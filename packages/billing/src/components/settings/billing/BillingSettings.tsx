@@ -11,6 +11,7 @@ import { NumberingSettings } from '@alga-psa/reference-data/components';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
+import RenewalAutomationSettings from './RenewalAutomationSettings';
 import { TaxSourceSettings } from '../tax/TaxSourceSettings';
 import { TaxRegionsManager } from '../tax/TaxRegionsManager';
 
@@ -143,6 +144,7 @@ const BillingSettings: React.FC = () => {
 
           <ZeroDollarInvoiceSettings />
           <CreditExpirationSettings />
+          <RenewalAutomationSettings />
         </div>
       ),
     },

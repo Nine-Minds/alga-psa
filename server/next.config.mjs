@@ -179,8 +179,8 @@ const nextConfig = {
       'server/src': './src', // Add explicit alias for server/src imports
       '@alga-psa/ui': '../packages/ui/src',
       '@alga-psa/ui/': '../packages/ui/src/',
-      '@alga-psa/clients': '../packages/clients/src',
-      '@alga-psa/clients/': '../packages/clients/src/',
+      '@alga-psa/clients': '../packages/clients/dist',
+      '@alga-psa/clients/': '../packages/clients/dist/',
       '@alga-psa/auth': '../packages/auth/src',
       '@alga-psa/auth/': '../packages/auth/src/',
       '@alga-psa/auth/getCurrentUser': '../packages/auth/src/lib/getCurrentUser.ts',
@@ -207,8 +207,8 @@ const nextConfig = {
       '@alga-psa/ee-microsoft-teams/': '../ee/packages/microsoft-teams/src/',
       '@alga-psa/ee-stubs': isEE ? '../ee/server/src' : '../packages/ee/src',
       '@alga-psa/ee-stubs/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
-      '@alga-psa/tags': '../packages/tags/src',
-      '@alga-psa/tags/': '../packages/tags/src/',
+      '@alga-psa/tags': '../packages/tags/dist',
+      '@alga-psa/tags/': '../packages/tags/dist/',
       '@alga-psa/users': '../packages/users/src',
       '@alga-psa/users/': '../packages/users/src/',
       '@alga-psa/users/actions': '../packages/users/src/actions/index.ts',
@@ -231,10 +231,10 @@ const nextConfig = {
       '@alga-psa/reference-data/actions': '../packages/reference-data/src/actions/index.ts',
       '@alga-psa/reference-data/components': '../packages/reference-data/src/components/index.ts',
       // Assets package
-      '@alga-psa/assets': '../packages/assets/src',
-      '@alga-psa/assets/': '../packages/assets/src/',
-      '@alga-psa/assets/actions': '../packages/assets/src/actions/index.ts',
-      '@alga-psa/assets/components': '../packages/assets/src/components/index.ts',
+      '@alga-psa/assets': '../packages/assets/dist',
+      '@alga-psa/assets/': '../packages/assets/dist/',
+      '@alga-psa/assets/actions': '../packages/assets/dist/actions/index.mjs',
+      '@alga-psa/assets/components': '../packages/assets/dist/components/index.mjs',
       // MSP Composition package
       '@alga-psa/msp-composition': '../packages/msp-composition/src',
       '@alga-psa/msp-composition/': '../packages/msp-composition/src/',
@@ -391,9 +391,7 @@ const nextConfig = {
     '@emoji-mart/data',
     '@alga-psa/core',
     '@alga-psa/auth',
-    '@alga-psa/tags',
     '@alga-psa/ui',
-    '@alga-psa/clients',
     '@alga-psa/scheduling',
     '@alga-psa/users',
     '@alga-psa/notifications',
@@ -407,7 +405,6 @@ const nextConfig = {
     '@alga-psa/documents',
     '@alga-psa/reference-data',
     '@alga-psa/billing',
-    '@alga-psa/assets',
     '@alga-psa/msp-composition',
     '@alga-psa/user-composition',
     '@alga-psa/projects',
@@ -417,7 +414,6 @@ const nextConfig = {
     '@product/settings-extensions',
     '@product/billing',
     '@alga-psa/workflows',
-    '@alga-psa/sla',
     // New aliasing packages
     '@alga-psa/product-extension-actions',
     '@alga-psa/product-auth-ee',
@@ -474,7 +470,7 @@ const nextConfig = {
       '@img/sharp-wasm32/versions': path.join(__dirname, 'src/empty/shims/empty.ts'),
       '@alga-psa/auth': path.join(__dirname, '../packages/auth/src'),
       '@alga-psa/ui': path.join(__dirname, '../packages/ui/src'),
-      '@alga-psa/clients': path.join(__dirname, '../packages/clients/src'),
+      '@alga-psa/clients': path.join(__dirname, '../packages/clients/dist'),
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
       '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),
       '@alga-psa/ee-microsoft-teams': path.join(__dirname, '../ee/packages/microsoft-teams/src'),
@@ -724,6 +720,12 @@ const nextConfig = {
     // These are optional runtime dependencies that may not be installed
     config.externals.push('ffmpeg-static');
     config.externals.push('ffprobe-static');
+
+    // Externalize expo-server-sdk for server builds.
+    // The SDK uses require('../package.json') internally which breaks when bundled.
+    if (isServer) {
+      config.externals.push('expo-server-sdk');
+    }
 
     // Externalize sharp for server builds to avoid bundling native dependencies.
     // sharp (and its optional @img/* helpers) should be resolved at runtime by Node.

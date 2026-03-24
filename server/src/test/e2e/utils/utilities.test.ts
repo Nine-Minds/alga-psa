@@ -56,6 +56,22 @@ describe('E2E Test Utilities', () => {
         .first();
       expect(apiKey).toBeDefined();
     });
+
+    it('T053: should create board-owned ticket statuses for the default board', async () => {
+      const defaultBoard = await env.db('boards')
+        .where({ tenant: env.tenant, is_default: true })
+        .first<{ board_id: string }>('board_id');
+
+      expect(defaultBoard?.board_id).toBeDefined();
+
+      const ticketStatuses = await env.db('statuses')
+        .where({ tenant: env.tenant, status_type: 'ticket' })
+        .select('status_id', 'board_id', 'is_default');
+
+      expect(ticketStatuses.length).toBeGreaterThan(0);
+      expect(ticketStatuses.every((status) => status.board_id === defaultBoard?.board_id)).toBe(true);
+      expect(ticketStatuses.some((status) => status.is_default)).toBe(true);
+    });
   });
 
   describe('Contact Test Data Factory', () => {

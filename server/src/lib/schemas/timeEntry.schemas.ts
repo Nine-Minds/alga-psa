@@ -44,5 +44,3 @@ export {
   workItemTypeSchema,
   timeSheetStatusSchema
 } from './timeSheet.schemas';
-
-export { validateData } from '@alga-psa/core';

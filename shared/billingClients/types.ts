@@ -36,6 +36,11 @@ export type ClientContractAssignmentCreateInput = {
   notice_period_days?: number;
   renewal_term_months?: number;
   use_tenant_renewal_defaults?: boolean;
+  renewal_due_date_action_policy?: 'queue_only' | 'create_ticket' | null;
+  renewal_ticket_board_id?: string | null;
+  renewal_ticket_status_id?: string | null;
+  renewal_ticket_priority?: string | null;
+  renewal_ticket_assignee_id?: string | null;
   po_required?: boolean;
   po_number?: string | null;
   po_amount?: number | null;

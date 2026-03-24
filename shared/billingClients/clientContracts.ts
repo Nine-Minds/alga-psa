@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import type { IClientContract } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import type { ClientContractAssignmentCreateInput } from './types';
+import { assertBoardScopedTicketStatusSelection } from '../lib/boardScopedTicketStatusValidation';
 import { deriveClientContractStatus } from './clientContractStatus';
 
 type RenewalMode = NonNullable<IClientContract['renewal_mode']>;
@@ -541,6 +542,14 @@ export async function createClientContractAssignment(
     updated_at: timestamp,
   };
 
+  await assertBoardScopedTicketStatusSelection({
+    trx: knexOrTrx,
+    tenant,
+    boardId: input.renewal_ticket_board_id ?? null,
+    statusId: input.renewal_ticket_status_id ?? null,
+    statusLabel: 'Renewal ticket status',
+  });
+
   if (input.renewal_mode === 'none' || input.renewal_mode === 'manual' || input.renewal_mode === 'auto') {
     insertPayload.renewal_mode = input.renewal_mode;
   }
@@ -554,9 +563,41 @@ export async function createClientContractAssignment(
     insertPayload.use_tenant_renewal_defaults = input.use_tenant_renewal_defaults;
   }
 
-  const hasPoRequired = await (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'po_required');
-  const hasPoNumber = await (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'po_number');
-  const hasPoAmount = await (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'po_amount');
+  const [
+    hasRenewalDueDateActionPolicy,
+    hasRenewalTicketBoard,
+    hasRenewalTicketStatus,
+    hasRenewalTicketPriority,
+    hasRenewalTicketAssignee,
+    hasPoRequired,
+    hasPoNumber,
+    hasPoAmount,
+  ] = await Promise.all([
+    (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'renewal_due_date_action_policy'),
+    (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'renewal_ticket_board_id'),
+    (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'renewal_ticket_status_id'),
+    (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'renewal_ticket_priority'),
+    (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'renewal_ticket_assignee_id'),
+    (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'po_required'),
+    (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'po_number'),
+    (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'po_amount'),
+  ]);
+
+  if (hasRenewalDueDateActionPolicy) {
+    insertPayload.renewal_due_date_action_policy = input.renewal_due_date_action_policy ?? null;
+  }
+  if (hasRenewalTicketBoard) {
+    insertPayload.renewal_ticket_board_id = input.renewal_ticket_board_id ?? null;
+  }
+  if (hasRenewalTicketStatus) {
+    insertPayload.renewal_ticket_status_id = input.renewal_ticket_status_id ?? null;
+  }
+  if (hasRenewalTicketPriority) {
+    insertPayload.renewal_ticket_priority = input.renewal_ticket_priority ?? null;
+  }
+  if (hasRenewalTicketAssignee) {
+    insertPayload.renewal_ticket_assignee_id = input.renewal_ticket_assignee_id ?? null;
+  }
 
   if (hasPoRequired) insertPayload.po_required = Boolean(input.po_required);
   if (hasPoNumber) insertPayload.po_number = input.po_number ?? null;
@@ -586,6 +627,23 @@ export async function updateClientContractAssignment(
     created_at: undefined as any,
     updated_at: new Date().toISOString() as any,
   };
+
+  const effectiveRenewalTicketBoardId =
+    updateData.renewal_ticket_board_id !== undefined
+      ? updateData.renewal_ticket_board_id ?? null
+      : existing.renewal_ticket_board_id ?? null;
+  const effectiveRenewalTicketStatusId =
+    updateData.renewal_ticket_status_id !== undefined
+      ? updateData.renewal_ticket_status_id ?? null
+      : existing.renewal_ticket_status_id ?? null;
+
+  await assertBoardScopedTicketStatusSelection({
+    trx: knexOrTrx,
+    tenant,
+    boardId: effectiveRenewalTicketBoardId,
+    statusId: effectiveRenewalTicketStatusId,
+    statusLabel: 'Renewal ticket status',
+  });
 
   if (updateData.start_date !== undefined && updateData.start_date !== existing.start_date) {
     const contract = await knexOrTrx('contracts')

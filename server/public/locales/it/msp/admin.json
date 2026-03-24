@@ -1,0 +1,259 @@
+{
+  "common": {
+    "actions": {
+      "save": "Salva impostazioni",
+      "saving": "Salvataggio in corso...",
+      "reset": "Reimposta",
+      "refresh": "Aggiorna",
+      "close": "Chiudi",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "deleting": "Eliminazione in corso…",
+      "verify": "Verifica"
+    },
+    "states": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "loading": "Caricamento..."
+    }
+  },
+  "telemetry": {
+    "loading": {
+      "title": "Impostazioni di telemetria dell'organizzazione",
+      "description": "Caricamento..."
+    },
+    "empty": {
+      "title": "Impostazioni di telemetria dell'organizzazione",
+      "description": "Errore durante il caricamento delle impostazioni",
+      "body": "Impossibile caricare le impostazioni di telemetria"
+    },
+    "page": {
+      "title": "Telemetria con analisi dell'organizzazione",
+      "description": "Configura le impostazioni di telemetria per l'intera organizzazione. La telemetria è abilitata per impostazione predefinita per migliorare la piattaforma, ma gli utenti possono scegliere individualmente di non partecipare, a meno che tu non disattivi questa opzione."
+    },
+    "toggles": {
+      "enableTelemetry": {
+        "title": "Abilita telemetria",
+        "description": "Consenti la raccolta di dati di utilizzo anonimi per migliorare la piattaforma (abilitata per impostazione predefinita)"
+      },
+      "allowUserOptOut": {
+        "title": "Consenti rinuncia dell'utente",
+        "description": "Consenti ai singoli utenti di rinunciare alla raccolta della telemetria"
+      }
+    },
+    "alerts": {
+      "enabled": "✓ Telemetria abilitata. Tutte le categorie sono abilitate per impostazione predefinita per i nuovi utenti, ma possono rinunciare individualmente se lo desiderano.",
+      "centralizedControl": "Controllo centralizzato: gli utenti non possono rinunciare individualmente. Assicurati di rispettare le normative locali sulla privacy."
+    },
+    "anonymization": {
+      "title": "Livello di anonimizzazione dei dati",
+      "description": "Scegli quanto anonimizzare i dati prima della raccolta",
+      "options": {
+        "none": {
+          "title": "Nessuna anonimizzazione",
+          "description": "Raccogli i dati così come sono (non consigliato)"
+        },
+        "partial": {
+          "title": "Anonimizzazione parziale",
+          "description": "Rimuovi le PII, mantieni gli ID di correlazione"
+        },
+        "full": {
+          "title": "Anonimizzazione completa",
+          "description": "Massima privacy, correlazione minima"
+        }
+      }
+    },
+    "compliance": {
+      "title": "Note di conformità"
+    },
+    "privacy": {
+      "collectTitle": "Cosa raccogliamo",
+      "collectItems": {
+        "errors": "• Informazioni sugli errori (nessun dato sensibile)",
+        "performance": "• Metriche di prestazione (tempi di caricamento pagina, tempi di risposta API)",
+        "usage": "• Schemi di utilizzo delle funzionalità (quali funzionalità vengono usate)",
+        "system": "• Metriche di sistema (per l'ottimizzazione dell'infrastruttura)"
+      },
+      "excludeTitle": "Cosa NON raccogliamo",
+      "excludeItems": {
+        "personalInfo": "• Informazioni personali (nomi, email, indirizzi)",
+        "clientData": "• Dati cliente oppure informazioni aziendali",
+        "passwords": "• Password o token di autenticazione",
+        "files": "• Contenuti di file oppure documenti"
+      }
+    },
+    "footer": {
+      "lastUpdated": "Ultimo aggiornamento: {{value}}",
+      "updatedBy": " da {{user}}"
+    },
+    "errors": {
+      "loadTenantTelemetrySettings": "Impossibile caricare le impostazioni di telemetria dell'organizzazione",
+      "loadSettings": "Impossibile caricare le impostazioni",
+      "saveTelemetrySettings": "Impossibile salvare le impostazioni di telemetria",
+      "saveSettings": "Impossibile salvare le impostazioni"
+    }
+  },
+  "email": {
+    "loading": "Caricamento delle impostazioni email...",
+    "error": "Errore: {{error}}",
+    "tabs": {
+      "inbound": "Email in entrata",
+      "outbound": "Email in uscita"
+    },
+    "descriptions": {
+      "outbound": "Configura le impostazioni SMTP o API per inviare email dalla tua applicazione",
+      "inbound": "Configura i provider email per ricevere nonché gestire le email come ticket"
+    },
+    "providerConfig": {
+      "title": "Configurazione del provider email",
+      "providerLabel": "Provider email",
+      "options": {
+        "smtp": "SMTP (server email tradizionale)",
+        "resend": "Resend (servizio API moderno)"
+      },
+      "placeholder": "Seleziona provider email",
+      "descriptions": {
+        "smtp": "Configura le impostazioni del server email SMTP tradizionale",
+        "resend": "Configura l'API di Resend per la consegna moderna delle email"
+      },
+      "status": {
+        "provider": "Provider {{provider}}"
+      }
+    },
+    "smtp": {
+      "host": {
+        "label": "Host SMTP",
+        "placeholder": "smtp.example.com"
+      },
+      "port": {
+        "label": "Porta",
+        "placeholder": "587"
+      },
+      "username": {
+        "label": "Nome utente",
+        "placeholder": "tua-email@example.com"
+      },
+      "password": {
+        "label": "Password",
+        "placeholder": "Inserisci la password"
+      },
+      "fromAddress": {
+        "label": "Indirizzo mittente",
+        "placeholder": "noreply@example.com"
+      }
+    },
+    "resend": {
+      "apiKey": {
+        "label": "Chiave API Resend",
+        "placeholder": "re_xxxxxxxxxxxxxxxxxx",
+        "helpPrefix": "Ottieni la tua chiave API da"
+      },
+      "fromAddress": {
+        "label": "Indirizzo mittente",
+        "placeholder": "noreply@yourdomain.com",
+        "help": "Deve provenire da un dominio verificato. Usa la scheda Domini per aggiungere domini personalizzati."
+      }
+    },
+    "domains": {
+      "verified": "Verificato",
+      "failed": "Non riuscito",
+      "pending": "In attesa",
+      "requiredDnsRecords": "Record DNS richiesti:"
+    },
+    "general": {
+      "title": "Impostazioni generali",
+      "trackingEnabled": "Abilita tracciamento email",
+      "dailyLimit": "Limite giornaliero email"
+    },
+    "errors": {
+      "loadEmailSettings": "Impossibile caricare le impostazioni email",
+      "saveSettings": "Impossibile salvare le impostazioni",
+      "addDomain": "Impossibile aggiungere il dominio",
+      "verifyDomain": "Impossibile verificare il dominio"
+    }
+  },
+  "microsoft365": {
+    "title": {
+      "microsoft": "Diagnostica Microsoft 365",
+      "default": "Diagnostica"
+    },
+    "description": "Esegue un controllo Graph dal vivo (inclusi i passaggi di creazione seguiti dall'eliminazione della sottoscrizione) per diagnosticare problemi di casella di posta, cartella, oltre alle autorizzazioni.",
+    "note": {
+      "label": "Nota:",
+      "body": "La diagnostica creerà una sottoscrizione temporanea a Microsoft Graph per poi eliminarla. Se l'eliminazione non riesce, potrebbe rendersi necessaria la rimozione manuale della sottoscrizione in Microsoft 365."
+    },
+    "labels": {
+      "provider": "Provider:",
+      "mailbox": "Casella di posta:",
+      "overall": "Generale:",
+      "resource": "Risorsa: {{resource}}",
+      "recommendations": "Raccomandazioni",
+      "error": "Errore"
+    },
+    "actions": {
+      "copySupportBundle": "Copia pacchetto di supporto",
+      "copied": "Copiato"
+    },
+    "states": {
+      "running": "Diagnostica in esecuzione...",
+      "diagnosticsFailed": "Diagnostica non riuscita"
+    },
+    "statuses": {
+      "pass": "Superato",
+      "warn": "Avviso",
+      "fail": "Non riuscito",
+      "skip": "Saltato"
+    }
+  },
+  "inboundDefaults": {
+    "loading": "Caricamento dei valori predefiniti ticket...",
+    "header": {
+      "title": "Valori predefiniti ticket in entrata",
+      "description": "Configura i valori predefiniti per i ticket creati dall'elaborazione delle email"
+    },
+    "actions": {
+      "addDefaults": "Aggiungi valori predefiniti"
+    },
+    "form": {
+      "editTitle": "Modifica valori predefiniti ticket",
+      "createTitle": "Crea valori predefiniti ticket",
+      "description": "Configura i valori predefiniti che saranno applicati ai ticket creati dall'elaborazione delle email"
+    },
+    "empty": {
+      "title": "Nessun valore predefinito ticket configurato",
+      "description": "Crea la tua prima configurazione per definire i valori predefiniti per i ticket generati via email"
+    },
+    "badges": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "fields": {
+      "board": "Board:",
+      "status": "Stato:",
+      "priority": "Priorità:",
+      "enteredBy": "Inserito da:"
+    },
+    "fallbacks": {
+      "notSet": "Non impostato",
+      "system": "Sistema"
+    },
+    "menu": {
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "deleting": "Eliminazione in corso…"
+    },
+    "help": {
+      "title": "Come funziona",
+      "items": {
+        "providerReference": "• Ogni provider email può fare riferimento a una configurazione di valori predefiniti ticket",
+        "requiredValues": "• Quando un'email crea un ticket, questi valori predefiniti forniscono i campi obbligatori",
+        "systemCreator": "• I ticket generati dal sistema mostreranno \"Sistema\" come autore quando entered_by è nullo",
+        "scenarios": "• Puoi creare valori predefiniti diversi per scenari email differenti (supporto, fatturazione, ecc.)"
+      }
+    },
+    "errors": {
+      "load": "Impossibile caricare i valori predefiniti ticket",
+      "delete": "Impossibile eliminare i valori predefiniti ticket"
+    }
+  }
+}

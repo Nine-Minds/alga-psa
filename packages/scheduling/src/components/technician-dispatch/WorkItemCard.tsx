@@ -3,6 +3,7 @@ import { WorkItemType } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { cn } from '@alga-psa/ui';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface WorkItemCardProps {
   ticketNumber?: string;
@@ -31,6 +32,8 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
   needsDispatch,
   agentsNeedingDispatch
 }) => {
+  const { t } = useTranslation('msp/dispatch');
+
   return (
     <div
       className="bg-white p-2 rounded cursor-pointer hover:bg-gray-50 transition-colors flex flex-col gap-1"
@@ -56,13 +59,21 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
       {/* Badges Area - Aligned Right */}
       <div className="flex justify-end space-x-1">
         {needsDispatch && (
-          <Tooltip content={`Needs dispatch for: ${agentsNeedingDispatch?.map(agent => `${agent.first_name || ''} ${agent.last_name || ''}`.trim()).filter(Boolean).join(', ') || 'Unknown Agent'}`}>
+          <Tooltip
+            content={t('badges.needsDispatchFor', {
+              defaultValue: 'Needs dispatch for: {{agents}}',
+              agents: agentsNeedingDispatch
+                ?.map(agent => `${agent.first_name || ''} ${agent.last_name || ''}`.trim())
+                .filter(Boolean)
+                .join(', ') || t('events.fallbacks.unknownAgent', { defaultValue: 'Unknown Agent' }),
+            })}
+          >
             <div>
               <span className="block lg:hidden w-4 h-4 bg-red-200 rounded-full align-middle"></span>
               <Badge variant="error" className={cn(
                 "hidden lg:inline-flex border-none"
               )}>
-                Needs Dispatch
+                {t('badges.needsDispatch', { defaultValue: 'Needs Dispatch' })}
               </Badge>
             </div>
           </Tooltip>

@@ -25,7 +25,7 @@ const UserRoleAssignment = dynamic(() => import('./UserRoleAssignment'), {
   ssr: false
 });
 
-const PolicyManagement = dynamic(() => import('@alga-psa/auth/components/settings/policy/PolicyManagement'), {
+const PolicyManagement = dynamic(() => import('@enterprise/components/settings/policy/PolicyManagement'), {
   loading: () => <SettingsTabSkeleton title="Policy Management" description="Loading policy configuration..." showTextArea={true} showTable={true} noCard={true} />,
   ssr: false
 });

@@ -25,7 +25,8 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ColumnDefinition } from '@alga-psa/types';
-import { deleteTicket, deleteTickets } from '../actions/ticketActions';
+import { deleteTicket, deleteTickets, moveTicketsToBoard } from '../actions/ticketActions';
+import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { bundleTicketsAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster, getAllMatchingTicketIds } from '../actions/optimizedTicketActions';
 import TicketExportDialog from './TicketExportDialog';
@@ -148,6 +149,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [isBulkMoveDialogOpen, setIsBulkMoveDialogOpen] = useState(false);
+  const [isBulkMoving, setIsBulkMoving] = useState(false);
+  const [bulkMoveErrors, setBulkMoveErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [selectedDestinationBoardId, setSelectedDestinationBoardId] = useState<string>('');
+  const [destinationBoardStatuses, setDestinationBoardStatuses] = useState<SelectOption[]>([]);
+  const [selectedDestinationStatusId, setSelectedDestinationStatusId] = useState<string>('');
+  const [isLoadingDestinationStatuses, setIsLoadingDestinationStatuses] = useState(false);
+  const [destinationStatusError, setDestinationStatusError] = useState<string>('');
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>(initialAgentAvatarUrls);
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>(initialTeamAvatarUrls);
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
@@ -757,6 +766,43 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedResponseState, selectedSlaStatus, bundleView, selectableTicketIds,
   ]);
 
+  const handleBulkMoveBoardChange = useCallback(async (boardId: string) => {
+    setSelectedDestinationBoardId(boardId);
+    setDestinationStatusError('');
+    setSelectedDestinationStatusId('');
+    setDestinationBoardStatuses([]);
+
+    if (!boardId) {
+      return;
+    }
+
+    setIsLoadingDestinationStatuses(true);
+    try {
+      const statuses = await getBoardTicketStatuses(boardId);
+      const boardStatusOptions = statuses.map((status) => ({
+        value: status.status_id as string,
+        label: status.name,
+      }));
+      const defaultStatus = statuses.find((status) => status.is_default);
+
+      setDestinationBoardStatuses(boardStatusOptions);
+
+      if (defaultStatus) {
+        setSelectedDestinationStatusId(defaultStatus.status_id);
+      } else {
+        setSelectedDestinationStatusId(boardStatusOptions[0]?.value || '');
+      }
+
+      if (boardStatusOptions.length === 0) {
+        setDestinationStatusError('This board has no ticket statuses configured for selection.');
+      }
+    } catch (error: unknown) {
+      setDestinationStatusError(error instanceof Error ? error.message : 'Failed to load board statuses');
+    } finally {
+      setIsLoadingDestinationStatuses(false);
+    }
+  }, []);
+
   const clearSelection = useCallback(() => {
     setSelectedTicketIds(prev => (prev.size === 0 ? prev : new Set<string>()));
     setAllMatchingMode(false);
@@ -951,6 +997,75 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setIsBulkDeleteDialogOpen(false);
     setBulkDeleteErrors([]);
   }, [isBulkDeleting]);
+
+  const handleBulkMoveClose = useCallback(() => {
+    if (isBulkMoving) {
+      return;
+    }
+    setIsBulkMoveDialogOpen(false);
+    setBulkMoveErrors([]);
+    setSelectedDestinationBoardId('');
+    setDestinationBoardStatuses([]);
+    setSelectedDestinationStatusId('');
+    setDestinationStatusError('');
+    setIsLoadingDestinationStatuses(false);
+  }, [isBulkMoving]);
+
+  const handleConfirmBulkMove = useCallback(async () => {
+    if (selectedTicketIdsArray.length === 0) {
+      return;
+    }
+
+    if (!currentUser) {
+      toast.error('You must be logged in to move tickets');
+      return;
+    }
+
+    if (!selectedDestinationBoardId || !selectedDestinationStatusId || destinationBoardStatuses.length === 0) {
+      return;
+    }
+
+    setIsBulkMoving(true);
+    setBulkMoveErrors([]);
+
+    try {
+      const result = await moveTicketsToBoard(
+        selectedTicketIdsArray,
+        selectedDestinationBoardId,
+        selectedDestinationStatusId
+      );
+
+      if (result.movedIds.length > 0) {
+        const movedSet = new Set(result.movedIds);
+        setTickets(prev => prev.filter(ticket => {
+          if (!ticket.ticket_id) {
+            return true;
+          }
+          return !movedSet.has(ticket.ticket_id);
+        }));
+        onFilterChange({});
+      }
+
+      if (result.failed.length > 0) {
+        setBulkMoveErrors(result.failed);
+        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
+        toast.error('Some tickets could not be moved');
+        if (result.movedIds.length > 0) {
+          toast.success(`${result.movedIds.length} ticket${result.movedIds.length === 1 ? '' : 's'} moved`);
+        }
+      } else {
+        if (result.movedIds.length > 0) {
+          toast.success(`${result.movedIds.length} ticket${result.movedIds.length === 1 ? '' : 's'} moved`);
+        }
+        clearSelection();
+        setIsBulkMoveDialogOpen(false);
+      }
+    } catch (error) {
+      handleError(error, 'Failed to move selected tickets');
+    } finally {
+      setIsBulkMoving(false);
+    }
+  }, [clearSelection, currentUser, onFilterChange, selectedDestinationBoardId, selectedDestinationStatusId, selectedTicketIdsArray, destinationBoardStatuses.length]);
 
   const handleConfirmBulkDelete = useCallback(async () => {
     if (selectedTicketIdsArray.length === 0) {
@@ -1200,6 +1315,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Ticketing Dashboard</h1>
         <div className="flex items-center gap-3">
+          {hasSelection && canUpdateTickets && (
+            <Button
+              id={`${id}-bulk-move-button`}
+              onClick={() => {
+                setBulkMoveErrors([]);
+                setSelectedDestinationBoardId('');
+                setDestinationBoardStatuses([]);
+                setSelectedDestinationStatusId('');
+                setDestinationStatusError('');
+                setIsBulkMoveDialogOpen(true);
+              }}
+              className="flex items-center gap-2"
+            >
+              Move to Board
+            </Button>
+          )}
           {hasSelection && (
             <Button
               id={`${id}-bulk-delete-button`}
@@ -1571,6 +1702,116 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         confirmLabel="Proceed"
         cancelLabel="Cancel"
       />
+      <Dialog
+        isOpen={isBulkMoveDialogOpen && hasSelection}
+        onClose={handleBulkMoveClose}
+        id={`${id}-bulk-move-dialog`}
+        title="Move Selected Tickets"
+      >
+        <DialogContent>
+          {bulkMoveErrors.length > 0 && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                <p className="font-medium">The following tickets could not be moved:</p>
+                <ul className="mt-2 space-y-1">
+                  {bulkMoveErrors.map(error => {
+                    const detail = selectedTicketDetails.find(item => item.ticket_id === error.ticketId);
+                    const label = detail?.ticket_number || detail?.title || error.ticketId;
+                    return (
+                      <li key={error.ticketId}>
+                        <span className="font-medium">{label}</span>: {error.message}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+          {destinationStatusError && (
+            <Alert variant="warning" className="mb-4">
+              <AlertDescription>
+                {destinationStatusError}
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="mb-4 space-y-1">
+            <p className="text-gray-600">
+              Select a destination board and status, then confirm moving the selected tickets.
+            </p>
+          </div>
+          <div className="mb-4 space-y-3">
+            <div>
+              <div className="text-sm font-medium text-gray-700 mb-1">Destination Board</div>
+              <CustomSelect
+                id={`${id}-bulk-move-board`}
+                value={selectedDestinationBoardId}
+                options={boards
+                  .filter((board): board is IBoard & { board_id: string } => typeof board.board_id === 'string')
+                  .map((board) => ({
+                    value: board.board_id,
+                    label: board.board_name ?? 'Unnamed board',
+                  }))}
+                onValueChange={(value) => void handleBulkMoveBoardChange(value)}
+                placeholder="Select destination board..."
+              />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-700 mb-1">Destination Status</div>
+              <CustomSelect
+                id={`${id}-bulk-move-status`}
+                value={selectedDestinationStatusId}
+                options={destinationBoardStatuses}
+                onValueChange={(value) => setSelectedDestinationStatusId(value)}
+                disabled={isLoadingDestinationStatuses || destinationBoardStatuses.length === 0}
+                placeholder="Select destination status..."
+              />
+            </div>
+          </div>
+          <div className="max-h-60 overflow-y-auto rounded-md border border-gray-200">
+            {selectedTicketDetails.length > 0 ? (
+              <ul>
+                {selectedTicketDetails.map(detail => (
+                  <li key={detail.ticket_id} className="border-b border-gray-200 px-4 py-2 last:border-b-0">
+                    <span className="font-medium text-gray-700">
+                      {detail.ticket_number || detail.title || detail.ticket_id}
+                    </span>
+                    {detail.title && detail.ticket_number && (
+                      <span className="ml-2 text-sm text-gray-500">{detail.title}</span>
+                    )}
+                    {detail.client_name && (
+                      <span className="ml-2 text-sm text-gray-400">· {detail.client_name}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="px-4 py-3 text-sm text-gray-500">
+                No tickets selected.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id={`${id}-bulk-move-cancel`}
+            variant="outline"
+            onClick={handleBulkMoveClose}
+            disabled={isBulkMoving}
+          >
+            Cancel
+          </Button>
+          <Button
+            id={`${id}-bulk-move-confirm`}
+            onClick={handleConfirmBulkMove}
+            disabled={isBulkMoving || isLoadingDestinationStatuses || !selectedDestinationBoardId || !selectedDestinationStatusId || destinationBoardStatuses.length === 0 || destinationStatusError.length > 0}
+          >
+            {isBulkMoving
+              ? 'Moving...'
+              : `Move ${selectedTicketIdsArray.length} Ticket${selectedTicketIdsArray.length === 1 ? '' : 's'}`}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
       <Dialog
         isOpen={isBulkDeleteDialogOpen && hasSelection}
         onClose={handleBulkDeleteClose}

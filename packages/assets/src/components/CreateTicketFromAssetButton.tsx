@@ -48,10 +48,9 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
         open: isDialogOpen
     });
 
-    // Load priorities, statuses, and boards when dialog opens
+    // Load priorities and boards when dialog opens.
     useEffect(() => {
         if (isDialogOpen) {
-            // Load priorities
             if (priorities.length === 0) {
                 setIsLoadingPriorities(true);
                 getAllPriorities('ticket')
@@ -66,30 +65,6 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                     });
             }
 
-            // Load statuses
-            if (statuses.length === 0) {
-                setIsLoadingStatuses(true);
-                getTicketStatuses()
-                    .then((fetchedStatuses) => {
-                        setStatuses(fetchedStatuses);
-                        // Auto-select the default status if available
-                        const defaultStatus = fetchedStatuses.find(s => s.is_default);
-                        if (defaultStatus && !status) {
-                            setStatus(defaultStatus.status_id);
-                        } else if (fetchedStatuses.length > 0 && !status) {
-                            // Fall back to first status
-                            setStatus(fetchedStatuses[0].status_id);
-                        }
-                    })
-                    .catch((error) => {
-                        handleError(error, 'Failed to load statuses');
-                    })
-                    .finally(() => {
-                        setIsLoadingStatuses(false);
-                    });
-            }
-
-            // Load boards
             if (boards.length === 0) {
                 setIsLoadingBoards(true);
                 getAllBoards(false) // false = only active boards
@@ -117,7 +92,56 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                     });
             }
         }
-    }, [isDialogOpen, priorities.length, statuses.length, boards.length, status, board, defaultBoardId]);
+    }, [isDialogOpen, priorities.length, boards.length, board, defaultBoardId, getAllBoards]);
+
+    useEffect(() => {
+        if (!isDialogOpen) {
+            return;
+        }
+
+        if (!board) {
+            setStatuses([]);
+            setStatus('');
+            setIsLoadingStatuses(false);
+            return;
+        }
+
+        let cancelled = false;
+        setIsLoadingStatuses(true);
+
+        getTicketStatuses(board)
+            .then((fetchedStatuses: IStatus[]) => {
+                if (cancelled) {
+                    return;
+                }
+
+                setStatuses(fetchedStatuses);
+                setStatus((currentStatus) => {
+                    if (currentStatus && fetchedStatuses.some((entry: IStatus) => entry.status_id === currentStatus)) {
+                        return currentStatus;
+                    }
+
+                    const defaultStatus = fetchedStatuses.find((entry: IStatus) => entry.is_default);
+                    return defaultStatus?.status_id ?? fetchedStatuses[0]?.status_id ?? '';
+                });
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setStatuses([]);
+                    setStatus('');
+                    handleError(error, 'Failed to load statuses');
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setIsLoadingStatuses(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isDialogOpen, board]);
 
     const priorityOptions: SelectOption[] = priorities.map((p) => ({
         value: p.priority_id,
@@ -135,6 +159,11 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
             value: b.board_id!,
             label: b.board_name!
         }));
+
+    const handleBoardChange = (nextBoardId: string) => {
+        setBoard(nextBoardId);
+        setStatus('');
+    };
 
     const handleSubmit = async () => {
         if (!title.trim() || !priority || !status || !board) {
@@ -207,7 +236,7 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                         label="Board"
                         options={boardOptions}
                         value={board}
-                        onValueChange={setBoard}
+                        onValueChange={handleBoardChange}
                         placeholder={isLoadingBoards ? "Loading boards..." : "Select board..."}
                         disabled={isLoadingBoards}
                     />
@@ -218,8 +247,8 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                         options={statusOptions}
                         value={status}
                         onValueChange={setStatus}
-                        placeholder={isLoadingStatuses ? "Loading statuses..." : "Select status..."}
-                        disabled={isLoadingStatuses}
+                        placeholder={!board ? "Select board first..." : isLoadingStatuses ? "Loading statuses..." : "Select status..."}
+                        disabled={isLoadingStatuses || !board}
                     />
 
                     <CustomSelect

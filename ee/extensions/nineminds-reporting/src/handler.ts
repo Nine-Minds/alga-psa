@@ -165,6 +165,7 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
       'PUT /notifications/:id - Update a notification',
       'DELETE /notifications/:id - Delete a notification',
       'GET /notifications/:id/stats - Get notification stats',
+      'GET /notifications/:id/reads - Get per-user read/dismiss data',
       'POST /notifications/resolve-recipients - Resolve matching users',
       'GET /audit - List audit logs',
       'GET /health - Health check',

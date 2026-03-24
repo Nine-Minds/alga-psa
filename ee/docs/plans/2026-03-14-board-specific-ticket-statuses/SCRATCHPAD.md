@@ -1,0 +1,467 @@
+# Scratchpad — Board-Specific Ticket Statuses
+
+- Plan slug: `board-specific-ticket-statuses`
+- Created: `2026-03-14`
+
+## What This Is
+
+Keep a lightweight, continuously-updated log of discoveries and decisions made while implementing this plan.
+
+Prefer short bullets. Append new entries as you learn things, and also *update earlier notes* when a decision changes or an open question is resolved.
+
+## Decisions
+
+- (2026-03-14) Scope is ticket statuses only. Project, interaction, and project-task statuses stay unchanged in this phase.
+- (2026-03-14) Ticket statuses will use separate board-owned records, not board-level overrides on top of tenant-global statuses.
+- (2026-03-14) Keep the existing `statuses` table and add board ownership for ticket statuses instead of introducing a second ticket-status table.
+- (2026-03-14) Migration must clone current tenant-wide ticket statuses onto every board and generate new board-owned `status_id` values.
+- (2026-03-14) Saved ticket-status references should be automatically remapped where board context exists.
+- (2026-03-14) Changing a ticket board must require explicit user status reselection. No runtime auto-remap.
+- (2026-03-14) New board creation must let admins either copy statuses from an existing board or create statuses inline.
+- (2026-03-14) Ticket board changes are now blocked in both backend update paths and the `TicketInfo` UI until the user explicitly selects a destination-board status, which prevents the old board's status from being silently retained.
+- (2026-03-14) New board creation now has an explicit copy-source board picker; save passes `copy_ticket_statuses_from_board_id` into `createBoard`, and the action clones board-owned ticket statuses with fresh ids onto the new board.
+- (2026-03-14) Board create now supports a `status_seed_mode` switch. In `create_inline` mode the dialog carries an unsaved `inline_ticket_statuses` array and sends it to `createBoard` as explicit board-owned status rows.
+- (2026-03-14) `F001`/`F002`: add `statuses.board_id` as nullable first, then enforce ticket ownership after clone/remap. Rationale: current tenant-global ticket rows must survive until the data migration rewrites them.
+- (2026-03-14) `F003`/`F004`/`F005`: keep the legacy tenant-global ticket status rows in place for now and clone from them during migration, because later remap steps still need the old ids to rewrite inbound, billing, and workflow references before the global rows can be retired.
+- (2026-03-14) `F006`/`F007`/`F008`: remap saved status references by joining legacy global ticket statuses to their board-owned clones via `tenant + board_id + status name`. Rationale: the old global status ids remain available during migration, so we can rewrite board-context tables without persisting a separate remap table.
+- (2026-03-14) `T003`/`T004`/`T005`/`T006`: cover the clone/remap migration with a DB-backed integration fixture that seeds one tenant, two boards, two legacy ticket statuses, and board-specific tickets before invoking the migration directly.
+- (2026-03-14) `F006`/`F007`/`F008`: remap inbound defaults, tenant billing renewal defaults, and contract renewal overrides by joining cloned ticket statuses back to the legacy status name within the saved board context.
+- (2026-03-14) `T007`/`T008`/`T009`: cover board-context remaps with a DB-backed integration fixture that runs the clone migration first, then asserts each persisted configuration surface moves from the legacy global status id to the correct board-owned replacement.
+- (2026-03-14) `F025` was too broad once Quick Add landed: narrowed it to the already-shipped Quick Add board-scoped status work, then split follow-up work into `F043` (bulk update surfaces) and `F044` (auxiliary ticket creation helpers). Rationale: there is no standalone bulk ticket status edit UI in this branch today, so the remaining work needs separate traceable items instead of one mixed feature.
+- (2026-03-14) `F028`/`F029`/`F030`: workflow ticket status handling now uses saved board context end-to-end. Authoring pickers depend on fixed `board_id` or `ticket_id`, create/update runtime paths reject cross-board statuses before calling shared ticket writes, and `tickets.close` resolves the closed status from the ticket's own board. Rationale: workflow actions were one of the last places still capable of surfacing or persisting tenant-global ticket status assumptions.
+- (2026-03-14) `F032`/`F033`: public ticket status APIs now expose board-owned ticket statuses only. `/api/v1/tickets/statuses` honors optional `board_id` and always excludes legacy board-less ticket rows, while generic `/api/v1/statuses` requires `board_id` for `type=ticket`, hides legacy ticket rows by id, and the old shared reference-data status CRUD rejects ticket status mutation in favor of board-local status actions.
+- (2026-03-14) `F034`: join-heavy ticket reads were mostly already safe because they join on `status_id`, but two board-owned regressions remained:
+  - `TicketService.search(...)` did not project ticket status metadata at all, so search callers could not reliably see the board-owned status state.
+  - `TicketService.getTicketStats(...)` grouped counts by `status_name`, which collapses distinct board-owned statuses that reuse the same label.
+- (2026-03-14) `F027`: treat billing renewal ticket status persistence the same way as other board-scoped ticket status saves. Rationale: tenant defaults and contract overrides both already persist `board_id + status_id`, so the safest implementation is to share the same board/status compatibility guard instead of trusting UI state alone.
+- (2026-03-14) `F037`: onboarding and standard reference-data ticket-status imports should enforce board scope at the action boundary, not just in the onboarding UI. Rationale: the import helper is reused outside onboarding, so board ownership has to be written and validated in the shared importer as well.
+- (2026-03-14) `F038` keeps `standard_statuses` unchanged. Rationale: that table is template/reference data, not the live `statuses` rows used by ticket runtime validation, so only real seed/fixture writers needed board scoping changes.
+
+## Discoveries / Constraints
+
+- (2026-03-14) Current ticket status actions are tenant-global:
+  - `packages/reference-data/src/actions/status-actions/statusActions.ts`
+  - `packages/tickets/src/models/status.ts`
+  - `server/src/app/api/v1/tickets/statuses/route.ts`
+- (2026-03-14) Board management and ticket status management are currently split across:
+  - `server/src/components/settings/general/BoardsSettings.tsx`
+  - `server/src/components/settings/general/StatusSettings.tsx`
+- (2026-03-14) Ticket default status helpers currently resolve tenant-wide ticket defaults with no board input:
+  - `shared/models/ticketModel.ts`
+  - `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts`
+- (2026-03-14) Workflow ticket operations and pickers persist raw ticket `status_id` values and currently validate only against tenant + status id:
+  - `shared/workflow/runtime/actions/businessOperations/tickets.ts`
+  - `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts`
+  - `server/src/components/workflow-designer/WorkflowActionInputFixedPicker.tsx`
+- (2026-03-14) Billing renewal defaults store both board and status ids already, which makes them a good candidate for automatic remap:
+  - `packages/billing/src/actions/billingSettingsActions.ts`
+  - `packages/billing/src/actions/renewalsQueueActions.ts`
+  - `server/src/lib/jobs/handlers/processRenewalQueueHandler.ts`
+- (2026-03-14) There is no standalone bulk ticket status edit surface in the current ticket dashboard branch; the only ticket bulk action present right now is bulk delete. That means `T032` needs either a future implementation surface or a scoped plan update, not a false claim of coverage.
+- (2026-03-14) There is no repo-backed UI yet that edits `default_billing_settings.renewal_ticket_board_id` / `renewal_ticket_status_id` or the contract-level renewal ticket routing overrides. `F027` is therefore currently blocked on a missing settings surface, even though the underlying persistence columns and queue/runtime readers exist.
+- (2026-03-14) Onboarding ticketing had drifted from the current board schema:
+  - `configureTicketing(...)` still inserted boards using legacy `email` / `is_active` fields, while current board creation in this branch uses the newer board shape and may expose only `is_inactive`.
+  - The onboarding fix now introspects `boards` columns before insert so board creation works against the current schema while still attaching board-owned statuses immediately afterward.
+- (2026-03-14) The earlier `F027` blocker was stale on this branch:
+  - tenant billing settings can now host a renewal automation card,
+  - contract assignment renewal overrides already have an edit surface in `ContractDetail.tsx`,
+  - the missing piece was board-scoped status loading and save-time validation.
+- (2026-03-14) Dev seed fallout for board-owned ticket statuses was narrower than the initial grep suggested:
+  - active runtime seeds needed changes in `server/seeds/dev/07_statuses.cjs`, `server/seeds/dev/14_tickets.cjs`, `server/seeds/dev/66_asset_tickets.cjs`, and `server/seeds/dev/80_default_inbound_ticket_defaults.cjs`
+  - `server/seeds/dev/58_populate_standard_statuses.cjs` stayed unchanged because it seeds template/reference rows, not live `statuses`
+- (2026-03-14) Completed `F027` by scoping billing renewal ticket statuses to the selected board:
+  - `packages/billing/src/components/settings/billing/RenewalAutomationSettings.tsx` adds a tenant renewal automation card with board-first ticket status selection and clears stale statuses when the board changes.
+  - `packages/billing/src/actions/billingSettingsActions.ts` now rejects renewal ticket status saves when the status does not belong to the selected board.
+  - `shared/billingClients/clientContracts.ts` now applies the same guard to contract assignment create/update paths, and `packages/billing/src/components/billing-dashboard/contracts/ContractDetail.tsx` exposes board-scoped renewal ticket board/status controls for per-assignment overrides.
+- (2026-03-14) Completed `T035` with focused billing coverage:
+  - `packages/billing/tests/RenewalAutomationSettings.boardScopedStatuses.test.tsx` verifies tenant billing renewal settings only load statuses for the selected board, disable status selection until a board is chosen, and clear stale status values on board change before save.
+  - `packages/billing/tests/billingSettingsActions.boardScopedRenewalStatus.test.ts` verifies save-time validation rejects a stale cross-board renewal status pair.
+  - `shared/billingClients/__tests__/clientContracts.boardScopedRenewalStatus.test.ts` covers the shared contract-assignment guard so per-contract renewal overrides cannot persist mismatched board/status ids.
+- (2026-03-14) SLA, notifications, surveys, and client portal ticket flows all resolve ticket statuses directly by `status_id`, so they are migration-sensitive:
+  - `packages/sla/src/services/slaPauseService.ts`
+  - `server/src/lib/eventBus/subscribers/internalNotificationSubscriber.ts`
+  - `server/src/lib/eventBus/subscribers/surveySubscriber.ts`
+  - `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts`
+- (2026-03-14) `packages/tickets/src/components/ticket/TicketInfo.tsx` already carries pending board/category state locally, so `F014` could be implemented by clearing `pendingChanges.status_id` on board change and disabling save until the new board gets a status.
+- (2026-03-14) `packages/tickets/src/actions/board-actions/boardActions.ts` can own status seeding for board create because it already centralizes transactional board creation and ITIL setup.
+- (2026-03-14) The copy path and inline path can coexist cleanly if copy remains the default `status_seed_mode`; that keeps `F015` green while adding `F016` without forcing a broader board-edit refactor.
+- (2026-03-14) Current schema still enforced tenant-global ticket status uniqueness before this batch:
+  - `server/migrations/202409101116_add_status_constraints.cjs`
+  - `packages/types/src/interfaces/status.interface.ts`
+- (2026-03-14) Ticket board-change UX still remains incomplete after the shared update-path validation fix:
+  - `shared/models/ticketModel.ts`
+  - `packages/tickets/src/actions/ticketActions.ts`
+  - `packages/tickets/src/actions/optimizedTicketActions.ts`
+  - `server/src/lib/api/services/TicketService.ts`
+- (2026-03-14) Board settings and board actions do not yet seed or manage board-local ticket statuses:
+  - `packages/tickets/src/actions/board-actions/boardActions.ts`
+  - `server/src/components/settings/general/BoardsSettings.tsx`
+- (2026-03-14) Saved config with explicit board context now has a direct migration path:
+  - `inbound_ticket_defaults.board_id + status_id`
+  - `default_billing_settings.renewal_ticket_board_id + renewal_ticket_status_id`
+  - `client_contracts.renewal_ticket_board_id + renewal_ticket_status_id`
+- (2026-03-14) Postgres migration gotcha: in `UPDATE ... FROM`, the target table alias cannot be referenced inside the joined table `ON` clause the way a regular join can. The board-column predicate for the board-context remap migration needs to live in the outer `WHERE` clause instead.
+- (2026-03-14) `F009`/`F010` are the first non-tabular migration slice:
+  - workflow ticket board/status references live inside `workflow_definitions.draft_definition` and `workflow_definition_versions.definition_json`
+  - ticket board/status values can appear as fixed literals or dynamic `inputMapping` expressions in action configs, so safe remap/surfacing needs JSON traversal and explicit unresolved detection rather than a single SQL join
+- (2026-03-14) Completed `F009` with a workflow JSON remap migration:
+  - `server/migrations/20260314130000_remap_workflow_ticket_status_references.cjs` traverses workflow v2 `steps` recursively and rewrites fixed literal `status_id` values only when a fixed literal `board_id` is present in the same saved payload.
+  - The remap runs against both `workflow_definitions.draft_definition` and `workflow_definition_versions.definition_json`.
+  - Because workflow tables do not carry `tenant`, the migration derives the legacy-to-board-owned mapping from `statuses` rows using `tenant + name` and applies it via saved `board_id + status_id` pairs.
+- (2026-03-14) Completed `T010` with DB-backed coverage in `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`:
+  - verifies `tickets.create`, `create_ticket_from_email`, and nested `ticketDefaults.status_id` inside `create_ticket_with_initial_comment` all remap in both workflow drafts and published versions
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`; the suite now passes with 9 migration tests after the later `T011` guard was added
+- (2026-03-14) Completed `F010` with an explicit unresolved-reference guard:
+  - `server/migrations/20260314133000_surface_unresolved_ticket_status_references.cjs` scans workflow drafts and published versions for fixed legacy ticket `status_id` values that still lack literal board context.
+  - The guard throws a migration error containing the workflow id, table, step path, action id, and input path so unresolved references are surfaced before release instead of guessed.
+- (2026-03-14) Completed `T011` in `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`:
+  - seeds a workflow `tickets.update_fields` step with fixed legacy `patch.status_id` and no board context
+  - verifies the guard migration rejects with a concrete unresolved-reference message and leaves the stored status id unchanged
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` and confirmed all 9 migration tests pass
+- (2026-03-14) Completed `F011` by making ticket default resolution board-aware in shared ticket creation paths:
+  - `shared/models/ticketModel.ts` now resolves a default ticket status only for the selected `board_id` and no longer falls back to tenant-global ticket statuses.
+  - `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts` now asks `TicketModel.getDefaultStatusId(...)` for the default status tied to the client portal's default board instead of querying tenant-global ticket defaults directly.
+- (2026-03-14) Completed `F012` by enforcing board/status compatibility on ticket creation:
+  - `shared/models/ticketModel.ts` now validates that a provided ticket `status_id` belongs to the selected `board_id` before insert.
+  - `TicketModel.createTicket(...)` now auto-fills the selected board's default status when callers omit `status_id`, and rejects create attempts when no board-local default exists.
+- (2026-03-14) Completed `T012` and `T013` with shared unit coverage in `shared/models/__tests__/ticketModel.boardStatusValidation.test.ts`:
+  - `T012` proves `getDefaultStatusId` returns the selected board's default instead of a legacy tenant-global default.
+  - `T013` proves create-time business rule validation rejects a status from a different board.
+  - verified with `cd shared && npx vitest run models/__tests__/ticketModel.boardStatusValidation.test.ts --config vitest.config.ts`.
+- (2026-03-14) Completed `T014` with DB-backed create-path coverage in `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`:
+  - seeds two boards with distinct board-owned ticket statuses and proves `TicketModel.createTicket(...)` inserts only for the matching board/status pair
+  - verifies the cross-board create attempt throws and leaves only the valid ticket row persisted
+  - verified with `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`.
+- (2026-03-14) Completed `F013` by enforcing board/status compatibility on ticket update paths:
+  - `shared/models/ticketModel.ts` now validates update-time `status_id` changes against the effective board for the ticket.
+  - `packages/tickets/src/actions/ticketActions.ts`, `packages/tickets/src/actions/optimizedTicketActions.ts`, and `server/src/lib/api/services/TicketService.ts` now all reject cross-board ticket status updates instead of validating ticket statuses at tenant scope only.
+- (2026-03-14) Completed `T015` in `shared/models/__tests__/ticketModel.boardStatusValidation.test.ts`:
+  - proves `TicketModel.updateTicket(...)` rejects a status-only update when the new status belongs to a different board
+  - verified with `cd shared && npx vitest run models/__tests__/ticketModel.boardStatusValidation.test.ts --config vitest.config.ts`.
+- (2026-03-14) Completed `T016` with DB-backed update coverage in `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`:
+  - proves `TicketModel.updateTicket(...)` rejects a cross-board status id and leaves the persisted ticket's prior status untouched
+  - verified with `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`.
+- (2026-03-14) Completed `F017`/`F018`/`F021` by moving board-local ticket lifecycle editing into board create/edit:
+  - `server/src/components/settings/general/BoardsSettings.tsx` now manages ticket statuses in both create-inline and edit flows, including add/remove/reorder/open-closed/default operations.
+  - Save is blocked until the managed board-local status set contains exactly one open default, which keeps board create and board edit aligned with the PRD's required lifecycle invariant.
+- (2026-03-14) Completed `F019` by retiring the old central ticket status settings surface:
+  - `server/src/components/settings/general/StatusSettings.tsx` now renders an informational handoff to Boards instead of acting as a tenant-global ticket status editor.
+- (2026-03-14) Completed `F020` with board-scoped ticket status actions and model reads:
+  - `packages/tickets/src/models/status.ts` now exposes board-scoped ticket status lookup helpers.
+  - `packages/tickets/src/actions/board-actions/boardTicketStatusActions.ts` now owns board-local ticket status reads plus create/update/delete/save operations, and explicitly rejects implicit cross-board mutation.
+- (2026-03-14) Completed `T020`/`T021`/`T022`/`T023`/`T024`/`T025`/`T026` with focused UI and action coverage:
+  - `server/src/components/settings/general/BoardsSettings.copyStatuses.test.tsx` now covers create-time lifecycle validation and board-edit status loading.
+  - `server/src/components/settings/general/StatusSettings.ticketStatusesRetired.test.tsx` verifies the central status surface is informational only.
+  - `packages/tickets/src/actions/board-actions/boardTicketStatusActions.test.ts` verifies board-local create/update/delete/default rules and duplicate-name scoping.
+- (2026-03-14) Completed `F022`/`F023`/`F024` by making ticket status options board-dependent in both create and edit ticket flows:
+  - `packages/reference-data/src/actions/status-actions/statusActions.ts` now accepts an optional `boardId` for ticket-status lookups.
+  - `packages/tickets/src/components/QuickAddTicket.tsx` now leaves status options empty until a board is chosen, then fetches that board's statuses and selects only that board's default.
+  - `packages/tickets/src/components/ticket/TicketInfo.tsx` now reloads status options from the currently selected board and disables the picker when no board is in scope.
+- (2026-03-14) Completed `T027`/`T028`/`T029`/`T030` with focused picker coverage:
+  - `packages/tickets/src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx` now verifies board-scoped option loading, empty/disabled state with no board, and board-change option reloading.
+  - `packages/tickets/src/components/__tests__/QuickAddTicket.boardScopedStatuses.test.tsx` verifies create flow status pickers stay empty until a board is selected and then choose that board's default.
+- (2026-03-14) Completed `F026` by making inbound ticket defaults board-scoped for statuses:
+  - `packages/integrations/src/components/email/forms/InboundTicketDefaultsForm.tsx` now clears `status_id` when the board changes, disables the status picker until a board is chosen, and reloads only that board's statuses via `getAvailableStatuses(boardId)`.
+  - `packages/integrations/src/actions/email-actions/ticketFieldOptionsActions.ts` now exposes `getAvailableStatuses(boardId)` as a board-filtered ticket-status lookup for inbound-email setup.
+  - `packages/integrations/src/actions/email-actions/inboundTicketDefaultsActions.ts` now rejects saves where `status_id` does not belong to the selected `board_id`.
+- (2026-03-14) Completed `T034` in `server/src/test/unit/components/InboundTicketDefaultsForm.test.tsx`:
+  - verifies inbound ticket defaults keep the status picker disabled until a board is selected
+  - verifies the form requests only the selected board's statuses and clears a stale status when the board changes
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/unit/components/InboundTicketDefaultsForm.test.tsx --config vitest.config.ts`
+- (2026-03-14) Completed `F031` by scoping client portal ticket status flows to the ticket board:
+  - `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts` now rejects client-portal status updates when the requested `status_id` does not belong to the ticket's `board_id`.
+  - `server/src/app/client-portal/tickets/[ticketId]/page.tsx` now preloads only the selected ticket board's statuses for the standalone details page.
+  - `packages/client-portal/src/components/tickets/TicketList.tsx` now fetches board-owned status menus per ticket board so the list's status-change dropdown stops offering cross-board choices.
+- (2026-03-14) Completed `F036`/`T049`/`T050` by tightening downstream subscriber coverage and remapping saved survey trigger status filters:
+  - `server/migrations/20260314135000_remap_survey_trigger_ticket_status_references.cjs` now rewrites legacy ticket `survey_triggers.trigger_conditions.status_id` values to board-owned ticket status ids using the saved `board_id` filter when present, and deterministically expands across all cloned boards when the trigger was intentionally board-agnostic.
+  - `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` now covers survey trigger remap persistence for migrated board-specific ticket statuses.
+  - `server/src/test/integration/internal-notifications/eventSubscribers.integration.test.ts` now proves ticket update notifications still resolve old/new board-owned status names, and its query stub now supports the `whereNotNull` calls used by the subscriber's assignee lookup.
+- (2026-03-14) Completed `F037` by moving onboarding and standard ticket-status imports to board-owned creation:
+  - `packages/reference-data/src/actions/referenceDataActions.ts` now requires `board_id` when importing ticket statuses, writes it onto imported rows, and scopes duplicate/default/order conflict checks to the target board.
+  - `packages/onboarding/src/actions/onboarding-actions/onboardingActions.ts` now requires a board before saving onboarding ticket statuses, writes new statuses with `board_id`, validates the default status on the default board, returns only the active board's ticket statuses to onboarding state, and creates boards using the current schema columns instead of assuming legacy `email` / `is_active` fields exist.
+  - `packages/onboarding/src/components/steps/TicketingConfigStep.tsx` now loads standard ticket statuses only when a board is in scope, imports them with `board_id`, and uses board-local ticket status actions for manual creation and default changes.
+- (2026-03-14) Completed `T051`/`T052` in `server/src/test/integration/onboardingBoardTicketStatuses.integration.test.ts`:
+  - proves `configureTicketing(...)` creates only board-owned ticket statuses for the onboarding-created board and leaves a valid board-local default status behind
+  - proves `importReferenceData('statuses', ..., { item_type: 'ticket', board_id })` writes ticket statuses only to the target board and does not treat the same ticket status name on another board as a conflict
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/onboardingBoardTicketStatuses.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Completed `F038` by moving shared seeds, fixtures, and workflow harness setup to board-owned ticket statuses:
+  - `server/src/test/e2e/utils/e2eTestSetup.ts` and `server/src/test/e2e/fixtures/test-setup.ts` now create a default board before ticket statuses, write `board_id` on seeded ticket statuses, and clean up statuses before boards.
+  - `server/seeds/dev/07_statuses.cjs` now clones the seeded ticket lifecycle onto every seeded board instead of inserting one tenant-global ticket status list.
+  - `server/seeds/dev/14_tickets.cjs`, `server/seeds/dev/66_asset_tickets.cjs`, and `server/seeds/dev/80_default_inbound_ticket_defaults.cjs` now resolve ticket statuses from the relevant board.
+  - `ee/test-data/workflow-harness/_lib/biz-fixture.cjs` plus the inline ticket workflow fixtures now select ticket statuses by `tenant + board_id`.
+- (2026-03-14) Completed `T053` in `server/src/test/e2e/utils/utilities.test.ts`:
+  - verifies the shared e2e environment creates ticket statuses only on the default board and still preserves a valid default status
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/e2e/utils/utilities.test.ts -t "T053" --config vitest.config.ts`
+- (2026-03-14) Completed `T054` in `server/src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts`:
+  - verifies the workflow smoke fixture resolves a ticket status from the seeded board-owned status set
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts -t "T054" --config vitest.config.ts`
+- (2026-03-14) Completed `F039` as a plan close-out because the existing migration DB integration suite already covers both required cases:
+  - `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` already contains the multi-board clone/remap happy path (`T003`) and the unresolved no-board-context guard (`T011`)
+  - `T055`/`T056` therefore map to existing coverage rather than requiring a new migration suite
+- (2026-03-14) Completed `T055`/`T056` by revalidating the existing migration integration suite:
+  - reran the targeted happy-path and guard cases in `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`
+  - confirmed the suite already proves both clone/remap correctness and explicit unresolved-reference surfacing
+- (2026-03-14) Completed `F040` as a plan close-out because the existing UI/component coverage already exercises the required board-local status management and board-change reselection behavior:
+  - `server/src/components/settings/general/BoardsSettings.copyStatuses.test.tsx` covers board create/edit lifecycle rules and board-local status editing
+  - `packages/tickets/src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx` covers explicit status reselection after a board change
+- (2026-03-14) Completed `F041` as a plan close-out because the existing migration, billing, and workflow suites already prove remapped saved configuration still resolves under board-owned statuses:
+  - `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` covers billing and workflow remap persistence (`T008`/`T009`/`T010`/`T011`)
+  - `shared/workflow/runtime/actions/__tests__/ticketWorkflowBoardStatusRuntime.test.ts` and `packages/billing/tests/*.boardScoped*` cover runtime/use-site validation after remap
+- (2026-03-14) Completed `F042` as a plan close-out because the existing API and client portal suites already cover the board-scoped lookup and validation regressions:
+  - `server/src/test/unit/api/ticketStatusesRoute.boardScope.test.ts` and `server/src/test/unit/api/statusService.ticketBoardScope.test.ts` cover API board scope
+  - `packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts` covers client portal create/update validation
+- (2026-03-14) Completed `F043` as a no-op scope close-out because this branch does not currently contain a ticket bulk-update surface:
+  - `packages/tickets/src/components/TicketingDashboard.tsx` only exposes bulk delete for tickets
+  - `server/src/test/e2e/api/tickets.e2e.test.ts` still treats `/api/v1/tickets/bulk-update` as optional and accepts `404`/`405`, which confirms there is no shipped bulk ticket status edit path to harden in this branch
+- (2026-03-14) Completed `F044` by scoping the remaining auxiliary ticket creation helper to board-owned ticket statuses:
+  - `packages/assets/src/components/CreateTicketFromAssetButton.tsx` now loads ticket statuses only for the active board, clears stale `status_id` values as soon as the board changes, and disables the status picker when no board is in scope.
+  - Project-linked ticket creation did not need new changes because `packages/projects/src/components/TaskTicketLinks.tsx` already routes through the board-scoped `QuickAddTicket` flow.
+- (2026-03-14) Completed `T033` in `packages/assets/src/components/CreateTicketFromAssetButton.boardScopedStatuses.test.tsx`:
+  - verifies the asset ticket dialog loads statuses with `getTicketStatuses(boardId)` instead of a tenant-global lookup
+  - verifies changing boards swaps the available status options and submit persists only the destination board's status id
+  - reran with `cd packages/assets && npx vitest run src/components/CreateTicketFromAssetButton.boardScopedStatuses.test.tsx --config vitest.config.ts`
+- (2026-03-14) Completed `T032` as a no-op scope close-out because there is no ticket bulk-update flow in this branch:
+  - `packages/tickets/src/components/TicketingDashboard.tsx` exposes only bulk delete
+  - `server/src/test/e2e/api/tickets.e2e.test.ts` still treats `/api/v1/tickets/bulk-update` as optional and accepts `404`/`405`
+- (2026-03-14) Completed `T057`/`T058` via equivalent UI/component coverage already present in the branch:
+  - `server/src/components/settings/general/BoardsSettings.copyStatuses.test.tsx` verifies board create with copied statuses, inline statuses, and board-local status editing
+  - `packages/tickets/src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx` verifies explicit status reselection after a board change
+- (2026-03-14) Completed `T059` via the existing workflow remap and runtime regression suites:
+  - `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` proves migrated saved workflow status references are remapped onto board-owned status ids
+  - `shared/workflow/runtime/actions/__tests__/ticketWorkflowBoardStatusRuntime.test.ts` and `server/src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts` cover execution against board-owned ticket statuses after remap
+- (2026-03-14) Completed `T060` via the existing billing remap and renewal routing regression suites:
+  - `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` proves tenant and contract renewal defaults remap to board-owned ticket status ids
+  - `packages/billing/tests/RenewalAutomationSettings.boardScopedStatuses.test.tsx`, `packages/billing/tests/billingSettingsActions.boardScopedRenewalStatus.test.ts`, `shared/billingClients/__tests__/clientContracts.boardScopedRenewalStatus.test.ts`, and `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts` together prove renewal ticket routing keeps using the intended board-owned board/status pair
+- (2026-03-14) Completed `T061`/`T062` via the existing API/service and client portal regression suites:
+  - `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts` proves valid board-owned create/update pairs succeed and cross-board pairs fail without persisting
+  - `server/src/test/unit/api/ticketStatusesRoute.boardScope.test.ts`, `server/src/test/unit/api/statusService.ticketBoardScope.test.ts`, and `packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts` cover the board-scoped lookup and client portal validation paths
+- (2026-03-14) Completed `T041`/`T042` in `packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts`:
+  - verifies client portal ticket creation resolves the default status from the default board before creating the ticket
+  - verifies client portal status updates reject a status from another board and skip the write/event path
+  - reran with `cd server && npx vitest run --coverage.enabled false ../packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts --config vitest.config.ts`
+- (2026-03-14) Completed `F035` for SLA pause config and reporting compatibility with board-owned ticket statuses:
+  - `server/migrations/20260314134000_remap_sla_pause_ticket_status_configs.cjs` clones legacy `status_sla_pause_config` rows onto each board-owned clone of the matching ticket status name, then deletes the legacy global ticket-status configs.
+  - `packages/sla/src/actions/slaPauseConfigActions.ts` now filters pause configs to board-owned ticket statuses, rejects writes against legacy/global ticket status ids, and exposes board-qualified ticket status options for the SLA settings UI.
+  - `packages/sla/src/components/SlaPauseSettings.tsx` now loads board-owned ticket statuses directly from SLA actions and renders duplicate status names with board context so pause rules stay unambiguous across boards.
+  - SLA integration fixtures now seed board-owned ticket statuses in `server/src/test/integration/sla/slaPauseService.integration.test.ts` and `server/src/test/integration/sla/slaReportingService.integration.test.ts`, and the reporting suite now includes a same-name cross-board closed/open regression case.
+- (2026-03-14) Completed `T047`/`T048` with focused SLA coverage:
+  - `server/src/test/unit/components/SlaPauseSettings.boardOwnedStatuses.test.tsx` verifies the SLA pause settings UI shows duplicate ticket status names with board labels and saves only the changed board-owned `status_id`.
+  - `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` now verifies the SLA pause config migration remaps a legacy ticket status rule onto every board-owned clone.
+  - `server/src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts` asserts the SLA pause config remap migration exists and keeps the legacy/global cleanup logic in place.
+  - `server/src/test/integration/sla/slaPauseConfigActions.integration.test.ts` adds regression assertions for rejecting legacy/global ticket status ids and hiding legacy configs from the returned board-owned config list, and the same suite also covers same-name cross-board pause evaluation via distinct board-owned `status_id` values.
+  - DB-backed SLA integration suites are still locally blocked in this shell because the server test database port (`127.0.0.1:5438` / `::1:5438`) is not reachable and fails with `EPERM`, so only the unit/component coverage above was rerun here.
+- (2026-03-14) Completed `F028` by making workflow ticket status authoring board-aware:
+  - `shared/workflow/runtime/actions/businessOperations/tickets.ts` now declares `ticket-status` picker dependencies on `board_id` for `tickets.create` and `ticket_id` for `tickets.update_fields`.
+  - `ee/server/src/components/workflow-designer/WorkflowActionInputFixedPicker.tsx` now resolves `ticket-status` options from the selected fixed board or from the fixed ticket's board instead of using tenant-global ticket statuses.
+  - `ee/server/vitest.config.ts` now aliases `@alga-psa/tickets/*` so the EE workflow-designer tests can import ticket actions directly.
+- (2026-03-14) Completed `T036` with workflow authoring coverage:
+  - `shared/workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts` verifies the real action schemas now export board/ticket dependencies for ticket status pickers.
+  - `ee/server/src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx` verifies fixed ticket-status pickers load only the selected board's statuses and can derive board context from a fixed `ticket_id`.
+  - reran with `cd shared && npx vitest run workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts --config vitest.config.ts`
+  - reran with `cd ee/server && npx vitest run --coverage.enabled false src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx --config vitest.config.ts`
+- (2026-03-14) Completed `F029`/`F030` in workflow runtime:
+  - `shared/workflow/runtime/actions/businessOperations/tickets.ts` now treats `tickets.create.status_id` as optional so workflow runs can rely on board-local default status resolution.
+  - `tickets.create` and `tickets.update_fields` now reject `status_id` values that do not belong to the effective board before calling shared ticket writes.
+  - `tickets.close` now picks the terminal closed status from the ticket's own board, and closure timestamps use `ctx.nowIso()` for deterministic runtime behavior.
+- (2026-03-14) Completed `T037`/`T038`/`T039`/`T040` in `shared/workflow/runtime/actions/__tests__/ticketWorkflowBoardStatusRuntime.test.ts`:
+  - proves workflow create rejects a status from another board
+  - proves workflow update rejects a cross-board status patch for the current ticket board
+  - proves workflow close resolves a closed status from the ticket's board even when another board has a lower-order closed status
+  - proves workflow create returns the selected board's default status when `status_id` is omitted
+  - reran with `cd shared && npx vitest run workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts workflow/runtime/actions/__tests__/ticketWorkflowBoardStatusRuntime.test.ts --config vitest.config.ts`
+- (2026-03-14) Completed `F032` by making the ticket statuses API board-aware:
+  - `server/src/app/api/v1/tickets/statuses/route.ts` now filters to `status_type='ticket'`, excludes legacy board-less ticket statuses, and honors optional `board_id` scope.
+- (2026-03-14) Completed `F033` by removing tenant-global ticket behavior from generic status surfaces:
+  - `server/src/lib/api/schemas/status.ts` now requires `board_id` when querying `type=ticket`.
+  - `server/src/lib/api/services/StatusService.ts` now filters generic ticket status lists by `board_id`, excludes board-less ticket rows, and hides legacy board-less ticket statuses in `getById`.
+  - `packages/reference-data/src/actions/status-actions/statusActions.ts` now filters `getStatuses('ticket')` to board-owned rows and rejects generic ticket status create/update/delete in favor of board settings.
+- (2026-03-14) Completed `T043`/`T044` with in-process API contract coverage:
+  - `server/src/test/unit/api/ticketStatusesRoute.boardScope.test.ts` verifies `/api/v1/tickets/statuses` honors `board_id` and excludes legacy board-less ticket statuses.
+  - `server/src/test/unit/api/statusService.ticketBoardScope.test.ts` verifies generic ticket status queries require board scope, list only board-owned ticket statuses, and hide legacy global ticket statuses by id.
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/unit/api/ticketStatusesRoute.boardScope.test.ts src/test/unit/api/statusService.ticketBoardScope.test.ts --config vitest.config.ts`
+- (2026-03-14) Completed `F034` by aligning ticket list/search/reporting read surfaces with board-owned ticket statuses:
+  - `server/src/lib/api/services/TicketService.ts` search results now project `status_name` and `status_is_closed` from the joined board-owned status row.
+  - `TicketService.getTicketStats(...)` now groups status counts by `status_id` instead of only by `status_name`, preventing cross-board count collapse when boards reuse the same label.
+- (2026-03-14) Completed `T045`/`T046` in `server/src/test/integration/ticketStatusReadSurfaces.integration.test.ts`:
+  - proves ticket list and search joins return the correct status metadata for tickets on different boards that reuse the same status name
+  - proves grouped ticket stats keep counts separated by board-owned `status_id` instead of collapsing same-name statuses across boards
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketStatusReadSurfaces.integration.test.ts --config vitest.config.ts`
+
+## Commands / Runbooks
+
+- (2026-03-14) Audit ticket status references:
+  - `rg -n "status_id|statusIds|ticket-status|renewal_ticket_status_id|inbound.*status_id" server shared ee packages -g '!**/node_modules/**'`
+- (2026-03-14) Inspect current board + ticket status settings surfaces:
+  - `sed -n '1,260p' server/src/components/settings/general/BoardsSettings.tsx`
+  - `sed -n '1,260p' server/src/components/settings/general/StatusSettings.tsx`
+- (2026-03-14) Inspect current status actions and APIs:
+  - `sed -n '1,260p' packages/reference-data/src/actions/status-actions/statusActions.ts`
+  - `sed -n '1,220p' server/src/app/api/v1/tickets/statuses/route.ts`
+  - `sed -n '1,240p' server/src/app/api/v1/statuses/route.ts`
+- (2026-03-14) Inspect ticket default resolution:
+  - `sed -n '1165,1260p' shared/models/ticketModel.ts`
+- (2026-03-14) Validate plan artifacts:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-14-board-specific-ticket-statuses`
+- (2026-03-14) Validate board-change status reselection:
+  - `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx --config vitest.config.ts`
+  - `cd shared && npx vitest run models/__tests__/ticketModel.boardStatusValidation.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate board status copy-on-create:
+  - `cd server && npx vitest run --coverage.enabled false src/components/settings/general/BoardsSettings.copyStatuses.test.tsx --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardCopyTicketStatuses.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate inline board status authoring:
+  - `cd server && npx vitest run --coverage.enabled false src/components/settings/general/BoardsSettings.copyStatuses.test.tsx --config vitest.config.ts`
+- (2026-03-14) Run the board-status migration schema tests directly from the server package:
+  - `cd server && npx vitest run src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts`
+- (2026-03-14) Repo-level `npm run test:local -- ...` is currently not usable in this shell because the installed `dotenv` CLI rejects `-e ../.env.localtest` as non-boolean.
+- (2026-03-14) Attempt the DB-backed clone/remap migration suite:
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`
+- (2026-03-14) Attempt the board-context status-reference remap suite:
+  - `cd server && npx vitest run src/test/integration/boardContextTicketStatusReferenceRemap.integration.test.ts --coverage=false`
+  - Run it after the clone/remap suite or against a schema that already includes `20260314113000_clone_global_ticket_statuses_to_boards.cjs`.
+- (2026-03-14) Run the shared board-status helper tests:
+  - `cd shared && npx vitest run models/__tests__/ticketModel.boardStatusValidation.test.ts --config vitest.config.ts`
+- (2026-03-14) Run the DB-backed ticket create board/status validation test:
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`
+- (2026-03-14) Validate board-local ticket status management and the retired central status surface:
+  - `cd packages/tickets && npx vitest run src/actions/board-actions/boardTicketStatusActions.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/components/settings/general/BoardsSettings.copyStatuses.test.tsx src/components/settings/general/StatusSettings.ticketStatusesRetired.test.tsx --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardCopyTicketStatuses.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate board-dependent ticket status pickers:
+  - `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx src/components/__tests__/QuickAddTicket.boardScopedStatuses.test.tsx --config vitest.config.ts`
+- (2026-03-14) Validate inbound ticket defaults board-scoped statuses:
+  - `cd server && npx vitest run --coverage.enabled false src/test/unit/components/InboundTicketDefaultsForm.test.tsx --config vitest.config.ts`
+- (2026-03-14) Validate client portal board-scoped status flows:
+  - `cd server && npx vitest run --coverage.enabled false ../packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate onboarding board-owned ticket statuses:
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/onboardingBoardTicketStatuses.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate seed/fixture board-owned ticket status setup:
+  - `cd server && npx vitest run --coverage.enabled false src/test/e2e/utils/utilities.test.ts -t "T053" --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts -t "T054" --config vitest.config.ts`
+- (2026-03-14) Revalidate the existing migration integration coverage used to close `F039`:
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts -t "T003" --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts -t "T011" --config vitest.config.ts`
+- (2026-03-14) Revalidate the existing UI/API coverage used to close `F040`/`F042`:
+  - `cd server && npx vitest run --coverage.enabled false src/components/settings/general/BoardsSettings.copyStatuses.test.tsx --config vitest.config.ts`
+  - `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/unit/api/ticketStatusesRoute.boardScope.test.ts src/test/unit/api/statusService.ticketBoardScope.test.ts ../packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts --config vitest.config.ts`
+- (2026-03-14) Revalidate the existing workflow/billing coverage used to close `F041`:
+  - `cd shared && npx vitest run workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts workflow/runtime/actions/__tests__/ticketWorkflowBoardStatusRuntime.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false ../packages/billing/tests/billingSettingsActions.boardScopedRenewalStatus.test.ts ../packages/billing/tests/RenewalAutomationSettings.boardScopedStatuses.test.tsx ../packages/billing/tests/ContractDetail.assignmentRenewalSettings.wiring.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Verify whether a ticket bulk-update surface exists before implementing `F043`:
+  - `rg -n "bulk[-_ ]update|bulk update|bulkUpdate|bulk_update|/bulk-update|Bulk" packages/tickets server shared ee -g '!**/node_modules/**'`
+  - `sed -n '1,260p' packages/tickets/src/components/TicketingDashboard.tsx`
+  - `sed -n '850,905p' server/src/test/e2e/api/tickets.e2e.test.ts`
+- (2026-03-14) Validate asset-linked ticket creation board-scoped statuses:
+  - `cd packages/assets && npx vitest run src/components/CreateTicketFromAssetButton.boardScopedStatuses.test.tsx --config vitest.config.ts`
+  - `cd packages/assets && npx vitest run --config vitest.config.ts`
+  - The package-wide assets run still trips the pre-existing contract failure in `src/components/QuickAddAsset.quick-add-client.contract.test.ts` (`open={isQuickAddClientOpen}` no longer matches the current quick-add client API shape); the new board-scoped asset ticket test itself passes.
+- (2026-03-14) Revalidate the remaining test checklist close-outs:
+  - `cd server && npx vitest run --coverage.enabled false src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate SLA board-owned pause config and migration coverage:
+  - `cd server && npx vitest run --coverage.enabled false src/test/unit/components/SlaPauseSettings.boardOwnedStatuses.test.tsx src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/sla/slaPauseService.integration.test.ts src/test/integration/sla/slaReportingService.integration.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/sla/slaPauseConfigActions.integration.test.ts --config vitest.config.ts`
+  - In this shell, the broader SLA DB suites are not currently reliable: `slaPauseService.integration.test.ts` / `slaReportingService.integration.test.ts` tripped shared DB bootstrap issues (`duplicate key value violates unique constraint "pg_database_datname_index"` and `ROLLBACK - Connection terminated unexpectedly`), and `slaPauseConfigActions.integration.test.ts` still expects a `server` database plus older `priorities.priority_order` fixture columns.
+- (2026-03-14) Validate workflow ticket status authoring + runtime:
+  - `cd shared && npx vitest run workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts workflow/runtime/actions/__tests__/ticketWorkflowBoardStatusRuntime.test.ts --config vitest.config.ts`
+  - `cd ee/server && npx vitest run --coverage.enabled false src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx --config vitest.config.ts`
+- (2026-03-14) Validate API ticket status board scope in-process:
+  - `cd server && npx vitest run --coverage.enabled false src/test/unit/api/ticketStatusesRoute.boardScope.test.ts src/test/unit/api/statusService.ticketBoardScope.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate ticket read/reporting status joins:
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketStatusReadSurfaces.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate subscriber and survey remap regressions:
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/internal-notifications/eventSubscribers.integration.test.ts -t "creates status change notifications for ticket updated events" --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) API e2e harness note:
+  - `cd server && npx vitest run --coverage.enabled false src/test/e2e/api/ticket-statuses.e2e.test.ts src/test/e2e/api/statuses.e2e.test.ts --config vitest.config.ts`
+  - In this shell the e2e setup can seed the DB, but the HTTP assertions fail with `fetch failed` because no server is listening on `TEST_API_BASE_URL` / `http://127.0.0.1:3000`.
+- (2026-03-14) Validate billing renewal defaults board-scoped statuses:
+  - `cd shared && npx vitest run billingClients/__tests__/clientContracts.boardScopedRenewalStatus.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false ../packages/billing/tests/billingSettingsActions.boardScopedRenewalStatus.test.ts ../packages/billing/tests/RenewalAutomationSettings.boardScopedStatuses.test.tsx ../packages/billing/tests/ContractDetail.assignmentRenewalSettings.wiring.test.ts --config vitest.config.ts`
+- (2026-03-14) Legacy Quick Add regression note:
+  - `cd packages/tickets && npx vitest run src/components/__tests__/ticket-inline-add-prefill.test.tsx --config vitest.config.ts`
+  - Current failures in that broader suite are mock-assumption mismatches around board-first status loading and unrelated quick-add helper behavior; they are not yet curated as plan items in this pass.
+
+## Links / References
+
+- Design summary: `ee/docs/plans/2026-03-14-board-specific-ticket-statuses-design.md`
+- Plan folder: `ee/docs/plans/2026-03-14-board-specific-ticket-statuses`
+- Board settings UI: `server/src/components/settings/general/BoardsSettings.tsx`
+- Central ticket status settings UI: `server/src/components/settings/general/StatusSettings.tsx`
+- Ticket status actions: `packages/reference-data/src/actions/status-actions/statusActions.ts`
+- Ticket status model: `packages/tickets/src/models/status.ts`
+- Board actions: `packages/tickets/src/actions/board-actions/boardActions.ts`
+- Board create copy-source test: `server/src/components/settings/general/BoardsSettings.copyStatuses.test.tsx`
+- Board status copy integration: `server/src/test/integration/boardCopyTicketStatuses.integration.test.ts`
+- Board create inline statuses wiring: `server/src/components/settings/general/BoardsSettings.tsx`
+- Board-local ticket status action layer: `packages/tickets/src/actions/board-actions/boardTicketStatusActions.ts`
+- Board-local ticket status action tests: `packages/tickets/src/actions/board-actions/boardTicketStatusActions.test.ts`
+- Retired central ticket status surface: `server/src/components/settings/general/StatusSettings.tsx`
+- Retired central ticket status test: `server/src/components/settings/general/StatusSettings.ticketStatusesRetired.test.tsx`
+- Board-scoped status action lookup: `packages/reference-data/src/actions/status-actions/statusActions.ts`
+- Quick Add board-scoped status test: `packages/tickets/src/components/__tests__/QuickAddTicket.boardScopedStatuses.test.tsx`
+- Ticket edit board-scoped status test: `packages/tickets/src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx`
+- Ticket model default status helper: `shared/models/ticketModel.ts`
+- Ticket create board/status validation integration: `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`
+- Ticket API service: `server/src/lib/api/services/TicketService.ts`
+- Ticket edit UI: `packages/tickets/src/components/ticket/TicketInfo.tsx`
+- Ticket edit reselection test: `packages/tickets/src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx`
+- Ticket statuses API route: `server/src/app/api/v1/tickets/statuses/route.ts`
+- Workflow ticket actions: `shared/workflow/runtime/actions/businessOperations/tickets.ts`
+- Billing renewal defaults: `packages/billing/src/actions/billingSettingsActions.ts`
+- Inbound ticket defaults form: `packages/integrations/src/components/email/forms/InboundTicketDefaultsForm.tsx`
+- Inbound ticket defaults actions: `packages/integrations/src/actions/email-actions/inboundTicketDefaultsActions.ts`
+- Inbound ticket field options actions: `packages/integrations/src/actions/email-actions/ticketFieldOptionsActions.ts`
+- Inbound ticket defaults test: `server/src/test/unit/components/InboundTicketDefaultsForm.test.tsx`
+- Client portal ticket actions: `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts`
+- Client portal board status validation test: `packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts`
+- Client portal ticket list UI: `packages/client-portal/src/components/tickets/TicketList.tsx`
+- Client portal ticket details page: `server/src/app/client-portal/tickets/[ticketId]/page.tsx`
+- Onboarding ticketing actions: `packages/onboarding/src/actions/onboarding-actions/onboardingActions.ts`
+- Onboarding ticketing step UI: `packages/onboarding/src/components/steps/TicketingConfigStep.tsx`
+- Seeded board-owned ticket statuses: `server/seeds/dev/07_statuses.cjs`
+- Seeded ticket rows with board-owned statuses: `server/seeds/dev/14_tickets.cjs`
+- Seeded asset-linked ticket rows: `server/seeds/dev/66_asset_tickets.cjs`
+- Seeded inbound defaults with board-owned statuses: `server/seeds/dev/80_default_inbound_ticket_defaults.cjs`
+- Shared e2e setup: `server/src/test/e2e/utils/e2eTestSetup.ts`
+- Simplified e2e fixture setup: `server/src/test/e2e/fixtures/test-setup.ts`
+- Workflow harness ticket fixture helper: `ee/test-data/workflow-harness/_lib/biz-fixture.cjs`
+- Seed/fixture board-owned status test: `server/src/test/e2e/utils/utilities.test.ts`
+- Workflow smoke board-owned status test: `server/src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts`
+- Reference-data ticket import actions: `packages/reference-data/src/actions/referenceDataActions.ts`
+- Onboarding board-owned status integration test: `server/src/test/integration/onboardingBoardTicketStatuses.integration.test.ts`
+- Workflow ticket action definitions: `shared/workflow/runtime/actions/businessOperations/tickets.ts`
+- Workflow ticket picker test: `shared/workflow/runtime/actions/__tests__/ticketWorkflowBoardStatusRuntime.test.ts`
+- Workflow designer fixed picker: `ee/server/src/components/workflow-designer/WorkflowActionInputFixedPicker.tsx`
+- Ticket statuses API route: `server/src/app/api/v1/tickets/statuses/route.ts`
+- Generic status API service: `server/src/lib/api/services/StatusService.ts`
+- Generic status query schema: `server/src/lib/api/schemas/status.ts`
+- Ticket statuses route unit test: `server/src/test/unit/api/ticketStatusesRoute.boardScope.test.ts`
+- Generic status API unit test: `server/src/test/unit/api/statusService.ticketBoardScope.test.ts`
+- Ticket read/reporting regression test: `server/src/test/integration/ticketStatusReadSurfaces.integration.test.ts`
+- Billing renewal automation settings UI: `packages/billing/src/components/settings/billing/RenewalAutomationSettings.tsx`
+- Billing renewal settings action validation: `packages/billing/src/actions/billingSettingsActions.ts`
+- Contract renewal assignment guard: `shared/billingClients/clientContracts.ts`
+- Contract renewal assignment edit UI: `packages/billing/src/components/billing-dashboard/contracts/ContractDetail.tsx`
+- Billing renewal UI test: `packages/billing/tests/RenewalAutomationSettings.boardScopedStatuses.test.tsx`
+- Billing renewal action test: `packages/billing/tests/billingSettingsActions.boardScopedRenewalStatus.test.ts`
+- Shared contract renewal validation test: `shared/billingClients/__tests__/clientContracts.boardScopedRenewalStatus.test.ts`
+- Asset-linked ticket creation helper: `packages/assets/src/components/CreateTicketFromAssetButton.tsx`
+- Asset-linked ticket board scope regression test: `packages/assets/src/components/CreateTicketFromAssetButton.boardScopedStatuses.test.tsx`
+- New status schema migration: `server/migrations/20260314100000_add_board_ownership_to_ticket_statuses.cjs`
+- Migration schema coverage: `server/src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts`
+- Clone/remap migration: `server/migrations/20260314113000_clone_global_ticket_statuses_to_boards.cjs`
+- Clone/remap DB integration coverage: `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`
+- Board-context status-reference remap migration: `server/migrations/20260314120000_remap_board_context_ticket_status_references.cjs`
+- Board-context status-reference integration coverage: `server/src/test/integration/boardContextTicketStatusReferenceRemap.integration.test.ts`
+- Workflow status-reference remap migration: `server/migrations/20260314130000_remap_workflow_ticket_status_references.cjs`
+- Workflow unresolved-reference guard migration: `server/migrations/20260314133000_surface_unresolved_ticket_status_references.cjs`
+- Survey trigger status-reference remap migration: `server/migrations/20260314135000_remap_survey_trigger_ticket_status_references.cjs`
+
+## Open Questions
+
+- (2026-03-14) Which persisted ticket-status references do not currently carry enough board context for a guaranteed automatic remap?

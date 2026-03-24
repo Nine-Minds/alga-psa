@@ -6,6 +6,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -30,20 +31,6 @@ function statusIcon(status: Microsoft365DiagnosticsStep['status']) {
   }
 }
 
-function statusBadge(status: Microsoft365DiagnosticsStep['status']) {
-  switch (status) {
-    case 'pass':
-      return <Badge variant="success">Pass</Badge>;
-    case 'warn':
-      return <Badge variant="warning">Warn</Badge>;
-    case 'fail':
-      return <Badge variant="error">Fail</Badge>;
-    case 'skip':
-    default:
-      return <Badge variant="secondary">Skip</Badge>;
-  }
-}
-
 export function Microsoft365DiagnosticsDialog({
   isOpen,
   onClose,
@@ -53,6 +40,7 @@ export function Microsoft365DiagnosticsDialog({
   onClose: () => void;
   provider: EmailProvider | null;
 }) {
+  const { t } = useTranslation('msp/admin');
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [report, setReport] = React.useState<Microsoft365DiagnosticsReport | null>(null);
@@ -73,13 +61,13 @@ export function Microsoft365DiagnosticsDialog({
         const result = await runMicrosoft365Diagnostics(provider.id);
         if (cancelled) return;
         if (!result.success || !result.report) {
-          setError(result.error || 'Diagnostics failed');
+          setError(result.error || t('microsoft365.states.diagnosticsFailed', { defaultValue: 'Diagnostics failed' }));
           return;
         }
         setReport(result.report);
       } catch (e: any) {
         if (cancelled) return;
-        setError(e?.message || 'Diagnostics failed');
+        setError(e?.message || t('microsoft365.states.diagnosticsFailed', { defaultValue: 'Diagnostics failed' }));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -103,8 +91,24 @@ export function Microsoft365DiagnosticsDialog({
   };
 
   const title = provider?.providerType === 'microsoft'
-    ? 'Microsoft 365 Diagnostics'
-    : 'Diagnostics';
+    ? t('microsoft365.title.microsoft', { defaultValue: 'Microsoft 365 Diagnostics' })
+    : t('microsoft365.title.default', { defaultValue: 'Diagnostics' });
+
+  const renderStatusBadge = (status: Microsoft365DiagnosticsStep['status']) => {
+    switch (status) {
+      case 'pass':
+        return <Badge variant="success">{t('microsoft365.statuses.pass', { defaultValue: 'Pass' })}</Badge>;
+      case 'warn':
+        return <Badge variant="warning">{t('microsoft365.statuses.warn', { defaultValue: 'Warn' })}</Badge>;
+      case 'fail':
+        return <Badge variant="error">{t('microsoft365.statuses.fail', { defaultValue: 'Fail' })}</Badge>;
+      case 'skip':
+      default:
+        return <Badge variant="secondary">{t('microsoft365.statuses.skip', { defaultValue: 'Skip' })}</Badge>;
+    }
+  };
+
+  const overallStatusKey = `microsoft365.statuses.${report?.summary.overallStatus ?? 'skip'}`;
 
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title={title} id="microsoft-365-diagnostics">
@@ -112,27 +116,37 @@ export function Microsoft365DiagnosticsDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Runs a live Graph check (including create+delete subscription) to diagnose mailbox, folder, and permission issues.
+            {t('microsoft365.description', {
+              defaultValue: 'Runs a live Graph check (including create+delete subscription) to diagnose mailbox, folder, and permission issues.'
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <Alert>
           <AlertDescription>
-            <span className="font-medium">Note:</span> Diagnostics will create a temporary Microsoft Graph subscription and then delete it.
-            If deletion fails, you may need to manually remove the subscription in Microsoft 365.
+            <span className="font-medium">{t('microsoft365.note.label', { defaultValue: 'Note:' })}</span>{' '}
+            {t('microsoft365.note.body', {
+              defaultValue: 'Diagnostics will create a temporary Microsoft Graph subscription and then delete it. If deletion fails, you may need to manually remove the subscription in Microsoft 365.'
+            })}
           </AlertDescription>
         </Alert>
 
         {provider && (
           <div className="text-sm text-muted-foreground mb-4">
-            Provider: <span className="font-medium text-foreground">{provider.providerName}</span> · Mailbox:{' '}
+            {t('microsoft365.labels.provider', { defaultValue: 'Provider:' })}{' '}
+            <span className="font-medium text-foreground">{provider.providerName}</span> ·{' '}
+            {t('microsoft365.labels.mailbox', { defaultValue: 'Mailbox:' })}{' '}
             <span className="font-medium text-foreground">{provider.mailbox}</span>
           </div>
         )}
 
         {loading && (
           <div className="flex items-center justify-center p-6">
-            <LoadingIndicator layout="stacked" text="Running diagnostics..." spinnerProps={{ size: 'md' }} />
+            <LoadingIndicator
+              layout="stacked"
+              text={t('microsoft365.states.running', { defaultValue: 'Running diagnostics...' })}
+              spinnerProps={{ size: 'md' }}
+            />
           </div>
         )}
 
@@ -146,21 +160,36 @@ export function Microsoft365DiagnosticsDialog({
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm">
-                Overall: <span className="font-medium">{report.summary.overallStatus.toUpperCase()}</span>{' '}
+                {t('microsoft365.labels.overall', { defaultValue: 'Overall:' })}{' '}
+                <span className="font-medium">
+                  {t(overallStatusKey, {
+                    defaultValue: report.summary.overallStatus.toUpperCase(),
+                  })}
+                </span>{' '}
                 {report.summary.targetResource && (
-                  <span className="text-muted-foreground">· Resource: {report.summary.targetResource}</span>
+                  <span className="text-muted-foreground">
+                    ·{' '}
+                    {t('microsoft365.labels.resource', {
+                      defaultValue: 'Resource: {{resource}}',
+                      resource: report.summary.targetResource,
+                    })}
+                  </span>
                 )}
               </div>
               <Button id="m365-diag-copy-bundle" variant="outline" size="sm" onClick={copySupportBundle}>
                 <Copy className="h-4 w-4 mr-2" />
-                {copied ? 'Copied' : 'Copy Support Bundle'}
+                {copied
+                  ? t('microsoft365.actions.copied', { defaultValue: 'Copied' })
+                  : t('microsoft365.actions.copySupportBundle', { defaultValue: 'Copy Support Bundle' })}
               </Button>
             </div>
 
             {report.recommendations?.length > 0 && (
               <Alert>
                 <AlertDescription>
-                  <div className="font-medium mb-1">Recommendations</div>
+                  <div className="font-medium mb-1">
+                    {t('microsoft365.labels.recommendations', { defaultValue: 'Recommendations' })}
+                  </div>
                   <ul className="list-disc pl-5 space-y-1">
                     {report.recommendations.map((r) => (
                       <li key={r}>{r}</li>
@@ -179,7 +208,7 @@ export function Microsoft365DiagnosticsDialog({
                       <span className="font-medium truncate">{step.title}</span>
                       <span className="text-xs text-muted-foreground">({step.durationMs}ms)</span>
                     </div>
-                    <div className="shrink-0">{statusBadge(step.status)}</div>
+                    <div className="shrink-0">{renderStatusBadge(step.status)}</div>
                   </summary>
                   <div className="mt-2 text-sm space-y-2">
                     {step.http && (
@@ -192,7 +221,9 @@ export function Microsoft365DiagnosticsDialog({
                     )}
                     {step.error && (
                       <div className="text-destructive bg-destructive/10 border border-destructive/30 rounded p-2">
-                        <div className="font-medium">Error</div>
+                        <div className="font-medium">
+                          {t('microsoft365.labels.error', { defaultValue: 'Error' })}
+                        </div>
                         <div>{step.error.message}</div>
                         <div className="text-xs mt-1">
                           {step.error.status ? `status: ${step.error.status}` : ''}
@@ -214,7 +245,9 @@ export function Microsoft365DiagnosticsDialog({
         )}
 
         <DialogFooter>
-          <Button id="m365-diag-close" variant="outline" onClick={onClose}>Close</Button>
+          <Button id="m365-diag-close" variant="outline" onClick={onClose}>
+            {t('common.actions.close', { defaultValue: 'Close' })}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

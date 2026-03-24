@@ -1,0 +1,152 @@
+{
+  "page": {
+    "title": "Technicusplanning",
+    "filteredWorkItems": "Gefilterde werkitems weergeven"
+  },
+  "workItems": {
+    "title": "Werkitems",
+    "searchPlaceholder": "Werkitems zoeken...",
+    "filterPlaceholder": "Filter op status...",
+    "status": {
+      "unscheduled": "Niet gepland",
+      "scheduled": "Gepland"
+    },
+    "pagination": {
+      "previous": "Vorige",
+      "next": "Volgende",
+      "pageInfo": "Pagina {{current}} van {{total}}",
+      "showing": "Toont {{count}} van {{total}} items"
+    }
+  },
+  "schedule": {
+    "showInactive": "Inactieve gebruikers tonen",
+    "prev": "< Vorige",
+    "next": "Volgende >",
+    "today": "Vandaag",
+    "viewDay": "Dag",
+    "viewWeek": "Week",
+    "prevAria": "Vorige {{mode}}",
+    "nextAria": "Volgende {{mode}}",
+    "viewWeekTooltip": "Week bekijken",
+    "viewWeekAria": "Week bekijken voor {{name}}",
+    "viewWeekAriaInactive": "Week bekijken voor {{name}} (inactief)",
+    "compareAll": "Alles vergelijken",
+    "clearAll": "Alles wissen",
+    "compare": "Vergelijken",
+    "stopComparing": "Vergelijking stoppen",
+    "compareAria": "{{name}} vergelijken",
+    "compareAriaInactive": "{{name}} (inactief) vergelijken"
+  },
+  "details": {
+    "appointmentRequest": {
+      "title": "Details van afspraakverzoek"
+    },
+    "sections": {
+      "approvalInformation": "Goedkeuringsinformatie"
+    },
+    "fields": {
+      "service": "Service",
+      "status": "Status",
+      "client": "Klant",
+      "contact": "Contact",
+      "company": "Bedrijf",
+      "requester": "Aanvrager",
+      "email": "E-mail",
+      "phone": "Telefoon",
+      "requestedDate": "Gevraagde datum",
+      "requestedTime": "Gevraagde tijd",
+      "duration": "Duur",
+      "preferredTechnician": "Voorkeursmonteur",
+      "description": "Beschrijving",
+      "declineReason": "Afwijsreden",
+      "approvedBy": "Goedgekeurd door:",
+      "approvedAt": "Goedgekeurd op:"
+    },
+    "messages": {
+      "notAvailable": "N/B",
+      "unsupportedWorkItemType": "Niet-ondersteund werkitemtype"
+    },
+    "toasts": {
+      "noUsersAvailable": "Er zijn geen gebruikers beschikbaar in het systeem",
+      "noUserSession": "Geen gebruikerssessie gevonden",
+      "failedToLoadTicketData": "Ticketgegevens konden niet worden geladen",
+      "failedToLoadProjectTaskData": "Projecttaakgegevens konden niet worden geladen",
+      "failedToLoadAdHocEntryData": "Gegevens van ad-hoc item konden niet worden geladen",
+      "failedToLoadInteractionData": "Interactiegegevens konden niet worden geladen",
+      "failedToLoadAppointmentRequestData": "Gegevens van afspraakverzoek konden niet worden geladen"
+    },
+    "errors": {
+      "loadUsers": "Gebruikers konden niet worden geladen. Vernieuw de pagina en probeer het opnieuw.",
+      "loadingContent": "Fout bij het laden van inhoud",
+      "tryAgain": "Probeer het opnieuw"
+    },
+    "units": {
+      "minutes": "minuten"
+    }
+  },
+  "dashboard": {
+    "filters": {
+      "allOpen": "Alle open",
+      "allClosed": "Alle gesloten"
+    },
+    "messages": {
+      "accessDenied": "Toegang geweigerd: u hebt geen toestemming om het technicusdispatch-dashboard te bekijken.",
+      "unknownError": "Er is een onbekende fout opgetreden.",
+      "permissionDeniedSchedule": "U hebt geen toestemming om voor deze technicus te plannen.",
+      "couldNotLoadWorkItemDetails": "Werkitemdetails konden niet worden geladen."
+    },
+    "errors": {
+      "searchWorkItems": "Werkitems konden niet worden gezocht",
+      "loadStatusFilterOptions": "Statusfilteropties konden niet worden geladen.",
+      "refreshScheduleEntries": "Schema-items konden niet worden vernieuwd",
+      "refreshData": "Gegevens konden niet worden vernieuwd",
+      "loadPermissions": "Machtigingen konden niet worden geladen.",
+      "fetchScheduleEntries": "Schema-items konden niet worden opgehaald",
+      "fetchData": "Gegevens konden niet worden opgehaald",
+      "updateSchedule": "Schema kon niet worden bijgewerkt",
+      "createScheduleEntry": "Schema-item kon niet worden aangemaakt",
+      "deleteScheduleEntry": "Schema-item kon niet worden verwijderd",
+      "updateTask": "Taak kon niet worden bijgewerkt",
+      "updateScheduleEntry": "Schema-item kon niet worden bijgewerkt",
+      "saveScheduleEntry": "Schema-item kon niet worden opgeslagen",
+      "openWorkItemDetails": "Werkitemdetails konden niet worden geopend."
+    },
+    "success": {
+      "taskUpdated": "Taak succesvol bijgewerkt",
+      "scheduleEntryUpdated": "Schema-item succesvol bijgewerkt",
+      "scheduleEntryCreated": "Schema-item succesvol aangemaakt"
+    }
+  },
+  "events": {
+    "actions": {
+      "viewDetails": "Details bekijken",
+      "delete": "Verwijderen",
+      "deleteScheduleEntry": "Schema-item verwijderen"
+    },
+    "fallbacks": {
+      "busy": "Bezet",
+      "unknown": "Onbekend",
+      "unassigned": "Niet toegewezen",
+      "unknownAgent": "Onbekende medewerker",
+      "untitled": "Zonder titel",
+      "thisScheduleEntry": "dit schema-item"
+    },
+    "tooltip": {
+      "privateEvent": "Bezet\nStart: {{start}}\nEinde: {{end}}",
+      "eventDetails": "{{title}}\nToegewezen aan: {{assigned}}\nStart: {{start}}\nEinde: {{end}}"
+    },
+    "errors": {
+      "validateDeletion": "Verwijdering kon niet worden gecontroleerd. Probeer het opnieuw."
+    }
+  },
+  "badges": {
+    "needsDispatch": "Dispatch nodig",
+    "needsDispatchFor": "Dispatch nodig voor: {{agents}}"
+  },
+  "time": {
+    "suffixes": {
+      "am": " AM",
+      "pm": " PM"
+    }
+  }
+}

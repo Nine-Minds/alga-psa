@@ -610,6 +610,8 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
     const hasPoRequired = await knex.schema.hasColumn('client_contracts', 'po_required');
     const hasPoNumber = await knex.schema.hasColumn('client_contracts', 'po_number');
     const hasPoAmount = await knex.schema.hasColumn('client_contracts', 'po_amount');
+    const hasRenewalTicketBoard = await knex.schema.hasColumn('client_contracts', 'renewal_ticket_board_id');
+    const hasRenewalTicketStatus = await knex.schema.hasColumn('client_contracts', 'renewal_ticket_status_id');
 
     const selection = [
       'cc.client_contract_id',
@@ -636,6 +638,12 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
     }
     if (hasPoAmount) {
       selection.push('cc.po_amount');
+    }
+    if (hasRenewalTicketBoard) {
+      selection.push('cc.renewal_ticket_board_id');
+    }
+    if (hasRenewalTicketStatus) {
+      selection.push('cc.renewal_ticket_status_id');
     }
 
     const rows = await knex('client_contracts as cc')
@@ -701,6 +709,8 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
         notice_period_days: noticePeriodDays,
         renewal_term_months: renewalTermMonths,
         use_tenant_renewal_defaults: useTenantRenewalDefaults,
+        renewal_ticket_board_id: hasRenewalTicketBoard ? row.renewal_ticket_board_id ?? null : null,
+        renewal_ticket_status_id: hasRenewalTicketStatus ? row.renewal_ticket_status_id ?? null : null,
         effective_renewal_mode: useTenantRenewalDefaults
           ? tenantDefaultRenewalMode
           : renewalMode ?? tenantDefaultRenewalMode,

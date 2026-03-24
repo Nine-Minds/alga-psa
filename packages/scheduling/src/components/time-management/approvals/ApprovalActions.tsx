@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ITimeSheet } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -12,6 +13,7 @@ interface ApprovalActionsProps {
 }
 
 export function ApprovalActions({ timeSheet, onApprove, onReject, onRequestChanges }: ApprovalActionsProps) {
+  const { t } = useTranslation('msp/time-entry');
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [isChangesDialogOpen, setIsChangesDialogOpen] = useState(false);
@@ -35,41 +37,57 @@ export function ApprovalActions({ timeSheet, onApprove, onReject, onRequestChang
 
   return (
     <div className="mb-4 flex space-x-2">
-      <Button id="approve-timesheet-btn" onClick={handleApprove}>Approve</Button>
-      <Button id="reject-timesheet-btn" onClick={() => setIsRejectDialogOpen(true)}>Reject</Button>
-      <Button id="request-changes-btn" onClick={() => setIsChangesDialogOpen(true)}>Request Changes</Button>
+      <Button id="approve-timesheet-btn" onClick={handleApprove}>
+        {t('common.actions.approve', { defaultValue: 'Approve' })}
+      </Button>
+      <Button id="reject-timesheet-btn" onClick={() => setIsRejectDialogOpen(true)}>
+        {t('common.actions.reject', { defaultValue: 'Reject' })}
+      </Button>
+      <Button id="request-changes-btn" onClick={() => setIsChangesDialogOpen(true)}>
+        {t('common.actions.requestChanges', { defaultValue: 'Request Changes' })}
+      </Button>
 
       <Dialog 
         isOpen={isRejectDialogOpen} 
         onClose={() => setIsRejectDialogOpen(false)} 
-        title="Reject Time Sheet"
+        title={t('approvalActions.dialogs.rejectTitle', { defaultValue: 'Reject Time Sheet' })}
       >
         <DialogContent>
           <TextArea
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="Enter reason for rejection"
-            label="Rejection Reason"
+            placeholder={t('approvalActions.placeholders.rejectionReason', {
+              defaultValue: 'Enter reason for rejection'
+            })}
+            label={t('approvalActions.labels.rejectionReason', { defaultValue: 'Rejection Reason' })}
           />
         </DialogContent>
         <DialogFooter>
-          <Button id="cancel-reject-btn" onClick={() => setIsRejectDialogOpen(false)}>Cancel</Button>
-          <Button id="confirm-reject-btn" onClick={handleReject}>Confirm Reject</Button>
+          <Button id="cancel-reject-btn" onClick={() => setIsRejectDialogOpen(false)}>
+            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button id="confirm-reject-btn" onClick={handleReject}>
+            {t('approvalActions.confirm.reject', { defaultValue: 'Confirm Reject' })}
+          </Button>
         </DialogFooter>
       </Dialog>
 
       <Dialog 
         isOpen={isChangesDialogOpen} 
         onClose={() => setIsChangesDialogOpen(false)} 
-        title="Request Changes"
+        title={t('approvalActions.dialogs.requestChangesTitle', { defaultValue: 'Request Changes' })}
       >
         <DialogContent>
             <></>
           {/* Implement a form or interface for specifying change requests */}
         </DialogContent>
         <DialogFooter>
-          <Button id="cancel-changes-btn" onClick={() => setIsChangesDialogOpen(false)}>Cancel</Button>
-          <Button id="confirm-changes-btn" onClick={handleRequestChanges}>Confirm Changes</Button>
+          <Button id="cancel-changes-btn" onClick={() => setIsChangesDialogOpen(false)}>
+            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button id="confirm-changes-btn" onClick={handleRequestChanges}>
+            {t('approvalActions.confirm.changes', { defaultValue: 'Confirm Changes' })}
+          </Button>
         </DialogFooter>
       </Dialog>
     </div>

@@ -1,0 +1,397 @@
+{
+  "common": {
+    "actions": {
+      "view": "Bekijken",
+      "back": "Terug",
+      "save": "Invoer opslaan",
+      "saveGeneric": "Opslaan",
+      "saving": "Bezig met opslaan...",
+      "cancel": "Annuleren",
+      "reset": "Opnieuw instellen",
+      "delete": "Verwijderen",
+      "change": "Wijzigen",
+      "select": "Selecteer",
+      "getStarted": "Aan de slag",
+      "addItem": "Item toevoegen",
+      "addEntry": "Invoer",
+      "addComment": "Commentaar toevoegen",
+      "adding": "Toevoegen...",
+      "approve": "Goedkeuren",
+      "reject": "Afwijzen",
+      "requestChanges": "Wijzigingen aanvragen",
+      "reverseApproval": "Goedkeuring terugdraaien",
+      "reopen": "Heropenen",
+      "reopenForEdits": "Opnieuw openen voor bewerkingen",
+      "submitTimeSheet": "Urenstaat indienen",
+      "showDetails": "Details tonen",
+      "hideDetails": "Details verbergen",
+      "copyToAnotherDay": "Kopieer naar een andere dag",
+      "viewDetails": "Bekijk details",
+      "manageTimePeriods": "Beheer tijdsperioden",
+      "selectWorkItem": "Selecteer Werkitem"
+    },
+    "states": {
+      "inProgress": "Bezig",
+      "submitted": "Ingediend",
+      "approved": "Goedgekeurd",
+      "changesRequested": "Wijzigingen aangevraagd",
+      "unknown": "Onbekend",
+      "current": "Huidig",
+      "active": "Actief",
+      "addressed": "Afgehandeld",
+      "changeRequested": "Wijziging aangevraagd",
+      "loading": "Laden..."
+    },
+    "fallbacks": {
+      "na": "n.v.t.",
+      "none": "Geen vermeldingen",
+      "notFound": "Niet gevonden",
+      "untitled": "Zonder titel",
+      "unassigned": "Niet toegewezen",
+      "noDueDate": "Geen vervaldatum",
+      "noServiceSelected": "Geen dienst geselecteerd",
+      "noNotes": "Geen aantekeningen",
+      "noUserFound": "Geen gebruiker gevonden"
+    },
+    "units": {
+      "hoursShort": "u",
+      "minutesShort": "m",
+      "hoursAbbrev": "u",
+      "dayOne": "dag",
+      "dayOther": "dagen",
+      "percentBillable": "{{value}}% factureerbaar"
+    },
+    "types": {
+      "all": "Alle soorten",
+      "ticket": "Ticket",
+      "tickets": "Tickets",
+      "projectTask": "Projecttaak",
+      "projectTasks": "Projecttaken",
+      "interaction": "Interactie",
+      "interactions": "Interacties",
+      "adHocEntry": "Ad-hocinvoer",
+      "adHocEntries": "Ad-hoc-invoer",
+      "billable": "Factureerbaar"
+    }
+  },
+  "timeTracking": {
+    "subjectUserLabel": "Gebruiker"
+  },
+  "timeEntryProvider": {
+    "errors": {
+      "initialize": "Kan de tijdinvoer niet initialiseren"
+    }
+  },
+  "timePeriodList": {
+    "title": "Selecteer een tijdsperiode",
+    "columns": {
+      "period": "Periode",
+      "status": "Status",
+      "hoursEntered": "Uren ingevoerd",
+      "daysLogged": "Dagen geregistreerd",
+      "lastEntry": "Laatste invoer",
+      "actions": "Acties"
+    },
+    "lastEntry": {
+      "none": "Geen vermeldingen"
+    }
+  },
+  "timeEntryForm": {
+    "labels": {
+      "service": "Dienst",
+      "date": "Datum",
+      "startTime": "Begintijd",
+      "endTime": "Eindtijd",
+      "duration": "Duur",
+      "billable": "Factureerbaar",
+      "notes": "Opmerkingen",
+      "deleteTimeEntry": "Tijdsinvoer verwijderen",
+      "unsavedChanges": "Niet-opgeslagen wijzigingen"
+    },
+    "placeholders": {
+      "selectService": "Selecteer een dienst",
+      "selectDate": "Datum selecteren",
+      "addNotes": "Voeg notities toe"
+    },
+    "validation": {
+      "startBeforeEnd": "De starttijd moet eerder zijn dan de eindtijd",
+      "endAfterStart": "De eindtijd moet later zijn dan de begintijd",
+      "durationMinimum": "De duur moet minimaal 1 minuut zijn",
+      "minimumDuration": "Minimale duur is 1 minuut",
+      "serviceRequired": "Voor tijdinvoer is service nodig",
+      "timePeriodRange": "Datum moet binnen de huidige periode vallen ({{periodRange}})",
+      "endAfterStartPicker": "De eindtijd moet na de starttijd liggen"
+    }
+  },
+  "workItemPicker": {
+    "actions": {
+      "createAdHocEntry": "Ad-hocinvoer maken"
+    },
+    "placeholders": {
+      "search": "Werkitems zoeken...",
+      "adHocTitle": "Voer de titel in voor ad-hocinvoer",
+      "startTime": "Begintijd",
+      "endTime": "Eindtijd"
+    },
+    "filters": {
+      "includeInactive": "Inclusief inactief",
+      "filters": "Filters",
+      "assignedTo": "Toegewezen aan",
+      "assignedToMe": "Aan mij toegewezen",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum"
+    },
+    "empty": {
+      "searching": "Zoeken...",
+      "noWorkItems": "Geen werkitems gevonden"
+    }
+  },
+  "workItemList": {
+    "meta": {
+      "assignedTo": "Toegewezen aan: {{value}}",
+      "dueDate": "Vervaldatum: {{value}}",
+      "contact": "Contactpersoon: {{value}}",
+      "scheduledEnd": "Gepland einde: {{value}}"
+    },
+    "assignment": {
+      "oneUser": "1 gebruiker toegewezen",
+      "multipleUsers": "{{count}} gebruikers toegewezen",
+      "additionalUsers": "{{name}}, +{{count}} gebruiker",
+      "additionalUsersOther": "{{name}}, +{{count}} gebruikers"
+    },
+    "bundledTicket": "Gebundeld ticket: registreer de tijd op het hoofdticket{{suffix}}.",
+    "pagination": {
+      "previous": "Vorige",
+      "next": "Volgende",
+      "pageInfo": "Pagina {{current}} van {{total}} ({{records}} totaal aantal records)"
+    },
+    "interactionType": "{{type}} • {{client}}"
+  },
+  "timeSheetHeader": {
+    "title": "Urenregistratie",
+    "titleFor": "Urenstaat voor {{name}}",
+    "editedBy": "Bewerkt door {{name}}",
+    "aria": {
+      "previousWeek": "Vorige week",
+      "nextWeek": "Volgende week"
+    },
+    "pagination": {
+      "pageInfo": "Pagina {{current}} van {{total}}"
+    },
+    "labels": {
+      "status": "Status:",
+      "showIntervals": "Intervallen tonen",
+      "grid": "Rooster",
+      "list": "Lijst"
+    }
+  },
+  "approval": {
+    "titleFor": "Goedkeuring urenstaat voor {{name}}",
+    "sections": {
+      "summary": "Samenvatting",
+      "breakdownByWorkItemType": "Uitsplitsing naar type werkitem",
+      "dailyBreakdown": "Dagelijkse uitsplitsing",
+      "detailedEntries": "Gedetailleerde tijdinvoer",
+      "comments": "Opmerkingen",
+      "timeEntryDetails": "Details van tijdinvoer"
+    },
+    "labels": {
+      "period": "Periode",
+      "submitted": "Ingediend",
+      "total": "Totaal",
+      "billable": "Factureerbaar",
+      "nonBillable": "Niet-factureerbaar",
+      "workItem": "Werkitem",
+      "duration": "Duur",
+      "notes": "Opmerkingen",
+      "entryChangeSuggestion": "Suggestie voor wijziging van invoer",
+      "approver": "Goedkeurder",
+      "employee": "Medewerker"
+    },
+    "table": {
+      "date": "Datum",
+      "workItem": "Werkitem",
+      "start": "Begin",
+      "end": "Einde",
+      "billable": "Factureerbaar",
+      "status": "Status"
+    },
+    "comments": {
+      "changesRequestedHint": "(Wijzigingen zijn aangevraagd - bekijk de opmerkingen)",
+      "responsePlaceholder": "Voeg uw reactie toe op de gevraagde wijzigingen...",
+      "placeholder": "Voeg een reactie toe...",
+      "respondToChanges": "Reageer op wijzigingen"
+    },
+    "changeSuggestionPlaceholder": "Vertel de medewerker precies wat hij op deze vermelding moet corrigeren"
+  },
+  "approvalActions": {
+    "dialogs": {
+      "rejectTitle": "Urenstaat afwijzen",
+      "requestChangesTitle": "Wijzigingen aanvragen"
+    },
+    "labels": {
+      "rejectionReason": "Reden van afwijzing"
+    },
+    "placeholders": {
+      "rejectionReason": "Voer de reden van afwijzing in"
+    },
+    "confirm": {
+      "reject": "Bevestig Afwijzen",
+      "changes": "Bevestig wijzigingen"
+    }
+  },
+  "comments": {
+    "placeholder": "Voeg een reactie toe...",
+    "responsePlaceholder": "Reageer op de gevraagde wijzigingen...",
+    "respondToChanges": "Reageer op wijzigingen"
+  },
+  "feedback": {
+    "approverFeedback": "Feedback van goedkeurder",
+    "viewHistory": "Feedbackgeschiedenis bekijken",
+    "approverOn": "{{name}} op {{value}}"
+  },
+  "managerDashboard": {
+    "access": {
+      "title": "Toegang tot teamleider vereist",
+      "description": "Om urenstaten voor uw teamleden goed te keuren, moet u een teamleider zijn.",
+      "goToTeamSettings": "Ga naar Teaminstellingen"
+    },
+    "title": "Goedkeuringen van urenstaten",
+    "actions": {
+      "hideApproved": "Goedgekeurde verbergen",
+      "showApproved": "Goedgekeurde tonen",
+      "bulkApproveSelected": "Selectie bulk goedkeuren",
+      "reverse": "Terugdraaien"
+    },
+    "columns": {
+      "select": "Selecteer",
+      "employee": "Medewerker",
+      "period": "Periode",
+      "status": "Status",
+      "actions": "Acties"
+    },
+    "reverseApproval": {
+      "reason": "Goedkeuring teruggedraaid door beheerder",
+      "error": "Kan goedkeuring niet ongedaan maken: {{error}}"
+    }
+  },
+  "workItemDrawer": {
+    "errors": {
+      "genericTitle": "Fout bij het laden van inhoud",
+      "genericDescription": "Probeer het opnieuw",
+      "failedInteraction": "Kan interactiedetails niet laden",
+      "interactionNotFound": "Interactie niet gevonden",
+      "noUserSession": "Geen gebruikerssessie gevonden",
+      "failedTicket": "Kan ticket niet laden",
+      "failedTask": "Kan taak niet laden",
+      "failedTaskPhase": "Kan de taakfase niet laden",
+      "failedTaskProjectMetadata": "Kan de metagegevens van het taakproject niet laden",
+      "failedAdHoc": "Gegevens van ad-hoc item konden niet worden geladen",
+      "unsupportedType": "Niet-ondersteund werkitemtype"
+    }
+  },
+  "timeSheetClient": {
+    "errors": {
+      "delegationDisabled": "Gedelegeerde tijdinvoer is uitgeschakeld",
+      "failedReopen": "Kan de urenstaat niet opnieuw openen"
+    },
+    "reopen": {
+      "success": "Urenstaat opnieuw geopend voor bewerkingen",
+      "reason": "Heropend voor bewerkingen",
+      "title": "Opnieuw openen voor bewerkingen?",
+      "message": "Hierdoor wordt de urenstaat teruggezet naar Wijzigingen aangevraagd, zodat de tijdsinvoer kan worden bewerkt."
+    }
+  },
+  "timeSheetList": {
+    "delete": {
+      "title": "Werkitem verwijderen",
+      "message": "Hierdoor worden alle tijdsinvoer voor dit werkitem definitief verwijderd. Deze actie kan niet ongedaan worden gemaakt."
+    },
+    "summary": {
+      "entryOne": "binnenkomst",
+      "entryOther": "inzendingen",
+      "total": "Totaal: {{value}}",
+      "billable": "Factureerbaar: {{value}}"
+    },
+    "empty": {
+      "title": "Nog geen tijdsinvoer",
+      "description": "Voeg een werkitem toe en begin met het bijhouden van uw tijd.",
+      "noEntries": "Geen vermeldingen"
+    },
+    "columns": {
+      "workItem": "Werkitem",
+      "timeEntry": "Tijdregistratie",
+      "duration": "Duur",
+      "billableDuration": "Factureerbare duur",
+      "actions": "Acties"
+    },
+    "dayGroup": {
+      "entryOne": "{{count}} invoer",
+      "entryOther": "{{count}} vermeldingen"
+    }
+  },
+  "selectedWorkItem": {
+    "adHocNoWorkItem": "Ad-hocinvoer (geen werkitem)"
+  },
+  "contractInfo": {
+    "noContract": "Er is geen contractregel gevonden voor deze service. De tijd wordt doorgestuurd naar het systeembeheerde standaardcontract.",
+    "contract": "Contract: {{name}}",
+    "defaultContract": "Systeembeheerd standaardcontract",
+    "multipleLines": "Meerdere contractregels beschikbaar - met standaardselectie"
+  },
+  "billableLegend": {
+    "title": "Factureerbare legende",
+    "description": "Kleurindicatoren voor factureerbare tijdratio's"
+  },
+  "intervalItem": {
+    "now": "Nu",
+    "autoClosed": "Automatisch gesloten",
+    "active": "Actief"
+  },
+  "intervals": {
+    "title": "Tickettijdsintervallen",
+    "hideShortIntervals": "Verberg intervallen van minder dan 1 minuut",
+    "totalTime": "Totale tijd: {{value}}",
+    "selectedOne": "{{count}} interval geselecteerd",
+    "selectedOther": "{{count}} intervallen geselecteerd",
+    "tooltips": {
+      "createTimeEntry": "Maak tijdinvoer op basis van geselecteerde intervallen",
+      "deleteSelected": "Geselecteerde intervallen verwijderen",
+      "mergeSelected": "Voeg geselecteerde intervallen samen"
+    },
+    "actions": {
+      "selectAll": "Selecteer Alles",
+      "deselectAll": "Deselecteer Alles",
+      "merge": "Samenvoegen"
+    },
+    "states": {
+      "loading": "Laadintervallen...",
+      "noIntervalsThisPeriod": "Er zijn geen intervallen gevonden voor deze periode",
+      "noIntervalsThisTicket": "Er zijn geen intervallen gevonden voor dit ticket",
+      "noIntervalsLongerThanMinute": "Geen intervallen langer dan 1 minuut gevonden"
+    },
+    "entryName": "Tickettijdinvoer",
+    "messages": {
+      "cannotFindTimeSheet": "Kan geen tijdsinvoer maken - kan de urenstaat niet vinden of maken",
+      "mergeFirst": "Voeg eerst de intervallen samen voordat u een tijdsinvoer maakt",
+      "sameTicketOnly": "Kan alleen tijdinvoer creëren op basis van intervallen van hetzelfde ticket",
+      "mergeSameTicketOnly": "Kan alleen intervallen van hetzelfde ticket samenvoegen",
+      "mergeSuccess": "Intervallen zijn succesvol samengevoegd",
+      "failedMerge": "Kan intervallen niet samenvoegen",
+      "noActivePeriod": "Geen actieve periode gevonden",
+      "failedFetchTimeSheet": "Kan urenstaat niet maken of ophalen",
+      "failedPrepareTimeEntry": "Het voorbereiden van de tijdinvoer is mislukt",
+      "savedSuccess": "Tijdinvoer succesvol opgeslagen",
+      "failedSave": "Kan tijdinvoer niet opslaan"
+    }
+  },
+  "addWorkItemDialog": {
+    "title": "Werkitem toevoegen",
+    "description": "Selecteer een werkitem dat u aan de urenstaat wilt toevoegen",
+    "close": "Sluit het dialoogvenster voor het toevoegen van werkitems",
+    "focus": "Focus op het dialoogvenster voor het toevoegen van werkitems"
+  },
+  "timeEntryReadOnly": {
+    "viewEntryDetails": "Bekijk de invoerdetails"
+  }
+}

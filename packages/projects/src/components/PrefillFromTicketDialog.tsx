@@ -7,7 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
-import { ITicketListFilters, ITicketListItem, ITicketCategory, IBoard } from '@alga-psa/types';
+import { ITicketListFilters, ITicketListItem, ITicketCategory, IBoard, IStatus } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
@@ -108,16 +108,17 @@ export default function PrefillFromTicketDialog({
           ] = await Promise.all([
             getTicketCategories().catch(() => []),
             getAllBoards().catch(() => []),
-            getTicketStatuses().catch(() => []),
+            getTicketStatuses().catch(() => [] as IStatus[]),
             getAllPriorities('ticket').catch(() => [])
           ]);
 
           setCategories(fetchedCategories || []);
           setBoards(fetchedBoards || []);
+          const fetchedStatuses: IStatus[] = statuses || [];
 
           setStatusOptions([
             { value: 'all', label: 'All Statuses' },
-            ...(statuses || []).map((status): SelectOption => ({
+            ...fetchedStatuses.map((status: IStatus): SelectOption => ({
               value: status.status_id!,
               label: status.name ?? ''
             }))

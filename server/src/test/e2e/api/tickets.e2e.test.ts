@@ -53,13 +53,13 @@ describe('Ticket API E2E Tests', () => {
 
     // Get existing statuses created by setupE2ETestEnvironment
     const newStatus = await db('statuses')
-      .where({ tenant: env.tenant, name: 'New', status_type: 'ticket' })
+      .where({ tenant: env.tenant, board_id: boardId, name: 'New', status_type: 'ticket' })
       .first();
     const inProgressStatus = await db('statuses')
-      .where({ tenant: env.tenant, name: 'In Progress', status_type: 'ticket' })
+      .where({ tenant: env.tenant, board_id: boardId, name: 'In Progress', status_type: 'ticket' })
       .first();
     const closedStatus = await db('statuses')
-      .where({ tenant: env.tenant, name: 'Closed', status_type: 'ticket' })
+      .where({ tenant: env.tenant, board_id: boardId, name: 'Closed', status_type: 'ticket' })
       .first();
 
     statusIds = {
