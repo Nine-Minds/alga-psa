@@ -721,6 +721,12 @@ const nextConfig = {
     config.externals.push('ffmpeg-static');
     config.externals.push('ffprobe-static');
 
+    // Externalize expo-server-sdk for server builds.
+    // The SDK uses require('../package.json') internally which breaks when bundled.
+    if (isServer) {
+      config.externals.push('expo-server-sdk');
+    }
+
     // Externalize sharp for server builds to avoid bundling native dependencies.
     // sharp (and its optional @img/* helpers) should be resolved at runtime by Node.
     if (isServer) {
