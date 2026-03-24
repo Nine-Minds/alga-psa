@@ -17,6 +17,7 @@ import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { getSchedulingTicketById } from '../../actions/ticketLookupActions';
 import { getSchedulingProjectTaskById } from '../../actions/projectTaskLookupActions';
 import { SchedulingProjectTaskDetails } from '../shared/SchedulingProjectTaskDetails';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface WorkItemDetailsDrawerProps {
     workItem: IExtendedWorkItem;
@@ -32,6 +33,8 @@ export function WorkItemDetailsDrawer({
     onScheduleUpdate
 }: WorkItemDetailsDrawerProps): React.JSX.Element {
     const tenant = useTenant();
+    const { t } = useTranslation('msp/dispatch');
+    const { formatDate: formatLocaleDate } = useFormatters();
     if (!tenant) {
         throw new Error('tenant is not defined');
     }
@@ -50,11 +53,11 @@ export function WorkItemDetailsDrawer({
                 console.log('Users loaded:', allUsers?.length ?? 0);
                 if (!allUsers || allUsers.length === 0) {
                     console.warn('No users returned from getAllUsersBasic');
-                    toast.error('No users available in the system');
+                    toast.error(t('details.toasts.noUsersAvailable', { defaultValue: 'No users available in the system' }));
                 }
                 setUsers(allUsers || []);
             } catch (error) {
-                handleError(error, 'Failed to load users. Please try refreshing the page.');
+                handleError(error, t('details.errors.loadUsers', { defaultValue: 'Failed to load users. Please try refreshing the page.' }));
                 setUsers([]);
             } finally {
                 console.log('Finished loading users, setting isUsersLoading to false');
@@ -62,7 +65,7 @@ export function WorkItemDetailsDrawer({
             }
         };
         loadUsers();
-    }, []);
+    }, [t]);
 
     // Debug effect to track state changes
     React.useEffect(() => {
@@ -78,7 +81,7 @@ export function WorkItemDetailsDrawer({
         try {
             const currentUser = await getCurrentUser();
             if (!currentUser) {
-                toast.error('No user session found');
+                toast.error(t('details.toasts.noUserSession', { defaultValue: 'No user session found' }));
                 return null;
             }
 
@@ -86,7 +89,7 @@ export function WorkItemDetailsDrawer({
                 case 'ticket': {
                     const ticketData = await getSchedulingTicketById(workItem.work_item_id);
                     if (!ticketData) {
-                        toast.error('Failed to load ticket data');
+                        toast.error(t('details.toasts.failedToLoadTicketData', { defaultValue: 'Failed to load ticket data' }));
                         return null;
                     }
                     return (
@@ -99,7 +102,7 @@ export function WorkItemDetailsDrawer({
                 case 'project_task': {
                     const taskData = await getSchedulingProjectTaskById(workItem.work_item_id);
                     if (!taskData) {
-                        toast.error('Failed to load project task data');
+                        toast.error(t('details.toasts.failedToLoadProjectTaskData', { defaultValue: 'Failed to load project task data' }));
                         return null;
                     }
                     return (
@@ -112,7 +115,7 @@ export function WorkItemDetailsDrawer({
                 case 'ad_hoc': {
                     const adHocData = await getWorkItemById(workItem.work_item_id, 'ad_hoc');
                     if (!adHocData) {
-                        toast.error('Failed to load ad-hoc entry data');
+                        toast.error(t('details.toasts.failedToLoadAdHocEntryData', { defaultValue: 'Failed to load ad-hoc entry data' }));
                         return null;
                     }
 
@@ -161,7 +164,7 @@ export function WorkItemDetailsDrawer({
                     console.log('Loading interaction with ID:', workItem.work_item_id);
                     const interactionData = await getSchedulingInteractionById(workItem.work_item_id);
                     if (!interactionData) {
-                        toast.error('Failed to load interaction data');
+                        toast.error(t('details.toasts.failedToLoadInteractionData', { defaultValue: 'Failed to load interaction data' }));
                         return null;
                     }
 
@@ -177,121 +180,186 @@ export function WorkItemDetailsDrawer({
                     const { getAppointmentRequestById } = await import('@alga-psa/scheduling/actions');
                     const result = await getAppointmentRequestById(workItem.work_item_id);
                     if (!result.success || !result.data) {
-                        toast.error('Failed to load appointment request data');
+                        toast.error(t('details.toasts.failedToLoadAppointmentRequestData', { defaultValue: 'Failed to load appointment request data' }));
                         return null;
                     }
 
                     const appointmentRequest = result.data as any;
 
                     // Format date and time safely
-                    const formatDate = (date: any) => {
-                        if (!date) return 'N/A';
-                        if (date instanceof Date) return date.toLocaleDateString();
-                        if (typeof date === 'string') return new Date(date).toLocaleDateString();
+                    const formatDateValue = (date: any) => {
+                        if (!date) {
+                            return t('details.messages.notAvailable', { defaultValue: 'N/A' });
+                        }
+                        if (date instanceof Date) {
+                            return formatLocaleDate(date);
+                        }
+                        if (typeof date === 'string') {
+                            return formatLocaleDate(new Date(date));
+                        }
                         return String(date);
                     };
 
                     const formatTime = (time: any) => {
-                        if (!time) return 'N/A';
+                        if (!time) {
+                            return t('details.messages.notAvailable', { defaultValue: 'N/A' });
+                        }
                         if (typeof time === 'string') return time;
                         return String(time);
                     };
 
                     const formatDateTime = (dateTime: any) => {
-                        if (!dateTime) return 'N/A';
-                        if (dateTime instanceof Date) return dateTime.toLocaleString();
-                        if (typeof dateTime === 'string') return new Date(dateTime).toLocaleString();
+                        if (!dateTime) {
+                            return t('details.messages.notAvailable', { defaultValue: 'N/A' });
+                        }
+                        if (dateTime instanceof Date) {
+                            return formatLocaleDate(dateTime, {
+                                year: 'numeric',
+                                month: 'numeric',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            });
+                        }
+                        if (typeof dateTime === 'string') {
+                            return formatLocaleDate(new Date(dateTime), {
+                                year: 'numeric',
+                                month: 'numeric',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            });
+                        }
                         return String(dateTime);
                     };
 
                     return (
                         <div className="h-full p-4">
-                            <h2 className="text-2xl font-bold mb-4">Appointment Request Details</h2>
+                            <h2 className="text-2xl font-bold mb-4">
+                                {t('details.appointmentRequest.title', { defaultValue: 'Appointment Request Details' })}
+                            </h2>
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
-                                        <div className="font-semibold text-gray-700">Service</div>
-                                        <div>{appointmentRequest.service_name || 'N/A'}</div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('details.fields.service', { defaultValue: 'Service' })}
+                                        </div>
+                                        <div>{appointmentRequest.service_name || t('details.messages.notAvailable', { defaultValue: 'N/A' })}</div>
                                     </div>
                                     <div>
-                                        <div className="font-semibold text-gray-700">Status</div>
-                                        <div className="capitalize">{String(appointmentRequest.status || 'N/A')}</div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('details.fields.status', { defaultValue: 'Status' })}
+                                        </div>
+                                        <div className="capitalize">{String(appointmentRequest.status || t('details.messages.notAvailable', { defaultValue: 'N/A' }))}</div>
                                     </div>
                                     {appointmentRequest.is_authenticated ? (
                                         <>
                                             <div>
-                                                <div className="font-semibold text-gray-700">Client</div>
-                                                <div>{appointmentRequest.client_company_name || 'N/A'}</div>
+                                                <div className="font-semibold text-gray-700">
+                                                    {t('details.fields.client', { defaultValue: 'Client' })}
+                                                </div>
+                                                <div>{appointmentRequest.client_company_name || t('details.messages.notAvailable', { defaultValue: 'N/A' })}</div>
                                             </div>
                                             <div>
-                                                <div className="font-semibold text-gray-700">Contact</div>
-                                                <div>{appointmentRequest.contact_name || 'N/A'}</div>
+                                                <div className="font-semibold text-gray-700">
+                                                    {t('details.fields.contact', { defaultValue: 'Contact' })}
+                                                </div>
+                                                <div>{appointmentRequest.contact_name || t('details.messages.notAvailable', { defaultValue: 'N/A' })}</div>
                                             </div>
                                         </>
                                     ) : (
                                         <>
                                             <div>
-                                                <div className="font-semibold text-gray-700">Company</div>
-                                                <div>{appointmentRequest.company_name || 'N/A'}</div>
+                                                <div className="font-semibold text-gray-700">
+                                                    {t('details.fields.company', { defaultValue: 'Company' })}
+                                                </div>
+                                                <div>{appointmentRequest.company_name || t('details.messages.notAvailable', { defaultValue: 'N/A' })}</div>
                                             </div>
                                             <div>
-                                                <div className="font-semibold text-gray-700">Requester</div>
-                                                <div>{appointmentRequest.requester_name || 'N/A'}</div>
+                                                <div className="font-semibold text-gray-700">
+                                                    {t('details.fields.requester', { defaultValue: 'Requester' })}
+                                                </div>
+                                                <div>{appointmentRequest.requester_name || t('details.messages.notAvailable', { defaultValue: 'N/A' })}</div>
                                             </div>
                                         </>
                                     )}
                                     <div>
-                                        <div className="font-semibold text-gray-700">Email</div>
-                                        <div>{appointmentRequest.contact_email || appointmentRequest.requester_email || 'N/A'}</div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('details.fields.email', { defaultValue: 'Email' })}
+                                        </div>
+                                        <div>{appointmentRequest.contact_email || appointmentRequest.requester_email || t('details.messages.notAvailable', { defaultValue: 'N/A' })}</div>
                                     </div>
                                     {appointmentRequest.requester_phone && (
                                         <div>
-                                            <div className="font-semibold text-gray-700">Phone</div>
+                                            <div className="font-semibold text-gray-700">
+                                                {t('details.fields.phone', { defaultValue: 'Phone' })}
+                                            </div>
                                             <div>{String(appointmentRequest.requester_phone)}</div>
                                         </div>
                                     )}
                                     <div>
-                                        <div className="font-semibold text-gray-700">Requested Date</div>
-                                        <div>{formatDate(appointmentRequest.requested_date)}</div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('details.fields.requestedDate', { defaultValue: 'Requested Date' })}
+                                        </div>
+                                        <div>{formatDateValue(appointmentRequest.requested_date)}</div>
                                     </div>
                                     <div>
-                                        <div className="font-semibold text-gray-700">Requested Time</div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('details.fields.requestedTime', { defaultValue: 'Requested Time' })}
+                                        </div>
                                         <div>{formatTime(appointmentRequest.requested_time)}</div>
                                     </div>
                                     <div>
-                                        <div className="font-semibold text-gray-700">Duration</div>
-                                        <div>{String(appointmentRequest.requested_duration)} minutes</div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('details.fields.duration', { defaultValue: 'Duration' })}
+                                        </div>
+                                        <div>
+                                            {String(appointmentRequest.requested_duration)}{' '}
+                                            {t('details.units.minutes', { defaultValue: 'minutes' })}
+                                        </div>
                                     </div>
                                     {appointmentRequest.preferred_technician_first_name && (
                                         <div>
-                                            <div className="font-semibold text-gray-700">Preferred Technician</div>
+                                            <div className="font-semibold text-gray-700">
+                                                {t('details.fields.preferredTechnician', { defaultValue: 'Preferred Technician' })}
+                                            </div>
                                             <div>{appointmentRequest.preferred_technician_first_name} {appointmentRequest.preferred_technician_last_name}</div>
                                         </div>
                                     )}
                                 </div>
                                 {appointmentRequest.description && (
                                     <div>
-                                        <div className="font-semibold text-gray-700 mb-1">Description</div>
+                                        <div className="font-semibold text-gray-700 mb-1">
+                                            {t('details.fields.description', { defaultValue: 'Description' })}
+                                        </div>
                                         <div className="text-sm bg-gray-50 p-3 rounded border">{String(appointmentRequest.description)}</div>
                                     </div>
                                 )}
                                 {appointmentRequest.declined_reason && (
                                     <div>
-                                        <div className="font-semibold text-gray-700 mb-1">Decline Reason</div>
+                                        <div className="font-semibold text-gray-700 mb-1">
+                                            {t('details.fields.declineReason', { defaultValue: 'Decline Reason' })}
+                                        </div>
                                         <div className="text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800 text-red-900 dark:text-red-300">{String(appointmentRequest.declined_reason)}</div>
                                     </div>
                                 )}
                                 {appointmentRequest.approved_by_user_id && (
                                     <div className="border-t pt-4">
-                                        <div className="font-semibold text-gray-700 mb-2">Approval Information</div>
+                                        <div className="font-semibold text-gray-700 mb-2">
+                                            {t('details.sections.approvalInformation', { defaultValue: 'Approval Information' })}
+                                        </div>
                                         <div className="text-sm space-y-1">
                                             <div>
-                                                <span className="text-gray-600">Approved by:</span>{' '}
+                                                <span className="text-gray-600">
+                                                    {t('details.fields.approvedBy', { defaultValue: 'Approved by:' })}
+                                                </span>{' '}
                                                 {appointmentRequest.approver_first_name} {appointmentRequest.approver_last_name}
                                             </div>
                                             {appointmentRequest.approved_at && (
                                                 <div>
-                                                    <span className="text-gray-600">Approved at:</span>{' '}
+                                                    <span className="text-gray-600">
+                                                        {t('details.fields.approvedAt', { defaultValue: 'Approved at:' })}
+                                                    </span>{' '}
                                                     {formatDateTime(appointmentRequest.approved_at)}
                                                 </div>
                                             )}
@@ -306,7 +374,7 @@ export function WorkItemDetailsDrawer({
                 default:
                     return (
                         <div className="h-full">
-                            <div>Unsupported work item type</div>
+                            <div>{t('details.messages.unsupportedWorkItemType', { defaultValue: 'Unsupported work item type' })}</div>
                         </div>
                     );
             }
@@ -315,13 +383,17 @@ export function WorkItemDetailsDrawer({
             return (
                 <div className="h-full">
                     <div className="flex flex-col items-center justify-center h-full text-red-500">
-                        <div className="text-lg mb-2">Error loading content</div>
-                        <div className="text-sm">Please try again</div>
+                        <div className="text-lg mb-2">
+                            {t('details.errors.loadingContent', { defaultValue: 'Error loading content' })}
+                        </div>
+                        <div className="text-sm">
+                            {t('details.errors.tryAgain', { defaultValue: 'Please try again' })}
+                        </div>
                     </div>
                 </div>
             );
         }
-    }, [workItem, tenant, onClose, onTaskUpdate, onScheduleUpdate, isUsersLoading, users]);
+    }, [workItem, tenant, onClose, onTaskUpdate, onScheduleUpdate, isUsersLoading, users, t, formatLocaleDate]);
 
     React.useEffect(() => {
         const init = async () => {

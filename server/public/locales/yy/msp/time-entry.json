@@ -1,0 +1,397 @@
+{
+  "common": {
+    "actions": {
+      "view": "55555",
+      "back": "55555",
+      "save": "55555",
+      "saveGeneric": "55555",
+      "saving": "55555",
+      "cancel": "55555",
+      "reset": "55555",
+      "delete": "55555",
+      "change": "55555",
+      "select": "55555",
+      "getStarted": "55555",
+      "addItem": "55555",
+      "addEntry": "55555",
+      "addComment": "55555",
+      "adding": "55555",
+      "approve": "55555",
+      "reject": "55555",
+      "requestChanges": "55555",
+      "reverseApproval": "55555",
+      "reopen": "55555",
+      "reopenForEdits": "55555",
+      "submitTimeSheet": "55555",
+      "showDetails": "55555",
+      "hideDetails": "55555",
+      "copyToAnotherDay": "55555",
+      "viewDetails": "55555",
+      "manageTimePeriods": "55555",
+      "selectWorkItem": "55555"
+    },
+    "states": {
+      "inProgress": "55555",
+      "submitted": "55555",
+      "approved": "55555",
+      "changesRequested": "55555",
+      "unknown": "55555",
+      "current": "55555",
+      "active": "55555",
+      "addressed": "55555",
+      "changeRequested": "55555",
+      "loading": "55555"
+    },
+    "fallbacks": {
+      "na": "55555",
+      "none": "55555",
+      "notFound": "55555",
+      "untitled": "55555",
+      "unassigned": "55555",
+      "noDueDate": "55555",
+      "noServiceSelected": "55555",
+      "noNotes": "55555",
+      "noUserFound": "55555"
+    },
+    "units": {
+      "hoursShort": "55555",
+      "minutesShort": "55555",
+      "hoursAbbrev": "55555",
+      "dayOne": "55555",
+      "dayOther": "55555",
+      "percentBillable": "55555 {{value}} 55555"
+    },
+    "types": {
+      "all": "55555",
+      "ticket": "55555",
+      "tickets": "55555",
+      "projectTask": "55555",
+      "projectTasks": "55555",
+      "interaction": "55555",
+      "interactions": "55555",
+      "adHocEntry": "55555",
+      "adHocEntries": "55555",
+      "billable": "55555"
+    }
+  },
+  "timeTracking": {
+    "subjectUserLabel": "55555"
+  },
+  "timeEntryProvider": {
+    "errors": {
+      "initialize": "55555"
+    }
+  },
+  "timePeriodList": {
+    "title": "55555",
+    "columns": {
+      "period": "55555",
+      "status": "55555",
+      "hoursEntered": "55555",
+      "daysLogged": "55555",
+      "lastEntry": "55555",
+      "actions": "55555"
+    },
+    "lastEntry": {
+      "none": "55555"
+    }
+  },
+  "timeEntryForm": {
+    "labels": {
+      "service": "55555",
+      "date": "55555",
+      "startTime": "55555",
+      "endTime": "55555",
+      "duration": "55555",
+      "billable": "55555",
+      "notes": "55555",
+      "deleteTimeEntry": "55555",
+      "unsavedChanges": "55555"
+    },
+    "placeholders": {
+      "selectService": "55555",
+      "selectDate": "55555",
+      "addNotes": "55555"
+    },
+    "validation": {
+      "startBeforeEnd": "55555",
+      "endAfterStart": "55555",
+      "durationMinimum": "55555",
+      "minimumDuration": "55555",
+      "serviceRequired": "55555",
+      "timePeriodRange": "55555 {{periodRange}} 55555",
+      "endAfterStartPicker": "55555"
+    }
+  },
+  "workItemPicker": {
+    "actions": {
+      "createAdHocEntry": "55555"
+    },
+    "placeholders": {
+      "search": "55555",
+      "adHocTitle": "55555",
+      "startTime": "55555",
+      "endTime": "55555"
+    },
+    "filters": {
+      "includeInactive": "55555",
+      "filters": "55555",
+      "assignedTo": "55555",
+      "assignedToMe": "55555",
+      "startDate": "55555",
+      "endDate": "55555"
+    },
+    "empty": {
+      "searching": "55555",
+      "noWorkItems": "55555"
+    }
+  },
+  "workItemList": {
+    "meta": {
+      "assignedTo": "55555 {{value}} 55555",
+      "dueDate": "55555 {{value}} 55555",
+      "contact": "55555 {{value}} 55555",
+      "scheduledEnd": "55555 {{value}} 55555"
+    },
+    "assignment": {
+      "oneUser": "55555",
+      "multipleUsers": "55555 {{count}} 55555",
+      "additionalUsers": "55555 {{name}} {{count}} 55555",
+      "additionalUsersOther": "55555 {{name}} {{count}} 55555"
+    },
+    "bundledTicket": "55555 {{suffix}} 55555",
+    "pagination": {
+      "previous": "55555",
+      "next": "55555",
+      "pageInfo": "55555 {{current}} {{total}} {{records}} 55555"
+    },
+    "interactionType": "55555 {{type}} {{client}} 55555"
+  },
+  "timeSheetHeader": {
+    "title": "55555",
+    "titleFor": "55555 {{name}} 55555",
+    "editedBy": "55555 {{name}} 55555",
+    "aria": {
+      "previousWeek": "55555",
+      "nextWeek": "55555"
+    },
+    "pagination": {
+      "pageInfo": "55555 {{current}} {{total}} 55555"
+    },
+    "labels": {
+      "status": "55555",
+      "showIntervals": "55555",
+      "grid": "55555",
+      "list": "55555"
+    }
+  },
+  "approval": {
+    "titleFor": "55555 {{name}} 55555",
+    "sections": {
+      "summary": "55555",
+      "breakdownByWorkItemType": "55555",
+      "dailyBreakdown": "55555",
+      "detailedEntries": "55555",
+      "comments": "55555",
+      "timeEntryDetails": "55555"
+    },
+    "labels": {
+      "period": "55555",
+      "submitted": "55555",
+      "total": "55555",
+      "billable": "55555",
+      "nonBillable": "55555",
+      "workItem": "55555",
+      "duration": "55555",
+      "notes": "55555",
+      "entryChangeSuggestion": "55555",
+      "approver": "55555",
+      "employee": "55555"
+    },
+    "table": {
+      "date": "55555",
+      "workItem": "55555",
+      "start": "55555",
+      "end": "55555",
+      "billable": "55555",
+      "status": "55555"
+    },
+    "comments": {
+      "changesRequestedHint": "55555",
+      "responsePlaceholder": "55555",
+      "placeholder": "55555",
+      "respondToChanges": "55555"
+    },
+    "changeSuggestionPlaceholder": "55555"
+  },
+  "approvalActions": {
+    "dialogs": {
+      "rejectTitle": "55555",
+      "requestChangesTitle": "55555"
+    },
+    "labels": {
+      "rejectionReason": "55555"
+    },
+    "placeholders": {
+      "rejectionReason": "55555"
+    },
+    "confirm": {
+      "reject": "55555",
+      "changes": "55555"
+    }
+  },
+  "comments": {
+    "placeholder": "55555",
+    "responsePlaceholder": "55555",
+    "respondToChanges": "55555"
+  },
+  "feedback": {
+    "approverFeedback": "55555",
+    "viewHistory": "55555",
+    "approverOn": "55555 {{name}} {{value}} 55555"
+  },
+  "managerDashboard": {
+    "access": {
+      "title": "55555",
+      "description": "55555",
+      "goToTeamSettings": "55555"
+    },
+    "title": "55555",
+    "actions": {
+      "hideApproved": "55555",
+      "showApproved": "55555",
+      "bulkApproveSelected": "55555",
+      "reverse": "55555"
+    },
+    "columns": {
+      "select": "55555",
+      "employee": "55555",
+      "period": "55555",
+      "status": "55555",
+      "actions": "55555"
+    },
+    "reverseApproval": {
+      "reason": "55555",
+      "error": "55555 {{error}} 55555"
+    }
+  },
+  "workItemDrawer": {
+    "errors": {
+      "genericTitle": "55555",
+      "genericDescription": "55555",
+      "failedInteraction": "55555",
+      "interactionNotFound": "55555",
+      "noUserSession": "55555",
+      "failedTicket": "55555",
+      "failedTask": "55555",
+      "failedTaskPhase": "55555",
+      "failedTaskProjectMetadata": "55555",
+      "failedAdHoc": "55555",
+      "unsupportedType": "55555"
+    }
+  },
+  "timeSheetClient": {
+    "errors": {
+      "delegationDisabled": "55555",
+      "failedReopen": "55555"
+    },
+    "reopen": {
+      "success": "55555",
+      "reason": "55555",
+      "title": "55555",
+      "message": "55555"
+    }
+  },
+  "timeSheetList": {
+    "delete": {
+      "title": "55555",
+      "message": "55555"
+    },
+    "summary": {
+      "entryOne": "55555",
+      "entryOther": "55555",
+      "total": "55555 {{value}} 55555",
+      "billable": "55555 {{value}} 55555"
+    },
+    "empty": {
+      "title": "55555",
+      "description": "55555",
+      "noEntries": "55555"
+    },
+    "columns": {
+      "workItem": "55555",
+      "timeEntry": "55555",
+      "duration": "55555",
+      "billableDuration": "55555",
+      "actions": "55555"
+    },
+    "dayGroup": {
+      "entryOne": "55555 {{count}} 55555",
+      "entryOther": "55555 {{count}} 55555"
+    }
+  },
+  "selectedWorkItem": {
+    "adHocNoWorkItem": "55555"
+  },
+  "contractInfo": {
+    "noContract": "55555",
+    "contract": "55555 {{name}} 55555",
+    "defaultContract": "55555",
+    "multipleLines": "55555"
+  },
+  "billableLegend": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "intervalItem": {
+    "now": "55555",
+    "autoClosed": "55555",
+    "active": "55555"
+  },
+  "intervals": {
+    "title": "55555",
+    "hideShortIntervals": "55555",
+    "totalTime": "55555 {{value}} 55555",
+    "selectedOne": "55555 {{count}} 55555",
+    "selectedOther": "55555 {{count}} 55555",
+    "tooltips": {
+      "createTimeEntry": "55555",
+      "deleteSelected": "55555",
+      "mergeSelected": "55555"
+    },
+    "actions": {
+      "selectAll": "55555",
+      "deselectAll": "55555",
+      "merge": "55555"
+    },
+    "states": {
+      "loading": "55555",
+      "noIntervalsThisPeriod": "55555",
+      "noIntervalsThisTicket": "55555",
+      "noIntervalsLongerThanMinute": "55555"
+    },
+    "entryName": "55555",
+    "messages": {
+      "cannotFindTimeSheet": "55555",
+      "mergeFirst": "55555",
+      "sameTicketOnly": "55555",
+      "mergeSameTicketOnly": "55555",
+      "mergeSuccess": "55555",
+      "failedMerge": "55555",
+      "noActivePeriod": "55555",
+      "failedFetchTimeSheet": "55555",
+      "failedPrepareTimeEntry": "55555",
+      "savedSuccess": "55555",
+      "failedSave": "55555"
+    }
+  },
+  "addWorkItemDialog": {
+    "title": "55555",
+    "description": "55555",
+    "close": "55555",
+    "focus": "55555"
+  },
+  "timeEntryReadOnly": {
+    "viewEntryDetails": "55555"
+  }
+}

@@ -2,7 +2,7 @@
 
 - Slug: `2026-03-19-msp-i18n-batch-2b1-core`
 - Date: `2026-03-19`
-- Status: Draft
+- Status: Complete
 
 ## Summary
 

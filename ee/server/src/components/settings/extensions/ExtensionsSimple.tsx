@@ -12,6 +12,7 @@ import { Extension } from '../../../lib/extensions/types';
 import ExtensionDetailsModal from './ExtensionDetailsModal';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Button } from '@alga-psa/ui/components/Button';
 
 // Define local interface to match UI expectations
 interface ExtensionUI {
@@ -122,13 +123,13 @@ export default function Extensions() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Extensions</h2>
+        <h2 className="text-xl font-semibold text-foreground">Extensions</h2>
       </div>
       
       {loading && (
         <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Loading extensions...</span>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+          <span className="ml-3 text-muted-foreground">Loading extensions...</span>
         </div>
       )}
       
@@ -142,64 +143,64 @@ export default function Extensions() {
       )}
       
       {!loading && !error && extensions.length === 0 && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No extensions installed</h3>
-          <p className="text-gray-600 mb-4">
+        <div className="bg-card border border-border rounded-lg p-8 text-center">
+          <h3 className="text-lg font-medium text-foreground mb-2">No extensions installed</h3>
+          <p className="text-muted-foreground mb-4">
             Install extensions to add new features and functionality to Alga PSA.
           </p>
         </div>
       )}
       
       {!loading && !error && extensions.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card rounded-lg border border-border overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Extension
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Version
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Author
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {extensions.map((extension): React.ReactElement => (
-                <tr key={extension.id} className="hover:bg-gray-50">
+                <tr key={extension.id} className="hover:bg-muted/30">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          <button 
+                        <div className="text-sm font-medium text-foreground">
+                          <button
                             onClick={() => {
                               setSelectedExtension(extension);
                               setShowModal(true);
                             }}
-                            className="hover:text-blue-600 text-left"
+                            className="hover:text-primary-600 text-left"
                           >
                             {extension.name}
                           </button>
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-muted-foreground">
                           {extension.description}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{extension.version}</div>
+                    <div className="text-sm text-foreground">{extension.version}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{extension.author || 'Unknown'}</div>
+                    <div className="text-sm text-foreground">{extension.author || 'Unknown'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -212,59 +213,41 @@ export default function Extensions() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <button
+                      <Button
+                        id={`extension-view-${extension.id}`}
+                        variant="outline"
+                        size="xs"
                         onClick={() => {
                           setSelectedExtension(extension);
                           setShowModal(true);
                         }}
-                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
                       >
-                        <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
                         View
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        id={`extension-settings-${extension.id}`}
+                        variant="soft"
+                        size="xs"
                         onClick={() => alert('Extension settings will be available in the next update.')}
-                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-info/15 text-info-foreground hover:bg-info/25"
                       >
-                        <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
                         Settings
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        id={`extension-toggle-${extension.id}`}
+                        variant="secondary"
+                        size="xs"
                         onClick={() => void handleToggleExtension(extension.id, extension.isEnabled)}
-                        className={`inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md ${
-                          extension.isEnabled
-                            ? 'bg-warning/15 text-warning-foreground hover:bg-warning/25'
-                            : 'bg-success/15 text-success hover:bg-success/25'
-                        }`}
                       >
-                        {extension.isEnabled ? (
-                          <>
-                            <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Disable
-                          </>
-                        ) : (
-                          <>
-                            <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Enable
-                          </>
-                        )}
-                      </button>
-                      <button
+                        {extension.isEnabled ? 'Disable' : 'Enable'}
+                      </Button>
+                      <Button
+                        id={`extension-remove-${extension.id}`}
+                        variant="destructive"
+                        size="xs"
                         onClick={() => void handleRemoveExtension(extension.id)}
-                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-destructive/15 text-destructive hover:bg-destructive/25"
                       >
                         Remove
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>

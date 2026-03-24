@@ -111,7 +111,7 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
           return;
         }
 
-        const nextStatusOptions = statuses.map((status) => ({
+        const nextStatusOptions = statuses.map((status: IStatus) => ({
           value: status.status_id,
           label: status.name,
         }));
@@ -122,7 +122,7 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
           }
 
           const hasSelectedStatus = statuses.some(
-            (status) => status.status_id === current.renewalTicketStatusId
+            (status: IStatus) => status.status_id === current.renewalTicketStatusId
           );
 
           return hasSelectedStatus

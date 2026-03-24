@@ -230,7 +230,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       const defaultStatus = { value: 'all', label: 'All Statuses' };
       setStatusOptions([
         defaultStatus,
-        ...fetchedStatuses.map((status): SelectOption => ({
+        ...fetchedStatuses.map((status: IStatus): SelectOption => ({
           value: status.status_id!,
           label: status.name ?? ""
         }))

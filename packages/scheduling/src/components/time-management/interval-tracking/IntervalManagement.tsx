@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { TicketInterval } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { IntervalTrackingService } from '@alga-psa/ui/services';
 import { IntervalItem } from './IntervalItem';
 import { formatDuration, calculateTotalDuration, secondsToMinutes } from './utils';
@@ -32,6 +33,7 @@ export function IntervalManagement({
   userId,
   onCreateTimeEntry
 }: IntervalManagementProps) {
+  const { t } = useTranslation('msp/time-entry');
   const [intervals, setIntervals] = useState<TicketInterval[]>([]);
   const [selectedIntervalIds, setSelectedIntervalIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -141,7 +143,7 @@ export function IntervalManagement({
       // Get current time period
       const timePeriod = await getCurrentTimePeriod();
       if (!timePeriod) {
-        toast.error('No active time period found');
+        toast.error(t('intervals.messages.noActivePeriod', { defaultValue: 'No active time period found' }));
         return;
       }
       setCurrentTimePeriod(timePeriod);
@@ -149,7 +151,7 @@ export function IntervalManagement({
       // Create or fetch time sheet
       const timeSheet = await fetchOrCreateTimeSheet(userId, timePeriod.period_id);
       if (!timeSheet) {
-        toast.error('Failed to create or fetch time sheet');
+        toast.error(t('intervals.messages.failedFetchTimeSheet', { defaultValue: 'Failed to create or fetch time sheet' }));
         return;
       }
       setCurrentTimeSheet(timeSheet);
@@ -197,7 +199,7 @@ export function IntervalManagement({
       setTimeEntryData(timeEntry);
       setIsTimeEntryDialogOpen(true);
     } catch (error) {
-      handleError(error, 'Failed to prepare time entry');
+      handleError(error, t('intervals.messages.failedPrepareTimeEntry', { defaultValue: 'Failed to prepare time entry' }));
     }
   };
   
@@ -207,14 +209,14 @@ export function IntervalManagement({
       // Get current time period
       const currentTimePeriod = await getCurrentTimePeriod();
       if (!currentTimePeriod) {
-        toast.error('No active time period found');
+        toast.error(t('intervals.messages.noActivePeriod', { defaultValue: 'No active time period found' }));
         return;
       }
 
       // Create or fetch time sheet
       const timeSheet = await fetchOrCreateTimeSheet(userId, currentTimePeriod.period_id);
       if (!timeSheet) {
-        toast.error('Failed to create or fetch time sheet');
+        toast.error(t('intervals.messages.failedFetchTimeSheet', { defaultValue: 'Failed to create or fetch time sheet' }));
         return;
       }
 
@@ -240,9 +242,9 @@ export function IntervalManagement({
       await loadIntervals();
       
       // Show success message
-      toast.success('Time entry saved successfully');
+      toast.success(t('intervals.messages.savedSuccess', { defaultValue: 'Time entry saved successfully' }));
     } catch (error) {
-      handleError(error, 'Failed to save time entry');
+      handleError(error, t('intervals.messages.failedSave', { defaultValue: 'Failed to save time entry' }));
     }
   };
   
@@ -255,11 +257,16 @@ export function IntervalManagement({
             checked={filterShortIntervals}
             onCheckedChange={setFilterShortIntervals}
           />
-          <Label htmlFor="filter-short-intervals">Hide intervals under 1 minute</Label>
+          <Label htmlFor="filter-short-intervals">
+            {t('intervals.hideShortIntervals', { defaultValue: 'Hide intervals under 1 minute' })}
+          </Label>
         </div>
         
         <div className="text-sm text-gray-600">
-          Total time: <span className="font-mono">{formatDuration(totalDuration)}</span>
+          {t('intervals.totalTime', {
+            defaultValue: 'Total time: {{value}}',
+            value: formatDuration(totalDuration)
+          })}
         </div>
       </div>
       
@@ -268,14 +275,18 @@ export function IntervalManagement({
         <Card className="p-3 bg-blue-50 dark:bg-blue-900/20">
           <div className="flex items-center justify-between">
             <div>
-              <span className="font-medium">{selectedIntervalIds.length} interval{selectedIntervalIds.length !== 1 ? 's' : ''} selected</span>
+              <span className="font-medium">
+                {selectedIntervalIds.length === 1
+                  ? t('intervals.selectedOne', { defaultValue: '{{count}} interval selected', count: selectedIntervalIds.length })
+                  : t('intervals.selectedOther', { defaultValue: '{{count}} intervals selected', count: selectedIntervalIds.length })}
+              </span>
               <span className="ml-2 text-sm">
                 ({formatDuration(selectedDuration)})
               </span>
             </div>
             
             <div className="flex flex-wrap gap-2 justify-end">
-              <Tooltip content="Delete selected intervals">
+              <Tooltip content={t('intervals.tooltips.deleteSelected', { defaultValue: 'Delete selected intervals' })}>
                 <Button
                   variant="outline"
                   size="sm"
@@ -288,7 +299,7 @@ export function IntervalManagement({
               </Tooltip>
               
               {selectedIntervalIds.length >= 2 && (
-                <Tooltip content="Merge selected intervals">
+                <Tooltip content={t('intervals.tooltips.mergeSelected', { defaultValue: 'Merge selected intervals' })}>
                   <Button
                     variant="outline"
                     size="sm"
@@ -300,7 +311,7 @@ export function IntervalManagement({
                 </Tooltip>
               )}
               
-              <Tooltip content="Create time entry from selected intervals">
+              <Tooltip content={t('intervals.tooltips.createTimeEntry', { defaultValue: 'Create time entry from selected intervals' })}>
                 <Button
                   size="sm"
                   onClick={handleCreateTimeEntry}
@@ -317,7 +328,7 @@ export function IntervalManagement({
       {/* Intervals list */}
       <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
         {isLoading ? (
-          <div className="text-center py-8">Loading intervals...</div>
+          <div className="text-center py-8">{t('intervals.states.loading', { defaultValue: 'Loading intervals...' })}</div>
         ) : filteredIntervals.length > 0 ? (
           filteredIntervals.map(interval => (
             <IntervalItem
@@ -330,8 +341,8 @@ export function IntervalManagement({
         ) : (
           <div className="text-center py-8 text-gray-500">
             {intervals.length > 0 && filterShortIntervals
-              ? 'No intervals longer than 1 minute found'
-              : 'No intervals found for this ticket'}
+              ? t('intervals.states.noIntervalsLongerThanMinute', { defaultValue: 'No intervals longer than 1 minute found' })
+              : t('intervals.states.noIntervalsThisTicket', { defaultValue: 'No intervals found for this ticket' })}
           </div>
         )}
       </div>
@@ -344,7 +355,7 @@ export function IntervalManagement({
           workItem={{
             work_item_id: timeEntryData.work_item_id || '',
             type: timeEntryData.work_item_type || 'ticket',
-            name: 'Ticket Time Entry',
+            name: t('intervals.entryName', { defaultValue: 'Ticket Time Entry' }),
             description: timeEntryData.notes || '',
             is_billable: true
           }}

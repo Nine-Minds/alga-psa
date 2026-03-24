@@ -1,11 +1,12 @@
 import React from 'react';
 import { ITimePeriodWithStatusView, TimeSheetStatus } from '@alga-psa/types';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { format, formatISO, parseISO } from 'date-fns';
+import { formatISO, parseISO } from 'date-fns';
 import { Temporal } from '@js-temporal/polyfill';
 
 // Helper to get the last inclusive day from an exclusive end_date
@@ -21,46 +22,69 @@ interface TimePeriodListProps {
   onSelectTimePeriod: (timePeriod: ITimePeriodWithStatusView) => void;
 }
 
-// Badge variants align with TimeSheetApproval.tsx statusConfig and ManagerApprovalDashboard.tsx badgeMap
-const statusBadgeConfig: Record<string, { variant: 'outline' | 'secondary' | 'success' | 'warning'; label: string }> = {
-  DRAFT: { variant: 'outline', label: 'In Progress' },
-  SUBMITTED: { variant: 'secondary', label: 'Submitted' },
-  APPROVED: { variant: 'success', label: 'Approved' },
-  CHANGES_REQUESTED: { variant: 'warning', label: 'Changes Requested' },
-};
-
-const getStatusBadgeConfig = (status: string) =>
-  statusBadgeConfig[status] ?? { variant: 'outline' as const, label: 'Unknown' };
-
 function formatPeriodRange(startDate: string, endDate: string): string {
   return `${startDate.slice(0, 10)} - ${getLastInclusiveDay(endDate)}`;
 }
 
-function formatHoursEntered(hoursEntered: number): string {
-  const formatted = new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 1
-  }).format(hoursEntered);
-
-  return `${formatted}h`;
-}
-
-function formatDaysLogged(daysLogged: number): string {
-  return `${daysLogged} ${daysLogged === 1 ? 'day' : 'days'}`;
-}
-
-function formatLastEntryDate(lastEntryDate?: string): string {
-  if (!lastEntryDate) {
-    return 'No entries';
-  }
-
-  return format(parseISO(lastEntryDate), 'EEE, MMM d');
-}
-
 export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodListProps) {
+  const { t } = useTranslation('msp/time-entry');
+  const { formatDate, formatNumber } = useFormatters();
   const router = useRouter();
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
+
+  const getStatusBadgeConfig = React.useCallback((status: string) => {
+    const statusBadgeConfig: Record<string, { variant: 'outline' | 'secondary' | 'success' | 'warning'; label: string }> = {
+      DRAFT: {
+        variant: 'outline',
+        label: t('common.states.inProgress', { defaultValue: 'In Progress' })
+      },
+      SUBMITTED: {
+        variant: 'secondary',
+        label: t('common.states.submitted', { defaultValue: 'Submitted' })
+      },
+      APPROVED: {
+        variant: 'success',
+        label: t('common.states.approved', { defaultValue: 'Approved' })
+      },
+      CHANGES_REQUESTED: {
+        variant: 'warning',
+        label: t('common.states.changesRequested', { defaultValue: 'Changes Requested' })
+      },
+    };
+
+    return statusBadgeConfig[status] ?? {
+      variant: 'outline' as const,
+      label: t('common.states.unknown', { defaultValue: 'Unknown' })
+    };
+  }, [t]);
+
+  const formatHoursEntered = React.useCallback((hoursEntered: number): string => {
+    const formatted = formatNumber(hoursEntered, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1
+    });
+
+    return `${formatted}${t('common.units.hoursShort', { defaultValue: 'h' })}`;
+  }, [formatNumber, t]);
+
+  const formatDaysLogged = React.useCallback((daysLogged: number): string => {
+    return `${daysLogged} ${daysLogged === 1
+      ? t('common.units.dayOne', { defaultValue: 'day' })
+      : t('common.units.dayOther', { defaultValue: 'days' })}`;
+  }, [t]);
+
+  const formatLastEntryDate = React.useCallback((lastEntryDate?: string): string => {
+    if (!lastEntryDate) {
+      return t('timePeriodList.lastEntry.none', { defaultValue: 'No entries' });
+    }
+
+    return formatDate(parseISO(lastEntryDate), {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  }, [formatDate, t]);
 
   const navigateToTimeSettings = () => {
     // Navigate to Time Entry tab and then to Time Periods nested tab
@@ -78,7 +102,9 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
   return (
     <div className="space-y-4 w-full">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">Select a Time Period</h2>
+        <h2 className="text-2xl font-bold">
+          {t('timePeriodList.title', { defaultValue: 'Select a Time Period' })}
+        </h2>
         <Button
           id="manage-time-periods-button"
           onClick={navigateToTimeSettings}
@@ -86,7 +112,7 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
           className="flex items-center gap-2"
         >
           <Settings className="h-4 w-4" />
-          Manage Time Periods
+          {t('common.actions.manageTimePeriods', { defaultValue: 'Manage Time Periods' })}
         </Button>
       </div>
       <DataTable
@@ -94,13 +120,13 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
         data={timePeriods}
         columns={[
           {
-            title: 'Period',
+            title: t('timePeriodList.columns.period', { defaultValue: 'Period' }),
             dataIndex: 'start_date',
             width: '28%',
             render: (_, record) => formatPeriodRange(record.start_date, record.end_date)
           },
           {
-            title: 'Status',
+            title: t('timePeriodList.columns.status', { defaultValue: 'Status' }),
             dataIndex: 'timeSheetStatus',
             width: '20%',
             render: (status: TimeSheetStatus, record) => {
@@ -110,7 +136,7 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
                   <Badge variant={config.variant} className="py-1">{config.label}</Badge>
                   {isCurrentPeriod(record.start_date, record.end_date) && (
                     <Badge variant="primary" className="py-1">
-                      Current
+                      {t('common.states.current', { defaultValue: 'Current' })}
                     </Badge>
                   )}
                 </div>
@@ -118,25 +144,25 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
             }
           },
           {
-            title: 'Hours Entered',
+            title: t('timePeriodList.columns.hoursEntered', { defaultValue: 'Hours Entered' }),
             dataIndex: 'hoursEntered',
             width: '14%',
             render: (hoursEntered: number) => formatHoursEntered(hoursEntered)
           },
           {
-            title: 'Days Logged',
+            title: t('timePeriodList.columns.daysLogged', { defaultValue: 'Days Logged' }),
             dataIndex: 'daysLogged',
             width: '12%',
             render: (daysLogged: number) => formatDaysLogged(daysLogged)
           },
           {
-            title: 'Last Entry',
+            title: t('timePeriodList.columns.lastEntry', { defaultValue: 'Last Entry' }),
             dataIndex: 'lastEntryDate',
             width: '16%',
             render: (lastEntryDate?: string) => formatLastEntryDate(lastEntryDate)
           },
           {
-            title: 'Actions',
+            title: t('timePeriodList.columns.actions', { defaultValue: 'Actions' }),
             dataIndex: 'action',
             width: '10%',
             render: (_, record) => (
@@ -145,7 +171,7 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
                 onClick={() => onSelectTimePeriod(record)}
                 variant="soft"
               >
-                View
+                {t('common.actions.view', { defaultValue: 'View' })}
               </Button>
             )
           }

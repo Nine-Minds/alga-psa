@@ -1,0 +1,1 @@
+export { MspActivityCrossFeatureProvider } from './MspActivityCrossFeatureProvider';
