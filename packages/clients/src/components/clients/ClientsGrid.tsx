@@ -2,7 +2,7 @@ import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import ClientGridCard from "./ClientGridCard";
 import Pagination from '@alga-psa/ui/components/Pagination';
-import { useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientsGridProps {
     filteredClients: IClient[];
@@ -39,12 +39,13 @@ const ClientsGrid = ({
     allUniqueTags = [],
     onTagsChange
 }: ClientsGridProps) => {
+    const { t } = useTranslation('msp/clients');
     
     const itemsPerPageOptions = [
-        { value: '9', label: '9 cards/page' },
-        { value: '18', label: '18 cards/page' },
-        { value: '27', label: '27 cards/page' },
-        { value: '36', label: '36 cards/page' }
+        { value: '9', label: t('clientsGrid.itemsPerPage9', { defaultValue: '9 cards/page' }) },
+        { value: '18', label: t('clientsGrid.itemsPerPage18', { defaultValue: '18 cards/page' }) },
+        { value: '27', label: t('clientsGrid.itemsPerPage27', { defaultValue: '27 cards/page' }) },
+        { value: '36', label: t('clientsGrid.itemsPerPage36', { defaultValue: '36 cards/page' }) }
     ];
 
     return (
@@ -75,7 +76,7 @@ const ClientsGrid = ({
                 onPageChange={onPageChange}
                 onItemsPerPageChange={onPageSizeChange}
                 variant="clients"
-                itemLabel="clients"
+                itemLabel={t('clientsGrid.itemLabel', { defaultValue: 'clients' })}
                 itemsPerPageOptions={itemsPerPageOptions}
             />
         </div>
