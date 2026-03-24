@@ -1,5 +1,5 @@
 [
-  {"id": "F001", "description": "Create en/msp/clients.json with all keys for 31 client components (+panels/)", "implemented": false, "prdRefs": ["2b-10"]},
+  {"id": "F001", "description": "Create en/msp/clients.json with all keys for 31 client components (+panels/)", "implemented": true, "prdRefs": ["2b-10"]},
   {"id": "F002", "description": "Wire useTranslation('msp/clients') in ClientDetails.tsx and Clients.tsx (largest files, ~300-600 strings combined)", "implemented": false, "prdRefs": ["2b-10"]},
   {"id": "F003", "description": "Wire useTranslation in QuickAddClient.tsx, ClientLocations.tsx, ClientsImportDialog.tsx", "implemented": false, "prdRefs": ["2b-10"]},
   {"id": "F004", "description": "Wire useTranslation in BillingConfiguration.tsx, ClientContractAssignment.tsx, ClientContractLineDashboard.tsx, ClientBillingSchedule.tsx", "implemented": false, "prdRefs": ["2b-10"]},

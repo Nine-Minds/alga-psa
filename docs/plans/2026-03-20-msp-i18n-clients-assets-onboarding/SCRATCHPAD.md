@@ -20,6 +20,8 @@
 - (2026-03-20) `ClientsImportDialog.tsx` (697 LOC) has CSV column mapping — translate UI labels but keep CSV header names in English
 - (2026-03-20) `ClientLanguagePreference.tsx` (118 LOC) — this component likely already has i18n awareness. Check during implementation.
 - (2026-03-20) 2 empty stub files (PlanPickerDialog.tsx, ClientPlanDisambiguationGuide.tsx) — 1 LOC each, skip
+- (2026-03-24) `ClientLocations.tsx` already contains partial `clients.locations.*` key usage. Extend that structure instead of replacing it with unrelated key names.
+- (2026-03-24) Keep stable ids/values untranslated in clients batch: client detail tab ids (`details`, `tickets`, `assets`, `billing`, `billing-dashboard`, `contacts`, `documents`, `tax-settings`, `additional-info`, `notes`, `interactions`), billing tab ids (`general`, `plans`, `taxRates`, `overlaps`), guide tabs (`overview`, `bestPractices`, `scenarios`, `troubleshooting`), import steps (`upload`, `mapping`, `preview`, `importing`, `complete`, `unassigned`), and list/filter values (`grid`, `list`, `all`, `active`, `inactive`, `company`, `individual`).
 
 ### Contacts (2b-11)
 - (2026-03-24) 12 files in `packages/clients/src/components/contacts/` (was 13 at plan time; ContactNotes.tsx removed or merged)
@@ -43,6 +45,12 @@
   - OnboardingChecklist.tsx — translated
   - DashboardOnboardingSlot.tsx — no strings
   - DashboardOnboardingSkeleton.tsx — no strings
+- (2026-03-24) Wizard-only onboarding form/help/alert text should stay in the new `msp/onboarding` namespace rather than extending `msp/dashboard.json`. Existing dashboard overlap remains under `onboarding.*` keys in `msp/dashboard.json`, but wizard steps do not reuse that namespace today.
+- (2026-03-24) Keep stable onboarding ids/values untranslated: `OnboardingStepId`, `step.id`, `substep.id`, `data_import`, checklist status enums (`complete`, `in_progress`, `not_started`, `blocked`), role values (`admin`, `technician`, `manager`, `user`), billing mode values (`fixed`, `hourly`, `usage`), `USD`, and ticketing sentinels like `none`, `board`, `category`, `status`, `priority`.
+
+## Progress Log
+
+- (2026-03-24) Completed `F001`: created `server/public/locales/en/msp/clients.json` with an initial component-scoped English namespace covering the clients list, client details, quick-add, locations, billing/contracts, tax settings, import flow, and notes panel. This seeds the new `msp/clients` file so follow-up wiring can land on stable keys instead of inventing ad hoc paths mid-edit. Validation: `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/clients.json','utf8')); console.log('ok')"` returned `ok`.
 
 ## Commands / Runbooks
 
