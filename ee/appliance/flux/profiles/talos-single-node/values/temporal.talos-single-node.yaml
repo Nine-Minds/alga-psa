@@ -15,4 +15,4 @@ db:
 temporal:
   db: postgres12
   namespace: default
-  postgresSeeds: postgres
+  postgresSeeds: db.msp.svc.cluster.local

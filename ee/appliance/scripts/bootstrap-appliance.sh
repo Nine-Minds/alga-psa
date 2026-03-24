@@ -242,8 +242,13 @@ resolve_runtime_inputs() {
     HOSTNAME_VALUE="$SITE_ID"
   fi
 
-  if [ -z "$APP_URL" ] && is_interactive; then
-    APP_URL="$(prompt_value "Public application URL" "https://alga.local")"
+  if [ -z "$APP_URL" ]; then
+    local default_app_url="http://${NODE_IP}:3000"
+    if is_interactive; then
+      APP_URL="$(prompt_value "Public application URL" "$default_app_url")"
+    else
+      APP_URL="$default_app_url"
+    fi
   fi
 
   if [ -z "$RELEASE_VERSION" ]; then
@@ -476,6 +481,13 @@ EOF
       done
     } >>"$controlplane_path"
   fi
+
+  cat >>"$controlplane_path" <<'EOF'
+---
+apiVersion: v1alpha1
+kind: TimeSyncConfig
+bootTimeout: 2m
+EOF
 }
 
 generate_machine_config() {
