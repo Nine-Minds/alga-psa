@@ -118,7 +118,7 @@ export default function PrefillFromTicketDialog({
 
           setStatusOptions([
             { value: 'all', label: 'All Statuses' },
-            ...fetchedStatuses.map((status): SelectOption => ({
+            ...fetchedStatuses.map((status: IStatus): SelectOption => ({
               value: status.status_id!,
               label: status.name ?? ''
             }))

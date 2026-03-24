@@ -16,6 +16,7 @@ export {
   addTicketComment,
   deleteTicket,
   deleteTickets,
+  moveTicketsToBoard,
   getScheduledHoursForTicket,
   getTicketById,
   registerSlaCancellation

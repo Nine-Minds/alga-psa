@@ -38,10 +38,10 @@ import { Temporal } from '@js-temporal/polyfill';
 import { resolveUserTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
+import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
-import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -1971,6 +1971,9 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
     return 'success';
     } catch (error) {
       console.error(error);
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('Failed to update ticket');
     }
   });
