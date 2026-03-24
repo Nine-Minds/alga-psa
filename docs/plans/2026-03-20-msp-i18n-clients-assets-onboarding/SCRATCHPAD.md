@@ -30,6 +30,7 @@
 - (2026-03-20) Same package as clients (`@alga-psa/clients`) — can share import of `useTranslation`
 - (2026-03-20) `ContactPortalTab.tsx` (652 LOC) — manages client portal access for contacts. May need to coordinate with client-portal translations.
 - (2026-03-20) `ContactPhoneNumbersEditor.tsx` (755 LOC) — complex phone number CRUD with format hints
+- (2026-03-24) There is also `packages/clients/src/components/contacts/panels/ContactNotesPanel.tsx` with user-facing copy (`Notes & Quick Info`, `Initial Note`, load/save error UI). The plan checklist omits it, so treat it as required remaining contact work rather than leaving the panel untranslated.
 
 ### Assets (2b-12)
 - (2026-03-24) 41 files in `packages/assets/src/components/` (was 39 at plan time; +1 test file, +1 new component)
@@ -74,6 +75,7 @@
 - (2026-03-24) Completed `T001`: `node scripts/validate-translations.cjs` passed after adding the clients namespace across `{en,de,es,fr,it,nl,pl,xx,yy}`. Summary reported `Errors: 0`, `Warnings: 0`, confirming `msp/clients` key parity across all 9 locale variants.
 - (2026-03-24) Completed `T002`: `cd server && npx tsc -p tsconfig.json --noEmit --pretty false` passed after wiring all client component surfaces. The remaining `PlanPickerDialog.tsx` and `ClientPlanDisambiguationGuide.tsx` files were confirmed to be re-export shims, so the compile check covers the actual implementation files that render client UI.
 - (2026-03-24) Completed `T003`: the targeted Italian accent audit for `server/public/locales/it/msp/clients.json` returned zero matches for the known dropped-accent patterns (`puo`, `gia`, `verra`, `funzionalita`, `e necessario`, etc.), so the clients namespace passed the post-translation accent check.
+- (2026-03-24) Completed `F010`: created `server/public/locales/en/msp/contacts.json` with an initial component-scoped English scaffold for the contacts list, contact detail, import flow, phone editor, portal tab, quick-add form, edit/view helpers, client-embedded list, route shell, loading skeleton, avatar upload, and notes panel. This matches the existing `msp/clients` namespace style so follow-up wiring can land on stable section names instead of ad hoc keys. Validation: `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/contacts.json','utf8')); console.log('ok')"` returned `ok`.
 
 ## Commands / Runbooks
 

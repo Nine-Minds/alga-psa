@@ -1,0 +1,86 @@
+{
+  "common": {
+    "actions": {
+      "add": "Add",
+      "back": "Back",
+      "cancel": "Cancel",
+      "close": "Close",
+      "create": "Create",
+      "delete": "Delete",
+      "downloadCsv": "Download CSV",
+      "edit": "Edit",
+      "import": "Import",
+      "reactivate": "Reactivate",
+      "remove": "Remove",
+      "retry": "Retry",
+      "save": "Save",
+      "saving": "Saving...",
+      "search": "Search",
+      "select": "Select",
+      "update": "Update",
+      "uploadCsv": "Upload CSV",
+      "view": "View"
+    },
+    "states": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "loading": "Loading...",
+      "na": "N/A",
+      "none": "None"
+    },
+    "no": "No",
+    "yes": "Yes"
+  },
+  "contactsPage": {
+    "title": "Contacts Page",
+    "description": "Main contacts management page with search, filters, list view, and bulk actions"
+  },
+  "contactDetails": {
+    "title": "Contact Details",
+    "description": "Contact detail view with tabs, inline editing, portal access, tags, and notes"
+  },
+  "contactsImportDialog": {
+    "title": "Import Contacts",
+    "description": "CSV import dialog for contact mapping, preview, validation, and results"
+  },
+  "contactPhoneNumbersEditor": {
+    "title": "Contact Phone Numbers",
+    "description": "Phone number editor with type management, validation, defaults, and extension support"
+  },
+  "contactPortalTab": {
+    "title": "Portal Access",
+    "description": "Client portal access management for a contact, including invitations and role updates"
+  },
+  "quickAddContact": {
+    "title": "Add New Contact",
+    "description": "Quick-add form for creating a contact with client, role, phone, and tag fields"
+  },
+  "contactDetailsEdit": {
+    "title": "Edit Contact",
+    "description": "Editable contact form used from the detail view and drawer flows"
+  },
+  "contactDetailsView": {
+    "title": "Contact Summary",
+    "description": "Read-oriented contact summary with associated client, phones, and metadata"
+  },
+  "clientContactsList": {
+    "title": "Client Contacts",
+    "description": "Embedded client-specific contacts list with filters and row actions"
+  },
+  "contactsLayout": {
+    "title": "Contacts Layout",
+    "description": "Contacts route shell and page chrome"
+  },
+  "contactsSkeleton": {
+    "title": "Contacts Loading State",
+    "description": "Loading placeholders for contacts list and detail surfaces"
+  },
+  "contactAvatarUpload": {
+    "title": "Contact Avatar Upload",
+    "description": "Avatar upload affordance for contact profile images"
+  },
+  "contactNotesPanel": {
+    "title": "Contact Notes",
+    "description": "Rich text notes panel with legacy note display and save/retry actions"
+  }
+}
