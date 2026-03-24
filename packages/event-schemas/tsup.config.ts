@@ -1,5 +1,5 @@
 import { defineConfig } from 'tsup';
-import { readdirSync, statSync } from 'fs';
+import { readdirSync, statSync, readFileSync, writeFileSync } from 'fs';
 import { join, relative } from 'path';
 
 function getAllSourceFiles(dir: string, base: string = dir): Record<string, string> {
@@ -23,6 +23,26 @@ function getAllSourceFiles(dir: string, base: string = dir): Record<string, stri
   return entries;
 }
 
+// Add .js extensions to relative imports for Node.js ESM compatibility
+function addJsExtensions(dir: string) {
+  for (const file of readdirSync(dir)) {
+    const fullPath = join(dir, file);
+    if (statSync(fullPath).isDirectory()) {
+      addJsExtensions(fullPath);
+    } else if (file.endsWith('.js')) {
+      const content = readFileSync(fullPath, 'utf-8');
+      const fixed = content.replace(
+        /(from\s+["'])(\.\.?\/[^"']+)(["'])/g,
+        (match, pre, path, post) => {
+          if (path.endsWith('.js') || path.endsWith('.json')) return match;
+          return `${pre}${path}.js${post}`;
+        }
+      );
+      if (fixed !== content) writeFileSync(fullPath, fixed);
+    }
+  }
+}
+
 export default defineConfig({
   entry: getAllSourceFiles('src'),
   format: ['esm'],
@@ -36,4 +56,7 @@ export default defineConfig({
     /^@alga-psa\//,
     /^@shared\//,
   ],
+  onSuccess: async () => {
+    addJsExtensions('dist');
+  },
 });
