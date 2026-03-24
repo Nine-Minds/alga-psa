@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IClient, IProject, IUserWithRoles } from '@alga-psa/types';
+import { IClient, IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
-import { Edit2, Save } from 'lucide-react';
+import { Download, Edit2, Save } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useDrawer } from "@alga-psa/ui";
@@ -14,9 +14,11 @@ import { TagManager } from '@alga-psa/tags/components';
 import { toast } from 'react-hot-toast';
 import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
 import ProjectMaterialsDrawer from './ProjectMaterialsDrawer';
+import ProjectTaskExportDialog from './ProjectTaskExportDialog';
 
 interface ProjectInfoProps {
   project: IProject;
+  phases: IProjectPhase[];
   contact?: {
     full_name: string;
   };
@@ -33,6 +35,7 @@ interface ProjectInfoProps {
 
 export default function ProjectInfo({
   project,
+  phases,
   contact,
   assignedUser,
   users,
@@ -48,6 +51,7 @@ export default function ProjectInfo({
 
   const [currentProject, setCurrentProject] = useState(project);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [projectMetrics, setProjectMetrics] = useState<{
     taskCompletionPercentage: number;
     hoursCompletionPercentage: number;
@@ -146,6 +150,15 @@ export default function ProjectInfo({
             Save as Template
           </Button>
           <Button
+            id="export-tasks-button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowExportDialog(true)}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export Tasks
+          </Button>
+          <Button
             id="project-materials-button"
             variant="outline"
             size="sm"
@@ -228,6 +241,14 @@ export default function ProjectInfo({
           }}
         />
       )}
+
+      {/* Export Tasks Dialog */}
+      <ProjectTaskExportDialog
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        projectId={currentProject.project_id}
+        phases={phases}
+      />
     </div>
   );
 }
