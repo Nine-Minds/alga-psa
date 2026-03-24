@@ -81,6 +81,11 @@
   - `npx eslint packages/clients/src/components/contacts/Contacts.tsx packages/clients/src/components/contacts/ContactDetails.tsx packages/clients/src/components/contacts/ContactsImportDialog.tsx` (warnings only, no errors)
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
   - Perl/Node audit over `t('...')` calls in the three files reported `contacts keys ok` for `server/public/locales/en/msp/contacts.json`
+- (2026-03-24) Completed `F012`: wired `packages/clients/src/components/contacts/ContactPhoneNumbersEditor.tsx`, `packages/clients/src/components/contacts/ContactPortalTab.tsx`, and `packages/clients/src/components/contacts/QuickAddContact.tsx` to `msp/contacts`. The phone editor now translates its headings, row actions, phone-type labels, custom-type search prompts, last-usage confirmation, and inline validation copy; the portal tab now translates the client-portal access shell, admin/role/status/invitation history controls, toast copy, and invitation badge labels while keeping invitation status enum values stable; the quick-add contact flow now translates dialog chrome, field labels/placeholders, validation summary/errors, status toggle copy, and success/error toasts, and it now routes phone validation messages through the translated phone-editor helper for consistent copy. Expanded `server/public/locales/en/msp/contacts.json` with phone-editor, portal-tab, and quick-add keys including dynamic phone-type labels and invitation-status badge labels. Validation:
+  - `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/contacts.json','utf8')); console.log('contacts json ok')"` returned `contacts json ok`
+  - `npx eslint packages/clients/src/components/contacts/ContactPhoneNumbersEditor.tsx packages/clients/src/components/contacts/ContactPortalTab.tsx packages/clients/src/components/contacts/QuickAddContact.tsx` (warnings only, no errors)
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+  - Perl/Node audit over `t('...')` calls in those three files plus explicit checks for `contactPhoneNumbersEditor.phoneTypes.*` and `contactPortalTab.history.status.{pending,used,expired,revoked}` reported `contacts F012 keys ok`
 
 ## Commands / Runbooks
 

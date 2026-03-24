@@ -242,15 +242,192 @@
   },
   "contactPhoneNumbersEditor": {
     "title": "Contact Phone Numbers",
-    "description": "Phone number editor with type management, validation, defaults, and extension support"
+    "description": "Phone number editor with type management, validation, defaults, and extension support",
+    "actions": {
+      "addPhone": "Add phone"
+    },
+    "empty": "No phone numbers yet.",
+    "phoneTypes": {
+      "work": "Work",
+      "mobile": "Mobile",
+      "home": "Home",
+      "fax": "Fax",
+      "other": "Other",
+      "custom": "Custom"
+    },
+    "row": {
+      "title": "Phone {{number}}",
+      "defaultDescription": "Default phone number",
+      "secondaryDescription": "Secondary phone number",
+      "defaultLabel": "Default",
+      "moveUp": "Move phone {{number}} up",
+      "moveDown": "Move phone {{number}} down",
+      "remove": "Remove phone {{number}}"
+    },
+    "fields": {
+      "phoneNumber": "Phone Number",
+      "phoneType": "Phone Type",
+      "customPhoneType": "Custom Phone Type",
+      "customTypePlaceholder": "Select or enter a custom phone type",
+      "customTypeSearchPlaceholder": "Search or enter a custom phone type...",
+      "customTypeEmpty": "No matching custom phone types.",
+      "customTypeUseValue": "Use \"{{value}}\""
+    },
+    "validation": {
+      "selectExactlyOneDefault": "Select exactly one default phone number.",
+      "phoneRow": "Phone {{number}}",
+      "enterCompletePhoneNumber": "Enter a complete phone number.",
+      "enterCustomPhoneType": "Enter a custom phone type.",
+      "customTypesUnique": "Custom phone type labels must be unique."
+    },
+    "lastTypeUsage": {
+      "title": "Last Phone Type Usage",
+      "message": "This is the last use of custom phone type \"{{label}}\". Delete the type definition, or keep it for future use?",
+      "removeAndDelete": "Remove & Delete Type",
+      "removeAndKeep": "Remove & Keep Type"
+    }
   },
   "contactPortalTab": {
     "title": "Portal Access",
-    "description": "Client portal access management for a contact, including invitations and role updates"
+    "description": "Client portal access management for a contact, including invitations and role updates",
+    "loadingDescription": "Loading portal information...",
+    "information": "Invitation emails will be sent from your organization's email system. Replies will go to your client's default location email address.",
+    "activeAccess": "Portal access active",
+    "noAccess": {
+      "title": "No Portal Access",
+      "description": "This contact does not have client portal access yet"
+    },
+    "portalAdmin": {
+      "label": "Portal Administrator",
+      "helper": "When enabled, the user will be created with Client Admin role. When disabled, they'll get Client User role."
+    },
+    "roles": {
+      "label": "Portal Roles",
+      "none": "No roles assigned",
+      "placeholder": "Select role to add",
+      "addButton": "Add Role"
+    },
+    "userStatus": {
+      "label": "User Status",
+      "active": "User is currently active",
+      "inactive": "User is currently inactive"
+    },
+    "lastLogin": {
+      "label": "Last Login",
+      "via": "via {{method}}"
+    },
+    "history": {
+      "title": "Invitation History",
+      "description": "Recent portal invitations sent to this contact",
+      "empty": "No portal invitations have been sent to this contact yet.",
+      "sentPrefix": "Sent:",
+      "expiresPrefix": "Expires:",
+      "usedPrefix": "Used:",
+      "status": {
+        "pending": "Pending",
+        "used": "Used",
+        "expired": "Expired",
+        "revoked": "Revoked"
+      }
+    },
+    "actions": {
+      "sendInvitation": "Send Portal Invitation",
+      "sending": "Sending...",
+      "refresh": "Refresh",
+      "refreshing": "Refreshing...",
+      "resend": "Resend",
+      "resending": "Resending...",
+      "revoke": "Revoke"
+    },
+    "toast": {
+      "successTitle": "Success",
+      "errorTitle": "Error",
+      "permissionDeniedTitle": "Permission Denied",
+      "loadError": "Failed to load portal information",
+      "refreshHistoryError": "Failed to refresh invitation history",
+      "sendInvitePermissionDenied": "You do not have permission to send invitations",
+      "sendInviteSuccess": "Portal invitation sent successfully!",
+      "sendInviteFailed": "Failed to send invitation",
+      "revokeInviteSuccess": "Invitation revoked successfully",
+      "revokeInviteFailed": "Failed to revoke invitation",
+      "resendInviteSuccess": "Portal invitation resent successfully!",
+      "resendInviteFailed": "Failed to resend invitation",
+      "updatePortalSettingsPermissionDenied": "You do not have permission to update client settings",
+      "portalAdminEnabled": "Contact marked as admin for client portal",
+      "portalAdminDisabled": "Contact unmarked as admin for client portal",
+      "updatePortalAdminFailed": "Failed to update status",
+      "updateAdminFailed": "Failed to update admin flag",
+      "updateRolesPermissionDenied": "You do not have permission to update user roles",
+      "roleAdded": "Role added successfully",
+      "addRoleFailed": "Failed to add role",
+      "roleRemoved": "Role removed successfully",
+      "removeRoleFailed": "Failed to remove role",
+      "updateStatusPermissionDenied": "You do not have permission to update user status",
+      "userActivated": "User activated successfully",
+      "userDeactivated": "User deactivated successfully",
+      "updateUserStatusFailed": "Failed to update user status"
+    }
   },
   "quickAddContact": {
     "title": "Add New Contact",
-    "description": "Quick-add form for creating a contact with client, role, phone, and tag fields"
+    "description": "Quick-add form for creating a contact with client, role, phone, and tag fields",
+    "dialog": {
+      "title": "Add New Contact"
+    },
+    "errorFallback": {
+      "title": "Something went wrong:",
+      "tryAgain": "Try again"
+    },
+    "actions": {
+      "submit": "Add Contact"
+    },
+    "fields": {
+      "fullName": "Full Name *",
+      "email": "Email *",
+      "clientOptional": "Client (Optional)",
+      "role": "Role",
+      "rolePlaceholder": "e.g., Manager, Developer, etc.",
+      "notes": "Notes",
+      "notesPlaceholder": "Add any additional notes about the contact..."
+    },
+    "status": {
+      "label": "Status",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "validation": {
+      "alertIntro": "Please fix the following errors:",
+      "fullNameRequired": "Full name is required",
+      "fullNameEmpty": "Full name cannot be empty",
+      "fullNameSpaces": "Full name cannot contain only spaces",
+      "emailRequired": "Email address is required",
+      "emailSpaces": "Email address cannot contain only spaces",
+      "roleSpaces": "Role cannot contain only spaces",
+      "roleLength": "Role must be 100 characters or less",
+      "roleCharacters": "Role must contain letters or numbers",
+      "notesSpaces": "Notes cannot contain only spaces"
+    },
+    "toasts": {
+      "warningTitle": "Warning",
+      "tagsFailed": "{{count}} tag(s) could not be created",
+      "contactCreated": "Contact created",
+      "contactAdded": "{{name}} has been added successfully."
+    },
+    "errors": {
+      "createContactTitle": "Error creating contact",
+      "unexpected": "An unexpected error occurred. Please try again.",
+      "validationTitle": "Validation Error",
+      "emailExistsTitle": "Email Already Exists",
+      "invalidReferenceTitle": "Invalid Reference",
+      "systemTitle": "System Error",
+      "genericTitle": "Error",
+      "closeMessage": "Close error message",
+      "createContactHeading": "Error creating contact:",
+      "validationPrefix": "Please fix the following:",
+      "emailExistsPrefix": "Email already exists:",
+      "invalidReferencePrefix": "Invalid reference:",
+      "systemPrefix": "System error:"
+    }
   },
   "contactDetailsEdit": {
     "title": "Edit Contact",
