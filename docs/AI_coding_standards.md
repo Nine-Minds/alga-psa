@@ -340,6 +340,23 @@ export async function myAction(): Promise<Result> {
 
 We use server actions that are located in the `/server/src/lib/actions` folder and package-specific actions in `packages/*/src/actions/`.
 
+## Package Build System
+
+The monorepo uses a hybrid build strategy. Some `@alga-psa/*` packages are **pre-built** (webpack resolves from `dist/`), others are **source-transpiled** (webpack compiles from `src/`). See [Package Build System](architecture/package-build-system.md) for full details.
+
+**Key rules for AI editors:**
+- **Do NOT change tsconfig paths** — TypeScript always resolves types from `src/` regardless of build mode.
+- **`npm run dev` automatically builds all pre-built packages** via `npx nx build-deps server` before starting the dev server. No manual rebuild needed after pulling.
+- **After editing source in a pre-built package during a running dev session**, rebuild it: `cd packages/<pkg> && npx tsup` (HMR only applies to source-transpiled packages).
+- **When creating a new tsup config**, use the shared preset at `packages/build-tools/tsup-preset.ts`:
+  ```typescript
+  import { defineConfig } from 'tsup';
+  import { makeConfig } from '../build-tools/tsup-preset';
+  export default defineConfig(makeConfig({ jsxEnabled: true }));
+  ```
+- **Pre-built packages** (resolve from `dist/`): `types`, `core`, `validation`, `formatting`, `event-schemas`, `clients`, `sla`, `assets`, `tags`.
+- **Source-transpiled packages** (resolve from `src/`): `ui`, `billing`, `tickets`, `projects`, `scheduling`, `documents`, `auth`, `integrations`, `notifications`, `users`, and composition layers.
+
 # ee folder
 The ee folder contains the server code for the enterprise edition of the application. It is a parallel structure 
 containing its own migrations that are overlaid on top of the base server migrations. ee specific database changes
