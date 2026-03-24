@@ -20,7 +20,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/"
