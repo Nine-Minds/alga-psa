@@ -8,6 +8,7 @@ import { CustomTabs, TabContent } from '@alga-psa/ui/components/CustomTabs';
 import {
   getClientContractLine,
   getClientInvoices,
+  getClientQuotes,
   getCurrentUsage
 } from '@alga-psa/client-portal/actions';
 import {
@@ -26,7 +27,7 @@ import {
   IService
 } from '@alga-psa/types';
 import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
-import type { InvoiceViewModel } from '@alga-psa/types';
+import type { InvoiceViewModel, IQuoteWithClient } from '@alga-psa/types';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -141,6 +142,7 @@ export default function BillingOverview() {
   const [isBucketHistoryLoading, setIsBucketHistoryLoading] = useState(false);
   const [isHoursLoading, setIsHoursLoading] = useState(false);
   const [isUsageMetricsLoading, setIsUsageMetricsLoading] = useState(false);
+  const [quotes, setQuotes] = useState<IQuoteWithClient[]>([]);
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true); // Default to true to avoid hydration mismatch
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
@@ -183,11 +185,15 @@ export default function BillingOverview() {
         setContractLine(plan);
         setUsage(usageData);
         
-        // Try to load invoices (will fail if user doesn't have permission)
+        // Try to load invoices and quotes (will fail if user doesn't have permission)
         try {
-          const invoiceData = await getClientInvoices();
+          const [invoiceData, quotesData] = await Promise.all([
+            getClientInvoices(),
+            getClientQuotes(),
+          ]);
           if (!isMounted) return;
           setInvoices(invoiceData);
+          setQuotes(quotesData);
           setHasInvoiceAccess(true);
         } catch (error) {
           if (!isMounted) return;
@@ -372,6 +378,17 @@ export default function BillingOverview() {
     }
   }, []);
 
+  // Create a function to switch to the Quotes tab
+  const handleViewAllQuotes = useCallback(() => {
+    setCurrentTab('quotes');
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', 'quotes');
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.pushState({}, '', newUrl);
+    }
+  }, []);
+
   // Memoize tabs to prevent unnecessary re-renders
   const tabs: TabContent[] = useMemo(() => {
     const tabsArray: TabContent[] = [
@@ -383,12 +400,14 @@ export default function BillingOverview() {
             <BillingOverviewTab
               contractLine={contractLine}
               invoices={invoices}
+              quotes={quotes}
               bucketUsage={bucketUsage}
               isBucketUsageLoading={isBucketUsageLoading}
               isLoading={isLoading}
               formatCurrency={formatCurrency}
               formatDate={formatDate}
               onViewAllInvoices={handleViewAllInvoices}
+              onViewAllQuotes={handleViewAllQuotes}
             />
           </div>
         ),
@@ -481,6 +500,8 @@ export default function BillingOverview() {
     handleInvoiceClick,
     handleDateRangeChange,
     handleViewAllInvoices,
+    handleViewAllQuotes,
+    quotes,
     t
   ]);
 

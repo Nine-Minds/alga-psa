@@ -10,8 +10,16 @@ import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@alga-psa/ui/components/DropdownMenu';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { MoreVertical, Eye, Edit, Send, Copy, Download, Trash2 } from 'lucide-react';
 import type { ColumnDefinition, IQuoteDocumentTemplate, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
-import { listQuotes, downloadQuotePdf } from '../../../actions/quoteActions';
+import { listQuotes, downloadQuotePdf, deleteQuote, duplicateQuote, sendQuote } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import QuoteDetail from './QuoteDetail';
 import QuoteForm from './QuoteForm';
@@ -43,7 +51,7 @@ const SUBTAB_STATUSES: Record<QuoteSubTab, QuoteStatus[]> = {
   closed: ['accepted', 'rejected', 'expired', 'converted', 'cancelled', 'superseded', 'archived'],
 };
 
-const QUOTE_COLUMNS: ColumnDefinition<IQuoteListItem>[] = [
+const BASE_QUOTE_COLUMNS: ColumnDefinition<IQuoteListItem>[] = [
   {
     title: 'Quote #',
     dataIndex: 'display_quote_number',
@@ -82,6 +90,12 @@ interface QuoteSubTabContentProps {
   onRowClick: (quote: IQuoteListItem) => void;
   onOpen: () => void;
   onDownload: () => Promise<void>;
+  onViewDetail: (quoteId: string) => void;
+  onEdit: (quoteId: string) => void;
+  onSend: (quoteId: string) => Promise<void>;
+  onDuplicate: (quoteId: string) => Promise<void>;
+  onDownloadPdf: (quoteId: string) => Promise<void>;
+  onDelete: (quoteId: string) => void;
 }
 
 const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
@@ -92,6 +106,12 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
   onRowClick,
   onOpen,
   onDownload,
+  onViewDetail,
+  onEdit,
+  onSend,
+  onDuplicate,
+  onDownloadPdf,
+  onDelete,
 }) => {
   const [clientFilter, setClientFilter] = useState('all');
   const [tableKey, setTableKey] = useState(0);
@@ -112,6 +132,94 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
     if (clientFilter === 'all') return filteredByStatus;
     return filteredByStatus.filter((q) => q.client_name === clientFilter);
   }, [filteredByStatus, clientFilter]);
+
+  const columns: ColumnDefinition<IQuoteListItem>[] = useMemo(() => [
+    ...BASE_QUOTE_COLUMNS,
+    {
+      title: 'Actions',
+      dataIndex: 'quote_id',
+      width: '5%',
+      render: (_: unknown, record: IQuoteListItem) => {
+        const status = record.status as QuoteStatus;
+        const canEdit = ['draft', 'pending_approval', 'approved'].includes(status);
+        const canSend = ['draft', 'approved'].includes(status);
+        const canDelete = status === 'draft';
+
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  id={`quote-row-actions-${record.quote_id}`}
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  aria-label="Quote actions"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => onViewDetail(record.quote_id)}
+                  className="flex items-center gap-2"
+                  id={`view-quote-${record.quote_id}-menu-item`}
+                >
+                  <Eye className="h-4 w-4" />
+                  View
+                </DropdownMenuItem>
+                {canEdit && (
+                  <DropdownMenuItem
+                    onClick={() => onEdit(record.quote_id)}
+                    className="flex items-center gap-2"
+                    id={`edit-quote-${record.quote_id}-menu-item`}
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                )}
+                {canSend && (
+                  <DropdownMenuItem
+                    onClick={() => void onSend(record.quote_id)}
+                    className="flex items-center gap-2"
+                    id={`send-quote-${record.quote_id}-menu-item`}
+                  >
+                    <Send className="h-4 w-4" />
+                    Send
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onClick={() => void onDownloadPdf(record.quote_id)}
+                  className="flex items-center gap-2"
+                  id={`download-quote-${record.quote_id}-menu-item`}
+                >
+                  <Download className="h-4 w-4" />
+                  Download PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => void onDuplicate(record.quote_id)}
+                  className="flex items-center gap-2"
+                  id={`duplicate-quote-${record.quote_id}-menu-item`}
+                >
+                  <Copy className="h-4 w-4" />
+                  Duplicate
+                </DropdownMenuItem>
+                {canDelete && (
+                  <DropdownMenuItem
+                    onClick={() => onDelete(record.quote_id)}
+                    className="flex items-center gap-2 text-destructive focus:text-destructive"
+                    id={`delete-quote-${record.quote_id}-menu-item`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      },
+    },
+  ], [onViewDetail, onEdit, onSend, onDownloadPdf, onDuplicate, onDelete]);
 
   if (filteredByStatus.length === 0) {
     return (
@@ -145,7 +253,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
           <DataTable
             key={tableKey}
             data={filteredQuotes}
-            columns={QUOTE_COLUMNS}
+            columns={columns}
             pagination
             onRowClick={onRowClick}
             rowClassName={(record) =>
@@ -181,6 +289,8 @@ const QuotesTab: React.FC = () => {
   const [templates, setTemplates] = useState<IQuoteDocumentTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogState, setDeleteDialogState] = useState<{ isOpen: boolean; quoteId: string | null }>({ isOpen: false, quoteId: null });
+  const [isDeleting, setIsDeleting] = useState(false);
   const selectedQuoteId = searchParams?.get('quoteId');
   const selectedMode = searchParams?.get('mode');
   const requestedSubtab = searchParams?.get('subtab');
@@ -230,7 +340,6 @@ const QuotesTab: React.FC = () => {
     params.set('tab', 'quotes');
     params.set('subtab', activeSubTab);
     if (selectedQuoteId === record.quote_id) {
-      // Deselect
       router.push(`/msp/billing?${params.toString()}`);
     } else {
       params.set('quoteId', record.quote_id);
@@ -244,11 +353,11 @@ const QuotesTab: React.FC = () => {
     }
   };
 
-  const handleDownloadPdf = async () => {
-    if (!selectedQuoteId) return;
-    const result = await downloadQuotePdf(selectedQuoteId);
+  const triggerPdfDownload = async (quoteId: string) => {
+    const result = await downloadQuotePdf(quoteId);
     if (result && typeof result === 'object' && 'permissionError' in result) {
-      throw new Error(result.permissionError);
+      setError(result.permissionError);
+      return;
     }
     const { pdfData, quoteNumber } = result as { pdfData: number[]; quoteNumber: string };
     const blob = new Blob([new Uint8Array(pdfData)], { type: 'application/pdf' });
@@ -260,6 +369,61 @@ const QuotesTab: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(blobUrl);
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!selectedQuoteId) return;
+    await triggerPdfDownload(selectedQuoteId);
+  };
+
+  const handleSendQuote = async (quoteId: string) => {
+    try {
+      const result = await sendQuote(quoteId);
+      if (result && typeof result === 'object' && 'permissionError' in result) {
+        setError(result.permissionError);
+        return;
+      }
+      void loadData();
+    } catch (err) {
+      console.error('Failed to send quote:', err);
+      setError(err instanceof Error ? err.message : 'Failed to send quote.');
+    }
+  };
+
+  const handleDuplicateQuote = async (quoteId: string) => {
+    try {
+      const result = await duplicateQuote(quoteId);
+      if (result && typeof result === 'object' && 'permissionError' in result) {
+        setError(result.permissionError);
+        return;
+      }
+      void loadData();
+    } catch (err) {
+      console.error('Failed to duplicate quote:', err);
+      setError(err instanceof Error ? err.message : 'Failed to duplicate quote.');
+    }
+  };
+
+  const handleDeleteQuote = async () => {
+    const quoteId = deleteDialogState.quoteId;
+    if (!quoteId) return;
+
+    setIsDeleting(true);
+    setError(null);
+    try {
+      const result = await deleteQuote(quoteId);
+      if (result && typeof result === 'object' && 'permissionError' in result) {
+        setError(result.permissionError);
+      } else {
+        void loadData();
+      }
+      setDeleteDialogState({ isOpen: false, quoteId: null });
+    } catch (err) {
+      console.error('Failed to delete quote:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete quote.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const subtabCounts = useMemo(() => {
@@ -328,13 +492,14 @@ const QuotesTab: React.FC = () => {
         </div>
       </div>
 
-      {error ? (
-        <Alert variant="destructive">
+      {error && (
+        <Alert variant="destructive" className="mb-4">
           <AlertTitle>Quotes</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-      ) : (
-        <CustomTabs
+      )}
+
+      <CustomTabs
           tabs={[
             {
               id: 'active',
@@ -348,6 +513,12 @@ const QuotesTab: React.FC = () => {
                   onRowClick={handleRowClick}
                   onOpen={handleOpenQuote}
                   onDownload={handleDownloadPdf}
+                  onViewDetail={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=detail`)}
+                  onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
+                  onSend={handleSendQuote}
+                  onDuplicate={handleDuplicateQuote}
+                  onDownloadPdf={triggerPdfDownload}
+                  onDelete={(id) => setDeleteDialogState({ isOpen: true, quoteId: id })}
                 />
               ),
             },
@@ -363,6 +534,12 @@ const QuotesTab: React.FC = () => {
                   onRowClick={handleRowClick}
                   onOpen={handleOpenQuote}
                   onDownload={handleDownloadPdf}
+                  onViewDetail={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=detail`)}
+                  onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
+                  onSend={handleSendQuote}
+                  onDuplicate={handleDuplicateQuote}
+                  onDownloadPdf={triggerPdfDownload}
+                  onDelete={(id) => setDeleteDialogState({ isOpen: true, quoteId: id })}
                 />
               ),
             },
@@ -378,6 +555,12 @@ const QuotesTab: React.FC = () => {
                   onRowClick={handleRowClick}
                   onOpen={handleOpenQuote}
                   onDownload={handleDownloadPdf}
+                  onViewDetail={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=detail`)}
+                  onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
+                  onSend={handleSendQuote}
+                  onDuplicate={handleDuplicateQuote}
+                  onDownloadPdf={triggerPdfDownload}
+                  onDelete={(id) => setDeleteDialogState({ isOpen: true, quoteId: id })}
                 />
               ),
             },
@@ -385,7 +568,18 @@ const QuotesTab: React.FC = () => {
           defaultTab={activeSubTab}
           onTabChange={handleSubTabChange}
         />
-      )}
+
+      <ConfirmationDialog
+        id="delete-quote-confirmation"
+        isOpen={deleteDialogState.isOpen}
+        onClose={() => setDeleteDialogState({ isOpen: false, quoteId: null })}
+        onConfirm={handleDeleteQuote}
+        title="Delete Quote"
+        message="Are you sure you want to delete this quote? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        isConfirming={isDeleting}
+      />
     </div>
   );
 };

@@ -419,7 +419,7 @@ export async function convertQuoteToDraftContract(
     contract_id: contract.contract_id,
     start_date: quote.accepted_at || quote.quote_date || nowIso,
     end_date: null,
-    is_active: false,
+    is_active: true,
     created_at: nowIso,
     updated_at: nowIso,
   });

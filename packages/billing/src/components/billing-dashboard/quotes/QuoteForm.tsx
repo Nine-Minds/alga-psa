@@ -200,102 +200,111 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
         throw new Error(result?.permissionError || 'Quote save failed');
       }
 
-      let nextLineItems = lineItems;
-      const quoteItemIdMap = new Map<string, string>(
-        lineItems
-          .filter((item) => Boolean(item.quote_item_id))
-          .map((item) => [item.local_id, item.quote_item_id as string])
-      );
+      // When creating from a template, the server already created all line items.
+      // Skip client-side item persistence to avoid duplicates.
+      const createdFromTemplate = !isEditMode && Boolean(form.template_id);
 
-      const persistItem = async (item: DraftQuoteItem) => {
-        const sharedPayload = {
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          unit_of_measure: item.unit_of_measure ?? null,
-          phase: item.phase ?? null,
-          is_optional: item.is_optional,
-          is_selected: item.is_selected,
-          is_recurring: item.is_recurring,
-          billing_frequency: item.billing_frequency ?? null,
-          billing_method: item.billing_method ?? null,
-          is_discount: item.is_discount ?? false,
-          discount_type: item.discount_type ?? null,
-          discount_percentage: item.discount_percentage ?? null,
-          applies_to_item_id: item.applies_to_item_id ? (quoteItemIdMap.get(item.applies_to_item_id) ?? item.applies_to_item_id) : null,
-          applies_to_service_id: item.applies_to_service_id ?? null,
-          is_taxable: item.is_taxable ?? true,
-          tax_region: item.tax_region ?? null,
-          tax_rate: item.tax_rate ?? null,
+      let nextLineItems = createdFromTemplate
+        ? (result.quote_items || []).map(createDraftQuoteItemFromQuoteItem)
+        : lineItems;
+
+      if (!createdFromTemplate) {
+        const quoteItemIdMap = new Map<string, string>(
+          lineItems
+            .filter((item) => Boolean(item.quote_item_id))
+            .map((item) => [item.local_id, item.quote_item_id as string])
+        );
+
+        const persistItem = async (item: DraftQuoteItem) => {
+          const sharedPayload = {
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            unit_of_measure: item.unit_of_measure ?? null,
+            phase: item.phase ?? null,
+            is_optional: item.is_optional,
+            is_selected: item.is_selected,
+            is_recurring: item.is_recurring,
+            billing_frequency: item.billing_frequency ?? null,
+            billing_method: item.billing_method ?? null,
+            is_discount: item.is_discount ?? false,
+            discount_type: item.discount_type ?? null,
+            discount_percentage: item.discount_percentage ?? null,
+            applies_to_item_id: item.applies_to_item_id ? (quoteItemIdMap.get(item.applies_to_item_id) ?? item.applies_to_item_id) : null,
+            applies_to_service_id: item.applies_to_service_id ?? null,
+            is_taxable: item.is_taxable ?? true,
+            tax_region: item.tax_region ?? null,
+            tax_rate: item.tax_rate ?? null,
+          };
+
+          if (item.quote_item_id) {
+            const updatedItem = await updateQuoteItem(item.quote_item_id, sharedPayload);
+            if ('permissionError' in updatedItem) {
+              throw new Error(updatedItem.permissionError);
+            }
+
+            nextLineItems = nextLineItems.map((draftItem) => draftItem.local_id === item.local_id ? {
+              ...draftItem,
+              ...createDraftQuoteItemFromQuoteItem(updatedItem),
+            } : draftItem);
+            quoteItemIdMap.set(item.local_id, updatedItem.quote_item_id);
+            return;
+          }
+
+          const createdItem = await addQuoteItem({
+            quote_id: result.quote_id,
+            service_id: item.service_id ?? null,
+            ...sharedPayload,
+          });
+
+          if ('permissionError' in createdItem) {
+            throw new Error(createdItem.permissionError);
+          }
+
+          nextLineItems = nextLineItems.map((draftItem) => {
+            if (draftItem.local_id !== item.local_id) {
+              return draftItem;
+            }
+
+            return {
+              ...draftItem,
+              local_id: createdItem.quote_item_id,
+              quote_item_id: createdItem.quote_item_id,
+            };
+          });
+          quoteItemIdMap.set(item.local_id, createdItem.quote_item_id);
         };
 
-        if (item.quote_item_id) {
-          const updatedItem = await updateQuoteItem(item.quote_item_id, sharedPayload);
-          if ('permissionError' in updatedItem) {
-            throw new Error(updatedItem.permissionError);
+        const nonDiscountItems = lineItems.filter((item) => !item.is_discount);
+        const discountItems = lineItems.filter((item) => item.is_discount);
+
+        for (const item of nonDiscountItems) {
+          await persistItem(item);
+        }
+
+        for (const item of discountItems) {
+          await persistItem(item);
+        }
+
+        const currentQuoteItemIds = nextLineItems
+          .map((item) => item.quote_item_id)
+          .filter((value): value is string => Boolean(value));
+
+        const removedQuoteItemIds = persistedQuoteItemIds.filter((itemId) => !currentQuoteItemIds.includes(itemId));
+        for (const removedQuoteItemId of removedQuoteItemIds) {
+          const removalResult = await removeQuoteItem(removedQuoteItemId);
+          if (typeof removalResult !== 'boolean') {
+            throw new Error(removalResult.permissionError);
           }
-
-          nextLineItems = nextLineItems.map((draftItem) => draftItem.local_id === item.local_id ? {
-            ...draftItem,
-            ...createDraftQuoteItemFromQuoteItem(updatedItem),
-          } : draftItem);
-          quoteItemIdMap.set(item.local_id, updatedItem.quote_item_id);
-          return;
         }
 
-        const createdItem = await addQuoteItem({
-          quote_id: result.quote_id,
-          service_id: item.service_id ?? null,
-          ...sharedPayload,
-        });
-
-        if ('permissionError' in createdItem) {
-          throw new Error(createdItem.permissionError);
-        }
-
-        nextLineItems = nextLineItems.map((draftItem) => {
-          if (draftItem.local_id !== item.local_id) {
-            return draftItem;
+        if (currentQuoteItemIds.length > 0) {
+          const reorderedItems = await reorderQuoteItems(result.quote_id, currentQuoteItemIds);
+          if ('permissionError' in reorderedItems) {
+            throw new Error(reorderedItems.permissionError);
           }
-
-          return {
-            ...draftItem,
-            local_id: createdItem.quote_item_id,
-            quote_item_id: createdItem.quote_item_id,
-          };
-        });
-        quoteItemIdMap.set(item.local_id, createdItem.quote_item_id);
-      };
-
-      const nonDiscountItems = lineItems.filter((item) => !item.is_discount);
-      const discountItems = lineItems.filter((item) => item.is_discount);
-
-      for (const item of nonDiscountItems) {
-        await persistItem(item);
-      }
-
-      for (const item of discountItems) {
-        await persistItem(item);
-      }
-
-      const currentQuoteItemIds = nextLineItems
-        .map((item) => item.quote_item_id)
-        .filter((value): value is string => Boolean(value));
-
-      const removedQuoteItemIds = persistedQuoteItemIds.filter((itemId) => !currentQuoteItemIds.includes(itemId));
-      for (const removedQuoteItemId of removedQuoteItemIds) {
-        const removalResult = await removeQuoteItem(removedQuoteItemId);
-        if (typeof removalResult !== 'boolean') {
-          throw new Error(removalResult.permissionError);
+          nextLineItems = reorderedItems.map(createDraftQuoteItemFromQuoteItem);
         }
-      }
-
-      if (currentQuoteItemIds.length > 0) {
-        const reorderedItems = await reorderQuoteItems(result.quote_id, currentQuoteItemIds);
-        if ('permissionError' in reorderedItems) {
-          throw new Error(reorderedItems.permissionError);
-        }
-        nextLineItems = reorderedItems.map(createDraftQuoteItemFromQuoteItem);
       }
 
       setLineItems(nextLineItems);

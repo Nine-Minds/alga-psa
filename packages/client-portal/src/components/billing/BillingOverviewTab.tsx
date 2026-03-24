@@ -3,10 +3,11 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
-import { Package, FileText, AlertCircle } from 'lucide-react';
+import { Package, FileText, AlertCircle, ScrollText } from 'lucide-react';
 import BucketUsageChart from './BucketUsageChart';
 import type {
-  IClientContractLine
+  IClientContractLine,
+  IQuoteWithClient,
 } from '@alga-psa/types';
 import type { InvoiceViewModel } from '@alga-psa/types';
 import type { ClientBucketUsageResult } from '@alga-psa/client-portal/actions';
@@ -21,23 +22,27 @@ const SHOW_USAGE_FEATURES = true;
 interface BillingOverviewTabProps {
   contractLine: IClientContractLine | null;
   invoices: InvoiceViewModel[];
+  quotes: IQuoteWithClient[];
   bucketUsage: ClientBucketUsageResult[];
   isBucketUsageLoading: boolean;
   isLoading: boolean;
   formatCurrency: (amount: number, currencyCode?: string) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
   onViewAllInvoices?: () => void;
+  onViewAllQuotes?: () => void;
 }
 
 const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
   contractLine,
   invoices,
+  quotes,
   bucketUsage,
   isBucketUsageLoading,
   isLoading,
   formatCurrency,
   formatDate,
-  onViewAllInvoices
+  onViewAllInvoices,
+  onViewAllQuotes,
 }) => {
   const { t } = useTranslation('features/billing');
   // State for plan details dialog
@@ -172,12 +177,67 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
     </Card>
   ), [nextInvoice, nextInvoiceFinancialArtifactSummary, nextInvoiceServicePeriodSummary, invoices.length, formatCurrency, formatDate, onViewAllInvoices, t]);
 
+  const pendingQuotes = useMemo(
+    () => quotes.filter((q) => q.status === 'sent' || q.status === 'approved'),
+    [quotes]
+  );
+
+  const quotesCard = useMemo(() => (
+    <Card className="p-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-500">{t('quotes.pendingQuotes', 'Pending Quotes')}</p>
+          {isLoading ? (
+            <>
+              <Skeleton className="mt-2 h-8 w-3/4" />
+              <Skeleton className="mt-1 h-4 w-1/2" />
+            </>
+          ) : pendingQuotes.length > 0 ? (
+            <>
+              <p className="mt-2 text-3xl font-semibold">{pendingQuotes.length}</p>
+              <p className="mt-1 text-sm text-gray-500">
+                {t('quotes.awaitingResponse', {
+                  count: pendingQuotes.length,
+                  defaultValue: '{{count}} quote(s) awaiting your response',
+                })}
+              </p>
+              {pendingQuotes[0] && (
+                <p className="mt-2 text-sm text-gray-500 truncate">
+                  {pendingQuotes[0].title || pendingQuotes[0].quote_number}
+                  {pendingQuotes[0].total_amount != null
+                    ? ` — ${formatCurrency(pendingQuotes[0].total_amount, pendingQuotes[0].currency_code || 'USD')}`
+                    : ''}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="mt-2 text-lg text-gray-500">{t('quotes.noPending', 'No pending quotes')}</p>
+          )}
+        </div>
+        <ScrollText className="h-5 w-5 text-gray-400" />
+      </div>
+      <Button
+        id="view-all-quotes-button"
+        className="mt-4 w-full"
+        variant="outline"
+        onClick={() => {
+          if (onViewAllQuotes) {
+            onViewAllQuotes();
+          }
+        }}
+      >
+        {t('quotes.viewAll', 'View All Quotes')}
+      </Button>
+    </Card>
+  ), [pendingQuotes, isLoading, formatCurrency, onViewAllQuotes, t]);
+
   return (
     <>
       <div id="billing-overview-content" className="space-y-6 py-4">
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {planCard}
           {invoiceCard}
+          {quotesCard}
         </div>
 
         {/* Enhanced Bucket Usage Visualization - optionally hidden */}

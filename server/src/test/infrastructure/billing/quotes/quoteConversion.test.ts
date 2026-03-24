@@ -315,7 +315,7 @@ describe('Quote conversion infrastructure', () => {
 
     expect(assignment.client_id).toBe(context.clientId);
     expect(new Date(assignment.start_date).toISOString().startsWith('2026-03-14')).toBe(true);
-    expect(assignment.is_active).toBe(false);
+    expect(assignment.is_active).toBe(true);
   });
 
   it('T109: contract conversion stores converted_contract_id on the source quote', async () => {
