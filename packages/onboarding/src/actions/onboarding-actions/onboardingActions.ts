@@ -1155,19 +1155,17 @@ export const getTenantTicketingData = withAuth(async (
       .orderBy('display_order', 'asc')
       .orderBy('board_name', 'asc');
 
-    const activeBoardId = boards.find((board: any) => board.is_default)?.board_id ?? boards[0]?.board_id ?? null;
-
     const [categories, statuses, priorities] = await Promise.all([
       knex('categories')
         .where({ tenant })
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
-      activeBoardId
-        ? knex('statuses')
-            .where({ tenant, status_type: 'ticket', board_id: activeBoardId })
-            .orderBy('order_number', 'asc')
-            .orderBy('name', 'asc')
-        : Promise.resolve([]),
+      knex('statuses')
+        .where({ tenant, status_type: 'ticket' })
+        .whereNotNull('board_id')
+        .orderBy('board_id', 'asc')
+        .orderBy('order_number', 'asc')
+        .orderBy('name', 'asc'),
       knex('priorities')
         .where({ tenant, item_type: 'ticket' })
         .orderBy('order_number', 'asc')
