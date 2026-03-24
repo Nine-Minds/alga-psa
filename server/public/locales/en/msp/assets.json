@@ -1,0 +1,181 @@
+{
+  "common": {
+    "actions": {
+      "add": "Add",
+      "back": "Back",
+      "cancel": "Cancel",
+      "close": "Close",
+      "copy": "Copy",
+      "create": "Create",
+      "delete": "Delete",
+      "download": "Download",
+      "edit": "Edit",
+      "refresh": "Refresh",
+      "remove": "Remove",
+      "retry": "Retry",
+      "save": "Save",
+      "saving": "Saving...",
+      "search": "Search",
+      "select": "Select",
+      "update": "Update",
+      "view": "View"
+    },
+    "states": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "loading": "Loading...",
+      "na": "N/A",
+      "none": "None"
+    },
+    "no": "No",
+    "yes": "Yes"
+  },
+  "assetAlertsSection": {
+    "title": "Asset Alerts Section",
+    "description": "Enterprise alert section wrapper for asset-specific RMM alerts and remediation actions"
+  },
+  "assetCommandPalette": {
+    "title": "Asset Command Palette",
+    "description": "Command palette for searching assets and launching asset actions"
+  },
+  "assetDashboard": {
+    "title": "Asset Dashboard",
+    "description": "Top-level asset dashboard wrapper that renders the client asset experience"
+  },
+  "assetDashboardClient": {
+    "title": "Asset Dashboard Client",
+    "description": "Main asset list page with filters, table and grid views, bulk actions, and drawer flows"
+  },
+  "assetDashboardGrid": {
+    "title": "Asset Dashboard Grid",
+    "description": "Composite grid layout for asset detail cards, RMM panels, and related status widgets"
+  },
+  "assetDetailDrawerClient": {
+    "title": "Asset Detail Drawer",
+    "description": "Drawer-based asset quick view with actions, summary data, and navigation into the full record"
+  },
+  "assetDetailHeader": {
+    "title": "Asset Detail Header",
+    "description": "Header chrome for the asset detail experience including identity, badges, and refresh actions"
+  },
+  "assetDetailTabs": {
+    "title": "Asset Detail Tabs",
+    "description": "Tabbed asset detail navigation for overview, maintenance, documents, history, and related records"
+  },
+  "assetDetailView": {
+    "title": "Asset Detail View",
+    "description": "Asset detail composition with loading, error, metrics, grid panels, and detail tabs"
+  },
+  "assetDetails": {
+    "title": "Asset Details",
+    "description": "Full asset details page with summary cards, associations, documents, and operational actions"
+  },
+  "assetDocuments": {
+    "title": "Asset Documents",
+    "description": "Asset document listing and attachment surface for files associated with an asset"
+  },
+  "assetForm": {
+    "title": "Asset Form",
+    "description": "Primary asset create and edit form with identity, lifecycle, contract, and metadata fields"
+  },
+  "assetFormClient": {
+    "title": "Asset Form Client",
+    "description": "Client-only dynamic wrapper for the asset form and edit skeleton experience"
+  },
+  "assetMetricsBanner": {
+    "title": "Asset Metrics Banner",
+    "description": "Metric cards and rollups for tickets, maintenance, uptime, and asset health indicators"
+  },
+  "assetPatchStatusSection": {
+    "title": "Asset Patch Status Section",
+    "description": "Enterprise patch and antivirus status wrapper shown in the asset detail experience"
+  },
+  "assetSoftwareInventory": {
+    "title": "Asset Software Inventory",
+    "description": "Enterprise software inventory wrapper for installed software and version data"
+  },
+  "associatedAssets": {
+    "title": "Associated Assets",
+    "description": "Parent and child asset relationship management with linked asset actions"
+  },
+  "createTicketFromAssetButton": {
+    "title": "Create Ticket From Asset",
+    "description": "Ticket creation flow launched from an asset with board, status, and category selection"
+  },
+  "deleteAssetButton": {
+    "title": "Delete Asset Button",
+    "description": "Delete confirmation flow for removing an asset record"
+  },
+  "quickAddAsset": {
+    "title": "Quick Add Asset",
+    "description": "Quick-create asset flow with essential fields for adding a new asset record"
+  },
+  "remoteAccessButton": {
+    "title": "Remote Access Button",
+    "description": "Remote access launcher for assets with supported connection integrations"
+  },
+  "rmmStatusIndicator": {
+    "title": "RMM Status Indicator",
+    "description": "Connected/disconnected RMM status chip and supporting state labels"
+  },
+  "assetInfoPanel": {
+    "title": "Asset Info Panel",
+    "description": "General asset information panel for identification, owner, and lifecycle details"
+  },
+  "assetNotesPanel": {
+    "title": "Asset Notes Panel",
+    "description": "Rich-text notes panel for asset-specific notes and quick operational context"
+  },
+  "hardwareSpecsPanel": {
+    "title": "Hardware Specs Panel",
+    "description": "Hardware specification panel covering CPU, memory, storage, and device metadata"
+  },
+  "rmmVitalsPanel": {
+    "title": "RMM Vitals Panel",
+    "description": "RMM vitals panel for heartbeat, monitoring, and endpoint health details"
+  },
+  "securityPatchingPanel": {
+    "title": "Security & Patching Panel",
+    "description": "Security and patching posture panel for vulnerability and update status indicators"
+  },
+  "copyableField": {
+    "title": "Copyable Field",
+    "description": "Shared copy-to-clipboard field used across asset forms and detail panels"
+  },
+  "statusBadge": {
+    "title": "Status Badge",
+    "description": "Shared badge renderer for asset lifecycle and monitoring statuses"
+  },
+  "utilizationBar": {
+    "title": "Utilization Bar",
+    "description": "Shared progress bar component for utilization and percentage-based asset metrics"
+  },
+  "auditLogTab": {
+    "title": "Audit Log Tab",
+    "description": "Asset audit history tab for timeline events and record changes"
+  },
+  "createMaintenanceScheduleDialog": {
+    "title": "Create Maintenance Schedule",
+    "description": "Dialog for defining maintenance schedules and recurrence rules for an asset"
+  },
+  "documentsPasswordsTab": {
+    "title": "Documents & Passwords Tab",
+    "description": "Combined tab for asset documents, credentials, and related secure records"
+  },
+  "maintenanceSchedulesTab": {
+    "title": "Maintenance Schedules Tab",
+    "description": "Maintenance schedule management tab for planned service and recurring work"
+  },
+  "relatedAssetsTab": {
+    "title": "Related Assets Tab",
+    "description": "Tab for browsing and managing related asset relationships"
+  },
+  "serviceHistoryTab": {
+    "title": "Service History Tab",
+    "description": "Service history tab summarizing maintenance and ticket activity for the asset"
+  },
+  "softwareInventoryTab": {
+    "title": "Software Inventory Tab",
+    "description": "Software inventory tab for installed software, versions, and discovery metadata"
+  }
+}

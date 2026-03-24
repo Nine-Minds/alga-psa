@@ -39,6 +39,7 @@
 - (2026-03-20) RMM integration components (RmmStatusIndicator, RmmVitalsPanel) — technical labels, some may stay English
 - (2026-03-20) `AssetCommandPalette.tsx` (256 LOC) — search/command interface, needs accessible translations
 - (2026-03-20) `index.ts` (13 LOC) — just exports, skip
+- (2026-03-24) Asset wrapper-only files need lighter handling in the namespace scaffold: `AssetDashboard.tsx`, `AssetFormClient.tsx`, `AssetAlertsSection.tsx`, `AssetPatchStatusSection.tsx`, and `AssetSoftwareInventory.tsx` are mostly wrappers/dynamic imports, while `AssetDetailDrawer.types.ts`, `index.ts`, and the component test files are non-UI sources that should stay out of locale coverage checks.
 
 ### Onboarding (2b-16)
 - (2026-03-24) `TicketingConfigStep.tsx` (3,040 LOC, was 2,920) is MASSIVE — larger than most entire components. Has ticketing board setup, status configuration, priority settings, category management, SLA configuration. This is effectively a mini settings page embedded in the wizard. **Updated**: +120 LOC for board-scoped status configuration (board-specific-statuses merge).
@@ -98,6 +99,8 @@
 - (2026-03-24) Completed `F015`: ran a targeted Italian accent audit on `server/public/locales/it/msp/contacts.json`. The strict dropped-accent scan (`pou/gia/verra/funzionalita/perche/cosi/piu`, plus the common `e necessario`-style phrases) returned no matches, and representative spot checks confirmed accented forms are present in the locale file (`Sì`, `è`, `più`). Validation:
   - `rg -n '\b(puo|gia|verra|funzionalita|perche|cosi|piu)\b| e necessario| e possibile| e richiesto| e richiesta| e configurato| e configurata' server/public/locales/it/msp/contacts.json` returned no matches
   - `rg -n 'Sì| è |più|funzionalità' server/public/locales/it/msp/contacts.json` returned representative accented strings
+- (2026-03-24) Completed `F020`: created `server/public/locales/en/msp/assets.json` as the initial English scaffold for the asset batch. Added shared `common.actions` / `common.states` keys plus component-scoped `title` / `description` entries for the main asset list/detail/form surfaces, related panels/tabs/shared widgets, and the thin wrapper components that will still hang later `t(...)` calls off the `msp/assets` namespace. Intentionally excluded `packages/assets/src/components/index.ts`, `packages/assets/src/components/AssetDetailDrawer.types.ts`, and the local asset test files because they are not user-facing locale sources. Validation:
+  - `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/assets.json','utf8')); console.log('assets json ok')"` returned `assets json ok`
 
 ## Commands / Runbooks
 
