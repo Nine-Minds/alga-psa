@@ -40,9 +40,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          if ! npm ci; then
+          if ! npm ci --include=optional; then
             echo "npm ci failed; attempting npm install fallback to regenerate lock data"
-            npm install --legacy-peer-deps
+            npm install --legacy-peer-deps --include=optional
           fi
 
       - name: Provide build-time env
