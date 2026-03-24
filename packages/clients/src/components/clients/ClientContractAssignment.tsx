@@ -28,6 +28,7 @@ import { getClientById } from '@alga-psa/clients/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ClientContractDialog, ClientContractDialogSubmission } from './ClientContractDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientContractAssignmentProps {
   clientId: string;
@@ -42,6 +43,7 @@ interface DetailedClientContract extends IClientContract {
 }
 
 const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ clientId, onAssignmentsChanged }) => {
+  const { t } = useTranslation('msp/clients');
   const [clientContracts, setClientContracts] = useState<DetailedClientContract[]>([]);
   const [availableContracts, setAvailableContracts] = useState<IContract[]>([]);
   const [selectedContractToAdd, setSelectedContractToAdd] = useState<string | null>(null);
@@ -110,7 +112,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      setError('Failed to load contracts data');
+      setError(t('clientContractAssignment.loadError', { defaultValue: 'Failed to load contracts data' }));
     } finally {
       setIsLoading(false);
     }
@@ -144,7 +146,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     } catch (error: any) {
       console.error('Error adding contract to client:', error);
       // Try to extract backend error message
-      let errorMsg = 'Failed to add contract to client';
+      let errorMsg = t('clientContractAssignment.addError', { defaultValue: 'Failed to add contract to client' });
       if (error?.message) {
         errorMsg = error.message;
       } else if (typeof error === 'string') {
@@ -167,7 +169,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
       await onAssignmentsChanged?.();
     } catch (error: any) {
       console.error('Error deactivating client contract:', error);
-      let errorMsg = 'Failed to deactivate contract';
+      let errorMsg = t('clientContractAssignment.deactivateError', { defaultValue: 'Failed to deactivate contract' });
       if (error?.message) {
         errorMsg = error.message;
       } else if (typeof error === 'string') {
@@ -204,7 +206,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
       await onAssignmentsChanged?.();
     } catch (error: any) {
       console.error('Error updating client contract:', error);
-      let errorMsg = 'Failed to update contract';
+      let errorMsg = t('clientContractAssignment.updateError', { defaultValue: 'Failed to update contract' });
       if (error?.message) {
         errorMsg = error.message;
       } else if (typeof error === 'string') {
@@ -220,67 +222,74 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
   };
 
   const formatDate = (dateString: string | null): string => {
-    if (!dateString) return 'Ongoing';
+    if (!dateString) {
+      return t('clientContractAssignment.ongoing', { defaultValue: 'Ongoing' });
+    }
     const date = new Date(dateString);
     return date.toLocaleDateString();
   };
 
   const getRenewalSummary = (contract: DetailedClientContract): string => {
     if (!contract.end_date) {
-      return 'Ongoing';
+      return t('clientContractAssignment.ongoing', { defaultValue: 'Ongoing' });
     }
 
     const renewalMode = contract.effective_renewal_mode ?? contract.renewal_mode ?? 'manual';
     if (renewalMode === 'auto') {
-      return 'Auto-renew';
+      return t('clientContractAssignment.autoRenew', { defaultValue: 'Auto-renew' });
     }
     if (renewalMode === 'none') {
-      return 'Non-renewing';
+      return t('clientContractAssignment.nonRenewing', { defaultValue: 'Non-renewing' });
     }
     if (contract.decision_due_date) {
-      return `Manual (due ${formatDate(contract.decision_due_date)})`;
+      return t('clientContractAssignment.manualDue', {
+        defaultValue: 'Manual (due {{date}})',
+        date: formatDate(contract.decision_due_date)
+      });
     }
-    return 'Manual renewal';
+    return t('clientContractAssignment.manualRenewal', { defaultValue: 'Manual renewal' });
   };
 
   const contractColumns: ColumnDefinition<DetailedClientContract>[] = [
     {
-      title: 'Contract Name',
+      title: t('clientContractAssignment.contractName', { defaultValue: 'Contract Name' }),
       dataIndex: 'contract_name',
       // Revert to just displaying the value, no button/dialog trigger needed here
       render: (value) => value,
     },
     {
-      title: 'Description',
+      title: t('clientContractAssignment.description', { defaultValue: 'Description' }),
       dataIndex: 'description',
-      render: (value) => value || 'No description',
+      render: (value) => value || t('clientContractAssignment.noDescription', { defaultValue: 'No description' }),
     },
     {
-      title: 'Start Date',
+      title: t('clientContractAssignment.startDate', { defaultValue: 'Start Date' }),
       dataIndex: 'start_date',
       render: (value) => formatDate(value),
     },
     {
-      title: 'End Date',
+      title: t('clientContractAssignment.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
       render: (value) => formatDate(value),
     },
     {
-      title: 'Renewal',
+      title: t('clientContractAssignment.renewal', { defaultValue: 'Renewal' }),
       dataIndex: 'effective_renewal_mode',
       render: (_value, record) => getRenewalSummary(record),
     },
     {
-      title: 'Status',
+      title: t('clientContractAssignment.status', { defaultValue: 'Status' }),
       dataIndex: 'is_active',
       render: (value) => (
         <Badge variant={value ? 'success' : 'default-muted'}>
-          {value ? 'Active' : 'Inactive'}
+          {value
+            ? t('common.states.active', { defaultValue: 'Active' })
+            : t('common.states.inactive', { defaultValue: 'Inactive' })}
         </Badge>
       ),
     },
     {
-      title: 'Contract Lines',
+      title: t('clientContractAssignment.contractLines', { defaultValue: 'Contract Lines' }),
       dataIndex: 'contract_line_names',
       render: (contractLineNames: string[] | undefined) => {
         if (!contractLineNames || contractLineNames.length === 0) {
@@ -290,7 +299,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
       },
     },
     {
-      title: 'Actions',
+      title: t('clientContractAssignment.actions', { defaultValue: 'Actions' }),
       dataIndex: 'client_contract_id',
       render: (value, record) => (
         <DropdownMenu>
@@ -301,7 +310,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('clientContractAssignment.openMenu', { defaultValue: 'Open menu' })}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -311,7 +320,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
               onClick={() => handleEditContract(record)}
             >
               <Calendar className="h-4 w-4 mr-2" />
-              Edit {/* Changed text */}
+              {t('common.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             {record.is_active && (
               <DropdownMenuItem
@@ -322,7 +331,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
                   handleDeactivateContract(value);
                 }}
               >
-                Unassign {/* Updated text only */}
+                {t('clientContractAssignment.unassign', { defaultValue: 'Unassign' })}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
@@ -336,7 +345,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
   return (
     <Card size="2">
       <Box p="4">
-        <h3 className="text-lg font-medium mb-4">Contracts</h3>
+        <h3 className="text-lg font-medium mb-4">{t('clientContractAssignment.title', { defaultValue: 'Contracts' })}</h3>
 
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -346,13 +355,13 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
         )}
 
         {isLoading ? (
-          <div className="text-center py-4">Loading contracts...</div>
+          <div className="text-center py-4">{t('clientContractAssignment.loading', { defaultValue: 'Loading contracts...' })}</div>
         ) : (
           <>
             <div className="mb-4">
               {clientContracts.length === 0 ? (
                 <div className="text-center py-4 text-gray-500">
-                  No contracts have been assigned to this client yet.
+                  {t('clientContractAssignment.empty', { defaultValue: 'No contracts have been assigned to this client yet.' })}
                 </div>
               ) : (
                 <DataTable
@@ -378,7 +387,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
                 }))}
                 onValueChange={setSelectedContractToAdd}
                 value={selectedContractToAdd || ''}
-                placeholder="Select contract..."
+                placeholder={t('clientContractAssignment.selectContract', { defaultValue: 'Select contract...' })}
                 className="flex-grow"
               />
               <ClientContractDialog
@@ -389,7 +398,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
                     disabled={!selectedContractToAdd || selectableContracts.length === 0}
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Assign Contract
+                    {t('clientContractAssignment.assignContract', { defaultValue: 'Assign Contract' })}
                   </Button>
                 }
               />

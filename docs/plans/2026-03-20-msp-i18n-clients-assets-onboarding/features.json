@@ -2,7 +2,7 @@
   {"id": "F001", "description": "Create en/msp/clients.json with all keys for 31 client components (+panels/)", "implemented": true, "prdRefs": ["2b-10"]},
   {"id": "F002", "description": "Wire useTranslation('msp/clients') in ClientDetails.tsx and Clients.tsx (largest files, ~300-600 strings combined)", "implemented": true, "prdRefs": ["2b-10"]},
   {"id": "F003", "description": "Wire useTranslation in QuickAddClient.tsx, ClientLocations.tsx, ClientsImportDialog.tsx", "implemented": true, "prdRefs": ["2b-10"]},
-  {"id": "F004", "description": "Wire useTranslation in BillingConfiguration.tsx, ClientContractAssignment.tsx, ClientContractLineDashboard.tsx, ClientBillingSchedule.tsx", "implemented": false, "prdRefs": ["2b-10"]},
+  {"id": "F004", "description": "Wire useTranslation in BillingConfiguration.tsx, ClientContractAssignment.tsx, ClientContractLineDashboard.tsx, ClientBillingSchedule.tsx", "implemented": true, "prdRefs": ["2b-10"]},
   {"id": "F005", "description": "Wire useTranslation in remaining ~20 client files (tax settings, service overlap, credit settings, grid cards, notes panel, contract lines, etc.)", "implemented": false, "prdRefs": ["2b-10"]},
   {"id": "F006", "description": "Generate msp/clients translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-10"]},
   {"id": "F007", "description": "Italian accent audit on it/msp/clients.json", "implemented": false, "prdRefs": ["2b-10"]},
