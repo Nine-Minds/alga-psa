@@ -29,7 +29,9 @@
       "loading": "Loading...",
       "na": "N/A",
       "none": "None"
-    }
+    },
+    "no": "No",
+    "yes": "Yes"
   },
   "clientsPage": {
     "title": "Clients Page",
@@ -74,18 +76,15 @@
     "singleInactiveError": "An error occurred while marking the client as inactive. Please try again.",
     "bulkReactivateError": "An error occurred while reactivating clients. Please try again.",
     "exportError": "Failed to export clients to CSV",
-    "unknownClient": "Unknown Client"
-    ,
+    "unknownClient": "Unknown Client",
     "unknownError": "Unknown error",
     "actions": "Actions",
-    "reset": "Reset",
     "allSelected": "All {{count}} clients selected",
     "selectedSingle": "{{count}} Selected",
     "selectedPlural": "{{count}} Selected",
     "createSuccess": "{{name}} has been created successfully.",
     "exportSuccess": "Exported {{count}} {{clientsLabel}} to CSV",
     "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} been deleted successfully.",
-    "bulkDeleteError": "An error occurred while deleting clients. Please try again.",
     "bulkInactiveFailed": "{{count}} {{clientsLabel}} could not be marked as inactive.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} and {{contactCount}} {{contactsLabel}} have been marked as inactive successfully.",
     "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} been marked as inactive successfully.",
@@ -129,7 +128,8 @@
       "serviceUsageRecords": "service usage records",
       "bucketUsageRecord": "bucket usage record",
       "bucketUsageRecords": "bucket usage records"
-    }
+    },
+    "deleteSelectedPrompt": "Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone."
   },
   "clientDetails": {
     "title": "Client Details",
@@ -189,7 +189,6 @@
     "selectSlaPolicy": "Select SLA Policy",
     "selectDefaultContact": "Select default contact",
     "noActiveContacts": "No active contacts",
-    "defaultContact": "Default contact",
     "timezone": "Timezone",
     "timezoneHelper": "Select the timezone for this client",
     "taxSettings": "Tax Settings",
@@ -260,7 +259,9 @@
   "clientCreatedDialog": {
     "title": "Client Created",
     "viewClient": "View Client",
-    "addAnother": "Add Another"
+    "addAnother": "Add Another",
+    "createdMessage": "\"{{name}}\" has been created successfully.",
+    "unknownClient": "Client"
   },
   "clientLocations": {
     "title": "Client Locations Manager",
@@ -307,12 +308,32 @@
     "invoiceDeliveryMethod": "Invoice Delivery Method",
     "invoiceTemplate": "Invoice Template",
     "invoiceTemplateHelp": "Select a template or use default",
-    "paymentTerms": "Payment Terms",
+    "paymentTerms": {
+      "dueOnReceipt": "Due on Receipt",
+      "net15": "Net 15",
+      "net30": "Net 30"
+    },
     "preferredPaymentMethod": "Preferred Payment Method",
     "defaultCurrency": "Default Currency",
     "selectTaxRegion": "Select Tax Region (Optional)",
     "loadingRegions": "Loading regions...",
-    "taxRegionLoadError": "Failed to load tax regions."
+    "taxRegionLoadError": "Failed to load tax regions.",
+    "defaultTaxRegion": "Default Tax Region",
+    "defaultTemplateLabel": "(Default)",
+    "deliveryMethods": {
+      "both": "Both",
+      "email": "Email",
+      "mail": "Mail"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Bank Transfer",
+      "check": "Check",
+      "creditCard": "Credit Card"
+    },
+    "paymentTermsLabel": "Payment Terms",
+    "standardTemplateLabel": "(Standard)",
+    "taxRegionsLoadError": "Failed to load tax regions.",
+    "usingDefaultTemplate": "Using default template: {{name}}"
   },
   "billingConfiguration": {
     "general": "General",
@@ -471,7 +492,21 @@
     "noticePeriodDays": "Notice Period (Days)",
     "renewalTermMonths": "Renewal Term (Months)",
     "includedContractLines": "Included Contract Lines:",
-    "unexpectedError": "An unexpected error occurred."
+    "unexpectedError": "An unexpected error occurred.",
+    "assignContract": "Assign Contract",
+    "cancel": "Cancel",
+    "endDate": "End Date",
+    "endDateAfterStart": "End date must be after start date",
+    "endDateRequired": "End date is required when not ongoing",
+    "noticePeriodInvalid": "Notice period days must be a non-negative whole number",
+    "noticePeriodPlaceholder": "e.g., 30",
+    "renewalMode": "Renewal Mode",
+    "renewalTermInvalid": "Renewal term months must be a positive whole number for auto-renew contracts",
+    "renewalTermPlaceholder": "e.g., 12",
+    "startDate": "Start Date",
+    "startDateRequired": "Start date is required",
+    "updateAssignment": "Update Assignment",
+    "useTenantRenewalDefaults": "Use tenant renewal defaults"
   },
   "clientContractLineDashboard": {
     "title": "Usage Metrics (Last 30 Days)",
@@ -500,7 +535,98 @@
     "overviewTitle": "Overview",
     "bestPracticesTitle": "Best Practices",
     "troubleshootingTitle": "Troubleshooting",
-    "commonScenariosTitle": "Common Scenarios"
+    "commonScenariosTitle": "Common Scenarios",
+    "bestPractices": {
+      "clearNamingDescription": "Name contract lines in a way that clearly indicates their purpose and scope for this client.",
+      "clearNamingItem1": "Include the contract line type in the name (e.g., \"Monthly Support Bucket\", \"Project-Based Plan\")",
+      "clearNamingItem2": "Consider including dates or version numbers for contract lines that change over time",
+      "clearNamingItem3": "Use consistent naming patterns across all contract lines for this client",
+      "clearNamingTitle": "2. Use Clear Plan Naming Conventions",
+      "description": "Follow these best practices to ensure accurate billing and minimize confusion when managing multiple contract lines for this client.",
+      "documentRulesDescription": "Clearly document how service overlaps should be handled for this specific client.",
+      "documentRulesItem1": "Create client-specific guidelines for which contract line to use in different scenarios",
+      "documentRulesItem2": "Share these guidelines with all team members who work with this client",
+      "documentRulesItem3": "Include examples of common situations and how they should be handled",
+      "documentRulesTitle": "3. Document Disambiguation Rules",
+      "minimizeOverlapsDescription": "Whenever possible, avoid having the same service in multiple contract lines for this client. This simplifies billing and reporting.",
+      "minimizeOverlapsItem1": "Review the Service Overlap Matrix to identify overlapping services",
+      "minimizeOverlapsItem2": "Consider consolidating contract lines or reorganizing services",
+      "minimizeOverlapsItem3": "If overlaps are necessary, ensure clear documentation of which contract line should be used when",
+      "minimizeOverlapsTitle": "1. Minimize Service Overlaps",
+      "title": "Best Practices for Contract Line Disambiguation"
+    },
+    "overview": {
+      "benefitBilling": "Accurate billing and revenue recognition",
+      "benefitReporting": "Clear reporting and analytics",
+      "benefitsTitle": "Benefits of Proper Disambiguation",
+      "benefitTracking": "Simplified time entry and usage tracking",
+      "benefitTransparency": "Improved client transparency",
+      "bucketPriorityDescription": "Bucket contract lines are given priority when disambiguating services for this client.",
+      "bucketPriorityLabel": "Bucket Priority:",
+      "description": "When a client has multiple contract lines that include the same service, the system needs to determine which contract line to use for time entries and usage records. This guide explains how to manage this situation for this specific client.",
+      "explicitAssignmentDescription": "When a service appears in multiple contract lines, users must choose the intended assignment context instead of relying on implicit fallback.",
+      "explicitAssignmentLabel": "Explicit Assignment Required:",
+      "explicitSelectionDescription": "When users must manually choose which contract line to bill against for this client.",
+      "explicitSelectionLabel": "Explicit Selection:",
+      "issueIncorrectBilling": "Incorrect billing when assignment context is ambiguous",
+      "issueReporting": "Reporting inconsistencies across different contract lines",
+      "issueUnexpectedBilling": "Unexpected billing behavior for this client",
+      "issueUserConfusion": "User confusion when selecting contract lines for time entry",
+      "keyConceptsTitle": "Key Concepts:",
+      "potentialIssuesTitle": "Potential Issues for This Client",
+      "serviceOverlapDescription": "When the same service appears in multiple contract lines for this client.",
+      "serviceOverlapLabel": "Service Overlap:",
+      "title": "Understanding Contract Line Disambiguation for This Client"
+    },
+    "scenarios": {
+      "description": "These examples illustrate how contract line disambiguation works in common scenarios for this client.",
+      "scenario1Description": "When a service appears in both a bucket contract line and a standard contract line for this client:",
+      "scenario1Item1": "The bucket contract line is given priority by default",
+      "scenario1Item2": "Time entries and usage will be billed against the bucket contract line until it's depleted",
+      "scenario1Item3": "After the bucket is depleted, the standard contract line will be used automatically",
+      "scenario1Item4": "Users can manually override this behavior by explicitly selecting a contract line during time entry",
+      "scenario1Title": "Scenario 1: Bucket Plan + Standard Plan",
+      "scenario2Description": "When a service appears in multiple standard contract lines for this client:",
+      "scenario2Item1": "Users will be prompted to select which contract line to bill against during time entry",
+      "scenario2Item2": "If no contract line is explicitly selected, billing should stop with an ambiguity error that requires user choice",
+      "scenario2Item3": "Consider consolidating these contract lines to avoid confusion",
+      "scenario2Title": "Scenario 2: Multiple Standard Plans",
+      "scenario3Description": "When a service appears in multiple bucket contract lines for this client:",
+      "scenario3Item1": "Users will be prompted to select which bucket to bill against during time entry",
+      "scenario3Item2": "If no bucket is explicitly selected, billing should stop with an ambiguity error that requires user choice",
+      "scenario3Item3": "Teams can define internal guidance for choosing between overlapping buckets",
+      "scenario3Title": "Scenario 3: Multiple Bucket Plans",
+      "title": "Common Disambiguation Scenarios"
+    },
+    "tabs": {
+      "bestPractices": "Best Practices",
+      "overview": "Overview",
+      "scenarios": "Common Scenarios",
+      "troubleshooting": "Troubleshooting"
+    },
+    "troubleshooting": {
+      "description": "Solutions for common issues related to contract line disambiguation for this client.",
+      "issueReportingDescription": "If you're seeing inconsistent reporting for services that appear in multiple contract lines for this client:",
+      "issueReportingItem1": "Use the contract_line_id filter in reports to see data for specific contract lines",
+      "issueReportingItem2": "Check if time entries or usage records have explicit contract line assignments",
+      "issueReportingItem3": "Review historical data to see if contract line assignments have changed over time",
+      "issueReportingItem4": "Consider updating the client's contract line configuration to reduce overlaps",
+      "issueReportingTitle": "Issue: Inconsistent Reporting",
+      "issueSelectionMissingDescription": "If the contract line selection dropdown is not appearing during time entry for this client:",
+      "issueSelectionMissingItem1": "Verify that the service is actually included in multiple active contract lines",
+      "issueSelectionMissingItem2": "Check if one of the contract lines has expired or is not yet active",
+      "issueSelectionMissingItem3": "Ensure that the client and service selections are made before expecting the contract line dropdown",
+      "issueSelectionMissingItem4": "Try refreshing the page or clearing the browser cache",
+      "issueSelectionMissingTitle": "Issue: Plan Selection Not Appearing",
+      "issueWrongPlanDescription": "If time entries are being billed to the wrong contract line for this client:",
+      "issueWrongPlanItem1": "Check if the time entry has an explicit contract_line_id assigned",
+      "issueWrongPlanItem2": "Verify that the service is included in the expected contract line",
+      "issueWrongPlanItem3": "Review the disambiguation rules to understand why a particular contract line was selected",
+      "issueWrongPlanItem4": "Update the time entry to explicitly select the correct contract line",
+      "issueWrongPlanItem5": "Consider updating the client's contract line configuration to avoid future issues",
+      "issueWrongPlanTitle": "Issue: Time Entry Billed to Wrong Plan",
+      "title": "Troubleshooting Contract Line Disambiguation"
+    }
   },
   "clientCreditExpirationSettings": {
     "title": "Credit Expiration Settings",
@@ -514,7 +640,14 @@
     "placeholder": "e.g., 30, 7, 1",
     "enabledHelp": "When enabled, credits will expire after the specified period",
     "loadError": "Failed to load settings",
-    "saveError": "Failed to save settings"
+    "saveError": "Failed to save settings",
+    "clientSpecificEnabled": "Client-specific credit expiration settings enabled.",
+    "notificationsUpdatedSuccess": "Notification days have been updated.",
+    "periodUpdatedSuccess": "Credit expiration period has been updated.",
+    "save": "Save",
+    "updatedSuccess": "Credit expiration settings have been updated.",
+    "updateError": "Failed to update settings",
+    "useDefaultSuccess": "Client will now use default credit expiration settings."
   },
   "clientGridCard": {
     "actions": "Client Actions",
@@ -525,7 +658,10 @@
     "type": "Type:",
     "address": "Address:",
     "phone": "Phone:",
-    "url": "URL:"
+    "url": "URL:",
+    "clientActions": "Client Actions",
+    "default": "Default",
+    "selectClient": "Select client {{name}}"
   },
   "clientLanguagePreference": {
     "title": "Client Language Settings",
@@ -534,11 +670,15 @@
     "selectPlaceholder": "Select a language",
     "updating": "Updating language preference...",
     "loadError": "Failed to load client language preference:",
-    "saveError": "Failed to update client language preference"
+    "saveError": "Failed to update client language preference",
+    "cardDescription": "Set the default language for all contacts in {{clientName}}.",
+    "saveSuccess": "Default language for {{clientName}} contacts updated to {{language}}",
+    "thisClient": "client"
   },
   "clientQuickView": {
     "notFound": "Client not found",
-    "loadError": "Failed to load client details"
+    "loadError": "Failed to load client details",
+    "unknownError": "Something went wrong"
   },
   "clientServiceOverlapMatrix": {
     "title": "Service Overlap Matrix",
@@ -555,7 +695,18 @@
     "noContractLines": "No contract lines assigned to this client",
     "noOverlaps": "No service overlaps detected for this client",
     "loadError": "Failed to load data for client service overlap matrix",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "countColumn": "Count",
+    "legendMultipleLines": "Service appears in multiple contract lines",
+    "legendNoOverlap": "Service is included in contract line (no overlap)",
+    "legendWithOverlap": "Service is included in contract line (with overlap)",
+    "loading": "Loading service overlap matrix...",
+    "overlapCount": "{{count}} service(s)",
+    "overlapSummary": "appear in multiple contract lines for this client. This matrix shows which services are included in each line.",
+    "overlapTooltip": "This service appears in multiple contract lines",
+    "serviceColumn": "Service",
+    "unknownType": "Unknown",
+    "unnamedPlan": "Unnamed Plan"
   },
   "clientSideDetails": {
     "address": "Address:",
@@ -576,7 +727,23 @@
     "loadingRates": "Loading rates...",
     "loadingDetails": "Loading tax details...",
     "assigning": "Assigning...",
-    "saveChange": "Save Change"
+    "saveChange": "Save Change",
+    "cancel": "Cancel",
+    "change": "Change",
+    "createDrawerDescription": "Enter the details for the new tax rate.",
+    "createDrawerTitle": "Create New Tax Rate",
+    "loadingTaxDetails": "Loading tax details...",
+    "loadTaxRegionsError": "Failed to load tax regions.",
+    "na": "N/A",
+    "noDefaultAssigned": "No default tax rate assigned.",
+    "noDescription": "No Description",
+    "saving": "Saving...",
+    "selectNewDefaultRate": "Select New Default Rate",
+    "selectRateToAssign": "Select Tax Rate to Assign",
+    "taxRateCreatedSuccess": "Tax rate created successfully.",
+    "taxRateCreateError": "Failed to create tax rate: {{message}}",
+    "taxRateOption": "{{regionLabel}} - {{percentage}}% ({{description}})",
+    "unknownRegion": "Unknown Region"
   },
   "clientZeroDollarInvoiceSettings": {
     "title": "Zero-Dollar Invoice Settings",
@@ -588,7 +755,19 @@
     "createAndFinalize": "Create and Finalize",
     "useDefault": "Use Default Settings",
     "useDefaultHelp": "Use the system-wide default settings for zero-dollar invoices",
-    "updated": "Zero-dollar invoice settings have been updated."
+    "updated": "Zero-dollar invoice settings have been updated.",
+    "clientSpecificEnabled": "Client-specific zero-dollar invoice settings enabled.",
+    "handling": {
+      "finalized": "Create and Finalize",
+      "normal": "Create as Draft"
+    },
+    "handlingHelp": "Choose how zero-dollar invoices should be handled when generated",
+    "loadError": "Failed to load settings",
+    "saveError": "Failed to save settings",
+    "suppressEmptyHelp": "Skip creation of invoices with no line items",
+    "updatedSuccess": "Zero-dollar invoice settings have been updated.",
+    "updateError": "Failed to update settings",
+    "useDefaultSuccess": "Client will now use default zero-dollar invoice settings."
   },
   "clientsImportDialog": {
     "title": "Import Clients",
@@ -622,10 +801,7 @@
     "invalidEmail": "Invalid email format",
     "creditLimitNumber": "Credit limit must be a number",
     "clientField": "Client Field",
-    "selectCsvColumn": "Select CSV Column",
-    "notMapped": "Not mapped",
     "recordsMessage": "You are importing {{count}} records. Processing may take a moment.",
-    "processing": "Processing...",
     "updateExistingLabel": "Update existing clients",
     "exists": "Exists",
     "email": "Email",
@@ -647,7 +823,11 @@
     "quickView": "Quick View",
     "selectClient": "Select Client",
     "defaultClient": "Default Client",
-    "taxExempt": "Tax Exempt"
+    "taxExempt": "Tax Exempt",
+    "clickThisButton": "Click this button",
+    "default": "Default",
+    "taxExemptTooltip": "This client is tax exempt - no taxes will be applied to their invoices",
+    "url": "URL"
   },
   "contractLinePickerDialog": {
     "addPlan": "Add Plan",
@@ -661,7 +841,9 @@
     "selectContractLinePlaceholder": "Select contract line...",
     "startDate": "Start Date",
     "endDate": "End Date",
-    "ongoing": "Ongoing"
+    "ongoing": "Ongoing",
+    "cancel": "Cancel",
+    "title": "Select a Contract Line"
   },
   "contractLines": {
     "title": "Contract Lines",
@@ -674,7 +856,12 @@
     "selectAssignment": "Select assignment...",
     "unknownCategory": "Unknown Category",
     "unknownPlan": "Unknown Plan",
-    "removePlan": "Remove Plan"
+    "removePlan": "Remove Plan",
+    "allCategories": "All categories",
+    "assignmentLabel": "Assignment {{assignmentId}} • Contract {{contractId}} ({{startDate}} → {{endDate}})",
+    "edit": "Edit",
+    "ongoing": "Ongoing",
+    "openMenu": "Open menu"
   },
   "serviceCatalog": {
     "title": "Service Catalog",
@@ -684,7 +871,11 @@
     "defaultRate": "Default Rate",
     "unitOfMeasure": "Unit of Measure",
     "deleteService": "Delete Service",
-    "deleteConfirm": "Are you sure you want to delete this service? This action cannot be undone."
+    "deleteConfirm": "Are you sure you want to delete this service? This action cannot be undone.",
+    "actions": "Actions",
+    "delete": "Delete",
+    "deleteMessage": "Are you sure you want to delete this service? This action cannot be undone.",
+    "deleteTitle": "Delete Service"
   },
   "taxRateCreateForm": {
     "title": "Create Tax Rate",
@@ -697,7 +888,33 @@
     "create": "Create Tax Rate",
     "creating": "Creating...",
     "validationHeader": "Please fill in the required fields:",
-    "regionsLoading": "Loading regions..."
+    "regionsLoading": "Loading regions...",
+    "cancel": "Cancel",
+    "descriptionLabel": "Description (Optional)",
+    "descriptionPlaceholder": "e.g., California State Tax",
+    "endDateLabel": "End Date (Optional)",
+    "loadingRegions": "Loading regions...",
+    "loadTaxRegionsError": "Failed to load tax regions.",
+    "percentageLabel": "Percentage (%) *",
+    "percentagePlaceholder": "e.g., 8.25 *",
+    "regionLabel": "Tax Region *",
+    "selectRegion": "Select Tax Region *",
+    "startDateLabel": "Start Date *",
+    "unknownError": "An unknown error occurred",
+    "validation": {
+      "description": "Description",
+      "descriptionLength": "Description cannot exceed 255 characters",
+      "endDateAfterStart": "End date must be after start date",
+      "endDateValid": "End date must be a valid date",
+      "percentage": "percentage",
+      "percentageMax": "Tax percentage cannot exceed 100%",
+      "percentageNonNegative": "Tax percentage cannot be negative",
+      "percentageNumber": "Tax percentage must be a valid number",
+      "percentageRequired": "Tax percentage is required",
+      "regionRequired": "Tax region is required",
+      "startDateRequired": "Start date is required",
+      "startDateValid": "Start date must be a valid date"
+    }
   },
   "taxSettingsForm": {
     "title": "Tax Calculation Settings",
@@ -720,7 +937,26 @@
     "taxExemptSuccess": "Tax exempt status updated successfully",
     "certificateSuccess": "Tax exemption certificate updated successfully",
     "saveError": "Failed to update tax settings",
-    "defaultCreateError": "Error creating default tax settings"
+    "defaultCreateError": "Error creating default tax settings",
+    "certificateLabel": "Tax Exemption Certificate",
+    "certificateUpdatedSuccess": "Tax exemption certificate updated successfully",
+    "certificateUpdateError": "Failed to update tax exemption certificate",
+    "createDefaultSettings": "Create Default Tax Settings",
+    "dismiss": "Dismiss",
+    "fetchError": "Error fetching tax settings",
+    "reverseCharge": "Reverse Charge Applicable",
+    "reverseChargeTooltip": "Reverse charge shifts tax liability to the buyer (common in B2B cross-border transactions).",
+    "saveTaxSettings": "Save Tax Settings",
+    "saving": "Saving...",
+    "taxCalculationDescription": "Configure how taxes are calculated for this client.",
+    "taxCalculationSettings": "Tax Calculation Settings",
+    "taxExemptDescription": "Mark this client as tax exempt and optionally store a certificate number.",
+    "taxExemptTooltip": "When enabled, taxes will not be applied to invoices for this client.",
+    "taxExemptUpdatedSuccess": "Tax exempt status updated successfully",
+    "taxExemptUpdateError": "Failed to update tax exempt status",
+    "taxSourceExternal": "External",
+    "taxSourceHelp": "Manage default client tax rates in Client Settings → Tax Rates, and manage global rates in Billing → Tax Settings.",
+    "taxSourceInternal": "Internal"
   },
   "clientNotesPanel": {
     "title": "Notes & Quick Info",
@@ -729,6 +965,117 @@
     "save": "Save",
     "retry": "Retry",
     "loadError": "Notes failed to load",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "loadErrorTitle": "Notes failed to load"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "clients": {
+    "locations": {
+      "buttons": {
+        "add": "Add Location",
+        "save": "Save Location"
+      },
+      "card": {
+        "addressHelper": "Full address for this location",
+        "addressLabel": "Address",
+        "billingTag": "Billing",
+        "delete": "Delete location",
+        "edit": "Edit location",
+        "emailHelper": "Email address for this location",
+        "emailLabel": "Email",
+        "notesHelper": "Additional notes for this location",
+        "notesLabel": "Notes",
+        "phoneHelper": "Phone number for this location",
+        "phoneLabel": "Phone",
+        "setDefault": "Set as default",
+        "shippingTag": "Shipping",
+        "unnamed": "Unnamed Location"
+      },
+      "dialog": {
+        "addTitle": "Add New Location",
+        "deleteMessage": "Are you sure you want to delete the location \"{{name}}\"? This action cannot be undone.",
+        "deleteTitle": "Delete Location",
+        "editTitle": "Edit Location"
+      },
+      "empty": {
+        "description": "Click \"Add Location\" to get started",
+        "title": "No locations added yet"
+      },
+      "errors": {
+        "delete": "Failed to delete location",
+        "loadCountries": "Failed to load countries",
+        "loadLocations": "Failed to load client locations",
+        "loadTaxRegions": "Failed to load tax regions",
+        "save": "Failed to save location",
+        "setDefault": "Failed to set default location"
+      },
+      "form": {
+        "addressLine1": "Address Line 1",
+        "addressLine1Helper": "Primary address line (required)",
+        "addressLine2": "Address Line 2",
+        "addressLine2Helper": "Additional address information (optional)",
+        "addressLine3": "Address Line 3",
+        "billingAddress": "Billing Address",
+        "billingAddressHelper": "Use this location as the billing address",
+        "city": "City",
+        "cityHelper": "City name (required)",
+        "country": "Country",
+        "countryHelper": "Select country (required)",
+        "defaultLocation": "Default Location",
+        "defaultLocationHelper": "Mark this as the default location for the client",
+        "email": "Email",
+        "emailHelper": "Email address for this location",
+        "locationName": "Location Name",
+        "locationNameHelper": "Name for this location (e.g., Main Office, Warehouse)",
+        "notes": "Notes",
+        "notesHelper": "Additional notes about this location",
+        "phone": "Phone",
+        "phoneHelper": "Phone number for this location",
+        "placeholder": {
+          "addressLine1": "Enter address *",
+          "city": "Enter city *",
+          "country": "Select Country *",
+          "loadingCountries": "Loading countries...",
+          "locationName": "e.g., Main Office, Warehouse",
+          "taxRegion": "Select a tax region...",
+          "taxRegionOption": "Select a tax region..."
+        },
+        "postalCode": "Postal Code",
+        "postalCodeHelper": "ZIP or postal code",
+        "shippingAddress": "Shipping Address",
+        "shippingAddressHelper": "Use this location as the shipping address",
+        "stateProvince": "State/Province",
+        "stateProvinceHelper": "State or province name",
+        "taxRegion": "Tax Region",
+        "taxRegionHelper": "Select the applicable tax region"
+      },
+      "listTitle": "Locations",
+      "loading": "Loading locations...",
+      "managerLabel": "Client Locations Manager",
+      "success": {
+        "create": "Location created successfully",
+        "delete": "Location deleted successfully",
+        "setDefault": "Default location updated",
+        "update": "Location updated successfully"
+      },
+      "validation": {
+        "title": "Please fill in the required fields:"
+      }
+    }
+  },
+  "clientsGrid": {
+    "itemLabel": "clients",
+    "itemsPerPage18": "18 cards/page",
+    "itemsPerPage27": "27 cards/page",
+    "itemsPerPage36": "36 cards/page",
+    "itemsPerPage9": "9 cards/page"
+  },
+  "status": {
+    "error": "Error",
+    "saving": "Saving...",
+    "success": "Success"
   }
 }
