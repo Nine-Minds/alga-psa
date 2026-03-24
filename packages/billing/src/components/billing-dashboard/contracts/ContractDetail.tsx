@@ -23,6 +23,7 @@ import type {
   IContract,
   IContractAssignmentSummary,
   IDocument,
+  IStatus,
   IInvoiceTemplate,
   InvoiceViewModel as BillingInvoiceViewModel
 } from '@alga-psa/types';
@@ -309,7 +310,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
       try {
         setLoadingRenewalTicketStatuses(true);
-        const statuses = await getTicketStatuses(editingRenewalTicketBoardId);
+        const statuses: IStatus[] = await getTicketStatuses(editingRenewalTicketBoardId);
         if (!active) {
           return;
         }
