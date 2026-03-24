@@ -7,7 +7,7 @@
   },
   {
     "id": "T002",
-    "description": "2b-10: all 32 client files compile with useTranslation — no TypeScript errors",
+    "description": "2b-10: all 31 client files (+panels/) compile with useTranslation — no TypeScript errors",
     "implemented": false,
     "featureIds": ["F002", "F003", "F004", "F005"]
   },
@@ -32,7 +32,7 @@
   },
   {
     "id": "T011",
-    "description": "2b-11: all 13 contact files compile with useTranslation — no TypeScript errors",
+    "description": "2b-11: all 12 contact files compile with useTranslation — no TypeScript errors",
     "implemented": false,
     "featureIds": ["F011", "F012", "F013"]
   },
@@ -57,7 +57,7 @@
   },
   {
     "id": "T021",
-    "description": "2b-12: all 39 asset files compile with useTranslation — no TypeScript errors",
+    "description": "2b-12: all 41 asset files compile with useTranslation — no TypeScript errors",
     "implemented": false,
     "featureIds": ["F021", "F022", "F023", "F024", "F025"]
   },

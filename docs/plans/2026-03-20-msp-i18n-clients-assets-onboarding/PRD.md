@@ -10,11 +10,11 @@ Translate four high-priority MSP feature areas that were missing from the origin
 
 | Batch | Namespace | Est. Strings | Files | Package |
 |-------|-----------|-------------|-------|---------|
-| 2b-10 | `msp/clients` | ~1,000-2,100 | 32 | `packages/clients/src/components/clients/` |
-| 2b-11 | `msp/contacts` | ~650-1,350 | 13 | `packages/clients/src/components/contacts/` |
-| 2b-12 | `msp/assets` | ~1,100-2,200 | 39 | `packages/assets/src/components/` |
-| 2b-16 | `msp/onboarding` | ~550-1,100 | 8 | `packages/onboarding/src/components/steps/` + OnboardingWizard.tsx |
-| **Total** | | **~3,300-6,750** | **92** | |
+| 2b-10 | `msp/clients` | ~1,000-2,100 | 31 | `packages/clients/src/components/clients/` (+panels/) |
+| 2b-11 | `msp/contacts` | ~550-1,150 | 12 | `packages/clients/src/components/contacts/` |
+| 2b-12 | `msp/assets` | ~1,200-2,400 | 41 | `packages/assets/src/components/` |
+| 2b-16 | `msp/onboarding` | ~600-1,200 | 8 | `packages/onboarding/src/components/steps/` + OnboardingWizard.tsx |
+| **Total** | | **~3,350-6,850** | **92** | |
 
 > **Note on estimates:** String counts are from automated scan using ~0.2 strings/LOC ratio. Previous batches showed this overestimates by ~1.5-2x. The lower bound is the more realistic target. Exact counts will be determined during implementation by reading each file.
 
@@ -53,12 +53,12 @@ Clients, contacts, and assets are the three most-used MSP features — operators
 
 - Client and contact forms have many fields — German translations may overflow in side-by-side label/input layouts
 - Asset dashboard has metric cards and status badges — verify badge text doesn't truncate
-- Onboarding wizard TicketingConfigStep (2,920 LOC) is the single largest file — ~550 estimated strings, likely 250-350 after reading carefully
+- Onboarding wizard TicketingConfigStep (3,040 LOC) is the single largest file — ~600 estimated strings, likely 300-400 after reading carefully. Now includes board-scoped status configuration.
 - Import dialogs (ClientsImportDialog, ContactsImportDialog) have CSV column mapping labels — these should be translated
 
 ## Requirements
 
-### Batch 2b-10: msp/clients (~1,000-2,100 strings, 32 files)
+### Batch 2b-10: msp/clients (~1,000-2,100 strings, 31 files)
 
 **Largest components:**
 
@@ -67,14 +67,16 @@ Clients, contacts, and assets are the three most-used MSP features — operators
 | ClientDetails.tsx | 1,805 | ~150-320 | Detail view, all sections, action menus |
 | Clients.tsx | 1,503 | ~140-280 | Client listing, filters, grid/list views |
 | QuickAddClient.tsx | 1,140 | ~100-210 | Quick-add form, all fields |
-| ClientLocations.tsx | 1,021 | ~100-195 | Location management, address fields |
+| ClientLocations.tsx | 1,038 | ~100-195 | Location management, address fields |
+| BillingConfiguration.tsx | 701 | ~70-135 | Billing setup, payment terms (updated: assignment-explicit semantics) |
 | ClientsImportDialog.tsx | 697 | ~75-150 | CSV import, column mapping |
-| BillingConfiguration.tsx | 661 | ~65-125 | Billing setup, payment terms |
-| ClientContractAssignment.tsx | 430 | ~45-85 | Contract assignment UI |
+| ClientBillingSchedule.tsx | 504 | ~50-100 | Billing schedule (updated: grew from ~387 LOC, billing mode decoupling) |
+| ClientContractAssignment.tsx | 423 | ~45-85 | Contract assignment UI (updated: refactored for explicit assignments) |
 | ClientContractLineDashboard.tsx | 426 | ~40-80 | Contract line overview |
-| Remaining 24 files | ~4,700 | ~285-575 | Tax settings, billing schedule, service overlap, credit settings, grid cards, notes panels, etc. |
+| ContractLines.tsx | 203 | ~20-40 | Contract lines display (updated: +55 LOC) |
+| Remaining 21 files | ~4,200 | ~250-505 | Tax settings, service overlap, credit settings, grid cards, notes panel, etc. |
 
-### Batch 2b-11: msp/contacts (~650-1,350 strings, 13 files)
+### Batch 2b-11: msp/contacts (~550-1,150 strings, 12 files)
 
 | Component | LOC | Est. Strings | Key content |
 |-----------|-----|-------------|-------------|
@@ -84,9 +86,9 @@ Clients, contacts, and assets are the three most-used MSP features — operators
 | ContactPhoneNumbersEditor.tsx | 755 | ~75-155 | Phone number CRUD |
 | ContactPortalTab.tsx | 652 | ~80-160 | Portal access configuration |
 | QuickAddContact.tsx | 621 | ~75-155 | Quick-add form |
-| Remaining 7 files | ~1,519 | ~100-230 | Details view/edit, client contacts list, notes, avatar, skeleton |
+| Remaining 6 files | ~1,400 | ~90-210 | ContactDetailsEdit, ContactDetailsView, ClientContactsList, ContactsLayout, ContactAvatarUpload, ContactsSkeleton |
 
-### Batch 2b-12: msp/assets (~1,100-2,200 strings, 39 files)
+### Batch 2b-12: msp/assets (~1,200-2,400 strings, 41 files)
 
 | Component | LOC | Est. Strings | Key content |
 |-----------|-----|-------------|-------------|
@@ -96,17 +98,18 @@ Clients, contacts, and assets are the three most-used MSP features — operators
 | AssetDetails.tsx | 653 | ~160-320 | Full detail page |
 | AssociatedAssets.tsx | 647 | ~70-140 | Related assets management |
 | QuickAddAsset.tsx | 587 | ~80-165 | Quick-add form |
-| Remaining 33 files | ~4,663 | ~390-780 | Tabs (maintenance, software, service history, audit log, documents), panels (info, RMM, hardware, security, notes), status badges, metric banners, command palette |
+| CreateTicketFromAssetButton.tsx | 285 | ~30-60 | Create ticket from asset (updated: board-scoped statuses) |
+| Remaining 34 files | ~4,378 | ~360-720 | Tabs (maintenance, software, service history, audit log, documents), panels (info, RMM, hardware, security, notes), status badges, metric banners, command palette |
 
-### Batch 2b-16: msp/onboarding (~550-1,100 strings, 8 files)
+### Batch 2b-16: msp/onboarding (~600-1,200 strings, 8 files)
 
 > Excludes already-translated dashboard components (DashboardOnboardingSection, OnboardingChecklist).
 
 | Component | LOC | Est. Strings | Key content |
 |-----------|-----|-------------|-------------|
-| steps/TicketingConfigStep.tsx | 2,920 | ~275-550 | Ticketing setup: boards, statuses, priorities, categories, SLA |
-| steps/BillingSetupStep.tsx | 582 | ~75-155 | Billing configuration step |
-| OnboardingWizard.tsx | 504 | ~45-85 | Wizard shell, step navigation |
+| steps/TicketingConfigStep.tsx | 3,040 | ~300-600 | Ticketing setup: boards, statuses, priorities, categories, SLA (updated: +120 LOC for board-scoped status configuration) |
+| steps/BillingSetupStep.tsx | 610 | ~80-165 | Billing configuration step (updated: +28 LOC, billing mode decoupled from service type) |
+| OnboardingWizard.tsx | 508 | ~45-85 | Wizard shell, step navigation |
 | steps/TeamMembersStep.tsx | 429 | ~55-110 | Team member invitation |
 | steps/ClientInfoStep.tsx | 286 | ~45-85 | Client information form |
 | steps/AddClientStep.tsx | 213 | ~30-60 | Add client step |
@@ -156,4 +159,5 @@ Clients, contacts, and assets are the three most-used MSP features — operators
 - [ ] `msp-i18n-enabled` OFF: English text, no regressions
 - [ ] `msp-i18n-enabled` ON + locale `xx`: clients, contacts, assets, onboarding all show `11111`
 - [ ] German translations don't overflow in client/contact forms, asset dashboard metrics, onboarding wizard
+- [ ] Billing terminology consistent with `msp/contracts` and `msp/invoicing` namespaces (post contract-simplification refactor)
 - [ ] `npm run build` succeeds
