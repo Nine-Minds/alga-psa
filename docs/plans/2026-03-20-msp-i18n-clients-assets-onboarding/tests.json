@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "2b-10: Italian accent audit passes for it/msp/clients.json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {

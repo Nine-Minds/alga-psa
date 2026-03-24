@@ -73,6 +73,7 @@
 - (2026-03-24) Completed `F007`: ran a targeted Italian accent audit on `server/public/locales/it/msp/clients.json` using `rg -n '\\b(puo|gia|verra|funzionalita|perche|cosi|piu|e necessario|e possibile|e richiesto|e richiesta|e configurato|e configurata)\\b' server/public/locales/it/msp/clients.json`. The audit returned no matches, and spot checks of higher-risk translated strings (renewal defaults help, language preference success copy, tax-source help) confirmed accented forms were preserved correctly.
 - (2026-03-24) Completed `T001`: `node scripts/validate-translations.cjs` passed after adding the clients namespace across `{en,de,es,fr,it,nl,pl,xx,yy}`. Summary reported `Errors: 0`, `Warnings: 0`, confirming `msp/clients` key parity across all 9 locale variants.
 - (2026-03-24) Completed `T002`: `cd server && npx tsc -p tsconfig.json --noEmit --pretty false` passed after wiring all client component surfaces. The remaining `PlanPickerDialog.tsx` and `ClientPlanDisambiguationGuide.tsx` files were confirmed to be re-export shims, so the compile check covers the actual implementation files that render client UI.
+- (2026-03-24) Completed `T003`: the targeted Italian accent audit for `server/public/locales/it/msp/clients.json` returned zero matches for the known dropped-accent patterns (`puo`, `gia`, `verra`, `funzionalita`, `e necessario`, etc.), so the clients namespace passed the post-translation accent check.
 
 ## Commands / Runbooks
 
