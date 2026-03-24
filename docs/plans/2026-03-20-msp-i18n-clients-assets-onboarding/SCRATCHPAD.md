@@ -51,6 +51,9 @@
 ## Progress Log
 
 - (2026-03-24) Completed `F001`: created `server/public/locales/en/msp/clients.json` with an initial component-scoped English namespace covering the clients list, client details, quick-add, locations, billing/contracts, tax settings, import flow, and notes panel. This seeds the new `msp/clients` file so follow-up wiring can land on stable keys instead of inventing ad hoc paths mid-edit. Validation: `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/clients.json','utf8')); console.log('ok')"` returned `ok`.
+- (2026-03-24) Completed `F002`: wired `packages/clients/src/components/clients/Clients.tsx` and `packages/clients/src/components/clients/ClientDetails.tsx` to `useTranslation('msp/clients')`. The list/detail chrome, main filter controls, view labels, bulk-delete dialogs, core detail tab labels, major field labels, save/delete/reactivate toasts, and deactivate/reactivate confirmations now use `t(..., { defaultValue })` while preserving stable tab ids/query-param values. Expanded `server/public/locales/en/msp/clients.json` with the new list/detail keys needed by those two files. Validation:
+  - `npx eslint packages/clients/src/components/clients/Clients.tsx packages/clients/src/components/clients/ClientDetails.tsx` (warnings only, no errors)
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
 
 ## Commands / Runbooks
 

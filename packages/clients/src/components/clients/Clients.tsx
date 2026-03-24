@@ -36,20 +36,29 @@ import toast from 'react-hot-toast';
 import { handleError, useClientDrawer } from '@alga-psa/ui';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
 const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
 const CLIENTS_LIST_PAGE_SIZE_SETTING = 'clients_list_page_size';
 
 // Memoized search input component to prevent re-renders
-const SearchInput = memo(({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => {
+const SearchInput = memo(({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder: string;
+}) => {
   return (
     <div className="relative p-0.5">
       <Input
         id="search-clients"
         data-automation-id="search-clients"
         type="text"
-        placeholder="Search clients"
+        placeholder={placeholder}
         className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
         value={value}
         onChange={onChange}
@@ -113,6 +122,7 @@ const ClientResults = memo(({
   sortDirection,
   onSortChange
 }: ClientResultsProps) => {
+  const { t } = useTranslation('msp/clients');
   const [clients, setClients] = useState<IClient[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -205,7 +215,7 @@ const ClientResults = memo(({
     return (
       <div className="flex-1 flex items-center justify-center min-h-[400px]">
         <LoadingIndicator
-          text="Loading clients..."
+          text={t('clientsPage.loadingClients', { defaultValue: 'Loading clients...' })}
           spinnerProps={{ size: 'lg' }}
           layout="stacked"
         />
@@ -262,6 +272,7 @@ ClientResults.displayName = 'ClientResults';
 
 const Clients: React.FC = () => {
   useTagPermissions(['client']);
+  const { t } = useTranslation('msp/clients');
   
 
    const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister({
@@ -403,6 +414,132 @@ const Clients: React.FC = () => {
   
   // For multi-delete functionality, we need to track clients
   
+  const formatClientCountLabel = useCallback((count: number) => {
+    return count === 1
+      ? t('clientsPage.entities.client', { defaultValue: 'client' })
+      : t('clientsPage.entities.clients', { defaultValue: 'clients' });
+  }, [t]);
+
+  const formatContactCountLabel = useCallback((count: number) => {
+    return count === 1
+      ? t('clientsPage.entities.contact', { defaultValue: 'contact' })
+      : t('clientsPage.entities.contacts', { defaultValue: 'contacts' });
+  }, [t]);
+
+  const formatSelectedSummary = useCallback((count: number) => {
+    if (count === 1) {
+      return t('clientsPage.selectedSingle', {
+        defaultValue: '{{count}} Selected',
+        count,
+      });
+    }
+
+    return t('clientsPage.selectedPlural', {
+      defaultValue: '{{count}} Selected',
+      count,
+    });
+  }, [t]);
+
+  const formatDependencyItem = useCallback((
+    count: number,
+    singularKey: string,
+    singularDefault: string,
+    pluralKey: string,
+    pluralDefault: string,
+  ) => {
+    const label = count === 1
+      ? t(singularKey, { defaultValue: singularDefault })
+      : t(pluralKey, { defaultValue: pluralDefault });
+
+    return `${count} ${label}`;
+  }, [t]);
+
+  const renderDependencyItems = useCallback((dependencies: NonNullable<typeof deleteDependencies>) => {
+    return [
+      dependencies.contacts
+        ? formatDependencyItem(
+            dependencies.contacts,
+            'clientsPage.dependency.contact',
+            'contact',
+            'clientsPage.dependency.contacts',
+            'contacts',
+          )
+        : null,
+      dependencies.tickets
+        ? formatDependencyItem(
+            dependencies.tickets,
+            'clientsPage.dependency.ticket',
+            'ticket',
+            'clientsPage.dependency.tickets',
+            'tickets',
+          )
+        : null,
+      dependencies.projects
+        ? formatDependencyItem(
+            dependencies.projects,
+            'clientsPage.dependency.project',
+            'project',
+            'clientsPage.dependency.projects',
+            'projects',
+          )
+        : null,
+      dependencies.invoices
+        ? formatDependencyItem(
+            dependencies.invoices,
+            'clientsPage.dependency.invoice',
+            'invoice',
+            'clientsPage.dependency.invoices',
+            'invoices',
+          )
+        : null,
+      dependencies.documents
+        ? formatDependencyItem(
+            dependencies.documents,
+            'clientsPage.dependency.document',
+            'document',
+            'clientsPage.dependency.documents',
+            'documents',
+          )
+        : null,
+      dependencies.interactions
+        ? formatDependencyItem(
+            dependencies.interactions,
+            'clientsPage.dependency.interaction',
+            'interaction',
+            'clientsPage.dependency.interactions',
+            'interactions',
+          )
+        : null,
+      dependencies.assets
+        ? formatDependencyItem(
+            dependencies.assets,
+            'clientsPage.dependency.asset',
+            'asset',
+            'clientsPage.dependency.assets',
+            'assets',
+          )
+        : null,
+      dependencies.service_usage
+        ? formatDependencyItem(
+            dependencies.service_usage,
+            'clientsPage.dependency.serviceUsageRecord',
+            'service usage record',
+            'clientsPage.dependency.serviceUsageRecords',
+            'service usage records',
+          )
+        : null,
+      dependencies.bucket_usage
+        ? formatDependencyItem(
+            dependencies.bucket_usage,
+            'clientsPage.dependency.bucketUsageRecord',
+            'bucket usage record',
+            'clientsPage.dependency.bucketUsageRecords',
+            'bucket usage records',
+          )
+        : null,
+    ].filter(Boolean) as string[];
+  }, [formatDependencyItem]);
+
 
   // Debounce search input
   useEffect(() => {
@@ -434,8 +571,16 @@ const Clients: React.FC = () => {
   }, [viewMode, isViewModeLoading]);
 
   const viewOptions: ViewSwitcherOption<ClientViewMode>[] = [
-    { value: 'grid', label: 'Cards', icon: LayoutGrid },
-    { value: 'list', label: 'Table', icon: List },
+    {
+      value: 'grid',
+      label: t('clientsPage.cardsView', { defaultValue: 'Cards' }),
+      icon: LayoutGrid,
+    },
+    {
+      value: 'list',
+      label: t('clientsPage.tableView', { defaultValue: 'Table' }),
+      icon: List,
+    },
   ];
 
   const handleViewModeChange = (newMode: ClientViewMode) => {
@@ -465,7 +610,10 @@ const Clients: React.FC = () => {
 
     // Refresh the list after a client is added
     setRefreshKey(prev => prev + 1);
-    toast.success(`${newClient.client_name} has been created successfully.`);
+    toast.success(t('clientsPage.createSuccess', {
+      defaultValue: '{{name}} has been created successfully.',
+      name: newClient.client_name,
+    }));
   };
 
   const handleCheckboxChange = (clientId: string) => {
@@ -559,17 +707,24 @@ const Clients: React.FC = () => {
           setShowDeactivateOption(result.alternatives.length > 0);
           return;
         }
-        throw new Error(result.message || 'Failed to delete client');
+        throw new Error(result.message || t('clientDetails.deleteError', {
+          defaultValue: 'Failed to delete client. Please try again.',
+        }));
       }
 
       // Show success toast
-      toast.success(`${clientToDelete.client_name} has been deleted successfully.`);
+      toast.success(t('clientsPage.deleteSingleSuccess', {
+        defaultValue: '{{name}} has been deleted successfully.',
+        name: clientToDelete.client_name,
+      }));
       
       setRefreshKey(prev => prev + 1);
       resetDeleteState();
     } catch (error) {
       console.error('Error deleting client:', error);
-      setDeleteError('An error occurred while deleting the client. Please try again.');
+      setDeleteError(t('clientsPage.singleDeleteError', {
+        defaultValue: 'An error occurred while deleting the client. Please try again.',
+      }));
     }
   };
 
@@ -583,7 +738,9 @@ const Clients: React.FC = () => {
       const result = await markClientInactiveWithContacts(clientToDelete.client_id, true);
 
       if (!result.success) {
-        handleError(new Error(result.message || 'Failed to mark client as inactive'));
+        handleError(new Error(result.message || t('clientsPage.markInactiveFailed', {
+          defaultValue: 'Failed to mark client as inactive',
+        })));
         resetDeleteState();
         return;
       }
@@ -598,7 +755,9 @@ const Clients: React.FC = () => {
       resetDeleteState();
       await refreshClients();
     } catch (error: any) {
-      handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
+      handleError(error, t('clientsPage.singleInactiveError', {
+        defaultValue: 'An error occurred while marking the client as inactive. Please try again.',
+      }));
       resetDeleteState();
     }
   };
@@ -613,7 +772,9 @@ const Clients: React.FC = () => {
       const result = await markClientInactiveWithContacts(clientToDelete.client_id, false);
 
       if (!result.success) {
-        handleError(new Error(result.message || 'Failed to mark client as inactive'));
+        handleError(new Error(result.message || t('clientsPage.markInactiveFailed', {
+          defaultValue: 'Failed to mark client as inactive',
+        })));
         resetDeleteState();
         return;
       }
@@ -624,7 +785,9 @@ const Clients: React.FC = () => {
       resetDeleteState();
       await refreshClients();
     } catch (error: any) {
-      handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
+      handleError(error, t('clientsPage.singleInactiveError', {
+        defaultValue: 'An error occurred while marking the client as inactive. Please try again.',
+      }));
       resetDeleteState();
     }
   };
@@ -658,13 +821,28 @@ const Clients: React.FC = () => {
       const totalContactsDeactivated = results.reduce((sum, r) => sum + r.contactsDeactivated, 0);
 
       if (failCount > 0) {
-        toast.error(`${failCount} client${failCount !== 1 ? 's' : ''} could not be marked as inactive.`);
+        toast.error(t('clientsPage.bulkInactiveFailed', {
+          defaultValue: '{{count}} {{clientsLabel}} could not be marked as inactive.',
+          count: failCount,
+          clientsLabel: formatClientCountLabel(failCount),
+        }));
       }
       if (successCount > 0) {
         if (totalContactsDeactivated > 0) {
-          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} and ${totalContactsDeactivated} contact${totalContactsDeactivated !== 1 ? 's' : ''} have been marked as inactive successfully.`);
+          toast.success(t('clientsPage.bulkInactiveWithContactsSuccess', {
+            defaultValue: '{{clientCount}} {{clientsLabel}} and {{contactCount}} {{contactsLabel}} have been marked as inactive successfully.',
+            clientCount: successCount,
+            clientsLabel: formatClientCountLabel(successCount),
+            contactCount: totalContactsDeactivated,
+            contactsLabel: formatContactCountLabel(totalContactsDeactivated),
+          }));
         } else {
-          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} ${successCount !== 1 ? 'have' : 'has'} been marked as inactive successfully.`);
+          toast.success(t('clientsPage.bulkInactiveSuccess', {
+            defaultValue: '{{count}} {{clientsLabel}} {{verb}} been marked as inactive successfully.',
+            count: successCount,
+            clientsLabel: formatClientCountLabel(successCount),
+            verb: successCount === 1 ? 'has' : 'have',
+          }));
         }
       }
 
@@ -672,7 +850,9 @@ const Clients: React.FC = () => {
       setIsSelectAllMode(false);
       await refreshClients();
     } catch (error) {
-      handleError(error, 'An error occurred while marking clients as inactive. Please try again.');
+      handleError(error, t('clientsPage.bulkInactiveError', {
+        defaultValue: 'An error occurred while marking clients as inactive. Please try again.',
+      }));
     }
   };
 
@@ -705,13 +885,28 @@ const Clients: React.FC = () => {
       const totalContactsReactivated = results.reduce((sum, r) => sum + r.contactsReactivated, 0);
 
       if (failCount > 0) {
-        toast.error(`${failCount} client${failCount !== 1 ? 's' : ''} could not be reactivated.`);
+        toast.error(t('clientsPage.bulkReactivateFailed', {
+          defaultValue: '{{count}} {{clientsLabel}} could not be reactivated.',
+          count: failCount,
+          clientsLabel: formatClientCountLabel(failCount),
+        }));
       }
       if (successCount > 0) {
         if (totalContactsReactivated > 0) {
-          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} and ${totalContactsReactivated} contact${totalContactsReactivated !== 1 ? 's' : ''} have been reactivated successfully.`);
+          toast.success(t('clientsPage.bulkReactivateWithContactsSuccess', {
+            defaultValue: '{{clientCount}} {{clientsLabel}} and {{contactCount}} {{contactsLabel}} have been reactivated successfully.',
+            clientCount: successCount,
+            clientsLabel: formatClientCountLabel(successCount),
+            contactCount: totalContactsReactivated,
+            contactsLabel: formatContactCountLabel(totalContactsReactivated),
+          }));
         } else {
-          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} ${successCount !== 1 ? 'have' : 'has'} been reactivated successfully.`);
+          toast.success(t('clientsPage.bulkReactivateSuccess', {
+            defaultValue: '{{count}} {{clientsLabel}} {{verb}} been reactivated successfully.',
+            count: successCount,
+            clientsLabel: formatClientCountLabel(successCount),
+            verb: successCount === 1 ? 'has' : 'have',
+          }));
         }
       }
 
@@ -719,7 +914,9 @@ const Clients: React.FC = () => {
       setIsSelectAllMode(false);
       await refreshClients();
     } catch (error) {
-      handleError(error, 'An error occurred while reactivating clients. Please try again.');
+      handleError(error, t('clientsPage.bulkReactivateError', {
+        defaultValue: 'An error occurred while reactivating clients. Please try again.',
+      }));
     }
   };
 
@@ -771,13 +968,19 @@ const Clients: React.FC = () => {
       deleteResults.forEach(({ clientId, result }) => {
         if (!result.success) {
           const client = loadedClients.find(c => c.client_id === clientId);
-          const clientName = client ? client.client_name : 'Unknown Client';
+            const clientName = client
+              ? client.client_name
+              : t('clientsPage.unknownClient', { defaultValue: 'Unknown Client' });
 
           if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
             const reason = formatDependencyText(result);
             failedClients.push({ clientId, clientName, reason });
           } else {
-            failedClients.push({ clientId, clientName, reason: result.message || 'Unknown error' });
+            failedClients.push({
+              clientId,
+              clientName,
+              reason: result.message || t('clientsPage.unknownError', { defaultValue: 'Unknown error' }),
+            });
           }
         } else {
           successfulDeletes.push(clientId);
@@ -797,7 +1000,12 @@ const Clients: React.FC = () => {
         setIsMultiDeleteDialogOpen(false);
         setMultiDeleteError(null);
         setMultiDeleteResults(null);
-        toast.success(`${successfulDeletes.length} client${successfulDeletes.length !== 1 ? 's have' : ' has'} been deleted successfully.`);
+        toast.success(t('clientsPage.bulkDeleteSuccess', {
+          defaultValue: '{{count}} {{clientsLabel}} {{verb}} been deleted successfully.',
+          count: successfulDeletes.length,
+          clientsLabel: formatClientCountLabel(successfulDeletes.length),
+          verb: successfulDeletes.length === 1 ? 'has' : 'have',
+        }));
       } else {
         // Store structured results for better UI display
         setMultiDeleteResults({
@@ -808,7 +1016,9 @@ const Clients: React.FC = () => {
 
     } catch (error) {
       console.error('Error in multi-delete:', error);
-      setMultiDeleteError('An error occurred while deleting clients. Please try again.');
+      setMultiDeleteError(t('clientsPage.bulkDeleteError', {
+        defaultValue: 'An error occurred while deleting clients. Please try again.',
+      }));
     }
   };
 
@@ -844,13 +1054,26 @@ const Clients: React.FC = () => {
 
       if (successCount > 0) {
         if (totalContactsDeactivated > 0) {
-          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} and ${totalContactsDeactivated} contact${totalContactsDeactivated !== 1 ? 's' : ''} have been marked as inactive.`);
+          toast.success(t('clientsPage.bulkInactiveWithContactsShortSuccess', {
+            defaultValue: '{{clientCount}} {{clientsLabel}} and {{contactCount}} {{contactsLabel}} have been marked as inactive.',
+            clientCount: successCount,
+            clientsLabel: formatClientCountLabel(successCount),
+            contactCount: totalContactsDeactivated,
+            contactsLabel: formatContactCountLabel(totalContactsDeactivated),
+          }));
         } else {
-          toast.success(`${successCount} client${successCount !== 1 ? 's have' : ' has'} been marked as inactive.`);
+          toast.success(t('clientsPage.bulkInactiveShortSuccess', {
+            defaultValue: '{{count}} {{clientsLabel}} {{verb}} been marked as inactive.',
+            count: successCount,
+            clientsLabel: formatClientCountLabel(successCount),
+            verb: successCount === 1 ? 'has' : 'have',
+          }));
         }
       }
     } catch (error) {
-      handleError(error, 'An error occurred while marking clients as inactive.');
+      handleError(error, t('clientsPage.bulkInactiveShortError', {
+        defaultValue: 'An error occurred while marking clients as inactive.',
+      }));
     }
   };
 
@@ -963,10 +1186,14 @@ const Clients: React.FC = () => {
         document.body.removeChild(link);
       }
       
-      toast.success(`Exported ${clientsToExport.length} ${clientsToExport.length === 1 ? 'client' : 'clients'} to CSV`);
+      toast.success(t('clientsPage.exportSuccess', {
+        defaultValue: 'Exported {{count}} {{clientsLabel}} to CSV',
+        count: clientsToExport.length,
+        clientsLabel: formatClientCountLabel(clientsToExport.length),
+      }));
     } catch (error) {
       console.error('Error exporting clients to CSV:', error);
-      toast.error('Failed to export clients to CSV');
+      toast.error(t('clientsPage.exportError', { defaultValue: 'Failed to export clients to CSV' }));
     }
   };
 
@@ -1009,7 +1236,7 @@ const Clients: React.FC = () => {
               id="create-client-button"
               onClick={() => setIsDialogOpen(true)}
             >
-              + Create Client
+              {t('clientsPage.createClientShort', { defaultValue: '+ Create Client' })}
             </Button>
 
             <DropdownMenu.Root>
@@ -1020,7 +1247,7 @@ const Clients: React.FC = () => {
                   className="flex items-center gap-2"
                 >
                   <MoreVertical size={16} />
-                  Actions
+                  {t('clientsPage.actions', { defaultValue: 'Actions' })}
                 </Button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
@@ -1029,14 +1256,14 @@ const Clients: React.FC = () => {
                   onSelect={() => setIsImportDialogOpen(true)}
                 >
                   <Upload size={14} className="mr-2" />
-                  Upload CSV
+                  {t('common.actions.uploadCsv', { defaultValue: 'Upload CSV' })}
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
                   onSelect={() => void handleExportToCSV()}
                 >
                   <CloudDownload size={14} className="mr-2" />
-                  Download CSV
+                  {t('common.actions.downloadCsv', { defaultValue: 'Download CSV' })}
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />
                 <DropdownMenu.Item
@@ -1045,7 +1272,7 @@ const Clients: React.FC = () => {
                   disabled={selectedClients.length === 0}
                 >
                   <Power size={14} className="mr-2" />
-                  Mark as Inactive
+                  {t('clientsPage.markAsInactive', { defaultValue: 'Mark as Inactive' })}
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -1053,7 +1280,7 @@ const Clients: React.FC = () => {
                   disabled={selectedClients.length === 0}
                 >
                   <RotateCcw size={14} className="mr-2" />
-                  Reactivate
+                  {t('common.actions.reactivate', { defaultValue: 'Reactivate' })}
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Root>
@@ -1068,7 +1295,11 @@ const Clients: React.FC = () => {
 
         {/* Filter row */}
         <div className="flex items-center mb-4 gap-4">
-            <SearchInput value={searchInput} onChange={handleSearchInputChange} />
+            <SearchInput
+              value={searchInput}
+              onChange={handleSearchInputChange}
+              placeholder={t('clientsPage.searchPlaceholder', { defaultValue: 'Search clients' })}
+            />
 
             <div className="w-48 shrink-0">
               <CustomSelect
@@ -1079,12 +1310,12 @@ const Clients: React.FC = () => {
                   setCurrentPage(1);
                 }}
                 options={[
-                  { value: 'active', label: 'Active Clients' },
-                  { value: 'inactive', label: 'Inactive Clients' },
-                  { value: 'all', label: 'All Clients' }
+                  { value: 'active', label: t('clientsPage.activeClients', { defaultValue: 'Active Clients' }) },
+                  { value: 'inactive', label: t('clientsPage.inactiveClients', { defaultValue: 'Inactive Clients' }) },
+                  { value: 'all', label: t('clientsPage.allClients', { defaultValue: 'All Clients' }) }
                 ]}
-                placeholder="Filter by status"
-                label="Status Filter"
+                placeholder={t('clientsPage.filterByStatus', { defaultValue: 'Filter by status' })}
+                label={t('clientsPage.statusFilterLabel', { defaultValue: 'Status Filter' })}
               />
             </div>
 
@@ -1097,12 +1328,12 @@ const Clients: React.FC = () => {
                   setCurrentPage(1);
                 }}
                 options={[
-                  { value: 'all', label: 'All Types' },
-                  { value: 'company', label: 'Companies' },
-                  { value: 'individual', label: 'Individuals' }
+                  { value: 'all', label: t('clientsPage.allTypes', { defaultValue: 'All Types' }) },
+                  { value: 'company', label: t('clientsPage.companies', { defaultValue: 'Companies' }) },
+                  { value: 'individual', label: t('clientsPage.individuals', { defaultValue: 'Individuals' }) }
                 ]}
-                placeholder="Filter by type"
-                label="Client Type Filter"
+                placeholder={t('clientsPage.filterByType', { defaultValue: 'Filter by type' })}
+                label={t('clientsPage.clientTypeFilterLabel', { defaultValue: 'Client Type Filter' })}
               />
             </div>
 
@@ -1129,7 +1360,7 @@ const Clients: React.FC = () => {
               disabled={!isFiltered}
             >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('clientsPage.reset', { defaultValue: 'Reset' })}
             </Button>
         </div>
 
@@ -1144,7 +1375,12 @@ const Clients: React.FC = () => {
         </div>
         {selectedClients.length > 0 && (
           <span className="text-sm font-medium text-gray-500">
-            {isSelectAllMode ? `All ${selectedClients.length} clients selected` : `${selectedClients.length} Selected`}
+            {isSelectAllMode
+              ? t('clientsPage.allSelected', {
+                  defaultValue: 'All {{count}} clients selected',
+                  count: selectedClients.length,
+                })
+              : formatSelectedSummary(selectedClients.length)}
           </span>
         )}
 
@@ -1156,7 +1392,7 @@ const Clients: React.FC = () => {
           disabled={selectedClients.length === 0}
           onClick={handleMultiDelete}
         >
-          Delete
+          {t('common.actions.delete', { defaultValue: 'Delete' })}
           <TrashIcon className="h-5 w-5" />
         </Button>
       </div>
@@ -1205,7 +1441,9 @@ const Clients: React.FC = () => {
           setMultiDeleteResults(null);
         }}
         id="multi-delete-confirmation-dialog"
-        title={multiDeleteResults ? "Delete Results" : "Delete Selected Clients"}
+        title={multiDeleteResults
+          ? t('clientsPage.deleteResults', { defaultValue: 'Delete Results' })
+          : t('clientsPage.deleteSelectedClients', { defaultValue: 'Delete Selected Clients' })}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -1217,7 +1455,12 @@ const Clients: React.FC = () => {
                 {multiDeleteResults.successCount > 0 && (
                   <Alert variant="success">
                     <AlertDescription>
-                      <span className="font-semibold">{multiDeleteResults.successCount}</span> client{multiDeleteResults.successCount !== 1 ? 's were' : ' was'} successfully deleted.
+                      {t('clientsPage.multiDeleteSuccessSummary', {
+                        defaultValue: '{{count}} {{clientsLabel}} {{verb}} successfully deleted.',
+                        count: multiDeleteResults.successCount,
+                        clientsLabel: formatClientCountLabel(multiDeleteResults.successCount),
+                        verb: multiDeleteResults.successCount === 1 ? 'was' : 'were',
+                      })}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -1228,10 +1471,16 @@ const Clients: React.FC = () => {
                     <Alert variant="warning">
                       <AlertDescription>
                         <p className="font-semibold mb-2">
-                          {multiDeleteResults.failedClients.length} client{multiDeleteResults.failedClients.length !== 1 ? 's' : ''} could not be deleted
+                          {t('clientsPage.multiDeleteFailedSummary', {
+                            defaultValue: '{{count}} {{clientsLabel}} could not be deleted',
+                            count: multiDeleteResults.failedClients.length,
+                            clientsLabel: formatClientCountLabel(multiDeleteResults.failedClients.length),
+                          })}
                         </p>
                         <p className="text-sm">
-                          These clients have associated records that must be removed first.
+                          {t('clientsPage.deleteBlockedPlural', {
+                            defaultValue: 'These clients have associated records that must be removed first.',
+                          })}
                         </p>
                       </AlertDescription>
                     </Alert>
@@ -1240,8 +1489,12 @@ const Clients: React.FC = () => {
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 sticky top-0">
                           <tr>
-                            <th className="text-left p-2 font-medium text-gray-700">Client</th>
-                            <th className="text-left p-2 font-medium text-gray-700">Associated Records</th>
+                            <th className="text-left p-2 font-medium text-gray-700">
+                              {t('clientsPage.table.client', { defaultValue: 'Client' })}
+                            </th>
+                            <th className="text-left p-2 font-medium text-gray-700">
+                              {t('clientsPage.associatedRecords', { defaultValue: 'Associated Records' })}
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
@@ -1257,7 +1510,9 @@ const Clients: React.FC = () => {
 
                     <Alert variant="info">
                       <AlertDescription>
-                        <span className="font-semibold">Alternative:</span> Mark these clients as inactive. They will be hidden from most views but retain all their data.
+                        {t('clientsPage.bulkInactivePrompt', {
+                          defaultValue: 'Mark these clients as inactive. They will be hidden from most views but retain all their data.',
+                        })}
                       </AlertDescription>
                     </Alert>
                   </div>
@@ -1265,7 +1520,11 @@ const Clients: React.FC = () => {
               </>
             ) : (
               <p className="text-gray-600">
-                Are you sure you want to delete <span className="font-semibold">{selectedClients.length}</span> selected client{selectedClients.length !== 1 ? 's' : ''}? This action cannot be undone.
+                {t('clientsPage.deleteSelectedPrompt', {
+                  defaultValue: 'Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone.',
+                  count: selectedClients.length,
+                  clientsLabel: formatClientCountLabel(selectedClients.length),
+                })}
               </p>
             )}
           </div>
@@ -1281,7 +1540,9 @@ const Clients: React.FC = () => {
                 }}
                 id="multi-delete-cancel"
               >
-                {multiDeleteResults ? "Close" : "Cancel"}
+                {multiDeleteResults
+                  ? t('common.actions.close', { defaultValue: 'Close' })
+                  : t('common.actions.cancel', { defaultValue: 'Cancel' })}
               </Button>
 
               {multiDeleteResults && multiDeleteResults.failedClients.length > 0 && (
@@ -1290,7 +1551,10 @@ const Clients: React.FC = () => {
                   onClick={() => void handleBulkMarkFailedAsInactive()}
                   id="multi-delete-mark-inactive"
                 >
-                  Mark {multiDeleteResults.failedClients.length} as Inactive
+                  {t('clientsPage.markFailedAsInactive', {
+                    defaultValue: 'Mark {{count}} as Inactive',
+                    count: multiDeleteResults.failedClients.length,
+                  })}
                 </Button>
               )}
 
@@ -1300,7 +1564,7 @@ const Clients: React.FC = () => {
                   onClick={() => void confirmMultiDelete()}
                   id="multi-delete-confirm"
                 >
-                  Delete
+                  {t('common.actions.delete', { defaultValue: 'Delete' })}
                 </Button>
               )}
             </div>
@@ -1313,7 +1577,7 @@ const Clients: React.FC = () => {
         isOpen={isDeleteDialogOpen}
         onClose={resetDeleteState}
         id="single-delete-confirmation-dialog"
-        title="Delete Client"
+        title={t('clientsPage.deleteClient', { defaultValue: 'Delete Client' })}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -1321,86 +1585,61 @@ const Clients: React.FC = () => {
               <>
                 <Alert variant="warning">
                   <AlertDescription>
-                    <span className="font-semibold">Note:</span> This client is already marked as inactive.
+                    {t('clientsPage.alreadyInactive', {
+                      defaultValue: 'This client is already marked as inactive.',
+                    })}
                   </AlertDescription>
                 </Alert>
-                <p className="text-gray-700">Unable to delete this client due to the following associated records:</p>
+                <p className="text-gray-700">
+                  {t('clientsPage.deleteBlockedSingle', {
+                    defaultValue: 'Unable to delete this client due to the following associated records:',
+                  })}
+                </p>
                 <div>
                   <ul className="list-disc list-inside space-y-1 text-gray-700">
-                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
-                      <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
-                      <li>{deleteDependencies.tickets} ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.projects && deleteDependencies.projects > 0 && (
-                      <li>{deleteDependencies.projects} project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
-                      <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.documents && deleteDependencies.documents > 0 && (
-                      <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
-                      <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.assets && deleteDependencies.assets > 0 && (
-                      <li>{deleteDependencies.assets} asset{deleteDependencies.assets !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.service_usage && deleteDependencies.service_usage > 0 && (
-                      <li>{deleteDependencies.service_usage} service usage record{deleteDependencies.service_usage !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.bucket_usage && deleteDependencies.bucket_usage > 0 && (
-                      <li>{deleteDependencies.bucket_usage} bucket usage record{deleteDependencies.bucket_usage !== 1 ? 's' : ''}</li>
-                    )}
+                    {renderDependencyItems(deleteDependencies).map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
                   </ul>
                 </div>
-                <p className="text-gray-700">Please remove or reassign these items before the client can be deleted.</p>
+                <p className="text-gray-700">
+                  {t('clientsPage.deleteBlockedHelp', {
+                    defaultValue: 'Please remove or reassign these items before the client can be deleted.',
+                  })}
+                </p>
               </>
             ) : showDeactivateOption && deleteDependencies ? (
               <>
-                <p className="text-gray-700">Unable to delete this client.</p>
+                <p className="text-gray-700">
+                  {t('clientsPage.deleteClientUnable', {
+                    defaultValue: 'Unable to delete this client.',
+                  })}
+                </p>
                 <div>
-                  <p className="text-gray-700 mb-2">This client has the following associated records:</p>
+                  <p className="text-gray-700 mb-2">
+                    {t('clientsPage.singleDeletePrompt', {
+                      defaultValue: 'This client has the following associated records:',
+                    })}
+                  </p>
                   <ul className="list-disc list-inside space-y-1 text-gray-700">
-                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
-                      <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
-                      <li>{deleteDependencies.tickets} ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.projects && deleteDependencies.projects > 0 && (
-                      <li>{deleteDependencies.projects} project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
-                      <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.documents && deleteDependencies.documents > 0 && (
-                      <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
-                      <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.assets && deleteDependencies.assets > 0 && (
-                      <li>{deleteDependencies.assets} asset{deleteDependencies.assets !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.service_usage && deleteDependencies.service_usage > 0 && (
-                      <li>{deleteDependencies.service_usage} service usage record{deleteDependencies.service_usage !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.bucket_usage && deleteDependencies.bucket_usage > 0 && (
-                      <li>{deleteDependencies.bucket_usage} bucket usage record{deleteDependencies.bucket_usage !== 1 ? 's' : ''}</li>
-                    )}
+                    {renderDependencyItems(deleteDependencies).map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
                   </ul>
                 </div>
                 <Alert variant="info">
                   <AlertDescription>
                     <p>
-                      <span className="font-semibold">Alternative Option:</span> You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.
+                      {t('clientsPage.inactiveAlternative', {
+                        defaultValue: 'You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.',
+                      })}
                     </p>
                     {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
                       <p className="mt-2">
-                        Would you like to also deactivate the {deleteDependencies.contacts} associated contact{deleteDependencies.contacts !== 1 ? 's' : ''}?
+                        {t('clientsPage.deactivateContactsPrompt', {
+                          defaultValue: 'Would you like to also deactivate the {{count}} associated contact(s)?',
+                          count: deleteDependencies.contacts,
+                        })}
                       </p>
                     )}
                   </AlertDescription>
@@ -1412,7 +1651,10 @@ const Clients: React.FC = () => {
               </div>
             ) : (
               <p className="text-gray-600">
-                Are you sure you want to delete {clientToDelete?.client_name}? This action cannot be undone.
+                {t('clientsPage.deleteSinglePrompt', {
+                  defaultValue: 'Are you sure you want to delete {{name}}? This action cannot be undone.',
+                  name: clientToDelete?.client_name ?? '',
+                })}
               </p>
             )}
           </div>
@@ -1424,7 +1666,7 @@ const Clients: React.FC = () => {
                 onClick={resetDeleteState}
                 id="single-delete-cancel"
               >
-                Cancel
+                {t('common.actions.cancel', { defaultValue: 'Cancel' })}
               </Button>
 
               {clientToDelete?.is_inactive && showDeactivateOption ? (
@@ -1433,7 +1675,7 @@ const Clients: React.FC = () => {
                   onClick={resetDeleteState}
                   id="single-delete-close"
                 >
-                  Close
+                  {t('common.actions.close', { defaultValue: 'Close' })}
                 </Button>
               ) : showDeactivateOption ? (
                 <>
@@ -1443,7 +1685,7 @@ const Clients: React.FC = () => {
                       onClick={() => void handleMarkClientInactiveOnly()}
                       id="single-delete-client-only"
                     >
-                      Client Only
+                      {t('clientDetails.clientOnly', { defaultValue: 'Client Only' })}
                     </Button>
                   )}
                   <Button
@@ -1451,7 +1693,9 @@ const Clients: React.FC = () => {
                     onClick={() => void handleMarkClientInactiveAll()}
                     id="single-delete-mark-inactive"
                   >
-                    {deleteDependencies?.contacts && deleteDependencies.contacts > 0 ? "Client & Contacts" : "Mark as Inactive"}
+                    {deleteDependencies?.contacts && deleteDependencies.contacts > 0
+                      ? t('clientDetails.clientAndContacts', { defaultValue: 'Client & Contacts' })
+                      : t('clientsPage.markAsInactive', { defaultValue: 'Mark as Inactive' })}
                   </Button>
                 </>
               ) : !deleteError && (
@@ -1460,7 +1704,7 @@ const Clients: React.FC = () => {
                   id="single-delete-confirm"
                   variant="destructive"
                 >
-                  Delete
+                  {t('common.actions.delete', { defaultValue: 'Delete' })}
                 </Button>
               )}
             </div>
