@@ -71,6 +71,7 @@
   - `for f in server/public/locales/{de,es,fr,it,nl,pl,xx,yy}/msp/clients.json; do node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$f" || exit 1; done` returned `json-ok`
   - `node scripts/validate-translations.cjs` → `PASSED` (`Errors: 0`, `Warnings: 0`)
 - (2026-03-24) Completed `F007`: ran a targeted Italian accent audit on `server/public/locales/it/msp/clients.json` using `rg -n '\\b(puo|gia|verra|funzionalita|perche|cosi|piu|e necessario|e possibile|e richiesto|e richiesta|e configurato|e configurata)\\b' server/public/locales/it/msp/clients.json`. The audit returned no matches, and spot checks of higher-risk translated strings (renewal defaults help, language preference success copy, tax-source help) confirmed accented forms were preserved correctly.
+- (2026-03-24) Completed `T001`: `node scripts/validate-translations.cjs` passed after adding the clients namespace across `{en,de,es,fr,it,nl,pl,xx,yy}`. Summary reported `Errors: 0`, `Warnings: 0`, confirming `msp/clients` key parity across all 9 locale variants.
 
 ## Commands / Runbooks
 
