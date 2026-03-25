@@ -28,7 +28,42 @@
   },
   "onboardingWizard": {
     "title": "Onboarding Wizard",
-    "description": "Wizard shell for MSP tenant setup with dialog/full-page presentation, progress, validation, and completion flows"
+    "description": "Wizard shell for MSP tenant setup with dialog/full-page presentation, progress, validation, and completion flows",
+    "steps": {
+      "clientInfo": "Client Info",
+      "teamMembers": "Team Members",
+      "addClient": "Add Client",
+      "clientContact": "Client Contact",
+      "billing": "Billing",
+      "ticketing": "Ticketing"
+    },
+    "errors": {
+      "saveClientInfo": "Failed to save client info",
+      "addTeamMembers": "Failed to add team members",
+      "saveClient": "Failed to save client",
+      "addContact": "Failed to add contact",
+      "setupBilling": "Failed to setup billing",
+      "unknown": "Unknown error",
+      "validationFailed": "Validation failed",
+      "configureTicketing": "Failed to configure ticketing",
+      "completeOnboarding": "Failed to complete onboarding"
+    },
+    "debug": {
+      "title": "Debug Info:",
+      "currentStep": "Current Step: {{stepIndex}} ({{stepName}})",
+      "isValid": "Is Valid: {{value}}",
+      "isRequired": "Is Required: {{value}}",
+      "viewData": "View Data"
+    },
+    "actions": {
+      "finish": "Finish Setup",
+      "saving": "Saving...",
+      "completing": "Completing..."
+    },
+    "shell": {
+      "title": "Setup Your System",
+      "description": "Let's get your workspace configured and ready to use."
+    }
   },
   "addClientStep": {
     "title": "Add Client Step",
@@ -36,7 +71,116 @@
   },
   "billingSetupStep": {
     "title": "Billing Setup Step",
-    "description": "Wizard step for defining the initial service, pricing, billing mode, and contract line defaults"
+    "description": "Wizard step for defining the initial service, pricing, billing mode, and contract line defaults",
+    "serviceTypes": {
+      "toasts": {
+        "deleted": "Service type deleted successfully"
+      },
+      "errors": {
+        "delete": "Failed to delete service type",
+        "nameRequired": "Service type name is required",
+        "duplicate": "Service type with this name already exists",
+        "create": "Failed to create service type",
+        "createRetry": "Failed to create service type. Please try again."
+      },
+      "actions": {
+        "manage": "Manage Service Types",
+        "import": "Import from Standard",
+        "add": "Add New",
+        "confirmAdd": "Add Service Type"
+      },
+      "noteLabel": "Note:",
+      "description": "Service types are taxonomy labels for organization and filtering. Billing mode is configured separately on each service.",
+      "addForm": {
+        "title": "Add New Service Type",
+        "fields": {
+          "name": {
+            "label": "Name *",
+            "placeholder": "e.g., Premium Support"
+          },
+          "description": {
+            "label": "Description",
+            "placeholder": "Describe this service type..."
+          },
+          "billingMethod": {
+            "label": "Billing Method *"
+          },
+          "displayOrder": {
+            "label": "Display Order",
+            "placeholder": "Leave empty for auto-generate",
+            "help": "Controls the order in which service types appear in dropdown menus throughout the platform. Lower numbers appear first."
+          }
+        }
+      },
+      "import": {
+        "title": "Import Standard Service Types",
+        "description": "Select standard service types to import into your system:",
+        "success": {
+          "titleOne": "Service type imported successfully!",
+          "titleOther": "Service types imported successfully!",
+          "description": "{{count}} type{{suffix}} added to your catalog.",
+          "skipped": "{{count}} skipped."
+        },
+        "actions": {
+          "importing": "Importing...",
+          "importSelected": "Import Selected ({{count}})"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Name",
+          "billingMethod": "Billing Method",
+          "order": "Order",
+          "actions": "Actions"
+        }
+      },
+      "current": {
+        "title": "Current Service Types",
+        "removeTitle": "Remove service type"
+      }
+    },
+    "header": {
+      "title": "Create Your First Service",
+      "description": "Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior."
+    },
+    "created": {
+      "title": "Service created successfully!",
+      "description": "{{serviceName}} has been added to your service catalog."
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Service Name *",
+        "placeholder": "Managed IT Services"
+      },
+      "serviceDescription": {
+        "label": "Service Description",
+        "placeholder": "Comprehensive IT support and management services..."
+      },
+      "serviceType": {
+        "label": "Service Type *",
+        "required": "(Required)",
+        "emptyPlaceholder": "Create or import service types",
+        "placeholder": "Select a service type",
+        "emptyHelp": "Click \"Manage Service Types\" to create or import service types"
+      },
+      "billingMode": {
+        "label": "Billing Mode"
+      },
+      "defaultRate": {
+        "label": "Default Rate",
+        "placeholder": "150"
+      }
+    },
+    "billingMethods": {
+      "fixed": "Fixed",
+      "hourly": "Hourly",
+      "usageBased": "Usage Based",
+      "usage": "Usage"
+    },
+    "validation": {
+      "actionRequiredLabel": "Action Required:",
+      "actionRequiredDescription": "Click \"Manage Service Types\" above to create or import at least one service type before creating a service."
+    }
   },
   "clientContactStep": {
     "title": "Client Contact Step",
@@ -48,7 +192,86 @@
   },
   "teamMembersStep": {
     "title": "Team Members Step",
-    "description": "Wizard step for inviting initial team members and assigning onboarding roles"
+    "description": "Wizard step for inviting initial team members and assigning onboarding roles",
+    "license": {
+      "limitReached": "License limit reached ({{current}}/{{limit}}). Contact support to increase your license limit.",
+      "remaining": {
+        "one": "You can add 1 more team member.",
+        "other": "You can add {{count}} more team members."
+      },
+      "summary": {
+        "noLimit": "Users: {{count}} (No limit)",
+        "limited": "Users: {{current}}/{{limit}}"
+      }
+    },
+    "errors": {
+      "requiredFields": "Please fill in all required fields including password",
+      "invalidEmail": "Please enter a valid email address",
+      "passwordLength": "Password must be at least 8 characters long",
+      "saveFailed": "Failed to save team member",
+      "generic": "An error occurred"
+    },
+    "header": {
+      "title": "Invite Team Members",
+      "description": "Add your team members to get them started. You can skip this step and add them later."
+    },
+    "created": {
+      "titleOne": "1 team member created successfully!",
+      "titleOther": "{{count}} team members created successfully!",
+      "users": "Created users: {{users}}"
+    },
+    "member": {
+      "title": "Team Member {{index}}",
+      "createdBadge": "Created",
+      "actions": {
+        "saving": "Saving...",
+        "save": "Save"
+      }
+    },
+    "fields": {
+      "firstName": {
+        "label": "First Name",
+        "placeholder": "Jane"
+      },
+      "lastName": {
+        "label": "Last Name",
+        "placeholder": "Smith"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "jane@client.com"
+      },
+      "role": {
+        "label": "Role"
+      },
+      "password": {
+        "label": "Temporary Password",
+        "placeholder": "Set temporary password",
+        "help": "The user will need to change this password on first login"
+      }
+    },
+    "roles": {
+      "admin": "Admin",
+      "technician": "Technician",
+      "manager": "Manager",
+      "user": "User"
+    },
+    "actions": {
+      "saveCurrentFirst": "Save Current Team Member First",
+      "addAnother": "Add Another Team Member"
+    },
+    "unsaved": {
+      "title": "Unsaved team member",
+      "description": "Please save the current team member before adding a new one."
+    },
+    "limitReached": {
+      "title": "User limit reached",
+      "description": "You've reached the maximum number of users for your current plan. Contact support to increase your limit."
+    },
+    "optional": {
+      "label": "Optional:",
+      "description": "You can skip this step and invite team members later from the settings page."
+    }
   },
   "ticketingConfigStep": {
     "title": "Ticketing Config Step",
