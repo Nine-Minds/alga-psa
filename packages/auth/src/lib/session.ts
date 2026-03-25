@@ -68,8 +68,13 @@ export function getSessionMaxAge(): number {
 /**
  * Get the session cookie name (environment-aware with port suffix for dev)
  */
+export function isSecureCookieEnvironment(): boolean {
+  return process.env.NODE_ENV === 'production'
+    && (!process.env.NEXTAUTH_URL || process.env.NEXTAUTH_URL.startsWith('https://'));
+}
+
 export function getSessionCookieName(): string {
-  const baseName = process.env.NODE_ENV === 'production'
+  const baseName = isSecureCookieEnvironment()
     ? '__Secure-authjs.session-token'
     : 'authjs.session-token';
 
@@ -80,8 +85,7 @@ export function getSessionCookieName(): string {
  * Get the session cookie configuration
  */
 export function getSessionCookieConfig(): CookieOption {
-  const environment = process.env.NODE_ENV ?? 'development';
-  const secure = environment === 'production';
+  const secure = isSecureCookieEnvironment();
 
   return {
     name: getSessionCookieName(),
