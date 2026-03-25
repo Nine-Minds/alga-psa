@@ -89,7 +89,7 @@
   {
     "id": "T032",
     "description": "2b-16: Italian accent audit passes for it/msp/onboarding.json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F035"]
   },
   {
