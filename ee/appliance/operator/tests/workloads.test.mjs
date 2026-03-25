@@ -53,8 +53,6 @@ test('listAppliancePods returns appliance namespace pods with status columns', a
         ],
       }),
     }),
-    async () => ({ ok: true, code: 0, output: JSON.stringify({ items: [] }) }),
-    async () => ({ ok: false, code: 1, output: 'forbidden' }),
   ]);
 
   const result = await listAppliancePods(makeEnv(), {
@@ -62,14 +60,14 @@ test('listAppliancePods returns appliance namespace pods with status columns', a
     nowMs: Date.parse('2026-03-25T13:00:00Z'),
   });
 
-  assert.deepEqual(result.namespaces, ['msp', 'alga-system', 'flux-system']);
+  assert.deepEqual(result.namespaces, ['msp']);
   assert.equal(result.pods.length, 1);
   assert.equal(result.pods[0].key, 'msp/alga-core-0');
   assert.equal(result.pods[0].ready, '1/2');
   assert.equal(result.pods[0].restarts, 3);
   assert.equal(result.pods[0].status, 'CrashLoopBackOff');
   assert.equal(result.pods[0].age, '1h');
-  assert.match(result.errors[0], /flux-system/);
+  assert.deepEqual(result.errors, []);
 });
 
 test('readPodLogsTail and readPodLogsSince parse timestamped lines', async () => {

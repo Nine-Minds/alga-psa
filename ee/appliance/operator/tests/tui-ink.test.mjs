@@ -95,7 +95,7 @@ function makeActions(overrides = {}) {
     runSupportBundle: async () => ({ ok: true }),
     listAppliancePods: async () => ({
       fetchedAt: '2026-03-25T12:00:00Z',
-      namespaces: ['msp', 'alga-system', 'flux-system'],
+      namespaces: ['msp'],
       errors: [],
       pods: [
         {
@@ -290,7 +290,7 @@ test('T010: Workload console lists appliance-scoped pods with status columns and
           const updatedAge = pollCount > 1 ? '11m' : '10m';
           return {
             fetchedAt: `2026-03-25T12:00:0${Math.min(pollCount, 9)}Z`,
-            namespaces: ['msp', 'alga-system', 'flux-system'],
+            namespaces: ['msp'],
             errors: [],
             pods: [
               {
@@ -302,16 +302,6 @@ test('T010: Workload console lists appliance-scoped pods with status columns and
                 ready: '2/2',
                 restarts: 0,
                 age: updatedAge,
-              },
-              {
-                key: 'alga-system/release-controller',
-                namespace: 'alga-system',
-                name: 'release-controller',
-                phase: 'Running',
-                status: 'CrashLoopBackOff',
-                ready: '0/1',
-                restarts: 4,
-                age: '5m',
               },
             ],
           };
@@ -329,15 +319,11 @@ test('T010: Workload console lists appliance-scoped pods with status columns and
 
   let frame = ui.lastFrame() || '';
   assert.match(frame, /Workloads/);
-  assert.match(frame, /Namespaces: msp, alga-system, flux-system/);
+  assert.match(frame, /Namespace: msp/);
   assert.match(frame, /alga-core-0/);
-  assert.match(frame, /release-controller/);
-  assert.match(frame, /CrashLoopBackOff/);
   assert.match(frame, /Ready\s+Restarts\s+Age/);
 
-  pressJ(ui); // select second row
-  await sleep(20);
-  pressJ(ui); // wrap
+  pressJ(ui); // stays on only row
   await sleep(20);
   ui.stdin.write('r');
   await sleep(40);

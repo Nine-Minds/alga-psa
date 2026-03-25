@@ -1,6 +1,6 @@
 import { ShellRunner } from './runner.mjs';
 
-const DEFAULT_NAMESPACES = ['msp', 'alga-system', 'flux-system'];
+const DEFAULT_NAMESPACES = ['msp'];
 
 function parseJsonOutput(output) {
   try {

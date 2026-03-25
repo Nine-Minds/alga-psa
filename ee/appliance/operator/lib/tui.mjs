@@ -110,6 +110,30 @@ function splitLabelValue(line = '') {
   };
 }
 
+function truncateText(value, width) {
+  const text = String(value ?? '');
+  if (text.length <= width) {
+    return text.padEnd(width);
+  }
+  if (width <= 1) {
+    return text.slice(0, width);
+  }
+  return `${text.slice(0, width - 1)}…`;
+}
+
+function alignRight(value, width) {
+  return String(value ?? '').padStart(width);
+}
+
+const WORKLOAD_COLUMNS = {
+  pod: 31,
+  namespace: 12,
+  status: 18,
+  ready: 7,
+  restarts: 8,
+  age: 5,
+};
+
 function renderLines(lines, keyPrefix, options = {}) {
   const { fallbackColor, bold = false } = options;
   return lines.map((line, index) =>
@@ -394,6 +418,14 @@ function WorkloadsPane({ workloads, workloadIndex, workloadNotice, loadingWorklo
   const rows = workloads?.pods || [];
   const start = Math.max(0, Math.min(workloadIndex - 8, Math.max(0, rows.length - 16)));
   const visibleRows = rows.slice(start, start + 16);
+  const headerLine = [
+    truncateText('Pod', WORKLOAD_COLUMNS.pod),
+    truncateText('Namespace', WORKLOAD_COLUMNS.namespace),
+    truncateText('Status', WORKLOAD_COLUMNS.status),
+    alignRight('Ready', WORKLOAD_COLUMNS.ready),
+    alignRight('Restarts', WORKLOAD_COLUMNS.restarts),
+    alignRight('Age', WORKLOAD_COLUMNS.age),
+  ].join(' ');
   return React.createElement(
     Box,
     { borderStyle: 'round', borderColor: BRAND_PRIMARY, paddingX: 1, flexDirection: 'column', flexGrow: 1 },
@@ -401,26 +433,33 @@ function WorkloadsPane({ workloads, workloadIndex, workloadNotice, loadingWorklo
     React.createElement(
       Text,
       { color: TEXT_MUTED },
-      `Namespaces: ${(workloads?.namespaces || []).join(', ') || 'msp, alga-system, flux-system'}`,
+      `Namespace: ${(workloads?.namespaces || []).join(', ') || 'msp'}`,
     ),
     React.createElement(Text, { color: TEXT_MUTED }, `Updated: ${workloads?.fetchedAt || 'pending...'}`),
     loadingWorkloads ? React.createElement(Text, { color: COLOR_WARN }, 'Refreshing workload inventory...') : null,
     React.createElement(Text, null, ''),
-    React.createElement(Text, { color: BRAND_SECONDARY }, 'Pod                           Namespace     Status         Ready  Restarts  Age'),
+    React.createElement(Text, { color: BRAND_SECONDARY, bold: true }, headerLine),
     ...(rows.length
       ? visibleRows.map((pod, index) => {
           const absolute = start + index;
           const selected = absolute === workloadIndex;
           const pointer = selected ? '>' : ' ';
-          const line = `${pointer} ${pod.name.padEnd(28)} ${pod.namespace.padEnd(12)} ${String(pod.status).padEnd(13)} ${String(pod.ready).padEnd(6)} ${String(pod.restarts).padEnd(8)} ${pod.age}`;
+
           return React.createElement(
             Text,
             {
               key: pod.key,
-              color: selected ? BRAND_SECONDARY : lineColor(pod.status) || TEXT_MUTED,
+              backgroundColor: selected ? BRAND_SECONDARY : undefined,
+              color: selected ? 'black' : undefined,
               bold: selected,
             },
-            line,
+            React.createElement(Text, { color: selected ? 'black' : BRAND_SECONDARY }, `${pointer} `),
+            React.createElement(Text, { color: selected ? 'black' : TEXT_MUTED }, `${truncateText(pod.name, WORKLOAD_COLUMNS.pod)} `),
+            React.createElement(Text, { color: selected ? 'black' : TEXT_MUTED }, `${truncateText(pod.namespace, WORKLOAD_COLUMNS.namespace)} `),
+            React.createElement(Text, { color: selected ? 'black' : lineColor(pod.status) || TEXT_MUTED }, `${truncateText(pod.status, WORKLOAD_COLUMNS.status)} `),
+            React.createElement(Text, { color: selected ? 'black' : TEXT_MUTED }, `${alignRight(pod.ready, WORKLOAD_COLUMNS.ready)} `),
+            React.createElement(Text, { color: selected ? 'black' : TEXT_MUTED }, `${alignRight(pod.restarts, WORKLOAD_COLUMNS.restarts)} `),
+            React.createElement(Text, { color: selected ? 'black' : TEXT_MUTED }, alignRight(pod.age, WORKLOAD_COLUMNS.age)),
           );
         })
       : [React.createElement(Text, { key: 'empty-workloads', color: TEXT_MUTED }, 'No appliance pods found.')]),
