@@ -70,7 +70,7 @@
   {
     "id": "T023",
     "description": "2b-12: Visual QA (xx) — asset dashboard, asset form, detail drawer, all tabs/panels show '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
 
