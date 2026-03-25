@@ -92,6 +92,13 @@ export default function TaskDocumentsSimple({
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [showSelector, setShowSelector] = useState(false);
+
+  // Ref to avoid stale closures when multi-file uploads call onUploadComplete
+  // sequentially within a single startBulkUpload loop.
+  const pendingDocsRef = useRef<PendingTaskDocument[]>(pendingDocuments || []);
+  useEffect(() => {
+    pendingDocsRef.current = pendingDocuments || [];
+  }, [pendingDocuments]);
   
   // Drawer states for viewing/editing documents
   const [selectedDocument, setSelectedDocument] = useState<IDocument | null>(null);
@@ -585,16 +592,18 @@ export default function TaskDocumentsSimple({
               id: "task-document-upload",
               userId: currentUser.user_id,
               entityId: isPendingMode ? undefined : taskId,
-              entityType: isPendingMode ? undefined : "project_task",
+              // Always pass entityType so the folder selector can show default
+              // folder templates even before the task is saved.
+              entityType: "project_task",
               // Leave folderPath undefined so the shared uploader prompts for a
               // destination folder, matching the ticket documents flow.
               folderPath: undefined,
               onUploadComplete: async (result: any) => {
-                setShowUpload(false);
                 if (result?.success && result.document) {
                   toast.success('Document uploaded successfully');
                   if (isPendingMode) {
-                    // In pending mode, add to pending documents list
+                    // Use ref to get latest pending docs (avoids stale closure
+                    // when multiple files upload sequentially in one loop).
                     const newPendingDoc: PendingTaskDocument = {
                       document_id: result.document.document_id,
                       document_name: result.document.document_name,
@@ -602,7 +611,9 @@ export default function TaskDocumentsSimple({
                       mime_type: result.document.mime_type,
                       file_id: result.document.file_id
                     };
-                    onPendingDocumentsChange?.([...(pendingDocuments || []), newPendingDoc]);
+                    const updated = [...pendingDocsRef.current, newPendingDoc];
+                    pendingDocsRef.current = updated;
+                    onPendingDocumentsChange?.(updated);
                   } else {
                     // In edit mode, notify parent about the new document for session tracking
                     onDocumentAdded?.({
@@ -616,6 +627,7 @@ export default function TaskDocumentsSimple({
                   }
                 }
               },
+              onAllUploadsComplete: () => setShowUpload(false),
               onCancel: () => setShowUpload(false),
             })}
           </div>
@@ -973,7 +985,7 @@ export default function TaskDocumentsSimple({
         title: "Select Folder for New Document",
         description: "Choose where to save this new document",
         entityId: isPendingMode ? undefined : taskId,
-        entityType: isPendingMode ? undefined : "project_task",
+        entityType: "project_task",
       })}
 
       {/* Delete confirmation dialog */}
