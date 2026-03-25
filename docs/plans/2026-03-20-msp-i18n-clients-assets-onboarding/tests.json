@@ -101,7 +101,7 @@
   {
     "id": "T034",
     "description": "2b-16: no key collisions between msp/onboarding.json and existing msp/dashboard.json onboarding keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
 
