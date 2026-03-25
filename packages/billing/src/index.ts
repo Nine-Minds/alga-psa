@@ -6,7 +6,7 @@
  */
 
 // Models
-export { Invoice, Contract } from './models';
+export { Invoice, Contract, Quote, QuoteItem, QuoteActivity, QuoteDocumentTemplate } from './models';
 
 // Components
 export { BillingDashboard, CreditsPage, TemplateRenderer, PurchaseOrderSummaryBanner, AutomaticInvoices, BillingCycles } from './components';
@@ -27,6 +27,18 @@ export type {
   DiscountType,
   InvoiceTemplateSource,
   ICreditAllocation,
+} from '@alga-psa/types';
+
+export type {
+  IQuote,
+  IQuoteItem,
+  IQuoteActivity,
+  IQuoteWithClient,
+  IQuoteListItem,
+  IQuoteDocumentTemplate,
+  QuoteDocumentTemplateSource,
+  QuoteViewModel,
+  QuoteStatus,
 } from '@alga-psa/types';
 
 // Re-export contract types from @alga-psa/types
@@ -85,6 +97,7 @@ export {
   INVOICE_STATUS_DISPLAY_ORDER,
   DEFAULT_ACCOUNTING_EXPORT_STATUSES,
   getTaxImportState,
+  QUOTE_STATUS_METADATA,
 } from '@alga-psa/types';
 export {
   resolveInvoicePdfPrintOptionsFromAst,

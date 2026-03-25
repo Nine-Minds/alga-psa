@@ -1,0 +1,1115 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration: quotes table created with correct columns including is_template boolean, types, and constraints",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Migration: quotes table has indexes on (tenant, client_id), (tenant, status), (tenant, quote_number), (tenant, parent_quote_id)",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Migration: quote_items table created with correct columns including is_selected, matching invoice_charges pattern plus quote-specific fields",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Migration: quote_items FK to quotes cascades on delete",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Migration: quote_activities table created with correct columns and FK to quotes",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Numbering: 'QUOTE' entity type generates Q-0001 on first call",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Numbering: sequential calls generate Q-0001, Q-0002, Q-0003",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Numbering: different tenants have independent sequences",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Types: IQuote interface includes all required fields with correct types",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Types: QuoteStatus includes draft, sent, accepted, rejected, expired, converted, cancelled, superseded",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Types: IQuoteListItem includes joined client name and computed display fields",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Schema: createQuoteSchema requires client_id, title, quote_date, valid_until",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Schema: createQuoteSchema rejects invalid dates (valid_until before quote_date)",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Schema: createQuoteItemSchema requires description and validates quantity > 0",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Schema: status transition validation allows draft\u2192sent but rejects draft\u2192accepted",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Schema: status transition validation allows sent\u2192accepted, sent\u2192rejected, sent\u2192expired, sent\u2192cancelled",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Schema: status transition validation allows accepted\u2192converted but rejects converted\u2192draft",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Model: getById returns quote with items for correct tenant",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Model: getById returns null for wrong tenant (isolation)",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Model: getById auto-expires quote if valid_until < today and status is 'sent'",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Model: getById does not auto-expire drafts or accepted quotes",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Model: getByNumber returns correct quote by human-readable number within tenant",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Model: listByTenant returns paginated results with correct total count",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Model: listByTenant filters by status correctly",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Model: listByTenant filters by client_id correctly",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Model: listByTenant sorts by quote_date descending by default",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Model: listByClient returns only quotes for specified client",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Model: create inserts quote with generated quote_number and logs 'created' activity",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Model: create sets default status to 'draft'",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Model: update changes fields and logs 'updated' activity",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Model: update rejects invalid status transitions",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Model: delete removes draft quotes with no business history via deleteEntityWithValidation",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F049a"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Model: delete blocks non-draft quotes and offers archive alternative",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F049a"
+    ]
+  },
+  {
+    "id": "T033a",
+    "description": "Model: delete blocks drafts that have business history (emails sent, etc.) and offers archive",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F049a"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Item model: listByQuoteId returns items ordered by display_order",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Item model: create with service_id populates service_name, service_sku, unit_price from catalog",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Item model: create without service_id allows custom item entry",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Item model: update allows rate override (different unit_price than catalog default)",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Item model: delete removes item and adjusts display_order of remaining items",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Item model: reorder updates display_order for all items in batch",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Activity model: create stores activity with all fields and auto-timestamps",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Activity model: listByQuoteId returns activities in chronological order",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Action: createQuote requires billing:create permission",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Action: createQuote returns quote with generated number",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Action: updateQuote enforces status transition rules",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Action: deleteQuote rejects deletion of sent/accepted quotes",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Action: addQuoteItem with service_id populates defaults from catalog",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Action: addQuoteItem with all four billing methods (fixed, hourly, usage, per_unit)",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Action: addQuoteItem allows rate override different from catalog default",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "Action: addQuoteItem stores is_optional=true when flagged",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Action: addQuoteItem stores is_recurring=true with billing_frequency",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T050a",
+    "description": "Business template: creating a quote template sets is_template=true and does not generate a quote_number",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T050b",
+    "description": "Business template: createQuoteFromTemplate copies all items from template to new draft quote",
+    "implemented": true,
+    "featureIds": [
+      "F036a"
+    ]
+  },
+  {
+    "id": "T050c",
+    "description": "Business template: createQuoteFromTemplate generates a new quote_number for the draft",
+    "implemented": true,
+    "featureIds": [
+      "F036a"
+    ]
+  },
+  {
+    "id": "T050d",
+    "description": "Business template: template list filters by is_template=true, quote list filters by is_template=false/null",
+    "implemented": true,
+    "featureIds": [
+      "F036b"
+    ]
+  },
+  {
+    "id": "T050e",
+    "description": "Business template: templates are not included in status lifecycle (no sent/accepted/etc.)",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Tax: calculateTax called per taxable item with correct net_amount and region",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Tax: is_taxable=false items get zero tax_amount",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "Tax: tax-exempt client gets zero tax on all items",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "Tax: reverse charge applicable client gets zero tax",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "Tax: per-item tax_region and tax_rate stored correctly after calculation",
+    "implemented": true,
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "Discount: percentage discount calculates correct amount from target item total",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "Discount: fixed discount stores exact amount as total_price",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "Discount: applies_to_item_id scopes discount to specific item's net_amount",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "Discount: applies_to_service_id scopes discount to all items of that service",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "Discount: quote-level discount (no target) applies to full subtotal",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "Totals: subtotal equals sum of non-discount item total_prices",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "Totals: discount_total equals sum of discount line amounts",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "Totals: total_amount = subtotal - discount_total + tax",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "Totals: adding an item triggers recalculation of all totals",
+    "implemented": true,
+    "featureIds": [
+      "F059"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "Totals: removing an item triggers recalculation",
+    "implemented": true,
+    "featureIds": [
+      "F059"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Totals: toggling optional item off excludes it from totals",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "Totals: toggling optional item back on includes it in totals",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "Versioning: revise creates new quote row with version+1 and parent_quote_id set",
+    "implemented": true,
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "Versioning: revise copies all quote_items to new version with new item_ids",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "Versioning: old version status set to 'superseded' after revision",
+    "implemented": true,
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "Versioning: new version has same quote_number as original",
+    "implemented": true,
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "Versioning: can revise a rejected quote (creates new version from rejected)",
+    "implemented": true,
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "Version history: query returns all versions ordered by version number",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "Version history: works for quotes with 3+ versions",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "Template migration: quote_templates table has templateAst JSONB column",
+    "implemented": true,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "Template migration: standard_quote_templates seeded with default and detailed templates",
+    "implemented": true,
+    "featureIds": [
+      "F071"
+    ]
+  },
+  {
+    "id": "T076a",
+    "description": "Template migration: standard quote template seed upsert succeeds on repeated runs",
+    "implemented": true,
+    "featureIds": [
+      "F071a"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "QuoteViewModel: correctly maps all quote fields including items with optional/recurring metadata",
+    "implemented": true,
+    "featureIds": [
+      "F073"
+    ]
+  },
+  {
+    "id": "T078",
+    "description": "AST bindings: quoteNumber, quoteDate, validUntil resolve to correct quote values",
+    "implemented": true,
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T079",
+    "description": "AST bindings: lineItems collection includes is_optional and is_recurring flags per item",
+    "implemented": true,
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T080",
+    "description": "Standard template: 'standard-quote-default' renders valid HTML with all sections",
+    "implemented": true,
+    "featureIds": [
+      "F076"
+    ]
+  },
+  {
+    "id": "T081",
+    "description": "Standard template: 'standard-quote-detailed' renders phase grouping and optional item markers",
+    "implemented": true,
+    "featureIds": [
+      "F077"
+    ]
+  },
+  {
+    "id": "T082",
+    "description": "Adapter: mapDbQuoteToViewModel fetches and joins client, contact, tenant data",
+    "implemented": true,
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T083",
+    "description": "PDF: generates valid PDF buffer from quote data",
+    "implemented": true,
+    "featureIds": [
+      "F079"
+    ]
+  },
+  {
+    "id": "T084",
+    "description": "PDF: stores generated file in file storage and returns file_id",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T085",
+    "description": "Preview: renders quote template in-browser without Puppeteer",
+    "implemented": true,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T086",
+    "description": "Template selection: uses quote-specific template_id if set",
+    "implemented": true,
+    "featureIds": [
+      "F082"
+    ]
+  },
+  {
+    "id": "T087",
+    "description": "Template selection: falls back to tenant default when no per-quote template",
+    "implemented": true,
+    "featureIds": [
+      "F082"
+    ]
+  },
+  {
+    "id": "T088",
+    "description": "Template selection: falls back to standard-quote-default when no tenant default",
+    "implemented": true,
+    "featureIds": [
+      "F082"
+    ]
+  },
+  {
+    "id": "T089",
+    "description": "Send: sendQuote rejects quotes not in draft/approved status",
+    "implemented": true,
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T090",
+    "description": "Send: sendQuote generates PDF, sends email to specified address(es), updates sent_at and status to 'sent'",
+    "implemented": true,
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T090a",
+    "description": "Send: sendQuote accepts array of email addresses and sends to all of them",
+    "implemented": true,
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T091",
+    "description": "Send: sendQuote logs 'sent' activity",
+    "implemented": true,
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T092",
+    "description": "Email: 'Quote Sent' email includes quote summary and PDF attachment",
+    "implemented": true,
+    "featureIds": [
+      "F085"
+    ]
+  },
+  {
+    "id": "T093",
+    "description": "Email: sent email logged in email_sending_logs with entity_type='quote'",
+    "implemented": true,
+    "featureIds": [
+      "F088"
+    ]
+  },
+  {
+    "id": "T094",
+    "description": "Client portal: QuotesTab loads and displays client's quotes",
+    "implemented": true,
+    "featureIds": [
+      "F089",
+      "F090"
+    ]
+  },
+  {
+    "id": "T095",
+    "description": "Client portal: QuotesTab only shows quotes for authenticated client",
+    "implemented": true,
+    "featureIds": [
+      "F090"
+    ]
+  },
+  {
+    "id": "T096",
+    "description": "Client portal: QuoteDetail shows full line items with optional item indicators",
+    "implemented": true,
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T097",
+    "description": "Client portal: toggling optional item on/off recalculates displayed total and persists is_selected server-side",
+    "implemented": true,
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T097a",
+    "description": "Client portal: optional item selections persist across page reloads",
+    "implemented": true,
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T098",
+    "description": "Client portal: Accept persists optional item selections and sets accepted_at, accepted_by, status to 'accepted'",
+    "implemented": true,
+    "featureIds": [
+      "F093"
+    ]
+  },
+  {
+    "id": "T098a",
+    "description": "MSP detail view: accepted quote with optional items shows client's selections highlighted for review",
+    "implemented": true,
+    "featureIds": [
+      "F093a"
+    ]
+  },
+  {
+    "id": "T100",
+    "description": "Client portal: Reject requires comment, sets rejected_at, rejection_reason, status to 'rejected'",
+    "implemented": true,
+    "featureIds": [
+      "F094"
+    ]
+  },
+  {
+    "id": "T101",
+    "description": "Client portal: first view sets viewed_at timestamp and logs activity",
+    "implemented": true,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T102",
+    "description": "Client portal: second view does not overwrite viewed_at",
+    "implemented": true,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T103",
+    "description": "Client portal: cannot accept/reject expired quote",
+    "implemented": true,
+    "featureIds": [
+      "F093",
+      "F094"
+    ]
+  },
+  {
+    "id": "T104",
+    "description": "Conversion: Quote\u2192Contract creates draft contract with correct name and dates",
+    "implemented": true,
+    "featureIds": [
+      "F098"
+    ]
+  },
+  {
+    "id": "T105",
+    "description": "Conversion: recurring fixed-price item creates contract_line + _fixed_config",
+    "implemented": true,
+    "featureIds": [
+      "F099",
+      "F100"
+    ]
+  },
+  {
+    "id": "T106",
+    "description": "Conversion: recurring hourly item creates contract_line + _hourly_config",
+    "implemented": true,
+    "featureIds": [
+      "F099",
+      "F100"
+    ]
+  },
+  {
+    "id": "T107",
+    "description": "Conversion: recurring usage item creates contract_line + _usage_config",
+    "implemented": true,
+    "featureIds": [
+      "F099",
+      "F100"
+    ]
+  },
+  {
+    "id": "T108",
+    "description": "Conversion: client_contracts assignment created with correct client and dates",
+    "implemented": true,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T109",
+    "description": "Conversion: converted_contract_id set on quote after contract creation",
+    "implemented": true,
+    "featureIds": [
+      "F102"
+    ]
+  },
+  {
+    "id": "T110",
+    "description": "Conversion: Quote\u2192Invoice creates draft invoice with is_manual=true",
+    "implemented": true,
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T111",
+    "description": "Conversion: one-time items mapped to invoice_charges with correct tax/discount data",
+    "implemented": true,
+    "featureIds": [
+      "F104"
+    ]
+  },
+  {
+    "id": "T112",
+    "description": "Conversion: converted_invoice_id set on quote after invoice creation",
+    "implemented": true,
+    "featureIds": [
+      "F105"
+    ]
+  },
+  {
+    "id": "T113",
+    "description": "Conversion: combined conversion creates both contract and invoice in single transaction",
+    "implemented": true,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T114",
+    "description": "Conversion: combined conversion rolls back both if invoice creation fails after contract creation",
+    "implemented": true,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T115",
+    "description": "Conversion: status set to 'converted' after successful conversion",
+    "implemented": true,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T116",
+    "description": "Conversion: preview correctly categorizes items as contract-bound vs invoice-bound",
+    "implemented": true,
+    "featureIds": [
+      "F107"
+    ]
+  },
+  {
+    "id": "T117",
+    "description": "Conversion: optional items with is_selected=false (excluded by client) are not converted",
+    "implemented": true,
+    "featureIds": [
+      "F098",
+      "F103"
+    ]
+  },
+  {
+    "id": "T118",
+    "description": "Conversion: post-conversion quote detail shows links to created contract and invoice",
+    "implemented": true,
+    "featureIds": [
+      "F109"
+    ]
+  },
+  {
+    "id": "T119",
+    "description": "Approval: 'Submit for Approval' changes status from draft to pending_approval",
+    "implemented": true,
+    "featureIds": [
+      "F111"
+    ]
+  },
+  {
+    "id": "T119a",
+    "description": "Approval migration: quotes status constraint allows pending_approval and approved",
+    "implemented": true,
+    "featureIds": [
+      "F110a"
+    ]
+  },
+  {
+    "id": "T120",
+    "description": "Approval: approve changes status from pending_approval to approved",
+    "implemented": true,
+    "featureIds": [
+      "F113"
+    ]
+  },
+  {
+    "id": "T121",
+    "description": "Approval: reject returns quote to draft with comment",
+    "implemented": true,
+    "featureIds": [
+      "F113"
+    ]
+  },
+  {
+    "id": "T122",
+    "description": "Approval: quotes:approve permission required \u2014 user without it gets denied",
+    "implemented": true,
+    "featureIds": [
+      "F114"
+    ]
+  },
+  {
+    "id": "T123",
+    "description": "Approval: when disabled per tenant, draft\u2192sent transition allowed directly",
+    "implemented": true,
+    "featureIds": [
+      "F113"
+    ]
+  },
+  {
+    "id": "T124",
+    "description": "Duplication: creates new quote with new number, draft status, copied items",
+    "implemented": true,
+    "featureIds": [
+      "F119"
+    ]
+  },
+  {
+    "id": "T125",
+    "description": "Duplication: duplicated items have new item_ids (not referencing original)",
+    "implemented": true,
+    "featureIds": [
+      "F119"
+    ]
+  },
+  {
+    "id": "T126",
+    "description": "Auto-expiration job: bulk-expires all sent quotes past valid_until",
+    "implemented": true,
+    "featureIds": [
+      "F118"
+    ]
+  },
+  {
+    "id": "T127",
+    "description": "Save as Template: creates business template from existing quote with is_template=true, copies items",
+    "implemented": true,
+    "featureIds": [
+      "F120"
+    ]
+  },
+  {
+    "id": "T128",
+    "description": "Save as Template: template does not copy quote-specific fields (client, contact, dates, status)",
+    "implemented": true,
+    "featureIds": [
+      "F120"
+    ]
+  }
+]

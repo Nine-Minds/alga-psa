@@ -6,6 +6,17 @@
 
 export { TaxService } from './taxService';
 export { BillingEngine } from '../lib/billing/billingEngine';
+export { recalculateQuoteFinancials } from './quoteCalculationService';
+export { QuotePDFGenerationService, createQuotePDFGenerationService } from './quotePdfGenerationService';
+export {
+  buildQuoteConversionPreview,
+  convertQuoteToDraftContract,
+  convertQuoteToDraftContractAndInvoice,
+  convertQuoteToDraftInvoice,
+  type QuoteToContractConversionResult,
+  type QuoteToBothConversionResult,
+  type QuoteToInvoiceConversionResult,
+} from './quoteConversionService';
 export { ContractLineServiceConfigurationService } from './contractLineServiceConfigurationService';
 export { ClientContractServiceConfigurationService } from './clientContractServiceConfigurationService';
 

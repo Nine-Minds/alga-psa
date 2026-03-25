@@ -516,6 +516,68 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     dependencies: [
       { type: 'user', table: 'user_roles', foreignKey: 'role_id', label: 'user assignment' }
     ]
+  },
+  quote: {
+    entityType: 'quote',
+    supportsInactive: false,
+    supportsArchive: true,
+    dependencies: [
+      {
+        type: 'quote_state',
+        table: 'quotes',
+        label: 'business history',
+        countQuery: async (trx, options) => {
+          const record = await trx('quotes')
+            .select('status')
+            .where({ tenant: options.tenant, quote_id: options.entityId })
+            .first();
+          return record?.status && record.status !== 'draft' ? 1 : 0;
+        }
+      },
+      {
+        type: 'quote_activity',
+        table: 'quote_activities',
+        label: 'quote activity',
+        countQuery: async (trx, options) => {
+          const result = await trx('quote_activities')
+            .where({ tenant: options.tenant, quote_id: options.entityId })
+            .whereNot('activity_type', 'created')
+            .count<{ count: string }>('* as count')
+            .first();
+          return Number(result?.count ?? 0);
+        }
+      },
+      {
+        type: 'quote_email',
+        table: 'email_sending_logs',
+        label: 'sent email',
+        countQuery: async (trx, options) => {
+          const result = await trx('email_sending_logs')
+            .where({ tenant: options.tenant, entity_type: 'quote', entity_id: options.entityId })
+            .count<{ count: string }>('* as count')
+            .first();
+          return Number(result?.count ?? 0);
+        }
+      },
+      {
+        type: 'converted_record',
+        table: 'quotes',
+        label: 'converted billing record',
+        countQuery: async (trx, options) => {
+          const record = await trx('quotes')
+            .select('converted_contract_id', 'converted_invoice_id')
+            .where({ tenant: options.tenant, quote_id: options.entityId })
+            .first();
+          return record?.converted_contract_id || record?.converted_invoice_id ? 1 : 0;
+        }
+      },
+      {
+        type: 'document',
+        table: 'document_associations',
+        label: 'document',
+        countQuery: countDocumentAssociations('quote')
+      }
+    ]
   }
 };
 

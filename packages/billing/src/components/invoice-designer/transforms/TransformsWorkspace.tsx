@@ -11,7 +11,6 @@ import type {
   InvoiceTemplateSortKey,
   InvoiceTemplateSortTransform,
   InvoiceTemplateTransformOperation,
-  WasmInvoiceViewModel,
 } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AsyncSearchableSelect } from '@alga-psa/ui/components/AsyncSearchableSelect';
@@ -23,7 +22,6 @@ import { exportWorkspaceToInvoiceTemplateAst } from '../ast/workspaceAst';
 import {
   DEFAULT_PREVIEW_SAMPLE_ID,
   INVOICE_PREVIEW_SAMPLE_SCENARIOS,
-  type InvoicePreviewSampleScenario,
 } from '../preview/sampleScenarios';
 import type { PreviewSessionState, PreviewSourceKind } from '../preview/previewSessionState';
 import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '../state/designerStore';
@@ -51,8 +49,8 @@ type PreviewIssue = {
 
 type Props = {
   previewState: PreviewSessionState;
-  previewData: WasmInvoiceViewModel | null;
-  activeSample: InvoicePreviewSampleScenario | null;
+  previewData: object | null;
+  activeSample: { id: string; label: string; description: string } | null;
   onSourceKindChange: (source: PreviewSourceKind) => void;
   onSampleChange: (sampleId: string) => void;
   onExistingInvoiceChange: (invoiceId: string) => void;
@@ -219,7 +217,7 @@ const discoverCollectionPaths = (value: unknown, prefix = '', result = new Set<s
 };
 
 const getSourceCollection = (
-  previewData: WasmInvoiceViewModel | null,
+  previewData: object | null,
   sourceBindingId: string,
   collectionPathById: Map<string, string>
 ): Array<Record<string, unknown>> => {

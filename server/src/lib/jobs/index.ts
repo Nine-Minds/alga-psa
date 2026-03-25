@@ -6,6 +6,7 @@ import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipH
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
 import { expiredCreditsHandler, ExpiredCreditsJobData } from './handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData } from './handlers/expiringCreditsNotificationHandler';
+import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
 import { creditReconciliationHandler, CreditReconciliationJobData } from './handlers/creditReconciliationHandler';
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handlers/reconcileBucketUsageHandler';
@@ -92,6 +93,10 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await expiringCreditsNotificationHandler(job.data);
     });
     
+    jobScheduler.registerJobHandler<ExpireQuotesJobData>('expire-quotes', async (job: Job<ExpireQuotesJobData>) => {
+      await expireQuotesHandler(job.data);
+    });
+
     // Register credit reconciliation handler
     jobScheduler.registerJobHandler<CreditReconciliationJobData>('credit-reconciliation', async (job: Job<CreditReconciliationJobData>) => {
       await creditReconciliationHandler(job.data);
@@ -304,6 +309,18 @@ export const scheduleExpiringCreditsNotificationJob = async (
     'expiring-credits-notification',
     cronExpression,
     { tenantId, clientId }
+  );
+};
+
+export const scheduleQuoteAutoExpirationJob = async (
+  tenantId: string,
+  cronExpression: string = '0 6 * * *'
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ExpireQuotesJobData>(
+    'expire-quotes',
+    cronExpression,
+    { tenantId }
   );
 };
 

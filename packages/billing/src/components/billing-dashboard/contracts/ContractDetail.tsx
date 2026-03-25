@@ -25,6 +25,7 @@ import type {
   IDocument,
   IStatus,
   IInvoiceTemplate,
+  IQuote,
   InvoiceViewModel as BillingInvoiceViewModel
 } from '@alga-psa/types';
 import {
@@ -34,6 +35,7 @@ import {
   updateContract,
   deleteContract,
 } from '@alga-psa/billing/actions/contractActions';
+import { getQuoteByConvertedContractId } from '@alga-psa/billing/actions/quoteActions';
 import type { IContractSummary } from '@alga-psa/billing/actions/contractActions';
 import {
   getClientContractByIdForBilling,
@@ -165,6 +167,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const [invoiceTemplates, setInvoiceTemplates] = useState<IInvoiceTemplate[]>([]);
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
+  const [sourceQuote, setSourceQuote] = useState<IQuote | null>(null);
   // Use server-provided userId if available
   const [currentUserId, setCurrentUserId] = useState<string>(serverUserId || '');
 
@@ -235,6 +238,44 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const isSystemManagedDefault = contract?.is_system_managed_default === true;
   const primaryAssignmentUsesTenantRenewalDefaults =
     primaryAssignment?.use_tenant_renewal_defaults !== false;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSourceQuote = async () => {
+      if (!contractId) {
+        if (isMounted) {
+          setSourceQuote(null);
+        }
+        return;
+      }
+
+      try {
+        const result = await getQuoteByConvertedContractId(contractId);
+        if (!isMounted) {
+          return;
+        }
+
+        if (result && !('permissionError' in result)) {
+          setSourceQuote(result);
+          return;
+        }
+
+        setSourceQuote(null);
+      } catch (sourceQuoteError) {
+        console.error('Failed to load source quote for contract detail:', sourceQuoteError);
+        if (isMounted) {
+          setSourceQuote(null);
+        }
+      }
+    };
+
+    void loadSourceQuote();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [contractId]);
   const primaryAssignmentRenewalMode = normalizeRenewalMode(
     primaryAssignment?.effective_renewal_mode ?? primaryAssignment?.renewal_mode
   );
@@ -1196,6 +1237,18 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           Back to Contracts
         </Button>
         <ContractHeader contract={contract} summary={summary} liveStatus={primaryAssignmentStatus} />
+        {sourceQuote ? (
+          <div>
+            <Button
+              id="contract-detail-open-source-quote"
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/msp/billing?tab=quotes&quoteId=${sourceQuote.quote_id}`)}
+            >
+              View Source Quote {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

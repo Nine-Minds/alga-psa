@@ -1979,19 +1979,15 @@ export const DesignerShell: React.FC = () => {
                   <label htmlFor="designer-paper-preset-select" className="text-xs text-slate-500 block">
                     Paper Preset
                   </label>
-                  <select
+                  <CustomSelect
                     id="designer-paper-preset-select"
-                    className="w-full rounded border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                     value={currentPrintSettings.paperPreset}
-                    onChange={handlePaperPresetChange}
-                    data-automation-id="designer-paper-preset-select"
-                  >
-                    {listInvoicePaperPresets().map((preset) => (
-                      <option key={preset.id} value={preset.id}>
-                        {preset.label}
-                      </option>
-                    ))}
-                  </select>
+                    onValueChange={(value) => applyPrintSettings({ paperPreset: value as InvoiceTemplatePrintSettings['paperPreset'] })}
+                    options={listInvoicePaperPresets().map((preset) => ({
+                      value: preset.id,
+                      label: preset.label,
+                    }))}
+                  />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="designer-margin-mm-input" className="text-xs text-slate-500 block">

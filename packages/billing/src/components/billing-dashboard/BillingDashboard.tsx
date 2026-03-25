@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { IClient, IService } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Import all the components
 import ContractLinesOverview from './contract-lines/ContractLinesOverview';
@@ -26,6 +27,8 @@ import InvoicingHub from './InvoicingHub';
 import ServiceCatalogManager from '../settings/billing/ServiceCatalogManager';
 import ProductsManager from '../settings/billing/ProductsManager';
 import AccountingExportsTab from './accounting/AccountingExportsTab';
+import QuotesTab from './quotes/QuotesTab';
+import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -51,7 +54,14 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const [isHydrated, setIsHydrated] = useState(false);
   const [error] = useState<string | null>(null);
 
-  const tabDefinitions = useMemo(() => billingTabDefinitions, []);
+  const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
+
+  const tabDefinitions = useMemo(() => {
+    if (isQuotingEnabled) return billingTabDefinitions;
+    return billingTabDefinitions.filter(
+      (tab) => tab.value !== 'quotes' && tab.value !== 'quote-templates'
+    );
+  }, [isQuotingEnabled]);
 
   const initialSearchParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -147,6 +157,18 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         <Tabs.Content value="accounting-exports">
           <AccountingExportsTab />
         </Tabs.Content>
+
+        {isQuotingEnabled && (
+          <Tabs.Content value="quotes">
+            <QuotesTab />
+          </Tabs.Content>
+        )}
+
+        {isQuotingEnabled && (
+          <Tabs.Content value="quote-templates">
+            <QuoteDocumentTemplatesPage />
+          </Tabs.Content>
+        )}
 
         <Tabs.Content value="reports">
           <ContractReports />

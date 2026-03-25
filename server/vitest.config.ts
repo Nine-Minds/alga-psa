@@ -136,6 +136,8 @@ export default defineConfig({
       { find: /^@alga-psa\/integrations\/(.*)$/, replacement: path.resolve(__dirname, '../packages/integrations/src/$1') },
       { find: /^@alga-psa\/client-portal$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/index.ts') },
       { find: /^@alga-psa\/client-portal\/(.*)$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/$1') },
+      { find: /^@alga-psa\/jobs$/, replacement: path.resolve(__dirname, '../packages/jobs/src/index.ts') },
+      { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
       { find: /^@alga-psa\/sla$/, replacement: path.resolve(__dirname, '../packages/sla/src/index.ts') },
       { find: /^@alga-psa\/sla\/(.*)$/, replacement: path.resolve(__dirname, '../packages/sla/src/$1') },
       { find: /^@alga-psa\/sla\/services\/(.*)$/, replacement: path.resolve(__dirname, '../packages/sla/src/services/$1') },

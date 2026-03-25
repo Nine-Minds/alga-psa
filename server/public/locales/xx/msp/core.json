@@ -28,7 +28,7 @@
       "clientContracts": "11111",
       "contractLinePresets": "11111",
       "invoicing": "11111",
-      "invoiceTemplates": "11111",
+      "invoiceLayouts": "11111",
       "billingCycles": "11111",
       "servicePeriods": "11111",
       "serviceCatalog": "11111",

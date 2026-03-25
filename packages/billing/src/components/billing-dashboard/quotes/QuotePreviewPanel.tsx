@@ -1,0 +1,181 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { FileText, Settings } from 'lucide-react';
+import type { IQuoteDocumentTemplate } from '@alga-psa/types';
+import { renderQuotePreview } from '../../../actions/quoteActions';
+
+interface QuotePreviewPanelProps {
+  quoteId: string | null;
+  templates: IQuoteDocumentTemplate[];
+  onDownload?: () => Promise<void>;
+  onOpen?: () => void;
+}
+
+const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
+  quoteId,
+  templates,
+  onDownload,
+  onOpen,
+}) => {
+  const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const loadPreview = async () => {
+      if (!quoteId) {
+        setPreviewHtml(null);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      setPreviewHtml(null);
+
+      try {
+        const result = await renderQuotePreview(quoteId);
+        if (result && typeof result === 'object' && 'permissionError' in result) {
+          throw new Error(result.permissionError);
+        }
+        setPreviewHtml(result as { html: string; css: string });
+      } catch (err) {
+        console.error('Error loading quote preview:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load preview');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadPreview();
+  }, [quoteId]);
+
+  const handleAction = async (action: () => Promise<void>, actionName: string) => {
+    setIsActionLoading(true);
+    setError(null);
+    try {
+      await action();
+    } catch (err) {
+      console.error(`Error ${actionName}:`, err);
+      setError(`Failed to ${actionName}. Please try again.`);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const baseWidth = 794; // A4 width in px at 96dpi
+  const baseHeight = 1123;
+  const scale = containerWidth > 0 ? Math.min(containerWidth / baseWidth, 1) : 1;
+
+  if (!quoteId) {
+    return (
+      <Card className="h-full">
+        <div className="p-6 flex items-center justify-center h-64 text-muted-foreground">
+          <div className="text-center">
+            <FileText className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+            <p>Select a quote to preview</p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="h-full">
+      <div className="p-6" ref={containerRef}>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold mb-2">Quote Preview</h3>
+        </div>
+
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription className="text-sm">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <LoadingIndicator text="Loading Preview..." spinnerProps={{ size: 'sm' }} />
+          </div>
+        ) : previewHtml ? (
+          <>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {onOpen && (
+                <Button
+                  id="quote-preview-open"
+                  variant="outline"
+                  onClick={onOpen}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  Open Quote
+                </Button>
+              )}
+              {onDownload && (
+                <Button
+                  id="quote-preview-download-pdf"
+                  onClick={() => handleAction(onDownload, 'download PDF')}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  Download PDF
+                </Button>
+              )}
+            </div>
+
+            <div className="mb-4 max-h-[600px] overflow-y-auto overflow-x-auto">
+              <div
+                style={{
+                  width: `${baseWidth * scale}px`,
+                  height: `${baseHeight * scale}px`,
+                }}
+              >
+                <div
+                  style={{
+                    transform: `scale(${scale})`,
+                    transformOrigin: 'top left',
+                    width: `${baseWidth}px`,
+                    transition: 'transform 0.2s ease-out',
+                    colorScheme: 'light',
+                    backgroundColor: 'white',
+                    color: 'black',
+                  }}
+                >
+                  <style dangerouslySetInnerHTML={{ __html: previewHtml.css }} />
+                  <div dangerouslySetInnerHTML={{ __html: previewHtml.html }} />
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="text-muted-foreground text-center h-64 flex items-center justify-center">
+            Could not display preview. Data might be missing.
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+};
+
+export default QuotePreviewPanel;

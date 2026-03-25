@@ -28,7 +28,7 @@
       "clientContracts": "55555",
       "contractLinePresets": "55555",
       "invoicing": "55555",
-      "invoiceTemplates": "55555",
+      "invoiceLayouts": "55555",
       "billingCycles": "55555",
       "servicePeriods": "55555",
       "serviceCatalog": "55555",

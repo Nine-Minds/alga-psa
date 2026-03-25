@@ -182,6 +182,9 @@ export interface InvoiceTemplateStyleDeclaration {
   fontFamily?: string;
   lineHeight?: string | number;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
+  flex?: string;
+  borderColor?: string;
+  fontStyle?: string;
 }
 
 export interface InvoiceTemplateBindingCatalog {

@@ -139,7 +139,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.billing.clientContracts',
       'nav.billing.contractLinePresets',
       'nav.billing.invoicing',
-      'nav.billing.invoiceTemplates',
+      'nav.billing.invoiceLayouts',
       'nav.billing.billingCycles',
       'nav.billing.servicePeriods',
       'nav.billing.serviceCatalog',

@@ -26,6 +26,7 @@ function getCacheKey(params: {
   is_active?: boolean;
   billing_methods?: BillingMethod[];
   item_kinds?: ItemKind[];
+  currency_code?: string;
 }): string {
   return JSON.stringify({
     search: params.search,
@@ -34,6 +35,7 @@ function getCacheKey(params: {
     is_active: params.is_active,
     billing_methods: params.billing_methods?.sort(),
     item_kinds: params.item_kinds?.sort(),
+    currency_code: params.currency_code,
   });
 }
 
@@ -44,6 +46,7 @@ function getCachedOrFetch(params: {
   is_active?: boolean;
   billing_methods?: BillingMethod[];
   item_kinds?: ItemKind[];
+  currency_code?: string;
 }): Promise<{ items: CatalogPickerItem[]; totalCount: number }> {
   const cacheKey = getCacheKey(params);
   const now = Date.now();
@@ -77,6 +80,8 @@ interface ServiceCatalogPickerProps {
   billingMethods?: BillingMethod[];
   itemKinds?: ItemKind[];
   isActive?: boolean;
+  /** When provided, the picker returns the currency-specific rate from service_prices alongside default_rate. */
+  currencyCode?: string;
   placeholder?: string;
   label?: string;
   id?: string;
@@ -92,6 +97,7 @@ export function ServiceCatalogPicker({
   billingMethods,
   itemKinds,
   isActive = true,
+  currencyCode,
   placeholder = 'Select item...',
   label,
   id,
@@ -111,6 +117,7 @@ export function ServiceCatalogPicker({
         is_active: isActive,
         billing_methods: billingMethods,
         item_kinds: itemKinds,
+        currency_code: currencyCode,
       });
 
       lastItemsByIdRef.current = result.items.reduce<Record<string, ServiceCatalogPickerItem>>((acc, item) => {
@@ -130,7 +137,7 @@ export function ServiceCatalogPicker({
 
       return { options, total: result.totalCount };
     },
-    [billingMethods, itemKinds, isActive]
+    [billingMethods, itemKinds, isActive, currencyCode]
   );
 
   const handleChange = useCallback(

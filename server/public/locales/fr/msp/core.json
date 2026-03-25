@@ -28,7 +28,7 @@
       "clientContracts": "Contrats client",
       "contractLinePresets": "Préréglages de lignes de contrat",
       "invoicing": "Facturation",
-      "invoiceTemplates": "Modèles de facture",
+      "invoiceLayouts": "Mises en page de facture",
       "billingCycles": "Cycles de facturation",
       "servicePeriods": "Périodes de service",
       "serviceCatalog": "Catalogue de services",

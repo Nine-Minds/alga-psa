@@ -8,6 +8,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import { NumberingSettings } from '@alga-psa/reference-data/components';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
 import RenewalAutomationSettings from './RenewalAutomationSettings';
@@ -74,17 +75,21 @@ const PaymentSettingsConfig = dynamic(
   }
 );
 
-const BILLING_SECTION_IDS = ['general', 'tax', 'payments'] as const;
 const DEFAULT_BILLING_SECTION = 'general';
 
 const BillingSettings: React.FC = () => {
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
+  const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
+
+  const billingSectionIds: readonly string[] = isQuotingEnabled
+    ? ['general', 'quoting', 'tax', 'payments']
+    : ['general', 'tax', 'payments'];
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
     const requestedTab = sectionParam?.toLowerCase();
-    return requestedTab && BILLING_SECTION_IDS.includes(requestedTab as typeof BILLING_SECTION_IDS[number])
+    return requestedTab && billingSectionIds.includes(requestedTab)
       ? requestedTab
       : DEFAULT_BILLING_SECTION;
   });
@@ -92,13 +97,13 @@ const BillingSettings: React.FC = () => {
   // Update active tab when URL parameter changes
   useEffect(() => {
     const requestedTab = sectionParam?.toLowerCase();
-    const targetTab = requestedTab && BILLING_SECTION_IDS.includes(requestedTab as typeof BILLING_SECTION_IDS[number])
+    const targetTab = requestedTab && billingSectionIds.includes(requestedTab)
       ? requestedTab
       : DEFAULT_BILLING_SECTION;
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
-  }, [sectionParam, activeTab]);
+  }, [sectionParam, activeTab, billingSectionIds]);
 
   const updateURL = (tabId: string) => {
     // Build new URL with tab and section parameters
@@ -143,6 +148,25 @@ const BillingSettings: React.FC = () => {
         </div>
       ),
     },
+    ...(isQuotingEnabled ? [{
+      id: 'quoting',
+      label: 'Quoting',
+      content: (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Quote Numbering</CardTitle>
+              <CardDescription>
+                Customize how quote numbers are generated and displayed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <NumberingSettings entityType="QUOTE" />
+            </CardContent>
+          </Card>
+        </div>
+      ),
+    }] : []),
     {
       id: 'tax',
       label: 'Tax',
