@@ -3,16 +3,14 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { 
   Check, 
   AlertTriangle, 
-  X, 
   HelpCircle, 
-  Ticket, 
   ShieldCheck, 
-  Shield, 
-  CalendarClock,
-  AlertCircle 
+  AlertCircle,
+  type LucideIcon
 } from 'lucide-react';
 import type { AssetSummaryMetrics } from '@alga-psa/types';
 import { cn } from '@alga-psa/ui';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AssetMetricsBannerProps {
   metrics: AssetSummaryMetrics | undefined;
@@ -49,7 +47,7 @@ const StatusText = ({
 }: { 
   text: string; 
   color: string; 
-  icon?: any;
+  icon?: LucideIcon;
 }) => (
   <div className="flex items-center gap-1">
     <span className={cn(
@@ -72,6 +70,7 @@ export const AssetMetricsBanner: React.FC<AssetMetricsBannerProps> = ({
   metrics,
   isLoading 
 }) => {
+  const { t } = useTranslation('msp/assets');
   if (isLoading || !metrics) {
     return (
       <div className="h-14 w-full animate-pulse bg-gray-50 border border-gray-200 rounded-lg mb-6" />
@@ -81,10 +80,10 @@ export const AssetMetricsBanner: React.FC<AssetMetricsBannerProps> = ({
   // Health Status Config
   const getHealthConfig = (status: string) => {
     switch (status) {
-      case 'healthy': return { icon: Check, color: 'green', text: 'Healthy' };
-      case 'warning': return { icon: AlertTriangle, color: 'yellow', text: 'Warning' };
-      case 'critical': return { icon: AlertCircle, color: 'red', text: 'Critical' };
-      default: return { icon: HelpCircle, color: 'gray', text: 'Unknown' };
+      case 'healthy': return { icon: Check, color: 'green', text: t('assetMetricsBanner.healthStatuses.healthy', { defaultValue: 'Healthy' }) };
+      case 'warning': return { icon: AlertTriangle, color: 'yellow', text: t('assetMetricsBanner.healthStatuses.warning', { defaultValue: 'Warning' }) };
+      case 'critical': return { icon: AlertCircle, color: 'red', text: t('assetMetricsBanner.healthStatuses.critical', { defaultValue: 'Critical' }) };
+      default: return { icon: HelpCircle, color: 'gray', text: t('assetMetricsBanner.healthStatuses.unknown', { defaultValue: 'Unknown' }) };
     }
   };
   const health = getHealthConfig(metrics.health_status);
@@ -92,10 +91,17 @@ export const AssetMetricsBanner: React.FC<AssetMetricsBannerProps> = ({
   // Security Status Config
   const getSecurityConfig = (status: string, issuesCount: number) => {
     switch (status) {
-      case 'secure': return { icon: ShieldCheck, color: 'green', text: 'Secure' };
-      case 'at_risk': return { icon: AlertTriangle, color: 'yellow', text: `${issuesCount} Missing Patches` };
-      case 'critical': return { icon: AlertCircle, color: 'red', text: 'Critical' };
-      default: return { icon: ShieldCheck, color: 'gray', text: 'Unknown' };
+      case 'secure': return { icon: ShieldCheck, color: 'green', text: t('assetMetricsBanner.securityStatuses.secure', { defaultValue: 'Secure' }) };
+      case 'at_risk': return {
+        icon: AlertTriangle,
+        color: 'yellow',
+        text: t('assetMetricsBanner.securityStatuses.missingPatches', {
+          defaultValue: '{{count}} Missing Patches',
+          count: issuesCount
+        })
+      };
+      case 'critical': return { icon: AlertCircle, color: 'red', text: t('assetMetricsBanner.securityStatuses.critical', { defaultValue: 'Critical' }) };
+      default: return { icon: ShieldCheck, color: 'gray', text: t('assetMetricsBanner.securityStatuses.unknown', { defaultValue: 'Unknown' }) };
     }
   };
   const security = getSecurityConfig(metrics.security_status, metrics.security_issues.length);
@@ -103,12 +109,23 @@ export const AssetMetricsBanner: React.FC<AssetMetricsBannerProps> = ({
   // Warranty Status Config
   const getWarrantyConfig = (status: string, days: number | null) => {
     if (status === 'active' && days !== null) {
-      return { text: `Expires in ${days} Days`, color: 'gray' }; 
+      return {
+        text: t('assetMetricsBanner.warrantyStatuses.expiresIn', {
+          count: days ?? 0
+        }),
+        color: 'gray'
+      };
     }
     switch (status) {
-      case 'expiring_soon': return { text: `Expires in ${days} Days`, color: 'yellow' };
-      case 'expired': return { text: 'Expired', color: 'red' };
-      default: return { text: 'Unknown', color: 'gray' };
+      case 'expiring_soon':
+        return {
+          text: t('assetMetricsBanner.warrantyStatuses.expiresIn', {
+            count: days ?? 0
+          }),
+          color: 'yellow'
+        };
+      case 'expired': return { text: t('assetMetricsBanner.warrantyStatuses.expired', { defaultValue: 'Expired' }), color: 'red' };
+      default: return { text: t('assetMetricsBanner.warrantyStatuses.unknown', { defaultValue: 'Unknown' }), color: 'gray' };
     }
   };
   const warranty = getWarrantyConfig(metrics.warranty_status, metrics.warranty_days_remaining);
@@ -117,27 +134,30 @@ export const AssetMetricsBanner: React.FC<AssetMetricsBannerProps> = ({
     <Card className="mb-6 bg-white overflow-hidden p-0">
       <div className="flex flex-col lg:flex-row justify-between lg:items-center divide-y lg:divide-y-0 lg:divide-x divide-gray-200">
         <MetricItem 
-          label="Health Status" 
+          label={t('assetMetricsBanner.labels.healthStatus', { defaultValue: 'Health Status' })}
           value={<StatusText text={health.text} color={health.color} icon={health.icon} />} 
         />
         
         <MetricItem 
-          label="Open Tickets" 
+          label={t('assetMetricsBanner.labels.openTickets', { defaultValue: 'Open Tickets' })}
           value={
             <span className="text-sm font-semibold text-primary-600">
-              [{metrics.open_tickets_count} Active]
+              {t('assetMetricsBanner.openTickets.active', {
+                defaultValue: '[{{count}} Active]',
+                count: metrics.open_tickets_count
+              })}
             </span>
           }
           onClick={() => { /* Navigate */ }}
         />
 
         <MetricItem 
-          label="Security Status" 
+          label={t('assetMetricsBanner.labels.securityStatus', { defaultValue: 'Security Status' })}
           value={<StatusText text={security.text} color={security.color} icon={security.icon} />} 
         />
 
         <MetricItem 
-          label="Warranty" 
+          label={t('assetMetricsBanner.labels.warranty', { defaultValue: 'Warranty' })}
           value={
             <StatusText text={warranty.text} color={warranty.color} />
           } 

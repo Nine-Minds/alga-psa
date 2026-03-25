@@ -35,8 +35,40 @@
     "description": "Enterprise alert section wrapper for asset-specific RMM alerts and remediation actions"
   },
   "assetCommandPalette": {
-    "title": "Asset Command Palette",
-    "description": "Command palette for searching assets and launching asset actions"
+    "title": "Command Palette",
+    "description": "Command palette for searching assets and launching asset actions",
+    "register": {
+      "label": "Asset Command Palette",
+      "title": "Asset Command Palette"
+    },
+    "actions": {
+      "createAsset": {
+        "label": "Create asset",
+        "description": "Open quick add to register a new asset"
+      },
+      "refreshData": {
+        "label": "Refresh data",
+        "description": "Re-fetch assets from the server"
+      },
+      "reset": {
+        "label": "Reset",
+        "description": "Remove all active filters and search terms"
+      }
+    },
+    "searchPlaceholder": "Search assets, clients, tickets…",
+    "empty": "No matches yet. Try a different keyword.",
+    "groups": {
+      "quickActions": "Quick actions",
+      "assets": "Assets",
+      "hints": "Hints"
+    },
+    "hint": {
+      "body": "Keep typing to search across the full asset list. Tickets and client lookup will arrive in a later drop.",
+      "badge": "Coming soon"
+    },
+    "values": {
+      "unassigned": "Unassigned"
+    }
   },
   "assetDashboard": {
     "title": "Asset Dashboard",
@@ -295,15 +327,42 @@
   },
   "assetDetailHeader": {
     "title": "Asset Detail Header",
-    "description": "Header chrome for the asset detail experience including identity, badges, and refresh actions"
+    "description": "Header chrome for the asset detail experience including identity, badges, and refresh actions",
+    "backToAssets": "Back to Assets",
+    "assetTag": "Asset Tag: {{tag}}",
+    "actions": {
+      "createTicket": "Create Ticket",
+      "menu": "Actions",
+      "refreshing": "Refreshing...",
+      "refreshData": "Refresh Data",
+      "rebootDevice": "Reboot Device",
+      "editAsset": "Edit Asset",
+      "deleteAsset": "Delete Asset"
+    },
+    "values": {
+      "unknownClient": "Unknown Client"
+    }
   },
   "assetDetailTabs": {
     "title": "Asset Detail Tabs",
-    "description": "Tabbed asset detail navigation for overview, maintenance, documents, history, and related records"
+    "description": "Tabbed asset detail navigation for overview, maintenance, documents, history, and related records",
+    "tabs": {
+      "serviceHistory": "Service History",
+      "software": "Software",
+      "maintenance": "Maintenance",
+      "relatedAssets": "Related Assets",
+      "documentsPasswords": "Documents & Passwords",
+      "auditLog": "Audit Log"
+    }
   },
   "assetDetailView": {
     "title": "Asset Detail View",
-    "description": "Asset detail composition with loading, error, metrics, grid panels, and detail tabs"
+    "description": "Asset detail composition with loading, error, metrics, grid panels, and detail tabs",
+    "loading": "Loading asset details...",
+    "errors": {
+      "title": "Error",
+      "notFound": "Asset not found or you do not have permission to view it."
+    }
   },
   "assetDetails": {
     "title": "Asset Details",
@@ -513,11 +572,38 @@
   },
   "assetFormClient": {
     "title": "Asset Form Client",
-    "description": "Client-only dynamic wrapper for the asset form and edit skeleton experience"
+    "description": "Client-only dynamic wrapper for the asset form and edit skeleton experience",
+    "loadingTitle": "Edit Asset"
   },
   "assetMetricsBanner": {
     "title": "Asset Metrics Banner",
-    "description": "Metric cards and rollups for tickets, maintenance, uptime, and asset health indicators"
+    "description": "Metric cards and rollups for tickets, maintenance, uptime, and asset health indicators",
+    "labels": {
+      "healthStatus": "Health Status",
+      "openTickets": "Open Tickets",
+      "securityStatus": "Security Status",
+      "warranty": "Warranty"
+    },
+    "healthStatuses": {
+      "healthy": "Healthy",
+      "warning": "Warning",
+      "critical": "Critical",
+      "unknown": "Unknown"
+    },
+    "securityStatuses": {
+      "secure": "Secure",
+      "missingPatches": "{{count}} Missing Patches",
+      "critical": "Critical",
+      "unknown": "Unknown"
+    },
+    "openTickets": {
+      "active": "[{{count}} Active]"
+    },
+    "warrantyStatuses": {
+      "expiresIn": "Expires in {{count}} Days",
+      "expired": "Expired",
+      "unknown": "Unknown"
+    }
   },
   "assetPatchStatusSection": {
     "title": "Asset Patch Status Section",
@@ -599,12 +685,58 @@
     }
   },
   "createTicketFromAssetButton": {
-    "title": "Create Ticket From Asset",
-    "description": "Ticket creation flow launched from an asset with board, status, and category selection"
+    "title": "Create Ticket from Asset",
+    "description": "Ticket creation flow launched from an asset with board, status, and category selection",
+    "register": {
+      "label": "Create Ticket from Asset",
+      "title": "Create Ticket from Asset"
+    },
+    "defaultTitle": "Issue with {{name}}",
+    "actions": {
+      "open": "Create Ticket",
+      "create": "Create Ticket",
+      "creating": "Creating..."
+    },
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "board": "Board",
+      "status": "Status",
+      "priority": "Priority"
+    },
+    "placeholders": {
+      "title": "Enter ticket title",
+      "description": "Describe the issue...",
+      "loadingBoards": "Loading boards...",
+      "selectBoard": "Select board...",
+      "selectBoardFirst": "Select board first...",
+      "loadingStatuses": "Loading statuses...",
+      "selectStatus": "Select status...",
+      "loadingPriorities": "Loading priorities...",
+      "selectPriority": "Select priority..."
+    },
+    "errors": {
+      "loadPriorities": "Failed to load priorities",
+      "loadBoards": "Failed to load boards",
+      "loadStatuses": "Failed to load statuses",
+      "requiredFields": "Please fill in title, board, status, and priority",
+      "createFailed": "Failed to create ticket"
+    },
+    "success": {
+      "created": "Ticket created successfully"
+    }
   },
   "deleteAssetButton": {
     "title": "Delete Asset Button",
-    "description": "Delete confirmation flow for removing an asset record"
+    "description": "Delete confirmation flow for removing an asset record",
+    "actions": {
+      "removing": "Removing…"
+    },
+    "entityNameFallback": "this asset",
+    "errors": {
+      "validationFailed": "Failed to validate deletion. Please try again.",
+      "deleteFailed": "Failed to delete asset. Please try again."
+    }
   },
   "quickAddAsset": {
     "title": "Quick Add Asset",
@@ -687,7 +819,24 @@
   },
   "rmmStatusIndicator": {
     "title": "RMM Status Indicator",
-    "description": "Connected/disconnected RMM status chip and supporting state labels"
+    "description": "Connected/disconnected RMM status chip and supporting state labels",
+    "titles": {
+      "unknown": "Agent status unknown",
+      "status": "{{status}}{{suffix}}",
+      "lastSeen": " - Last seen: {{value}}"
+    },
+    "statuses": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Overdue",
+      "unknown": "Unknown"
+    },
+    "relative": {
+      "justNow": "Just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    }
   },
   "assetInfoPanel": {
     "title": "Asset Info & Lifecycle",
@@ -791,11 +940,29 @@
   },
   "copyableField": {
     "title": "Copyable Field",
-    "description": "Shared copy-to-clipboard field used across asset forms and detail panels"
+    "description": "Shared copy-to-clipboard field used across asset forms and detail panels",
+    "actions": {
+      "copy": "Copy",
+      "copied": "Copied"
+    }
   },
   "statusBadge": {
     "title": "Status Badge",
-    "description": "Shared badge renderer for asset lifecycle and monitoring statuses"
+    "description": "Shared badge renderer for asset lifecycle and monitoring statuses",
+    "statuses": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Overdue",
+      "healthy": "Healthy",
+      "warning": "Warning",
+      "critical": "Critical",
+      "unknown": "Unknown",
+      "secure": "Secure",
+      "at_risk": "At Risk",
+      "active": "Active",
+      "expiring_soon": "Expiring Soon",
+      "expired": "Expired"
+    }
   },
   "utilizationBar": {
     "title": "Utilization Bar",
@@ -814,7 +981,49 @@
   },
   "createMaintenanceScheduleDialog": {
     "title": "Create Maintenance Schedule",
-    "description": "Dialog for defining maintenance schedules and recurrence rules for an asset"
+    "description": "Dialog for defining maintenance schedules and recurrence rules for an asset",
+    "titles": {
+      "create": "Schedule Maintenance",
+      "edit": "Edit Maintenance Schedule"
+    },
+    "actions": {
+      "create": "Create Schedule",
+      "creating": "Creating...",
+      "update": "Update Schedule",
+      "updating": "Updating..."
+    },
+    "fields": {
+      "scheduleName": "Schedule Name *",
+      "description": "Description",
+      "maintenanceType": "Maintenance Type *",
+      "frequency": "Frequency *",
+      "interval": "Interval *",
+      "nextMaintenanceDate": "Next Maintenance Date *",
+      "active": "Active"
+    },
+    "placeholders": {
+      "scheduleName": "e.g., Monthly Server Maintenance",
+      "description": "Optional description...",
+      "maintenanceType": "Select maintenance type",
+      "frequency": "Select frequency",
+      "interval": "1",
+      "nextMaintenanceDate": "Select date"
+    },
+    "frequencyOptions": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "yearly": "Yearly"
+    },
+    "errors": {
+      "scheduleNameRequired": "Schedule name is required",
+      "maintenanceTypeRequired": "Maintenance type is required",
+      "frequencyRequired": "Frequency is required",
+      "nextMaintenanceRequired": "Next maintenance date is required",
+      "frequencyIntervalMin": "Frequency interval must be at least 1",
+      "saveFailed": "Failed to create maintenance schedule"
+    }
   },
   "documentsPasswordsTab": {
     "title": "Documents & Passwords",
