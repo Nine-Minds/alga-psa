@@ -38,7 +38,7 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
     void loadTemplates();
   }, [selectedTemplateId]);
 
-  const columns: ColumnDefinition<IQuoteDocumentTemplate>[] = useMemo(() => [
+  const columns = useMemo((): ColumnDefinition<IQuoteDocumentTemplate>[] => [
     { title: 'Name', dataIndex: 'name' },
     {
       title: 'Source',
