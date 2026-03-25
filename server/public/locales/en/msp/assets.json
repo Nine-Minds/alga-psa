@@ -169,9 +169,129 @@
     "title": "Asset Dashboard Grid",
     "description": "Composite grid layout for asset detail cards, RMM panels, and related status widgets"
   },
-  "assetDetailDrawerClient": {
+  "assetDetailDrawer": {
     "title": "Asset Detail Drawer",
-    "description": "Drawer-based asset quick view with actions, summary data, and navigation into the full record"
+    "description": "Drawer-based asset quick view with actions, summary data, and navigation into the full record",
+    "label": "Asset Detail Drawer",
+    "header": {
+      "title": "Asset details",
+      "subtitle": "Stay in context while reviewing lifecycle and configuration"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "maintenance": "Maintenance",
+      "tickets": "Tickets",
+      "configuration": "Configuration",
+      "documents": "Documents"
+    },
+    "helper": {
+      "awaitingSelection": "Awaiting asset selection",
+      "selectedAsset": "{{name}} • {{tab}}"
+    },
+    "statuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "maintenance": "Maintenance"
+    },
+    "empty": {
+      "selectAsset": "Select an asset to view details",
+      "nothingToDisplay": "Nothing to display"
+    },
+    "actions": {
+      "openAssetRecord": "Open asset record",
+      "delete": "Delete"
+    },
+    "overview": {
+      "assetTag": "Asset tag {{tag}} • {{type}}",
+      "client": "Client: {{name}}",
+      "activeSchedules": "Active Schedules",
+      "upcomingMaintenance": "Upcoming Maintenance",
+      "nextOn": "Next on {{date}}",
+      "completedMaintenance": "Completed Maintenance",
+      "compliance": "Compliance {{percent}}%",
+      "lastMaintenance": "Last Maintenance",
+      "noHistory": "No history",
+      "maintenanceDataPending": "Maintenance data will appear once schedules are configured.",
+      "assetSummary": "Asset summary",
+      "recentLifecycleEvents": "Recent lifecycle events"
+    },
+    "maintenance": {
+      "noSchedules": "No maintenance schedules found for this asset yet.",
+      "totalSchedules": "Total Schedules",
+      "active": "Active",
+      "complianceRate": "Compliance Rate",
+      "history": "Maintenance history",
+      "loggedBy": "Logged by {{name}}",
+      "system": "system",
+      "noLogs": "Maintenance logs will appear here after the first service entry."
+    },
+    "tickets": {
+      "empty": "No tickets linked to this asset yet. Use the quick action to create one.",
+      "linked": "Linked {{date}}",
+      "client": "Client: {{name}}",
+      "assignee": "Assignee: {{name}}",
+      "openTicket": "Open ticket"
+    },
+    "configuration": {
+      "coreAttributes": "Core attributes",
+      "serialNumber": "Serial number",
+      "location": "Location",
+      "purchaseDate": "Purchase date",
+      "warrantyEnd": "Warranty end",
+      "notProvided": "Not provided"
+    },
+    "info": {
+      "client": "Client",
+      "unassigned": "Unassigned",
+      "assetTag": "Asset tag",
+      "status": "Status",
+      "created": "Created",
+      "updated": "Updated",
+      "tenant": "Tenant"
+    },
+    "typeDetails": {
+      "workstation": "Workstation details",
+      "networkDevice": "Network device details",
+      "server": "Server details",
+      "mobileDevice": "Mobile device details",
+      "printer": "Printer details",
+      "operatingSystem": "Operating system",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Storage",
+      "gpu": "GPU",
+      "notProvided": "Not provided",
+      "never": "Never",
+      "deviceType": "Device type",
+      "managementIp": "Management IP",
+      "portCount": "Port count",
+      "firmwareVersion": "Firmware version",
+      "poeSupport": "PoE support",
+      "powerDraw": "Power draw",
+      "virtualized": "Virtualized",
+      "primaryIp": "Primary IP",
+      "hypervisor": "Hypervisor",
+      "os": "OS",
+      "model": "Model",
+      "imei": "IMEI",
+      "phoneNumber": "Phone number",
+      "carrier": "Carrier",
+      "lastLogin": "Last login",
+      "lastCheckIn": "Last check-in",
+      "notReported": "Not reported",
+      "networkPrinter": "Network printer",
+      "ipAddress": "IP address",
+      "supportsColor": "Supports color",
+      "supportsDuplex": "Supports duplex",
+      "monthlyDutyCycle": "Monthly duty cycle",
+      "monthlyDutyCycleValue": "{{count}} pages"
+    },
+    "relative": {
+      "momentsAgo": "moments ago",
+      "minutesAgo": "{{count}} minute{{suffix}} ago",
+      "hoursAgo": "{{count}} hour{{suffix}} ago",
+      "daysAgo": "{{count}} day{{suffix}} ago"
+    }
   },
   "assetDetailHeader": {
     "title": "Asset Detail Header",
@@ -409,7 +529,74 @@
   },
   "associatedAssets": {
     "title": "Associated Assets",
-    "description": "Parent and child asset relationship management with linked asset actions"
+    "description": "Parent and child asset relationship management with linked asset actions",
+    "loading": {
+      "assets": "Loading assets..."
+    },
+    "actions": {
+      "addAsset": "Add Asset",
+      "showLess": "Show less",
+      "moreAssets": "{{count}} more asset{{suffix}}"
+    },
+    "errors": {
+      "loadAvailableAssets": "Failed to load available assets",
+      "loadDrawerFailed": "Unable to load asset details right now. Please try again.",
+      "loadAssociatedAssets": "Failed to load associated assets",
+      "selectAtLeastOneAsset": "Please select at least one asset",
+      "associateFailed": "Failed to associate assets - they may already be associated",
+      "associationFailed": "Failed to associate assets",
+      "removeFailed": "Failed to remove asset association"
+    },
+    "success": {
+      "associated": "{{count}} asset{{suffix}} associated successfully",
+      "associatedPartial": "{{count}} asset{{suffix}} associated successfully, {{failed}} failed (may already be associated)",
+      "removed": "Asset association removed"
+    },
+    "empty": {
+      "noneAssociated": "No assets associated with this ticket.",
+      "unknownAsset": "Unknown Asset"
+    },
+    "dialog": {
+      "title": "Add Asset",
+      "loadingAssets": "Loading assets...",
+      "selectedAssetsLabel": "Selected:",
+      "search": {
+        "label": "Search Assets",
+        "placeholder": "Search by name, tag, or serial..."
+      },
+      "empty": {
+        "search": "No assets found matching your search",
+        "available": "No assets available for this client"
+      },
+      "relationship": {
+        "placeholder": "Type..."
+      },
+      "actions": {
+        "addAssets": "Add Asset{{suffix}}"
+      }
+    },
+    "table": {
+      "name": "Name",
+      "assetTag": "Asset Tag",
+      "type": "Type",
+      "status": "Status"
+    },
+    "assetStatuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "maintenance": "Maintenance"
+    },
+    "assetTypes": {
+      "workstation": "Workstation",
+      "server": "Server",
+      "network_device": "Network Device",
+      "mobile_device": "Mobile Device",
+      "printer": "Printer"
+    },
+    "relationshipTypes": {
+      "affected": "Affected",
+      "related": "Related"
+    }
   },
   "createTicketFromAssetButton": {
     "title": "Create Ticket From Asset",
@@ -421,7 +608,78 @@
   },
   "quickAddAsset": {
     "title": "Quick Add Asset",
-    "description": "Quick-create asset flow with essential fields for adding a new asset record"
+    "description": "Quick-create asset flow with essential fields for adding a new asset record",
+    "actions": {
+      "addAsset": "Add Asset",
+      "creating": "Creating...",
+      "createAsset": "Create Asset"
+    },
+    "errors": {
+      "fetchClientsFailed": "Failed to fetch clients",
+      "createFailed": "Failed to create asset"
+    },
+    "validation": {
+      "client": "Client",
+      "assetName": "Asset Name",
+      "assetTag": "Asset Tag",
+      "assetType": "Asset Type",
+      "requiredFields": "Please fill in the required fields:"
+    },
+    "fields": {
+      "osType": "OS Type",
+      "osVersion": "OS Version",
+      "deviceType": "Device Type",
+      "managementIp": "Management IP",
+      "model": "Model",
+      "clientRequired": "Client *",
+      "assetNameRequired": "Asset Name *",
+      "assetTagRequired": "Asset Tag *",
+      "typeRequired": "Type *",
+      "status": "Status",
+      "serialNumber": "Serial Number"
+    },
+    "placeholders": {
+      "workstationOsType": "e.g., Windows, macOS, Linux",
+      "workstationOsVersion": "e.g., 11, Monterey, Ubuntu 22.04",
+      "selectDeviceType": "Select device type",
+      "managementIp": "e.g., 192.168.1.1",
+      "serverOsType": "e.g., Windows Server, Ubuntu Server",
+      "serverOsVersion": "e.g., 2022, 22.04 LTS",
+      "selectOsType": "Select OS type",
+      "mobileModel": "e.g., iPhone 14 Pro, Galaxy S23",
+      "printerModel": "e.g., HP LaserJet Pro M404n",
+      "assetName": "Enter asset name",
+      "assetTag": "Enter asset tag",
+      "selectType": "Select type",
+      "selectStatus": "Select status",
+      "serialNumber": "Enter serial number"
+    },
+    "sections": {
+      "typeSpecificDetails": "Type-specific Details"
+    },
+    "statusOptions": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "maintenance": "Maintenance"
+    },
+    "assetTypes": {
+      "workstation": "Workstation",
+      "network_device": "Network Device",
+      "server": "Server",
+      "mobile_device": "Mobile Device",
+      "printer": "Printer"
+    },
+    "networkDeviceTypes": {
+      "switch": "Switch",
+      "router": "Router",
+      "firewall": "Firewall",
+      "accessPoint": "Access Point",
+      "loadBalancer": "Load Balancer"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    }
   },
   "remoteAccessButton": {
     "title": "Remote Access Button",
