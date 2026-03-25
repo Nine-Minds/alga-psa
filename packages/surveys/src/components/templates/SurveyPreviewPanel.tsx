@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
@@ -44,7 +46,7 @@ export function SurveyPreviewPanel({
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-medium text-gray-700">
-        {t('surveys.settings.templateForm.labels.preview', 'Preview')}
+        {t('surveys.settings.preview.heading', 'Response page preview')}
       </h3>
 
       <Tabs value={previewTab} onValueChange={setPreviewTab}>
@@ -148,8 +150,17 @@ export function SurveyPreviewPanel({
       <p className="text-xs text-gray-400">
         {t(
           'surveys.settings.preview.notice',
-          'This is a preview. The actual survey is sent to customers via email.'
+          'This preview shows what customers see after clicking the survey link in their email.'
         )}
+      </p>
+      <p className="text-xs">
+        <Link
+          href="/msp/settings?tab=notifications&view=email&section=email-templates"
+          className="inline-flex items-center gap-1 text-primary-500 hover:underline"
+        >
+          {t('surveys.settings.preview.editEmailTemplate', 'Edit survey email template')}
+          <ExternalLink className="h-3 w-3" />
+        </Link>
       </p>
     </div>
   );
