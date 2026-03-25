@@ -114,7 +114,7 @@
   {
     "id": "T041",
     "description": "Cross-batch: validate-translations.cjs passes for ALL 4 namespaces (0 errors, 0 warnings)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F091"]
   },
   {
