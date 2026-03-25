@@ -216,7 +216,7 @@ export class TemporaryApiKeyService {
 
       if (metadataSupported) {
         updatePayload.metadata = trx.raw(
-          "coalesce(metadata, '{}'::jsonb) || jsonb_build_object('revoked_at', ?, 'revoked_reason', 'expired')",
+          "coalesce(metadata, '{}'::jsonb) || jsonb_build_object('revoked_at', ?::text, 'revoked_reason', 'expired')",
           new Date().toISOString()
         );
       }

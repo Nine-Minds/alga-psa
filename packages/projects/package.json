@@ -35,6 +35,7 @@
     "@alga-psa/clients": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/documents": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/types": "*",
     "@alga-psa/user-composition": "*",

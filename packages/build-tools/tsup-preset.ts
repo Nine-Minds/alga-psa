@@ -83,6 +83,9 @@ export function makeConfig(opts: PresetOptions = {}): Options {
     clean: true,
     outDir: 'dist',
     external,
+    outExtension() {
+      return { js: '.js' };
+    },
   };
 
   if (opts.jsxEnabled) {

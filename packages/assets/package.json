@@ -3,32 +3,32 @@
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.js"
     },
     "./actions": {
       "types": "./dist/actions/index.d.ts",
-      "import": "./dist/actions/index.mjs",
+      "import": "./dist/actions/index.js",
       "require": "./dist/actions/index.js"
     },
     "./actions/*": {
       "types": "./dist/actions/*.d.ts",
-      "import": "./dist/actions/*.mjs",
+      "import": "./dist/actions/*.js",
       "require": "./dist/actions/*.js"
     },
     "./components": {
       "types": "./dist/components/index.d.ts",
-      "import": "./dist/components/index.mjs",
+      "import": "./dist/components/index.js",
       "require": "./dist/components/index.js"
     },
     "./components/*": {
       "types": "./dist/components/*.d.ts",
-      "import": "./dist/components/*.mjs",
+      "import": "./dist/components/*.js",
       "require": "./dist/components/*.js"
     },
     "./context/*": {

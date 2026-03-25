@@ -242,8 +242,8 @@ const nextConfig = {
       // Assets package
       '@alga-psa/assets': '../packages/assets/dist',
       '@alga-psa/assets/': '../packages/assets/dist/',
-      '@alga-psa/assets/actions': '../packages/assets/dist/actions/index.mjs',
-      '@alga-psa/assets/components': '../packages/assets/dist/components/index.mjs',
+      '@alga-psa/assets/actions': '../packages/assets/dist/actions/index.js',
+      '@alga-psa/assets/components': '../packages/assets/dist/components/index.js',
       // MSP Composition package
       '@alga-psa/msp-composition': '../packages/msp-composition/src',
       '@alga-psa/msp-composition/': '../packages/msp-composition/src/',
