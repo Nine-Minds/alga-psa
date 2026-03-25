@@ -2,27 +2,8 @@
   "name": "@alga-psa/formatting",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.mjs",
   "types": "./src/index.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./src/index.ts"
-    },
-    "./blocknoteUtils": {
-      "import": "./dist/blocknoteUtils.js",
-      "types": "./src/blocknoteUtils.ts"
-    },
-    "./avatarUtils": {
-      "import": "./dist/avatarUtils.js",
-      "types": "./src/avatarUtils.ts"
-    },
-    "./imageUrl": {
-      "import": "./dist/imageUrl.js",
-      "types": "./src/imageUrl.ts"
-    }
-  },
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
