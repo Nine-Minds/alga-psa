@@ -67,7 +67,55 @@
   },
   "addClientStep": {
     "title": "Add Client Step",
-    "description": "Wizard step for creating or revisiting the primary client record during onboarding"
+    "description": "Wizard step for creating or revisiting the primary client record during onboarding",
+    "validation": {
+      "email": {
+        "invalid": "Please enter a valid email address"
+      },
+      "website": {
+        "example": "Please enter a valid website (e.g., example.com)",
+        "format": "Please enter a valid website format"
+      },
+      "phone": {
+        "tooShort": "Phone number seems too short",
+        "tooLong": "Phone number seems too long",
+        "invalidCharacters": "Phone number contains invalid characters"
+      }
+    },
+    "header": {
+      "title": "Add Your First Client",
+      "description": "Let's add your first client to get started. You can skip this and add clients later."
+    },
+    "created": {
+      "title": "Client created successfully!",
+      "description": "{{clientName}} has been added to your client list."
+    },
+    "fields": {
+      "clientName": {
+        "label": "Client Name",
+        "placeholder": "Example Corp"
+      },
+      "clientEmail": {
+        "label": "Client Email",
+        "placeholder": "contact@example.com"
+      },
+      "clientPhone": {
+        "label": "Phone Number",
+        "placeholder": "+1 (555) 123-4567"
+      },
+      "website": {
+        "label": "Website",
+        "placeholder": "https://example.com"
+      }
+    },
+    "common": {
+      "noteLabel": "Note:",
+      "optionalLabel": "Optional:"
+    },
+    "note": {
+      "defaultTaxSettings": "The client will be created with default non-taxable (0%) tax settings. You can configure tax rates later in the client settings.",
+      "optional": "You can skip this step and add clients later from your dashboard."
+    }
   },
   "billingSetupStep": {
     "title": "Billing Setup Step",
@@ -184,11 +232,125 @@
   },
   "clientContactStep": {
     "title": "Client Contact Step",
-    "description": "Wizard step for collecting the main client contact details"
+    "description": "Wizard step for collecting the main client contact details",
+    "validation": {
+      "email": {
+        "invalid": "Please enter a valid email address"
+      }
+    },
+    "empty": {
+      "title": "Client Contact",
+      "description": "No client information was provided. Skip this step or go back to add a client first."
+    },
+    "header": {
+      "title": "Add Contact for {{clientName}}",
+      "clientFallback": "Client",
+      "description": "Add a primary contact person for this client."
+    },
+    "created": {
+      "title": "Contact created successfully!",
+      "description": "{{contactName}} has been added to {{clientName}}.",
+      "contactFallback": "The contact",
+      "clientFallback": "the client"
+    },
+    "fields": {
+      "contactName": {
+        "label": "Contact Name",
+        "placeholder": "John Smith"
+      },
+      "contactEmail": {
+        "label": "Contact Email",
+        "placeholder": "john.smith@example.com"
+      },
+      "contactRole": {
+        "label": "Role/Title",
+        "placeholder": "IT Manager"
+      }
+    },
+    "common": {
+      "optionalLabel": "Optional:"
+    },
+    "footer": {
+      "optional": "You can skip this step and add contacts later from the client's profile."
+    }
   },
   "clientInfoStep": {
     "title": "Client Info Step",
-    "description": "Wizard step for collecting MSP operator identity, company information, and initial client basics"
+    "description": "Wizard step for collecting MSP operator identity, company information, and initial client basics",
+    "revisit": {
+      "title": "Company Information",
+      "description": "Review or update your company details.",
+      "fields": {
+        "companyName": {
+          "label": "Company Name",
+          "placeholder": "Acme IT Solutions"
+        }
+      },
+      "note": "You can use this wizard to reconfigure your workspace settings at any time."
+    },
+    "common": {
+      "noteLabel": "Note:"
+    },
+    "header": {
+      "title": "Client Information",
+      "description": "Let's start by setting up your client profile."
+    },
+    "fields": {
+      "firstName": {
+        "label": "First Name",
+        "placeholder": "John"
+      },
+      "lastName": {
+        "label": "Last Name",
+        "placeholder": "Doe"
+      },
+      "clientName": {
+        "label": "Client Name",
+        "placeholder": "Acme IT Solutions"
+      },
+      "email": {
+        "label": "Email Address",
+        "placeholder": "john@acmeit.com",
+        "help": "This will be used for signing in to your account."
+      }
+    },
+    "password": {
+      "resetRequired": {
+        "title": "Password Reset Required",
+        "description": "You must set a new password to continue with the setup process. This step cannot be skipped."
+      },
+      "title": "Set Your Password",
+      "description": "Please set a new password to replace your temporary password.",
+      "fields": {
+        "newPassword": {
+          "label": "New Password",
+          "placeholder": "Create a strong password"
+        },
+        "confirmPassword": {
+          "label": "Confirm Password",
+          "placeholder": "Re-enter your password",
+          "match": "Passwords match",
+          "mismatch": "Passwords do not match"
+        }
+      },
+      "requirements": {
+        "title": "Password must contain:",
+        "minLength": "At least 8 characters",
+        "uppercase": "One uppercase letter",
+        "lowercase": "One lowercase letter",
+        "number": "One number",
+        "specialCharacter": "One special character"
+      },
+      "strength": {
+        "label": "Password strength: {{strength}}",
+        "strong": "Strong",
+        "medium": "Medium",
+        "weak": "Weak"
+      }
+    },
+    "footer": {
+      "note": "All fields on this page are required to proceed."
+    }
   },
   "teamMembersStep": {
     "title": "Team Members Step",
