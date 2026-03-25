@@ -308,11 +308,11 @@ export class TemporalJobRunner implements IJobRunner {
 
       // Create a new schedule
       const scheduleSpec = this.parseScheduleSpec(interval);
-      const timezoneName = (options?.metadata as any)?.timezone;
-      const spec: any = { ...scheduleSpec };
-      if (timezoneName && typeof timezoneName === 'string') {
-        // Temporal supports schedule timezones via `timezoneName` on spec.
-        spec.timezoneName = timezoneName;
+      const ianaTimeZone = (options?.metadata as { timezone?: unknown })?.timezone;
+      const spec: Record<string, unknown> = { ...scheduleSpec };
+      if (typeof ianaTimeZone === 'string' && ianaTimeZone.trim().length > 0) {
+        // @temporalio/client encodeScheduleSpec reads `timezone` and maps it to protobuf timezoneName.
+        spec.timezone = ianaTimeZone.trim();
       }
       await this.client.schedule.create({
         scheduleId,
