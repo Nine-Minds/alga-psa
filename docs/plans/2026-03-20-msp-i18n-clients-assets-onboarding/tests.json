@@ -83,7 +83,7 @@
   {
     "id": "T031",
     "description": "2b-16: all 8 onboarding wizard files compile with useTranslation — no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031", "F032", "F033"]
   },
   {
