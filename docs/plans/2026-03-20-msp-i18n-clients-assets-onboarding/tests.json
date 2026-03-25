@@ -108,7 +108,7 @@
   {
     "id": "T040",
     "description": "Cross-batch: ROUTE_NAMESPACES updated for all 4 routes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F090"]
   },
   {
