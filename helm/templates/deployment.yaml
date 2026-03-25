@@ -507,7 +507,8 @@ spec:
             value: "{{ .Values.token.expire }}"
 
           # ----------- AUTH ----------------
-          {{- $publicAppUrl := .Values.appUrl | default (printf "https://%s" .Values.host) }}
+          {{- $rawAppUrl := .Values.appUrl | default (include "sebastian.resolveHost" .) }}
+          {{- $publicAppUrl := hasPrefix "http" $rawAppUrl | ternary $rawAppUrl (printf "https://%s" $rawAppUrl) }}
           - name: NEXTAUTH_URL
             value: "{{ $publicAppUrl }}"
           # Public base URL for links in emails and client-side code
