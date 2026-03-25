@@ -9,6 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
+import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
@@ -102,14 +103,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         getQuoteDocumentTemplates(),
       ]);
 
-      if (!loadedQuote || 'permissionError' in loadedQuote) {
-        throw new Error(!loadedQuote ? 'Quote not found' : loadedQuote.permissionError);
+      if (!loadedQuote || isActionPermissionError(loadedQuote)) {
+        throw new Error(!loadedQuote ? 'Quote not found' : getErrorMessage(loadedQuote));
       }
 
       setQuote(loadedQuote);
       setClients(loadedClients);
       setContacts(loadedContacts);
-      setApprovalRequired(!('permissionError' in approvalSettings) && approvalSettings.approvalRequired === true);
+      setApprovalRequired(!isActionPermissionError(approvalSettings) && approvalSettings.approvalRequired === true);
       setDocumentTemplates(Array.isArray(loadedTemplates) ? loadedTemplates : []);
 
       const loadedVersions = await listQuoteVersions(quoteId);

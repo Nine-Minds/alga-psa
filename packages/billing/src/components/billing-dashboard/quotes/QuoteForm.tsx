@@ -13,6 +13,7 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteListItem } from '@alga-psa/types';
+import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { addQuoteItem, createQuote, createQuoteFromTemplate, getQuote, listQuotes, removeQuoteItem, reorderQuoteItems, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
@@ -92,12 +93,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
 
       setClients(fetchedClients);
       setContacts(fetchedContacts);
-      setTemplates('permissionError' in fetchedTemplates ? [] : fetchedTemplates.data);
+      setTemplates(isActionPermissionError(fetchedTemplates) ? [] : fetchedTemplates.data);
 
       if (isEditMode && quoteId) {
         const quote = await getQuote(quoteId);
-        if (!quote || 'permissionError' in quote) {
-          throw new Error(!quote ? 'Quote not found' : quote.permissionError);
+        if (!quote || isActionPermissionError(quote)) {
+          throw new Error(!quote ? 'Quote not found' : getErrorMessage(quote));
         }
 
         setIsTemplate(quote.is_template === true);
@@ -196,8 +197,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
         result = await createQuote(payload as any);
       }
 
-      if (!result || 'permissionError' in result) {
-        throw new Error(result?.permissionError || 'Quote save failed');
+      if (!result || isActionPermissionError(result)) {
+        throw new Error(result ? getErrorMessage(result) : 'Quote save failed');
       }
 
       // When creating from a template, the server already created all line items.

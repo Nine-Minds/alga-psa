@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition, IQuoteDocumentTemplate } from '@alga-psa/types';
+import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import QuoteDocumentTemplateEditor from './QuoteDocumentTemplateEditor';
 
@@ -22,8 +23,8 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
     const loadTemplates = async () => {
       try {
         const result = await getQuoteDocumentTemplates();
-        if (result && typeof result === 'object' && 'permissionError' in result) {
-          setError(result.permissionError);
+        if (isActionPermissionError(result)) {
+          setError(getErrorMessage(result));
           return;
         }
         setTemplates(result as IQuoteDocumentTemplate[]);
@@ -37,12 +38,12 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
     void loadTemplates();
   }, [selectedTemplateId]);
 
-  const columns = useMemo<ColumnDefinition<IQuoteDocumentTemplate>[]>(() => ([
+  const columns: ColumnDefinition<IQuoteDocumentTemplate>[] = useMemo(() => [
     { title: 'Name', dataIndex: 'name' },
     {
       title: 'Source',
       dataIndex: 'templateSource',
-      render: (value: string | null | undefined, record) => record.isStandard ? 'Standard' : (value || 'Custom'),
+      render: (value: string | null | undefined, record: IQuoteDocumentTemplate) => record.isStandard ? 'Standard' : (value || 'Custom'),
     },
     { title: 'Version', dataIndex: 'version' },
     {
@@ -50,7 +51,7 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
       dataIndex: 'isTenantDefault',
       render: (value: boolean | null | undefined) => value ? 'Yes' : 'No',
     },
-  ]), []);
+  ], []);
 
   const handleNavigateToEditor = (templateId: string | 'new', code?: string) => {
     const params = new URLSearchParams();
