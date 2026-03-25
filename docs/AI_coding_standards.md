@@ -354,8 +354,8 @@ The monorepo uses a hybrid build strategy. Some `@alga-psa/*` packages are **pre
   import { makeConfig } from '../build-tools/tsup-preset';
   export default defineConfig(makeConfig({ jsxEnabled: true }));
   ```
-- **Pre-built packages** (resolve from `dist/`): `types`, `core`, `validation`, `formatting`, `event-schemas`, `clients`, `sla`, `assets`, `tags`.
-- **Source-transpiled packages** (resolve from `src/`): `ui`, `billing`, `tickets`, `projects`, `scheduling`, `documents`, `auth`, `integrations`, `notifications`, `users`, and composition layers.
+- **Pre-built packages** (resolve from `dist/`): `types`, `core`, `validation`, `event-schemas`, `clients`, `sla`, `assets`, `tags`.
+- **Source-transpiled packages** (resolve from `src/`): `formatting`, `ui`, `billing`, `tickets`, `projects`, `scheduling`, `documents`, `auth`, `integrations`, `notifications`, `users`, and composition layers.
 
 # ee folder
 The ee folder contains the server code for the enterprise edition of the application. It is a parallel structure 

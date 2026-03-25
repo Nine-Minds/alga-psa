@@ -15,11 +15,11 @@ TypeScript type checking (`tsc --noEmit`) always resolves from `src/` via tsconf
 
 These packages are compiled by `tsup` before `next build` runs. Webpack resolves their imports from `dist/` instead of compiling from source.
 
-**Currently flipped (9 packages):**
+**Currently flipped (8 packages):**
 - `clients`, `sla`, `assets`, `tags` (domain packages, CSS-free)
-- `types`, `core`, `validation`, `formatting`, `event-schemas` (leaf/horizontal packages)
+- `types`, `core`, `validation`, `event-schemas` (leaf/horizontal packages)
 
-**Still source-transpiled:** `ui`, `billing`, `scheduling`, `tickets`, `projects`, `documents` (have CSS imports), `auth`, `integrations`, `notifications`, `users` (CE/EE complexity), and composition layers.
+**Still source-transpiled:** `formatting` (deep subpath imports across many packages), `ui`, `billing`, `scheduling`, `tickets`, `projects`, `documents` (have CSS imports), `auth`, `integrations`, `notifications`, `users` (CE/EE complexity), and composition layers.
 
 ## Shared tsup preset
 
