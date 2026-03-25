@@ -6,14 +6,11 @@
   "tags": ["scope:ui", "type:horizontal"],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/dist"],
       "options": {
-        "outputPath": "dist/packages/ui-kit",
-        "tsConfig": "packages/ui-kit/tsconfig.json",
-        "packageJson": "packages/ui-kit/package.json",
-        "main": "packages/ui-kit/src/index.ts",
-        "assets": ["packages/ui-kit/src/theme/tokens.css"]
+        "command": "tsc -b",
+        "cwd": "packages/ui-kit"
       }
     },
     "test": {

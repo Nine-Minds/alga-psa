@@ -42,6 +42,9 @@
       "inputs": ["production", "^production"],
       "cache": true
     },
+    "next:dev": {
+      "dependsOn": ["^build"]
+    },
     "test": {
       "dependsOn": ["build"],
       "cache": true

@@ -305,7 +305,7 @@ export default function FolderSelectorModal({
           </div>
         ) : (
           <div className="flex justify-between items-center">
-            {entityId && !getFoldersFn ? (
+            {(entityId || entityType) && !getFoldersFn ? (
               <button
                 type="button"
                 onClick={handleToggleShowAll}
