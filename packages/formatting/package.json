@@ -4,23 +4,22 @@
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./src/index.ts",
+      "import": "./dist/index.js",
       "types": "./src/index.ts"
     },
     "./blocknoteUtils": {
-      "import": "./src/blocknoteUtils.ts",
+      "import": "./dist/blocknoteUtils.js",
       "types": "./src/blocknoteUtils.ts"
     },
     "./avatarUtils": {
-      "import": "./src/avatarUtils.ts",
+      "import": "./dist/avatarUtils.js",
       "types": "./src/avatarUtils.ts"
     },
     "./imageUrl": {
-      "import": "./src/imageUrl.ts",
+      "import": "./dist/imageUrl.js",
       "types": "./src/imageUrl.ts"
     }
   },
