@@ -77,7 +77,7 @@
   {
     "id": "T030",
     "description": "validate-translations.cjs passes after 2b-16 (msp/onboarding keys consistent across all 9 locales)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030", "F034"]
   },
   {
