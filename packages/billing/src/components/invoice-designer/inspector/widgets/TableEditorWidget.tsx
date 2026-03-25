@@ -7,9 +7,9 @@ import type { DesignerNode } from '../../state/designerStore';
 import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '../../state/designerStore';
 import { hasDesignerTransforms } from '../../transforms/transformWorkspace';
 import { getNodeMetadata } from '../../utils/nodeProps';
+import { generateUUID } from '@alga-psa/core';
 
-const createLocalId = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+const createLocalId = () => generateUUID();
 
 type Props = {
   node: DesignerNode;

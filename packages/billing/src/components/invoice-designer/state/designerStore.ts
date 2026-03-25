@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { generateUUID } from '@alga-psa/core';
 import { devtools } from 'zustand/middleware';
 import {
   DEFAULT_INVOICE_PRINT_SETTINGS,
@@ -270,10 +271,7 @@ const DEFAULT_SIZE: Size = { width: 160, height: 64 };
 export const DOCUMENT_NODE_ID = 'designer-document-root';
 const DEFAULT_PAGE_NODE_ID = 'designer-page-default';
 
-const generateId = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2);
+const generateId = () => generateUUID();
 
 const deepCloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 

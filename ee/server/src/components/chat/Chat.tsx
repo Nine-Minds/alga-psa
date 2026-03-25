@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useId } from 'react';
 import Image from 'next/image';
+import { generateUUID } from '@alga-psa/core';
 
 import { Message, type FunctionCallMeta } from '../../components/message/Message';
 import { IChat } from '../../interfaces/chat.interface';
@@ -325,9 +326,7 @@ export const Chat: React.FC<ChatProps> = ({
   const SCROLL_BOTTOM_THRESHOLD_PX = 40;
 
   const resolveMessageId = (candidate?: string | null) =>
-    candidate ?? (typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `msg-${Date.now()}-${Math.random()}`);
+    candidate ?? generateUUID();
 
   const isNearBottom = useCallback((container: HTMLDivElement) => {
     const distanceFromBottom =
