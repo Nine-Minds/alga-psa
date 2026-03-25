@@ -96,6 +96,7 @@
     "@alga-psa/scheduling": "*",
     "@alga-psa/sla": "*",
     "@alga-psa/surveys": "*",
+    "@alga-psa/tags": "*",
     "@alga-psa/tickets": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",

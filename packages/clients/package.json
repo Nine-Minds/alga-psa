@@ -26,6 +26,11 @@
       "import": "./dist/models/index.mjs",
       "require": "./dist/models/index.js"
     },
+    "./context/ClientCrossFeatureContext": {
+      "types": "./src/context/ClientCrossFeatureContext.tsx",
+      "import": "./dist/context/ClientCrossFeatureContext.mjs",
+      "require": "./dist/context/ClientCrossFeatureContext.js"
+    },
     "./schemas": {
       "types": "./src/schemas/index.ts",
       "import": "./dist/schemas/index.mjs",

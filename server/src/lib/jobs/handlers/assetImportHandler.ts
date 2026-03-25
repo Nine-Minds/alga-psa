@@ -8,7 +8,7 @@ import { DuplicateDetector } from '@/lib/imports/DuplicateDetector';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { computeRecordHash } from '@/lib/imports/ExternalEntityMappingRepository';
 import { AssetImportJobContext } from '@/lib/imports/importJobContext';
-import { createAsset } from '@alga-psa/assets/actions/assetActions';
+import { createAsset } from '@alga-psa/assets/actions';
 import type { CreateAssetRequest } from '@alga-psa/types';
 import type { DuplicateDetectionStrategy, FieldMapping, ImportErrorSummary } from '../../../types/imports.types';
 import { JobService } from 'server/src/services/job.service';

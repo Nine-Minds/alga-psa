@@ -16,10 +16,20 @@
       "import": "./dist/actions/index.mjs",
       "require": "./dist/actions/index.js"
     },
+    "./actions/*": {
+      "types": "./dist/actions/*.d.ts",
+      "import": "./dist/actions/*.mjs",
+      "require": "./dist/actions/*.js"
+    },
     "./components": {
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.mjs",
       "require": "./dist/components/index.js"
+    },
+    "./components/*": {
+      "types": "./dist/components/*.d.ts",
+      "import": "./dist/components/*.mjs",
+      "require": "./dist/components/*.js"
     },
     "./context/*": {
       "import": "./src/context/*.tsx",

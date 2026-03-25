@@ -416,7 +416,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
       <MspTicketCrossFeatureProvider>
       <MspDocumentsCrossFeatureProvider>
       <MspSchedulingCrossFeatureProvider>
-      {/* <MspActivityCrossFeatureProvider> */}
+      <MspActivityCrossFeatureProvider>
       <MspQuickAddClientProvider>
         <div className="flex h-screen overflow-hidden bg-gray-100">
           <SidebarWithFeatureFlags
@@ -514,7 +514,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
         />
         <DrawerOutlet />
       </MspQuickAddClientProvider>
-      {/* </MspActivityCrossFeatureProvider> */}
+      </MspActivityCrossFeatureProvider>
       </MspSchedulingCrossFeatureProvider>
       </MspDocumentsCrossFeatureProvider>
       </MspTicketCrossFeatureProvider>
