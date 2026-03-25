@@ -65,7 +65,7 @@ export function getMobileAuthConfig(): MobileAuthConfig {
   return {
     hostedDomainAllowlist: allowlist,
     ottTtlSec: parseNumber('ALGA_MOBILE_OTT_TTL_SEC', 60),
-    accessTtlSec: parseNumber('ALGA_MOBILE_ACCESS_TTL_SEC', 15 * 60),
+    accessTtlSec: parseNumber('ALGA_MOBILE_ACCESS_TTL_SEC', 8 * 60 * 60),
     refreshTtlSec: parseNumber('ALGA_MOBILE_REFRESH_TTL_SEC', 30 * 24 * 60 * 60),
   };
 }

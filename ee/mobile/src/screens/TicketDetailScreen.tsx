@@ -1,5 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { RootStackParamList } from "../navigation/types";
 import { useTheme } from "../ui/ThemeContext";
@@ -7,7 +8,7 @@ import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { ErrorState, LoadingState } from "../ui/states";
-import React, { useCallback, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useToast } from "../ui/toast/ToastProvider";
@@ -25,6 +26,7 @@ import { useTicketDueDate } from "../features/ticketDetail/hooks/useTicketDueDat
 import { useTicketWatch } from "../features/ticketDetail/hooks/useTicketWatch";
 import { useTimeEntry } from "../features/ticketDetail/hooks/useTimeEntry";
 import { useTicketAssignment } from "../features/ticketDetail/hooks/useTicketAssignment";
+import { useTicketTitle } from "../features/ticketDetail/hooks/useTicketTitle";
 import { useTicketQa } from "../features/ticketDetail/hooks/useTicketQa";
 
 // Components
@@ -52,7 +54,7 @@ import { DescriptionSection } from "../features/ticketDetail/components/Descript
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
-export function TicketDetailScreen({ route }: Props) {
+export function TicketDetailScreen({ route, navigation }: Props) {
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession } = useAuth();
   return (
@@ -62,6 +64,7 @@ export function TicketDetailScreen({ route }: Props) {
       config={config}
       session={session}
       refreshSession={refreshSession}
+      navigation={navigation}
     />
   );
 }
@@ -72,12 +75,14 @@ export function TicketDetailBody({
   config,
   session,
   refreshSession,
+  navigation,
 }: {
   ticketId: string;
   qaScenario?: TicketRichTextQaScenario;
   config: ReturnType<typeof getAppConfig>;
   session: ReturnType<typeof useAuth>["session"];
   refreshSession: ReturnType<typeof useAuth>["refreshSession"];
+  navigation?: Props["navigation"];
 }) {
   const client = useMemo(() => {
     if (!config.ok || !session) return null;
@@ -116,6 +121,7 @@ export function TicketDetailBody({
   const watchHook = useTicketWatch({ ...deps, ticket, fetchTicket });
   const timeEntryHook = useTimeEntry(deps);
   const assignmentHook = useTicketAssignment({ ...deps, fetchTicket });
+  const titleHook = useTicketTitle({ ...deps, ticket, setTicket: ticketData.setTicket });
   const qaHook = useTicketQa({
     qaScenario,
     ticketId,
@@ -131,6 +137,13 @@ export function TicketDetailBody({
     setCommentDraft: commentDraftHook.setCommentDraft,
     setCommentDraftPlainText: commentDraftHook.setCommentDraftPlainText,
   });
+
+  // --- Set nav header to ticket number ---
+  useEffect(() => {
+    if (ticket?.ticket_number && navigation) {
+      navigation.setOptions({ title: ticket.ticket_number });
+    }
+  }, [ticket?.ticket_number, navigation]);
 
   // --- Scroll helpers ---
   const scrollToLatest = useCallback(() => {
@@ -235,9 +248,63 @@ export function TicketDetailBody({
           {ticket.client_name ? ` • ${ticket.client_name}` : ""}
           {ticket.contact_name ? ` • ${ticket.contact_name}` : ""}
         </Text>
-        <Text accessibilityRole="header" style={{ ...typography.title, marginTop: 2, color: colors.text }}>
-          {ticket.title}
-        </Text>
+        {titleHook.titleEditing ? (
+          <View style={{ marginTop: 2 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+              <TextInput
+                value={titleHook.titleDraft}
+                onChangeText={titleHook.setTitleDraft}
+                editable={!titleHook.titleSaving}
+                autoFocus
+                style={{
+                  ...typography.title,
+                  flex: 1,
+                  color: colors.text,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 8,
+                  paddingHorizontal: spacing.sm,
+                  paddingVertical: spacing.xs,
+                  backgroundColor: colors.card,
+                }}
+                onSubmitEditing={() => void titleHook.saveTitle()}
+              />
+              <Pressable
+                onPress={titleHook.cancelTitleEditing}
+                disabled={titleHook.titleSaving}
+                accessibilityRole="button"
+                accessibilityLabel={t("common:cancel")}
+                style={{ padding: spacing.xs, opacity: titleHook.titleSaving ? 0.4 : 1 }}
+              >
+                <Feather name="x" size={22} color={colors.textSecondary} />
+              </Pressable>
+              <Pressable
+                onPress={() => void titleHook.saveTitle()}
+                disabled={titleHook.titleSaving}
+                accessibilityRole="button"
+                accessibilityLabel={t("common:save")}
+                style={{ padding: spacing.xs, opacity: titleHook.titleSaving ? 0.4 : 1 }}
+              >
+                {titleHook.titleSaving ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Feather name="check" size={22} color={colors.primary} />
+                )}
+              </Pressable>
+            </View>
+            {titleHook.titleError ? (
+              <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.xs }}>
+                {titleHook.titleError}
+              </Text>
+            ) : null}
+          </View>
+        ) : (
+          <Pressable onPress={titleHook.startTitleEditing} accessibilityRole="button" accessibilityLabel={t("detail.editTitle")}>
+            <Text accessibilityRole="header" style={{ ...typography.title, marginTop: 2, color: colors.text }}>
+              {ticket.title}
+            </Text>
+          </Pressable>
+        )}
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.md }}>
           <Badge label={statusLabel} tone={ticket.status_is_closed ? "neutral" : "info"} />
@@ -322,9 +389,74 @@ export function TicketDetailBody({
         )}
 
         <View style={{ marginTop: spacing.lg }}>
-          <KeyValue label={t("detail.requester")} value={stringOrDash(ticket.contact_name)} />
+          <KeyValue label={t("detail.contact")} value={stringOrDash(ticket.contact_name)}>
+            {ticket.contact_phone ? (
+              <Pressable
+                onPress={() => void Linking.openURL(`tel:${ticket.contact_phone}`)}
+                accessibilityRole="button"
+                accessibilityLabel={t("detail.callContact", { name: ticket.contact_name ?? "" })}
+                style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
+              >
+                <Text style={{ ...typography.caption, color: colors.primary }}>
+                  {t("detail.contactPhone")}: {ticket.contact_phone}
+                </Text>
+              </Pressable>
+            ) : null}
+            {ticket.contact_email ? (
+              <Pressable
+                onPress={() => void Linking.openURL(`mailto:${ticket.contact_email}`)}
+                accessibilityRole="button"
+                accessibilityLabel={t("detail.emailContact", { name: ticket.contact_name ?? "" })}
+                style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
+              >
+                <Text style={{ ...typography.caption, color: colors.primary }}>
+                  {t("detail.contactEmail")}: {ticket.contact_email}
+                </Text>
+              </Pressable>
+            ) : null}
+          </KeyValue>
           <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.client")} value={stringOrDash(ticket.client_name)} />
+          <KeyValue label={t("detail.client")} value={stringOrDash(ticket.client_name)}>
+            {ticket.client_phone ? (
+              <Pressable
+                onPress={() => void Linking.openURL(`tel:${ticket.client_phone}`)}
+                accessibilityRole="button"
+                style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
+              >
+                <Text style={{ ...typography.caption, color: colors.primary }}>
+                  {t("detail.contactPhone")}: {ticket.client_phone}
+                </Text>
+              </Pressable>
+            ) : null}
+            {ticket.client_email ? (
+              <Pressable
+                onPress={() => void Linking.openURL(`mailto:${ticket.client_email}`)}
+                accessibilityRole="button"
+                style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
+              >
+                <Text style={{ ...typography.caption, color: colors.primary }}>
+                  {t("detail.contactEmail")}: {ticket.client_email}
+                </Text>
+              </Pressable>
+            ) : null}
+            {ticket.location_name ? (
+              <Pressable
+                onPress={() => {
+                  const query = encodeURIComponent(ticket.location_name ?? "");
+                  const url = Platform.OS === "ios"
+                    ? `maps:0,0?q=${query}`
+                    : `geo:0,0?q=${query}`;
+                  void Linking.openURL(url);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t("detail.openInMaps")}
+                style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
+              >
+                <Text style={{ ...typography.caption, color: colors.textSecondary }}>{t("detail.location")}</Text>
+                <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{ticket.location_name}</Text>
+              </Pressable>
+            ) : null}
+          </KeyValue>
           <View style={{ height: spacing.sm }} />
           <DescriptionSection
             ticket={ticket}
@@ -357,6 +489,7 @@ export function TicketDetailBody({
             imageAuth={imageAuth}
             baseUrl={config.ok ? config.baseUrl : null}
             ticketId={ticketId}
+            onCommentUpdated={() => void fetchComments()}
           />
           <View style={{ height: spacing.sm }} />
           <CommentComposer

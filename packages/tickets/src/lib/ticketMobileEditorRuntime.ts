@@ -399,7 +399,19 @@ export class TicketMobileEditorRuntime {
   }
 
   private emitContentHeight(): void {
+    // Temporarily remove min-height from the element, body, and html so
+    // scrollHeight reflects actual content rather than the WebView viewport.
+    const doc = this.element.ownerDocument;
+    const prevEl = this.element.style.minHeight;
+    const prevBody = doc.body.style.minHeight;
+    const prevHtml = doc.documentElement.style.minHeight;
+    this.element.style.minHeight = '0';
+    doc.body.style.minHeight = '0';
+    doc.documentElement.style.minHeight = '0';
     const height = this.element.scrollHeight;
+    this.element.style.minHeight = prevEl;
+    doc.body.style.minHeight = prevBody;
+    doc.documentElement.style.minHeight = prevHtml;
     this.emitMessage({
       type: 'content-height',
       payload: { height },

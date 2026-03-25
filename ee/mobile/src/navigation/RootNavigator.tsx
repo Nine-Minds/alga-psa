@@ -1,4 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { Platform, Pressable, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import type { RootStackParamList } from "./types";
 import { TabsNavigator } from "./TabsNavigator";
 import { SignInScreen } from "../screens/SignInScreen";
@@ -13,6 +15,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
   const theme = useTheme();
   const { t: tAuth } = useTranslation("auth");
+  const { t: tTickets } = useTranslation("tickets");
 
   // Register push token and handle notification taps (no-op when feature flag is off)
   useNotifications();
@@ -43,7 +46,26 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
           <Stack.Screen
             name="TicketDetail"
             component={TicketDetailScreen}
-            options={{ title: "Ticket" }}
+            options={({ navigation }) => ({
+              title: tTickets("list.title", "Tickets"),
+              headerBackTitle: tTickets("list.title", "Tickets"),
+              ...(Platform.OS === "android" ? {
+                headerTitleAlign: "left" as const,
+                headerLeft: () => (
+                  <Pressable
+                    onPress={() => navigation.goBack()}
+                    accessibilityRole="button"
+                    accessibilityLabel={tTickets("list.title", "Tickets")}
+                    style={{ flexDirection: "row", alignItems: "center", marginRight: 8 }}
+                  >
+                    <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+                    <Text style={{ color: theme.colors.text, fontSize: 16, marginLeft: 2 }}>
+                      {tTickets("list.title", "Tickets")}
+                    </Text>
+                  </Pressable>
+                ),
+              } : {}),
+            })}
           />
         </>
       ) : (

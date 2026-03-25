@@ -210,12 +210,22 @@ export function AppRoot() {
 
   useEffect(() => {
     if (!session) return;
+    // When the access token expires, attempt a refresh instead of
+    // immediately logging the user out.  Only clear the session if
+    // the refresh itself fails (e.g. refresh token also expired).
     const handle = setTimeout(
-      () => setSession(null),
+      () => {
+        void refreshSession().then((token) => {
+          if (!token) {
+            // Refresh failed — session is truly unrecoverable.
+            setSession(null);
+          }
+        });
+      },
       msUntilExpiry(session.expiresAtMs, Date.now()) + 500,
     );
     return () => clearTimeout(handle);
-  }, [session?.expiresAtMs, session?.refreshToken, setSession]);
+  }, [session?.expiresAtMs, session?.refreshToken, setSession, refreshSession]);
 
   useAppResume(() => {
     if (!session) return;
