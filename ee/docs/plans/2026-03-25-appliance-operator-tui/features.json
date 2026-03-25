@@ -217,5 +217,59 @@
     "prdRefs": [
       "Rollout / Migration"
     ]
+  },
+  {
+    "id": "F026",
+    "description": "Replace the current readline-based interactive shell with an Ink-based full-screen application shell while preserving the existing operator core.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Implement a persistent full-screen layout with dedicated header, action navigation, main content, and progress/help regions.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Convert bootstrap, upgrade, and reset from sequential prompts to keyboard-navigable form and confirmation panels inside the Ink UI.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Render long-running lifecycle progress inside a dedicated live panel that preserves surrounding UI context while scripts stream output.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Present status as an always-available dashboard panel within the Ink UI rather than only as printed report sections.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Keep the non-interactive appliance commands and the operator core intact while swapping only the interactive UI layer to Ink.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Rollout / Migration"
+    ]
   }
 ]

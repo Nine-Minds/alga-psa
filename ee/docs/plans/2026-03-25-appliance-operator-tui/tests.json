@@ -74,5 +74,34 @@
       "F004",
       "F023"
     ]
+  },
+  {
+    "id": "T007",
+    "description": "Ink shell: the interactive entrypoint renders a full-screen layout with persistent header, action navigation, and content regions instead of falling back to a sequential readline prompt flow.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F027",
+      "F031"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Ink lifecycle forms: bootstrap, upgrade, and reset can be completed through keyboard navigation inside the full-screen UI, including destructive confirmation and missing-release error states.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F028"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Ink progress and dashboard views: long-running lifecycle actions stream into a dedicated progress region and the status summary remains accessible without collapsing into plain printed sections.",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F029",
+      "F030"
+    ]
   }
 ]

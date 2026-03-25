@@ -19,6 +19,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-25) Added runtime path abstraction with repo auto-discovery and `ALGA_APPLIANCE_ASSET_ROOT` override. Reason: required for future standalone packaging while preserving repo-hosted workflow.
 - (2026-03-25) Implemented one normalized status model (`collectStatus`) used by both TUI and non-interactive commands. Reason: avoids divergent status logic and supports consistent blocker guidance across command surfaces.
 - (2026-03-25) Kept lifecycle actions script-driven (`bootstrap-appliance.sh`, `upgrade-appliance.sh`, `reset-appliance-data.sh`, `collect-support-bundle.sh`) with phase-aware progress wrappers. Reason: minimizes operational drift and honors existing script contracts.
+- (2026-03-25) The current `readline` shell is not the accepted final UX. Reason: it is operationally useful, but it does not meet the product bar for a real operator TUI.
+- (2026-03-25) Ink is the intended runtime for the interactive layer. Reason: it supports the full-screen, persistent-layout, keyboard-driven interface we actually want while allowing the existing Node operator core to remain intact.
+- (2026-03-25) Replaced the interactive `readline/promises` loop with a stateful Ink app while keeping lifecycle/status modules untouched. Reason: satisfies the UX acceptance bar (`F026`-`F031`) without destabilizing non-interactive commands.
+- (2026-03-25) Added Vim-style `j/k/h/l` bindings alongside arrows in the Ink shell. Reason: improves SSH/operator ergonomics and made headless TUI tests deterministic.
 
 ## Discoveries / Constraints
 
@@ -29,6 +33,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-25) The existing developer CLI is Nushell-based and heavily focused on dev/build/test workflows, which makes it a poor default home for a customer-facing appliance operator surface.
 - (2026-03-25) `ee/appliance` had no existing app package or command framework, so the operator needed to bootstrap its own CLI/TUI modules and tests from scratch.
 - (2026-03-25) Bootstrap stderr/stdout can contain multiple layers in one run; classifier precedence must favor explicit Kubernetes timeout strings when Talos logs are also present.
+- (2026-03-25) The current operator core and non-interactive commands are still the right foundation; the main change is swapping the interactive shell, not rewriting lifecycle or status logic.
+- (2026-03-25) `ink@5.x` was incompatible with this repo's React 19 runtime (`ReactCurrentOwner` crash during module load). `ink@6.8.0` resolves the compatibility issue.
+- (2026-03-25) The new UI keeps a persistent layout with dedicated header, action navigator, status dashboard panel, main content pane, progress panel, and contextual help strip.
 
 ## Commands / Runbooks
 
@@ -45,6 +52,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `ee/appliance/appliance status`
 - (2026-03-25) New test runbook:
   - `node --test ee/appliance/operator/tests/*.test.mjs`
+- (2026-03-25) Ink dependency updates:
+  - `npm install ink@^6.8.0`
+  - `npm install --save-dev ink-testing-library@^4.0.0`
 
 ## Links / References
 
@@ -60,6 +70,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - `ee/appliance/operator/tests/lifecycle-cli.test.mjs`
 - `ee/appliance/operator/tests/status.test.mjs`
 - `ee/appliance/operator/tests/runtime-paths.test.mjs`
+- `ee/appliance/operator/tests/tui-ink.test.mjs`
 - `ee/docs/premise/README.md`
 - `ee/docs/premise/talos-gitops-bootstrap.md`
 - `docs/plans/2026-03-10-talos-appliance-gitops-alga-deployment-design.md`
@@ -67,6 +78,6 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 ## Open Questions
 
-- (Resolved 2026-03-25) TUI runtime/library: use built-in Node `readline/promises` for v1 to avoid extra dependency/packaging drag; can be swapped later for richer full-screen TUI.
+- (Resolved 2026-03-25) TUI runtime/library: use Ink for the real interactive shell. The existing `readline/promises` shell is interim scaffolding, not the accepted end state.
 - (Resolved 2026-03-25) v1 status scope: summary-first (Talos/Kubernetes/Flux/Helm/workloads + release/config paths) without embedded log/event drill-down.
 - (Resolved 2026-03-25) Ship TUI and mirrored non-interactive command surface together in v1.
