@@ -132,7 +132,7 @@
   {
     "id": "T044",
     "description": "Cross-batch: msp-i18n-enabled OFF — clients, contacts, assets, onboarding all show English, no regressions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F093"]
   },
   {
