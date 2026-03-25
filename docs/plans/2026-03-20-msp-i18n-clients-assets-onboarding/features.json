@@ -30,7 +30,7 @@
   {"id": "F034", "description": "Generate msp/onboarding translations for 6 non-English locales + 2 pseudo-locales", "implemented": true, "prdRefs": ["2b-16"]},
   {"id": "F035", "description": "Italian accent audit on it/msp/onboarding.json", "implemented": true, "prdRefs": ["2b-16"]},
 
-  {"id": "F090", "description": "Update ROUTE_NAMESPACES for /msp/clients, /msp/contacts, /msp/assets, /msp/onboarding", "implemented": false},
+  {"id": "F090", "description": "Update ROUTE_NAMESPACES for /msp/clients, /msp/contacts, /msp/assets, /msp/onboarding", "implemented": true},
   {"id": "F091", "description": "validate-translations.cjs passes for all 4 new namespaces across all 9 locales", "implemented": false},
   {"id": "F092", "description": "Regenerate pseudo-locales (xx, yy) for all 4 namespaces", "implemented": false},
   {"id": "F093", "description": "npm run build succeeds with no TypeScript errors", "implemented": false}
