@@ -15,7 +15,7 @@ vi.mock('@temporalio/client', () => {
 });
 
 describe('TemporalJobRunner.scheduleRecurringJob', () => {
-  it('uses singletonKey as scheduleId and creates schedule with timezoneName', async () => {
+  it('uses singletonKey as scheduleId and passes IANA timezone on spec (Temporal client field: timezone)', async () => {
     const { TemporalJobRunner } = await import('@ee/lib/jobs/runners/TemporalJobRunner');
     TemporalJobRunner.reset();
 
@@ -56,7 +56,7 @@ describe('TemporalJobRunner.scheduleRecurringJob', () => {
 
     const arg = client.schedule.create.mock.calls[0][0];
     expect(arg.scheduleId).toBe('extsched:install-1:sched-1');
-    expect(arg.spec.timezoneName).toBe('UTC');
+    expect(arg.spec.timezone).toBe('UTC');
     expect(arg.action?.workflowType).toBe('genericJobWorkflow');
   });
 
