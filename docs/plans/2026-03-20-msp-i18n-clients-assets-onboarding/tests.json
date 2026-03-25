@@ -33,7 +33,7 @@
   {
     "id": "T011",
     "description": "2b-11: all contact UI files (+ ContactNotesPanel) compile after useTranslation wiring — no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F012", "F013"]
   },
   {
