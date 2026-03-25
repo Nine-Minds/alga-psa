@@ -1,0 +1,78 @@
+[
+  {
+    "id": "T001",
+    "description": "Interactive bootstrap: starting from a discovered appliance environment, the TUI collects required bootstrap inputs, resolves the target release manifest, invokes the existing bootstrap flow, and renders staged progress plus final success/failure classification.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F009",
+      "F010",
+      "F024"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Interactive upgrade: the TUI shows the current release, offers published target releases, invokes the existing upgrade path, and reports a no-auto-rollback failure state with a clear next step.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F011",
+      "F012",
+      "F013",
+      "F023"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Interactive reset: the TUI requires explicit destructive confirmation, states what data will be wiped, and invokes the existing reset helper only after confirmation.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F014",
+      "F015",
+      "F023"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Status dashboard: with a reachable appliance, the TUI summarizes Talos, Kubernetes, Flux, HelmRelease, workload, release-selection, app URL, and config-path state without requiring direct kubectl or talosctl use.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F016",
+      "F017",
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F024"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Partial-failure status: simulated or fixture-backed states for Talos-only, cluster-down, Flux-degraded, and workload-unhealthy conditions render the correct top-level blocker and operator guidance.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F021",
+      "F022"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Packaging boundary: operator core path resolution works both from the repo layout and from an abstracted non-repo runtime layout without changing lifecycle behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F023"
+    ]
+  }
+]

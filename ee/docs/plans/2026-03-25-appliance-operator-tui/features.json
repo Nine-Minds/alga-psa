@@ -1,0 +1,221 @@
+[
+  {
+    "id": "F001",
+    "description": "Create a new appliance operator tool under ee/appliance instead of extending the existing Nushell developer CLI.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Separate the appliance operator into an interactive TUI shell and a reusable non-interactive operator core.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Implement appliance environment discovery that can resolve the active site config, talosconfig, kubeconfig, and release manifests without requiring the operator to type those paths.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Structure path and asset resolution so the operator core can support both repo-based use and future standalone packaging.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add a terminal home screen with primary actions for Bootstrap, Upgrade, Reset, and Status.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Show the selected appliance, node IP, release version, and high-level connectivity state in a persistent header or summary area.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Implement a guided bootstrap flow that gathers node IP, hostname, app URL, release version, bootstrap mode, and network settings through forms instead of raw flags.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Drive bootstrap through the existing bootstrap-appliance.sh script rather than reimplementing Talos or Flux bootstrap logic.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Display bootstrap progress as readable phases and streamed output instead of exposing raw shell commands as the primary UX.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Classify bootstrap failures into host, Kubernetes, Flux, Helm, or workload layers for operator guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Implement an upgrade flow that shows the current installed appliance release and lets the operator select a published target release version.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Drive upgrades through the existing upgrade-appliance.sh behavior and release manifest model instead of asking for raw component tags.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Make the upgrade flow explicitly reflect the no-auto-rollback policy and point to support-bundle collection on failure.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Implement a separate reset flow with strong destructive confirmation before invoking reset-appliance-data.sh.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "State exactly what reset wipes before allowing the operator to continue.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Implement a status dashboard that summarizes Talos reachability and key host health without showing raw talosctl commands.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Include Kubernetes node readiness and basic cluster availability in the status dashboard.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Include Flux GitRepository, Kustomization, and appliance HelmRelease readiness in the status dashboard.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Include PSA workload status for alga-core, db, redis, pgbouncer, temporal, workflow-worker, email-service, and temporal-worker in the status dashboard.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Show the selected appliance release, release metadata, app URL, and resolved config paths in the status experience.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Normalize host, cluster, Flux, and workload data into one internal appliance status model for the UI and command outputs.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Handle partial-failure states cleanly, including Talos-only availability, Kubernetes down, Flux degraded, or workload unhealthy while the cluster remains reachable.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Provide a non-interactive appliance command surface that mirrors the interactive flows for automation and scripted support use.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Keep direct kubectl and talosctl usage hidden for standard operator flows while preserving support for advanced fallback use outside the TUI.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Update appliance documentation so the new operator TUI is the preferred user-facing workflow and the shell scripts are documented as lower-level internals or fallbacks.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration"
+    ]
+  }
+]

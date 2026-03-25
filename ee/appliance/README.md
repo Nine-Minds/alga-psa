@@ -67,7 +67,27 @@ The build script writes:
 
 The release manifest couples the Talos version, schematic ID, ISO URL/checksum, and installer image so later bootstrap flows can consume one deterministic contract.
 
-## Guided appliance bootstrap
+## Preferred operator workflow (TUI + CLI)
+
+Use `ee/appliance/appliance` as the primary operator entrypoint for appliance lifecycle actions:
+
+```bash
+ee/appliance/appliance tui
+```
+
+The same operator core is available for non-interactive usage:
+
+```bash
+ee/appliance/appliance bootstrap --bootstrap-mode recover --release-version 0.0.1
+ee/appliance/appliance upgrade --release-version 0.0.1
+ee/appliance/appliance reset --force
+ee/appliance/appliance status
+ee/appliance/appliance support-bundle --output-dir ./bundles
+```
+
+The shell scripts below remain supported internals and advanced fallbacks.
+
+## Guided appliance bootstrap (script-level fallback)
 
 Use `ee/appliance/scripts/bootstrap-appliance.sh` as the primary operator entrypoint.
 

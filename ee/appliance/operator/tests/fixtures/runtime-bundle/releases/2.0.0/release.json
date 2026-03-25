@@ -1,0 +1,7 @@
+{
+  "releaseVersion": "2.0.0",
+  "app": {
+    "version": "2.0.0",
+    "releaseBranch": "release/2.0.0"
+  }
+}
