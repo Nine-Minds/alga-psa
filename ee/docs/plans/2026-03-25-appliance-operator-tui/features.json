@@ -271,5 +271,90 @@
       "Goals",
       "Rollout / Migration"
     ]
+  },
+  {
+    "id": "F032",
+    "description": "Add a top-level Workloads operation in the Ink UI for appliance-relevant pod inspection without sending operators to raw kubectl.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Restrict the workload console to appliance-relevant namespaces and pods by default, including msp, alga-system, and flux-system components needed for appliance operation.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Present a refreshable workload list that shows pod name, namespace, phase/status, ready containers, restart count, and age/uptime.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Auto-refresh the workload list on a short interval while preserving the current selection and current view state.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Add a full-screen pod log viewer that opens from the workload list and restores the prior workload layout when the operator presses Escape.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Implement bounded-memory log loading using chunked older-log retrieval so operators can scroll back through long logs without unbounded in-memory accumulation.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "UX / UI Notes",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Support live log follow while the operator is at the bottom of the log stream and pause live-follow when the operator scrolls away from the bottom.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Add keyboard navigation for the workload list and log viewer, including pod selection, vertical scrolling, loading older logs near the top, and Escape-to-return behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Introduce a workload/log adapter layer over kubectl that supplies appliance-scoped pod inventory and pod logs to the TUI without exposing raw kubectl usage to the operator.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations",
+      "Goals"
+    ]
   }
 ]

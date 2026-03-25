@@ -103,5 +103,37 @@
       "F029",
       "F030"
     ]
+  },
+  {
+    "id": "T010",
+    "description": "Workload console: with an appliance-relevant cluster fixture, the TUI lists only appliance-relevant pods and shows current status, readiness, restart count, and uptime columns while preserving selection across refreshes.",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F033",
+      "F034",
+      "F035",
+      "F040"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Log viewer navigation: selecting a pod opens a full-screen log view, Escape returns to the previous workload layout, and keyboard scroll state is preserved correctly across the transition.",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F039"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Bounded log scrollback: the log viewer loads recent lines first, prepends older log chunks on upward scroll near the top, follows live logs at the bottom, pauses live-follow when scrolled away, and keeps memory bounded.",
+    "implemented": true,
+    "featureIds": [
+      "F037",
+      "F038",
+      "F039",
+      "F040"
+    ]
   }
 ]

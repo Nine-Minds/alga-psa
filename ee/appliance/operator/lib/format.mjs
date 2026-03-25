@@ -7,6 +7,15 @@ export function printSection(title, lines = []) {
 }
 
 export function formatStatusSummary(status) {
+  if (!status) {
+    return [
+      'Site: unknown',
+      'Node IP: unknown',
+      'Connectivity: unknown',
+      'Selected release: unknown',
+    ];
+  }
+
   const lines = [
     `Site: ${status.siteId}`,
     `Node IP: ${status.nodeIp || 'unknown'}`,
@@ -17,6 +26,45 @@ export function formatStatusSummary(status) {
 }
 
 export function formatStatusReport(status) {
+  if (!status) {
+    return {
+      summary: [
+        'Site: unknown',
+        'Node IP: unknown',
+        'Connectivity: unknown',
+        'Top blocker: status unavailable',
+        'Blocker detail: Unable to collect appliance status yet.',
+        'Next action: Verify site selection and cluster connectivity, then refresh status.',
+      ],
+      host: [
+        'Status: unknown',
+        'Detail: Talos status not collected',
+      ],
+      cluster: [
+        'API reachable: false',
+        'Status: unavailable',
+      ],
+      flux: [
+        'Flux status: unavailable',
+        'Helm status: unavailable',
+      ],
+      workloads: [
+        'Workload status: unavailable',
+      ],
+      release: [
+        'Selected release: unknown',
+        'App URL: unknown',
+        'Release app version: unknown',
+        'Release branch: unknown',
+      ],
+      paths: [
+        'Config dir: unknown',
+        'kubeconfig: unknown',
+        'talosconfig: unknown',
+      ],
+    };
+  }
+
   return {
     summary: [
       `Site: ${status.siteId}`,

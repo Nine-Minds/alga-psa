@@ -23,6 +23,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-25) Ink is the intended runtime for the interactive layer. Reason: it supports the full-screen, persistent-layout, keyboard-driven interface we actually want while allowing the existing Node operator core to remain intact.
 - (2026-03-25) Replaced the interactive `readline/promises` loop with a stateful Ink app while keeping lifecycle/status modules untouched. Reason: satisfies the UX acceptance bar (`F026`-`F031`) without destabilizing non-interactive commands.
 - (2026-03-25) Added Vim-style `j/k/h/l` bindings alongside arrows in the Ink shell. Reason: improves SSH/operator ergonomics and made headless TUI tests deterministic.
+- (2026-03-25) Appliance pod inspection belongs inside the same Ink operator rather than a separate CLI/tool. Reason: operators should stay in one surface for lifecycle, status, and debugging.
+- (2026-03-25) Workload scope should default to appliance-relevant namespaces only (`msp`, `alga-system`, `flux-system`). Reason: operators asked for appliance-focused visibility, not a generic cluster browser.
+- (2026-03-25) Pod logs should use a full-screen viewer with bounded scrollback and Escape-to-return behavior. Reason: this matches operator expectations better than a cramped split view and avoids unbounded memory growth.
 
 ## Discoveries / Constraints
 
@@ -36,6 +39,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-25) The current operator core and non-interactive commands are still the right foundation; the main change is swapping the interactive shell, not rewriting lifecycle or status logic.
 - (2026-03-25) `ink@5.x` was incompatible with this repo's React 19 runtime (`ReactCurrentOwner` crash during module load). `ink@6.8.0` resolves the compatibility issue.
 - (2026-03-25) The new UI keeps a persistent layout with dedicated header, action navigator, status dashboard panel, main content pane, progress panel, and contextual help strip.
+- (2026-03-25) `kubectl logs` is not a true random-access log API, so "scrollback pagination" must be approximated by chunked reloads and bounded windows rather than arbitrary seek.
+- (2026-03-25) Auto-refreshing workload state must preserve selection and avoid clobbering active log-view state during operator inspection.
 
 ## Commands / Runbooks
 
@@ -52,6 +57,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `ee/appliance/appliance status`
 - (2026-03-25) New test runbook:
   - `node --test ee/appliance/operator/tests/*.test.mjs`
+- (2026-03-25) Future workload/log implementation will likely need dedicated adapter tests separate from the existing lifecycle/status tests.
 - (2026-03-25) Ink dependency updates:
   - `npm install ink@^6.8.0`
   - `npm install --save-dev ink-testing-library@^4.0.0`
@@ -81,3 +87,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (Resolved 2026-03-25) TUI runtime/library: use Ink for the real interactive shell. The existing `readline/promises` shell is interim scaffolding, not the accepted end state.
 - (Resolved 2026-03-25) v1 status scope: summary-first (Talos/Kubernetes/Flux/Helm/workloads + release/config paths) without embedded log/event drill-down.
 - (Resolved 2026-03-25) Ship TUI and mirrored non-interactive command surface together in v1.
+- (Resolved 2026-03-25) Expanded v1 operator scope now includes appliance-relevant workload inventory and full-screen pod log viewing inside the Ink UI.

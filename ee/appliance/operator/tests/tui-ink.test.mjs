@@ -93,6 +93,31 @@ function makeActions(overrides = {}) {
     runUpgrade: async () => ({ ok: true }),
     runReset: async () => ({ ok: true }),
     runSupportBundle: async () => ({ ok: true }),
+    listAppliancePods: async () => ({
+      fetchedAt: '2026-03-25T12:00:00Z',
+      namespaces: ['msp', 'alga-system', 'flux-system'],
+      errors: [],
+      pods: [
+        {
+          key: 'msp/alga-core-0',
+          namespace: 'msp',
+          name: 'alga-core-0',
+          phase: 'Running',
+          status: 'Running',
+          ready: '2/2',
+          restarts: 0,
+          age: '10m',
+        },
+      ],
+    }),
+    readPodLogsTail: async () => ({
+      ok: true,
+      lines: [
+        { timestamp: '2026-03-25T12:00:00Z', text: '2026-03-25T12:00:00Z ready' },
+        { timestamp: '2026-03-25T12:00:01Z', text: '2026-03-25T12:00:01Z healthy' },
+      ],
+    }),
+    readPodLogsSince: async () => ({ ok: true, lines: [] }),
     ...overrides,
   };
 }
@@ -122,10 +147,10 @@ test('T007: Ink shell renders persistent layout regions instead of sequential pr
 
   await sleep(20);
   const frame = ui.lastFrame() || '';
-  assert.match(frame, /Appliance Operator \(Ink\)/);
+  assert.match(frame, /Alga PSA Operator/);
   assert.match(frame, /Actions/);
   assert.match(frame, /Status Dashboard/);
-  assert.match(frame, /Live Progress/);
+  assert.doesNotMatch(frame, /Live Progress/);
   assert.match(frame, /Bootstrap/);
   assert.doesNotMatch(frame, /Select \[1\]/);
   ui.unmount();
@@ -162,7 +187,7 @@ test('T008: Ink lifecycle forms are keyboard-navigable, including reset confirma
   await sleep(20);
 
   // Navigate to Reset and verify challenge behavior.
-  pressJ(resetUi, 2);
+  pressJ(resetUi, 5);
   await sleep(20);
   pressEnter(resetUi);
   await sleep(20);
@@ -185,7 +210,7 @@ test('T008: Ink lifecycle forms are keyboard-navigable, including reset confirma
     }),
   );
   await sleep(20);
-  pressJ(resetConfirmUi, 2);
+  pressJ(resetConfirmUi, 5);
   await sleep(20);
   pressEnter(resetConfirmUi);
   await sleep(20);
@@ -251,5 +276,168 @@ test('T009: Ink progress stream stays in dedicated region while status dashboard
   assert.match(frame, /Helm phase/);
   assert.match(frame, /helmrelease\/alga-core reconciling/);
   assert.match(frame, /Status Dashboard/);
+  ui.unmount();
+});
+
+test('T010: Workload console lists appliance-scoped pods with status columns and preserves selection on refresh', async () => {
+  let pollCount = 0;
+  const ui = render(
+    React.createElement(TuiApp, {
+      initialEnv: makeEnv(),
+      actions: makeActions({
+        listAppliancePods: async () => {
+          pollCount += 1;
+          const updatedAge = pollCount > 1 ? '11m' : '10m';
+          return {
+            fetchedAt: `2026-03-25T12:00:0${Math.min(pollCount, 9)}Z`,
+            namespaces: ['msp', 'alga-system', 'flux-system'],
+            errors: [],
+            pods: [
+              {
+                key: 'msp/alga-core-0',
+                namespace: 'msp',
+                name: 'alga-core-0',
+                phase: 'Running',
+                status: 'Running',
+                ready: '2/2',
+                restarts: 0,
+                age: updatedAge,
+              },
+              {
+                key: 'alga-system/release-controller',
+                namespace: 'alga-system',
+                name: 'release-controller',
+                phase: 'Running',
+                status: 'CrashLoopBackOff',
+                ready: '0/1',
+                restarts: 4,
+                age: '5m',
+              },
+            ],
+          };
+        },
+      }),
+      onExit: () => {},
+    }),
+  );
+
+  await sleep(20);
+  pressJ(ui, 3); // Workloads
+  await sleep(20);
+  pressEnter(ui);
+  await sleep(60);
+
+  let frame = ui.lastFrame() || '';
+  assert.match(frame, /Workloads/);
+  assert.match(frame, /Namespaces: msp, alga-system, flux-system/);
+  assert.match(frame, /alga-core-0/);
+  assert.match(frame, /release-controller/);
+  assert.match(frame, /CrashLoopBackOff/);
+  assert.match(frame, /Ready\s+Restarts\s+Age/);
+
+  pressJ(ui); // select second row
+  await sleep(20);
+  pressJ(ui); // wrap
+  await sleep(20);
+  ui.stdin.write('r');
+  await sleep(40);
+
+  frame = ui.lastFrame() || '';
+  assert.match(frame, /> alga-core-0/);
+  assert.match(frame, /11m|10m/);
+  ui.unmount();
+});
+
+test('T011: Log viewer opens from workload list and Escape returns to workloads layout', async () => {
+  const ui = render(
+    React.createElement(TuiApp, {
+      initialEnv: makeEnv(),
+      actions: makeActions(),
+      onExit: () => {},
+    }),
+  );
+  await sleep(20);
+  pressJ(ui, 3);
+  await sleep(20);
+  pressEnter(ui);
+  await sleep(50);
+  pressEnter(ui);
+  await sleep(40);
+
+  let frame = ui.lastFrame() || '';
+  assert.match(frame, /Logs: msp\/alga-core-0/);
+  assert.match(frame, /ready/);
+
+  ui.stdin.write('\u001B'); // escape
+  await sleep(40);
+  frame = ui.lastFrame() || '';
+  assert.match(frame, /Workloads/);
+  assert.match(frame, /> alga-core-0/);
+  ui.unmount();
+});
+
+test('T012: Log viewer prepends older chunks, toggles follow mode, and bounds line count', async () => {
+  let tailCalls = 0;
+  const ui = render(
+    React.createElement(TuiApp, {
+      initialEnv: makeEnv(),
+      actions: makeActions({
+        readPodLogsTail: async (_env, _pod, options) => {
+          tailCalls += 1;
+          const tail = Number(options?.tailLines || 0);
+          const lines = [];
+          for (let index = 0; index < tail; index += 1) {
+            const stamp = `2026-03-25T12:00:${String(index % 60).padStart(2, '0')}Z`;
+            lines.push({ timestamp: stamp, text: `${stamp} line-${index}` });
+          }
+          return { ok: true, lines };
+        },
+        readPodLogsSince: async () => ({
+          ok: true,
+          lines: [{ timestamp: '2026-03-25T12:10:00Z', text: '2026-03-25T12:10:00Z live-line' }],
+        }),
+      }),
+      onExit: () => {},
+    }),
+  );
+
+  await sleep(20);
+  pressJ(ui, 3);
+  await sleep(20);
+  pressEnter(ui);
+  await sleep(40);
+  pressEnter(ui); // open logs
+  await sleep(40);
+
+  let frame = ui.lastFrame() || '';
+  assert.match(frame, /Follow: on/);
+
+  ui.stdin.write('k');
+  await sleep(40);
+  frame = ui.lastFrame() || '';
+  assert.match(frame, /Follow: paused/);
+
+  for (let index = 0; index < 140; index += 1) {
+    ui.stdin.write('k');
+  }
+  await sleep(40);
+  pressEnter(ui);
+  await sleep(70);
+
+  frame = ui.lastFrame() || '';
+  const countMatch = frame.match(/Lines:\s+(\d+)/);
+  assert.ok(countMatch);
+  const lineCount = Number(countMatch[1]);
+  assert.ok(lineCount > 120);
+  assert.ok(lineCount <= 400);
+  assert.ok(tailCalls >= 2);
+
+  for (let index = 0; index < 260; index += 1) {
+    ui.stdin.write('j');
+  }
+  await sleep(1700);
+  frame = ui.lastFrame() || '';
+  assert.match(frame, /Follow: on/);
+  assert.match(frame, /live-line|line-/);
   ui.unmount();
 });

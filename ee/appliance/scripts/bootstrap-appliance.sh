@@ -191,6 +191,21 @@ cleanup() {
 
 trap cleanup EXIT
 
+persist_operator_metadata() {
+  if $DRY_RUN; then
+    echo "+ write operator metadata files under $CONFIG_DIR (node-ip, app-url)"
+    return 0
+  fi
+
+  if [ -n "$NODE_IP" ]; then
+    printf '%s\n' "$NODE_IP" > "$CONFIG_DIR/node-ip"
+  fi
+
+  if [ -n "$APP_URL" ]; then
+    printf '%s\n' "$APP_URL" > "$CONFIG_DIR/app-url"
+  fi
+}
+
 resolve_release_version() {
   local releases_dir
   local latest_release
@@ -1072,6 +1087,8 @@ apply_release_selection
 prepull_images
 install_gitops_sync
 wait_for_bootstrap
+
+persist_operator_metadata
 
 cat <<EOF
 Appliance bootstrap submitted.

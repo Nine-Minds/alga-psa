@@ -149,3 +149,17 @@ test('T003: CLI reset enforces force flag and invokes reset helper when confirme
   assert.match(resetArgs, /--kubeconfig/);
   assert.match(resetArgs, /--force/);
 });
+
+test('CLI fails fast when multiple site configs exist and --site-id is omitted', async () => {
+  const runtime = makeTempRuntime();
+  const home = makeHome('site-a');
+  const secondSiteDir = path.join(home, 'nm-kube-config/alga-psa/talos', 'site-b');
+  fs.mkdirSync(secondSiteDir, { recursive: true });
+  fs.writeFileSync(path.join(secondSiteDir, 'kubeconfig'), 'fake');
+  fs.writeFileSync(path.join(secondSiteDir, 'talosconfig'), 'fake');
+
+  const result = await runCli(['status', '--asset-root', runtime], { HOME: home });
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Multiple appliance sites found/i);
+  assert.match(result.stderr, /--site-id/i);
+});

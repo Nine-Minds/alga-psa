@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { discoverEnvironment, selectDiscoveredSite } from '../lib/environment.mjs';
 import { resolveRuntimePaths } from '../lib/runtime-paths.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,4 +29,27 @@ test('T006: resolves standalone asset-root runtime paths', () => {
   assert.equal(runtime.assetRoot, fixtureRoot);
   assert.equal(runtime.bootstrapScript, path.join(fixtureRoot, 'scripts/bootstrap-appliance.sh'));
   assert.equal(runtime.releasesDir, path.join(fixtureRoot, 'releases'));
+});
+
+test('environment discovery defers site selection in TUI mode when multiple sites exist', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'appliance-operator-home-'));
+  for (const siteId of ['site-a', 'site-b']) {
+    const siteDir = path.join(home, 'nm-kube-config/alga-psa/talos', siteId);
+    fs.mkdirSync(siteDir, { recursive: true });
+    fs.writeFileSync(path.join(siteDir, 'kubeconfig'), 'fake');
+    fs.writeFileSync(path.join(siteDir, 'talosconfig'), 'fake');
+  }
+
+  const env = discoverEnvironment({
+    homeDir: home,
+    cwd: path.resolve(__dirname, 'fixtures/runtime-repo'),
+    allowAmbiguousSiteSelection: true,
+  });
+
+  assert.equal(env.siteSelectionRequired, true);
+  assert.equal(env.site, null);
+
+  const selected = selectDiscoveredSite(env, 'site-b');
+  assert.equal(selected.site.siteId, 'site-b');
+  assert.equal(selected.paths.kubeconfig, path.join(home, 'nm-kube-config/alga-psa/talos', 'site-b', 'kubeconfig'));
 });
