@@ -65,7 +65,7 @@
     },
     "lastPhoneTypeUsage": {
       "title": "11111",
-      "message": "11111 {{suffix}} {{labels}} {{definitionSuffix}} 11111",
+      "message": "11111 {{suffix}} 11111 {{labels}} 11111 {{definitionSuffix}} 11111",
       "deleteType": "11111",
       "keepType": "11111"
     }
@@ -228,7 +228,7 @@
     },
     "importing": {
       "title": "11111",
-      "processing": "11111 {{current}} {{total}} 11111",
+      "processing": "11111 {{current}} 11111 {{total}} 11111",
       "currentItem": "11111 {{item}} 11111"
     },
     "complete": {

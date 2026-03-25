@@ -65,7 +65,7 @@
     },
     "lastPhoneTypeUsage": {
       "title": "55555",
-      "message": "55555 {{suffix}} {{labels}} {{definitionSuffix}} 55555",
+      "message": "55555 {{suffix}} 55555 {{labels}} 55555 {{definitionSuffix}} 55555",
       "deleteType": "55555",
       "keepType": "55555"
     }
@@ -228,7 +228,7 @@
     },
     "importing": {
       "title": "55555",
-      "processing": "55555 {{current}} {{total}} 55555",
+      "processing": "55555 {{current}} 55555 {{total}} 55555",
       "currentItem": "55555 {{item}} 55555"
     },
     "complete": {
