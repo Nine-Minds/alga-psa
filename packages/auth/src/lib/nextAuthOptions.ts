@@ -12,6 +12,7 @@ import {
     getNextAuthSecretSync,
     getSessionCookieConfig,
     getSessionMaxAge,
+    isSecureCookieEnvironment,
     withDevPortSuffix,
     type PortalSessionTokenPayload,
 } from "./session";
@@ -140,8 +141,7 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
     };
 }
 
-const NEXTAUTH_SECURE_COOKIES = process.env.NODE_ENV === 'production'
-    && (!process.env.NEXTAUTH_URL || process.env.NEXTAUTH_URL.startsWith('https://'));
+const NEXTAUTH_SECURE_COOKIES = isSecureCookieEnvironment();
 const NEXTAUTH_COOKIE_PREFIX = NEXTAUTH_SECURE_COOKIES ? '__Secure-' : '';
 const PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED = process.env.PLAYWRIGHT_FAKE_GOOGLE_OAUTH === 'true';
 
