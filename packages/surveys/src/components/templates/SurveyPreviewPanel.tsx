@@ -64,9 +64,6 @@ export function SurveyPreviewPanel({
               <CardTitle className="text-base">
                 {promptText || t('surveys.settings.preview.noPrompt', 'Survey prompt')}
               </CardTitle>
-              <CardDescription>
-                {t('surveys.response.ratingPrompt', 'How was your experience?')}
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
