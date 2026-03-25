@@ -29,6 +29,9 @@ export * from './lib/templateUtils';
 // Formatting utilities
 export * from './lib/formatters';
 
+// UUID utilities
+export { generateUUID } from './lib/uuid';
+
 // CSV utilities
 export * from './lib/csvParser';
 

@@ -8,6 +8,7 @@ import { TaxRegion } from '@alga-psa/types';
 import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '../../../../actions/timeEntryActions';
 import { getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
+import { generateUUID } from '@alga-psa/core';
 import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
 import { Service, ITimeEntryWithNew } from './types';
 
@@ -194,7 +195,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         service_id: prefilledServiceId,
         tax_region: defaultTaxRegion || client?.region_code || '',
         isNew: true,
-        tempId: crypto.randomUUID(),
+        tempId: generateUUID(),
         client_id: clientId || undefined,
         // Service prefill tracking (only for new entries with prefilled service)
         _isServicePrefilled: !!prefilledServiceId,
@@ -246,7 +247,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         service_id: '',
         tax_region: defaultTaxRegion || '',
         isNew: true,
-        tempId: crypto.randomUUID(),
+        tempId: generateUUID(),
         client_id: clientId || undefined,
       }];
     }

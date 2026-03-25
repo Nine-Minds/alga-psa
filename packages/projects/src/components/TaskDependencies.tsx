@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { Ban, GitBranch, Link2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { generateUUID } from '@alga-psa/core';
 import { addTaskDependency, removeTaskDependency } from '../actions/projectTaskActions';
 import { useDrawer } from "@alga-psa/ui";
 import TaskEdit from './TaskEdit';
@@ -164,7 +165,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       const targetTask = allTasksInProject.find(t => t.task_id === taskId);
       if (targetTask) {
         setPendingDeps(prev => [...prev, {
-          tempId: crypto?.randomUUID?.() ?? `pending-${Date.now()}`,
+          tempId: generateUUID(),
           targetTaskId: taskId,
           targetTaskName: targetTask.task_name,
           targetTaskTypeKey: targetTask.task_type_key || 'task',

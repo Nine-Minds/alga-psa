@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { generateUUID } from '@alga-psa/core';
 import type {
   InvoiceTemplateAggregateTransform,
   InvoiceTemplateAggregation,
@@ -92,10 +93,7 @@ const AGGREGATION_OPTIONS = [
 
 type ComparisonPredicate = Extract<InvoiceTemplatePredicate, { type: 'comparison' }>;
 
-const createLocalId = (prefix: string) =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? `${prefix}-${crypto.randomUUID()}`
-    : `${prefix}-${Math.random().toString(36).slice(2)}`;
+const createLocalId = (prefix: string) => `${prefix}-${generateUUID()}`;
 
 const cloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 

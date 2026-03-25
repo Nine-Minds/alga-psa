@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { generateUUID } from '@alga-psa/core';
 import type { Modifier } from '@dnd-kit/core';
 import {
   DndContext,
@@ -2209,5 +2210,4 @@ export const __designerShellTestUtils = {
   computeBreadcrumbNodes,
 };
 
-const createLocalId = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+const createLocalId = () => generateUUID();

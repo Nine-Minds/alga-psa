@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
+import { utcToLocal, formatDateTime, getUserTimeZone, generateUUID } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import {
@@ -475,7 +475,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         if (typeof window !== 'undefined') {
             const existing = sessionStorage.getItem('tabHolderId');
             if (existing) return existing;
-            const id = crypto.randomUUID();
+            const id = generateUUID();
             sessionStorage.setItem('tabHolderId', id);
             return id;
         }
