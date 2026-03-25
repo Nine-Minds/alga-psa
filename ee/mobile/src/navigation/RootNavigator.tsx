@@ -1,6 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Platform, Pressable, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Platform, Pressable, Text } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import type { RootStackParamList } from "./types";
 import { TabsNavigator } from "./TabsNavigator";
 import { SignInScreen } from "../screens/SignInScreen";
@@ -58,7 +58,7 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
                     accessibilityLabel={tTickets("list.title", "Tickets")}
                     style={{ flexDirection: "row", alignItems: "center", marginRight: 8 }}
                   >
-                    <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+                    <Feather name="chevron-left" size={24} color={theme.colors.text} />
                     <Text style={{ color: theme.colors.text, fontSize: 16, marginLeft: 2 }}>
                       {tTickets("list.title", "Tickets")}
                     </Text>

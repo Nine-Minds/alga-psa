@@ -67,10 +67,9 @@ export function AppRoot() {
         return;
       }
 
-      const nowMs = Date.now();
       const stored = await getStoredSession();
       if (stored) {
-        if (isSessionUsable(stored, nowMs)) {
+        if (isSessionUsable(stored)) {
           sessionRef.current = stored;
           if (!canceled) setSessionState(stored);
         } else {
@@ -78,7 +77,7 @@ export function AppRoot() {
         }
       }
 
-      if (stored && isSessionUsable(stored, nowMs)) {
+      if (stored && isSessionUsable(stored)) {
         const biometricEnabled = await getBiometricGateEnabled();
         if (biometricEnabled && !canceled) setIsBiometricLocked(true);
       }

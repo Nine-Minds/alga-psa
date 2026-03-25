@@ -1,6 +1,6 @@
 import type { MobileSession } from "../auth/AuthContext";
 
-export function isSessionUsable(session: MobileSession, nowMs: number = Date.now()): boolean {
+export function isSessionUsable(session: MobileSession): boolean {
   // A session is usable as long as the refresh token exists, even if the
   // access token has expired — the app will attempt a refresh on resume.
   // Previously this checked only access token expiry, which caused
