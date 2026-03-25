@@ -690,24 +690,104 @@
     "description": "Connected/disconnected RMM status chip and supporting state labels"
   },
   "assetInfoPanel": {
-    "title": "Asset Info Panel",
-    "description": "General asset information panel for identification, owner, and lifecycle details"
+    "title": "Asset Info & Lifecycle",
+    "description": "General asset information panel for identification, owner, and lifecycle details",
+    "actions": {
+      "copy": "Copy",
+      "copied": "Copied"
+    },
+    "fields": {
+      "client": "Client",
+      "location": "Location",
+      "model": "Model",
+      "serialNumber": "Serial Number",
+      "purchaseDate": "Purchase Date",
+      "warrantyEnd": "Warranty End"
+    },
+    "values": {
+      "unknownClient": "Unknown Client",
+      "unassigned": "Unassigned",
+      "unknownModel": "Unknown Model"
+    }
   },
   "assetNotesPanel": {
-    "title": "Asset Notes Panel",
-    "description": "Rich-text notes panel for asset-specific notes and quick operational context"
+    "title": "Notes & Quick Info",
+    "description": "Rich-text notes panel for asset-specific notes and quick operational context",
+    "errors": {
+      "loadTitle": "Notes failed to load",
+      "unknown": "Unknown error"
+    },
+    "lastUpdated": "Last updated: {{value}}"
   },
   "hardwareSpecsPanel": {
-    "title": "Hardware Specs Panel",
-    "description": "Hardware specification panel covering CPU, memory, storage, and device metadata"
+    "title": "Hardware Specifications",
+    "description": "Hardware specification panel covering CPU, memory, storage, and device metadata",
+    "fields": {
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Storage",
+      "utilization": "Utilization"
+    },
+    "values": {
+      "unknownCpu": "Unknown CPU",
+      "unknown": "Unknown",
+      "unifiedMemory": "{{size}}GB Unified Memory",
+      "memoryUsed": " ({{size}}GB Used)",
+      "freeStorage": "{{size}} GB Free"
+    },
+    "empty": "No hardware data available",
+    "emptyStorage": "No storage drives detected"
   },
   "rmmVitalsPanel": {
-    "title": "RMM Vitals Panel",
-    "description": "RMM vitals panel for heartbeat, monitoring, and endpoint health details"
+    "title": "RMM Vitals & Connectivity",
+    "description": "RMM vitals panel for heartbeat, monitoring, and endpoint health details",
+    "actions": {
+      "refresh": "Refresh"
+    },
+    "fields": {
+      "agentStatus": "Agent Status",
+      "currentUser": "Current User",
+      "lastCheckIn": "(Last check-in: {{value}})",
+      "uptime": "Uptime",
+      "lastSync": "Last RMM Sync",
+      "network": "Network",
+      "networkValue": "LAN IP: {{lan}} | WAN IP: {{wan}}"
+    },
+    "values": {
+      "never": "Never"
+    },
+    "empty": {
+      "title": "RMM Vitals",
+      "notConnected": "Not connected to RMM"
+    },
+    "uptime": "{{days}} days, {{hours}} hours, {{minutes}} minutes"
   },
   "securityPatchingPanel": {
-    "title": "Security & Patching Panel",
-    "description": "Security and patching posture panel for vulnerability and update status indicators"
+    "title": "Security & Patching",
+    "description": "Security and patching posture panel for vulnerability and update status indicators",
+    "fields": {
+      "osVersion": "OS Version",
+      "antivirus": "Antivirus",
+      "patchStatus": "Patch Status",
+      "firewall": "Firewall"
+    },
+    "values": {
+      "unknown": "Unknown"
+    },
+    "antivirus": {
+      "running": "✔ Installed & Running",
+      "inactive": "Inactive",
+      "lastScan": "| Last Scan: Today, 3:00 AM"
+    },
+    "patchStatus": {
+      "critical": "Critical",
+      "atRisk": "At Risk",
+      "missingPatches": "- {{count}} Critical OS Patches missing.",
+      "upToDate": "✔ Up to Date"
+    },
+    "firewall": {
+      "on": "✔ On"
+    }
   },
   "copyableField": {
     "title": "Copyable Field",
