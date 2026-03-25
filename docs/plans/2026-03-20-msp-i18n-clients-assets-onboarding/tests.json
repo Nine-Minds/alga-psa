@@ -138,7 +138,7 @@
   {
     "id": "T045",
     "description": "Cross-batch: German (de) — no overflow in client forms, contact phone editor, asset dashboard metrics, onboarding wizard",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F014", "F026", "F034"]
   }
 ]
