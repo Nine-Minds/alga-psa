@@ -24,8 +24,8 @@
     "seed": "knex seed:run",
     "test:local": "cd server && dotenv -e ../.env.localtest -- vitest \"$@\"",
     "generate:proto": "mkdir -p ee/server/src/generated && protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=ee/server/src/generated --ts_proto_opt=esModuleInterop=true,outputServices=false,useExactTypes=false --proto_path=ee/server/protos workflow.proto",
-    "dev": "NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx nx next:dev server",
-    "dev:turbo": "NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx nx next:dev server -- --turbo",
+    "dev": "npx nx build-deps server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx nx next:dev server",
+    "dev:turbo": "npx nx build-deps server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx nx next:dev server -- --turbo",
     "build": "npm run build:assemblyscript && cd server && npm run build",
     "build:ce": "npm run build:assemblyscript && cd server && npm run build",
     "build:ee": "npm run build:assemblyscript && cd server && EDITION=ee NEXT_PUBLIC_EDITION=enterprise npm run build:enterprise",
@@ -199,6 +199,7 @@
     "zustand": "^4.5.7"
   },
   "devDependencies": {
+    "@bytecodealliance/wizer": "^10.0.0",
     "@eslint/js": "^9.17.0",
     "@nx/docker": "22.3.3",
     "@nx/eslint": "22.3.3",
