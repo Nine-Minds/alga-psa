@@ -45,7 +45,7 @@
   {
     "id": "T013",
     "description": "2b-11: Visual QA (xx) — contact list, contact detail, quick-add, phone editor, portal tab all show '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
 
