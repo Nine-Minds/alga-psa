@@ -474,7 +474,7 @@ EOF
       printf '%s\n' 'apiVersion: v1alpha1'
       printf '%s\n' 'kind: ResolverConfig'
       printf '%s\n' 'nameservers:'
-      printf '%s' "$DNS_SERVERS" | tr ',' '\n' | while IFS= read -r resolver; do
+      printf '%s\n' "$DNS_SERVERS" | tr ',' '\n' | while IFS= read -r resolver; do
         resolver="$(printf '%s' "$resolver" | xargs)"
         [ -n "$resolver" ] || continue
         printf '  - address: %s\n' "$resolver"
