@@ -7,7 +7,10 @@ A comprehensive Professional Services Automation platform designed for Managed S
 ### Core Functionality
 - **Asset Management**: Track and manage client assets, maintenance schedules, and relationships
 - **Automation Hub**: Create and manage TypeScript-based workflows with event-based triggers
+- **Event Bus System**: Redis-based pub/sub messaging for asynchronous processing and system events
+- **Email Notifications**: Templated email notifications for tickets, invoices, and project updates, powered by the event bus
 - **Billing & Invoicing**: Flexible billing cycles, international tax support, and automated invoicing
+  - Supports contract purchase orders (PO number on invoices; advisory PO limits)
 - **Client Management**: Comprehensive client profiles and relationship tracking
 - **Document Management**: Centralized document repository with version control
 - **Project Management**: Project tracking, task management, and resource allocation
@@ -48,7 +51,7 @@ A comprehensive Professional Services Automation platform designed for Managed S
 - **Event Processing**: Redis-based event bus with Zod schema validation
 - **Workflow Engine**: Event-sourced workflow system with TypeScript support
 - **Real-time Collaboration**: Hocuspocus integration
-- **Authentication**: NextAuth.js
+- **Authentication**: NextAuth.js with multi-portal support (MSP and Client Portal)
 - **UI Components**: Radix-based component library
 
 ## Getting Started
@@ -59,6 +62,8 @@ For detailed setup instructions, please refer to our [Complete Setup Guide](/doc
 - Environment configuration
 - Security setup
 - Verification steps
+
+Note: For production-like persistence, both CE and EE prebuilt compose files define named volumes for the database (`postgres_data`) and uploaded documents (`files_data`). These volumes are created automatically and ensure data survives container restarts and upgrades. See the Production section in the setup guide for backup/restore examples.
 
 ## Documentation
 
@@ -87,24 +92,30 @@ For detailed setup instructions, please refer to our [Complete Setup Guide](/doc
 
 ```
 alga-psa/
-├── docker-compose.yaml     # Base docker configuration
-├── docker-compose.ce.yaml  # Community Edition config
-├── docker-compose.ee.yaml  # Enterprise Edition config
-├── ee/                    # Enterprise Edition
-│   └── setup/
-│       └── docker-compose.yaml
-├── helm/                  # Kubernetes configurations
-├── hocuspocus/           # Real-time collaboration server
-└── server/
-    ├── public/           # Static assets
-    ├── src/
-    │   ├── app/         # Next.js pages
-    │   ├── components/  # React components
-    │   │   ├── ui/     # Shared UI components
-    │   │   └── features/# Feature-specific components
-    │   ├── lib/        # Core business logic
-    │   └── types/      # TypeScript definitions
-    └── migrations/     # Database migrations
+├── server/                  # Next.js application server
+│   ├── src/
+│   │   ├── app/             # Next.js App Router pages
+│   │   ├── components/      # React components
+│   │   └── lib/             # Core business logic
+│   └── migrations/          # Database migrations (CE)
+├── packages/                # Shared @alga-psa/* packages
+│   ├── billing/             # Billing, invoicing, tax
+│   ├── clients/             # Client management
+│   ├── core/                # Logging, encryption, utilities
+│   ├── db/                  # Database connection & tenant context
+│   ├── types/               # Shared TypeScript interfaces
+│   ├── ui/                  # Shared UI component library
+│   ├── build-tools/         # Shared tsup build preset
+│   └── ...                  # ~50 domain & utility packages
+├── ee/                      # Enterprise Edition
+│   ├── server/              # EE server overrides & migrations
+│   └── packages/            # EE-only packages
+├── shared/                  # Legacy shared libraries
+├── hocuspocus/              # Real-time collaboration server
+├── services/
+│   └── workflow-worker/     # Workflow processing service
+├── sdk/                     # Extension SDK & samples
+└── docs/                    # Documentation
 ```
 
 ## Testing
