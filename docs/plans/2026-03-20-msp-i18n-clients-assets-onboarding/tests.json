@@ -120,7 +120,7 @@
   {
     "id": "T042",
     "description": "Cross-batch: pseudo-locales regenerated for all 4 namespaces",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F092"]
   },
   {
