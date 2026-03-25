@@ -57,6 +57,7 @@
 - (2026-03-24) Wizard-only onboarding form/help/alert text should stay in the new `msp/onboarding` namespace rather than extending `msp/dashboard.json`. Existing dashboard overlap remains under `onboarding.*` keys in `msp/dashboard.json`, but wizard steps do not reuse that namespace today.
 - (2026-03-24) Keep stable onboarding ids/values untranslated: `OnboardingStepId`, `step.id`, `substep.id`, `data_import`, checklist status enums (`complete`, `in_progress`, `not_started`, `blocked`), role values (`admin`, `technician`, `manager`, `user`), billing mode values (`fixed`, `hourly`, `usage`), `USD`, and ticketing sentinels like `none`, `board`, `category`, `status`, `priority`.
 - (2026-03-25) `F030` scaffold created `server/public/locales/en/msp/onboarding.json` with shared `common.actions` / `common.states` plus component-scoped roots for `OnboardingProvider`, `OnboardingWizard`, and the six in-scope wizard steps. This mirrors the earlier batch scaffolds: enough stable section names for follow-up wiring, without pretending the full key inventory is known before the large `TicketingConfigStep.tsx` migration happens.
+- (2026-03-25) `TicketingConfigStep.tsx` now depends on explicit `ticketingConfigStep.statuses.types.{open,closed}` keys because the board-scoped status type label is resolved from a computed key rather than a direct string-literal `t('...')` call. Keep those two keys in mind during later locale generation/audits because simple direct-key scans will not discover them automatically.
 
 ## Progress Log
 
@@ -137,6 +138,10 @@
   - `rg -n 'Sì| è |più|funzionalità|perché|così|già|verrà' server/public/locales/it/msp/assets.json | head -n 20` returned representative accented strings
 - (2026-03-25) Completed `F030`: created `server/public/locales/en/msp/onboarding.json` as the initial English scaffold for the onboarding batch. Added shared `common.actions` / `common.states` keys plus component-scoped `title` / `description` entries for `OnboardingProvider`, `OnboardingWizard`, `AddClientStep`, `BillingSetupStep`, `ClientContactStep`, `ClientInfoStep`, `TeamMembersStep`, and `TicketingConfigStep`. Dashboard onboarding components remain intentionally excluded because they already live under `msp/dashboard.json`. Validation:
   - `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/onboarding.json','utf8')); console.log('onboarding json ok')"` returned `onboarding json ok`
+- (2026-03-25) Completed `F031`: wired `packages/onboarding/src/components/steps/TicketingConfigStep.tsx` to `useTranslation('msp/onboarding')`. The step now translates its loading/header shell, ticket-numbering fields, board/category/status/priority section chrome, import/add flows, default/delete toasts and fallback validation copy, the support-email requirement block, and the full ITIL standards modal including category lists and the priority matrix. Expanded `server/public/locales/en/msp/onboarding.json` with the step-specific English keys and added explicit `ticketingConfigStep.statuses.types.{open,closed}` entries for the computed board-scoped status type labels. Validation:
+  - direct-key locale audit over `TicketingConfigStep.tsx` plus manual checks for `ticketingConfigStep.statuses.types.{open,closed}` reported `missing=0` against `server/public/locales/en/msp/onboarding.json`
+  - `npx eslint packages/onboarding/src/components/steps/TicketingConfigStep.tsx` (warnings only, no errors; existing `any` / hook-deps warnings remain)
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
 
 ## Commands / Runbooks
 
