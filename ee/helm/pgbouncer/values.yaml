@@ -1,0 +1,58 @@
+enabled: true
+
+namespace: ""
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: edoburu/pgbouncer
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  name: pgbouncer
+  port: 6432
+
+postgres:
+  host: db.msp.svc.cluster.local
+  port: 5432
+  appDatabase: server
+  adminDatabase: postgres
+  appUser: app_user_pgbouncer
+  adminUser: postgres
+  appPasswordSecret:
+    name: db-credentials
+    key: DB_PASSWORD_PGBOUNCER
+  adminPasswordSecret:
+    name: db-credentials
+    key: DB_PASSWORD_SUPERUSER
+
+authType: scram-sha-256
+
+pool:
+  mode: transaction
+  maxClientConn: 1000
+  defaultPoolSize: 20
+  minPoolSize: 10
+  reservePoolSize: 10
+  reservePoolTimeout: 5
+  maxDbConnections: 100
+  maxUserConnections: 100
+  idleTransactionTimeout: 300
+  serverIdleTimeout: 600
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

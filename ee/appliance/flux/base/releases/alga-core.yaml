@@ -1,0 +1,30 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: alga-core
+  namespace: alga-system
+spec:
+  interval: 10m
+  timeout: 30m
+  releaseName: alga-core
+  targetNamespace: msp
+  install:
+    createNamespace: true
+    remediation:
+      retries: 0
+  upgrade:
+    remediation:
+      retries: 0
+  chart:
+    spec:
+      chart: ./helm
+      interval: 10m
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: alga-appliance
+        namespace: flux-system
+  valuesFrom:
+    - kind: ConfigMap
+      name: appliance-values-alga-core
+      valuesKey: alga-core.talos-single-node.yaml

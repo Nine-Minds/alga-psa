@@ -1,0 +1,28 @@
+namespace: msp
+enabled: true
+
+image:
+  repository: ghcr.io/nine-minds/temporal-worker
+  tag: latest
+  pullPolicy: IfNotPresent
+  is_private: false
+  credentials: ""
+
+temporal:
+  address: temporal-frontend.msp.svc.cluster.local:7233
+  namespace: default
+  taskQueue: tenant-workflows,portal-domain-workflows,email-domain-workflows
+
+db:
+  host: pgbouncer.msp.svc.cluster.local
+  port: "6432"
+  serverDatabase: server
+  user: app_user_pgbouncer
+  serverPasswordSecret:
+    name: db-credentials
+    key: DB_PASSWORD_PGBOUNCER
+  adminPasswordSecret:
+    name: db-credentials
+    key: DB_PASSWORD_SUPERUSER
+
+applicationUrl: http://alga-core.msp.svc.cluster.local:3000

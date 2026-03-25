@@ -1,0 +1,32 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: temporal
+  namespace: alga-system
+spec:
+  interval: 10m
+  timeout: 30m
+  dependsOn:
+    - name: alga-core
+  releaseName: temporal
+  targetNamespace: msp
+  install:
+    createNamespace: true
+    remediation:
+      retries: 0
+  upgrade:
+    remediation:
+      retries: 0
+  chart:
+    spec:
+      chart: ./ee/helm/temporal
+      interval: 10m
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: alga-appliance
+        namespace: flux-system
+  valuesFrom:
+    - kind: ConfigMap
+      name: appliance-values-temporal
+      valuesKey: temporal.talos-single-node.yaml

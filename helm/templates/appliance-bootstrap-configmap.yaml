@@ -1,0 +1,285 @@
+{{- if and (not .Values.devEnv.enabled) .Values.setup.applianceBootstrap.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sebastian.fullname" . }}-appliance-bootstrap
+  namespace: {{ include "sebastian.namespace" . }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+data:
+  appliance-bootstrap.sh: |
+    #!/bin/sh
+    set -eu
+
+    log() {
+      echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+    }
+
+    is_enabled() {
+      case "${1:-true}" in
+        [Ff][Aa][Ll][Ss][Ee]|0|[Nn][Oo]|[Oo][Ff][Ff])
+          return 1
+          ;;
+        *)
+          return 0
+          ;;
+      esac
+    }
+
+    get_admin_password() {
+      local password=""
+
+      if [ -f /run/secrets/postgres_password ]; then
+        password="$(cat /run/secrets/postgres_password 2>/dev/null)"
+      fi
+
+      if [ -z "$password" ] && [ -n "${DB_PASSWORD_ADMIN:-}" ]; then
+        password="${DB_PASSWORD_ADMIN}"
+      fi
+
+      if [ -z "$password" ] && [ -n "${DB_PASSWORD_SUPERUSER:-}" ]; then
+        password="${DB_PASSWORD_SUPERUSER}"
+      fi
+
+      echo "$password" | tr -d '[:space:]'
+    }
+
+    psql_admin() {
+      local database="$1"
+      shift
+      local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+      local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+      local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+      local pg_password
+
+      pg_password="$(get_admin_password)"
+      PGPASSWORD="${pg_password}" psql -v ON_ERROR_STOP=1 -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${database}" "$@"
+    }
+
+    psql_quiet() {
+      local database="$1"
+      shift
+      local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+      local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+      local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+      local pg_password
+
+      pg_password="$(get_admin_password)"
+      PGPASSWORD="${pg_password}" psql -v ON_ERROR_STOP=1 -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${database}" "$@" 2>&1
+    }
+
+    wait_for_postgres() {
+      local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+      local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+      local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+      local pg_password
+      local output
+      local timeout_seconds="${BOOTSTRAP_WAIT_TIMEOUT_SECONDS:-300}"
+      local retry_seconds="${BOOTSTRAP_WAIT_RETRY_SECONDS:-2}"
+      local started_at
+      local now
+
+      pg_password="$(get_admin_password)"
+      if [ -z "$pg_password" ]; then
+        log "ERROR: No admin database password available"
+        exit 1
+      fi
+
+      started_at="$(date +%s)"
+
+      while true; do
+        output="$(PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d postgres -c '\q' 2>&1)" && break
+        now="$(date +%s)"
+
+        case "$output" in
+          *"password authentication failed"*|*"no password supplied"*|*"SASL authentication failed"*|*"role \""* )
+            log "ERROR: PostgreSQL authentication failed for ${pg_admin_user} at ${pg_admin_host}:${pg_admin_port}"
+            log "ERROR: Existing appliance data may not match the current db-credentials secret. Reuse the original credentials in recover mode or wipe appliance data before a fresh install."
+            exit 1
+            ;;
+          *)
+            if [ $((now - started_at)) -ge "${timeout_seconds}" ]; then
+              log "ERROR: PostgreSQL did not become reachable within ${timeout_seconds}s at ${pg_admin_host}:${pg_admin_port}"
+              log "ERROR: ${output}"
+              exit 1
+            fi
+            log "PostgreSQL is not ready yet at ${pg_admin_host}:${pg_admin_port} - retrying"
+            ;;
+        esac
+        sleep "${retry_seconds}"
+      done
+
+      log "PostgreSQL is up and running"
+    }
+
+    database_exists() {
+      local database_name="$1"
+      psql_quiet postgres -Atqc "SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname='${database_name}');" | grep -q '^t$'
+    }
+
+    users_table_exists() {
+      psql_quiet "${DB_NAME_SERVER:-server}" -Atqc "SELECT to_regclass('public.users') IS NOT NULL;" | grep -q '^t$'
+    }
+
+    seed_row_count() {
+      psql_quiet "${DB_NAME_SERVER:-server}" -Atqc "SELECT COUNT(*) FROM users;" | tr -d '[:space:]'
+    }
+
+    preflight_database_state() {
+      local server_db=false
+      local hocuspocus_db=false
+      local users_table=false
+      local user_count=0
+
+      if database_exists "${DB_NAME_SERVER:-server}"; then
+        server_db=true
+        if users_table_exists; then
+          users_table=true
+          user_count="$(seed_row_count)"
+        fi
+      fi
+
+      if database_exists "${DB_NAME_HOCUSPOCUS:-hocuspocus}"; then
+        hocuspocus_db=true
+      fi
+
+      log "Database preflight: bootstrap_mode=${BOOTSTRAP_MODE:-recover} server_db=${server_db} hocuspocus_db=${hocuspocus_db} users_table=${users_table} user_count=${user_count}"
+
+      if [ "${BOOTSTRAP_MODE:-recover}" = "fresh" ] && { [ "$server_db" = "true" ] || [ "$hocuspocus_db" = "true" ] || [ "$user_count" -gt 0 ]; }; then
+        log "ERROR: Existing application database state detected while bootstrap.mode=fresh."
+        log "ERROR: Wipe persisted appliance data before a fresh install or rerun in recover mode."
+        exit 1
+      fi
+    }
+
+    check_seeds_status() {
+      local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+      local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+      local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+      local pg_password
+
+      pg_password="$(get_admin_password)"
+      PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);" 2>/dev/null | grep -q '^t$'
+    }
+
+    ensure_database() {
+      local db_name="$1"
+      psql_admin postgres -v db_name="${db_name}" <<'SQL'
+    SELECT CASE
+      WHEN EXISTS (SELECT 1 FROM pg_database WHERE datname = :'db_name')
+        THEN NULL
+      ELSE format('CREATE DATABASE %I', :'db_name')
+    END \gexec
+    SQL
+    }
+
+    ensure_role() {
+      local role_name="$1"
+      local role_password="$2"
+      local encryption="${3:-scram-sha-256}"
+
+      psql_admin postgres -v role_name="${role_name}" -v role_password="${role_password}" -v role_encryption="${encryption}" <<'SQL'
+    SET password_encryption = :'role_encryption';
+    SELECT CASE
+      WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'role_name')
+        THEN format('ALTER ROLE %I WITH LOGIN PASSWORD %L', :'role_name', :'role_password')
+      ELSE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', :'role_name', :'role_password')
+    END \gexec
+    SQL
+    }
+
+    grant_server_privileges() {
+      local role_name="$1"
+      local db_name="${DB_NAME_SERVER:-server}"
+
+      psql_admin postgres -v db_name="${db_name}" -v role_name="${role_name}" <<'SQL'
+    SELECT format('GRANT CONNECT ON DATABASE %I TO %I', :'db_name', :'role_name') \gexec
+    SQL
+
+      psql_admin "${db_name}" -v role_name="${role_name}" <<'SQL'
+    SELECT format('GRANT USAGE ON SCHEMA public TO %I', :'role_name') \gexec
+    SELECT format('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO %I', :'role_name') \gexec
+    SELECT format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I', :'role_name') \gexec
+    SELECT format('GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO %I', :'role_name') \gexec
+    SELECT format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES TO %I', :'role_name') \gexec
+    SQL
+    }
+
+    grant_hocuspocus_privileges() {
+      local role_name="$1"
+      local db_name="${DB_NAME_HOCUSPOCUS:-hocuspocus}"
+
+      psql_admin postgres -v db_name="${db_name}" -v role_name="${role_name}" <<'SQL'
+    SELECT format('GRANT CONNECT ON DATABASE %I TO %I', :'db_name', :'role_name') \gexec
+    SQL
+
+      psql_admin "${db_name}" -v role_name="${role_name}" <<'SQL'
+    SELECT format('GRANT ALL PRIVILEGES ON SCHEMA public TO %I', :'role_name') \gexec
+    SELECT format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO %I', :'role_name') \gexec
+    SELECT format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO %I', :'role_name') \gexec
+    SQL
+    }
+
+    configure_server_database() {
+      psql_admin "${DB_NAME_SERVER:-server}" -v app_env="${APP_ENV:-production}" <<'SQL'
+    CREATE EXTENSION IF NOT EXISTS vector;
+    SELECT format('ALTER DATABASE %I SET app.environment = %L', current_database(), :'app_env') \gexec
+    GRANT ALL PRIVILEGES ON SCHEMA public TO postgres;
+    SQL
+
+      psql_admin postgres -v db_name="${DB_NAME_SERVER:-server}" <<'SQL'
+    SELECT format('GRANT ALL PRIVILEGES ON DATABASE %I TO postgres', :'db_name') \gexec
+    SQL
+    }
+
+    wait_for_postgres
+    preflight_database_state
+
+    log "Creating appliance databases and roles"
+    ensure_database "${DB_NAME_HOCUSPOCUS:-hocuspocus}"
+    ensure_role "${DB_USER_HOCUSPOCUS:-hocuspocus_user}" "${DB_PASSWORD_HOCUSPOCUS:?DB_PASSWORD_HOCUSPOCUS is required}" "scram-sha-256"
+    grant_hocuspocus_privileges "${DB_USER_HOCUSPOCUS:-hocuspocus_user}"
+
+    ensure_database "${DB_NAME_SERVER:-server}"
+    ensure_role "${DB_USER_SERVER:-app_user}" "${DB_PASSWORD_SERVER:?DB_PASSWORD_SERVER is required}" "scram-sha-256"
+    if [ -n "${DB_USER_PGBOUNCER:-}" ] && [ -n "${DB_PASSWORD_PGBOUNCER:-}" ] && [ "${DB_USER_PGBOUNCER}" != "${DB_USER_SERVER:-app_user}" ]; then
+      ensure_role "${DB_USER_PGBOUNCER}" "${DB_PASSWORD_PGBOUNCER}" "scram-sha-256"
+    fi
+    configure_server_database
+    grant_server_privileges "${DB_USER_SERVER:-app_user}"
+    if [ -n "${DB_USER_PGBOUNCER:-}" ] && [ "${DB_USER_PGBOUNCER}" != "${DB_USER_SERVER:-app_user}" ]; then
+      grant_server_privileges "${DB_USER_PGBOUNCER}"
+    fi
+
+    if is_enabled "${SETUP_RUN_MIGRATIONS:-true}"; then
+      pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+      pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+      pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+
+      pg_password="$(get_admin_password)"
+
+      log "Creating pgboss schema"
+      PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -c 'CREATE SCHEMA IF NOT EXISTS pgboss;'
+
+      log "Granting necessary permissions"
+      PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -c 'GRANT ALL ON SCHEMA public TO postgres;'
+
+      log "Running migrations"
+      NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile /app/server/knexfile.cjs --verbose
+    else
+      log "SETUP_RUN_MIGRATIONS is disabled; skipping migrations"
+    fi
+
+    if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
+      if check_seeds_status; then
+        log "Seeds already exist; skipping"
+      else
+        log "Running seeds"
+        NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose
+      fi
+    else
+      log "SETUP_RUN_SEEDS is disabled; skipping seeds"
+    fi
+
+    log "Appliance setup completed"
+{{- end }}

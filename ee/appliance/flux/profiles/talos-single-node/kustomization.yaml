@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: appliance-values-alga-core
+    namespace: alga-system
+    files:
+      - alga-core.talos-single-node.yaml=values/alga-core.talos-single-node.yaml
+  - name: appliance-values-pgbouncer
+    namespace: alga-system
+    files:
+      - pgbouncer.talos-single-node.yaml=values/pgbouncer.talos-single-node.yaml
+  - name: appliance-values-temporal
+    namespace: alga-system
+    files:
+      - temporal.talos-single-node.yaml=values/temporal.talos-single-node.yaml
+  - name: appliance-values-workflow-worker
+    namespace: alga-system
+    files:
+      - workflow-worker.talos-single-node.yaml=values/workflow-worker.talos-single-node.yaml
+  - name: appliance-values-email-service
+    namespace: alga-system
+    files:
+      - email-service.talos-single-node.yaml=values/email-service.talos-single-node.yaml
+  - name: appliance-values-temporal-worker
+    namespace: alga-system
+    files:
+      - temporal-worker.talos-single-node.yaml=values/temporal-worker.talos-single-node.yaml
