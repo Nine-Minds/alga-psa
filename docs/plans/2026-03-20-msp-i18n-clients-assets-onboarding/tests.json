@@ -58,7 +58,7 @@
   {
     "id": "T021",
     "description": "2b-12: all 41 asset files compile with useTranslation — no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021", "F022", "F023", "F024", "F025"]
   },
   {
