@@ -17,6 +17,12 @@ import {
   type NormalizedBillingCycleAnchorSettings
 } from '../lib/billing/billingCycleAnchors';
 import { withAuth } from '@alga-psa/auth';
+import {
+  CLIENT_CADENCE_SCHEDULE_CONTEXT,
+  type ClientCadenceScheduleContext
+} from '@shared/billingClients/clientCadenceScheduleContext';
+import { ensureClientBillingSettingsRow } from '@shared/billingClients/billingSettings';
+import { regenerateClientCadenceServicePeriodsForScheduleChange } from './clientCadenceScheduleRegeneration';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -35,6 +41,7 @@ function normalizeDbIsoUtcMidnight(value: unknown): ISO8601String {
 export type ClientBillingCycleAnchorConfig = {
   billingCycle: BillingCycleType;
   anchor: NormalizedBillingCycleAnchorSettings;
+  cadenceContext: ClientCadenceScheduleContext;
 };
 
 export const getClientBillingCycleAnchor = withAuth(async (
@@ -76,7 +83,11 @@ export const getClientBillingCycleAnchor = withAuth(async (
         : null
     });
 
-    return { billingCycle, anchor: normalized } satisfies ClientBillingCycleAnchorConfig;
+    return {
+      billingCycle,
+      anchor: normalized,
+      cadenceContext: CLIENT_CADENCE_SCHEDULE_CONTEXT
+    } satisfies ClientBillingCycleAnchorConfig;
   });
 
   return result;
@@ -127,43 +138,12 @@ export const updateClientBillingCycleAnchor = withAuth(async (
         updated_at: trx.fn.now()
       });
 
-    // Anchor changes should not retroactively affect already-invoiced periods.
-    // To make sure newly generated cycles reflect the updated anchor, deactivate any
-    // future, non-invoiced cycles at/after the cutover start.
-    const lastInvoiced = await trx('client_billing_cycles as cbc')
-      .join('invoices as i', function () {
-        this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id').andOn('i.tenant', '=', 'cbc.tenant');
-      })
-      .where('cbc.tenant', tenant)
-      .andWhere('cbc.client_id', input.clientId)
-      .orderBy('cbc.period_end_date', 'desc')
-      .first()
-      .select('cbc.period_end_date');
-
-    const cutoverStart: ISO8601String | null = lastInvoiced?.period_end_date
-      ? normalizeDbIsoUtcMidnight(lastInvoiced.period_end_date)
-      : null;
-
-    const nonInvoicedCycleQuery = trx('client_billing_cycles')
-      .where({ tenant, client_id: input.clientId, is_active: true })
-      .whereNotExists(function () {
-        this.select(1)
-          .from('invoices')
-          .whereRaw('invoices.tenant = client_billing_cycles.tenant')
-          .andWhereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id');
-      });
-
-    if (cutoverStart) {
-      await nonInvoicedCycleQuery.andWhere('period_start_date', '>=', cutoverStart).update({
-        is_active: false,
-        updated_at: trx.fn.now()
-      });
-    } else {
-      await nonInvoicedCycleQuery.update({
-        is_active: false,
-        updated_at: trx.fn.now()
-      });
-    }
+    await regenerateClientCadenceServicePeriodsForScheduleChange(trx, {
+      tenant,
+      clientId: input.clientId,
+      billingCycle,
+      anchor: normalized,
+    });
   });
 
   return { success: true };
@@ -174,13 +154,18 @@ export type BillingCyclePeriodPreview = {
   periodEndDate: ISO8601String;
 };
 
+export type BillingCyclePeriodPreviewResult = {
+  cadenceContext: ClientCadenceScheduleContext;
+  periods: BillingCyclePeriodPreview[];
+};
+
 export const previewBillingPeriodsForSchedule = withAuth(async (
   user,
   { tenant },
   billingCycle: BillingCycleType,
   anchor: BillingCycleAnchorSettingsInput,
   options: { count?: number; referenceDate?: ISO8601String } = {}
-): Promise<BillingCyclePeriodPreview[]> => {
+): Promise<BillingCyclePeriodPreviewResult> => {
   validateAnchorSettingsForCycle(billingCycle, anchor);
   const normalized = normalizeAnchorSettingsForCycle(billingCycle, anchor);
 
@@ -201,7 +186,10 @@ export const previewBillingPeriodsForSchedule = withAuth(async (
     periods.push({ periodStartDate: nextEnd, periodEndDate: nextNext });
   }
 
-  return periods;
+  return {
+    cadenceContext: CLIENT_CADENCE_SCHEDULE_CONTEXT,
+    periods
+  };
 });
 
 export const previewClientBillingPeriods = withAuth(async (
@@ -209,7 +197,7 @@ export const previewClientBillingPeriods = withAuth(async (
   { tenant },
   clientId: string,
   options: { count?: number; referenceDate?: ISO8601String } = {}
-): Promise<BillingCyclePeriodPreview[]> => {
+): Promise<BillingCyclePeriodPreviewResult> => {
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
@@ -265,41 +253,10 @@ export const previewClientBillingPeriods = withAuth(async (
     periods.push({ periodStartDate: nextEnd, periodEndDate: nextNext });
   }
 
-  return periods;
+  return {
+    cadenceContext: CLIENT_CADENCE_SCHEDULE_CONTEXT,
+    periods
+  };
 });
-
-async function ensureClientBillingSettingsRow(
-  trx: Knex.Transaction,
-  params: { tenant: string; clientId: string }
-): Promise<void> {
-  const existing = await trx('client_billing_settings')
-    .where({ tenant: params.tenant, client_id: params.clientId })
-    .first()
-    .select('client_id');
-  if (existing) return;
-
-  const defaults = await trx('default_billing_settings')
-    .where({ tenant: params.tenant })
-    .first()
-    .select(
-      'zero_dollar_invoice_handling',
-      'suppress_zero_dollar_invoices',
-      'credit_expiration_days',
-      'credit_expiration_notification_days',
-      'enable_credit_expiration'
-    );
-
-  await trx('client_billing_settings').insert({
-    tenant: params.tenant,
-    client_id: params.clientId,
-    zero_dollar_invoice_handling: defaults?.zero_dollar_invoice_handling ?? 'normal',
-    suppress_zero_dollar_invoices: defaults?.suppress_zero_dollar_invoices ?? false,
-    credit_expiration_days: defaults?.credit_expiration_days ?? 365,
-    credit_expiration_notification_days: defaults?.credit_expiration_notification_days ?? [30, 7, 1],
-    enable_credit_expiration: defaults?.enable_credit_expiration ?? true,
-    created_at: trx.fn.now(),
-    updated_at: trx.fn.now()
-  });
-}
 
 export { ensureClientBillingSettingsRow };

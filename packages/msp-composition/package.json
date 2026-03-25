@@ -26,6 +26,10 @@
       "import": "./src/tickets/*.tsx",
       "types": "./src/tickets/*.tsx"
     },
+    "./tickets/registerSlaIntegration": {
+      "import": "./src/tickets/registerSlaIntegration.ts",
+      "types": "./src/tickets/registerSlaIntegration.ts"
+    },
     "./projects": {
       "import": "./src/projects/index.ts",
       "types": "./src/projects/index.ts"
@@ -65,6 +69,18 @@
     "./documents/*": {
       "import": "./src/documents/*.tsx",
       "types": "./src/documents/*.tsx"
+    },
+    "./workflows": {
+      "import": "./src/workflows/index.ts",
+      "types": "./src/workflows/index.ts"
+    },
+    "./workflows/*": {
+      "import": "./src/workflows/*.tsx",
+      "types": "./src/workflows/*.tsx"
+    },
+    "./workflows/registerScheduleEntryIntegration": {
+      "import": "./src/workflows/registerScheduleEntryIntegration.ts",
+      "types": "./src/workflows/registerScheduleEntryIntegration.ts"
     }
   },
   "dependencies": {
@@ -78,6 +94,7 @@
     "@alga-psa/formatting": "*",
     "@alga-psa/projects": "*",
     "@alga-psa/scheduling": "*",
+    "@alga-psa/sla": "*",
     "@alga-psa/surveys": "*",
     "@alga-psa/tickets": "*",
     "@alga-psa/types": "*",

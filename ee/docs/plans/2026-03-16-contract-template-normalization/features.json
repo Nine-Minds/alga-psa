@@ -1,0 +1,212 @@
+[
+  {
+    "id": "F001",
+    "description": "Document the normalized target invariant where templates are authoring-only and instantiated contracts are the sole live billing source",
+    "implemented": false,
+    "prdRefs": ["Summary", "Goals"]
+  },
+  {
+    "id": "F002",
+    "description": "Inventory every runtime use of `template_contract_id`, `contracts.is_template`, and `contract_lines.is_template` and record the cutover scope in the plan scratchpad",
+    "implemented": false,
+    "prdRefs": ["Rollout / Migration", "Data / API / Integrations"]
+  },
+  {
+    "id": "F003",
+    "description": "Add a strict pre-cutover verification pass that proves canonical `contract_template*` records exist for every legacy template artifact still referenced by the system",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F004",
+    "description": "Define whether `client_contracts.template_contract_id` remains as provenance-only metadata or is fully removed in the normalized end state",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Open Questions"]
+  },
+  {
+    "id": "F005",
+    "description": "Remove billing-engine contract-line resolution fallback from `template_contract_id` to template-backed contract IDs",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F006",
+    "description": "Remove billing-engine discount resolution fallback that treats `template_contract_id` and `contract_id` as interchangeable live keys",
+    "implemented": false,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "Guarantee that template-to-contract instantiation clones all runtime-billing data needed so live billing never reads through templates after assignment",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F008",
+    "description": "Convert `shared/billingClients/templateClone.ts` semantics so template provenance is one-way copy metadata rather than an active runtime lookup dependency",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F009",
+    "description": "Split contract endpoints from template endpoints so contract reads never silently return template-backed resources",
+    "implemented": false,
+    "prdRefs": ["Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F010",
+    "description": "Remove template-to-contract DTO adapters that flatten templates into `IContract`-shaped responses in billing actions",
+    "implemented": false,
+    "prdRefs": ["Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F011",
+    "description": "Refactor contract detail/list loaders so template and contract lookups are explicit and never share a fallback-by-ID path",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes", "Requirements"]
+  },
+  {
+    "id": "F012",
+    "description": "Split template line repositories/actions from contract line repositories/actions at the server/package boundary",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F013",
+    "description": "Remove mixed-mode repository helpers that accept a single ID space for 'maybe template, maybe contract' line operations",
+    "implemented": false,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F014",
+    "description": "Refactor template update/delete flows so they only touch `contract_template*` tables and never mutate instantiated contract storage",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F015",
+    "description": "Audit and remove contract/template compatibility branches in billing dashboard loaders and detail-switcher UI flows",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F016",
+    "description": "Audit and remove compatibility branches in client contract actions/models that backfill or depend on `template_contract_id` as live runtime state",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F017",
+    "description": "Audit and remove compatibility branches in renewal flows that preserve hybrid template/contract runtime behavior",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F018",
+    "description": "Audit and remove compatibility branches in API services that treat templates as contract fallbacks or backfill template IDs from contract IDs",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F019",
+    "description": "Rewrite or retire `server/scripts/verify-template-migration.ts` so it validates the normalized model instead of duplicated legacy/separated storage",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations", "Rollout / Migration"]
+  },
+  {
+    "id": "F020",
+    "description": "Rewrite or retire `server/scripts/contract-template-decoupling.ts` so it no longer preserves hybrid template fallback behavior",
+    "implemented": false,
+    "prdRefs": ["Rollout / Migration", "Data / API / Integrations"]
+  },
+  {
+    "id": "F021",
+    "description": "Define and implement the cleanup migration sequence for removing obsolete legacy template columns and runtime assumptions",
+    "implemented": false,
+    "prdRefs": ["Rollout / Migration", "Requirements"]
+  },
+  {
+    "id": "F022",
+    "description": "Add a gated cleanup migration that removes live reliance on `contracts.is_template` after runtime and API cutover are validated",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F023",
+    "description": "Add a gated cleanup migration that removes live reliance on `contract_lines.is_template` after template-line separation is validated",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F024",
+    "description": "If selected by the final design, add a migration to remove or null out `client_contracts.template_contract_id` once it is provenance-only or obsolete",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Open Questions", "Rollout / Migration"]
+  },
+  {
+    "id": "F025",
+    "description": "Retire or quarantine legacy template rows in `contracts` once canonical template tables are proven complete and unused by runtime flows",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F026",
+    "description": "Retire or quarantine legacy template rows in `contract_lines` once canonical template line tables are proven complete and unused by runtime flows",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F027",
+    "description": "Document operator runbooks for preflight, cutover, rollback posture, and post-cutover validation in the plan scratchpad",
+    "implemented": false,
+    "prdRefs": ["Rollout / Migration", "Acceptance Criteria"]
+  },
+  {
+    "id": "F028",
+    "description": "Update billing architecture docs to describe the post-normalization split between template authoring and live contract runtime data",
+    "implemented": false,
+    "prdRefs": ["Summary", "Goals"]
+  },
+  {
+    "id": "F029",
+    "description": "Update types/interfaces to separate template DTOs from instantiated contract DTOs where shared contract-shaped compatibility currently exists",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F030",
+    "description": "Ensure downstream integrations and exports continue to operate from instantiated invoice/contract data only after template fallback removal",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations", "Acceptance Criteria"]
+  },
+  {
+    "id": "F031",
+    "description": "Add DB-backed validation gates proving no runtime code path requires legacy template rows before destructive cleanup lands",
+    "implemented": false,
+    "prdRefs": ["Non-functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F032",
+    "description": "Add DB-backed post-cutover validation proving templates are stored canonically while contracts remain fully billable without template-side fallback",
+    "implemented": false,
+    "prdRefs": ["Acceptance Criteria", "Rollout / Migration"]
+  },
+  {
+    "id": "F033",
+    "description": "Document template instantiation as the only supported transfer boundary from authoring tables into runtime contract data",
+    "implemented": false,
+    "prdRefs": ["Summary", "Requirements"]
+  },
+  {
+    "id": "F034",
+    "description": "Guarantee that editing a template after contract instantiation cannot alter live contract runtime behavior without an explicit future reapply workflow",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Acceptance Criteria"]
+  },
+  {
+    "id": "F035",
+    "description": "Guarantee that deleting a template after instantiation only affects authoring-side assets and provenance, never live runtime contract behavior",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Acceptance Criteria"]
+  }
+]

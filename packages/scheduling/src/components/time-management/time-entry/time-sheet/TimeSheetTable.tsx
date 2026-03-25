@@ -31,7 +31,7 @@ interface TimeSheetTableProps {
         defaultStartTime?: string;
         defaultEndTime?: string;
     }) => void;
-    onAddWorkItem: () => void;
+    onAddWorkItem: (date?: string) => void;
     onWorkItemClick: (workItem: IExtendedWorkItem) => void;
     onQuickAddTimeEntry?: (params: {
         workItem: IExtendedWorkItem;
@@ -253,7 +253,7 @@ export function TimeSheetTable({
                                 id="add-work-item-button"
                                 variant="dashed"
                                 size="sm"
-                                onClick={onAddWorkItem}
+                                onClick={() => onAddWorkItem()}
                                 disabled={!isEditable}
                             >
                                 <Plus className="h-4 w-4 mr-1.5" />
@@ -334,7 +334,7 @@ export function TimeSheetTable({
                                         <Button
                                             id="get-started-button"
                                             variant="link"
-                                            onClick={onAddWorkItem}
+                                            onClick={() => onAddWorkItem()}
                                         >
                                             Get Started
                                             <ArrowRight className="w-4 h-4 ml-1" />

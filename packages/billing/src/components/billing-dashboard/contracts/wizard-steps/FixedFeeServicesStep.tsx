@@ -14,6 +14,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 
 interface FixedFeeServicesStepProps {
   data: ContractWizardData;
@@ -99,6 +100,13 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
     updateData({ fixed_services: next });
   };
 
+  const recurringPreview = getRecurringAuthoringPreview({
+    cadenceOwner: data.cadence_owner,
+    billingTiming: data.billing_timing,
+    billingFrequency: data.fixed_billing_frequency ?? data.billing_frequency,
+    enableProration: data.enable_proration,
+  });
+
   return (
     <ReflectionContainer id="fixed-fee-services-step">
       <div className="space-y-6">
@@ -163,16 +171,16 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <SwitchWithLabel
-                label="Enable proration"
+                label="Adjust for Partial Periods"
                 checked={data.enable_proration}
                 onCheckedChange={(checked) => updateData({ enable_proration: checked })}
               />
-              <Tooltip content="Automatically adjust the recurring fee for partial billing periods based on the contract start and end dates.">
+              <Tooltip content="Adjust the recurring fee when contract dates cover only part of a service period.">
                 <HelpCircle className="h-4 w-4 text-[rgb(var(--color-text-300))] cursor-help" />
               </Tooltip>
             </div>
             <p className="text-xs text-[rgb(var(--color-text-400))]">
-              When enabled, the recurring fee is prorated if the contract starts or ends mid-cycle.
+              {recurringPreview.partialPeriodSummary}
             </p>
           </div>
         )}
@@ -198,7 +206,6 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                     value={service.service_id}
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
-                    billingMethods={['fixed']}
                     itemKinds={['service']}
                     placeholder="Select a service"
                   />
@@ -254,20 +261,33 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
           </div>
         )}
 
-        {data.fixed_services.length > 0 && data.fixed_base_rate && (
+        {data.fixed_services.length > 0 && (
           <Alert variant="info" className="mt-6">
             <AlertDescription>
-              <h4 className="text-sm font-semibold mb-2">Fixed Fee Summary</h4>
+              <h4 className="text-sm font-semibold mb-2">Recurring Preview Before Save</h4>
               <div className="text-sm space-y-1">
-                <p>
-                  <strong>Services:</strong> {data.fixed_services.length}
-                </p>
-                <p>
-                  <strong>Recurring Rate:</strong> {formatCurrency(data.fixed_base_rate)}
-                </p>
-                <p>
-                  <strong>Proration:</strong> {data.enable_proration ? 'Enabled' : 'Disabled'}
-                </p>
+                <p><strong>Services:</strong> {data.fixed_services.length}</p>
+                {data.fixed_base_rate ? (
+                  <p><strong>Recurring Rate:</strong> {formatCurrency(data.fixed_base_rate)}</p>
+                ) : null}
+                <p><strong>Cadence Owner:</strong> {recurringPreview.cadenceOwnerLabel}</p>
+                <p>{recurringPreview.cadenceOwnerSummary}</p>
+                <p><strong>Billing Timing:</strong> {recurringPreview.billingTimingLabel}</p>
+                <p>{recurringPreview.billingTimingSummary}</p>
+                <p>{recurringPreview.firstInvoiceSummary}</p>
+                <p>{recurringPreview.partialPeriodSummary}</p>
+                <div className="pt-2">
+                  <p><strong>{recurringPreview.materializedPeriodsHeading}:</strong></p>
+                  <p>{recurringPreview.materializedPeriodsSummary}</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {recurringPreview.materializedPeriods.map((period) => (
+                      <li key={`${period.servicePeriodLabel}:${period.invoiceWindowLabel}`}>
+                        <span><strong>Service:</strong> {period.servicePeriodLabel}</span>
+                        <span className="block"><strong>Invoice window:</strong> {period.invoiceWindowLabel}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </AlertDescription>
           </Alert>

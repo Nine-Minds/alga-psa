@@ -71,7 +71,7 @@ export default function ExtensionManagement() {
                         </span>
                         <Link
                           href="/msp/extensions/d773f8f7-c46d-4c9d-a79b-b55903dd5074/debug"
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-colors"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                           {t('extensions.links.debugConsole')}

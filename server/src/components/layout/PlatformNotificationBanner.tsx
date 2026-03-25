@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { X } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getActivePlatformNotifications,
   dismissPlatformNotification,
@@ -26,6 +27,7 @@ function toAlertVariant(variant: string): AlertVariant {
 }
 
 export function PlatformNotificationBanner() {
+  const { t } = useTranslation('msp/core');
   const [notifications, setNotifications] = useState<PlatformNotification[]>([]);
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export function PlatformNotificationBanner() {
               />
               <Link href={`/msp/platform-updates/${notification.notification_id}`} prefetch={false}>
                 <Button id={`platform-notif-learn-more-${notification.notification_id}`} size="sm" variant="outline" className="text-xs whitespace-nowrap">
-                  Learn More
+                  {t('banners.platformNotification.learnMore', { defaultValue: 'Learn More' })}
                 </Button>
               </Link>
               <Button
@@ -67,7 +69,9 @@ export function PlatformNotificationBanner() {
                 variant="icon"
                 size="icon"
                 onClick={() => handleDismiss(notification.notification_id)}
-                aria-label="Dismiss notification"
+                aria-label={t('banners.platformNotification.dismiss', {
+                  defaultValue: 'Dismiss notification',
+                })}
                 className="flex-shrink-0"
               >
                 <X className="h-4 w-4" />

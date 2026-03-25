@@ -7,17 +7,17 @@ const source = readFileSync(
 );
 
 describe('renewalsQueueActions strict-schema integration wiring', () => {
-  it('T249: listRenewalQueueRows executes against migrated schema and avoids missing-column query branches', () => {
+  it('RQ249: listRenewalQueueRows executes against migrated schema and avoids missing-column query branches', () => {
     expect(source).toContain('const REQUIRED_RENEWAL_SCHEMA_COLUMNS = {');
     expect(source).toContain('const assertRenewalSchemaReady = async (knex: any): Promise<void> => {');
     expect(source).toContain('await assertRenewalSchemaReady(knex);');
-    expect(source).toContain("throw new Error('Permission denied: Cannot read renewals queue');");
+    expect(source).toContain("return permissionError('Permission denied: Cannot read renewals queue');");
     expect(source).toContain('export const listRenewalQueueRows = withAuth(async (');
     expect(source).toContain(".where({ 'cc.tenant': tenant, 'cc.is_active': true })");
     expect(source).toContain("Run the latest server database migrations, then retry this renewals operation.");
   });
 
-  it('T250: snoozeRenewalQueueItem persists status/snoozed_until plus last_action audit metadata', () => {
+  it('RQ250: snoozeRenewalQueueItem persists status/snoozed_until plus last_action audit metadata', () => {
     expect(source).toContain('export const snoozeRenewalQueueItem = withAuth(async (');
     expect(source).toContain('await assertRenewalSchemaReady(knex);');
     expect(source).toContain("status: 'snoozed',");
@@ -30,10 +30,10 @@ describe('renewalsQueueActions strict-schema integration wiring', () => {
     expect(source).toContain("throw new Error('Snooze target date must be in the future');");
   });
 
-  it('T251: markRenewalQueueItemRenewing transitions pending->renewing and persists actor/timestamp metadata', () => {
+  it('RQ251: markRenewalQueueItemRenewing transitions pending->renewing and persists actor/timestamp metadata', () => {
     expect(source).toContain('export const markRenewalQueueItemRenewing = withAuth(async (');
     expect(source).toContain('await assertRenewalSchemaReady(knex);');
-    expect(source).toContain("if (previousStatus !== 'pending') {");
+    expect(source).toContain("if (previousStatus !== 'pending' && previousStatus !== 'non_renewing' && previousStatus !== 'snoozed') {");
     expect(source).toContain("status: 'renewing',");
     expect(source).toContain("}, 'mark_renewing'), actorUserId");
     expect(source).toContain('withActionTimestamp(');
@@ -42,7 +42,7 @@ describe('renewalsQueueActions strict-schema integration wiring', () => {
     expect(source).toContain("status: 'renewing',");
   });
 
-  it('T254: renewal schema readiness guard rejects access with actionable error when required columns are absent', () => {
+  it('RQ254: renewal schema readiness guard rejects access with actionable error when required columns are absent', () => {
     expect(source).toContain('const getMissingRenewalSchemaColumns = async (knex: any): Promise<string[]> => {');
     expect(source).toContain('const assertRenewalSchemaReady = async (knex: any): Promise<void> => {');
     expect(source).toContain('const missing = await getMissingRenewalSchemaColumns(knex);');
@@ -52,7 +52,7 @@ describe('renewalsQueueActions strict-schema integration wiring', () => {
     expect(source).toContain('Run the latest server database migrations, then retry this renewals operation.');
   });
 
-  it('T255: schema guard happy path is wired for operational renewals endpoints after migrations', () => {
+  it('RQ255: schema guard happy path is wired for operational renewals endpoints after migrations', () => {
     expect(source).toContain('export const listRenewalQueueRows = withAuth(async (');
     expect(source).toContain('export const markRenewalQueueItemRenewing = withAuth(async (');
     expect(source).toContain('export const markRenewalQueueItemNonRenewing = withAuth(async (');

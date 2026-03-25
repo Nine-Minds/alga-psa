@@ -14,6 +14,7 @@ import type { Knex } from 'knex';
 import type {
   IInvoice,
   IInvoiceCharge,
+  IInvoiceChargeRecurringDetailPeriod,
   IInvoiceTemplate,
   ICustomField,
   IConditionalRule,
@@ -21,6 +22,115 @@ import type {
   InvoiceViewModel,
 } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+
+type InvoiceChargeDetailPeriodRow = {
+  item_id: string;
+  service_period_start?: string | Date | null;
+  service_period_end?: string | Date | null;
+  billing_timing?: 'arrears' | 'advance' | null;
+};
+
+function normalizeRecurringDetailPeriodDate(
+  value: string | Date | null | undefined
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  return null;
+}
+
+function sortInvoiceChargesForDisplay(charges: IInvoiceCharge[]): IInvoiceCharge[] {
+  return charges
+    .map((charge, index) => ({ charge, index }))
+    .sort((left, right) => {
+      const leftStart = left.charge.service_period_start;
+      const rightStart = right.charge.service_period_start;
+      const leftEnd = left.charge.service_period_end;
+      const rightEnd = right.charge.service_period_end;
+      const leftHasPeriod = typeof leftStart === 'string' && leftStart.length > 0;
+      const rightHasPeriod = typeof rightStart === 'string' && rightStart.length > 0;
+
+      if (leftHasPeriod && rightHasPeriod) {
+        if (leftStart !== rightStart) {
+          return String(leftStart).localeCompare(String(rightStart));
+        }
+        if (leftEnd !== rightEnd) {
+          return String(leftEnd ?? '').localeCompare(String(rightEnd ?? ''));
+        }
+      } else if (leftHasPeriod !== rightHasPeriod) {
+        return leftHasPeriod ? -1 : 1;
+      }
+
+      return left.index - right.index;
+    })
+    .map(({ charge }) => charge);
+}
+
+function attachCanonicalRecurringDetailPeriods(
+  charges: IInvoiceCharge[],
+  detailRows: InvoiceChargeDetailPeriodRow[]
+): IInvoiceCharge[] {
+  const detailRowsByItemId = new Map<string, InvoiceChargeDetailPeriodRow[]>();
+
+  for (const detailRow of detailRows) {
+    const existing = detailRowsByItemId.get(detailRow.item_id) ?? [];
+    existing.push(detailRow);
+    detailRowsByItemId.set(detailRow.item_id, existing);
+  }
+
+  return charges.map((charge) => {
+    const chargeDetailRows = detailRowsByItemId.get(charge.item_id);
+    if (!chargeDetailRows || chargeDetailRows.length === 0) {
+      // Historical flat invoices stay parent-only when canonical detail rows do not exist.
+      return charge;
+    }
+
+    const recurringDetailPeriods: IInvoiceChargeRecurringDetailPeriod[] = chargeDetailRows
+      .map((detailRow) => ({
+        service_period_start: normalizeRecurringDetailPeriodDate(detailRow.service_period_start),
+        service_period_end: normalizeRecurringDetailPeriodDate(detailRow.service_period_end),
+        billing_timing: detailRow.billing_timing ?? null,
+      }))
+      .sort((left, right) => {
+        if (left.service_period_start !== right.service_period_start) {
+          return String(left.service_period_start ?? '').localeCompare(String(right.service_period_start ?? ''));
+        }
+        return String(left.service_period_end ?? '').localeCompare(String(right.service_period_end ?? ''));
+      });
+
+    const servicePeriodStarts = chargeDetailRows
+      .map((detailRow) => normalizeRecurringDetailPeriodDate(detailRow.service_period_start))
+      .filter((value): value is string => typeof value === 'string' && value.length > 0)
+      .sort();
+    const servicePeriodEnds = chargeDetailRows
+      .map((detailRow) => normalizeRecurringDetailPeriodDate(detailRow.service_period_end))
+      .filter((value): value is string => typeof value === 'string' && value.length > 0)
+      .sort();
+    const billingTimings = Array.from(
+      new Set(
+        chargeDetailRows
+          .map((detailRow) => detailRow.billing_timing)
+          .filter((value): value is 'arrears' | 'advance' => value === 'arrears' || value === 'advance')
+      )
+    );
+    return {
+      ...charge,
+      service_period_start: servicePeriodStarts[0] ?? null,
+      service_period_end: servicePeriodEnds[servicePeriodEnds.length - 1] ?? null,
+      billing_timing: billingTimings.length === 1 ? billingTimings[0] : null,
+      recurring_detail_periods: recurringDetailPeriods,
+    };
+  });
+}
 
 /**
  * Invoice model with tenant-explicit methods.
@@ -469,8 +579,20 @@ const Invoice = {
         });
 
       const items = await query;
+      if (items.length === 0) {
+        return items;
+      }
 
-      return items;
+      const itemIds = items.map((item) => item.item_id).filter(Boolean);
+      const detailRows: InvoiceChargeDetailPeriodRow[] = itemIds.length === 0
+        ? []
+        : await knexOrTrx('invoice_charge_details')
+            .select('item_id', 'service_period_start', 'service_period_end', 'billing_timing')
+            .where({ tenant })
+            .whereIn('item_id', itemIds)
+            .orderBy('service_period_start', 'asc');
+
+      return sortInvoiceChargesForDisplay(attachCanonicalRecurringDetailPeriods(items, detailRows));
     } catch (error) {
       console.error(`Error getting invoice items for invoice ${invoiceId} in tenant ${tenant}:`, error);
       throw new Error(`Failed to get invoice items: ${error instanceof Error ? error.message : 'Unknown error'}`);

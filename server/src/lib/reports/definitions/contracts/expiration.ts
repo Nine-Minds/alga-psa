@@ -27,7 +27,9 @@ export const contractExpirationReport: ReportDefinition = {
         filters: [
           { field: 'tenant', operator: 'eq', value: '{{tenant}}' },
           { field: 'is_active', operator: 'eq', value: true },
+          { field: "raw:COALESCE(start_date, CURRENT_DATE)", operator: 'lte', value: '{{today}}' },
           { field: 'end_date', operator: 'is_not_null', value: null },
+          { field: 'end_date', operator: 'gte', value: '{{today}}' },
           { field: 'end_date', operator: 'lte', value: '{{in_90_days}}' }
         ]
       },
@@ -48,7 +50,9 @@ export const contractExpirationReport: ReportDefinition = {
         filters: [
           { field: 'tenant', operator: 'eq', value: '{{tenant}}' },
           { field: 'is_active', operator: 'eq', value: true },
+          { field: "raw:COALESCE(start_date, CURRENT_DATE)", operator: 'lte', value: '{{today}}' },
           { field: 'end_date', operator: 'is_not_null', value: null },
+          { field: 'end_date', operator: 'gte', value: '{{today}}' },
           { field: 'end_date', operator: 'lte', value: '{{in_30_days}}' }
         ]
       },
@@ -80,7 +84,9 @@ export const contractExpirationReport: ReportDefinition = {
         filters: [
           { field: 'client_contracts.tenant', operator: 'eq', value: '{{tenant}}' },
           { field: 'client_contracts.is_active', operator: 'eq', value: true },
+          { field: "raw:COALESCE(client_contracts.start_date, CURRENT_DATE)", operator: 'lte', value: '{{today}}' },
           { field: 'client_contracts.end_date', operator: 'is_not_null', value: null },
+          { field: 'client_contracts.end_date', operator: 'gte', value: '{{today}}' },
           { field: 'client_contracts.end_date', operator: 'lte', value: '{{in_90_days}}' }
         ]
       },
@@ -101,6 +107,7 @@ export const contractExpirationReport: ReportDefinition = {
         aggregation: 'count',
         filters: [
           { field: 'tenant', operator: 'eq', value: '{{tenant}}' },
+          { field: "raw:COALESCE(start_date, CURRENT_DATE)", operator: 'lte', value: '{{today}}' },
           { field: 'end_date', operator: 'is_not_null', value: null },
           { field: 'end_date', operator: 'lt', value: '{{today}}' }
         ]

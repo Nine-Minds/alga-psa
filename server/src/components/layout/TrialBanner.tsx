@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Clock, CheckCircle } from 'lucide-react';
 import { useTier } from '@/context/TierContext';
 import { TIER_LABELS } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**
  * Shows a trial countdown badge in the header when the tenant is on a trial.
@@ -17,6 +18,7 @@ import { TIER_LABELS } from '@alga-psa/types';
  * 2. Premium trial (30-day) — reverts to Pro unless user confirms
  */
 export function TrialBanner() {
+  const { t } = useTranslation('msp/core');
   const { isTrialing, trialDaysLeft, tier, isPaymentFailed, isPremiumTrial, premiumTrialDaysLeft, isPremiumTrialConfirmed } = useTier();
 
   // Don't show trial banner when payment has failed (PaymentFailedBanner takes priority)
@@ -32,13 +34,23 @@ export function TrialBanner() {
           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700"
         >
           <CheckCircle className="h-3 w-3" />
-          <span>Premium confirmed — starts next billing cycle</span>
+          <span>
+            {t('banners.trial.premiumConfirmed', {
+              defaultValue: 'Premium confirmed — starts next billing cycle',
+            })}
+          </span>
         </Link>
       );
     }
 
     const isUrgent = premiumTrialDaysLeft <= 3;
-    const daysLabel = premiumTrialDaysLeft === 1 ? '1 day left' : `${premiumTrialDaysLeft} days left`;
+    const daysLabel =
+      premiumTrialDaysLeft === 1
+        ? t('banners.trial.dayLeft', { defaultValue: '1 day left' })
+        : t('banners.trial.daysLeft', {
+            defaultValue: '{{count}} days left',
+            count: premiumTrialDaysLeft,
+          });
 
     return (
       <Link
@@ -50,7 +62,12 @@ export function TrialBanner() {
         }`}
       >
         <Clock className="h-3 w-3" />
-        <span>Premium Trial: {daysLabel} — confirm to keep</span>
+        <span>
+          {t('banners.trial.premiumTrial', {
+            defaultValue: 'Premium Trial: {{daysLabel}} — confirm to keep',
+            daysLabel,
+          })}
+        </span>
       </Link>
     );
   }
@@ -59,7 +76,13 @@ export function TrialBanner() {
   if (!isTrialing) return null;
 
   const isUrgent = trialDaysLeft <= 3;
-  const daysLabel = trialDaysLeft === 1 ? '1 day left' : `${trialDaysLeft} days left`;
+  const daysLabel =
+    trialDaysLeft === 1
+      ? t('banners.trial.dayLeft', { defaultValue: '1 day left' })
+      : t('banners.trial.daysLeft', {
+          defaultValue: '{{count}} days left',
+          count: trialDaysLeft,
+        });
 
   return (
     <Link
@@ -71,7 +94,13 @@ export function TrialBanner() {
       }`}
     >
       <Clock className="h-3 w-3" />
-      <span>{TIER_LABELS[tier]} Trial: {daysLabel}</span>
+      <span>
+        {t('banners.trial.stripeTrial', {
+          defaultValue: '{{tier}} Trial: {{daysLabel}}',
+          tier: TIER_LABELS[tier],
+          daysLabel,
+        })}
+      </span>
     </Link>
   );
 }

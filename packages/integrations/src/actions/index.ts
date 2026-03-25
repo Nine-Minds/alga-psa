@@ -74,6 +74,7 @@ export {
 } from './email-actions/inboundTicketDefaultsActions';
 export {
   getTicketFieldOptions,
+  getAvailableStatuses,
   getCategoriesByBoard
 } from './email-actions/ticketFieldOptionsActions';
 export {

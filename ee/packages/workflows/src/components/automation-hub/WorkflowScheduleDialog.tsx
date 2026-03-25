@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -16,6 +17,8 @@ import {
 } from '@alga-psa/ui/components/Dialog';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { TimePicker } from '@alga-psa/ui/components/TimePicker';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import {
   createWorkflowScheduleAction as createWorkflowScheduleActionDefault,
   getWorkflowScheduleAction as getWorkflowScheduleActionDefault,
@@ -213,19 +216,11 @@ const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSch
   return errors;
 };
 
-const toDatetimeLocalValue = (iso: string | null | undefined): string => {
-  if (!iso) return '';
+const parseDate = (iso: string | null | undefined): Date | undefined => {
+  if (!iso) return undefined;
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
-
-const toIsoString = (value: string): string | undefined => {
-  if (!value) return undefined;
-  const date = new Date(value);
   if (Number.isNaN(date.getTime())) return undefined;
-  return date.toISOString();
+  return date;
 };
 
 const buildWorkflowEligibilityMessage = (
@@ -265,7 +260,7 @@ export default function WorkflowScheduleDialog({
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(initialWorkflowId ?? '');
   const [scheduleName, setScheduleName] = useState('');
   const [triggerType, setTriggerType] = useState<'schedule' | 'recurring'>('schedule');
-  const [runAt, setRunAt] = useState('');
+  const [runAt, setRunAt] = useState<Date | undefined>(undefined);
   const [cron, setCron] = useState('');
   const [recurringMode, setRecurringMode] = useState<RecurringEditorMode>('builder');
   const [recurringBuilder, setRecurringBuilder] = useState<RecurringBuilderState>(DEFAULT_RECURRING_BUILDER_STATE);
@@ -345,7 +340,7 @@ export default function WorkflowScheduleDialog({
           setSelectedWorkflowId(schedule.workflow_id);
           setScheduleName(schedule.name ?? '');
           setTriggerType(schedule.trigger_type);
-          setRunAt(toDatetimeLocalValue(schedule.run_at));
+          setRunAt(parseDate(schedule.run_at));
           setCron(schedule.cron ?? '');
           if (schedule.trigger_type === 'recurring') {
             const parsedRecurringBuilder = parseRecurringBuilderFromCron(schedule.cron ?? '');
@@ -382,7 +377,7 @@ export default function WorkflowScheduleDialog({
     setSelectedWorkflowId(initialWorkflowId ?? '');
     setScheduleName('');
     setTriggerType('schedule');
-    setRunAt('');
+    setRunAt(undefined);
     setCron('');
     setRecurringMode('builder');
     setRecurringBuilder(DEFAULT_RECURRING_BUILDER_STATE);
@@ -455,23 +450,23 @@ export default function WorkflowScheduleDialog({
       return {
         value: workflow.workflow_id,
         label: (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-900">{workflow.name}</span>
+          <div className="flex items-center gap-2 overflow-hidden flex-nowrap">
+            <span className="font-medium text-gray-900 truncate">{workflow.name}</span>
+            <span className="flex-shrink-0">
               {workflow.published_version ? (
                 <Badge variant="info" size="sm">v{workflow.published_version}</Badge>
               ) : (
                 <Badge variant="warning" size="sm">Unpublished</Badge>
               )}
-              {String(workflow.payload_schema_mode ?? 'pinned') !== 'pinned' && (
+            </span>
+            {String(workflow.payload_schema_mode ?? 'pinned') !== 'pinned' && (
+              <span className="flex-shrink-0">
                 <Badge variant="warning" size="sm">Inferred schema</Badge>
-              )}
-            </div>
-            {eligibilityMessage && (
-              <div className="text-[11px] text-gray-500">{eligibilityMessage}</div>
+              </span>
             )}
           </div>
         ),
+        dropdownHint: eligibilityMessage || undefined,
         textValue: workflow.name
       };
     }),
@@ -790,13 +785,13 @@ export default function WorkflowScheduleDialog({
         ? await scheduleActions.updateWorkflowScheduleAction({
           scheduleId,
           ...common,
-          runAt: triggerType === 'schedule' ? toIsoString(runAt) : undefined,
+          runAt: triggerType === 'schedule' ? runAt?.toISOString() : undefined,
           cron: triggerType === 'recurring' ? effectiveRecurringCron : undefined,
           timezone: triggerType === 'recurring' ? timezone.trim() : undefined
         })
         : await scheduleActions.createWorkflowScheduleAction({
           ...common,
-          runAt: triggerType === 'schedule' ? toIsoString(runAt) : undefined,
+          runAt: triggerType === 'schedule' ? runAt?.toISOString() : undefined,
           cron: triggerType === 'recurring' ? effectiveRecurringCron : undefined,
           timezone: triggerType === 'recurring' ? timezone.trim() : undefined
         });
@@ -889,13 +884,15 @@ export default function WorkflowScheduleDialog({
             </div>
 
             {triggerType === 'schedule' ? (
-              <Input
-                id="schedule-dialog-run-at"
-                label="Run at"
-                type="datetime-local"
-                value={runAt}
-                onChange={(event) => setRunAt(event.target.value)}
-              />
+              <div>
+                <label className="text-sm font-medium text-[rgb(var(--color-text-700))]">Run at</label>
+                <DateTimePicker
+                  id="schedule-dialog-run-at"
+                  label="Run at"
+                  value={runAt}
+                  onChange={setRunAt}
+                />
+              </div>
             ) : (
               <div className="space-y-4 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-50))] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -960,19 +957,20 @@ export default function WorkflowScheduleDialog({
                           { value: 'monthly', label: 'Monthly' },
                         ]}
                       />
-                      <Input
-                        id="schedule-dialog-recurring-time"
-                        label="Time"
-                        type="time"
-                        value={recurringBuilder.time}
-                        onChange={(event) => {
-                          const nextTime = event.target.value;
-                          setRecurringBuilder((current) => ({
-                            ...current,
-                            time: nextTime,
-                          }));
-                        }}
-                      />
+                      <div>
+                        <label className="text-sm font-medium text-[rgb(var(--color-text-700))]">Time</label>
+                        <TimePicker
+                          id="schedule-dialog-recurring-time"
+                          label="Time"
+                          value={recurringBuilder.time}
+                          onChange={(nextTime) => {
+                            setRecurringBuilder((current) => ({
+                              ...current,
+                              time: nextTime,
+                            }));
+                          }}
+                        />
+                      </div>
                       {recurringBuilder.frequency === 'monthly' ? (
                         <Input
                           id="schedule-dialog-recurring-day-of-month"
@@ -1044,9 +1042,11 @@ export default function WorkflowScheduleDialog({
                 ) : (
                   <div className="space-y-3">
                     {unsupportedRecurringCron && (
-                      <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning-foreground">
-                        This schedule uses a custom cron expression. Keep editing it here, or switch back to the builder to replace it with a common pattern.
-                      </div>
+                      <Alert variant="warning">
+                        <AlertDescription>
+                          This schedule uses a custom cron expression. Keep editing it here, or switch back to the builder to replace it with a common pattern.
+                        </AlertDescription>
+                      </Alert>
                     )}
                     <Input
                       id="schedule-dialog-cron"
@@ -1068,12 +1068,9 @@ export default function WorkflowScheduleDialog({
             )}
 
             {workflowEligibilityMessage && selectedWorkflowId && (
-              <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning-foreground">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{workflowEligibilityMessage}</span>
-                </div>
-              </div>
+              <Alert variant="warning">
+                <AlertDescription>{workflowEligibilityMessage}</AlertDescription>
+              </Alert>
             )}
 
             <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-50))] p-4">
@@ -1140,31 +1137,37 @@ export default function WorkflowScheduleDialog({
               )}
 
               {schemaErrors.length > 0 && (
-                <div className="mt-3 rounded border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-                  <div className="font-semibold">Payload validation errors</div>
-                  {schemaErrors.slice(0, 6).map((error, index) => (
-                    <div key={`${error.path}-${index}`}>{error.path || 'payload'}: {error.message}</div>
-                  ))}
-                  {schemaErrors.length > 6 && (
-                    <div>+{schemaErrors.length - 6} more…</div>
-                  )}
-                </div>
+                <Alert variant="destructive" className="mt-3">
+                  <AlertTitle>Payload validation errors</AlertTitle>
+                  <AlertDescription>
+                    <div className="space-y-1 text-xs">
+                      {schemaErrors.slice(0, 6).map((error, index) => (
+                        <div key={`${error.path}-${index}`}>{error.path || 'payload'}: {error.message}</div>
+                      ))}
+                      {schemaErrors.length > 6 && (
+                        <div>+{schemaErrors.length - 6} more…</div>
+                      )}
+                    </div>
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
 
             {submitError && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                <div className="font-medium">{submitError}</div>
+              <Alert variant="destructive">
+                <AlertTitle>{submitError}</AlertTitle>
                 {serverIssues.length > 0 && (
-                  <div className="mt-2 space-y-1 text-xs">
-                    {serverIssues.map((issue, index) => (
-                      <div key={`${issue.path ?? 'payload'}-${index}`}>
-                        {(issue.path ?? 'payload')}: {issue.message ?? 'Invalid value'}
-                      </div>
-                    ))}
-                  </div>
+                  <AlertDescription>
+                    <div className="space-y-1 text-xs">
+                      {serverIssues.map((issue, index) => (
+                        <div key={`${issue.path ?? 'payload'}-${index}`}>
+                          {(issue.path ?? 'payload')}: {issue.message ?? 'Invalid value'}
+                        </div>
+                      ))}
+                    </div>
+                  </AlertDescription>
                 )}
-              </div>
+              </Alert>
             )}
           </div>
         )}

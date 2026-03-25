@@ -20,6 +20,12 @@ describe('phase status copy/remove action contracts', () => {
     expect(source).toContain('custom_name: mapping.custom_name,');
     expect(source).toContain('display_order: mapping.display_order,');
     expect(source).toContain('is_visible: mapping.is_visible');
+    // Task reassignment: existing phase tasks are moved from default to new phase mappings
+    expect(source).toContain("const updatesByReplacement = new Map<string, string[]>();");
+    expect(source).toContain("(m) => m.status_id === defaultMapping.status_id");
+    expect(source).toContain(".where({ tenant, phase_id: phaseId })");
+    expect(source).toContain(".whereIn('project_status_mapping_id', oldIds)");
+    expect(source).toContain("{ project_status_mapping_id: newId }");
   });
 
   it('T022/T023/T024: removePhaseStatuses remaps phase tasks to project defaults before deleting phase mappings', () => {
@@ -34,9 +40,8 @@ describe('phase status copy/remove action contracts', () => {
       'const replacementMapping = resolveReplacementStatusMapping(phaseMapping, defaultMappings);'
     );
     expect(source).toContain("await trx('project_tasks')");
-    expect(source).toContain('phase_id: phaseId,');
-    expect(source).toContain('project_status_mapping_id: phaseMapping.project_status_mapping_id');
-    expect(source).toContain('project_status_mapping_id: replacementMapping.project_status_mapping_id');
+    expect(source).toContain('replacementMapping.project_status_mapping_id');
+    expect(source).toContain('phaseMapping.project_status_mapping_id');
     expect(source).toContain(".where({ tenant, phase_id: phaseId })");
     expect(source).toContain('.del();');
   });

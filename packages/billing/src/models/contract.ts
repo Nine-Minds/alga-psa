@@ -13,10 +13,32 @@ import type { Knex } from 'knex';
 import type { IContract, IContractWithClient, IContractLine } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  hasActiveContractForClient as hasActiveContractForClientShared,
-  getClientIdsWithActiveContracts as getClientIdsWithActiveContractsShared,
+  deriveClientContractStatus,
   checkAndReactivateExpiredContract as checkAndReactivateExpiredContractShared,
 } from '@alga-psa/shared/billingClients';
+
+const normalizeOwnerClientId = (value: unknown): string | null => (
+  typeof value === 'string' && value.trim().length > 0 ? value.trim() : null
+);
+
+const assertNonTemplateContractOwner = (
+  contract: Partial<IContract>,
+  operation: 'create' | 'update'
+): void => {
+  const isTemplate = contract.is_template === true;
+  if (isTemplate) {
+    return;
+  }
+
+  if (contract.owner_client_id === undefined && operation === 'update') {
+    return;
+  }
+
+  const ownerClientId = normalizeOwnerClientId(contract.owner_client_id);
+  if (!ownerClientId) {
+    throw new Error('Non-template contracts require an owning client');
+  }
+};
 
 /**
  * Contract model with tenant-explicit methods.
@@ -81,42 +103,6 @@ const Contract = {
   },
 
   /**
-   * Check if a client has an active contract (excluding a specific contract).
-   */
-  hasActiveContractForClient: async (
-    knexOrTrx: Knex | Knex.Transaction,
-    tenant: string,
-    clientId: string,
-    excludeContractId?: string
-  ): Promise<boolean> => {
-    if (!tenant) {
-      throw new Error('Tenant context is required for checking client active contracts');
-    }
-
-    try {
-      return await hasActiveContractForClientShared(knexOrTrx, tenant, clientId, excludeContractId);
-    } catch (error) {
-      console.error(`Error checking active contracts for client ${clientId}:`, error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get all client IDs that have active (non-template) contracts.
-   */
-  getClientIdsWithActiveContracts: async (
-    knexOrTrx: Knex | Knex.Transaction,
-    tenant: string,
-    excludeContractId?: string
-  ): Promise<string[]> => {
-    if (!tenant) {
-      throw new Error('Tenant context is required for fetching client IDs with active contracts');
-    }
-
-    return getClientIdsWithActiveContractsShared(knexOrTrx, tenant, excludeContractId);
-  },
-
-  /**
    * Delete a contract and all related data.
    */
   delete: async (
@@ -150,6 +136,11 @@ const Contract = {
         .pluck('contract_line_id');
 
       if (contractLineIds.length > 0) {
+        await knexOrTrx('recurring_service_periods')
+          .where({ tenant })
+          .whereIn('obligation_id', contractLineIds)
+          .delete();
+
         // Clear contract_line_id in time_entries before deleting contract_lines
         await knexOrTrx('time_entries')
           .where({ tenant })
@@ -277,22 +268,9 @@ const Contract = {
     }
 
     try {
-      const contractIds = await knexOrTrx('contracts')
-        .where({ tenant })
-        .select('contract_id');
-
-      for (const { contract_id } of contractIds) {
-        await Contract.checkAndUpdateExpiredStatus(knexOrTrx, tenant, contract_id);
-      }
-
-      // Now fetch with updated statuses
-      const rows = await knexOrTrx('contracts as co')
-        .leftJoin('client_contracts as cc', function () {
-          this.on('co.contract_id', '=', 'cc.contract_id').andOn(
-            'co.tenant',
-            '=',
-            'cc.tenant'
-          );
+      const rows = await knexOrTrx('client_contracts as cc')
+        .join('contracts as co', function () {
+          this.on('co.contract_id', '=', 'cc.contract_id').andOn('co.tenant', '=', 'cc.tenant');
         })
         .leftJoin('contract_templates as template', function () {
           this.on('cc.template_contract_id', '=', 'template.template_id').andOn(
@@ -304,23 +282,43 @@ const Contract = {
         .leftJoin('clients as c', function () {
           this.on('cc.client_id', '=', 'c.client_id').andOn('cc.tenant', '=', 'c.tenant');
         })
-        .where({ 'co.tenant': tenant })
+        .leftJoin('clients as owner', function () {
+          this.on('co.owner_client_id', '=', 'owner.client_id').andOn('co.tenant', '=', 'owner.tenant');
+        })
+        .where({ 'cc.tenant': tenant })
         .andWhere((builder) =>
           builder.whereNull('co.is_template').orWhere('co.is_template', false)
         )
+        .whereNotNull('co.owner_client_id')
         .select(
           'co.*',
+          'co.status as contract_header_status',
           'cc.client_contract_id',
+          'cc.is_active as assignment_is_active',
           'cc.template_contract_id',
           'c.client_id',
           'c.client_name',
+          'owner.client_name as owner_client_name',
           'cc.start_date',
           'cc.end_date',
           'template.template_name as template_contract_name'
         )
-        .orderBy('co.created_at', 'desc');
+        .orderBy('cc.created_at', 'desc');
 
-      return rows;
+      return rows.map((row: any) => {
+        const assignmentStatus = deriveClientContractStatus({
+          isActive: Boolean(row.assignment_is_active),
+          startDate: row.start_date,
+          endDate: row.end_date,
+        });
+
+        return {
+          ...row,
+          status: assignmentStatus,
+          assignment_status: assignmentStatus,
+          contract_header_status: row.contract_header_status ?? row.status,
+        };
+      });
     } catch (error) {
       console.error('Error fetching contracts with clients:', error);
       throw error;
@@ -340,9 +338,6 @@ const Contract = {
     }
 
     try {
-      // Check and update expired status before fetching
-      await Contract.checkAndUpdateExpiredStatus(knexOrTrx, tenant, contractId);
-
       const contract = await knexOrTrx('contracts')
         .where({ contract_id: contractId, tenant })
         .andWhere((builder) =>
@@ -369,9 +364,12 @@ const Contract = {
       throw new Error('Tenant context is required for creating contracts');
     }
 
+    assertNonTemplateContractOwner(contract, 'create');
+
     const timestamp = new Date().toISOString();
     const payload = {
       ...contract,
+      owner_client_id: normalizeOwnerClientId(contract.owner_client_id),
       contract_id: uuidv4(),
       tenant,
       created_at: timestamp,
@@ -401,8 +399,13 @@ const Contract = {
     }
 
     try {
+      assertNonTemplateContractOwner(updateData, 'update');
+
       const sanitized: Partial<IContract> = {
         ...updateData,
+        owner_client_id: updateData.owner_client_id === undefined
+          ? undefined
+          : normalizeOwnerClientId(updateData.owner_client_id),
         tenant: undefined,
         contract_id: undefined,
         created_at: undefined,

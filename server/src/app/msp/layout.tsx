@@ -5,6 +5,8 @@ import { getTenantSettings } from "@alga-psa/tenancy/actions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { featureFlags } from "@/lib/feature-flags/featureFlags";
 import { MspLayoutClient } from "./MspLayoutClient";
+import { registerSlaIntegration } from "@alga-psa/msp-composition/tickets/registerSlaIntegration";
+import { registerScheduleEntryIntegration } from "@alga-psa/msp-composition/workflows/registerScheduleEntryIntegration";
 import type { Metadata } from 'next';
 
 // This template overrides the root layout's template for all /msp/* pages.
@@ -16,6 +18,10 @@ export const metadata: Metadata = {
     default: 'Dashboard | Alga PSA',
   },
 };
+
+// Register SLA service integrations (server-side, avoids bundling nodemailer into client)
+registerSlaIntegration();
+registerScheduleEntryIntegration();
 
 export default async function MspLayout({
   children,

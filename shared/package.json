@@ -54,6 +54,8 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
     "google-auth-library": "^10.5.0",
+    "imapflow": "^1.0.174",
+    "mailparser": "^3.9.4",
     "googleapis": "^152.0.0",
     "jsonata": "^2.0.6",
     "knex": "^3.1.0",

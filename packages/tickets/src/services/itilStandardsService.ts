@@ -1,6 +1,12 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { configureItilSlaForBoard } from '@alga-psa/sla';
+
+// ITIL SLA configuration is injected by the composition layer to avoid tickets→sla cross-package violation
+let _configureItilSlaForBoardFn: ((trx: Knex.Transaction, tenant: string, boardId: string) => Promise<{ created: boolean }>) | null = null;
+
+export function registerItilSlaConfiguration(fn: (trx: Knex.Transaction, tenant: string, boardId: string) => Promise<{ created: boolean }>): void {
+  _configureItilSlaForBoardFn = fn;
+}
 
 /**
  * Service to manage copying ITIL standards to tenant-specific tables
@@ -192,9 +198,11 @@ export class ItilStandardsService {
 
       // Auto-create "ITIL Standard" SLA policy and assign to board
       // This creates industry-standard SLA targets for each ITIL priority level
-      const slaResult = await configureItilSlaForBoard(trx, tenant, boardId);
-      if (slaResult.created) {
-        console.log(`[ItilStandardsService] Auto-created ITIL Standard SLA policy for board ${boardId}`);
+      if (_configureItilSlaForBoardFn) {
+        const slaResult = await _configureItilSlaForBoardFn(trx, tenant, boardId);
+        if (slaResult.created) {
+          console.log(`[ItilStandardsService] Auto-created ITIL Standard SLA policy for board ${boardId}`);
+        }
       }
     }
 

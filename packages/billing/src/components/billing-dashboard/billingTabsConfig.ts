@@ -26,6 +26,7 @@ export type BillingTabValue =
   | 'invoicing'
   | 'invoice-templates'
   | 'billing-cycles'
+  | 'service-periods'
   | 'products'
   | 'service-catalog'
   | 'tax-rates'
@@ -79,6 +80,12 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     value: 'billing-cycles',
     label: 'Billing Cycles',
     href: '/msp/billing?tab=billing-cycles',
+    icon: Calendar
+  },
+  {
+    value: 'service-periods',
+    label: 'Service Periods',
+    href: '/msp/billing?tab=service-periods',
     icon: Calendar
   },
   {

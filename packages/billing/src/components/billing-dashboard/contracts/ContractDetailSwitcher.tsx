@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -26,18 +27,20 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
   currentUserId,
   renderClientDetails
 }) => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const contractId = searchParams?.get('contractId') ?? null;
   const clientContractId = searchParams?.get('clientContractId') ?? null;
 
   const [viewMode, setViewMode] = useState<ViewMode>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [resolvedContractId, setResolvedContractId] = useState<string | null>(contractId);
 
   useEffect(() => {
     let isMounted = true;
 
     const resolveContractType = async () => {
-      if (!contractId) {
+      if (!contractId && !clientContractId) {
         if (isMounted) {
           setViewMode('error');
           setError('Missing contract identifier');
@@ -56,10 +59,24 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
           if (!isMounted) {
             return;
           }
-          if (clientContract && clientContract.contract_id === contractId) {
+          if (clientContract) {
+            setResolvedContractId(clientContract.contract_id);
+            if (!contractId) {
+              const params = new URLSearchParams(searchParams?.toString() ?? '');
+              params.set('tab', 'client-contracts');
+              params.set('clientContractId', clientContractId);
+              params.set('contractId', clientContract.contract_id);
+              router.replace(`/msp/billing?${params.toString()}`, { scroll: false });
+            }
             setViewMode('client');
             return;
           }
+        }
+
+        if (!contractId) {
+          setViewMode('error');
+          setError('Contract not found');
+          return;
         }
 
         const contract = await getContractById(contractId);
@@ -74,6 +91,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
           return;
         }
 
+        setResolvedContractId(contractId);
         setViewMode(contract.is_template ? 'template' : 'client');
       } catch (contractError) {
         console.error('Failed to determine contract type', contractError);
@@ -89,9 +107,9 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [contractId, clientContractId]);
+  }, [clientContractId, contractId, router, searchParams]);
 
-  if (!contractId) {
+  if (!contractId && !clientContractId) {
     return (
       <Alert variant="destructive">
         <AlertDescription>No contract selected.</AlertDescription>
@@ -126,6 +144,8 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
     <ContractTemplateDetail />
   ) : (
     <ContractDetail
+      resolvedContractId={resolvedContractId}
+      resolvedClientContractId={clientContractId}
       serverDocuments={contractDocuments}
       serverUserId={currentUserId}
       renderClientDetails={renderClientDetails}

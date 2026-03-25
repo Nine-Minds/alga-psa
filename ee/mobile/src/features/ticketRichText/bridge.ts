@@ -26,6 +26,7 @@ export type TicketMobileEditorBridgeClientOptions = {
   onContentChange?: (payload: { html: string; json: unknown }) => void;
   onContentHeight?: (payload: { height: number }) => void;
   onError?: (payload: { code: string; message: string; requestId?: string }) => void;
+  onImageRequest?: (payload: { src: string }) => void;
 };
 
 function decodeMessage(raw: unknown): unknown {
@@ -61,6 +62,7 @@ export function parseTicketMobileEditorWebToNativeMessage(
     case "content-height":
     case "response":
     case "error":
+    case "image-request":
       return decoded as TicketMobileEditorWebToNativeMessage;
     default:
       throw new Error(`Unknown editor bridge message type: ${decoded.type}`);
@@ -90,6 +92,8 @@ export class TicketMobileEditorBridgeClient {
 
   private readonly onError?: TicketMobileEditorBridgeClientOptions["onError"];
 
+  private readonly onImageRequest?: TicketMobileEditorBridgeClientOptions["onImageRequest"];
+
   constructor(options: TicketMobileEditorBridgeClientOptions) {
     this.postMessage = options.postMessage;
     this.requestTimeoutMs = options.requestTimeoutMs ?? 1500;
@@ -100,12 +104,20 @@ export class TicketMobileEditorBridgeClient {
     this.onContentChange = options.onContentChange;
     this.onContentHeight = options.onContentHeight;
     this.onError = options.onError;
+    this.onImageRequest = options.onImageRequest;
   }
 
   initialize(payload: TicketMobileEditorInitPayload): void {
     this.post({
       type: "init",
       payload,
+    });
+  }
+
+  sendImageData(src: string, dataUri: string): void {
+    this.post({
+      type: "image-data",
+      payload: { src, dataUri },
     });
   }
 
@@ -155,6 +167,9 @@ export class TicketMobileEditorBridgeClient {
       case "error":
         this.rejectPendingRequest(message.payload.requestId, message.payload.message);
         this.onError?.(message.payload);
+        break;
+      case "image-request":
+        this.onImageRequest?.(message.payload);
         break;
     }
 

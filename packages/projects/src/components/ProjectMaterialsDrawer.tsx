@@ -176,11 +176,15 @@ export default function ProjectMaterialsDrawer({
 
   const handleDeleteMaterial = async (materialId: string) => {
     setDeletingId(materialId);
+    // Optimistically remove from UI
+    const previousMaterials = materials;
+    setMaterials(prev => prev.filter(m => m.project_material_id !== materialId));
     try {
       await deleteProjectMaterial(materialId);
       toast.success('Material removed');
-      await loadMaterials();
     } catch (error) {
+      // Revert on failure
+      setMaterials(previousMaterials);
       handleError(error, 'Failed to remove material');
     } finally {
       setDeletingId(null);

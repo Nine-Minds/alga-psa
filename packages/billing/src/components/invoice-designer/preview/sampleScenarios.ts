@@ -50,6 +50,16 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
           quantity: 15,
           unitPrice: 4200,
           total: 63000,
+          servicePeriodStart: '2026-01-01',
+          servicePeriodEnd: '2026-02-01',
+          billingTiming: 'arrears',
+          recurringDetailPeriods: [
+            {
+              servicePeriodStart: '2026-01-01',
+              servicePeriodEnd: '2026-02-01',
+              billingTiming: 'arrears',
+            },
+          ],
         },
         {
           id: 'svc-patching',
@@ -57,6 +67,21 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
           quantity: 15,
           unitPrice: 1600,
           total: 24000,
+          servicePeriodStart: '2026-01-01',
+          servicePeriodEnd: '2026-03-01',
+          billingTiming: 'arrears',
+          recurringDetailPeriods: [
+            {
+              servicePeriodStart: '2026-01-01',
+              servicePeriodEnd: '2026-02-01',
+              billingTiming: 'arrears',
+            },
+            {
+              servicePeriodStart: '2026-02-01',
+              servicePeriodEnd: '2026-03-01',
+              billingTiming: 'arrears',
+            },
+          ],
         },
       ],
       subtotal: 87000,
@@ -85,6 +110,16 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
           quantity: 1,
           unitPrice: 145000,
           total: 145000,
+          servicePeriodStart: '2026-02-01',
+          servicePeriodEnd: '2026-03-01',
+          billingTiming: 'advance',
+          recurringDetailPeriods: [
+            {
+              servicePeriodStart: '2026-02-01',
+              servicePeriodEnd: '2026-03-01',
+              billingTiming: 'advance',
+            },
+          ],
         },
         {
           id: 'svc-onsite',

@@ -254,12 +254,21 @@ async function resolveTemplateCustomRate(
   templateContractId: string | null,
   templateContractLineId: string
 ): Promise<number | null> {
-  if (!templateContractId) return null;
+  if (!templateContractId) {
+    return null;
+  }
 
-  const row = await trx('contract_template_line_mappings')
-    .where({ tenant, template_id: templateContractId, template_line_id: templateContractLineId })
+  type CustomRateRow = { custom_rate: number | string | null };
+
+  const templateLine = await trx<CustomRateRow>('contract_template_lines')
+    .where('tenant', tenant)
+    .where('template_id', templateContractId)
+    .where('template_line_id', templateContractLineId)
     .first('custom_rate');
 
-  return normalizeNumeric(row?.custom_rate);
-}
+  if (templateLine && templateLine.custom_rate != null) {
+    return normalizeNumeric(templateLine.custom_rate);
+  }
 
+  return null;
+}

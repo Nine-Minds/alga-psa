@@ -1,0 +1,152 @@
+{
+  "page": {
+    "title": "Techniker-Disposition",
+    "filteredWorkItems": "Gefilterte Arbeitsauftr\u00e4ge anzeigen"
+  },
+  "workItems": {
+    "title": "Arbeitsauftr\u00e4ge",
+    "searchPlaceholder": "Arbeitsauftr\u00e4ge suchen...",
+    "filterPlaceholder": "Nach Status filtern...",
+    "status": {
+      "unscheduled": "Nicht geplant",
+      "scheduled": "Geplant"
+    },
+    "pagination": {
+      "previous": "Zur\u00fcck",
+      "next": "Weiter",
+      "pageInfo": "Seite {{current}} von {{total}}",
+      "showing": "Zeige {{count}} von {{total}} Eintr\u00e4gen"
+    }
+  },
+  "schedule": {
+    "showInactive": "Inaktive Benutzer anzeigen",
+    "prev": "< Zur\u00fcck",
+    "next": "Weiter >",
+    "today": "Heute",
+    "viewDay": "Tag",
+    "viewWeek": "Woche",
+    "prevAria": "Vorheriger {{mode}}",
+    "nextAria": "N\u00e4chster {{mode}}",
+    "viewWeekTooltip": "Woche anzeigen",
+    "viewWeekAria": "Woche anzeigen f\u00fcr {{name}}",
+    "viewWeekAriaInactive": "Woche anzeigen f\u00fcr {{name}} (inaktiv)",
+    "compareAll": "Alle vergleichen",
+    "clearAll": "Alle l\u00f6schen",
+    "compare": "Vergleichen",
+    "stopComparing": "Vergleich beenden",
+    "compareAria": "{{name}} vergleichen",
+    "compareAriaInactive": "{{name}} (inaktiv) vergleichen"
+  },
+  "details": {
+    "appointmentRequest": {
+      "title": "Details der Terminanfrage"
+    },
+    "sections": {
+      "approvalInformation": "Genehmigungsinformationen"
+    },
+    "fields": {
+      "service": "Service",
+      "status": "Status",
+      "client": "Kunde",
+      "contact": "Kontakt",
+      "company": "Unternehmen",
+      "requester": "Anfragende Person",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "requestedDate": "Gew\u00fcnschtes Datum",
+      "requestedTime": "Gew\u00fcnschte Uhrzeit",
+      "duration": "Dauer",
+      "preferredTechnician": "Bevorzugter Techniker",
+      "description": "Beschreibung",
+      "declineReason": "Ablehnungsgrund",
+      "approvedBy": "Genehmigt von:",
+      "approvedAt": "Genehmigt am:"
+    },
+    "messages": {
+      "notAvailable": "N/V",
+      "unsupportedWorkItemType": "Nicht unterst\u00fctzter Arbeitsaufgabentyp"
+    },
+    "toasts": {
+      "noUsersAvailable": "Keine Benutzer im System verf\u00fcgbar",
+      "noUserSession": "Keine Benutzersitzung gefunden",
+      "failedToLoadTicketData": "Ticketdaten konnten nicht geladen werden",
+      "failedToLoadProjectTaskData": "Projekttaskdaten konnten nicht geladen werden",
+      "failedToLoadAdHocEntryData": "Daten des Ad-hoc-Eintrags konnten nicht geladen werden",
+      "failedToLoadInteractionData": "Interaktionsdaten konnten nicht geladen werden",
+      "failedToLoadAppointmentRequestData": "Daten der Terminanfrage konnten nicht geladen werden"
+    },
+    "errors": {
+      "loadUsers": "Benutzer konnten nicht geladen werden. Bitte versuchen Sie, die Seite zu aktualisieren.",
+      "loadingContent": "Fehler beim Laden des Inhalts",
+      "tryAgain": "Bitte versuchen Sie es erneut"
+    },
+    "units": {
+      "minutes": "Minuten"
+    }
+  },
+  "dashboard": {
+    "filters": {
+      "allOpen": "Alle offenen",
+      "allClosed": "Alle geschlossenen"
+    },
+    "messages": {
+      "accessDenied": "Zugriff verweigert: Sie haben keine Berechtigung, das Techniker-Dispatch-Dashboard anzuzeigen.",
+      "unknownError": "Ein unbekannter Fehler ist aufgetreten.",
+      "permissionDeniedSchedule": "Sie haben keine Berechtigung, f\u00fcr diesen Techniker zu planen.",
+      "couldNotLoadWorkItemDetails": "Arbeitsauftragsdetails konnten nicht geladen werden."
+    },
+    "errors": {
+      "searchWorkItems": "Arbeitsauftr\u00e4ge konnten nicht gesucht werden",
+      "loadStatusFilterOptions": "Statusfilteroptionen konnten nicht geladen werden.",
+      "refreshScheduleEntries": "Termineintr\u00e4ge konnten nicht aktualisiert werden",
+      "refreshData": "Daten konnten nicht aktualisiert werden",
+      "loadPermissions": "Berechtigungen konnten nicht geladen werden.",
+      "fetchScheduleEntries": "Termineintr\u00e4ge konnten nicht abgerufen werden",
+      "fetchData": "Daten konnten nicht abgerufen werden",
+      "updateSchedule": "Termin konnte nicht aktualisiert werden",
+      "createScheduleEntry": "Termineintrag konnte nicht erstellt werden",
+      "deleteScheduleEntry": "Termineintrag konnte nicht gel\u00f6scht werden",
+      "updateTask": "Aufgabe konnte nicht aktualisiert werden",
+      "updateScheduleEntry": "Termineintrag konnte nicht aktualisiert werden",
+      "saveScheduleEntry": "Termineintrag konnte nicht gespeichert werden",
+      "openWorkItemDetails": "Arbeitsauftragsdetails konnten nicht ge\u00f6ffnet werden."
+    },
+    "success": {
+      "taskUpdated": "Aufgabe erfolgreich aktualisiert",
+      "scheduleEntryUpdated": "Termineintrag erfolgreich aktualisiert",
+      "scheduleEntryCreated": "Termineintrag erfolgreich erstellt"
+    }
+  },
+  "events": {
+    "actions": {
+      "viewDetails": "Details anzeigen",
+      "delete": "L\u00f6schen",
+      "deleteScheduleEntry": "Termineintrag l\u00f6schen"
+    },
+    "fallbacks": {
+      "busy": "Besch\u00e4ftigt",
+      "unknown": "Unbekannt",
+      "unassigned": "Nicht zugewiesen",
+      "unknownAgent": "Unbekannter Mitarbeiter",
+      "untitled": "Ohne Titel",
+      "thisScheduleEntry": "diesen Termineintrag"
+    },
+    "tooltip": {
+      "privateEvent": "Besch\u00e4ftigt\nStart: {{start}}\nEnde: {{end}}",
+      "eventDetails": "{{title}}\nZugewiesen an: {{assigned}}\nStart: {{start}}\nEnde: {{end}}"
+    },
+    "errors": {
+      "validateDeletion": "L\u00f6schung konnte nicht gepr\u00fcft werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "badges": {
+    "needsDispatch": "Ben\u00f6tigt Einsatz",
+    "needsDispatchFor": "Ben\u00f6tigt Einsatz f\u00fcr: {{agents}}"
+  },
+  "time": {
+    "suffixes": {
+      "am": " AM",
+      "pm": " PM"
+    }
+  }
+}

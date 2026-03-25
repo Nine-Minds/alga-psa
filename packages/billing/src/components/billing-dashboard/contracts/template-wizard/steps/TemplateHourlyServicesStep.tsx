@@ -199,7 +199,6 @@ export function TemplateHourlyServicesStep({
                     value={service.service_id}
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
-                    billingMethods={['hourly']}
                     itemKinds={['service']}
                     placeholder="Select a service"
                   />

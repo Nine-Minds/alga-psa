@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.0.12-rc4",
+  "version": "1.0.17-rc4",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -45,6 +45,10 @@
     "./config/deletion": {
       "import": "./src/config/deletion/index.ts",
       "types": "./src/config/deletion/index.ts"
+    },
+    "./lib/scheduleEntryRegistry": {
+      "import": "./src/lib/scheduleEntryRegistry.ts",
+      "types": "./src/lib/scheduleEntryRegistry.ts"
     }
   },
   "scripts": {

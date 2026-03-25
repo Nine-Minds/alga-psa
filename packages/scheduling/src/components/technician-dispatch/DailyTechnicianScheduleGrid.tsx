@@ -7,6 +7,7 @@ import TimeHeader from './TimeHeader';
 import TechnicianRow from './TechnicianRow';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CalendarDays } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Discriminated union type for drop events
 interface WorkItemDrop {
@@ -64,6 +65,7 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
   onTechnicianClick,
   canEdit
 }) => {
+  const { t } = useTranslation('msp/dispatch');
   const scheduleGridRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -544,9 +546,17 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
                   variant="ghost"
                   size="sm"
                   onClick={() => onTechnicianClick(tech.user_id)}
-                  tooltipText="View Week"
+                  tooltipText={t('schedule.viewWeekTooltip', { defaultValue: 'View Week' })}
                   tooltip={true}
-                  aria-label={`View week for ${tech.first_name} ${tech.last_name}${tech.is_inactive ? ' (Inactive)' : ''}`}
+                  aria-label={tech.is_inactive
+                    ? t('schedule.viewWeekAriaInactive', {
+                        defaultValue: 'View week for {{name}} (Inactive)',
+                        name: `${tech.first_name} ${tech.last_name}`,
+                      })
+                    : t('schedule.viewWeekAria', {
+                        defaultValue: 'View week for {{name}}',
+                        name: `${tech.first_name} ${tech.last_name}`,
+                      })}
                 >
                   <CalendarDays className="h-4 w-4" />
                 </Button>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -27,6 +28,7 @@ export interface InboundTicketDefaultsManagerProps {
 }
 
 export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicketDefaultsManagerProps) {
+  const { t } = useTranslation('msp/admin');
   const [defaults, setDefaults] = useState<InboundTicketDefaults[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +70,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
       const data = await getInboundTicketDefaults();
       setDefaults(data.defaults || []);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || t('inboundDefaults.errors.load', { defaultValue: 'Failed to load ticket defaults' }));
     } finally {
       setLoading(false);
     }
@@ -100,20 +102,20 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
       setDefaults(prev => prev.filter(d => d.id !== id));
       onDefaultsChange?.();
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || t('inboundDefaults.errors.delete', { defaultValue: 'Failed to delete ticket defaults' }));
     } finally {
       setDeleting(null);
     }
   };
 
   const nameById = (list: { id: string; name: string }[], id?: string | null): string => {
-    if (!id) return 'Not set';
+    if (!id) return t('inboundDefaults.fallbacks.notSet', { defaultValue: 'Not set' });
     const found = list.find(x => String(x.id) === String(id));
     return found?.name || id;
   };
 
   const userNameById = (id?: string | null): string => {
-    if (!id) return 'System';
+    if (!id) return t('inboundDefaults.fallbacks.system', { defaultValue: 'System' });
     const u = fieldOptions.users.find(x => String(x.id) === String(id));
     return u ? (u.name || u.username || id) : id;
   };
@@ -129,7 +131,9 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
         <CardContent className="p-6 !pt-6">
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span className="ml-2">Loading ticket defaults...</span>
+            <span className="ml-2">
+              {t('inboundDefaults.loading', { defaultValue: 'Loading ticket defaults...' })}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -141,9 +145,13 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Inbound Ticket Defaults</h3>
+          <h3 className="text-lg font-semibold">
+            {t('inboundDefaults.header.title', { defaultValue: 'Inbound Ticket Defaults' })}
+          </h3>
           <p className="text-sm text-muted-foreground">
-            Configure default values for tickets created from email processing
+            {t('inboundDefaults.header.description', {
+              defaultValue: 'Configure default values for tickets created from email processing'
+            })}
           </p>
         </div>
         <Button 
@@ -152,7 +160,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
           disabled={showForm || !!editingDefaults}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Defaults
+          {t('inboundDefaults.actions.addDefaults', { defaultValue: 'Add Defaults' })}
         </Button>
       </div>
 
@@ -168,10 +176,14 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
         <Card>
           <CardHeader>
             <CardTitle>
-              {editingDefaults ? 'Edit Ticket Defaults' : 'Create Ticket Defaults'}
+              {editingDefaults
+                ? t('inboundDefaults.form.editTitle', { defaultValue: 'Edit Ticket Defaults' })
+                : t('inboundDefaults.form.createTitle', { defaultValue: 'Create Ticket Defaults' })}
             </CardTitle>
             <CardDescription>
-              Configure the default values that will be applied to tickets created from email processing
+              {t('inboundDefaults.form.description', {
+                defaultValue: 'Configure the default values that will be applied to tickets created from email processing'
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -189,9 +201,13 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
         <Card className="mt-4">
           <CardContent className="px-6 text-center !pt-12 !pb-12">
             <Settings className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-            <p className="text-muted-foreground">No ticket defaults configured</p>
+            <p className="text-muted-foreground">
+              {t('inboundDefaults.empty.title', { defaultValue: 'No ticket defaults configured' })}
+            </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Create your first configuration to define default values for email-generated tickets
+              {t('inboundDefaults.empty.description', {
+                defaultValue: 'Create your first configuration to define default values for email-generated tickets'
+              })}
             </p>
           </CardContent>
         </Card>
@@ -211,12 +227,12 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
                         {defaultConfig.is_active ? (
                           <>
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Active
+                            {t('inboundDefaults.badges.active', { defaultValue: 'Active' })}
                           </>
                         ) : (
                           <>
                             <XCircle className="h-3 w-3 mr-1" />
-                            Inactive
+                            {t('inboundDefaults.badges.inactive', { defaultValue: 'Inactive' })}
                           </>
                         )}
                       </Badge>
@@ -231,16 +247,28 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
                     {/* Defaults Preview */}
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="font-medium">Board:</span> {nameById(fieldOptions.boards, defaultConfig.board_id)}
+                        <span className="font-medium">
+                          {t('inboundDefaults.fields.board', { defaultValue: 'Board:' })}
+                        </span>{' '}
+                        {nameById(fieldOptions.boards, defaultConfig.board_id)}
                       </div>
                       <div>
-                        <span className="font-medium">Status:</span> {nameById(fieldOptions.statuses, defaultConfig.status_id)}
+                        <span className="font-medium">
+                          {t('inboundDefaults.fields.status', { defaultValue: 'Status:' })}
+                        </span>{' '}
+                        {nameById(fieldOptions.statuses, defaultConfig.status_id)}
                       </div>
                       <div>
-                        <span className="font-medium">Priority:</span> {nameById(fieldOptions.priorities, defaultConfig.priority_id)}
+                        <span className="font-medium">
+                          {t('inboundDefaults.fields.priority', { defaultValue: 'Priority:' })}
+                        </span>{' '}
+                        {nameById(fieldOptions.priorities, defaultConfig.priority_id)}
                       </div>
                       <div>
-                        <span className="font-medium">Entered By:</span> {userNameById(defaultConfig.entered_by)}
+                        <span className="font-medium">
+                          {t('inboundDefaults.fields.enteredBy', { defaultValue: 'Entered By:' })}
+                        </span>{' '}
+                        {userNameById(defaultConfig.entered_by)}
                       </div>
                     </div>
                   </div>
@@ -258,7 +286,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
                           onClick={() => handleEdit(defaultConfig)}
                           disabled={showForm || !!editingDefaults || deleting === defaultConfig.id}
                         >
-                          Edit
+                          {t('inboundDefaults.menu.edit', { defaultValue: 'Edit' })}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -267,7 +295,9 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
                           disabled={showForm || !!editingDefaults || deleting === defaultConfig.id}
                           className="text-red-600 focus:text-red-700"
                         >
-                          {deleting === defaultConfig.id ? 'Deleting…' : 'Delete'}
+                          {deleting === defaultConfig.id
+                            ? t('inboundDefaults.menu.deleting', { defaultValue: 'Deleting…' })
+                            : t('inboundDefaults.menu.delete', { defaultValue: 'Delete' })}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -282,13 +312,15 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
       {/* Help Information */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">How It Works</CardTitle>
+          <CardTitle className="text-base">
+            {t('inboundDefaults.help.title', { defaultValue: 'How It Works' })}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>• Each email provider can reference one ticket defaults configuration</p>
-          <p>• When an email creates a ticket, these defaults provide required field values</p>
-          <p>• System-generated tickets will show "System" as the creator when entered_by is null</p>
-          <p>• You can create different defaults for different email scenarios (support, billing, etc.)</p>
+          <p>{t('inboundDefaults.help.items.providerReference', { defaultValue: '• Each email provider can reference one ticket defaults configuration' })}</p>
+          <p>{t('inboundDefaults.help.items.requiredValues', { defaultValue: '• When an email creates a ticket, these defaults provide required field values' })}</p>
+          <p>{t('inboundDefaults.help.items.systemCreator', { defaultValue: '• System-generated tickets will show "System" as the creator when entered_by is null' })}</p>
+          <p>{t('inboundDefaults.help.items.scenarios', { defaultValue: '• You can create different defaults for different email scenarios (support, billing, etc.)' })}</p>
         </CardContent>
       </Card>
     </div>

@@ -57,7 +57,6 @@ export {
   checkContractHasInvoices,
   getContractLinesForContract,
   getContractSummary,
-  checkClientHasActiveContract,
   getContractAssignments,
   getContractOverview,
   // These are duplicated with contractLineMappingActions - export from contractActions

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
-import { StorageProviderFactory } from '@alga-psa/storage';
+import { StorageError, StorageProviderFactory } from '@alga-psa/storage';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 
@@ -94,6 +94,14 @@ export async function GET(
     });
 
   } catch (error) {
+    if (
+      error instanceof StorageError &&
+      error.operation === 'download' &&
+      (error.cause?.message === 'File not found' || error.message === 'File not found')
+    ) {
+      return new NextResponse('Thumbnail file not found in storage', { status: 404 });
+    }
+
     console.error(`Error serving thumbnail for document ${documentId}:`, error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }

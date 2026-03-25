@@ -1,23 +1,37 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { toPlainDate } from '@alga-psa/core';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Search, Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
-import type { IClientContractLineCycle, PreviewInvoiceResponse } from '@alga-psa/types';
-import { getPurchaseOrderOverageForBillingCycle, previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
-import { generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
+import { Search, AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown } from 'lucide-react';
+import type {
+  IRecurringDueSelectionInput,
+  IRecurringDueWorkInvoiceCandidate,
+  IRecurringDueWorkMaterializationGap,
+} from '@alga-psa/types';
+import {
+  getPurchaseOrderOverageForSelectionInput,
+  previewGroupedInvoicesForSelectionInputs,
+} from '@alga-psa/billing/actions/invoiceGeneration';
+import { generateGroupedInvoicesAsRecurringBillingRun, generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
-import { getInvoicedBillingCyclesPaginated, removeBillingCycle, hardDeleteBillingCycle } from '@alga-psa/billing/actions/billingCycleActions';
-import { getAvailableBillingPeriods, type BillingPeriodDateRange } from '@alga-psa/billing/actions/billingAndTax';
-import type { ISO8601String } from '@alga-psa/types';
+import {
+  getRecurringInvoiceHistoryPaginated,
+  reverseRecurringInvoice,
+  hardDeleteRecurringInvoice,
+  type RecurringInvoiceHistoryRow,
+} from '@alga-psa/billing/actions/billingCycleActions';
+import {
+  getAvailableRecurringDueWork,
+  type BillingPeriodDateRange,
+} from '@alga-psa/billing/actions/billingAndTax';
 import { Dialog, DialogContent, DialogFooter, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { formatCurrency } from '@alga-psa/core';
 // Added imports for DropdownMenu
@@ -38,15 +52,114 @@ interface AutomaticInvoicesProps {
   refreshTrigger?: number;
 }
 
-interface Period extends IClientContractLineCycle {
-  client_name: string;
-  can_generate: boolean;
-  billing_cycle_id?: string;
-  period_start_date: ISO8601String;
-  period_end_date: ISO8601String;
-  is_early?: boolean;
-  contract_name?: string; // Added for Phase 4
+type ReadyPeriod = IRecurringDueWorkInvoiceCandidate;
+
+type InvoicedPeriod = RecurringInvoiceHistoryRow;
+
+interface RecurringInvoiceParentGroup {
+  parentSummary: {
+    parentGroupKey: string;
+    parentSelectionKey: string;
+    candidateKey: string;
+    clientName: string | null;
+    windowLabel: string;
+    servicePeriodLabel: string;
+    childCount: number;
+    aggregateAmountCents: number | null;
+    isCombinable: boolean;
+    combinabilitySummary: string;
+    incompatibilityReasons: string[];
+    canGenerate: boolean;
+    blockedReason: string | null;
+  };
+  childExecutionRows: ReadyPeriod['members'];
+  candidate: ReadyPeriod;
 }
+
+type RecurringSelectionGroup = {
+  groupKey: string;
+  selectorInputs: IRecurringDueSelectionInput[];
+};
+
+const getParentGroupSummary = ({
+  isCombinable,
+  canGenerate,
+  incompatibilityReasons,
+  childCount,
+}: {
+  isCombinable: boolean;
+  canGenerate: boolean;
+  incompatibilityReasons: string[];
+  childCount: number;
+}): {
+  label: string;
+  className: string;
+} => {
+  if (isCombinable) {
+    return {
+      label: 'Can combine into 1 invoice',
+      className: 'border-border/70 text-foreground',
+    };
+  }
+
+  if (incompatibilityReasons.length > 0) {
+    return {
+      label: 'Must invoice separately',
+      className: 'border-warning/40 text-warning',
+    };
+  }
+
+  if (!canGenerate) {
+    return {
+      label: childCount > 1 ? 'Contains blocked items' : 'Not ready to invoice',
+      className: 'border-border/60 text-muted-foreground',
+    };
+  }
+
+  return {
+    label: 'Must invoice separately',
+    className: 'border-warning/40 text-warning',
+  };
+};
+
+const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): RecurringInvoiceParentGroup[] =>
+  candidates.map((candidate) => {
+    const memberAmounts = candidate.members
+      .map((member) => (member as { amountCents?: number | null }).amountCents)
+      .filter((amount): amount is number => typeof amount === 'number' && Number.isFinite(amount));
+    const aggregateAmountCents =
+      memberAmounts.length > 0 && memberAmounts.length === candidate.members.length
+        ? memberAmounts.reduce((sum, amount) => sum + amount, 0)
+        : null;
+    const incompatibilityReasons = resolveIncompatibilityReasons(candidate);
+    const isCombinable = candidate.canGenerate && incompatibilityReasons.length === 0;
+    const parentGroupSummary = getParentGroupSummary({
+      isCombinable,
+      canGenerate: candidate.canGenerate,
+      incompatibilityReasons,
+      childCount: candidate.memberCount,
+    });
+
+    return {
+      parentSummary: {
+      parentGroupKey: `parent-group:${candidate.clientId}:${candidate.windowStart}:${candidate.windowEnd}`,
+      parentSelectionKey: `parent-selection:${candidate.candidateKey}`,
+      candidateKey: candidate.candidateKey,
+      clientName: candidate.clientName ?? null,
+      windowLabel: candidate.windowLabel,
+      servicePeriodLabel: candidate.servicePeriodLabel,
+      childCount: candidate.memberCount,
+      aggregateAmountCents,
+      isCombinable,
+      combinabilitySummary: parentGroupSummary.label,
+      incompatibilityReasons,
+      canGenerate: candidate.canGenerate,
+      blockedReason: candidate.blockedReason ?? null,
+    },
+    childExecutionRows: candidate.members,
+    candidate,
+    };
+  });
 
 // Convert DateRange to API format using YYYY-MM-DD to avoid timezone drift
 const buildDateRangeFilter = (range: DateRange): BillingPeriodDateRange | undefined => {
@@ -68,9 +181,150 @@ const buildDateRangeFilter = (range: DateRange): BillingPeriodDateRange | undefi
   return { from, to };
 };
 
+const getTodayDate = (): Date => {
+  const today = new Date();
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+};
+
+const buildServicePeriodRepairHref = (scheduleKey: string) =>
+  `/msp/billing?tab=service-periods&scheduleKey=${encodeURIComponent(scheduleKey)}`;
+
+const isInvoiceDraftStatus = (status: string | null | undefined): boolean =>
+  (status ?? '').toLowerCase() === 'draft';
+
+const formatCadenceSourceBadge = (
+  cadenceSource: string | null | undefined,
+): { label: string; variant: 'outline' | 'secondary' } => {
+  switch (cadenceSource) {
+    case 'contract_anniversary':
+      return { label: 'Contract anniversary', variant: 'outline' };
+    case 'client_schedule':
+      return { label: 'Client schedule', variant: 'outline' };
+    default:
+      return {
+        label: `Unknown cadence source (${cadenceSource?.trim() ? cadenceSource : 'missing'})`,
+        variant: 'secondary',
+      };
+  }
+};
+
+const summarizeCadenceSources = (cadenceSources: Array<string | null | undefined>): string => {
+  const labels = Array.from(
+    new Set(
+      cadenceSources.map((source) => formatCadenceSourceBadge(source).label),
+    ),
+  );
+
+  if (labels.length === 0) {
+    return 'Unknown cadence source';
+  }
+
+  return labels.join(' + ');
+};
+
+const parseNonContractSelectionFromScheduleKey = (scheduleKey: string | null | undefined): {
+  chargeType: 'time' | 'usage';
+  recordId: string;
+} | null => {
+  if (!scheduleKey) {
+    return null;
+  }
+
+  const match = scheduleKey.match(/:(?:unresolved|non_contract):(time|usage):([^:]+)$/);
+  if (!match?.[1] || !match?.[2]) {
+    return null;
+  }
+
+  return {
+    chargeType: match[1] as 'time' | 'usage',
+    recordId: match[2],
+  };
+};
+
+const getRecurringAssignmentContext = (member: IRecurringDueWorkInvoiceCandidate['members'][number]): string | null => {
+  if (member.attribution?.label?.trim()) {
+    return member.attribution.label.trim();
+  }
+
+  const nonContractSelection = parseNonContractSelectionFromScheduleKey(member.scheduleKey ?? null);
+  if (nonContractSelection) {
+    return nonContractSelection.chargeType === 'time'
+      ? 'Unresolved time entry'
+      : 'Unresolved usage record';
+  }
+
+  if (member.contractLineId?.trim()) {
+    return 'Assigned contract line';
+  }
+
+  const scheduleKey = member.scheduleKey?.trim();
+  if (scheduleKey) {
+    const contractLineMatch = scheduleKey.match(/contract_line:([^:]+)/);
+    if (contractLineMatch?.[1]) {
+      return 'Assigned contract line';
+    }
+    const clientContractLineMatch = scheduleKey.match(/client_contract_line:([^:]+)/);
+    if (clientContractLineMatch?.[1]) {
+      return 'Assigned contract line';
+    }
+  }
+
+  return member.executionIdentityKey?.trim()
+    ? 'Assigned work item'
+    : null;
+};
+
+const normalizeScopeValue = (value: string | null | undefined): string => {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : '__none__';
+};
+
+const resolveIncompatibilityReasons = (candidate: ReadyPeriod): string[] => {
+  const eligibleMembers = candidate.members.filter((member) => member.canGenerate);
+  const members = eligibleMembers.length > 0 ? eligibleMembers : candidate.members;
+  if (members.length <= 1) {
+    return [];
+  }
+
+  const reasons: string[] = [];
+  const uniqueWindows = new Set(
+    members.map((member) =>
+      `${normalizeScopeValue(member.invoiceWindowStart)}:${normalizeScopeValue(member.invoiceWindowEnd)}`,
+    ),
+  );
+  const uniqueClients = new Set(members.map((member) => normalizeScopeValue(member.clientId)));
+  const uniqueCurrencies = new Set(members.map((member) => normalizeScopeValue(member.currencyCode)));
+  const uniquePoScopes = new Set(members.map((member) => normalizeScopeValue(member.purchaseOrderScopeKey)));
+  const uniqueTaxSources = new Set(members.map((member) => normalizeScopeValue(member.taxSource)));
+  const uniqueExportShapes = new Set(members.map((member) => normalizeScopeValue(member.exportShapeKey)));
+
+  if (uniqueWindows.size > 1) {
+    reasons.push('Invoice window differs');
+  }
+  if (uniqueClients.size > 1) {
+    reasons.push('Client differs');
+  }
+  if (uniquePoScopes.size > 1) {
+    reasons.push('PO scope differs');
+  }
+  if (uniqueCurrencies.size > 1) {
+    reasons.push('Currency differs');
+  }
+  if (uniqueTaxSources.size > 1) {
+    reasons.push('Tax treatment differs');
+  }
+  if (uniqueExportShapes.size > 1) {
+    reasons.push('Export shape differs');
+  }
+
+  return reasons;
+};
+
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
+  const router = useRouter();
   // Drawer removed: client details quick view no longer used here
-  const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
+  const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
+  const [expandedParentGroups, setExpandedParentGroups] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
@@ -80,13 +334,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   // Date range filter state (pending = user selection, applied = active filter)
   const [pendingDateRange, setPendingDateRange] = useState<DateRange>(() => ({
     from: undefined,
-    to: undefined,
+    to: getTodayDate(),
   }));
   const [appliedDateRange, setAppliedDateRange] = useState<DateRange>(() => ({
     from: undefined,
-    to: undefined,
+    to: getTodayDate(),
   }));
-  const [invoicedPeriods, setInvoicedPeriods] = useState<Period[]>([]);
+  const [invoicedPeriods, setInvoicedPeriods] = useState<InvoicedPeriod[]>([]);
   const [invoicedCurrentPage, setInvoicedCurrentPage] = useState(1);
   const [invoicedPageSize, setInvoicedPageSize] = useState(10);
   const [totalInvoicedPeriods, setTotalInvoicedPeriods] = useState(0);
@@ -98,49 +352,62 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showReverseDialog, setShowReverseDialog] = useState(false);
   const [selectedCycleToReverse, setSelectedCycleToReverse] = useState<{
-    id: string;
-    client: string;
-    period: string;
-  } | null>(null);
-  // State to hold both preview data and the associated billing cycle ID
-  const [previewState, setPreviewState] = useState<{
-    data: WasmInvoiceViewModel | null; // Use the directly imported ViewModel type
+    invoiceId: string;
     billingCycleId: string | null;
-  }>({ data: null, billingCycleId: null });
+    hasBillingCycleBridge: boolean;
+    client: string;
+    servicePeriodLabel: string;
+    cadenceSource: string;
+  } | null>(null);
+  // State to hold preview data and the canonical selector metadata used to generate it.
+  const [previewState, setPreviewState] = useState<{
+    previews: Array<{ previewGroupKey: string; data: WasmInvoiceViewModel; selectorInputs: IRecurringDueSelectionInput[] }>;
+    invoiceCount: number;
+    billingCycleId: string | null;
+    executionIdentityKey: string | null;
+    selectorInput: IRecurringDueSelectionInput | null;
+  }>({ previews: [], invoiceCount: 0, billingCycleId: null, executionIdentityKey: null, selectorInput: null });
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isGeneratingFromPreview, setIsGeneratingFromPreview] = useState(false); // Loading state for generate from preview
   const [poOverageDialogState, setPoOverageDialogState] = useState<{
     isOpen: boolean;
-    billingCycleIds: string[];
-    overageByBillingCycleId: Record<string, { clientName: string; overageCents: number; poNumber: string | null }>;
+    executionIdentityKeys: string[];
+    overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null }>;
   }>({
     isOpen: false,
-    billingCycleIds: [],
-    overageByBillingCycleId: {},
+    executionIdentityKeys: [],
+    overageByExecutionIdentityKey: {},
   });
   const [poOverageSingleConfirm, setPoOverageSingleConfirm] = useState<{
     isOpen: boolean;
     billingCycleId: string | null;
+    executionIdentityKey: string | null;
+    selectorInput: IRecurringDueSelectionInput | null;
     overageCents: number;
     poNumber: string | null;
   }>({
     isOpen: false,
     billingCycleId: null,
+    executionIdentityKey: null,
+    selectorInput: null,
     overageCents: 0,
     poNumber: null,
   });
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
-  // State for delete confirmation
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCycleToDelete, setSelectedCycleToDelete] = useState<{
-    id: string;
+    invoiceId: string;
+    billingCycleId: string | null;
+    hasBillingCycleBridge: boolean;
     client: string;
-    period: string;
+    servicePeriodLabel: string;
+    cadenceSource: string;
   } | null>(null);
 
   // Server-side pagination state for "Ready to Invoice"
-  const [periods, setPeriods] = useState<Period[]>([]);
+  const [periods, setPeriods] = useState<ReadyPeriod[]>([]);
+  const [materializationGaps, setMaterializationGaps] = useState<IRecurringDueWorkMaterializationGap[]>([]);
   const [totalPeriods, setTotalPeriods] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
@@ -152,7 +419,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       setDebouncedClientFilter(clientFilter);
       if (initialLoadDone.current) {
         setCurrentReadyPage(1);
-        setSelectedPeriods(new Set()); // Clear selection when filter changes
+        setSelectedTargets(new Set()); // Clear selection when filter changes
+        setExpandedParentGroups(new Set());
       }
     }, 300);
     return () => clearTimeout(timer);
@@ -162,20 +430,23 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setCurrentReadyPage(1);
-    setSelectedPeriods(new Set());
+    setSelectedTargets(new Set());
+    setExpandedParentGroups(new Set());
   };
 
   // Handle page change - clear selection (server-side pagination means selected items may not be visible)
   const handleReadyPageChange = (newPage: number) => {
     setCurrentReadyPage(newPage);
-    setSelectedPeriods(new Set());
+    setSelectedTargets(new Set());
+    setExpandedParentGroups(new Set());
   };
 
   // Handle date range search - apply filter, reset page, and clear selection
   const handleDateRangeSearch = () => {
     setAppliedDateRange(pendingDateRange);
     setCurrentReadyPage(1);
-    setSelectedPeriods(new Set());
+    setSelectedTargets(new Set());
+    setExpandedParentGroups(new Set());
   };
 
   // Load available billing periods with server-side pagination
@@ -187,7 +458,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       setLoadError(null);
       try {
         const dateRangeFilter = buildDateRangeFilter(appliedDateRange);
-        const result = await getAvailableBillingPeriods({
+        const result = await getAvailableRecurringDueWork({
           page: currentReadyPage,
           pageSize: pageSize,
           searchTerm: debouncedClientFilter,
@@ -196,7 +467,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
         if (!isMounted) return;
 
-        setPeriods(result.periods as Period[]);
+        setPeriods(result.invoiceCandidates as ReadyPeriod[]);
+        setMaterializationGaps(result.materializationGaps);
         setTotalPeriods(result.total);
         initialLoadDone.current = true;
 
@@ -204,11 +476,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         const maxPage = Math.max(1, Math.ceil(result.total / pageSize));
         if (currentReadyPage > maxPage && currentReadyPage !== maxPage) {
           setCurrentReadyPage(maxPage);
-          setSelectedPeriods(new Set()); // Clear selection since visible rows changed
+          setSelectedTargets(new Set()); // Clear selection since visible rows changed
         }
       } catch (error) {
         console.error('Error loading billing periods:', error);
         if (isMounted) {
+          setMaterializationGaps([]);
           setLoadError('Failed to load billing periods. Please try again.');
         }
       }
@@ -225,6 +498,63 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   // For server-side pagination, filteredPeriods is just periods
   const filteredPeriods = periods;
+  const parentGroups = buildRecurringInvoiceParentGroups(filteredPeriods);
+  const readyRows = parentGroups.flatMap((group) => group.childExecutionRows);
+  const childSelectionKeyForMember = (member: RecurringInvoiceParentGroup['childExecutionRows'][number]) =>
+    `child-selection:${member.executionIdentityKey}`;
+  const selectedParentGroups = parentGroups.filter((group) =>
+    selectedTargets.has(group.parentSummary.parentSelectionKey),
+  );
+  const selectedParentSelectionKeys = new Set(
+    selectedParentGroups.map((group) => group.parentSummary.parentSelectionKey),
+  );
+  const selectedChildRows = readyRows.filter((member) => selectedTargets.has(childSelectionKeyForMember(member)));
+  const selectedExecutionRows = [
+    ...selectedParentGroups.flatMap((group) => group.childExecutionRows),
+    ...selectedChildRows,
+  ].filter((member, index, allMembers) =>
+    allMembers.findIndex((item) => item.executionIdentityKey === member.executionIdentityKey) === index,
+  );
+  const selectedSelectionGroups: RecurringSelectionGroup[] = [
+    ...selectedParentGroups.map((group) => ({
+      groupKey: group.parentSummary.parentSelectionKey,
+      selectorInputs: group.childExecutionRows.map((member) => member.selectorInput),
+    })),
+    ...selectedChildRows
+      .filter((member) => {
+        const parentGroup = parentGroups.find((group) =>
+          group.childExecutionRows.some((groupMember) => groupMember.executionIdentityKey === member.executionIdentityKey),
+        );
+        return !parentGroup || !selectedParentSelectionKeys.has(parentGroup.parentSummary.parentSelectionKey);
+      })
+      .map((member) => ({
+        groupKey: childSelectionKeyForMember(member),
+        selectorInputs: [member.selectorInput],
+      })),
+  ].filter((group) => group.selectorInputs.length > 0);
+  const previewSupportsDirectGeneration =
+    selectedSelectionGroups.length === 1
+    && selectedSelectionGroups[0].selectorInputs.length === 1;
+  const isGroupFullySelected = (group: RecurringInvoiceParentGroup): boolean => {
+    if (selectedTargets.has(group.parentSummary.parentSelectionKey)) {
+      return true;
+    }
+
+    const selectableChildren = group.childExecutionRows.filter((member) => member.canGenerate);
+    if (selectableChildren.length === 0) {
+      return false;
+    }
+
+    return selectableChildren.every((member) => selectedTargets.has(childSelectionKeyForMember(member)));
+  };
+  const allGroupsFullySelected = parentGroups.length > 0 && parentGroups.every((group) => isGroupFullySelected(group));
+  const hasAnyGroupSelection = parentGroups.some((group) => {
+    if (selectedTargets.has(group.parentSummary.parentSelectionKey)) {
+      return true;
+    }
+
+    return group.childExecutionRows.some((member) => selectedTargets.has(childSelectionKeyForMember(member)));
+  });
 
   // Debounce invoiced search term
   useEffect(() => {
@@ -243,14 +573,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     setInvoicedCurrentPage(1);
   };
 
-  // Load invoiced billing periods with server-side pagination
+  // Load recurring invoice history with server-side pagination
   useEffect(() => {
     let isMounted = true;
 
     const loadInvoicedPeriods = async () => {
       setIsInvoicedLoading(true);
       try {
-        const result = await getInvoicedBillingCyclesPaginated({
+        const result = await getRecurringInvoiceHistoryPaginated({
           page: invoicedCurrentPage,
           pageSize: invoicedPageSize,
           searchTerm: debouncedInvoicedSearchTerm
@@ -258,10 +588,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
         if (!isMounted) return;
 
-        setInvoicedPeriods(result.cycles.map((cycle): Period => ({
-          ...cycle,
-          can_generate: false // Already invoiced periods can't be generated again
-        })));
+        setInvoicedPeriods(result.rows as InvoicedPeriod[]);
         setTotalInvoicedPeriods(result.total);
 
         // Clamp page if current page is beyond available pages
@@ -272,7 +599,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       } catch (error) {
         console.error('Error loading invoiced periods:', error);
         if (isMounted) {
-          setLoadError('Failed to load invoiced periods. Please try again.');
+          setLoadError('Failed to load recurring invoice history. Please try again.');
         }
       }
       if (isMounted) {
@@ -287,49 +614,140 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     };
   }, [invoicedCurrentPage, invoicedPageSize, debouncedInvoicedSearchTerm, refreshTrigger]);
 
-  // Debug effect to log preview data
-  useEffect(() => {
-    if (previewState.data) {
-      console.log("Preview data items:", previewState.data.items); // Use items
-      // Need to check item structure for contract headers if needed, assuming 'description' for now
-      console.log("Contract headers:", previewState.data.items.filter(item => item.description?.startsWith('Contract:')));
-    }
-  }, [previewState.data]);
-
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      const validIds = filteredPeriods
-        .filter(p => p.can_generate)
-        .map((p): string | undefined => p.billing_cycle_id)
-        .filter((id): id is string => id !== undefined);
-      setSelectedPeriods(new Set(validIds));
+      const nextSelections = new Set<string>();
+      for (const group of parentGroups) {
+        const selectableChildren = group.childExecutionRows.filter((member) => member.canGenerate);
+        if (selectableChildren.length === 0) {
+          continue;
+        }
+
+        if (group.parentSummary.canGenerate && group.parentSummary.isCombinable) {
+          nextSelections.add(group.parentSummary.parentSelectionKey);
+          continue;
+        }
+
+        for (const child of selectableChildren) {
+          nextSelections.add(childSelectionKeyForMember(child));
+        }
+      }
+      setSelectedTargets(nextSelections);
     } else {
-      setSelectedPeriods(new Set());
+      setSelectedTargets(new Set());
     }
   };
 
-  const handleSelectPeriod = (billingCycleId: string | undefined, event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!billingCycleId) return;
+  const handleSelectParentGroup = (
+    group: RecurringInvoiceParentGroup,
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const parentSelectionKey = group.parentSummary.parentSelectionKey;
+    if (!parentSelectionKey) return;
 
-    const newSelected = new Set(selectedPeriods);
+    const newSelected = new Set(selectedTargets);
+    for (const child of group.childExecutionRows) {
+      newSelected.delete(childSelectionKeyForMember(child));
+    }
+
     if (event.target.checked) {
-      newSelected.add(billingCycleId);
+      newSelected.add(parentSelectionKey);
     } else {
-      newSelected.delete(billingCycleId);
+      newSelected.delete(parentSelectionKey);
     }
-    setSelectedPeriods(newSelected);
+    setSelectedTargets(newSelected);
   };
 
-  const handlePreviewInvoice = async (billingCycleId: string) => {
+  const handleSelectChild = (
+    group: RecurringInvoiceParentGroup,
+    child: RecurringInvoiceParentGroup['childExecutionRows'][number],
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const childSelectionKey = childSelectionKeyForMember(child);
+    const nextSelected = new Set(selectedTargets);
+    nextSelected.delete(group.parentSummary.parentSelectionKey);
+
+    if (event.target.checked) {
+      nextSelected.add(childSelectionKey);
+    } else {
+      nextSelected.delete(childSelectionKey);
+    }
+
+    setSelectedTargets(nextSelected);
+  };
+
+  const toggleParentGroupExpansion = (parentGroupKey: string) => {
+    setExpandedParentGroups((previous) => {
+      const next = new Set(previous);
+      if (next.has(parentGroupKey)) {
+        next.delete(parentGroupKey);
+      } else {
+        next.add(parentGroupKey);
+      }
+      return next;
+    });
+  };
+
+  const buildRecurringRunTargetFromSelection = (selection: {
+    selectorInput: IRecurringDueSelectionInput;
+  }) => {
+    return {
+      selectorInput: selection.selectorInput,
+      executionWindow: selection.selectorInput.executionWindow,
+    };
+  };
+
+  const resolveFailurePeriod = (failure: {
+    billingCycleId?: string | null;
+    executionIdentityKey?: string;
+  }) =>
+    readyRows.find((period) =>
+      (failure.executionIdentityKey && period.executionIdentityKey === failure.executionIdentityKey)
+      || (failure.billingCycleId && period.billingCycleId === failure.billingCycleId),
+    );
+
+  const resolveRecurringFailureLabel = (failure: {
+    billingCycleId?: string | null;
+    executionIdentityKey?: string;
+  }) => {
+    const period = resolveFailurePeriod(failure);
+    const clientName = period?.clientName?.trim();
+    return clientName || failure.billingCycleId || failure.executionIdentityKey || 'Recurring invoice window';
+  };
+
+  const handlePreviewSelection = async (groups: RecurringSelectionGroup[]) => {
+    if (groups.length === 0) {
+      return;
+    }
+
+    const primarySelection = groups[0]?.selectorInputs[0] ?? null;
     setIsPreviewLoading(true);
     setErrors({}); // Clear previous errors
-    const response = await previewInvoice(billingCycleId);
+    const response = await previewGroupedInvoicesForSelectionInputs(
+      groups.map((group) => ({
+        previewGroupKey: group.groupKey,
+        selectorInputs: group.selectorInputs,
+      })),
+    );
     if (response.success) {
-      // No cast needed now, types should match directly
-      setPreviewState({ data: response.data, billingCycleId: billingCycleId });
+      setPreviewState({
+        previews: response.previews,
+        invoiceCount: response.invoiceCount,
+        billingCycleId: null,
+        executionIdentityKey: primarySelection?.executionWindow.identityKey ?? null,
+        selectorInput: response.previews.length === 1 && response.previews[0].selectorInputs.length === 1
+          ? response.previews[0].selectorInputs[0]
+          : null,
+      });
       setShowPreviewDialog(true);
     } else {
-      setPreviewState({ data: null, billingCycleId: null }); // Clear preview state on error
+      setPreviewState({
+        previews: [],
+        invoiceCount: 0,
+        billingCycleId: null,
+        executionIdentityKey: null,
+        selectorInput: null,
+      }); // Clear preview state on error
       setErrors({
         preview: (response as { success: false; error: string }).error
       });
@@ -340,8 +758,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   };
 
   const handleGenerateInvoices = async () => {
-    const billingCycleIds = Array.from(selectedPeriods);
-    if (billingCycleIds.length === 0) {
+    const selectedExecutionPeriods = selectedExecutionRows.filter((period) => period.canGenerate);
+    if (selectedExecutionPeriods.length === 0) {
       return;
     }
 
@@ -350,49 +768,53 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
     try {
       const overageResults = await Promise.all(
-        billingCycleIds.map(async (id) => {
+        selectedExecutionPeriods
+          .map(async (period) => {
           try {
-            const overage = await getPurchaseOrderOverageForBillingCycle(id);
-            return { id, overage };
+            const overage = await getPurchaseOrderOverageForSelectionInput(period.selectorInput);
+            return { period, overage };
           } catch (err) {
             // If overage analysis fails, treat as "no overage warning" and let generation surface errors normally.
-            return { id, overage: null as any };
+            return { period, overage: null as any };
           }
-        })
+        }),
       );
 
-      const overageByBillingCycleId: Record<string, { clientName: string; overageCents: number; poNumber: string | null }> = {};
+      const overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null }> = {};
       for (const result of overageResults) {
         const overage = result.overage;
         if (!overage || overage.overage_cents <= 0) {
           continue;
         }
 
-        const period = periods.find((p) => p.billing_cycle_id === result.id);
-        const clientName = period?.client_name || result.id;
-        overageByBillingCycleId[result.id] = {
+        const clientName = result.period.clientName || result.period.executionIdentityKey;
+        overageByExecutionIdentityKey[result.period.executionIdentityKey] = {
           clientName,
           overageCents: overage.overage_cents,
           poNumber: overage.po_number ?? null,
         };
       }
 
-      const overageIds = Object.keys(overageByBillingCycleId);
+      const overageIds = Object.keys(overageByExecutionIdentityKey);
       if (overageIds.length > 0) {
         setPoOverageDialogState({
           isOpen: true,
-          billingCycleIds,
-          overageByBillingCycleId,
+          executionIdentityKeys: selectedExecutionPeriods.map((period) => period.executionIdentityKey),
+          overageByExecutionIdentityKey,
         });
         return;
       }
 
-      const runResult = await generateInvoicesAsRecurringBillingRun({ billingCycleIds });
+      const runResult = await generateGroupedInvoicesAsRecurringBillingRun({
+        groupedTargets: selectedSelectionGroups.map((group) => ({
+          groupKey: group.groupKey,
+          selectorInputs: group.selectorInputs,
+        })),
+      });
       const newErrors: { [key: string]: string } = {};
       for (const failure of runResult.failures) {
-        const period = periods.find((p) => p.billing_cycle_id === failure.billingCycleId);
-        const clientName = period?.client_name || failure.billingCycleId;
-        newErrors[clientName] = failure.errorMessage;
+        const label = resolveRecurringFailureLabel(failure);
+        newErrors[label] = failure.errorMessage;
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -400,7 +822,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
-      setSelectedPeriods(new Set());
+      setSelectedTargets(new Set());
       // Let onGenerateSuccess trigger refresh via refreshTrigger - no need to manually reload
       onGenerateSuccess();
     } finally {
@@ -410,34 +832,41 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   const handlePoOverageBatchDecision = async (decisionValue?: string) => {
     const decision = (decisionValue ?? 'allow') as 'allow' | 'skip';
-    const { billingCycleIds, overageByBillingCycleId } = poOverageDialogState;
+    const { executionIdentityKeys, overageByExecutionIdentityKey } = poOverageDialogState;
 
-    setPoOverageDialogState({ isOpen: false, billingCycleIds: [], overageByBillingCycleId: {} });
+    setPoOverageDialogState({ isOpen: false, executionIdentityKeys: [], overageByExecutionIdentityKey: {} });
     setIsGenerating(true);
     setErrors({});
 
     try {
       const newErrors: { [key: string]: string } = {};
-      const overageIds = new Set(Object.keys(overageByBillingCycleId));
+      const overageIds = new Set(Object.keys(overageByExecutionIdentityKey));
+      const selectedExecutionPeriods = readyRows.filter((period) =>
+        executionIdentityKeys.includes(period.executionIdentityKey),
+      );
       const toGenerate =
-        decision === 'skip' ? billingCycleIds.filter((id) => !overageIds.has(id)) : billingCycleIds;
+        decision === 'skip'
+          ? selectedExecutionPeriods.filter((period) => !overageIds.has(period.executionIdentityKey))
+          : selectedExecutionPeriods;
 
       if (decision === 'skip') {
-        for (const [, info] of Object.entries(overageByBillingCycleId)) {
+        for (const [, info] of Object.entries(overageByExecutionIdentityKey)) {
           newErrors[info.clientName] =
             `Skipped due to PO overage (${info.poNumber ? `PO ${info.poNumber}` : 'PO'}): ` +
             `over by ${formatCurrency(info.overageCents)}.`;
         }
       }
 
-      const runResult = await generateInvoicesAsRecurringBillingRun({
-        billingCycleIds: toGenerate,
+      const runResult = await generateGroupedInvoicesAsRecurringBillingRun({
+        groupedTargets: toGenerate.map((period) => ({
+          groupKey: `child-selection:${period.executionIdentityKey}`,
+          selectorInputs: [period.selectorInput],
+        })),
         allowPoOverage: decision === 'allow',
       });
       for (const failure of runResult.failures) {
-        const period = periods.find((p) => p.billing_cycle_id === failure.billingCycleId);
-        const clientName = period?.client_name || failure.billingCycleId;
-        newErrors[clientName] = failure.errorMessage;
+        const label = resolveRecurringFailureLabel(failure);
+        newErrors[label] = failure.errorMessage;
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -445,7 +874,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
-      setSelectedPeriods(new Set());
+      setSelectedTargets(new Set());
       // Let onGenerateSuccess trigger refresh via refreshTrigger - no need to manually reload
       onGenerateSuccess();
     } finally {
@@ -458,64 +887,82 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
     setIsReversing(true);
     try {
-      await removeBillingCycle(selectedCycleToReverse.id);
+      await reverseRecurringInvoice({
+        invoiceId: selectedCycleToReverse.invoiceId,
+        billingCycleId: selectedCycleToReverse.billingCycleId,
+      });
       setShowReverseDialog(false);
       setSelectedCycleToReverse(null);
       // Let onGenerateSuccess trigger refresh via refreshTrigger
       onGenerateSuccess();
     } catch (error) {
       setErrors({
-        [selectedCycleToReverse.client]: error instanceof Error ? error.message : 'Failed to reverse billing cycle'
+        [selectedCycleToReverse.client]: error instanceof Error ? error.message : 'Failed to reverse recurring invoice'
       });
     }
     setIsReversing(false);
   };
 
-  const handleDeleteBillingCycle = async () => {
+  const handleDeleteRecurringInvoice = async () => {
     if (!selectedCycleToDelete) return;
 
     setIsDeleting(true);
-    setErrors({}); // Clear previous errors
+    setErrors({});
     try {
-      await hardDeleteBillingCycle(selectedCycleToDelete.id);
+      await hardDeleteRecurringInvoice({
+        invoiceId: selectedCycleToDelete.invoiceId,
+        billingCycleId: selectedCycleToDelete.billingCycleId,
+      });
       setShowDeleteDialog(false);
       setSelectedCycleToDelete(null);
-      // Let onGenerateSuccess trigger refresh via refreshTrigger
       onGenerateSuccess();
     } catch (error) {
       setErrors({
-        [selectedCycleToDelete.client]: error instanceof Error ? error.message : 'Failed to delete billing cycle'
+        [selectedCycleToDelete.client]: error instanceof Error ? error.message : 'Failed to delete recurring invoice'
       });
-      // Keep dialog open on error to show message? Or close it? Closing for now.
       setShowDeleteDialog(false);
     }
     setIsDeleting(false);
   };
 
   const handleGenerateFromPreview = async () => {
-    if (!previewState.billingCycleId) return;
+    if (!previewState.selectorInput) return;
 
     setIsGeneratingFromPreview(true);
     setErrors({}); // Clear previous errors
 
     try {
-      const overage = await getPurchaseOrderOverageForBillingCycle(previewState.billingCycleId);
+      const overage = await getPurchaseOrderOverageForSelectionInput(previewState.selectorInput);
       if (overage && overage.overage_cents > 0) {
         setPoOverageSingleConfirm({
           isOpen: true,
           billingCycleId: previewState.billingCycleId,
+          executionIdentityKey: previewState.executionIdentityKey,
+          selectorInput: previewState.selectorInput,
           overageCents: overage.overage_cents,
           poNumber: overage.po_number ?? null,
         });
         return;
       }
 
-      const runResult = await generateInvoicesAsRecurringBillingRun({ billingCycleIds: [previewState.billingCycleId] });
+      const runResult = await generateInvoicesAsRecurringBillingRun({
+        targets: [
+          buildRecurringRunTargetFromSelection({
+            selectorInput: previewState.selectorInput,
+          }),
+        ],
+      });
       if (runResult.failures.length > 0) {
         throw new Error(runResult.failures[0]?.errorMessage || 'Failed to generate invoice from preview');
       }
       setShowPreviewDialog(false); // Close dialog on success
-      setPreviewState({ data: null, billingCycleId: null }); // Reset preview state
+      setPreviewState({
+        previews: [],
+        invoiceCount: 0,
+        billingCycleId: null,
+        executionIdentityKey: null,
+        selectorInput: null,
+      }); // Reset preview state
       onGenerateSuccess(); // Refresh data lists
     } catch (err) {
       setErrors({
@@ -527,26 +974,43 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   };
 
   const handlePoOverageSingleConfirm = async () => {
-    if (!poOverageSingleConfirm.billingCycleId) {
+    if (!poOverageSingleConfirm.selectorInput) {
       return;
     }
 
-    const billingCycleId = poOverageSingleConfirm.billingCycleId;
-    setPoOverageSingleConfirm({ isOpen: false, billingCycleId: null, overageCents: 0, poNumber: null });
+    const { selectorInput } = poOverageSingleConfirm;
+    setPoOverageSingleConfirm({
+      isOpen: false,
+      billingCycleId: null,
+      executionIdentityKey: null,
+      selectorInput: null,
+      overageCents: 0,
+      poNumber: null,
+    });
 
     setIsGeneratingFromPreview(true);
     setErrors({});
 
     try {
       const runResult = await generateInvoicesAsRecurringBillingRun({
-        billingCycleIds: [billingCycleId],
+        targets: [
+          buildRecurringRunTargetFromSelection({
+            selectorInput,
+          }),
+        ],
         allowPoOverage: true,
       });
       if (runResult.failures.length > 0) {
         throw new Error(runResult.failures[0]?.errorMessage || 'Failed to generate invoice from preview');
       }
       setShowPreviewDialog(false);
-      setPreviewState({ data: null, billingCycleId: null });
+      setPreviewState({
+        previews: [],
+        invoiceCount: 0,
+        billingCycleId: null,
+        executionIdentityKey: null,
+        selectorInput: null,
+      });
       onGenerateSuccess();
     } catch (err) {
       setErrors({
@@ -558,6 +1022,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   };
 
   // Removed company drawer handler (migrated to client-only flow)
+
+  const handleRecurringHistoryRowClick = (record: InvoicedPeriod) => {
+    const subtab = isInvoiceDraftStatus(record.invoiceStatus) ? 'drafts' : 'finalized';
+    const params = new URLSearchParams();
+    params.set('tab', 'invoicing');
+    params.set('subtab', subtab);
+    params.set('invoiceId', record.invoiceId);
+    router.push(`/msp/billing?${params.toString()}`);
+  };
 
   // Show combined loading state only during initial load (before any data has loaded)
   const isInitialLoading = !initialLoadDone.current && (isPeriodsLoading || isInvoicedLoading);
@@ -603,28 +1076,44 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       <div className="space-y-8">
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Ready to Invoice</h2>
+            <div>
+              <h2 className="text-lg font-semibold">Ready to Invoice</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Select All chooses parent rows when a group is combinable and falls back to individual child rows when a group is not combinable.
+              </p>
+            </div>
             <div className="flex gap-2 items-end">
               <Button
                 id='preview-selected-button'
                 variant="outline"
                 onClick={() => {
-                  if (selectedPeriods.size === 1) {
-                    handlePreviewInvoice(Array.from(selectedPeriods)[0]);
+                  if (selectedSelectionGroups.length > 0) {
+                    handlePreviewSelection(selectedSelectionGroups);
                   }
                 }}
-                disabled={selectedPeriods.size !== 1 || isPreviewLoading}
+                disabled={
+                  selectedSelectionGroups.length === 0
+                  || isPreviewLoading
+                }
               >
                 <Eye className="h-4 w-4 mr-2" />
                 {isPreviewLoading ? 'Loading...' : 'Preview Selected'}
               </Button>
+              {!previewSupportsDirectGeneration && selectedSelectionGroups.length > 0 ? (
+                <span className="text-xs text-muted-foreground" data-testid="grouped-preview-unavailable-copy">
+                  Preview supports grouped selections; direct "Generate from preview" remains single-selection only.
+                </span>
+              ) : null}
               <Button
                 id='generate-invoices-button'
                 onClick={handleGenerateInvoices}
-                disabled={selectedPeriods.size === 0 || isGenerating}
-                className={selectedPeriods.size === 0 ? 'opacity-50' : ''}
+                disabled={selectedExecutionRows.length === 0 || isGenerating}
+                className={selectedExecutionRows.length === 0 ? 'opacity-50' : ''}
               >
-                {isGenerating ? 'Generating...' : `Generate Invoices for Selected Periods (${selectedPeriods.size})`}
+                {isGenerating ? 'Generating...' : `Generate Invoices for Selected Periods (${selectedExecutionRows.length})`}
               </Button>
             </div>
           </div>
@@ -633,7 +1122,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <div className="flex items-end gap-4 mb-4">
             <DateRangePicker
               id="billing-period-date-range"
-              label="Period end date range"
+              label="Service period start date range"
               value={pendingDateRange}
               onChange={(range) => setPendingDateRange(range)}
             />
@@ -678,10 +1167,64 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </Alert>
           )}
 
+          {materializationGaps.length > 0 ? (
+            <Alert className="mb-4 border-warning/40 bg-warning/5" data-testid="recurring-materialization-gap-panel">
+              <AlertDescription>
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-semibold">Recurring service period repair required</h4>
+                      <p className="text-sm text-muted-foreground">
+                        These client-cadence windows are missing persisted recurring service periods, so they are blocked from ready-to-invoice work until the canonical schedule is repaired.
+                      </p>
+                    </div>
+                    <ul className="space-y-3">
+                      {materializationGaps.map((gap) => (
+                        <li
+                          key={gap.selectionKey}
+                          className="rounded-md border border-warning/30 bg-background/80 px-3 py-3"
+                          data-testid={`recurring-materialization-gap-${gap.selectionKey}`}
+                        >
+                          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div className="space-y-1 text-sm">
+                              <div className="font-medium">{gap.clientName ?? 'Unknown client'}</div>
+                              <div className="text-muted-foreground">{gap.detail}</div>
+                              <div>
+                                Service period: {gap.servicePeriodStart} to {gap.servicePeriodEnd}
+                              </div>
+                              <div>
+                                Invoice window: {gap.invoiceWindowStart} to {gap.invoiceWindowEnd}
+                              </div>
+                              <div className="break-all text-xs text-muted-foreground">
+                                Schedule key: {gap.scheduleKey}
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-start gap-2">
+                              <a
+                                href={buildServicePeriodRepairHref(gap.scheduleKey)}
+                                className="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
+                              >
+                                Review Service Periods
+                              </a>
+                              <span className="text-xs text-muted-foreground">
+                                Repair the canonical service-period records instead of generating a compatibility invoice row.
+                              </span>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           <DataTable
             id="automatic-invoices-table"
             key={`${currentReadyPage}-${pageSize}`}
-            data={filteredPeriods}
+            data={parentGroups}
             // Add onRowClick prop - implementation depends on DataTable component
             // Assuming it takes a function like this:
             // Temporarily disabled invoice preview on row click
@@ -693,107 +1236,279 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             columns={[
               {
                 title: (
-                  <Checkbox
-                    id="select-all"
-                    checked={filteredPeriods.length > 0 && selectedPeriods.size === filteredPeriods.filter(p => p.can_generate).length}
-                    onChange={handleSelectAll}
-                    disabled={!filteredPeriods.some(p => p.can_generate)}
-                  />
+                  <div className="flex justify-center">
+                    <Checkbox
+                      id="select-all"
+                      checked={allGroupsFullySelected}
+                      indeterminate={!allGroupsFullySelected && hasAnyGroupSelection}
+                      onChange={handleSelectAll}
+                      disabled={parentGroups.length === 0}
+                    />
+                  </div>
                 ),
-                dataIndex: 'billing_cycle_id',
-                render: (_: unknown, record: Period) => record.can_generate ? (
-                  <Checkbox
-                    id={`select-${record.billing_cycle_id}`}
-                    checked={selectedPeriods.has(record.billing_cycle_id || '')}
-                    // Stop propagation to prevent row click when clicking checkbox
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                      event.stopPropagation();
-                      handleSelectPeriod(record.billing_cycle_id, event);
-                    }}
-                    onClick={(e) => e.stopPropagation()} // Also stop propagation on click
-                  />
-                ) : null
-              },
-              { title: 'Client', dataIndex: 'client_name' },
-              {
-                title: 'Billing Cycle',
-                dataIndex: 'billing_cycle'
-              },
-              {
-                title: 'Period Start',
-                dataIndex: 'period_start_date',
-                render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
-              },
-              {
-                title: 'Period End',
-                dataIndex: 'period_end_date',
-                render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
-              },
-              {
-                title: 'Actions', // Renamed from Status
-                dataIndex: 'billing_cycle_id', // Use ID for actions
-                render: (_: unknown, record: Period) => {
-                  // Only show actions if it's a valid, generatable period
-                  if (!record.billing_cycle_id || !record.can_generate) {
-                    return null; // Or some placeholder if needed
-                  }
+                dataIndex: 'candidateKey',
+                width: '6rem',
+                headerClassName: 'px-2 text-center',
+                cellClassName: 'px-2 text-center',
+                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
+                  const isParentSelected = selectedTargets.has(record.parentSummary.parentSelectionKey);
+                  const selectedChildrenCount = record.childExecutionRows.filter((member) =>
+                    selectedTargets.has(childSelectionKeyForMember(member)),
+                  ).length;
+                  const isPartiallySelected = !isParentSelected && selectedChildrenCount > 0;
                   return (
-                    // Centered the content horizontally
-                    <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}> {/* Stop row click propagation */}
-                      {record.is_early && (
-                        <Tooltip
-                          content={
-                            <p>Warning: Current billing cycle hasn't ended yet (ends {toPlainDate(record.period_end_date).toLocaleString()})</p>
-                          }
-                          side="top" // Pass side prop to custom component
-                          className="max-w-xs" // Pass className for content styling
-                        >
-                          {/* The trigger element is now the direct child */}
-                          <div className="flex items-center mr-2 cursor-help">
-                            <Info className="h-4 w-4 text-yellow-500" />
-                          </div>
-                        </Tooltip>
-                      )}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button id={`actions-trigger-${record.billing_cycle_id}`} variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {/* Temporarily disabled invoice preview */}
-                          {/* <DropdownMenuItem
-                            id={`preview-invoice-${record.billing_cycle_id}`}
-                            onClick={() => handlePreviewInvoice(record.billing_cycle_id || '')}
-                            disabled={isPreviewLoading} // Disable only during preview loading
-                          >
-                            Preview
-                          </DropdownMenuItem> */}
-                          {/* <DropdownMenuSeparator /> */}
-                          {/* Delete Option Moved Here */}
-                          <DropdownMenuItem
-                            id={`delete-billing-cycle-${record.billing_cycle_id}`}
-                            className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                            onSelect={(e) => e.preventDefault()} // Prevent closing dropdown immediately
-                            onClick={() => {
-                              setSelectedCycleToDelete({
-                                id: record.billing_cycle_id || '',
-                                client: record.client_name,
-                                period: `${toPlainDate(record.period_start_date).toLocaleString()} - ${toPlainDate(record.period_end_date).toLocaleString()}`
-                              });
-                              setShowDeleteDialog(true); // Open the confirmation dialog
-                            }}
-                          >
-                            Delete Cycle
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <div className="flex justify-center">
+                      <Checkbox
+                        id={`select-${record.parentSummary.parentGroupKey}`}
+                        checked={isParentSelected}
+                        indeterminate={isPartiallySelected}
+                        disabled={!record.parentSummary.canGenerate || !record.parentSummary.isCombinable}
+                        // Stop propagation to prevent row click when clicking checkbox
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                          event.stopPropagation();
+                          handleSelectParentGroup(record, event);
+                        }}
+                        onClick={(e) => e.stopPropagation()} // Also stop propagation on click
+                      />
                     </div>
                   );
                 }
-              }
-            ]}
+              },
+	              {
+	                title: 'Group',
+	                dataIndex: 'parentGroupKey',
+	                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
+	                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
+                    const contractNames = Array.from(
+                      new Set(
+                        record.childExecutionRows
+                          .map((member) => member.contractName?.trim())
+                          .filter((name): name is string => Boolean(name)),
+                      ),
+                    );
+                    const contractLineNames = Array.from(
+                      new Set(
+                        record.childExecutionRows
+                          .map((member) => member.contractLineName?.trim())
+                          .filter((name): name is string => Boolean(name)),
+                      ),
+                    );
+                    const contractMetadataMissingCount = record.childExecutionRows.filter((member) => {
+                      return member.attribution?.isComplete === false;
+                    }).length;
+                    const assignmentContexts = Array.from(
+                      new Set(
+                        record.childExecutionRows
+                          .map((member) => getRecurringAssignmentContext(member))
+                          .filter((value): value is string => Boolean(value)),
+                      ),
+                    );
+                    const attributionSummaryLabels = record.candidate.attributionSummary?.labels ?? [];
+                    const assignmentLabels = Array.from(new Set([...attributionSummaryLabels, ...assignmentContexts]));
+	                    const cadenceSummary = summarizeCadenceSources(record.candidate.cadenceSources);
+                      const shouldShowAssignmentContexts =
+                        !isExpanded
+                        && contractNames.length === 0
+                        && contractLineNames.length === 0
+                        && assignmentLabels.length > 0;
+	                  return (
+                      <div className="min-w-[16rem] space-y-2">
+                        <div className="flex items-start gap-2">
+                          <Button
+                            id={`toggle-group-${record.parentSummary.parentGroupKey}`}
+                            variant="ghost"
+                            size="sm"
+                            className="mt-0.5 h-8 w-8 shrink-0 p-0"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleParentGroupExpansion(record.parentSummary.parentGroupKey);
+                            }}
+                            aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                          >
+                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </Button>
+                          <div className="min-w-0 space-y-1">
+                            <div className="font-medium">{record.parentSummary.clientName ?? 'Unknown client'}</div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                              <span>{record.parentSummary.childCount} item{record.parentSummary.childCount === 1 ? '' : 's'}</span>
+                              {contractNames.length > 0 ? (
+                                <span title={contractNames.join(', ')}>
+                                  {contractNames.length} contract{contractNames.length === 1 ? '' : 's'}
+                                </span>
+                              ) : null}
+                              {contractLineNames.length > 0 ? (
+                                <span title={contractLineNames.join(', ')}>
+                                  {contractLineNames.length} line{contractLineNames.length === 1 ? '' : 's'}
+                                </span>
+                              ) : null}
+                              <span>{cadenceSummary}</span>
+                              {record.childExecutionRows.some((member) => !member.billingCycleId) ? (
+                                <span>Service-period-backed</span>
+                              ) : null}
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              <span
+                                className={`inline-flex rounded-full border px-2 py-0.5 font-medium ${getParentGroupSummary({
+                                  isCombinable: record.parentSummary.isCombinable,
+                                  canGenerate: record.parentSummary.canGenerate,
+                                  incompatibilityReasons: record.parentSummary.incompatibilityReasons,
+                                  childCount: record.parentSummary.childCount,
+                                }).className}`}
+                              >
+                                {record.parentSummary.combinabilitySummary}
+                              </span>
+                            </div>
+                            {!record.parentSummary.isCombinable && record.parentSummary.incompatibilityReasons.length > 0 ? (
+                              <div
+                                className="text-xs text-muted-foreground"
+                                data-testid={`combinability-reasons-${record.parentSummary.parentGroupKey}`}
+                              >
+                                {record.parentSummary.incompatibilityReasons.join(', ')}
+                              </div>
+                            ) : null}
+                            {!record.parentSummary.canGenerate && record.parentSummary.blockedReason ? (
+                              <div className="text-xs text-muted-foreground">{record.parentSummary.blockedReason}</div>
+                            ) : null}
+                            {shouldShowAssignmentContexts ? assignmentLabels.map((contextValue) => (
+                              <div
+                                key={`${record.parentSummary.candidateKey}:assignment:${contextValue}`}
+                                className="text-xs text-muted-foreground"
+                                data-testid={`contract-assignment-context-${record.parentSummary.candidateKey}`}
+                              >
+                                {contextValue}
+                              </div>
+                            )) : null}
+                            {contractMetadataMissingCount > 0 ? (
+                              <div
+                                className="text-xs text-warning"
+                                data-testid={`contract-metadata-warning-${record.parentSummary.candidateKey}`}
+                              >
+                                Assignment attribution metadata missing ({contractMetadataMissingCount} obligation{contractMetadataMissingCount === 1 ? '' : 's'})
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+	                  );
+	                },
+	              },
+	              {
+	                title: 'Service Period',
+	                dataIndex: 'servicePeriodLabel',
+	                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
+	                  <div className="space-y-1">
+	                    <div>{record.parentSummary.servicePeriodLabel}</div>
+	                    <div className="text-xs text-muted-foreground">
+	                      {record.parentSummary.childCount} obligation{record.parentSummary.childCount === 1 ? '' : 's'}
+	                    </div>
+	                    {record.parentSummary.aggregateAmountCents !== null ? (
+	                      <div
+	                        className="text-sm font-medium"
+	                        data-testid={`group-amount-${record.parentSummary.parentGroupKey}`}
+	                      >
+	                        {formatCurrency(record.parentSummary.aggregateAmountCents / 100)}
+	                      </div>
+	                    ) : null}
+	                  </div>
+	                ),
+	              },
+	              {
+	                title: 'Invoice Window',
+	                dataIndex: 'windowLabel',
+	                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
+                    <div className="space-y-1">
+                      <div>{record.parentSummary.windowLabel}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {record.parentSummary.isCombinable ? '1 invoice if parent selected' : 'Select items individually'}
+                      </div>
+                    </div>
+                  ),
+	              },
+	              {
+	                title: 'Included',
+	                dataIndex: 'childExecutionRows',
+	                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
+	                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
+	                  if (!isExpanded) {
+	                    return (
+	                      <div className="text-xs text-muted-foreground">
+	                        {record.parentSummary.childCount} item{record.parentSummary.childCount === 1 ? '' : 's'} included
+	                      </div>
+	                    );
+	                  }
+
+	                  return (
+	                    <div className="min-w-[20rem] space-y-2">
+	                      {record.childExecutionRows.map((member) => {
+		                        const assignmentContext = getRecurringAssignmentContext(member);
+	                          const nonContractSelection = parseNonContractSelectionFromScheduleKey(member.scheduleKey ?? null);
+		                        const cadenceSource = formatCadenceSourceBadge(member.cadenceSource).label;
+		                        const billingTiming = member.duePosition === 'advance' ? 'Advance' : 'Arrears';
+		                        const amountCents = (member as { amountCents?: number | null }).amountCents;
+	                        const isChildSelected = selectedTargets.has(childSelectionKeyForMember(member));
+                          const childTitle =
+                            member.contractName?.trim()
+                            || assignmentContext
+                            || member.contractLineName?.trim()
+                            || member.executionIdentityKey;
+
+	                        return (
+	                          <div
+	                            key={`${record.parentSummary.parentGroupKey}:${member.executionIdentityKey}`}
+	                            className="rounded-md border border-border/60 bg-background p-3"
+	                            data-testid={`child-row-${record.parentSummary.parentGroupKey}-${member.executionIdentityKey}`}
+	                          >
+	                            <div className="flex items-start gap-3">
+	                              <Checkbox
+	                                id={`select-child-${record.parentSummary.parentGroupKey}-${member.executionIdentityKey}`}
+	                                checked={isChildSelected}
+	                                disabled={!member.canGenerate}
+                                  className="mt-0.5"
+	                                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+	                                  event.stopPropagation();
+	                                  handleSelectChild(record, member, event);
+	                                }}
+	                              />
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="font-medium">{childTitle}</div>
+                                      {member.contractLineName?.trim() && member.contractLineName?.trim() !== childTitle ? (
+                                        <div className="text-sm text-muted-foreground">{member.contractLineName.trim()}</div>
+                                      ) : null}
+                                      {nonContractSelection ? (
+                                        <div className="text-xs text-muted-foreground" data-testid={`non-contract-child-${member.executionIdentityKey}`}>
+                                          Unresolved work
+                                        </div>
+                                      ) : null}
+                                      {member.attribution?.isComplete === false ? (
+                                        <div className="text-xs text-warning" data-testid={`child-attribution-warning-${member.executionIdentityKey}`}>
+                                          Assignment attribution metadata missing
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                    <div className="shrink-0 text-sm font-medium">
+                                      {typeof amountCents === 'number' ? formatCurrency(amountCents / 100) : 'Pending amount'}
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">Cadence: {cadenceSource}</div>
+                                  <div className="text-xs text-muted-foreground">Billing timing: {billingTiming}</div>
+                                  <div className="text-xs text-muted-foreground">Service period: {member.servicePeriodLabel}</div>
+                                  {!member.canGenerate && (member as { blockedReason?: string | null }).blockedReason ? (
+                                    <div className="text-xs text-muted-foreground">
+                                      {(member as { blockedReason?: string | null }).blockedReason}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
+	                          </div>
+	                        );
+	                      })}
+	                    </div>
+	                  );
+	                },
+	              },
+	            ]}
             pagination={true}
             currentPage={currentReadyPage}
             onPageChange={handleReadyPageChange}
@@ -807,7 +1522,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Already Invoiced</h2>
+            <h2 className="text-lg font-semibold">Recurring Invoice History</h2>
             <Input
               id="filter-invoiced-clients-input"
               type="text"
@@ -820,47 +1535,108 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <DataTable
             id="already-invoiced-table"
             data={invoicedPeriods}
+            onRowClick={handleRecurringHistoryRowClick}
             columns={[
-              { title: 'Client', dataIndex: 'client_name' },
+              { title: 'Client', dataIndex: 'clientName' },
               {
-                title: 'Billing Cycle',
-                dataIndex: 'billing_cycle'
+                title: 'Assignment Scope',
+                dataIndex: 'assignmentSummary',
+                render: (_: unknown, record: InvoicedPeriod) => (
+                  <div className="space-y-1">
+                    <div>{record.assignmentSummary}</div>
+                    {record.isMultiAssignment ? (
+                      <Badge variant="secondary">Multi-contract invoice</Badge>
+                    ) : null}
+                  </div>
+                ),
               },
               {
-                title: 'Period Start',
-                dataIndex: 'period_start_date',
-                render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
+                title: 'Cadence Source',
+                dataIndex: 'cadenceSource',
+                render: (_: unknown, record: InvoicedPeriod) => (
+                  <div className="space-y-1">
+                    <Badge variant={formatCadenceSourceBadge(record.cadenceSource).variant}>
+                      {formatCadenceSourceBadge(record.cadenceSource).label}
+                    </Badge>
+                    {!record.hasBillingCycleBridge ? (
+                      <Badge variant="secondary">Service-period-backed</Badge>
+                    ) : null}
+                  </div>
+                ),
               },
               {
-                title: 'Period End',
-                dataIndex: 'period_end_date',
-                render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
+                title: 'Service Period',
+                dataIndex: 'servicePeriodLabel',
+              },
+              {
+                title: 'Invoice Window',
+                dataIndex: 'invoiceWindowLabel',
+              },
+              {
+                title: 'Invoice',
+                dataIndex: 'invoiceNumber',
+                render: (_: unknown, record: InvoicedPeriod) => (
+                  <div className="space-y-1">
+                    <div>{record.invoiceNumber ?? record.invoiceId}</div>
+                    {record.invoiceDate ? (
+                      <div className="text-xs text-muted-foreground">
+                        {toPlainDate(record.invoiceDate).toLocaleString()}
+                      </div>
+                    ) : null}
+                  </div>
+                ),
               },
               {
                 title: 'Actions',
-                dataIndex: 'billing_cycle_id',
-                render: (_: unknown, record: Period) => (
+                dataIndex: 'invoiceId',
+                render: (_: unknown, record: InvoicedPeriod) => (
                   <div className="flex justify-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button id={`actions-trigger-invoiced-${record.billing_cycle_id}`} variant="ghost" className="h-8 w-8 p-0">
+                        <Button id={`actions-trigger-invoiced-${record.invoiceId}`} variant="ghost" className="h-8 w-8 p-0">
                           <span className="sr-only">Open menu</span>
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          id={`reverse-billing-cycle-${record.billing_cycle_id}`}
+                          id={`reverse-billing-cycle-${record.invoiceId}`}
                           onClick={() => {
                             setSelectedCycleToReverse({
-                              id: record.billing_cycle_id || '',
-                              client: record.client_name,
-                              period: `${toPlainDate(record.period_start_date).toLocaleString()} - ${toPlainDate(record.period_end_date).toLocaleString()}`
+                              invoiceId: record.invoiceId,
+                              billingCycleId: record.billingCycleId,
+                              hasBillingCycleBridge: record.hasBillingCycleBridge,
+                              client: record.clientName,
+                              servicePeriodLabel: record.servicePeriodLabel,
+                              cadenceSource: record.cadenceSource === 'contract_anniversary'
+                                ? 'Contract anniversary'
+                                : 'Client schedule',
                             });
                             setShowReverseDialog(true);
                           }}
                         >
                           Reverse Invoice
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          id={`delete-billing-cycle-${record.invoiceId}`}
+                          className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                          onSelect={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setSelectedCycleToDelete({
+                              invoiceId: record.invoiceId,
+                              billingCycleId: record.billingCycleId,
+                              hasBillingCycleBridge: record.hasBillingCycleBridge,
+                              client: record.clientName,
+                              servicePeriodLabel: record.servicePeriodLabel,
+                              cadenceSource: record.cadenceSource === 'contract_anniversary'
+                                ? 'Contract anniversary'
+                                : 'Client schedule',
+                            });
+                            setShowDeleteDialog(true);
+                          }}
+                        >
+                          Delete Invoice
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -882,27 +1658,32 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       <Dialog
         isOpen={showReverseDialog}
         onClose={() => setShowReverseDialog(false)}
-        title="Reverse Billing Cycle"
+        title="Reverse Recurring Invoice"
       >
         <DialogContent>
           <div className="flex items-center gap-2 text-red-600 mb-4">
             <AlertTriangle className="h-5 w-5" />
-            <span className="font-semibold">Warning: Reverse Billing Cycle</span>
+            <span className="font-semibold">Warning: Reverse Recurring Invoice</span>
           </div>
           <div className="text-sm space-y-2">
-            <p className="font-semibold">You are about to reverse the billing cycle for:</p>
+            <p className="font-semibold">You are about to reverse the recurring invoice for:</p>
             <p>Client: {selectedCycleToReverse?.client}</p>
-            <p>Period: {selectedCycleToReverse?.period}</p>
+            <p>Cadence source: {selectedCycleToReverse?.cadenceSource}</p>
+            <p>Service period: {selectedCycleToReverse?.servicePeriodLabel}</p>
           </div>
 
           <Alert variant="warning" className="mt-4">
             <AlertDescription className="text-sm space-y-2">
               <p className="font-semibold">This action will:</p>
               <ul className="list-disc pl-5">
-                <li>Reverse any invoices generated for this billing cycle</li>
-                <li>Reissue any credits that were applied to these invoices</li>
-                <li>Unmark all time entries and usage records as invoiced</li>
-                <li>Mark the billing cycle as inactive</li>
+                <li>Delete the generated recurring invoice draft</li>
+                <li>Reissue any credits that were applied to that invoice</li>
+                <li>Unmark linked time entries and usage records as invoiced</li>
+                <li>
+                  {selectedCycleToReverse?.hasBillingCycleBridge
+                    ? 'Retire the linked client cadence bridge record and reopen the linked recurring service periods'
+                    : 'Reopen the linked recurring service periods without requiring client-cycle bridge metadata'}
+                </li>
               </ul>
               <p className="text-destructive font-semibold mt-4">This action cannot be undone!</p>
             </AlertDescription>
@@ -923,7 +1704,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             onClick={handleReverseBillingCycle}
             disabled={isReversing}
           >
-            {isReversing ? 'Reversing...' : 'Yes, Reverse Billing Cycle'}
+            {isReversing ? 'Reversing...' : 'Yes, Reverse Invoice'}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -933,7 +1714,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         // Reset preview state when dialog is closed
         onClose={() => {
           setShowPreviewDialog(false);
-          setPreviewState({ data: null, billingCycleId: null });
+          setPreviewState({
+            previews: [],
+            invoiceCount: 0,
+            billingCycleId: null,
+            executionIdentityKey: null,
+            selectorInput: null,
+          });
           setErrors({}); // Clear preview-specific errors on close
         }}
         title="Invoice Preview"
@@ -947,102 +1734,99 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               {/* Display error message if present */}
               <p className="text-red-600">{errors.preview}</p>
             </div>
-          ) : previewState.data && ( // Check previewState.data instead of previewData
+          ) : previewState.previews.length > 0 && (
             <div className="space-y-4">
-              <div className="border-b pb-4">
-                <h3 className="font-semibold">Client Details</h3>
-                {/* Use customer property */}
-                <p>{previewState.data.customer?.name}</p>
-                <p>{previewState.data.customer?.address}</p>
+              <div className="rounded border border-border/70 bg-muted/10 px-3 py-2 text-sm" data-testid="preview-invoice-count-summary">
+                {previewState.invoiceCount === 1
+                  ? 'This selection will generate one combined invoice.'
+                  : `This selection will generate ${previewState.invoiceCount} separate invoices.`}
               </div>
+              {previewState.previews.map((previewEntry, previewIndex) => (
+                <div key={previewEntry.previewGroupKey} className="space-y-4 rounded border border-border/70 p-3" data-testid={`preview-group-${previewEntry.previewGroupKey}`}>
+                  <h3 className="font-semibold">Invoice {previewIndex + 1}</h3>
+                  <div className="border-b pb-4">
+                    <h4 className="font-semibold">Client Details</h4>
+                    <p>{previewEntry.data.customer?.name}</p>
+                    <p>{previewEntry.data.customer?.address}</p>
+                  </div>
+                  <div className="border-b pb-4">
+                    <h4 className="font-semibold">Invoice Details</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Invoice Number</p>
+                        <p>{previewEntry.data.invoiceNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Date</p>
+                        <p>{toPlainDate(previewEntry.data.issueDate).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Due Date</p>
+                        <p>{toPlainDate(previewEntry.data.dueDate).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-2">Line Items</h4>
+                    <table className="min-w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2">Description</th>
+                          <th className="text-right py-2">Quantity</th>
+                          <th className="text-right py-2">Rate</th>
+                          <th className="text-right py-2">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewEntry.data.items.map((item) => {
+                          const isContractHeader = item.description?.startsWith('Contract:');
+                          const isDetailLine = !isContractHeader && item.quantity === undefined && item.unitPrice === undefined;
 
-              <div className="border-b pb-4">
-                <h3 className="font-semibold">Invoice Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Invoice Number</p>
-                    {/* Use invoiceNumber */}
-                    <p>{previewState.data.invoiceNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Date</p>
-                    {/* Use issueDate and convert */}
-                    <p>{toPlainDate(previewState.data.issueDate).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Due Date</p>
-                    {/* Use dueDate and convert */}
-                    <p>{toPlainDate(previewState.data.dueDate).toLocaleString()}</p>
+                          if (isContractHeader) {
+                            return (
+                              <tr key={item.id} className="border-b bg-muted/50 font-semibold">
+                                <td className="py-2 px-2" colSpan={4}>{item.description}</td>
+                              </tr>
+                            );
+                          }
+                          if (isDetailLine) {
+                            return (
+                              <tr key={item.id} className="border-b">
+                                <td className="py-2 px-2">{item.description}</td>
+                                <td className="text-right py-2 px-2"></td>
+                                <td className="text-right py-2 px-2"></td>
+                                <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
+                              </tr>
+                            );
+                          }
+                          return (
+                            <tr key={item.id} className="border-b">
+                              <td className="py-2 px-2">{item.description}</td>
+                              <td className="text-right py-2 px-2">{item.quantity}</td>
+                              <td className="text-right py-2 px-2">{formatCurrency(item.unitPrice / 100)}</td>
+                              <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colSpan={3} className="text-right py-2 font-semibold">Subtotal</td>
+                          <td className="text-right py-2">{formatCurrency(previewEntry.data.subtotal / 100)}</td>
+                        </tr>
+                        <tr>
+                          <td colSpan={3} className="text-right py-2 font-semibold">Tax</td>
+                          <td className="text-right py-2">{formatCurrency(previewEntry.data.tax / 100)}</td>
+                        </tr>
+                        <tr>
+                          <td colSpan={3} className="text-right py-2 font-semibold">Total</td>
+                          <td className="text-right py-2">{formatCurrency(previewEntry.data.total / 100)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
                   </div>
                 </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Line Items</h3>
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2">Description</th>
-                      <th className="text-right py-2">Quantity</th>
-                      <th className="text-right py-2">Rate</th>
-                      <th className="text-right py-2">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Map over previewState.data.items */}
-                    {previewState.data.items.map((item) => {
-                      // Check for contract header based on description (adjust if needed)
-                      const isContractHeader = item.description?.startsWith('Contract:');
-                      // Check for detail line (assuming no quantity/unitPrice for now)
-                      const isDetailLine = !isContractHeader && item.quantity === undefined && item.unitPrice === undefined;
-
-                      if (isContractHeader) {
-                        // Render contract header style
-                        return (
-                          <tr key={item.id} className="border-b bg-muted/50 font-semibold">
-                            <td className="py-2 px-2" colSpan={4}>{item.description}</td>
-                          </tr>
-                        );
-                      } else if (isDetailLine) {
-                        // Render detail line (blank Qty/Rate)
-                        return (
-                          <tr key={item.id} className="border-b">
-                            <td className="py-2 px-2">{item.description}</td>
-                            <td className="text-right py-2 px-2"></td> {/* Blank Quantity */}
-                            <td className="text-right py-2 px-2"></td> {/* Blank Rate */}
-                            <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
-                          </tr>
-                        );
-                      } else {
-                        // Render regular standalone item
-                        return (
-                          <tr key={item.id} className="border-b">
-                            <td className="py-2 px-2">{item.description}</td>
-                            <td className="text-right py-2 px-2">{item.quantity}</td>
-                            <td className="text-right py-2 px-2">{formatCurrency(item.unitPrice / 100)}</td>
-                            <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
-                          </tr>
-                        );
-                      }
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td colSpan={3} className="text-right py-2 font-semibold">Subtotal</td>
-                      {/* Use previewState.data properties */}
-                      <td className="text-right py-2">{formatCurrency(previewState.data.subtotal / 100)}</td>
-                    </tr>
-                    <tr>
-                      <td colSpan={3} className="text-right py-2 font-semibold">Tax</td>
-                      <td className="text-right py-2">{formatCurrency(previewState.data.tax / 100)}</td>
-                    </tr>
-                    <tr>
-                      <td colSpan={3} className="text-right py-2 font-semibold">Total</td>
-                      <td className="text-right py-2">{formatCurrency(previewState.data.total / 100)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+              ))}
             </div>
           )}
         </DialogContent>
@@ -1053,7 +1837,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             variant="outline" // Use outline for secondary action
             onClick={() => {
               setShowPreviewDialog(false);
-              setPreviewState({ data: null, billingCycleId: null }); // Reset state on close
+              setPreviewState({
+                previews: [],
+                invoiceCount: 0,
+                billingCycleId: null,
+                executionIdentityKey: null,
+                selectorInput: null,
+              }); // Reset state on close
               setErrors({}); // Clear errors on close
             }}
             disabled={isGeneratingFromPreview} // Disable while generating
@@ -1065,36 +1855,39 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             id="generate-invoice-from-preview-button"
             onClick={handleGenerateFromPreview}
             // Disable if there's an error, no data, or generation is in progress
-            disabled={!!errors.preview || !previewState.data || isGeneratingFromPreview || isPreviewLoading}
+            disabled={
+              !!errors.preview
+              || previewState.previews.length === 0
+              || !previewState.selectorInput
+              || isGeneratingFromPreview
+              || isPreviewLoading
+              || !previewSupportsDirectGeneration
+            }
           >
             {isGeneratingFromPreview ? 'Generating...' : 'Generate Invoice'}
           </Button>
         </DialogFooter>
       </Dialog>
 
-      {/* Delete Confirmation Dialog - Moved outside the table render loop */}
-      {/* Delete Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={showDeleteDialog}
         onClose={() => {
           setShowDeleteDialog(false);
-          setSelectedCycleToDelete(null); // Clear selection on close
+          setSelectedCycleToDelete(null);
         }}
-        onConfirm={handleDeleteBillingCycle}
-        title="Permanently Delete Billing Cycle?"
-        // Use the 'message' prop (string) instead of 'description'
-        message={`This action cannot be undone. This will permanently delete the billing cycle and any associated invoice data for:\nClient: ${selectedCycleToDelete?.client}\nPeriod: ${selectedCycleToDelete?.period}`}
-        confirmLabel={isDeleting ? 'Deleting...' : 'Yes, Delete Permanently'} // Renamed prop
+        onConfirm={handleDeleteRecurringInvoice}
+        title="Permanently Delete Recurring Invoice?"
+        message={`This action cannot be undone. This will permanently delete the recurring invoice for:\nClient: ${selectedCycleToDelete?.client}\nCadence source: ${selectedCycleToDelete?.cadenceSource}\nService period: ${selectedCycleToDelete?.servicePeriodLabel}\n${selectedCycleToDelete?.hasBillingCycleBridge ? 'The linked client cadence bridge record will also be deleted.' : 'Linked recurring service periods will be reopened without requiring client-cycle bridge metadata.'}`}
+        confirmLabel={isDeleting ? 'Deleting...' : 'Yes, Delete Permanently'}
         isConfirming={isDeleting}
-        // Removed unsupported props: confirmButtonVariant, icon
-        id="delete-billing-cycle-confirmation" // Added an ID for consistency
+        id="delete-recurring-invoice-confirmation"
       />
 
       <ConfirmationDialog
         id="po-overage-batch-decision"
         isOpen={poOverageDialogState.isOpen}
         onClose={() =>
-          setPoOverageDialogState({ isOpen: false, billingCycleIds: [], overageByBillingCycleId: {} })
+          setPoOverageDialogState({ isOpen: false, executionIdentityKeys: [], overageByExecutionIdentityKey: {} })
         }
         title="Purchase Order Limit Overages"
         message={
@@ -1103,7 +1896,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               One or more invoices would exceed a Purchase Order authorized amount. What do you want to do?
             </p>
             <ul className="list-disc pl-5">
-              {Object.entries(poOverageDialogState.overageByBillingCycleId).map(([id, info]) => (
+              {Object.entries(poOverageDialogState.overageByExecutionIdentityKey).map(([id, info]) => (
                 <li key={id}>
                   {info.clientName}: over by {formatCurrency(info.overageCents)}
                   {info.poNumber ? ` (PO ${info.poNumber})` : ''}
@@ -1124,7 +1917,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       <ConfirmationDialog
         id="po-overage-single-confirm"
         isOpen={poOverageSingleConfirm.isOpen}
-        onClose={() => setPoOverageSingleConfirm({ isOpen: false, billingCycleId: null, overageCents: 0, poNumber: null })}
+        onClose={() =>
+          setPoOverageSingleConfirm({
+            isOpen: false,
+            billingCycleId: null,
+            executionIdentityKey: null,
+            selectorInput: null,
+            overageCents: 0,
+            poNumber: null,
+          })
+        }
         title="Purchase Order Limit Overages"
         message={
           <div className="space-y-2">

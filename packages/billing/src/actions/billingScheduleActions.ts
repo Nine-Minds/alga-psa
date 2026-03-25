@@ -13,7 +13,9 @@ import {
   type NormalizedBillingCycleAnchorSettings
 } from '../lib/billing/billingCycleAnchors';
 import { ensureClientBillingSettingsRow } from './billingCycleAnchorActions';
+import { regenerateClientCadenceServicePeriodsForScheduleChange } from './clientCadenceScheduleRegeneration';
 import { withAuth } from '@alga-psa/auth';
+import { updateClientBillingSchedule as updateClientBillingScheduleShared } from '@alga-psa/shared/billingClients';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -85,6 +87,7 @@ export type UpdateClientBillingScheduleInput = {
   clientId: string;
   billingCycle: BillingCycleType;
   anchor: BillingCycleAnchorSettingsInput;
+  billingHistoryStartDate?: ISO8601String | null;
 };
 
 export const updateClientBillingSchedule = withAuth(async (
@@ -106,62 +109,34 @@ export const updateClientBillingSchedule = withAuth(async (
     validateAnchorSettingsForCycle(input.billingCycle, input.anchor);
     const normalized = normalizeAnchorSettingsForCycle(input.billingCycle, input.anchor);
 
-    // Update billing cycle type (if changed).
-    if ((client.billing_cycle ?? 'monthly') !== input.billingCycle) {
-      await trx('clients')
-        .where({ tenant, client_id: input.clientId })
-        .update({ billing_cycle: input.billingCycle, updated_at: trx.fn.now() });
-    }
-
-    await ensureClientBillingSettingsRow(trx, { tenant, clientId: input.clientId });
-
-    await trx('client_billing_settings')
-      .where({ tenant, client_id: input.clientId })
-      .update({
-        billing_cycle_anchor_day_of_month: normalized.dayOfMonth,
-        billing_cycle_anchor_month_of_year: normalized.monthOfYear,
-        billing_cycle_anchor_day_of_week: normalized.dayOfWeek,
-        billing_cycle_anchor_reference_date: normalized.referenceDate,
-        updated_at: trx.fn.now()
-      });
-
-    // Schedule changes should not retroactively affect already-invoiced periods.
-    // To ensure newly generated cycles reflect the updated schedule, deactivate any
-    // future, non-invoiced cycles at/after the cutover start.
-    const lastInvoiced = await trx('client_billing_cycles as cbc')
-      .join('invoices as i', function () {
-        this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id').andOn('i.tenant', '=', 'cbc.tenant');
-      })
-      .where('cbc.tenant', tenant)
-      .andWhere('cbc.client_id', input.clientId)
-      .orderBy('cbc.period_end_date', 'desc')
-      .first()
-      .select('cbc.period_end_date');
-
-    const cutoverStart: ISO8601String | null = lastInvoiced?.period_end_date
-      ? normalizeDbIsoUtcMidnight(lastInvoiced.period_end_date)
-      : null;
-
-    const nonInvoicedCycleQuery = trx('client_billing_cycles')
-      .where({ tenant, client_id: input.clientId, is_active: true })
-      .whereNotExists(function () {
-        this.select(1)
-          .from('invoices')
-          .whereRaw('invoices.tenant = client_billing_cycles.tenant')
-          .andWhereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id');
-      });
-
-    if (cutoverStart) {
-      await nonInvoicedCycleQuery.andWhere('period_start_date', '>=', cutoverStart).update({
-        is_active: false,
-        updated_at: trx.fn.now()
-      });
+    if (input.billingHistoryStartDate) {
+      await updateClientBillingScheduleShared(trx, tenant, input);
     } else {
-      await nonInvoicedCycleQuery.update({
-        is_active: false,
-        updated_at: trx.fn.now()
-      });
+      if ((client.billing_cycle ?? 'monthly') !== input.billingCycle) {
+        await trx('clients')
+          .where({ tenant, client_id: input.clientId })
+          .update({ billing_cycle: input.billingCycle, updated_at: trx.fn.now() });
+      }
+
+      await ensureClientBillingSettingsRow(trx, { tenant, clientId: input.clientId });
+
+      await trx('client_billing_settings')
+        .where({ tenant, client_id: input.clientId })
+        .update({
+          billing_cycle_anchor_day_of_month: normalized.dayOfMonth,
+          billing_cycle_anchor_month_of_year: normalized.monthOfYear,
+          billing_cycle_anchor_day_of_week: normalized.dayOfWeek,
+          billing_cycle_anchor_reference_date: normalized.referenceDate,
+          updated_at: trx.fn.now()
+        });
     }
+
+    await regenerateClientCadenceServicePeriodsForScheduleChange(trx, {
+      tenant,
+      clientId: input.clientId,
+      billingCycle: input.billingCycle,
+      anchor: normalized,
+    });
   });
 
   return { success: true };

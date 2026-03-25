@@ -51,6 +51,7 @@ interface PeriodInfo {
   periodEnd: Temporal.PlainDate;
   planId: string;
   billingFrequency: string; // e.g., 'monthly', 'quarterly', 'annually'
+  source: 'client_billing_cycle' | 'plan_anchor';
 }
 
 /**
@@ -108,6 +109,39 @@ async function calculatePeriod(
     `[calculatePeriod] Found clientPlan: contract_line_id=${clientPlan.contract_line_id}, start_date=${clientPlan.start_date}, billing_frequency=${clientPlan.billing_frequency}`
   );
 
+  const matchingClientBillingCycle = await trx('client_billing_cycles')
+    .where({
+      tenant,
+      client_id: clientId,
+    })
+    .whereNotNull('period_start_date')
+    .whereNotNull('period_end_date')
+    .andWhere('period_start_date', '<=', targetDateISO)
+    .andWhere('period_end_date', '>', targetDateISO)
+    .orderBy('period_start_date', 'desc')
+    .first<{ period_start_date: ISO8601String; period_end_date: ISO8601String } | undefined>(
+      'period_start_date',
+      'period_end_date'
+    );
+
+  if (matchingClientBillingCycle) {
+    const periodStart = toPlainDate(matchingClientBillingCycle.period_start_date);
+    const periodEndExclusive = toPlainDate(matchingClientBillingCycle.period_end_date);
+    const periodEnd = periodEndExclusive.subtract({ days: 1 });
+
+    console.debug(
+      `[calculatePeriod] Using client billing cycle window: start=${periodStart.toString()}, end=${periodEnd.toString()}`
+    );
+
+    return {
+      periodStart,
+      periodEnd,
+      planId: clientPlan.contract_line_id,
+      billingFrequency: clientPlan.billing_frequency,
+      source: 'client_billing_cycle',
+    };
+  }
+
   const planStartDate = toPlainDate(clientPlan.start_date);
   const frequency = clientPlan.billing_frequency;
 
@@ -152,6 +186,7 @@ async function calculatePeriod(
     periodEnd,
     planId: clientPlan.contract_line_id,
     billingFrequency: frequency,
+    source: 'plan_anchor',
   };
 }
 
@@ -179,7 +214,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
     throw new Error(`Could not determine active contract line/period for client ${clientId}, service ${serviceCatalogId}, date ${date}`);
   }
 
-  const { periodStart, periodEnd, planId, billingFrequency } = periodInfo;
+  const { periodStart, periodEnd, planId, billingFrequency, source } = periodInfo;
   const periodStartISO = toISODate(periodStart) as ISO8601String;
   const periodEndISO = toISODate(periodEnd) as ISO8601String;
 
@@ -237,21 +272,57 @@ export async function findOrCreateCurrentBucketUsageRecord(
     let prevPeriodStart: Temporal.PlainDate;
 
     try {
-      switch (billingFrequency) {
-        case 'monthly':
+      if (source === 'client_billing_cycle') {
+        const previousCycle = await trx('client_billing_cycles')
+          .where({
+            tenant,
+            client_id: clientId,
+          })
+          .whereNotNull('period_start_date')
+          .whereNotNull('period_end_date')
+          .andWhere('period_end_date', '<=', periodStartISO)
+          .orderBy('period_end_date', 'desc')
+          .first<{ period_start_date: ISO8601String; period_end_date: ISO8601String } | undefined>(
+            'period_start_date',
+            'period_end_date'
+          );
+
+        if (previousCycle) {
+          prevPeriodStart = toPlainDate(previousCycle.period_start_date);
+          prevPeriodEnd = toPlainDate(previousCycle.period_end_date).subtract({ days: 1 });
+        } else {
           prevPeriodEnd = periodStart.subtract({ days: 1 });
-          prevPeriodStart = periodStart.subtract({ months: 1 });
-          break;
-        case 'quarterly':
-          prevPeriodEnd = periodStart.subtract({ days: 1 });
-          prevPeriodStart = periodStart.subtract({ months: 3 });
-          break;
-        case 'annually':
-          prevPeriodEnd = periodStart.subtract({ days: 1 });
-          prevPeriodStart = periodStart.subtract({ years: 1 });
-          break;
-        default:
-          throw new Error(`Unsupported billing frequency encountered during rollover calculation: ${billingFrequency}`);
+          switch (billingFrequency) {
+            case 'monthly':
+              prevPeriodStart = periodStart.subtract({ months: 1 });
+              break;
+            case 'quarterly':
+              prevPeriodStart = periodStart.subtract({ months: 3 });
+              break;
+            case 'annually':
+              prevPeriodStart = periodStart.subtract({ years: 1 });
+              break;
+            default:
+              throw new Error(`Unsupported billing frequency encountered during rollover calculation: ${billingFrequency}`);
+          }
+        }
+      } else {
+        switch (billingFrequency) {
+          case 'monthly':
+            prevPeriodEnd = periodStart.subtract({ days: 1 });
+            prevPeriodStart = periodStart.subtract({ months: 1 });
+            break;
+          case 'quarterly':
+            prevPeriodEnd = periodStart.subtract({ days: 1 });
+            prevPeriodStart = periodStart.subtract({ months: 3 });
+            break;
+          case 'annually':
+            prevPeriodEnd = periodStart.subtract({ days: 1 });
+            prevPeriodStart = periodStart.subtract({ years: 1 });
+            break;
+          default:
+            throw new Error(`Unsupported billing frequency encountered during rollover calculation: ${billingFrequency}`);
+        }
       }
     } catch (error) {
       console.error(`Error calculating previous period dates: ${error}`);
@@ -467,4 +538,3 @@ export async function reconcileBucketUsageRecord(trx: Knex.Transaction, bucketUs
 
   console.log(`Reconciliation complete for bucket usage ${bucketUsageId}. New minutes_used=${totalMinutesUsed}, overage_minutes=${newOverageMinutes}`);
 }
-

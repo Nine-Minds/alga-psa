@@ -670,6 +670,23 @@ export const updateTicketStatus = withAuth(async (
         throw new Error('Ticket not found');
       }
 
+      if (!ticket.board_id) {
+        throw new Error('Ticket does not have a board');
+      }
+
+      const statusForBoard = await trx('statuses')
+        .where({
+          tenant,
+          status_id: newStatusId,
+          status_type: 'ticket',
+          board_id: ticket.board_id,
+        })
+        .first('status_id');
+
+      if (!statusForBoard) {
+        throw new Error('Selected status is not valid for the ticket board');
+      }
+
       // Get old status for change tracking
       const oldStatusId = ticket.status_id;
 
@@ -920,15 +937,13 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       }
 
       // Fetch default status for tickets
-      const defaultStatus = await trx('statuses')
-        .where({
-          tenant,
-          is_default: true,
-          status_type: 'ticket'
-        })
-        .first();
+      const defaultStatusId = await TicketModel.getDefaultStatusId(
+        tenant,
+        trx,
+        defaultBoard.board_id
+      );
 
-      if (!defaultStatus) {
+      if (!defaultStatusId) {
         throw new Error('No default status configured for tickets');
       }
 
@@ -950,7 +965,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         source: 'client_portal',
         ticket_origin: TICKET_ORIGINS.CLIENT_PORTAL,
         board_id: defaultBoard.board_id,
-        status_id: defaultStatus.status_id,
+        status_id: defaultStatusId,
         // Auto-assign to board's default agent if configured
         assigned_to: defaultBoard.default_assigned_to || undefined
       };

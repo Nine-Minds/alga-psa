@@ -11,22 +11,24 @@ import { renderWithProviders } from '../../utils/testWrapper';
 
 const {
   mockGetTicketFieldOptions,
+  mockGetAvailableStatuses,
   mockGetCategoriesByBoard,
   mockCreateInboundTicketDefaults,
   mockUpdateInboundTicketDefaults,
-  mockGetAllBoards,
-  mockGetAllClients,
   mockGetAllPriorities,
   mockGetAllUsersBasic,
+  mockGetIntegrationClients,
+  mockGetUserAvatarUrlsBatchAction,
 } = vi.hoisted(() => ({
   mockGetTicketFieldOptions: vi.fn(),
+  mockGetAvailableStatuses: vi.fn(),
   mockGetCategoriesByBoard: vi.fn(),
   mockCreateInboundTicketDefaults: vi.fn(),
   mockUpdateInboundTicketDefaults: vi.fn(),
-  mockGetAllBoards: vi.fn(),
-  mockGetAllClients: vi.fn(),
   mockGetAllPriorities: vi.fn(),
   mockGetAllUsersBasic: vi.fn(),
+  mockGetIntegrationClients: vi.fn(),
+  mockGetUserAvatarUrlsBatchAction: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
@@ -95,8 +97,8 @@ vi.mock('@alga-psa/tickets/components/CategoryPicker', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/ui/components', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
+vi.mock('@alga-psa/ui/components', () => ({
+  __esModule: true,
   PrioritySelect: ({
     id,
     options = [],
@@ -171,19 +173,15 @@ vi.mock('@alga-psa/ui/components/UserPicker', () => ({
 vi.mock('@alga-psa/integrations/actions', () => ({
   __esModule: true,
   getTicketFieldOptions: mockGetTicketFieldOptions,
+  getAvailableStatuses: mockGetAvailableStatuses,
   getCategoriesByBoard: mockGetCategoriesByBoard,
   createInboundTicketDefaults: mockCreateInboundTicketDefaults,
   updateInboundTicketDefaults: mockUpdateInboundTicketDefaults,
 }));
 
-vi.mock('@alga-psa/tickets/actions', () => ({
+vi.mock('../../../../../packages/integrations/src/actions/clientLookupActions', () => ({
   __esModule: true,
-  getAllBoards: mockGetAllBoards,
-}));
-
-vi.mock('@alga-psa/clients/actions', () => ({
-  __esModule: true,
-  getAllClients: mockGetAllClients,
+  getIntegrationClients: mockGetIntegrationClients,
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({
@@ -191,26 +189,26 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
   getAllPriorities: mockGetAllPriorities,
 }));
 
-vi.mock('@alga-psa/users/actions', () => ({
+vi.mock('@alga-psa/user-composition/actions', () => ({
   __esModule: true,
   getAllUsersBasic: mockGetAllUsersBasic,
+  getUserAvatarUrlsBatchAction: mockGetUserAvatarUrlsBatchAction,
 }));
 
-import { InboundTicketDefaultsForm } from '@alga-psa/integrations/components';
+import { InboundTicketDefaultsForm } from '../../../../../packages/integrations/src/components/email/forms/InboundTicketDefaultsForm';
 
 const sampleFieldOptions = {
-  boards: [{ id: 'board-1', name: 'General', is_default: true }],
-  statuses: [{ id: 'status-1', name: 'New', is_default: false }],
+  boards: [
+    { id: 'board-1', name: 'General', is_default: true },
+    { id: 'board-2', name: 'Projects', is_default: false },
+  ],
+  statuses: [{ id: 'legacy-status', name: 'Legacy', is_default: false }],
   priorities: [{ id: 'priority-1', name: 'Medium' }],
   categories: [],
   clients: [{ id: 'client-1', name: 'Acme Corp' }],
   users: [],
   locations: [],
 };
-
-const sampleBoards = [
-  { board_id: 'board-1', board_name: 'General', is_inactive: false },
-];
 
 const sampleClients = [
   { client_id: 'client-1', client_name: 'Acme Corp', is_inactive: false },
@@ -225,11 +223,26 @@ describe('InboundTicketDefaultsForm', () => {
     vi.clearAllMocks();
 
     mockGetTicketFieldOptions.mockResolvedValue({ options: sampleFieldOptions });
+    mockGetAvailableStatuses.mockImplementation(async (boardId: string | null) => {
+      if (boardId === 'board-1') {
+        return {
+          statuses: [{ id: 'status-1', name: 'New', is_default: true }],
+        };
+      }
+
+      if (boardId === 'board-2') {
+        return {
+          statuses: [{ id: 'status-2', name: 'Escalated', is_default: false }],
+        };
+      }
+
+      return { statuses: [] };
+    });
     mockGetCategoriesByBoard.mockResolvedValue({ categories: [] });
-    mockGetAllBoards.mockResolvedValue(sampleBoards);
-    mockGetAllClients.mockResolvedValue(sampleClients);
+    mockGetIntegrationClients.mockResolvedValue(sampleClients);
     mockGetAllPriorities.mockResolvedValue(samplePriorities);
     mockGetAllUsersBasic.mockResolvedValue([]);
+    mockGetUserAvatarUrlsBatchAction.mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -251,13 +264,11 @@ describe('InboundTicketDefaultsForm', () => {
 
     const shortNameInput = await screen.findByPlaceholderText('email-general');
     const displayNameInput = screen.getByPlaceholderText('General Email Support');
-    const statusSelect = screen.getByLabelText('Status *');
     const prioritySelect = screen.getByLabelText('Priority *');
     const clientSelect = screen.getByLabelText('Client *');
 
     await user.type(shortNameInput, 'catch-all');
     await user.type(displayNameInput, 'Catch All Defaults');
-    await user.selectOptions(statusSelect, 'status-1');
     await user.selectOptions(prioritySelect, 'priority-1');
     await user.selectOptions(clientSelect, 'client-1');
 
@@ -302,5 +313,47 @@ describe('InboundTicketDefaultsForm', () => {
     });
 
     expect(mockCreateInboundTicketDefaults).not.toHaveBeenCalled();
+  });
+
+  it('T034: only loads statuses for the selected board and clears stale status selections when the board changes', async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(
+      <InboundTicketDefaultsForm
+        defaults={null}
+        onSuccess={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await waitFor(() => expect(mockGetTicketFieldOptions).toHaveBeenCalled());
+
+    const boardSelect = await screen.findByLabelText('Board *');
+    const statusSelect = screen.getByLabelText('Status *') as HTMLSelectElement;
+
+    expect(statusSelect).toBeDisabled();
+
+    await user.selectOptions(boardSelect, 'board-1');
+
+    await waitFor(() => {
+      expect(mockGetAvailableStatuses).toHaveBeenCalledWith('board-1');
+      expect(statusSelect).not.toBeDisabled();
+      expect(screen.getByRole('option', { name: 'New (Default)' })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('option', { name: 'Escalated' })).not.toBeInTheDocument();
+
+    await user.selectOptions(statusSelect, 'status-1');
+    expect(statusSelect.value).toBe('status-1');
+
+    await user.selectOptions(boardSelect, 'board-2');
+
+    await waitFor(() => {
+      expect(mockGetAvailableStatuses).toHaveBeenCalledWith('board-2');
+      expect(statusSelect.value).toBe('');
+      expect(screen.getByRole('option', { name: 'Escalated' })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('option', { name: 'New (Default)' })).not.toBeInTheDocument();
   });
 });

@@ -1,0 +1,157 @@
+{
+  "welcome": {
+    "title": "Witamy w centrum dowodzenia MSP",
+    "description": "Śledź postęp onboardingu, konfiguruj kluczowe usługi i dbaj o spójne doświadczenie każdego klienta.",
+    "titleCommunity": "Witamy ponownie",
+    "descriptionCommunity": "Przechodź z pulpitu bezpośrednio do zgłoszeń, harmonogramu, projektów i raportów."
+  },
+  "features": {
+    "heading": "Funkcje platformy",
+    "comingSoon": "Wkrótce!",
+    "tickets": {
+      "title": "Zarządzanie zgłoszeniami",
+      "description": "Usprawnij wsparcie dzięki trasowaniu, śledzeniu SLA i prowadzonym przepływom pracy."
+    },
+    "monitoring": {
+      "title": "Monitorowanie systemu",
+      "description": "Obserwuj kluczowe sygnały u klientów i uruchamiaj automatyzację, gdy jest to potrzebne."
+    },
+    "security": {
+      "title": "Zarządzanie bezpieczeństwem",
+      "description": "Zarządzaj politykami, zatwierdzeniami i reakcjami na audyty w jednym miejscu."
+    },
+    "projects": {
+      "title": "Zarządzanie projektami",
+      "description": "Organizuj plany realizacji, zadania i kamienie milowe dla każdego zlecenia."
+    },
+    "reports": {
+      "title": "Raporty i analityka",
+      "description": "Twórz zestawienia wykorzystania, realizacji SLA i rentowności."
+    },
+    "schedule": {
+      "title": "Zarządzanie harmonogramem",
+      "description": "Koordynuj wizyty na miejscu i sesje zdalne z dwukierunkową synchronizacją."
+    }
+  },
+  "knowledgeBase": {
+    "title": "Potrzebujesz więcej szczegółów?",
+    "description": "Poznaj runbooki wdrożeniowe i najlepsze praktyki w bazie wiedzy.",
+    "cta": "Przejdź do zasobów"
+  },
+  "onboarding": {
+    "completeTitle": "Onboarding zakończony",
+    "incompleteTitle": "Dokończ konfigurację",
+    "completeDescription": "Możesz już korzystać z pełnego doświadczenia pulpitu MSP.",
+    "incompleteDescription": "Wykonaj każdy krok, aby odblokować pełne doświadczenie pulpitu MSP.",
+    "stepLabel": "KROK {{index}}",
+    "badges": {
+      "complete": "Ukończono",
+      "notStarted": "Nie rozpoczęto",
+      "inProgress": "W toku",
+      "blocked": "Zablokowane"
+    },
+    "progress": {
+      "label": "POSTĘP",
+      "steps": "{{completed}} z {{total}} kroków",
+      "messageStart": "Dopiero zaczynasz!",
+      "messageComplete": "Wszystko gotowe - świetna robota!",
+      "messageInProgress": "Nie przestawaj - idzie ci świetnie!"
+    },
+    "substeps": {
+      "dataImport": "Ukończ pierwszy import LUB utwórz 5 kontaktów",
+      "identity": {
+        "addProvider": "Dodaj dostawcę SSO",
+        "linkTeamMember": "Połącz pierwszego członka zespołu"
+      },
+      "portal": {
+        "customDomain": "Niestandardowa domena portalu",
+        "branding": "Dostosowanie kolorów i logo portalu",
+        "inviteFirstContact": "Zaproś pierwszy kontakt do portalu"
+      },
+      "createContacts": "Utwórz pierwsze 5 kontaktów",
+      "calendar": {
+        "addProvider": "Dodaj dostawcę kalendarza",
+        "connectAuthorize": "Połącz i autoryzuj dostawcę"
+      },
+      "email": {
+        "configureInbound": "Skonfiguruj pocztę przychodzącą",
+        "configureOutboundDomain": "Skonfiguruj niestandardową domenę poczty wychodzącej"
+      }
+    },
+    "cta": {
+      "completed": "Ukończono",
+      "hiding": "Ukrywanie...",
+      "hide": "Ukryj",
+      "dismiss": "Ukryj {{title}}",
+      "restoring": "Przywracanie..."
+    },
+    "hidden": {
+      "title": "Ukryte karty konfiguracji ({{count}})",
+      "subtitle": "Przywróć dowolną kartę, jeśli będzie potrzebna później."
+    },
+    "checklist": {
+      "title": "Lista kontrolna onboardingu",
+      "progress": "{{completed}} z {{total}} zadań ukończono",
+      "completeTitle": "Konfiguracja ukończona",
+      "completeDescription": "Zaproś klientów do korzystania z twojego oznakowanego portalu.",
+      "inviteCta": "Zaproś klientów",
+      "viewButton": "Wyświetl listę kontrolną onboardingu"
+    },
+    "steps": {
+      "identity": {
+        "title": "Zabezpiecz tożsamość i SSO",
+        "description": "Połącz Google Workspace lub Microsoft 365, aby administratorzy logowali się przy użyciu zarządzanych tożsamości.",
+        "cta": "Połącz SSO"
+      },
+      "portal": {
+        "title": "Skonfiguruj portal klienta",
+        "description": "Skonfiguruj portal tak, aby klienci mogli logować się w twojej domenie z twoim brandingiem.",
+        "cta": "Otwórz ustawienia portalu"
+      },
+      "dataImport": {
+        "title": "Importuj dane podstawowe",
+        "description": "Dodaj kontakty, aby zacząć pracować dla klientów i utrzymać przepływy w ruchu.",
+        "cta": "Utwórz kontakty"
+      },
+      "calendar": {
+        "title": "Synchronizacja kalendarza",
+        "description": "Połącz kalendarze Google lub Outlook, aby utrzymać zgodność planowania i spotkań z klientami.",
+        "cta": "Skonfiguruj kalendarz"
+      },
+      "email": {
+        "title": "Skonfiguruj e-mail",
+        "description": "Skonfiguruj przychodzącą pocztę zgłoszeń i zweryfikuj domenę wysyłkową dla niezawodnego dostarczania.",
+        "cta": "Skonfiguruj e-mail"
+      }
+    },
+    "blockers": {
+      "identity": {
+        "linkedAccountsUnavailable": "Nie można teraz zweryfikować połączonych członków zespołu.",
+        "noLinkedUsers": "Żaden użytkownik nie jest jeszcze połączony z dostawcą tożsamości. Poproś administratora MSP o podłączenie Google lub Microsoft.",
+        "addProviderCredentials": "Dodaj poświadczenia Google Workspace lub Microsoft 365, aby włączyć SSO dla swojego zespołu.",
+        "configurationUnavailable": "Konfiguracja dostawcy SSO jest niedostępna w tym środowisku.",
+        "loadFailed": "Nie udało się załadować stanu konfiguracji SSO."
+      },
+      "portal": {
+        "loadFailed": "Nie udało się załadować stanu domeny portalu klienta."
+      },
+      "import": {
+        "loadFailed": "Nie udało się załadować historii importu."
+      },
+      "calendar": {
+        "providerAttention": "{{provider}} wymaga uwagi, zanim synchronizacja będzie mogła zostać wznowiona.",
+        "loadFailed": "Nie udało się załadować integracji kalendarza."
+      },
+      "email": {
+        "enterpriseOnly": "Zarządzane domeny e-mail są dostępne tylko w edycji Enterprise.",
+        "tenantRequired": "Kontekst tenant jest wymagany do załadowania statusu onboardingu e-maila.",
+        "loadFailed": "Nie udało się załadować zarządzanych domen e-mail.",
+        "verificationFailed": "Weryfikacja domeny {{domain}} nie powiodła się."
+      }
+    },
+    "errors": {
+      "dismissFailed": "Nie udało się ukryć kroku onboardingu.",
+      "restoreFailed": "Nie udało się przywrócić kroku onboardingu."
+    }
+  }
+}

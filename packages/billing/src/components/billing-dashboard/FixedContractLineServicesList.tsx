@@ -37,11 +37,11 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 // Removed ContractLineServiceForm import as 'Configure' is removed
 
 // Define billing method options
-const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage' | 'per_unit'; label: string }> = [
+const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
   { value: 'fixed', label: 'Fixed Price' },
   { value: 'hourly', label: 'Hourly' },
   { value: 'usage', label: 'Usage Based' },
-  { value: 'per_unit', label: 'Per Unit' }
+  { value: 'usage', label: 'Usage' }
 ];
 
 interface FixedPlanServicesListProps {
@@ -53,7 +53,7 @@ interface FixedPlanServicesListProps {
 interface SimplePlanService extends IContractLineService {
   service_name?: string;
   service_category?: string; // This will now hold the name
-  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null; // Allow null and per_unit to match IService
+  billing_method?: 'fixed' | 'hourly' | 'usage' | null;
   unit_of_measure?: string;
   default_rate?: number;
   quantity?: number; // Added quantity field

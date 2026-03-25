@@ -510,7 +510,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         </div>
         <div className='mb-3'>
           {showEditor && (
-            <div className='flex items-start'>
+            <div className='flex items-start min-w-0 max-w-full'>
               <div className="mr-2">
                 {/* Use UserAvatar component for current user */}
                 <UserAvatar
@@ -521,7 +521,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                   size="md"
                 />
               </div>
-              <div className='flex-grow'>
+              <div className='flex-grow min-w-0 max-w-full'>
                 {/* Toggle switches above the editor */}
                 <div className="flex flex-wrap items-center gap-4 mb-2 ml-2">
                   {!hideInternalTab && (

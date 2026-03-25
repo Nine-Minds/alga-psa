@@ -146,6 +146,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     <div>
       <ProjectInfo
         project={projectMetadata.project}
+        phases={projectMetadata.phases}
         contact={projectMetadata.contact}
         assignedUser={projectMetadata.assignedUser || undefined}
         users={projectMetadata.users}

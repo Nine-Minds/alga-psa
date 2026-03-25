@@ -304,7 +304,7 @@ export class ApiTicketController extends ApiBaseController {
             { limit, offset, order }
           );
 
-          return createSuccessResponse(comments);
+          return createSuccessResponse(comments, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -326,7 +326,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const documents = await this.ticketService.getTicketDocuments(ticketId, apiRequest.context!);
 
-          return createSuccessResponse(documents);
+          return createSuccessResponse(documents, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);

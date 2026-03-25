@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { uuidSchema } from './common';
 
-const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage', 'per_unit']);
+const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage']);
 
 const defaultRateSchema = z.preprocess((value) => {
   if (typeof value === 'string') {

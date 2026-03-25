@@ -256,6 +256,75 @@ const Status = {
   },
 
   /**
+   * Get ticket statuses for a specific board.
+   */
+  getTicketStatusesByBoard: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    boardId: string
+  ): Promise<IStatus[]> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting board ticket statuses');
+    }
+
+    if (!boardId) {
+      throw new Error('Board context is required for getting board ticket statuses');
+    }
+
+    try {
+      return await knexOrTrx<IStatus>('statuses')
+        .select('*')
+        .where({
+          tenant,
+          board_id: boardId,
+          status_type: 'ticket',
+        })
+        .orderBy('order_number', 'asc')
+        .orderBy('name', 'asc');
+    } catch (error) {
+      console.error(`Error getting ticket statuses for board ${boardId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get a single board-owned ticket status by ID.
+   */
+  getBoardTicketStatus: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    boardId: string,
+    statusId: string
+  ): Promise<IStatus | undefined> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting a board ticket status');
+    }
+
+    if (!boardId) {
+      throw new Error('Board context is required for getting a board ticket status');
+    }
+
+    if (!statusId) {
+      throw new Error('Status ID is required for getting a board ticket status');
+    }
+
+    try {
+      return await knexOrTrx<IStatus>('statuses')
+        .select('*')
+        .where({
+          tenant,
+          board_id: boardId,
+          status_id: statusId,
+          status_type: 'ticket',
+        })
+        .first();
+    } catch (error) {
+      console.error(`Error getting board ticket status ${statusId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
    * Get project statuses for a tenant.
    */
   getProjectStatuses: async (

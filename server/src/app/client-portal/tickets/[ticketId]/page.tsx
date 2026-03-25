@@ -33,11 +33,8 @@ export default async function TicketPage({ params }: TicketPageProps) {
   const { ticketId } = resolvedParams;
 
   try {
-    // Fetch ticket details and statuses server-side (uses React.cache — deduped with generateMetadata)
-    const [ticketData, statuses] = await Promise.all([
-      getCachedTicket(ticketId),
-      getTicketStatuses()
-    ]);
+    const ticketData = await getCachedTicket(ticketId);
+    const statuses = await getTicketStatuses(ticketData.board_id);
 
     return (
       <div className="w-full">

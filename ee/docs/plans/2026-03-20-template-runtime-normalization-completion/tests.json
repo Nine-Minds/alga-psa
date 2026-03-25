@@ -1,0 +1,175 @@
+[
+  {
+    "id": "T001",
+    "description": "Preflight inventory lists every remaining runtime `template_contract_id` reference in the targeted packages and classifies it in the scratchpad.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "The plan explicitly states whether `client_contracts.template_contract_id` is provenance-only metadata or ready for future removal, with no ambiguous wording.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F014"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit/static coverage proves `applyContractToClient(...)` no longer derives template source with `template_contract_id ?? contract_id`.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F011"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed integration: applying a contract with valid provenance succeeds without any template fallback join or mixed runtime-ID source resolution.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F012"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed failure case: applying a contract that requires authoring provenance but lacks it fails with an explicit error instead of silently using `contract_id` as template source.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F013"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit/static coverage proves `packages/clients/src/actions/clientContractLineActions.ts` no longer uses `template_contract_id ?? contract_id` or equivalent mixed source fallback in line-add flows.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F011"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB-backed integration: adding or cloning a client contract line succeeds from explicit authoring source data without template fallback reads.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F012"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB-backed failure case: adding or cloning a client contract line with missing required provenance fails closed with a user-readable error.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F013"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Runtime client-contract line DTO/model tests prove `template_contract_id` is treated as provenance metadata only and not required for normal live reads.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F009"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Static or unit coverage proves `ContractLineService` setup/mutation code no longer infers template source from runtime contract IDs.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F011"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Focused API/service test proves contract-line setup still works when provenance exists and does not backfill or reinterpret runtime IDs when it does not.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F013"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Runtime contract loader tests prove template joins in `packages/billing/src/models/contract.ts` and related actions are provenance-only and do not widen instantiated contract lookup behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Assignment/detail lookup tests prove runtime contract queries do not accept template IDs as interchangeable live identifiers after the cleanup.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F012"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Script-level contract test proves `server/scripts/contract-template-decoupling.ts` no longer backfills `template_contract_id` or preserves hybrid fallback semantics.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Shared type/schema tests prove `template_contract_id` fields that remain are documented and shaped as provenance-only metadata for callers.",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Legacy tests/fixtures that previously asserted template fallback behavior are removed or updated to assert explicit failure/provenance semantics instead.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Static guard test fails if new runtime code in targeted packages/scripts introduces `template_contract_id ?? contract_id`, `coalesce(template_contract_id, contract_id)`, or comparable mixed-ID fallback patterns.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "DB-backed integration sanity suite covers one happy path and one failure path for post-normalization contract application against migrated schema.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "DB-backed integration sanity suite covers one happy path and one failure path for post-normalization client contract-line add/clone flows against migrated schema.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "The scratchpad/runbook explicitly lists the remaining allowed provenance-only read surfaces so future reviewers can distinguish metadata reads from forbidden runtime behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  }
+]

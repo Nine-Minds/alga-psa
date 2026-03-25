@@ -22,6 +22,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
+import { useTicketCrossFeature } from '@alga-psa/tickets/context/TicketCrossFeatureContext';
 import { getTicketingDisplaySettings, type TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { ITag } from '@alga-psa/types';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
@@ -70,6 +71,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
   initialTags = [],
   initialUsers = []
 }) => {
+  const { renderSlaIndicator } = useTicketCrossFeature();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -313,7 +315,8 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
       onTagsChange: handleTagsChange,
       showClient: true, // Show client column in contact view
       onClientClick: handleClientClick,
-    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, handleClientClick]);
+      renderSlaIndicator,
+    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, handleClientClick, renderSlaIndicator]);
 
   const handleCategorySelect = (
     selectedCategories: string[],

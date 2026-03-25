@@ -2,7 +2,7 @@
 
 // Onboarding step: configure ticketing defaults.
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -26,7 +26,8 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { createBoard, updateBoard } from '@alga-psa/tickets/actions';
 import { createCategory } from '@alga-psa/tickets/actions';
-import { createStatus, createPriority } from '@alga-psa/reference-data/actions';
+import { createBoardTicketStatus, updateBoardTicketStatus } from '@alga-psa/tickets/actions';
+import { createPriority } from '@alga-psa/reference-data/actions';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
@@ -150,6 +151,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   
   // Board selection for categories import
   const [importTargetBoard, setImportTargetBoard] = useState<string>('');
+  const [selectedStatusBoardId, setSelectedStatusBoardId] = useState<string>('');
 
   // Import results
   const [importResults, setImportResults] = useState<Record<string, { imported: number; skipped: number }>>({});
@@ -187,6 +189,35 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   // ITIL configuration
   const [showItilInfoModal, setShowItilInfoModal] = useState(false);
   const [importBoardItilSettings, setImportBoardItilSettings] = useState<Record<string, boolean>>({});
+
+  const effectiveStatusBoardId = useMemo(() => {
+    const preferredBoardId =
+      selectedStatusBoardId ||
+      data.boardId ||
+      importedBoards.find((board) => board.is_default)?.board_id ||
+      importedBoards[0]?.board_id ||
+      '';
+
+    return preferredBoardId;
+  }, [selectedStatusBoardId, data.boardId, importedBoards]);
+
+  const selectedStatusBoard = useMemo(
+    () => importedBoards.find((board) => board.board_id === effectiveStatusBoardId) || null,
+    [importedBoards, effectiveStatusBoardId]
+  );
+
+  const statusesForSelectedBoard = useMemo(
+    () => importedStatuses.filter((status) => status.board_id === effectiveStatusBoardId),
+    [importedStatuses, effectiveStatusBoardId]
+  );
+
+  const statusBoardOptions = useMemo(
+    () => importedBoards.map((board) => ({
+      value: board.board_id,
+      label: board.board_name
+    })),
+    [importedBoards]
+  );
 
   // Function to load existing ticketing data
   const loadExistingData = async () => {
@@ -256,10 +287,33 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   }, [showImportDialogs.categories]);
 
   useEffect(() => {
-    if (showImportDialogs.statuses && availableStatuses.length === 0) {
-      loadAvailableStatuses();
+    if (!importedBoards.length) {
+      if (selectedStatusBoardId) {
+        setSelectedStatusBoardId('');
+      }
+      return;
     }
-  }, [showImportDialogs.statuses]);
+
+    const currentSelectionIsValid = importedBoards.some((board) => board.board_id === selectedStatusBoardId);
+    if (currentSelectionIsValid) {
+      return;
+    }
+
+    const nextBoardId =
+      data.boardId ||
+      importedBoards.find((board) => board.is_default)?.board_id ||
+      importedBoards[0]?.board_id ||
+      '';
+
+    if (nextBoardId && nextBoardId !== selectedStatusBoardId) {
+      setSelectedStatusBoardId(nextBoardId);
+    }
+  }, [importedBoards, data.boardId, selectedStatusBoardId]);
+
+  useEffect(() => {
+    setSelectedStatuses([]);
+    setAvailableStatuses([]);
+  }, [effectiveStatusBoardId]);
 
   useEffect(() => {
     if (showImportDialogs.priorities && availablePriorities.length === 0) {
@@ -302,12 +356,29 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
   const loadAvailableStatuses = async () => {
     try {
-      const statuses = await getAvailableReferenceData('statuses', { item_type: 'ticket' });
+      const activeBoardId = effectiveStatusBoardId;
+      if (!activeBoardId) {
+        setAvailableStatuses([]);
+        return;
+      }
+
+      const statuses = await getAvailableReferenceData('statuses', {
+        item_type: 'ticket',
+        board_id: activeBoardId
+      });
       setAvailableStatuses(statuses);
     } catch (error) {
       console.error('Error loading available statuses:', error);
     }
   };
+
+  useEffect(() => {
+    if (!showImportDialogs.statuses) {
+      return;
+    }
+
+    void loadAvailableStatuses();
+  }, [showImportDialogs.statuses, effectiveStatusBoardId]);
 
   const loadAvailablePriorities = async () => {
     try {
@@ -488,11 +559,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   };
 
   const handleImportStatuses = async () => {
-    if (selectedStatuses.length === 0) return;
+    const activeBoardId = effectiveStatusBoardId;
+    if (selectedStatuses.length === 0 || !activeBoardId) return;
     
     setIsImporting(prev => ({ ...prev, statuses: true }));
     try {
-      const result = await importReferenceData('statuses', selectedStatuses, { item_type: 'ticket' });
+      const result = await importReferenceData('statuses', selectedStatuses, {
+        item_type: 'ticket',
+        board_id: activeBoardId
+      });
       setImportResults(prev => ({ ...prev, statuses: { 
         imported: result.imported?.length || 0, 
         skipped: result.skipped?.length || 0 
@@ -504,15 +579,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         const hasDefaultStatus = result.imported.some((s: any) => s.is_default);
         
         // Check if there's already a default status in existing statuses
-        const existingHasDefault = importedStatuses.some(s => s.is_default);
+        const existingHasDefault = statusesForSelectedBoard.some(s => s.is_default);
         
         // If no default status exists, mark the first open status as default
         if (!hasDefaultStatus && !existingHasDefault) {
           const firstOpenStatus = result.imported.find((s: any) => !s.is_closed);
           if (firstOpenStatus) {
-            // Update the status to be default
-            const { updateStatus } = await import('@alga-psa/reference-data/actions');
-            await updateStatus(firstOpenStatus.status_id, { is_default: true });
+            await updateBoardTicketStatus(activeBoardId, firstOpenStatus.status_id, { is_default: true });
             firstOpenStatus.is_default = true;
             toast.success('First open status automatically set as default', {
               duration: 3000
@@ -1062,8 +1135,12 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       }
       
       // Update status to be default (this will automatically unset others)
-      const { updateStatus } = await import('@alga-psa/reference-data/actions');
-      await updateStatus(statusId, { is_default: true });
+      const boardIdForStatus = status.board_id || effectiveStatusBoardId;
+      if (!boardIdForStatus) {
+        toast.error('Select or create a board before changing status defaults.');
+        return;
+      }
+      await updateBoardTicketStatus(boardIdForStatus, statusId, { is_default: true });
       
       // Refresh data from server to get updated default states
       await loadExistingData();
@@ -2058,15 +2135,34 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             <Alert variant="info" className="mb-4">
               <AlertDescription>
                 <p>
-                  <span className="font-semibold">Note:</span> Statuses track the lifecycle of a ticket. Each status is either <span className="font-semibold">Open</span> (ticket needs attention) or <span className="font-semibold">Closed</span> (ticket is resolved). The <span className="font-semibold">Default</span> status is automatically assigned to new tickets. Common statuses include New, In Progress, Waiting for Customer, Resolved, and Closed.
+                  <span className="font-semibold">Note:</span> Statuses are configured <span className="font-semibold">per board</span>. Select a board below to define the lifecycle for tickets on that board. The <span className="font-semibold">Default</span> open status for the selected board is automatically assigned to new tickets created on that board.
                 </p>
-                {importedStatuses.length > 1 && (
+                {importedBoards.length > 1 && (
                   <p className="mt-2">
-                    <span className="font-semibold">Tip:</span> Click the star in the Default column to change which status is the default. Only open statuses can be set as default.
+                    <span className="font-semibold">Tip:</span> Boards do not share statuses. Switch boards here to review or change each board's status set.
                   </p>
                 )}
               </AlertDescription>
             </Alert>
+
+            {importedBoards.length > 0 ? (
+              <div className="max-w-sm">
+                <Label htmlFor="status-board-selector">Board</Label>
+                <CustomSelect
+                  id="status-board-selector"
+                  value={effectiveStatusBoardId}
+                  onValueChange={setSelectedStatusBoardId}
+                  options={statusBoardOptions}
+                  placeholder="Select board"
+                />
+              </div>
+            ) : (
+              <Alert variant="warning">
+                <AlertDescription>
+                  Create or import a board before configuring statuses. Each board needs its own open default status.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Action Buttons - Moved to top */}
             <div className="flex gap-2">
@@ -2076,6 +2172,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 variant="outline"
                 onClick={() => toggleImportDialog('statuses')}
                 className="flex-1"
+                disabled={!effectiveStatusBoardId}
               >
                 <Package className="w-4 h-4 mr-2" />
                 Import from Standard
@@ -2086,6 +2183,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 variant="outline"
                 onClick={() => setShowAddForms(prev => ({ ...prev, status: !prev.status }))}
                 className="flex-1"
+                disabled={!effectiveStatusBoardId}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add New Status
@@ -2155,15 +2253,21 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       if (!statusForm.name.trim()) return;
                       
                       // Check if status already exists
-                      if (importedStatuses.some(s => s.name === statusForm.name)) {
+                      if (statusesForSelectedBoard.some(s => s.name === statusForm.name)) {
                         toast.error('Status already exists');
                         return;
                       }
                       
                       try {
+                        const activeBoardId = effectiveStatusBoardId;
+                        if (!activeBoardId) {
+                          toast.error('Select or create a board before adding statuses.');
+                          return;
+                        }
+
                         // Calculate the next order number if not provided or if already in use
                         let orderNumber = statusForm.displayOrder;
-                        const maxOrder = importedStatuses.reduce((max, status) => 
+                        const maxOrder = statusesForSelectedBoard.reduce((max, status) => 
                           Math.max(max, status.order_number || 0), 0
                         );
                         
@@ -2171,22 +2275,21 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           orderNumber = maxOrder + 1;
                         } else {
                           // Check if the provided order is already in use
-                          const isOrderInUse = importedStatuses.some(s => s.order_number === orderNumber);
+                          const isOrderInUse = statusesForSelectedBoard.some(s => s.order_number === orderNumber);
                           if (isOrderInUse) {
                             orderNumber = maxOrder + 1;
                           }
                         }
                         
                         // Set as default if this is the first open status
-                        const hasDefaultOpenStatus = importedStatuses.some(s => s.is_default && !s.is_closed);
+                        const hasDefaultOpenStatus = statusesForSelectedBoard.some(s => s.is_default && !s.is_closed);
                         const isDefault = !statusForm.isClosed && !hasDefaultOpenStatus;
                         
                         // Create actual status in database
-                        const createdStatus = await createStatus({
+                        const createdStatus = await createBoardTicketStatus(activeBoardId, {
                           name: statusForm.name,
                           is_closed: statusForm.isClosed,
                           is_default: isDefault,
-                          status_type: 'ticket',
                           order_number: orderNumber
                         });
                         
@@ -2199,7 +2302,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         });
                         
                         // Track all statuses in form data, sorted by order_number
-                        const allStatuses = [...importedStatuses, createdStatus].sort((a, b) => 
+                        const allStatuses = [...(data.statuses || []), createdStatus].sort((a, b) => 
                           (a.order_number || 0) - (b.order_number || 0)
                         );
                         updateData({ statuses: allStatuses });
@@ -2224,6 +2327,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {showImportDialogs.statuses && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
                 <h4 className="font-medium">Import Standard Statuses</h4>
+                {selectedStatusBoard && (
+                  <p className="text-sm text-gray-600">
+                    Importing into <span className="font-medium">{selectedStatusBoard.board_name}</span>.
+                  </p>
+                )}
                 
                 {importResults.statuses && (
                   <div className="rounded-md bg-success/10 border border-success/30 p-3 flex items-center gap-2">
@@ -2318,9 +2426,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             )}
 
             {/* Existing Statuses */}
-            {importedStatuses.length > 0 && (
+            {effectiveStatusBoardId && statusesForSelectedBoard.length > 0 && (
               <div>
-                <Label className="mb-2 block">Current Statuses</Label>
+                <Label className="mb-2 block">
+                  Current Statuses{selectedStatusBoard ? ` for ${selectedStatusBoard.board_name}` : ''}
+                </Label>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
@@ -2333,7 +2443,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       </tr>
                     </thead>
                     <tbody className="bg-white">
-                      {importedStatuses.map((status, idx) => (
+                      {statusesForSelectedBoard.map((status, idx) => (
                         <tr key={status.status_id}>
                           <td className="px-2 py-1 text-xs">{status.name}</td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">
@@ -2376,6 +2486,16 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   </table>
                 </div>
               </div>
+            )}
+
+            {importedBoards.length > 0 && effectiveStatusBoardId && statusesForSelectedBoard.length === 0 && (
+              <Alert variant="warning">
+                <AlertDescription>
+                  {selectedStatusBoard
+                    ? `${selectedStatusBoard.board_name} does not have any statuses yet. Add or import at least one open default status before completing onboarding.`
+                    : 'Select a board to configure its statuses.'}
+                </AlertDescription>
+              </Alert>
             )}
 
           </div>

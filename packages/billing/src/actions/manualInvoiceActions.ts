@@ -3,11 +3,11 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
-import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
+import { InvoiceViewModel, DiscountType } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import * as invoiceService from '../services/invoiceService';
-import { toPlainDate } from '@alga-psa/core';
+import Invoice from '../models/invoice';
 import { withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
 import { getAnalyticsAsync } from '../lib/authHelpers';
@@ -89,7 +89,7 @@ export const generateManualInvoice = withAuth(async (
     await trx('invoices').insert(invoice);
 
     // Persist manual invoice items using the dedicated service function
-    const subtotal = await invoiceService.persistManualInvoiceCharges(
+    await invoiceService.persistManualInvoiceCharges(
       trx,
       invoiceId,
       items, // Assuming items match ManualInvoiceItemInput structure
@@ -100,7 +100,7 @@ export const generateManualInvoice = withAuth(async (
 
     // Calculate and distribute tax
     const taxService = new TaxService();
-    const computedTotalTax = await invoiceService.calculateAndDistributeTax(
+    await invoiceService.calculateAndDistributeTax(
       trx,
       invoiceId,
       client,
@@ -118,10 +118,7 @@ export const generateManualInvoice = withAuth(async (
       isPrepayment ? expirationDate : undefined
     );
 
-    // Get updated invoice items with tax
-    const updatedItems = await trx('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
-      .orderBy('created_at', 'asc');
+    const createdInvoice = await Invoice.getFullInvoiceById(trx, tenant, invoiceId);
 
     // Track analytics
     const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
@@ -129,61 +126,17 @@ export const generateManualInvoice = withAuth(async (
       invoice_id: invoiceId,
       invoice_number: invoiceNumber,
       client_id: clientId,
-      subtotal: Math.ceil(subtotal),
-      tax: Math.ceil(computedTotalTax),
-      total_amount: Math.ceil(subtotal + computedTotalTax),
-      item_count: updatedItems.length,
+      subtotal: createdInvoice.subtotal,
+      tax: createdInvoice.tax,
+      total_amount: createdInvoice.total_amount,
+      item_count: createdInvoice.invoice_charges.length,
       is_manual: true,
       is_prepayment: isPrepayment || false
     }, session.user.id);
 
-    // Return invoice view model
     return {
       success: true as const,
-      invoice: {
-        invoice_id: invoiceId,
-        invoice_number: invoiceNumber,
-        client_id: clientId,
-        client: {
-          name: client.client_name,
-          logo: client.logoUrl || '',
-          address: client.location_address || ''
-        },
-        contact: {
-          name: '',
-          address: ''
-        },
-        invoice_date: currentDate, // ISO date string
-        due_date: currentDate, // ISO date string
-        status: 'draft',
-        currencyCode: invoice.currency_code,
-        subtotal: Math.ceil(subtotal),
-        tax: Math.ceil(computedTotalTax),
-        total: Math.ceil(subtotal + computedTotalTax),
-        total_amount: Math.ceil(subtotal + computedTotalTax),
-        invoice_charges: updatedItems.map((item: any): IInvoiceCharge => ({
-          item_id: item.item_id,
-          invoice_id: invoiceId,
-          service_id: item.service_id,
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: parseInt(item.unit_price.toString()),
-          total_price: parseInt(item.total_price.toString()),
-          tax_amount: parseInt(item.tax_amount.toString()),
-          net_amount: parseInt(item.net_amount.toString()),
-          tenant,
-          is_manual: true,
-          is_discount: item.is_discount || false,
-          discount_type: item.discount_type,
-          applies_to_item_id: item.applies_to_item_id,
-          applies_to_service_id: item.applies_to_service_id, // Add the new field
-          created_by: session.user.id,
-          created_at: item.created_at,
-          rate: parseInt(item.unit_price.toString()) // Use unit_price as rate
-        })),
-        credit_applied: 0,
-        is_manual: true
-      }
+      invoice: createdInvoice
     };
   });
 });
@@ -247,68 +200,5 @@ export const updateManualInvoice = withAuth(async (
   // Recalculate the entire invoice
   await billingEngine.recalculateInvoice(invoiceId);
 
-  // Fetch the updated invoice with new totals
-  const updatedInvoice = await knex('invoices')
-    .where({
-      invoice_id: invoiceId,
-      tenant
-    })
-    .first();
-
-  if (!updatedInvoice) {
-    throw new Error(`Invoice ${invoiceId} not found for tenant ${tenant}`);
-  }
-
-  const updatedItems = await knex('invoice_charges')
-    .where({
-      invoice_id: invoiceId,
-      tenant
-    })
-    .orderBy('created_at', 'asc');
-
-  // Return updated invoice view model
-  return {
-    invoice_id: invoiceId,
-    invoice_number: existingInvoice.invoice_number,
-    client_id: clientId,
-    client: {
-      name: client.client_name,
-      logo: client.logoUrl || '',
-      address: client.location_address || ''
-    },
-    contact: {
-      name: '',
-      address: ''
-    },
-    invoice_date: toPlainDate(existingInvoice.invoice_date).toString(),
-    due_date: toPlainDate(existingInvoice.due_date).toString(),
-    status: existingInvoice.status,
-    currencyCode: updatedInvoice.currency_code,
-    subtotal: updatedInvoice.subtotal,
-    tax: updatedInvoice.tax,
-    total: updatedInvoice.total_amount,
-    total_amount: parseInt(updatedInvoice.total_amount.toString()),
-    invoice_charges: updatedItems.map((item): IInvoiceCharge => ({
-      item_id: item.item_id,
-      invoice_id: invoiceId,
-      service_id: item.service_id,
-      description: item.description,
-      quantity: item.quantity,
-      unit_price: parseInt(item.unit_price.toString()),
-      total_price: parseInt(item.total_price.toString()),
-      tax_amount: parseInt(item.tax_amount.toString()),
-      net_amount: item.net_amount,
-      tenant,
-      is_manual: true,
-      is_discount: item.is_discount || false,
-      discount_type: item.discount_type,
-      applies_to_item_id: item.applies_to_item_id,
-      applies_to_service_id: item.applies_to_service_id, // Add the new field
-      created_by: session.user.id,
-      created_at: item.created_at,
-      rate: parseInt(item.unit_price.toString()) // Use unit_price as rate
-    })),
-    credit_applied: existingInvoice.credit_applied,
-    is_manual: true
-  };
+  return await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
 });

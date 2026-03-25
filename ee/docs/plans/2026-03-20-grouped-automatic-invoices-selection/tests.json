@@ -1,0 +1,206 @@
+[
+  {
+    "id": "T001",
+    "description": "Automatic invoices renders one parent group for a shared `client + invoice window` instead of separate top-level rows for each child candidate.",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F004"]
+  },
+  {
+    "id": "T002",
+    "description": "Parent rows display child count, aggregate amount, and invoice window summary correctly.",
+    "implemented": true,
+    "featureIds": ["F004", "F005"]
+  },
+  {
+    "id": "T003",
+    "description": "Expanding a parent row reveals child candidates with contract or assignment identity, cadence source, service period, and amount.",
+    "implemented": true,
+    "featureIds": ["F004", "F006"]
+  },
+  {
+    "id": "T004",
+    "description": "A parent row is combinable only when all ready children share the same client, currency, PO scope, tax source, and export shape.",
+    "implemented": true,
+    "featureIds": ["F007", "F008"]
+  },
+  {
+    "id": "T005",
+    "description": "A parent row becomes non-combinable when PO scope differs across children and shows the PO incompatibility reason.",
+    "implemented": true,
+    "featureIds": ["F007", "F008", "F012", "F023"]
+  },
+  {
+    "id": "T006",
+    "description": "A parent row becomes non-combinable when currency differs across children and shows the currency incompatibility reason.",
+    "implemented": true,
+    "featureIds": ["F007", "F008", "F012"]
+  },
+  {
+    "id": "T007",
+    "description": "A parent row becomes non-combinable when tax source differs across children and shows the tax incompatibility reason.",
+    "implemented": true,
+    "featureIds": ["F007", "F008", "F012"]
+  },
+  {
+    "id": "T008",
+    "description": "A parent row becomes non-combinable when export shape differs across children and shows the export incompatibility reason.",
+    "implemented": true,
+    "featureIds": ["F007", "F008", "F012"]
+  },
+  {
+    "id": "T009",
+    "description": "When a parent is combinable, selecting the parent selects the whole group as one invoice target.",
+    "implemented": true,
+    "featureIds": ["F008", "F009"]
+  },
+  {
+    "id": "T010",
+    "description": "When a parent is non-combinable, the parent checkbox is disabled while child rows remain individually selectable.",
+    "implemented": true,
+    "featureIds": ["F008", "F009", "F012"]
+  },
+  {
+    "id": "T011",
+    "description": "Partial child selection drives a tri-state parent indicator without silently changing execution semantics.",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T012",
+    "description": "`Select All` selects combinable groups by parent row instead of selecting each child individually.",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T013",
+    "description": "`Select All` selects child rows individually for non-combinable groups instead of attempting invalid parent selection.",
+    "implemented": true,
+    "featureIds": ["F010", "F012"]
+  },
+  {
+    "id": "T014",
+    "description": "Blocked child rows remain visible inside a group and do not become selectable through either child selection or parent `Select All`.",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T015",
+    "description": "Previewing a selected combinable parent renders one combined invoice preview and states `This selection will generate 1 invoice`.",
+    "implemented": true,
+    "featureIds": ["F013", "F014", "F017"]
+  },
+  {
+    "id": "T016",
+    "description": "Previewing a non-combinable mixed child selection renders a multi-invoice preview state or summary with the correct invoice count.",
+    "implemented": true,
+    "featureIds": ["F013", "F014", "F018"]
+  },
+  {
+    "id": "T017",
+    "description": "Preview executes against the exact selected parent or child scope and does not include unselected sibling candidates from the same group.",
+    "implemented": true,
+    "featureIds": ["F013", "F016"]
+  },
+  {
+    "id": "T018",
+    "description": "Generating a selected combinable parent creates exactly one invoice spanning all selected compatible children.",
+    "implemented": true,
+    "featureIds": ["F015", "F016", "F017"]
+  },
+  {
+    "id": "T019",
+    "description": "Generating selected child rows from a non-combinable group creates multiple invoices while preserving the exact selected scope.",
+    "implemented": true,
+    "featureIds": ["F015", "F016", "F018"]
+  },
+  {
+    "id": "T020",
+    "description": "Grouped generation does not re-expand into unselected siblings when the same client and invoice window contain additional candidates.",
+    "implemented": true,
+    "featureIds": ["F015", "F016"]
+  },
+  {
+    "id": "T021",
+    "description": "Duplicate-prevention logic blocks re-invoicing the same grouped parent selection or member selection without blocking unrelated siblings.",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T022",
+    "description": "A combined multi-assignment invoice persists successfully without requiring a fake invoice-header `client_contract_id` owner.",
+    "implemented": true,
+    "featureIds": ["F017", "F020"]
+  },
+  {
+    "id": "T023",
+    "description": "Charge persistence preserves `client_contract_id` attribution per charge for a combined multi-assignment invoice.",
+    "implemented": true,
+    "featureIds": ["F020", "F021"]
+  },
+  {
+    "id": "T024",
+    "description": "Invoice reads and invoice-detail rendering expose enough per-charge assignment attribution to explain a combined multi-assignment invoice.",
+    "implemented": true,
+    "featureIds": ["F021", "F022"]
+  },
+  {
+    "id": "T025",
+    "description": "Invoice history shows a combined grouped invoice clearly and does not mislabel it as belonging to only one assignment when it spans several.",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T026",
+    "description": "Purchase-order enforcement keeps a parent non-combinable when child candidates do not share compatible PO scope.",
+    "implemented": true,
+    "featureIds": ["F007", "F023"]
+  },
+  {
+    "id": "T027",
+    "description": "A valid no-PO grouped combination can generate as one invoice without tripping header-assignment PO checks.",
+    "implemented": true,
+    "featureIds": ["F017", "F020", "F023"]
+  },
+  {
+    "id": "T028",
+    "description": "Legacy single-assignment parent groups still preview and generate exactly as before.",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T029",
+    "description": "A single-child group still behaves like the legacy one-row flow and remains fully supported by preview and generation.",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T030",
+    "description": "DB-backed integration proves two active contracts for the same client with no PO constraint can be selected as one grouped parent and generated as one invoice.",
+    "implemented": true,
+    "featureIds": ["F017", "F020", "F021"]
+  },
+  {
+    "id": "T031",
+    "description": "DB-backed integration proves two active contracts for the same client with incompatible PO scope remain grouped visually but require separate child-level invoicing.",
+    "implemented": true,
+    "featureIds": ["F007", "F012", "F018", "F023"]
+  },
+  {
+    "id": "T032",
+    "description": "DB-backed integration proves `Select All` combines compatible groups and fans out incompatible groups in the same run without cross-contamination.",
+    "implemented": true,
+    "featureIds": ["F010", "F017", "F018"]
+  },
+  {
+    "id": "T033",
+    "description": "DB-backed integration proves grouped duplicate protection remains correct when a prior combined invoice exists for part of the same client window.",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T034",
+    "description": "Static/wiring coverage proves in-product copy, docs, and runbook text describe parent grouping, disabled non-combinable parents, and smart `Select All` semantics.",
+    "implemented": true,
+    "featureIds": ["F025"]
+  }
+]

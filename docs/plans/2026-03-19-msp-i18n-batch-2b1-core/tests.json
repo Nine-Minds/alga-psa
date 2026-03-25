@@ -1,0 +1,591 @@
+[
+  {
+    "id": "T001",
+    "description": "menuConfig.ts: MenuItem interface accepts optional translationKey field",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "menuConfig.ts: NavigationSection interface accepts optional translationKey field for section titles",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T003",
+    "description": "menuConfig.ts: all navigationSections items have translationKey matching msp/core nav.* keys",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "menuConfig.ts: all sub-items (Projects > All Projects/Templates, Documents > All Documents/Knowledge Base, etc.) have translationKeys",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T005",
+    "description": "menuConfig.ts: bottomMenuItems (Settings, Support, sub-items General/Profile/Security) have translationKeys",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T006",
+    "description": "menuConfig.ts: all 6 settingsNavigationSections section titles have translationKeys matching settings.sections.*",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T007",
+    "description": "menuConfig.ts: all settings items including Language and SLA have translationKeys matching settings.tabs.*",
+    "implemented": true,
+    "featureIds": ["F004", "F042"]
+  },
+  {
+    "id": "T008",
+    "description": "menuConfig.ts: all 4 billingNavigationSections titles have translationKeys matching nav.billing.sections.*",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T009",
+    "description": "menuConfig.ts: all 12 billing items have translationKeys matching nav.billing.*",
+    "implemented": true,
+    "featureIds": ["F005", "F043"]
+  },
+  {
+    "id": "T010",
+    "description": "Sidebar.tsx: with msp-i18n-enabled ON + non-English locale, nav items display translated text",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T011",
+    "description": "Sidebar.tsx: with msp-i18n-enabled OFF, nav items display English text (no regressions)",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T012",
+    "description": "Sidebar.tsx: collapsed sidebar tooltips show translated nav item names",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T013",
+    "description": "Sidebar.tsx: 'Go to dashboard' aria-label is translated",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T014",
+    "description": "Sidebar.tsx: 'AlgaPSA Logo' alt text is translated",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T015",
+    "description": "Sidebar.tsx: 'Expand sidebar' / 'Collapse sidebar' labels are translated",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T016",
+    "description": "Sidebar.tsx: settings mode section titles ('Organization & Access', etc.) display translated text",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T017",
+    "description": "Sidebar.tsx: billing mode section titles display translated text",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T018",
+    "description": "Sidebar.tsx: 'Back to Main' button text and tooltip are translated (already has key — verify consumption)",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T019",
+    "description": "Header.tsx: 'Quick Create' button text is translated",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T020",
+    "description": "Header.tsx: 'Open quick create' aria-label is translated",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T021",
+    "description": "Header.tsx: 'Create' dropdown heading is translated",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T022",
+    "description": "Header.tsx: all 7 quick-create option labels are translated",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T023",
+    "description": "Header.tsx: all 7 quick-create option descriptions are translated",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T024",
+    "description": "Header.tsx: 'Background Jobs' title is translated",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T025",
+    "description": "Header.tsx: 'Active jobs', 'Queued jobs', 'Failed last 24h' labels are translated",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T026",
+    "description": "Header.tsx: 'Open Job Center' menu item is translated",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T027",
+    "description": "Header.tsx: breadcrumb 'Home' text and aria-label are translated",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T028",
+    "description": "Header.tsx: breadcrumb shows translated nav item name (not English) when on a page with a menu match",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T029",
+    "description": "Header.tsx: TenantBadge aria-label uses translated template with tenant name interpolation",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T030",
+    "description": "DefaultLayout.tsx: AI interrupt dialog shows translated title when pendingInterruptKind is 'navigate'",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T031",
+    "description": "DefaultLayout.tsx: AI interrupt dialog shows translated title when pendingInterruptKind is 'close-sidebar'",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T032",
+    "description": "DefaultLayout.tsx: AI interrupt dialog confirm/cancel buttons are translated for both kinds",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T033",
+    "description": "TrialBanner.tsx: 'Premium confirmed — starts next billing cycle' is translated",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T034",
+    "description": "TrialBanner.tsx: '1 day left' singular form is translated correctly",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T035",
+    "description": "TrialBanner.tsx: '{{count}} days left' plural form with interpolation works in all languages",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T036",
+    "description": "TrialBanner.tsx: 'Premium Trial: {{daysLabel}} — confirm to keep' is translated with interpolation",
+    "implemented": true,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T037",
+    "description": "TrialBanner.tsx: '{{tier}} Trial: {{daysLabel}}' is translated with tier name interpolation",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T038",
+    "description": "PaymentFailedBanner.tsx: 'Payment failed — Update payment method' is translated",
+    "implemented": true,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T039",
+    "description": "PaymentFailedBanner.tsx: 'Failed to open billing portal' toast error is translated",
+    "implemented": true,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T040",
+    "description": "QuickCreateDialog.tsx: asset success toast is translated",
+    "implemented": true,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T041",
+    "description": "QuickCreateDialog.tsx: ticket success toast with ticket number interpolation is translated",
+    "implemented": true,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T042",
+    "description": "QuickCreateDialog.tsx: client success toast with client name interpolation is translated",
+    "implemented": true,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T043",
+    "description": "QuickCreateDialog.tsx: contact success toast with contact name interpolation is translated",
+    "implemented": true,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T044",
+    "description": "QuickCreateDialog.tsx: project success toast with project name interpolation is translated",
+    "implemented": true,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T045",
+    "description": "QuickCreateDialog.tsx: service and product success toasts are translated",
+    "implemented": true,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T046",
+    "description": "QuickCreateDialog.tsx: 'Add New Contact', 'Add New Project', 'Add New Service' dialog titles are translated",
+    "implemented": true,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T047",
+    "description": "QuickCreateDialog.tsx: 'Failed to load clients' and 'Failed to load service types' error messages are translated",
+    "implemented": true,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T048",
+    "description": "RightSidebar.tsx: CE fallback 'Chat' title is translated",
+    "implemented": true,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T049",
+    "description": "RightSidebar.tsx: CE fallback enterprise-only message is translated",
+    "implemented": true,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T050",
+    "description": "PlatformNotificationBanner.tsx: 'Learn More' button is translated",
+    "implemented": true,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T051",
+    "description": "PlatformNotificationBanner.tsx: 'Dismiss notification' aria-label is translated",
+    "implemented": true,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T052",
+    "description": "en/msp/core.json: all ~80 new keys present with correct English values",
+    "implemented": true,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T053",
+    "description": "All 7 production locale files have identical key sets (no missing or extra keys vs English)",
+    "implemented": true,
+    "featureIds": ["F032", "F033", "F034", "F035", "F036", "F037"]
+  },
+  {
+    "id": "T054",
+    "description": "xx/msp/core.json: all leaf values are '11111', key structure matches en",
+    "implemented": true,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T055",
+    "description": "yy/msp/core.json: all leaf values are '55555', key structure matches en",
+    "implemented": true,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T056",
+    "description": "Italian accent audit passes: no missing accents on common words (funzionalità, è, può, verrà, già, necessario)",
+    "implemented": true,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T057",
+    "description": "Cross-locale consistency: nav.billing.* labels match between msp/core.json and any settings reference",
+    "implemented": true,
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T058",
+    "description": "Visual QA: switch to xx locale, navigate to /msp/dashboard — sidebar, header, breadcrumb all show '11111'",
+    "implemented": true,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T059",
+    "description": "Visual QA: switch to xx locale, navigate to /msp/settings — settings sidebar section titles and items show '11111'",
+    "implemented": true,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T060",
+    "description": "Visual QA: switch to xx locale, navigate to /msp/billing — billing sidebar section titles and items show '11111'",
+    "implemented": true,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T061",
+    "description": "Visual QA: switch to xx locale, open quick-create dropdown — all labels and descriptions show '11111'",
+    "implemented": true,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T062",
+    "description": "Visual QA: switch to de locale — verify no text overflow in sidebar tooltips or dropdown menus",
+    "implemented": true,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T063",
+    "description": "Build verification: npm run build succeeds with no TypeScript errors",
+    "implemented": true,
+    "featureIds": ["F001", "F007", "F013", "F020"]
+  },
+  {
+    "id": "T064",
+    "description": "All {{variables}} in translation values are preserved exactly across all 7 languages",
+    "implemented": true,
+    "featureIds": ["F032", "F033", "F034", "F035", "F036", "F037"]
+  },
+  {
+    "id": "T065",
+    "description": "All translation JSON files are valid JSON (no syntax errors)",
+    "implemented": true,
+    "featureIds": ["F031", "F032", "F033", "F034", "F035", "F036", "F037", "F038", "F039"]
+  },
+  {
+    "id": "T066",
+    "description": "Sidebar.tsx: Language item is shown only when msp-i18n-enabled flag is ON (existing behavior preserved)",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+
+  {
+    "id": "T070",
+    "description": "en/msp/dashboard.json: all ~110 keys present with correct English values",
+    "implemented": true,
+    "featureIds": ["F050"]
+  },
+  {
+    "id": "T071",
+    "description": "DashboardContainer.tsx: enterprise welcome banner title and description are translated",
+    "implemented": true,
+    "featureIds": ["F051"]
+  },
+  {
+    "id": "T072",
+    "description": "DashboardContainer.tsx: community welcome banner title and description are translated",
+    "implemented": true,
+    "featureIds": ["F051"]
+  },
+  {
+    "id": "T073",
+    "description": "DashboardContainer.tsx: 'Platform Features' heading is translated",
+    "implemented": true,
+    "featureIds": ["F052"]
+  },
+  {
+    "id": "T074",
+    "description": "DashboardContainer.tsx: all 6 feature card titles are translated",
+    "implemented": true,
+    "featureIds": ["F052"]
+  },
+  {
+    "id": "T075",
+    "description": "DashboardContainer.tsx: all 6 feature card descriptions are translated",
+    "implemented": true,
+    "featureIds": ["F052"]
+  },
+  {
+    "id": "T076",
+    "description": "DashboardContainer.tsx: knowledge base section title, description, and CTA button are translated",
+    "implemented": true,
+    "featureIds": ["F053"]
+  },
+  {
+    "id": "T077",
+    "description": "DashboardContainer.tsx: 'Coming soon!' toast is translated",
+    "implemented": true,
+    "featureIds": ["F054"]
+  },
+  {
+    "id": "T078",
+    "description": "DashboardOnboardingSection.tsx: 'Onboarding complete' and 'Complete your setup' headings switch correctly and are translated",
+    "implemented": true,
+    "featureIds": ["F055"]
+  },
+  {
+    "id": "T079",
+    "description": "DashboardOnboardingSection.tsx: progress ring shows translated 'PROGRESS' label and '{{completed}} of {{total}} Steps' with interpolation",
+    "implemented": true,
+    "featureIds": ["F056"]
+  },
+  {
+    "id": "T080",
+    "description": "DashboardOnboardingSection.tsx: motivational messages change correctly based on progress and are translated",
+    "implemented": true,
+    "featureIds": ["F056"]
+  },
+  {
+    "id": "T081",
+    "description": "DashboardOnboardingSection.tsx: step badges (NOT STARTED, IN PROGRESS, COMPLETE, BLOCKED) are translated",
+    "implemented": true,
+    "featureIds": ["F057"]
+  },
+  {
+    "id": "T082",
+    "description": "DashboardOnboardingSection.tsx: 'STEP {{index}}' label is translated with interpolation",
+    "implemented": true,
+    "featureIds": ["F057"]
+  },
+  {
+    "id": "T083",
+    "description": "DashboardOnboardingSection.tsx: action buttons (Completed, Hiding, Hide) are translated",
+    "implemented": true,
+    "featureIds": ["F058"]
+  },
+  {
+    "id": "T084",
+    "description": "DashboardOnboardingSection.tsx: 'Hidden setup cards ({{count}})' panel title is translated with interpolation",
+    "implemented": true,
+    "featureIds": ["F058"]
+  },
+  {
+    "id": "T085",
+    "description": "OnboardingChecklist.tsx: card title 'Onboarding checklist' is translated",
+    "implemented": true,
+    "featureIds": ["F059"]
+  },
+  {
+    "id": "T086",
+    "description": "OnboardingChecklist.tsx: progress subtitle '{{completed}} of {{total}} tasks complete' is translated with interpolation",
+    "implemented": true,
+    "featureIds": ["F059"]
+  },
+  {
+    "id": "T087",
+    "description": "OnboardingChecklist.tsx: completion banner heading, description, and 'Invite clients' CTA are translated",
+    "implemented": true,
+    "featureIds": ["F059"]
+  },
+  {
+    "id": "T088",
+    "description": "stepDefinitions.ts: all 5 step titles are translatable via translationKey",
+    "implemented": true,
+    "featureIds": ["F060"]
+  },
+  {
+    "id": "T089",
+    "description": "stepDefinitions.ts: all 5 step descriptions are translatable via translationKey",
+    "implemented": true,
+    "featureIds": ["F060"]
+  },
+  {
+    "id": "T090",
+    "description": "stepDefinitions.ts: all 5 step CTA button labels are translatable via translationKey",
+    "implemented": true,
+    "featureIds": ["F060"]
+  },
+  {
+    "id": "T091",
+    "description": "ROUTE_NAMESPACES: '/msp' route loads 'msp/dashboard' namespace",
+    "implemented": true,
+    "featureIds": ["F061"]
+  },
+  {
+    "id": "T092",
+    "description": "ROUTE_NAMESPACES: '/msp/dashboard' route loads 'msp/dashboard' namespace",
+    "implemented": true,
+    "featureIds": ["F061"]
+  },
+  {
+    "id": "T093",
+    "description": "All 7 production locale files for msp/dashboard.json have identical key sets (no missing or extra keys vs English)",
+    "implemented": true,
+    "featureIds": ["F062", "F063", "F064", "F065", "F066", "F067"]
+  },
+  {
+    "id": "T094",
+    "description": "xx/msp/dashboard.json: all leaf values are '11111', key structure matches en",
+    "implemented": true,
+    "featureIds": ["F068"]
+  },
+  {
+    "id": "T095",
+    "description": "yy/msp/dashboard.json: all leaf values are '55555', key structure matches en",
+    "implemented": true,
+    "featureIds": ["F069"]
+  },
+  {
+    "id": "T096",
+    "description": "Italian accent audit passes for it/msp/dashboard.json",
+    "implemented": true,
+    "featureIds": ["F070"]
+  },
+  {
+    "id": "T097",
+    "description": "Visual QA: switch to xx locale, navigate to /msp/dashboard — welcome banner, feature cards, onboarding all show '11111'",
+    "implemented": true,
+    "featureIds": ["F068"]
+  },
+  {
+    "id": "T098",
+    "description": "Visual QA: switch to de locale on /msp/dashboard — verify no text overflow on feature card descriptions and onboarding steps",
+    "implemented": true,
+    "featureIds": ["F064"]
+  },
+  {
+    "id": "T099",
+    "description": "All {{variables}} in msp/dashboard.json translation values are preserved exactly across all 7 languages",
+    "implemented": true,
+    "featureIds": ["F062", "F063", "F064", "F065", "F066", "F067"]
+  },
+  {
+    "id": "T100",
+    "description": "All msp/dashboard.json files are valid JSON (no syntax errors)",
+    "implemented": true,
+    "featureIds": ["F050", "F062", "F063", "F064", "F065", "F066", "F067", "F068", "F069"]
+  },
+  {
+    "id": "T101",
+    "description": "DashboardOnboardingSection.tsx: rendering without initialDismissedStepIds does not trigger a rerender loop",
+    "implemented": true,
+    "featureIds": ["F071"]
+  }
+]

@@ -35,6 +35,97 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
   const { t } = useTranslation('features/billing');
   const { t: tCommon } = useTranslation('common');
 
+  const formatServicePeriodRange = (
+    start: string | null | undefined,
+    end: string | null | undefined
+  ): string | null => {
+    if (!start || !end) {
+      return null;
+    }
+
+    return `${formatDate(start)} - ${formatDate(end)}`;
+  };
+
+  const renderRecurringDetailPeriods = (
+    periods: Array<{
+      service_period_start?: string | null;
+      service_period_end?: string | null;
+      billing_timing?: 'arrears' | 'advance' | null;
+    }> | undefined
+  ) => {
+    if (!periods || periods.length === 0) {
+      return null;
+    }
+
+    const renderedPeriods = periods
+      .map((period) => ({
+        start: period.service_period_start ?? null,
+        end: period.service_period_end ?? null,
+        label: formatServicePeriodRange(period.service_period_start, period.service_period_end),
+        timing: period.billing_timing,
+      }))
+      .filter((period): period is {
+        start: string | null;
+        end: string | null;
+        label: string;
+        timing: 'arrears' | 'advance' | null | undefined;
+      } => Boolean(period.label))
+      .sort((left, right) => {
+        if (left.start !== right.start) {
+          return String(left.start ?? '').localeCompare(String(right.start ?? ''));
+        }
+        return String(left.end ?? '').localeCompare(String(right.end ?? ''));
+      });
+
+    if (renderedPeriods.length === 0) {
+      return null;
+    }
+
+    // Portal policy:
+    // - multi-detail recurring rows render the canonical detail list
+    // - single-detail recurring rows render one "Service Period" line
+    // - rows with no canonical detail list fall back to parent summary fields elsewhere below
+    if (renderedPeriods.length === 1) {
+      return (
+        <div className="text-xs text-muted-foreground">
+          {t('invoice.servicePeriod', 'Service Period')}: {renderedPeriods[0].label}
+        </div>
+      );
+    }
+
+    return (
+      <div className="text-xs text-muted-foreground">
+        <div>{t('invoice.servicePeriods', 'Service Periods')}:</div>
+          <ul className="list-disc pl-4">
+            {renderedPeriods.map((period) => (
+              <li key={`${period.label}:${period.timing ?? 'none'}`}>{period.label}</li>
+            ))}
+        </ul>
+      </div>
+    );
+  };
+
+  const renderFinancialArtifactNote = (item: InvoiceViewModel['invoice_charges'][number]) => {
+    const hasSummaryRange = Boolean(
+      formatServicePeriodRange(item.service_period_start, item.service_period_end)
+    );
+    const hasRecurringDetails = Boolean(item.recurring_detail_periods?.length);
+
+    if (hasSummaryRange || hasRecurringDetails) {
+      return null;
+    }
+
+    if (item.is_manual) {
+      return (
+        <div className="text-xs text-muted-foreground">
+          {t('invoice.financialOnlyLine', 'Financial-only line. No recurring service period.')}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   // Fetch invoice details when dialog opens
   useEffect(() => {
     const fetchInvoiceDetails = async () => {
@@ -161,16 +252,33 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
               <tbody className="divide-y divide-gray-200">
                 {invoice.invoice_charges && invoice.invoice_charges.length > 0 ? (
                   invoice.invoice_charges.map((item, idx) => (
-                    <tr key={idx}>
+                    <tr key={idx} data-automation-id={`invoice-line-item-${idx}`}>
                       <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <span>{item.description}</span>
-                          {item.service_item_kind === 'product' ? (
-                            <Badge variant="secondary">Product</Badge>
-                          ) : null}
-                          {item.service_item_kind === 'product' && item.service_sku ? (
-                            <span className="text-xs text-muted-foreground">{item.service_sku}</span>
-                          ) : null}
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span>{item.description}</span>
+                            {item.service_item_kind === 'product' ? (
+                              <Badge variant="secondary">Product</Badge>
+                            ) : null}
+                            {item.billing_timing ? (
+                              <Badge variant="outline">
+                                {item.billing_timing === 'advance'
+                                  ? t('invoice.advanceTiming', 'Advance')
+                                  : t('invoice.arrearsTiming', 'Arrears')}
+                              </Badge>
+                            ) : null}
+                            {item.service_item_kind === 'product' && item.service_sku ? (
+                              <span className="text-xs text-muted-foreground">{item.service_sku}</span>
+                            ) : null}
+                          </div>
+                          {item.recurring_detail_periods && item.recurring_detail_periods.length > 0
+                            ? renderRecurringDetailPeriods(item.recurring_detail_periods)
+                            // Historical or flattened rows keep a single compatibility summary range.
+                            : formatServicePeriodRange(item.service_period_start, item.service_period_end) ? (
+                                <div className="text-xs text-muted-foreground">
+                                  {t('invoice.servicePeriod', 'Service Period')}: {formatServicePeriodRange(item.service_period_start, item.service_period_end)}
+                                </div>
+                              ) : renderFinancialArtifactNote(item)}
                         </div>
                       </td>
                       <td className="px-3 py-2">{item.quantity}</td>

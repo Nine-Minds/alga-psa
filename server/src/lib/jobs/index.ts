@@ -26,6 +26,8 @@ import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
 import logger from '@alga-psa/core/logger';
+import type { IRecurringRunExecutionWindowIdentity } from '@alga-psa/types';
+import type { IRecurringDueSelectionInput } from '@alga-psa/types';
 
 // =============================================================================
 // NEW JOB RUNNER ABSTRACTION EXPORTS
@@ -202,11 +204,36 @@ export const scheduleInvoiceGeneration = async (
   runAt: Date,
   tenantId: string
 ): Promise<string | null> => {
+  throw new Error(
+    `Recurring invoice scheduling no longer accepts billingCycleId ${billingCycleId}. Use scheduleRecurringWindowInvoiceGeneration with canonical selectorInput.`,
+  );
+};
+
+export const scheduleRecurringWindowInvoiceGeneration = async (input: {
+  clientId: string;
+  runAt: Date;
+  tenantId: string;
+  executionWindow?: IRecurringRunExecutionWindowIdentity;
+  selectorInput: IRecurringDueSelectionInput;
+}): Promise<string | null> => {
   const scheduler = await initializeScheduler();
+  const executionWindow = input.executionWindow ?? input.selectorInput.executionWindow;
+
+  if (executionWindow.identityKey !== input.selectorInput.executionWindow.identityKey) {
+    throw new Error(
+      `Recurring invoice job execution window ${executionWindow.identityKey} does not match selectorInput ${input.selectorInput.executionWindow.identityKey}.`,
+    );
+  }
+
   return await scheduler.scheduleScheduledJob<GenerateInvoiceData>(
     'generate-invoice',
-    runAt,
-    { clientId, billingCycleId, tenantId }
+    input.runAt,
+    {
+      clientId: input.clientId,
+      executionWindow,
+      selectorInput: input.selectorInput,
+      tenantId: input.tenantId,
+    }
   );
 };
 

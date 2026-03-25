@@ -56,11 +56,19 @@ class ClientContractLine {
                 this.on('cc.contract_id', '=', 'cl.contract_id')
                     .andOn('cl.tenant', '=', 'cc.tenant');
             })
+            .join('contracts as c', function() {
+                this.on('cc.contract_id', '=', 'c.contract_id')
+                    .andOn('c.tenant', '=', 'cc.tenant');
+            })
             .where({
                 'cc.client_id': clientId,
                 'cc.is_active': true,
                 'cc.tenant': tenant,
-                'cl.service_category': serviceCategory
+                'cl.service_category': serviceCategory,
+                'c.owner_client_id': clientId
+            })
+            .andWhere(function() {
+                this.whereNull('c.is_template').orWhere('c.is_template', false);
             })
             .where(function (this: Knex.QueryBuilder) {
                 this.where(function (this: Knex.QueryBuilder) {
@@ -209,7 +217,11 @@ class ClientContractLine {
                 .where({
                     'cc.client_id': clientId,
                     'cc.is_active': true,
-                    'cc.tenant': tenant
+                    'cc.tenant': tenant,
+                    'c.owner_client_id': clientId
+                })
+                .andWhere(function() {
+                    this.whereNull('c.is_template').orWhere('c.is_template', false);
                 })
                 .select(
                     'cl.contract_line_id',
@@ -363,7 +375,11 @@ class ClientContractLine {
                 .where({
                     'cc.client_id': clientId,
                     'cc.is_active': true,
-                    'cc.tenant': tenant
+                    'cc.tenant': tenant,
+                    'c.owner_client_id': clientId
+                })
+                .andWhere(function() {
+                    this.whereNull('c.is_template').orWhere('c.is_template', false);
                 })
                 .select(
                     'cc.*',

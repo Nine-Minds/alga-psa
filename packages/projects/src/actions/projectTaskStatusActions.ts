@@ -158,9 +158,30 @@ export const copyProjectStatusesToPhase = withAuth(async (
       is_visible: mapping.is_visible
     }));
 
-    return await trx('project_status_mappings')
+    const newMappings: IProjectStatusMapping[] = await trx('project_status_mappings')
       .insert(inserts)
       .returning('*');
+
+    // Reassign existing tasks from project-default mappings to the new phase-specific ones
+    // Group by new phase mapping so we can batch with whereIn, matching removePhaseStatuses style
+    const updatesByReplacement = new Map<string, string[]>();
+    for (const defaultMapping of defaultMappings) {
+      const phaseMapping = newMappings.find((m) => m.status_id === defaultMapping.status_id);
+      if (phaseMapping) {
+        const existing = updatesByReplacement.get(phaseMapping.project_status_mapping_id) || [];
+        existing.push(defaultMapping.project_status_mapping_id);
+        updatesByReplacement.set(phaseMapping.project_status_mapping_id, existing);
+      }
+    }
+
+    for (const [newId, oldIds] of updatesByReplacement) {
+      await trx('project_tasks')
+        .where({ tenant, phase_id: phaseId })
+        .whereIn('project_status_mapping_id', oldIds)
+        .update({ project_status_mapping_id: newId });
+    }
+
+    return newMappings;
   });
 });
 

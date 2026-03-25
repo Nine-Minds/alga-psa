@@ -3,6 +3,9 @@ import { Temporal } from '@js-temporal/polyfill';
 import type { ISO8601String, IClientContractLine } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db'; // Assuming needed if trx doesn't carry tenant context reliably
 import { toPlainDate, toISODate } from '@alga-psa/core';
+import {
+    buildClientCadencePostDropObligationRef,
+} from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 // Import necessary interfaces - adjust paths if needed
 
 // Define IBucketUsage locally for now, aligning with Phase 1 needs.
@@ -52,6 +55,8 @@ interface PeriodInfo {
     periodEnd: Temporal.PlainDate;
     planId: string;
     billingFrequency: string; // e.g., 'monthly', 'quarterly', 'annually'
+    source: 'recurring_service_period' | 'plan_anchor';
+    recurringScheduleKey: string | null;
 }
 
 /**
@@ -77,12 +82,16 @@ async function calculatePeriod(
 
     console.debug(`[calculatePeriod] Inputs: tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
 
-    // Find the active client contract line that covers the target date AND
+    // Find the active client-owned contract line that covers the target date AND
     // is associated with a bucket configuration for the given serviceCatalogId.
-    const clientPlan = await trx('client_contract_lines as ccl')
+    const clientPlan = await trx('client_contracts as cc')
+        .join('contracts as ct', function() {
+            this.on('ct.contract_id', '=', 'cc.contract_id')
+                .andOn('ct.tenant', '=', 'cc.tenant');
+        })
         .join('contract_lines as cl', function() {
-            this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
-                .andOn('ccl.tenant', '=', 'cl.tenant');
+            this.on('cl.contract_id', '=', 'ct.contract_id')
+                .andOn('cl.tenant', '=', 'ct.tenant');
         })
         .join('contract_line_service_configuration as psc', function() {
             this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
@@ -93,29 +102,130 @@ async function calculatePeriod(
             this.on('psc.config_id', '=', 'psbc.config_id')
                 .andOn('psc.tenant', '=', 'psbc.tenant');
         })
-        .where('ccl.client_id', clientId)
-        .andWhere('ccl.tenant', tenant)
-        .andWhere('ccl.is_active', true)
-        .andWhere('ccl.start_date', '<=', targetDateISO) // Plan must start on or before the target date
+        .where('cc.client_id', clientId)
+        .andWhere('cc.tenant', tenant)
+        .andWhere('cc.is_active', true)
+        .andWhere('cc.start_date', '<=', targetDateISO) // Plan must start on or before the target date
         .andWhere(function() {
             // Plan must end on or after the target date, or have no end date
-            this.where('ccl.end_date', '>=', targetDateISO)
-                .orWhereNull('ccl.end_date');
+            this.where('cc.end_date', '>=', targetDateISO)
+                .orWhereNull('cc.end_date');
         })
         .select(
-            'ccl.contract_line_id',
-            'ccl.start_date', // Use the client-specific plan start date as the anchor
-            'cl.billing_frequency'
+            'cc.client_contract_id',
+            'cl.contract_line_id as client_contract_line_id',
+            'cl.contract_line_id',
+            'cc.start_date', // Use the client-specific assignment start date as the anchor
+            'cl.billing_frequency',
+            'cl.cadence_owner',
          )
-        .orderBy('ccl.start_date', 'desc') // Prefer the most recently started plan if overlaps occur
-        .first<{ contract_line_id: string; start_date: ISO8601String; billing_frequency: string } | undefined>();
+        .orderBy('cc.start_date', 'desc') // Prefer the most recently started plan if overlaps occur
+        .first<{
+            client_contract_id: string;
+            client_contract_line_id: string;
+            contract_line_id: string;
+            start_date: ISO8601String;
+            billing_frequency: string;
+            cadence_owner: 'client' | 'contract' | null;
+        } | undefined>();
 
     if (!clientPlan) {
         console.warn(`[calculatePeriod] No active contract line with bucket config found. tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
         return null;
     }
 
+    const conflictingClientPlan = await trx('client_contracts as cc')
+        .join('contracts as ct', function() {
+            this.on('ct.contract_id', '=', 'cc.contract_id')
+                .andOn('ct.tenant', '=', 'cc.tenant');
+        })
+        .join('contract_lines as cl', function() {
+            this.on('cl.contract_id', '=', 'ct.contract_id')
+                .andOn('cl.tenant', '=', 'ct.tenant');
+        })
+        .join('contract_line_service_configuration as psc', function() {
+            this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
+                .andOn('cl.tenant', '=', 'psc.tenant')
+                .andOnVal('psc.service_id', '=', serviceCatalogId);
+        })
+        .join('contract_line_service_bucket_config as psbc', function() {
+            this.on('psc.config_id', '=', 'psbc.config_id')
+                .andOn('psc.tenant', '=', 'psbc.tenant');
+        })
+        .where('cc.client_id', clientId)
+        .andWhere('cc.tenant', tenant)
+        .andWhere('cc.is_active', true)
+        .andWhere('cc.start_date', '<=', targetDateISO)
+        .andWhere(function() {
+            this.where('cc.end_date', '>=', targetDateISO)
+                .orWhereNull('cc.end_date');
+        })
+        .andWhere('cc.client_contract_id', '!=', clientPlan.client_contract_id)
+        .select('cc.client_contract_id')
+        .orderBy('cc.start_date', 'desc')
+        .first<{ client_contract_id: string } | undefined>();
+
+    if (conflictingClientPlan?.client_contract_id) {
+        throw new Error(
+            `Ambiguous bucket usage assignment resolution for client ${clientId}, service ${serviceCatalogId}, date ${targetDateISO}. `
+            + `Matched assignments: ${clientPlan.client_contract_id}, ${conflictingClientPlan.client_contract_id}. `
+            + 'Provide explicit assignment identity before bucket billing.',
+        );
+    }
+
     console.debug(`[calculatePeriod] Found clientPlan: contract_line_id=${clientPlan.contract_line_id}, start_date=${clientPlan.start_date}, billing_frequency=${clientPlan.billing_frequency}`);
+
+    const recurringObligation = clientPlan.cadence_owner === 'contract'
+        ? {
+            obligationType: 'contract_line' as const,
+            obligationId: clientPlan.contract_line_id,
+        }
+        : buildClientCadencePostDropObligationRef({
+            contractLineId: clientPlan.client_contract_line_id,
+            chargeFamily: 'bucket',
+        });
+
+    const matchingRecurringServicePeriod = await trx('recurring_service_periods')
+        .where({
+            tenant,
+            obligation_type: recurringObligation.obligationType,
+            obligation_id: recurringObligation.obligationId,
+        })
+        .whereNotNull('service_period_start')
+        .whereNotNull('service_period_end')
+        .whereNotIn('lifecycle_state', ['archived', 'superseded'])
+        .andWhere('service_period_start', '<=', targetDateISO)
+        .andWhere('service_period_end', '>', targetDateISO)
+        .orderBy('service_period_start', 'desc')
+        .orderBy('revision', 'desc')
+        .first<{
+            schedule_key: string;
+            service_period_start: ISO8601String;
+            service_period_end: ISO8601String;
+        } | undefined>(
+            'schedule_key',
+            'service_period_start',
+            'service_period_end',
+        );
+
+    if (matchingRecurringServicePeriod) {
+        const periodStart = toPlainDate(matchingRecurringServicePeriod.service_period_start);
+        const periodEndExclusive = toPlainDate(matchingRecurringServicePeriod.service_period_end);
+        const periodEnd = periodEndExclusive.subtract({ days: 1 });
+
+        console.debug(
+            `[calculatePeriod] Using recurring service-period window: start=${periodStart.toString()}, end=${periodEnd.toString()}, schedule=${matchingRecurringServicePeriod.schedule_key}`
+        );
+
+        return {
+            periodStart,
+            periodEnd,
+            planId: clientPlan.contract_line_id,
+            billingFrequency: clientPlan.billing_frequency,
+            source: 'recurring_service_period',
+            recurringScheduleKey: matchingRecurringServicePeriod.schedule_key,
+        };
+    }
 
     const planStartDate = toPlainDate(clientPlan.start_date);
     const frequency = clientPlan.billing_frequency;
@@ -163,6 +273,8 @@ async function calculatePeriod(
         periodEnd,
         planId: clientPlan.contract_line_id,
         billingFrequency: frequency,
+        source: 'plan_anchor',
+        recurringScheduleKey: null,
     };
 }
 
@@ -203,7 +315,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
         throw new Error(`Could not determine active contract line/period for client ${clientId}, service ${serviceCatalogId}, date ${date}`);
     }
 
-    const { periodStart, periodEnd, planId, billingFrequency } = periodInfo;
+    const { periodStart, periodEnd, planId, billingFrequency, source, recurringScheduleKey } = periodInfo;
     const periodStartISO = toISODate(periodStart);
     const periodEndISO = toISODate(periodEnd);
 
@@ -259,22 +371,63 @@ export async function findOrCreateCurrentBucketUsageRecord(
         let prevPeriodStart: Temporal.PlainDate;
 
         try {
-            switch (billingFrequency) {
-                case 'monthly':
+            if (source === 'recurring_service_period' && recurringScheduleKey) {
+                const previousRecurringServicePeriod = await trx('recurring_service_periods')
+                    .where({
+                        tenant,
+                        schedule_key: recurringScheduleKey,
+                    })
+                    .whereNotNull('service_period_start')
+                    .whereNotNull('service_period_end')
+                    .whereNotIn('lifecycle_state', ['archived', 'superseded'])
+                    .andWhere('service_period_end', '<=', periodStartISO)
+                    .orderBy('service_period_end', 'desc')
+                    .orderBy('revision', 'desc')
+                    .first<{
+                        service_period_start: ISO8601String;
+                        service_period_end: ISO8601String;
+                    } | undefined>(
+                        'service_period_start',
+                        'service_period_end'
+                    );
+
+                if (previousRecurringServicePeriod) {
+                    prevPeriodStart = toPlainDate(previousRecurringServicePeriod.service_period_start);
+                    prevPeriodEnd = toPlainDate(previousRecurringServicePeriod.service_period_end).subtract({ days: 1 });
+                } else {
                     prevPeriodEnd = periodStart.subtract({ days: 1 });
-                    prevPeriodStart = periodStart.subtract({ months: 1 });
-                    break;
-                case 'quarterly':
-                    prevPeriodEnd = periodStart.subtract({ days: 1 });
-                    prevPeriodStart = periodStart.subtract({ months: 3 });
-                    break;
-                case 'annually':
-                    prevPeriodEnd = periodStart.subtract({ days: 1 });
-                    prevPeriodStart = periodStart.subtract({ years: 1 });
-                    break;
-                default:
-                    // Should not happen due to check in calculatePeriod, but handle defensively
-                    throw new Error(`Unsupported billing frequency encountered during rollover calculation: ${billingFrequency}`);
+                    switch (billingFrequency) {
+                        case 'monthly':
+                            prevPeriodStart = periodStart.subtract({ months: 1 });
+                            break;
+                        case 'quarterly':
+                            prevPeriodStart = periodStart.subtract({ months: 3 });
+                            break;
+                        case 'annually':
+                            prevPeriodStart = periodStart.subtract({ years: 1 });
+                            break;
+                        default:
+                            throw new Error(`Unsupported billing frequency encountered during rollover calculation: ${billingFrequency}`);
+                    }
+                }
+            } else {
+                switch (billingFrequency) {
+                    case 'monthly':
+                        prevPeriodEnd = periodStart.subtract({ days: 1 });
+                        prevPeriodStart = periodStart.subtract({ months: 1 });
+                        break;
+                    case 'quarterly':
+                        prevPeriodEnd = periodStart.subtract({ days: 1 });
+                        prevPeriodStart = periodStart.subtract({ months: 3 });
+                        break;
+                    case 'annually':
+                        prevPeriodEnd = periodStart.subtract({ days: 1 });
+                        prevPeriodStart = periodStart.subtract({ years: 1 });
+                        break;
+                    default:
+                        // Should not happen due to check in calculatePeriod, but handle defensively
+                        throw new Error(`Unsupported billing frequency encountered during rollover calculation: ${billingFrequency}`);
+                }
             }
         } catch (error) {
              console.error(`Error calculating previous period dates: ${error}`);

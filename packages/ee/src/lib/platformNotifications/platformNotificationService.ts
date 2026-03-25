@@ -10,6 +10,8 @@ export interface TargetAudienceFilters {
   tenant_ids?: string[];
   user_types?: string[];
   email_search?: string;
+  subscription_statuses?: string[];
+  product_names?: string[];
 }
 
 export interface TargetAudience {
@@ -79,6 +81,8 @@ export interface ResolvedRecipient {
   last_name: string | null;
   roles: string[];
   user_type: string;
+  subscription_status: string | null;
+  product_name: string | null;
 }
 
 export class PlatformNotificationService {

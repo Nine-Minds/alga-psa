@@ -170,8 +170,8 @@ describe('SLA Reporting Service Integration Tests', () => {
     boardId = await createBoard(db, tenantId, 'Reporting Test Board');
 
     // Create statuses
-    statusOpenId = await createStatus(db, tenantId, 'Open', false);
-    statusClosedId = await createStatus(db, tenantId, 'Closed', true);
+    statusOpenId = await createStatus(db, tenantId, boardId, 'Open', false);
+    statusClosedId = await createStatus(db, tenantId, boardId, 'Closed', true);
 
     // Create priorities with order
     priorityHighId = await createPriority(db, tenantId, 'High', 1, internalUserId);
@@ -637,6 +637,59 @@ describe('SLA Reporting Service Integration Tests', () => {
       const closedTicket = result.find(t => t.ticketId === ticketId);
       expect(closedTicket).toBeUndefined(); // Should not include closed tickets
     });
+
+    it('T048: resolves open and closed state from board-owned status ids without mixing same-named statuses across boards', async () => {
+      const now = new Date();
+      const secondBoardId = await createBoard(db, tenantId, 'Reporting Secondary Board');
+      const secondBoardClosedOpenStatusId = await createStatus(db, tenantId, secondBoardId, 'Open', true);
+      const openTicketId = uuidv4();
+      const closedTicketId = uuidv4();
+
+      await insertTicket(db, {
+        tenant: tenantId,
+        ticketId: openTicketId,
+        ticketNumber: `RISK-OPEN-${uuidv4().slice(0, 6)}`,
+        title: 'Primary Board Open Ticket',
+        companyId,
+        contactId,
+        statusId: statusOpenId,
+        priorityId: priorityHighId,
+        boardId,
+        assignedTo: internalUserId,
+        slaPolicyId,
+      });
+
+      await insertTicket(db, {
+        tenant: tenantId,
+        ticketId: closedTicketId,
+        ticketNumber: `RISK-CLOSED-${uuidv4().slice(0, 6)}`,
+        title: 'Secondary Board Closed Ticket',
+        companyId,
+        contactId,
+        statusId: secondBoardClosedOpenStatusId,
+        priorityId: priorityHighId,
+        boardId: secondBoardId,
+        assignedTo: internalUserId,
+        slaPolicyId,
+      });
+
+      await db('tickets').where({ tenant: tenantId, ticket_id: openTicketId }).update({
+        sla_started_at: new Date(now.getTime() - 90 * 60000),
+        sla_response_due_at: new Date(now.getTime() + 30 * 60000),
+        sla_resolution_due_at: new Date(now.getTime() + 60 * 60000),
+      });
+
+      await db('tickets').where({ tenant: tenantId, ticket_id: closedTicketId }).update({
+        sla_started_at: new Date(now.getTime() - 90 * 60000),
+        sla_response_due_at: new Date(now.getTime() + 30 * 60000),
+        sla_resolution_due_at: new Date(now.getTime() + 60 * 60000),
+      });
+
+      const result = await getTicketsAtRisk(10);
+
+      expect(result.some((ticket) => ticket.ticketId === openTicketId)).toBe(true);
+      expect(result.some((ticket) => ticket.ticketId === closedTicketId)).toBe(false);
+    });
   });
 
   // ==========================================================================
@@ -721,7 +774,7 @@ describe('SLA Reporting Service Integration Tests', () => {
         updated_at: db.fn.now(),
       });
       const otherBoardId = await createBoard(db, otherTenantId, 'Other Board');
-      const otherStatusId = await createStatus(db, otherTenantId, 'Open', false);
+      const otherStatusId = await createStatus(db, otherTenantId, otherBoardId, 'Open', false);
       const otherPriorityId = await createPriority(db, otherTenantId, 'High', 1, otherUserId);
       const otherScheduleId = await createBusinessHoursSchedule(db, otherTenantId, 'Other Schedule');
       const otherPolicyId = await createSlaPolicy(db, otherTenantId, 'Other Policy', otherScheduleId, true);
@@ -831,10 +884,17 @@ async function createBoard(db: Knex, tenant: string, name: string): Promise<stri
   return boardId;
 }
 
-async function createStatus(db: Knex, tenant: string, name: string, isClosed: boolean): Promise<string> {
+async function createStatus(
+  db: Knex,
+  tenant: string,
+  boardId: string,
+  name: string,
+  isClosed: boolean
+): Promise<string> {
   const statusId = uuidv4();
   await db('statuses').insert({
     tenant,
+    board_id: boardId,
     status_id: statusId,
     name,
     is_closed: isClosed,

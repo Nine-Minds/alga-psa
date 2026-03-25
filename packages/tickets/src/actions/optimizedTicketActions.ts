@@ -38,6 +38,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { resolveUserTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
+import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
@@ -1616,6 +1617,14 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
     // Check if we're updating the assigned_to field
     const isChangingAssignment = 'assigned_to' in updateData &&
                                 updateData.assigned_to !== currentTicket.assigned_to;
+    const isBoardChange =
+      'board_id' in updateData &&
+      !!updateData.board_id &&
+      updateData.board_id !== currentTicket.board_id;
+
+    if (isBoardChange && !updateData.status_id) {
+      throw new Error('Changing the board requires selecting a status for the destination board');
+    }
 
     // If updating category or subcategory, ensure they are compatible
     if ('subcategory_id' in updateData || 'category_id' in updateData) {
@@ -1631,6 +1640,25 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
         if (subcategory && subcategory.parent_category !== newCategoryId) {
           throw new Error('Invalid category combination: subcategory must belong to the selected parent category');
         }
+      }
+    }
+
+    if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
+      const effectiveBoardId = updateData.board_id || currentTicket.board_id;
+      const statusResult = effectiveBoardId
+        ? await TicketModel.validateStatusBelongsToBoard(
+          updateData.status_id,
+          effectiveBoardId,
+          tenant,
+          trx
+        )
+        : {
+          valid: false,
+          error: 'Invalid status: board_id is required when selecting a ticket status'
+        };
+
+      if (!statusResult.valid && statusResult.error) {
+        throw new Error(statusResult.error);
       }
     }
 
@@ -1943,6 +1971,9 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
     return 'success';
     } catch (error) {
       console.error(error);
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('Failed to update ticket');
     }
   });

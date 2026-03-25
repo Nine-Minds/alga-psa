@@ -861,7 +861,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     <div className="text-sm text-gray-500 capitalize">{selectedWorkItem.type.replace('_', ' ')}</div>
                   </div>
                 ) : (
-                  <span className="font-bold text-black">Ad-hoc entry (no work item)</span>
+                  <span className="font-bold text-[rgb(var(--color-text-900))]">Ad-hoc entry (no work item)</span>
                 )}
               </div>
             ) : (

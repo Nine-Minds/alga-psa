@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Circle, AlertCircle, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
@@ -10,6 +10,7 @@ import { Progress } from '@alga-psa/ui/components/Progress';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import Drawer from '@alga-psa/ui/components/Drawer';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { OnboardingProgressSummary, OnboardingStep } from '../../hooks/useOnboardingProgress';
 
 interface OnboardingChecklistProps {
@@ -21,23 +22,42 @@ interface OnboardingChecklistProps {
 
 export function OnboardingChecklist({ steps, summary, isLoading, onStepCta }: OnboardingChecklistProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { t } = useTranslation('msp/dashboard');
+  const translatedSteps = useMemo(
+    () => steps.map((step) => translateStep(step, t)),
+    [steps, t]
+  );
 
   const content = useMemo(() => (
     <Card className="shadow-md">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-lg font-semibold">Onboarding checklist</CardTitle>
+        <CardTitle className="text-lg font-semibold">
+          {t('onboarding.checklist.title', { defaultValue: 'Onboarding checklist' })}
+        </CardTitle>
         <p className="text-sm text-muted-foreground">
-          {summary.completed} of {summary.total} tasks complete
+          {t('onboarding.checklist.progress', {
+            defaultValue: '{{completed}} of {{total}} tasks complete',
+            completed: summary.completed,
+            total: summary.total,
+          })}
         </p>
         <Progress value={(summary.completed / Math.max(summary.total, 1)) * 100} className="h-2" />
         {summary.allComplete && (
           <div className="mt-4 rounded-md bg-primary-500/10 p-3 text-sm text-[rgb(var(--color-text-800))] flex items-start gap-2">
             <Sparkles className="h-5 w-5" />
             <div>
-              <p className="font-medium">Configuration complete</p>
-              <p>Invite clients to experience your branded portal.</p>
+              <p className="font-medium">
+                {t('onboarding.checklist.completeTitle', { defaultValue: 'Configuration complete' })}
+              </p>
+              <p>
+                {t('onboarding.checklist.completeDescription', {
+                  defaultValue: 'Invite clients to experience your branded portal.',
+                })}
+              </p>
               <Button id="invite-clients-onboarding-button" asChild size="sm" className="mt-3">
-                <Link href="/msp/clients?create=true">Invite clients</Link>
+                <Link href="/msp/clients?create=true">
+                  {t('onboarding.checklist.inviteCta', { defaultValue: 'Invite clients' })}
+                </Link>
               </Button>
             </div>
           </div>
@@ -47,19 +67,19 @@ export function OnboardingChecklist({ steps, summary, isLoading, onStepCta }: On
         {isLoading && steps.length === 0 ? (
           <ChecklistSkeleton />
         ) : (
-          steps.map((step) => (
+          translatedSteps.map((step) => (
             <StepItem key={step.id} step={step} onCtaClick={onStepCta} />
           ))
         )}
       </CardContent>
     </Card>
-  ), [steps, summary, isLoading, onStepCta]);
+  ), [isLoading, onStepCta, summary, steps.length, t, translatedSteps]);
 
   return (
     <div>
       <div className="mb-4 lg:hidden">
         <Button id="open-onboarding-checklist-drawer" variant="outline" className="w-full" onClick={() => setIsDrawerOpen(true)}>
-          View onboarding checklist
+          {t('onboarding.checklist.viewButton', { defaultValue: 'View onboarding checklist' })}
         </Button>
       </div>
 
@@ -89,8 +109,26 @@ const statusConfig: Record<OnboardingStep['status'], { label: string; badgeVaria
 };
 
 function StepItem({ step, onCtaClick }: StepItemProps) {
+  const { t } = useTranslation('msp/dashboard');
   const Icon = step.icon;
-  const status = statusConfig[step.status];
+  const status = {
+    complete: {
+      label: t('onboarding.badges.complete', { defaultValue: statusConfig.complete.label }),
+      badgeVariant: statusConfig.complete.badgeVariant,
+    },
+    in_progress: {
+      label: t('onboarding.badges.inProgress', { defaultValue: statusConfig.in_progress.label }),
+      badgeVariant: statusConfig.in_progress.badgeVariant,
+    },
+    not_started: {
+      label: t('onboarding.badges.notStarted', { defaultValue: statusConfig.not_started.label }),
+      badgeVariant: statusConfig.not_started.badgeVariant,
+    },
+    blocked: {
+      label: t('onboarding.badges.blocked', { defaultValue: statusConfig.blocked.label }),
+      badgeVariant: statusConfig.blocked.badgeVariant,
+    },
+  }[step.status];
   const showProgress = typeof step.progressValue === 'number';
   const disabled = step.status === 'complete';
   const isImportStep = step.id === 'data_import';
@@ -111,7 +149,9 @@ function StepItem({ step, onCtaClick }: StepItemProps) {
               <p className="text-xs text-muted-foreground">{step.description}</p>
               {isImportStep ? (
                 <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                  Create your first 5 contacts
+                  {t('onboarding.substeps.createContacts', {
+                    defaultValue: 'Create your first 5 contacts',
+                  })}
                 </p>
               ) : null}
             </div>
@@ -130,7 +170,7 @@ function StepItem({ step, onCtaClick }: StepItemProps) {
           ) : null}
           {disabled ? (
             <Button id={`onboarding-${step.id}-cta`} size="sm" className="w-full" disabled>
-              Completed
+              {t('onboarding.cta.completed', { defaultValue: 'Completed' })}
             </Button>
           ) : (
             <Button
@@ -195,4 +235,25 @@ function ChecklistSkeleton() {
       ))}
     </div>
   );
+}
+
+function translateStep(step: OnboardingStep, t: (key: string, options?: Record<string, unknown>) => string): OnboardingStep {
+  return {
+    ...step,
+    title: t(step.titleKey, { defaultValue: step.title }),
+    description: t(step.descriptionKey, { defaultValue: step.description }),
+    ctaLabel: t(step.ctaLabelKey, { defaultValue: step.ctaLabel }),
+    blocker: step.blockerKey
+      ? t(step.blockerKey, { defaultValue: step.blocker ?? step.blockerKey, ...step.blockerValues })
+      : step.blocker,
+    substeps: step.substeps?.map((substep) => ({
+      ...substep,
+      title: substep.titleKey
+        ? t(substep.titleKey, { defaultValue: substep.title })
+        : substep.title,
+      blocker: substep.blockerKey
+        ? t(substep.blockerKey, { defaultValue: substep.blocker ?? substep.blockerKey, ...substep.blockerValues })
+        : substep.blocker,
+    })) ?? [],
+  };
 }

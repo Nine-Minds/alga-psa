@@ -66,5 +66,8 @@ export async function setClientTemplate(
   clientId: string,
   templateId: string | null
 ): Promise<void> {
-  await knexOrTrx('clients').where({ client_id: clientId, tenant }).update({ invoice_template_id: templateId });
+  const normalizedTemplateId =
+    typeof templateId === 'string' && templateId.trim().length === 0 ? null : templateId;
+
+  await knexOrTrx('clients').where({ client_id: clientId, tenant }).update({ invoice_template_id: normalizedTemplateId });
 }

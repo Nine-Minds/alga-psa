@@ -9,7 +9,7 @@ import {
 } from '../actions/projectTaskActions';
 import { ITicketListFilters } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
-import { ITicketListItem, ITicket, ITicketCategory } from '@alga-psa/types';
+import { ITicketListItem, ITicket, ITicketCategory, IStatus } from '@alga-psa/types';
 import { IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -191,8 +191,8 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
   };
 
   // Find the default status from the list of statuses
-  const findDefaultStatus = (statuses: any[]) => {
-    const defaultStatus = statuses.find(status => status.is_default === true);
+  const findDefaultStatus = (statuses: IStatus[]) => {
+    const defaultStatus = statuses.find((status: IStatus) => status.is_default === true);
     if (defaultStatus) {
       setDefaultStatus({
         status_id: defaultStatus.status_id,
@@ -214,22 +214,23 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       ] = await Promise.all([
         getTicketCategories().catch(() => []),
         getAllBoards().catch(() => []),
-        getTicketStatuses().catch(() => []),
+        getTicketStatuses().catch(() => [] as IStatus[]),
         getAllPriorities('ticket').catch(() => [])
       ]);
 
       setCategories(fetchedCategories || []);
       setBoards(fetchedBoards || []);
+      const fetchedStatuses: IStatus[] = statuses || [];
       
       // Find the default status
-      if (statuses && statuses.length > 0) {
-        findDefaultStatus(statuses);
+      if (fetchedStatuses.length > 0) {
+        findDefaultStatus(fetchedStatuses);
       }
       
       const defaultStatus = { value: 'all', label: 'All Statuses' };
       setStatusOptions([
         defaultStatus,
-        ...(statuses || []).map((status): SelectOption => ({
+        ...fetchedStatuses.map((status: IStatus): SelectOption => ({
           value: status.status_id!,
           label: status.name ?? ""
         }))
