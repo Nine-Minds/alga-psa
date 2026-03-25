@@ -1,0 +1,856 @@
+{
+  "common": {
+    "actions": {
+      "back": "Wstecz",
+      "cancel": "Anuluj",
+      "close": "Zamknij",
+      "continue": "Kontynuuj",
+      "finish": "Zakończ",
+      "invite": "Zaproś",
+      "next": "Dalej",
+      "retry": "Spróbuj ponownie",
+      "save": "Zapisz",
+      "saving": "Zapisywanie...",
+      "skip": "Pomiń",
+      "submit": "Wyślij"
+    },
+    "states": {
+      "loading": "Ładowanie...",
+      "optional": "Opcjonalne",
+      "required": "Wymagane"
+    },
+    "no": "Nie",
+    "yes": "Tak"
+  },
+  "onboardingProvider": {
+    "title": "Dostawca wdrożenia",
+    "description": "Brama wdrożeniowa na poziomie trasy, która sprawdza stan ukończenia dzierżawcy i przekierowuje nieukończonych dzierżawców do kreatora"
+  },
+  "onboardingWizard": {
+    "title": "Kreator wdrożenia",
+    "description": "Powłoka kreatora do konfiguracji dzierżawcy MSP z prezentacją w oknie dialogowym lub na pełnym ekranie, postępem, walidacją i zakończeniem",
+    "steps": {
+      "clientInfo": "Informacje o kliencie",
+      "teamMembers": "Członkowie zespołu",
+      "addClient": "Dodaj klienta",
+      "clientContact": "Kontakt klienta",
+      "billing": "Fakturowanie",
+      "ticketing": "Zgłoszenia"
+    },
+    "errors": {
+      "saveClientInfo": "Nie udało się zapisać informacji o kliencie",
+      "addTeamMembers": "Nie udało się dodać członków zespołu",
+      "saveClient": "Nie udało się zapisać klienta",
+      "addContact": "Nie udało się dodać kontaktu",
+      "setupBilling": "Nie udało się skonfigurować fakturowania",
+      "unknown": "Nieznany błąd",
+      "validationFailed": "Walidacja nie powiodła się",
+      "configureTicketing": "Nie udało się skonfigurować zgłoszeń",
+      "completeOnboarding": "Nie udało się zakończyć onboardingu"
+    },
+    "debug": {
+      "title": "Informacje debugowania:",
+      "currentStep": "Bieżący krok: {{stepIndex}} ({{stepName}})",
+      "isValid": "Jest poprawne: {{value}}",
+      "isRequired": "Jest wymagane: {{value}}",
+      "viewData": "Pokaż dane"
+    },
+    "actions": {
+      "finish": "Zakończ konfigurację",
+      "saving": "Zapisywanie...",
+      "completing": "Kończenie..."
+    },
+    "shell": {
+      "title": "Skonfiguruj swój system",
+      "description": "Skonfigurujmy Twoje środowisko i przygotujmy je do użycia."
+    }
+  },
+  "addClientStep": {
+    "title": "Krok dodawania klienta",
+    "description": "Krok kreatora do tworzenia lub ponownego przeglądu głównego rekordu klienta podczas onboardingu",
+    "validation": {
+      "email": {
+        "invalid": "Wprowadź prawidłowy adres e-mail"
+      },
+      "website": {
+        "example": "Wprowadź prawidłową stronę internetową (np. example.com)",
+        "format": "Wprowadź prawidłowy format strony internetowej"
+      },
+      "phone": {
+        "tooShort": "Numer telefonu wygląda na zbyt krótki",
+        "tooLong": "Numer telefonu wygląda na zbyt długi",
+        "invalidCharacters": "Numer telefonu zawiera nieprawidłowe znaki"
+      }
+    },
+    "header": {
+      "title": "Dodaj swojego pierwszego klienta",
+      "description": "Dodajmy Twojego pierwszego klienta, aby zacząć. Możesz pominąć ten krok i dodać klientów później."
+    },
+    "created": {
+      "title": "Klient został utworzony!",
+      "description": "{{clientName}} został dodany do Twojej listy klientów."
+    },
+    "fields": {
+      "clientName": {
+        "label": "Nazwa klienta",
+        "placeholder": "Przykładowa sp. z o.o."
+      },
+      "clientEmail": {
+        "label": "E-mail klienta",
+        "placeholder": "kontakt@przyklad.pl"
+      },
+      "clientPhone": {
+        "label": "Numer telefonu",
+        "placeholder": "+48 123 456 789"
+      },
+      "website": {
+        "label": "Strona internetowa",
+        "placeholder": "https://przyklad.pl"
+      }
+    },
+    "common": {
+      "noteLabel": "Uwaga:",
+      "optionalLabel": "Opcjonalne:"
+    },
+    "note": {
+      "defaultTaxSettings": "Klient zostanie utworzony z domyślnymi nieopodatkowanymi (0%) ustawieniami podatkowymi. Możesz skonfigurować stawki podatkowe później w ustawieniach klienta.",
+      "optional": "Możesz pominąć ten krok i dodać klientów później z poziomu panelu."
+    }
+  },
+  "billingSetupStep": {
+    "title": "Krok konfiguracji rozliczeń",
+    "description": "Krok kreatora do określenia początkowej usługi, cen, trybu rozliczeń i domyślnych linii umowy",
+    "serviceTypes": {
+      "toasts": {
+        "deleted": "Typ usługi został usunięty"
+      },
+      "errors": {
+        "delete": "Nie udało się usunąć typu usługi",
+        "nameRequired": "Nazwa typu usługi jest wymagana",
+        "duplicate": "Typ usługi o tej nazwie już istnieje",
+        "create": "Nie udało się utworzyć typu usługi",
+        "createRetry": "Nie udało się utworzyć typu usługi. Spróbuj ponownie."
+      },
+      "actions": {
+        "manage": "Zarządzaj typami usług",
+        "import": "Importuj ze standardu",
+        "add": "Dodaj nowy",
+        "confirmAdd": "Dodaj typ usługi"
+      },
+      "noteLabel": "Uwaga:",
+      "description": "Typy usług są etykietami taksonomicznymi do organizacji i filtrowania. Tryb rozliczeń jest konfigurowany osobno dla każdej usługi.",
+      "addForm": {
+        "title": "Dodaj nowy typ usługi",
+        "fields": {
+          "name": {
+            "label": "Nazwa *",
+            "placeholder": "np. Wsparcie premium"
+          },
+          "description": {
+            "label": "Opis",
+            "placeholder": "Opisz ten typ usługi..."
+          },
+          "billingMethod": {
+            "label": "Metoda rozliczeń *"
+          },
+          "displayOrder": {
+            "label": "Kolejność wyświetlania",
+            "placeholder": "Pozostaw puste, aby wygenerować automatycznie",
+            "help": "Określa kolejność wyświetlania typów usług na listach rozwijanych w całej platformie. Niższe numery pojawiają się wcześniej."
+          }
+        }
+      },
+      "import": {
+        "title": "Importuj standardowe typy usług",
+        "description": "Wybierz standardowe typy usług do zaimportowania do systemu:",
+        "success": {
+          "titleOne": "Typ usługi został zaimportowany!",
+          "titleOther": "Typy usług zostały zaimportowane!",
+          "description": "Dodano {{count}} typ{{suffix}} do katalogu.",
+          "skipped": "Pominięto {{count}}."
+        },
+        "actions": {
+          "importing": "Importowanie...",
+          "importSelected": "Importuj zaznaczone ({{count}})"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Nazwa",
+          "billingMethod": "Metoda rozliczeń",
+          "order": "Kolejność",
+          "actions": "Akcje"
+        }
+      },
+      "current": {
+        "title": "Bieżące typy usług",
+        "removeTitle": "Usuń typ usługi"
+      }
+    },
+    "header": {
+      "title": "Utwórz swoją pierwszą usługę",
+      "description": "Dodaj usługę i wybierz sposób jej rozliczania. Typ usługi identyfikuje kategorię usługi, a tryb rozliczeń kontroluje zachowanie cenowe."
+    },
+    "created": {
+      "title": "Usługa została utworzona!",
+      "description": "{{serviceName}} został dodany do katalogu usług."
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Nazwa usługi *",
+        "placeholder": "Zarządzane usługi IT"
+      },
+      "serviceDescription": {
+        "label": "Opis usługi",
+        "placeholder": "Kompleksowe wsparcie i zarządzanie IT..."
+      },
+      "serviceType": {
+        "label": "Typ usługi *",
+        "required": "(Wymagane)",
+        "emptyPlaceholder": "Utwórz lub zaimportuj typy usług",
+        "placeholder": "Wybierz typ usługi",
+        "emptyHelp": "Kliknij \"Zarządzaj typami usług\", aby utworzyć lub zaimportować typy usług"
+      },
+      "billingMode": {
+        "label": "Tryb rozliczeń"
+      },
+      "defaultRate": {
+        "label": "Stawka domyślna",
+        "placeholder": "150"
+      }
+    },
+    "billingMethods": {
+      "fixed": "Stała",
+      "hourly": "Godzinowa",
+      "usageBased": "Oparta na użyciu",
+      "usage": "Użycie"
+    },
+    "validation": {
+      "actionRequiredLabel": "Wymagane działanie:",
+      "actionRequiredDescription": "Kliknij powyżej \"Zarządzaj typami usług\", aby utworzyć lub zaimportować co najmniej jeden typ usługi przed utworzeniem usługi."
+    }
+  },
+  "clientContactStep": {
+    "title": "Krok kontaktu klienta",
+    "description": "Krok kreatora do zbierania głównych danych kontaktowych klienta",
+    "validation": {
+      "email": {
+        "invalid": "Wprowadź prawidłowy adres e-mail"
+      }
+    },
+    "empty": {
+      "title": "Kontakt klienta",
+      "description": "Nie podano informacji o kliencie. Pomiń ten krok lub wróć, aby najpierw dodać klienta."
+    },
+    "header": {
+      "title": "Dodaj kontakt dla {{clientName}}",
+      "clientFallback": "Klient",
+      "description": "Dodaj główną osobę kontaktową dla tego klienta."
+    },
+    "created": {
+      "title": "Kontakt został utworzony!",
+      "description": "{{contactName}} został dodany do {{clientName}}.",
+      "contactFallback": "Kontakt",
+      "clientFallback": "klienta"
+    },
+    "fields": {
+      "contactName": {
+        "label": "Imię i nazwisko kontaktu",
+        "placeholder": "Jan Kowalski"
+      },
+      "contactEmail": {
+        "label": "E-mail kontaktu",
+        "placeholder": "jan.kowalski@przyklad.pl"
+      },
+      "contactRole": {
+        "label": "Rola/Tytuł",
+        "placeholder": "Kierownik IT"
+      }
+    },
+    "common": {
+      "optionalLabel": "Opcjonalne:"
+    },
+    "footer": {
+      "optional": "Możesz pominąć ten krok i dodać kontakty później z profilu klienta."
+    }
+  },
+  "clientInfoStep": {
+    "title": "Krok informacji o kliencie",
+    "description": "Krok kreatora do zbierania tożsamości operatora MSP, informacji o firmie i podstawowych danych klienta",
+    "revisit": {
+      "title": "Informacje o firmie",
+      "description": "Sprawdź lub zaktualizuj dane swojej firmy.",
+      "fields": {
+        "companyName": {
+          "label": "Nazwa firmy",
+          "placeholder": "Acme IT Solutions"
+        }
+      },
+      "note": "Możesz użyć tego kreatora, aby w dowolnym momencie ponownie skonfigurować ustawienia swojego obszaru roboczego."
+    },
+    "common": {
+      "noteLabel": "Uwaga:"
+    },
+    "header": {
+      "title": "Informacje o kliencie",
+      "description": "Zacznijmy od skonfigurowania profilu klienta."
+    },
+    "fields": {
+      "firstName": {
+        "label": "Imię",
+        "placeholder": "Jan"
+      },
+      "lastName": {
+        "label": "Nazwisko",
+        "placeholder": "Kowalski"
+      },
+      "clientName": {
+        "label": "Nazwa klienta",
+        "placeholder": "Acme IT Solutions"
+      },
+      "email": {
+        "label": "Adres e-mail",
+        "placeholder": "jan@acmeit.com",
+        "help": "Będzie używany do logowania do konta."
+      }
+    },
+    "password": {
+      "resetRequired": {
+        "title": "Wymagany reset hasła",
+        "description": "Musisz ustawić nowe hasło, aby kontynuować proces konfiguracji. Tego kroku nie można pominąć."
+      },
+      "title": "Ustaw hasło",
+      "description": "Ustaw nowe hasło zamiast hasła tymczasowego.",
+      "fields": {
+        "newPassword": {
+          "label": "Nowe hasło",
+          "placeholder": "Utwórz silne hasło"
+        },
+        "confirmPassword": {
+          "label": "Potwierdź hasło",
+          "placeholder": "Wprowadź hasło ponownie",
+          "match": "Hasła są zgodne",
+          "mismatch": "Hasła nie są zgodne"
+        }
+      },
+      "requirements": {
+        "title": "Hasło musi zawierać:",
+        "minLength": "Co najmniej 8 znaków",
+        "uppercase": "Jedną wielką literę",
+        "lowercase": "Jedną małą literę",
+        "number": "Jedną cyfrę",
+        "specialCharacter": "Jeden znak specjalny"
+      },
+      "strength": {
+        "label": "Siła hasła: {{strength}}",
+        "strong": "Silne",
+        "medium": "Średnie",
+        "weak": "Słabe"
+      }
+    },
+    "footer": {
+      "note": "Wszystkie pola na tej stronie są wymagane, aby kontynuować."
+    }
+  },
+  "teamMembersStep": {
+    "title": "Krok członków zespołu",
+    "description": "Krok kreatora do zapraszania początkowych członków zespołu i przypisywania ról onboardingu",
+    "license": {
+      "limitReached": "Limit licencji został osiągnięty ({{current}}/{{limit}}). Skontaktuj się z pomocą techniczną, aby zwiększyć limit licencji.",
+      "remaining": {
+        "one": "Możesz dodać jeszcze 1 członka zespołu.",
+        "other": "Możesz dodać jeszcze {{count}} członków zespołu."
+      },
+      "summary": {
+        "noLimit": "Użytkownicy: {{count}} (bez limitu)",
+        "limited": "Użytkownicy: {{current}}/{{limit}}"
+      }
+    },
+    "errors": {
+      "requiredFields": "Wypełnij wszystkie wymagane pola, w tym hasło",
+      "invalidEmail": "Wprowadź prawidłowy adres e-mail",
+      "passwordLength": "Hasło musi mieć co najmniej 8 znaków",
+      "saveFailed": "Nie udało się zapisać członka zespołu",
+      "generic": "Wystąpił błąd"
+    },
+    "header": {
+      "title": "Zaproś członków zespołu",
+      "description": "Dodaj członków zespołu, aby mogli zacząć. Możesz pominąć ten krok i dodać ich później."
+    },
+    "created": {
+      "titleOne": "1 członek zespołu został utworzony!",
+      "titleOther": "{{count}} członków zespołu zostało utworzonych!",
+      "users": "Utworzeni użytkownicy: {{users}}"
+    },
+    "member": {
+      "title": "Członek zespołu {{index}}",
+      "createdBadge": "Utworzony",
+      "actions": {
+        "saving": "Zapisywanie...",
+        "save": "Zapisz"
+      }
+    },
+    "fields": {
+      "firstName": {
+        "label": "Imię",
+        "placeholder": "Jan"
+      },
+      "lastName": {
+        "label": "Nazwisko",
+        "placeholder": "Kowalski"
+      },
+      "email": {
+        "label": "E-mail",
+        "placeholder": "jan@klient.pl"
+      },
+      "role": {
+        "label": "Rola"
+      },
+      "password": {
+        "label": "Hasło tymczasowe",
+        "placeholder": "Ustaw hasło tymczasowe",
+        "help": "Użytkownik będzie musiał zmienić to hasło przy pierwszym logowaniu"
+      }
+    },
+    "roles": {
+      "admin": "Administrator",
+      "technician": "Technik",
+      "manager": "Menedżer",
+      "user": "Użytkownik"
+    },
+    "actions": {
+      "saveCurrentFirst": "Najpierw zapisz bieżącego członka zespołu",
+      "addAnother": "Dodaj kolejnego członka zespołu"
+    },
+    "unsaved": {
+      "title": "Niezapisany członek zespołu",
+      "description": "Zapisz bieżącego członka zespołu przed dodaniem nowego."
+    },
+    "limitReached": {
+      "title": "Osiągnięto limit użytkowników",
+      "description": "Osiągnąłeś maksymalną liczbę użytkowników dla bieżącego planu. Skontaktuj się z pomocą techniczną, aby zwiększyć limit."
+    },
+    "optional": {
+      "label": "Opcjonalne:",
+      "description": "Możesz pominąć ten krok i zaprosić członków zespołu później z poziomu ustawień."
+    }
+  },
+  "ticketingConfigStep": {
+    "title": "Krok konfiguracji zgłoszeń",
+    "description": "Krok kreatora do konfiguracji tablic, statusów, priorytetów, kategorii i domyślnych ustawień SLA podczas onboardingu",
+    "boards": {
+      "toasts": {
+        "firstDefaultSet": "Pierwsza tablica automatycznie ustawiona jako domyślna",
+        "deleted": "Tablica została usunięta",
+        "defaultUpdated": "Domyślna tablica została zaktualizowana"
+      },
+      "errors": {
+        "import": "Nie udało się zaimportować tablic",
+        "delete": "Nie udało się usunąć tablicy.",
+        "defaultRequired": "Co najmniej jedna tablica musi być ustawiona jako domyślna",
+        "defaultUpdate": "Nie udało się ustawić domyślnej tablicy",
+        "duplicate": "Tablica już istnieje",
+        "create": "Nie udało się utworzyć tablicy. Spróbuj ponownie."
+      },
+      "delete": {
+        "fallbackEntity": "ta tablica"
+      },
+      "title": "Tablice",
+      "description": "Tablice pomagają organizować zgłoszenia według działu, zespołu lub typu przepływu pracy. Gdy klienci tworzą zgłoszenia przez portal klienta, są one automatycznie przypisywane do tablicy oznaczonej jako domyślna.",
+      "tip": "Kliknij gwiazdkę w kolumnie Domyślna, aby zmienić domyślną tablicę.",
+      "actions": {
+        "import": "Importuj ze standardu",
+        "add": "Dodaj nową tablicę",
+        "confirmAdd": "Dodaj tablicę"
+      },
+      "addForm": {
+        "title": "Dodaj nową tablicę",
+        "fields": {
+          "name": {
+            "label": "Nazwa tablicy *",
+            "placeholder": "Wprowadź nazwę tablicy"
+          },
+          "description": {
+            "label": "Opis",
+            "placeholder": "Wprowadź opis"
+          },
+          "displayOrder": {
+            "label": "Kolejność wyświetlania",
+            "placeholder": "Pozostaw puste, aby wygenerować automatycznie",
+            "help": "Określa kolejność pojawiania się tablic na listach rozwijanych w całej platformie. Niższe numery pojawiają się wcześniej."
+          },
+          "itil": {
+            "label": "Uczyń tę tablicę zgodną z ITIL"
+          }
+        },
+        "configurationTitle": "Konfiguracja tablicy"
+      },
+      "import": {
+        "title": "Importuj standardowe tablice",
+        "success": {
+          "one": "Pomyślnie zaimportowano 1 tablicę.",
+          "other": "Pomyślnie zaimportowano {{count}} tablic."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Nazwa",
+          "default": "Domyślna",
+          "order": "Kolejność",
+          "itil": "ITIL"
+        }
+      },
+      "current": {
+        "title": "Bieżące tablice",
+        "defaultTitle": "Tablica domyślna",
+        "setDefaultTitle": "Ustaw jako domyślną tablicę",
+        "removeTitle": "Usuń tablicę"
+      }
+    },
+    "categories": {
+      "import": {
+        "unknownParent": "Nieznana nadrzędna kategoria",
+        "title": "Importuj standardowe kategorie",
+        "success": {
+          "one": "Pomyślnie zaimportowano 1 kategorię.",
+          "other": "Pomyślnie zaimportowano {{count}} kategorii."
+        },
+        "targetBoard": {
+          "label": "Tablica docelowa *",
+          "placeholder": "Wybierz tablicę dla importowanych kategorii",
+          "help": "Wszystkie importowane kategorie zostaną przypisane do tej tablicy"
+        },
+        "parentAutoSelectTitle": "Kategoria nadrzędna zostanie wybrana automatycznie"
+      },
+      "errors": {
+        "missingParents": "Nie można importować podkategorii bez ich kategorii nadrzędnych. Wybierz także: {{parents}}",
+        "duplicate": "Kategoria już istnieje w tej tablicy",
+        "create": "Nie udało się utworzyć kategorii. Spróbuj ponownie.",
+        "delete": "Nie udało się usunąć kategorii."
+      },
+      "delete": {
+        "fallbackEntity": "ta kategoria"
+      },
+      "toasts": {
+        "deleted": "Kategoria została usunięta"
+      },
+      "title": "Kategorie",
+      "requiresBoard": "(wymagana tablica)",
+      "description": "Kategorie pomagają organizować zgłoszenia według rodzaju problemu lub prośby. Możesz tworzyć kategorie nadrzędne z podkategoriami, aby lepiej organizować strukturę. Przykłady to Wsparcie techniczne (z podkategoriami takimi jak Sprzęt, Oprogramowanie, Sieć) lub Wnioski o usługę.",
+      "actions": {
+        "import": "Importuj ze standardu",
+        "add": "Dodaj nową kategorię",
+        "confirmAdd": "Dodaj kategorię"
+      },
+      "addForm": {
+        "title": "Dodaj nową kategorię",
+        "fields": {
+          "name": {
+            "label": "Nazwa kategorii *",
+            "placeholder": "Wprowadź nazwę kategorii"
+          },
+          "board": {
+            "label": "Tablica docelowa *",
+            "placeholder": "Wybierz tablicę"
+          },
+          "parent": {
+            "label": "Kategoria nadrzędna",
+            "noneOption": "Brak (kategoria najwyższego poziomu)",
+            "placeholder": "Wybierz kategorię nadrzędną"
+          },
+          "displayOrder": {
+            "label": "Kolejność wyświetlania",
+            "placeholder": "Pozostaw puste, aby wygenerować automatycznie",
+            "help": "Określa kolejność pojawiania się kategorii na listach rozwijanych w całej platformie. Niższe numery pojawiają się wcześniej."
+          }
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Nazwa",
+          "order": "Kolejność"
+        }
+      },
+      "current": {
+        "title": "Bieżące kategorie (łącznie: {{count}})",
+        "removeTitle": "Usuń kategorię"
+      }
+    },
+    "statuses": {
+      "toasts": {
+        "firstDefaultSet": "Pierwszy otwarty status automatycznie ustawiony jako domyślny",
+        "deleted": "Status został usunięty",
+        "defaultUpdated": "Domyślny status został zaktualizowany"
+      },
+      "delete": {
+        "fallbackEntity": "ten status"
+      },
+      "errors": {
+        "delete": "Nie udało się usunąć statusu.",
+        "defaultRequired": "Co najmniej jeden status musi być ustawiony jako domyślny",
+        "closedCannotBeDefault": "Zamknięte statusy nie mogą być ustawione jako domyślne",
+        "selectBoardForDefault": "Wybierz lub utwórz tablicę przed zmianą domyślnych statusów.",
+        "defaultUpdate": "Nie udało się ustawić domyślnego statusu",
+        "duplicate": "Status już istnieje",
+        "selectBoardForAdd": "Wybierz lub utwórz tablicę przed dodaniem statusów.",
+        "create": "Nie udało się utworzyć statusu. Spróbuj ponownie."
+      },
+      "title": "Statusy",
+      "description": "Statusy są konfigurowane osobno dla każdej tablicy. Wybierz poniżej tablicę, aby zdefiniować cykl życia zgłoszeń dla tej tablicy. Domyślny otwarty status dla wybranej tablicy jest automatycznie przypisywany do nowych zgłoszeń utworzonych na tej tablicy.",
+      "tip": "Tablice nie współdzielą statusów. Przełączaj tutaj tablice, aby przeglądać lub zmieniać zestaw statusów dla każdej z nich.",
+      "fields": {
+        "board": {
+          "label": "Tablica",
+          "placeholder": "Wybierz tablicę"
+        }
+      },
+      "noBoardWarning": "Utwórz lub zaimportuj tablicę, zanim skonfigurujesz statusy. Każda tablica potrzebuje własnego domyślnego otwartego statusu.",
+      "actions": {
+        "import": "Importuj ze standardu",
+        "add": "Dodaj nowy status",
+        "confirmAdd": "Dodaj status"
+      },
+      "addForm": {
+        "title": "Dodaj nowy status",
+        "fields": {
+          "name": {
+            "label": "Nazwa statusu *",
+            "placeholder": "Wprowadź nazwę statusu"
+          },
+          "displayOrder": {
+            "label": "Kolejność wyświetlania",
+            "placeholder": "Pozostaw puste, aby wygenerować automatycznie",
+            "help": "Określa kolejność pojawiania się statusów na listach rozwijanych w całej platformie. Niższe numery pojawiają się wcześniej."
+          },
+          "state": {
+            "closedLabel": "Status zamknięty",
+            "openLabel": "Status otwarty",
+            "closedHelp": "Ten status oznacza, że zgłoszenie zostało rozwiązane i zamknięte",
+            "openHelp": "Ten status oznacza, że zgłoszenie jest nadal otwarte i wymaga uwagi"
+          }
+        }
+      },
+      "import": {
+        "title": "Importuj standardowe statusy",
+        "targetBoard": "Importowanie do {{boardName}}.",
+        "success": {
+          "one": "Pomyślnie zaimportowano 1 status.",
+          "other": "Pomyślnie zaimportowano {{count}} statusów."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Nazwa",
+          "type": "Typ",
+          "default": "Domyślny",
+          "order": "Kolejność"
+        }
+      },
+      "types": {
+        "closed": "Zamknięty",
+        "open": "Otwarty"
+      },
+      "current": {
+        "title": "Bieżące statusy",
+        "titleWithBoard": "Bieżące statusy dla {{boardName}}",
+        "defaultTitle": "Status domyślny",
+        "setDefaultTitle": "Ustaw jako domyślny status",
+        "removeTitle": "Usuń status"
+      },
+      "empty": {
+        "forBoard": "Tablica {{boardName}} nie ma jeszcze żadnych statusów. Dodaj lub zaimportuj co najmniej jeden otwarty domyślny status przed zakończeniem onboardingu.",
+        "noBoardSelected": "Wybierz tablicę, aby skonfigurować jej statusy."
+      }
+    },
+    "priorities": {
+      "errors": {
+        "duplicate": "Priorytet już istnieje",
+        "missingSession": "Nie znaleziono sesji użytkownika. Odśwież i spróbuj ponownie.",
+        "create": "Nie udało się utworzyć priorytetu. Spróbuj ponownie.",
+        "delete": "Nie udało się usunąć priorytetu."
+      },
+      "delete": {
+        "fallbackEntity": "ten priorytet"
+      },
+      "toasts": {
+        "deleted": "Priorytet został usunięty"
+      },
+      "title": "Priorytety",
+      "description": "Priorytety pomagają określić pilność zgłoszeń i umów SLA. Każdy priorytet ma kolor dla szybkiej identyfikacji wizualnej. Typowe priorytety to Krytyczny (czerwony), Wysoki (pomarańczowy), Średni (niebieski) i Niski (zielony).",
+      "actions": {
+        "import": "Importuj ze standardu",
+        "add": "Dodaj nowy priorytet",
+        "confirmAdd": "Dodaj priorytet"
+      },
+      "addForm": {
+        "title": "Dodaj nowy priorytet",
+        "fields": {
+          "name": {
+            "label": "Nazwa priorytetu *",
+            "placeholder": "Wprowadź nazwę priorytetu"
+          },
+          "displayOrder": {
+            "label": "Kolejność wyświetlania",
+            "placeholder": "Pozostaw puste, aby wygenerować automatycznie",
+            "help": "Określa kolejność pojawiania się priorytetów na listach rozwijanych w całej platformie. Niższe numery pojawiają się wcześniej."
+          },
+          "color": {
+            "label": "Kolor priorytetu",
+            "choose": "Wybierz kolor"
+          }
+        }
+      },
+      "import": {
+        "title": "Importuj standardowe priorytety",
+        "success": {
+          "one": "Pomyślnie zaimportowano 1 priorytet.",
+          "other": "Pomyślnie zaimportowano {{count}} priorytetów."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Nazwa",
+          "color": "Kolor",
+          "order": "Kolejność"
+        }
+      },
+      "current": {
+        "title": "Bieżące priorytety",
+        "removeTitle": "Usuń priorytet"
+      }
+    },
+    "common": {
+      "errors": {
+        "validateDeletion": "Nie udało się zweryfikować usunięcia. Spróbuj ponownie."
+      },
+      "noteLabel": "Uwaga:",
+      "tipLabel": "Wskazówka:",
+      "actions": {
+        "importing": "Importowanie...",
+        "importCount": "Importuj ({{count}})"
+      },
+      "table": {
+        "actions": "Akcje"
+      }
+    },
+    "header": {
+      "title": "Skonfiguruj zgłoszenia",
+      "description": "Skonfiguruj swój system zgłoszeń. Importuj standardowe konfiguracje lub utwórz własne."
+    },
+    "loading": {
+      "description": "Ładowanie istniejącej konfiguracji..."
+    },
+    "numbering": {
+      "title": "Numeracja zgłoszeń",
+      "description": "Skonfiguruj sposób generowania numerów zgłoszeń. Każde zgłoszenie będzie miało unikalny identyfikator składający się z opcjonalnego prefiksu i numeru sekwencyjnego z opcjonalnym uzupełnieniem zerami.",
+      "fields": {
+        "prefix": {
+          "label": "Prefiks zgłoszenia",
+          "placeholder": "TK-",
+          "help": "Opcjonalne. Pozostaw puste, aby nie używać prefiksu, lub wprowadź własny prefiks (np. \"TK-\", \"TICKET-\")"
+        },
+        "paddingLength": {
+          "label": "Długość dopełnienia",
+          "help": "Minimalna liczba cyfr. Np. 6 sprawi, że \"1\" stanie się \"000001\""
+        },
+        "startNumber": {
+          "label": "Numer początkowy"
+        }
+      },
+      "example": "Przykład: {{value}}"
+    },
+    "itil": {
+      "actions": {
+        "openReference": "Wyświetl kategorie ITIL i matrycę priorytetów"
+      },
+      "title": "Odniesienie do standardów ITIL",
+      "categories": {
+        "title": "Kategorie i podkategorie standardu ITIL",
+        "hardware": {
+          "title": "Sprzęt",
+          "server": "• Serwer",
+          "desktopLaptop": "• Komputer stacjonarny/laptop",
+          "networkEquipment": "• Urządzenia sieciowe",
+          "printer": "• Drukarka",
+          "storage": "• Pamięć masowa",
+          "mobileDevice": "• Urządzenie mobilne"
+        },
+        "software": {
+          "title": "Oprogramowanie",
+          "operatingSystem": "• System operacyjny",
+          "businessApplication": "• Aplikacja biznesowa",
+          "database": "• Baza danych",
+          "emailCollaboration": "• E-mail/współpraca",
+          "securitySoftware": "• Oprogramowanie zabezpieczające",
+          "customApplication": "• Aplikacja niestandardowa"
+        },
+        "network": {
+          "title": "Sieć",
+          "connectivity": "• Łączność",
+          "vpn": "• VPN",
+          "wifi": "• Wi-Fi",
+          "internetAccess": "• Dostęp do internetu",
+          "lanWan": "• LAN/WAN",
+          "firewall": "• Zapora sieciowa"
+        },
+        "security": {
+          "title": "Bezpieczeństwo",
+          "malwareVirus": "• Złośliwe oprogramowanie/wirus",
+          "unauthorizedAccess": "• Nieautoryzowany dostęp",
+          "dataBreach": "• Naruszenie danych",
+          "phishingSpam": "• Phishing/spam",
+          "policyViolation": "• Naruszenie zasad",
+          "accountLockout": "• Blokada konta"
+        },
+        "serviceRequest": {
+          "title": "Zgłoszenie usługi",
+          "accessRequest": "• Prośba o dostęp",
+          "newUserSetup": "• Konfiguracja nowego użytkownika",
+          "softwareInstallation": "• Instalacja oprogramowania",
+          "equipmentRequest": "• Wniosek o sprzęt",
+          "informationRequest": "• Prośba o informację",
+          "changeRequest": "• Wniosek o zmianę"
+        }
+      },
+      "matrix": {
+        "title": "Matryca priorytetów ITIL (Wpływ × Pilność)",
+        "urgency": {
+          "high": "Wysoka",
+          "label": "Pilność",
+          "mediumHigh": "Średnio-wysoka",
+          "medium": "Średnia",
+          "mediumLow": "Średnio-niska",
+          "low": "Niska"
+        },
+        "impact": {
+          "high": "Duży wpływ (1)",
+          "mediumHigh": "Średnio-duży wpływ (2)",
+          "medium": "Średni wpływ (3)",
+          "mediumLow": "Średnio-mały wpływ (4)",
+          "low": "Mały wpływ (5)"
+        },
+        "priority": {
+          "critical": "Krytyczny (1)",
+          "high": "Wysoki (2)",
+          "medium": "Średni (3)",
+          "low": "Niski (4)",
+          "planning": "Planowanie (5)"
+        },
+        "explanation": {
+          "impact": "Wpływ: Ilu użytkowników/funkcji biznesowych to dotyczy?",
+          "urgency": "Pilność: Jak szybko należy to rozwiązać?",
+          "priority": "Priorytet: Automatycznie obliczany na podstawie matrycy Wpływ × Pilność powyżej."
+        }
+      }
+    },
+    "supportEmail": {
+      "label": "E-mail wsparcia",
+      "placeholder": "support@twojklient.pl",
+      "help": "Ten adres e-mail będzie używany do tworzenia zgłoszeń wsparcia. Wiadomości wysłane na ten adres będą automatycznie generować zgłoszenia w systemie."
+    },
+    "finalRequirement": {
+      "label": "Wymagane:",
+      "description": "Skonfiguruj co najmniej jedną tablicę i jeden priorytet, aby zakończyć konfigurację. Zaimportuj standardowe konfiguracje, aby szybko uruchomić system zgłoszeń."
+    }
+  }
+}
