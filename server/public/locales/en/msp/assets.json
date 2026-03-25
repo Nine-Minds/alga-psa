@@ -722,31 +722,182 @@
     "description": "Shared progress bar component for utilization and percentage-based asset metrics"
   },
   "auditLogTab": {
-    "title": "Audit Log Tab",
-    "description": "Asset audit history tab for timeline events and record changes"
+    "title": "Audit Log",
+    "description": "Asset audit history tab for timeline events and record changes",
+    "changedBy": "Changed by {{name}}",
+    "userFallback": "user {{id}}",
+    "empty": "No audit history available.",
+    "changeTypes": {
+      "created": "Created",
+      "updated": "Updated"
+    }
   },
   "createMaintenanceScheduleDialog": {
     "title": "Create Maintenance Schedule",
     "description": "Dialog for defining maintenance schedules and recurrence rules for an asset"
   },
   "documentsPasswordsTab": {
-    "title": "Documents & Passwords Tab",
-    "description": "Combined tab for asset documents, credentials, and related secure records"
+    "title": "Documents & Passwords",
+    "description": "Combined tab for asset documents, credentials, and related secure records",
+    "passwords": {
+      "title": "Passwords & Secrets",
+      "comingSoon": "Secure password management coming soon."
+    }
   },
   "maintenanceSchedulesTab": {
-    "title": "Maintenance Schedules Tab",
-    "description": "Maintenance schedule management tab for planned service and recurring work"
+    "title": "Maintenance Schedules",
+    "description": "Maintenance schedule management tab for planned service and recurring work",
+    "summary": {
+      "complianceRate": "Compliance Rate",
+      "nextMaintenance": "Next Maintenance",
+      "noneScheduled": "None Scheduled"
+    },
+    "actions": {
+      "scheduleMaintenance": "Schedule Maintenance"
+    },
+    "errors": {
+      "deleteFailed": "Failed to delete maintenance schedule"
+    },
+    "table": {
+      "scheduleName": "Schedule Name",
+      "type": "Type",
+      "frequency": "Frequency",
+      "nextMaintenance": "Next Maintenance",
+      "lastMaintenance": "Last Maintenance",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "frequency": {
+      "every": "Every {{count}} {{frequency}}{{suffix}}",
+      "units": {
+        "daily": "day",
+        "weekly": "week",
+        "monthly": "month",
+        "quarterly": "quarter",
+        "yearly": "year"
+      }
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "types": {
+      "preventive": "Preventive",
+      "inspection": "Inspection",
+      "calibration": "Calibration",
+      "replacement": "Replacement"
+    },
+    "empty": {
+      "schedules": "No maintenance schedules found. Click \"Schedule Maintenance\" to create one."
+    },
+    "history": {
+      "title": "Maintenance History",
+      "performedAt": "Performed At",
+      "performedBy": "Performed By",
+      "notes": "Notes",
+      "empty": "No maintenance history recorded."
+    },
+    "dialog": {
+      "delete": {
+        "title": "Delete Maintenance Schedule",
+        "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+      }
+    }
   },
   "relatedAssetsTab": {
-    "title": "Related Assets Tab",
-    "description": "Tab for browsing and managing related asset relationships"
+    "title": "Related Assets ({{count}})",
+    "description": "Tab for browsing and managing related asset relationships",
+    "loading": "Loading related assets...",
+    "actions": {
+      "linkAsset": "Link Asset",
+      "unlink": "Unlink",
+      "linkEmptyState": "Link an asset"
+    },
+    "success": {
+      "linked": "Asset linked",
+      "unlinked": "Asset unlinked"
+    },
+    "errors": {
+      "selectAsset": "Select an asset to link",
+      "linkFailed": "Failed to link asset",
+      "unlinkFailed": "Failed to unlink asset"
+    },
+    "table": {
+      "assetName": "Asset Name",
+      "relationship": "Relationship",
+      "linkedDate": "Linked Date",
+      "actions": "Actions"
+    },
+    "empty": {
+      "linked": "No related assets linked."
+    },
+    "dialog": {
+      "title": "Link Asset",
+      "loadingAssets": "Loading assets...",
+      "empty": "No available assets found.",
+      "search": {
+        "label": "Search assets",
+        "placeholder": "Search by name, tag, serial..."
+      },
+      "relationshipType": {
+        "label": "Relationship type",
+        "placeholder": "related"
+      },
+      "table": {
+        "asset": "Asset",
+        "select": "Select"
+      },
+      "actions": {
+        "selected": "Selected",
+        "linking": "Linking...",
+        "confirm": "Link asset"
+      }
+    },
+    "relationshipTypes": {
+      "related": "Related",
+      "affected": "Affected"
+    }
   },
   "serviceHistoryTab": {
-    "title": "Service History Tab",
-    "description": "Service history tab summarizing maintenance and ticket activity for the asset"
+    "title": "Service History",
+    "description": "Service history tab summarizing maintenance and ticket activity for the asset",
+    "actions": {
+      "createTicket": "Create Ticket"
+    },
+    "table": {
+      "ticketId": "Ticket ID",
+      "subject": "Subject",
+      "status": "Status",
+      "priority": "Priority",
+      "dateLinked": "Date Linked"
+    },
+    "empty": "No tickets linked to this asset.",
+    "clientFallback": "Unknown Client"
   },
   "softwareInventoryTab": {
-    "title": "Software Inventory Tab",
-    "description": "Software inventory tab for installed software, versions, and discovery metadata"
+    "title": "Software Inventory",
+    "description": "Software inventory tab for installed software, versions, and discovery metadata",
+    "searchPlaceholder": "Search software...",
+    "category": {
+      "placeholder": "Category",
+      "options": {
+        "all": "All",
+        "browser": "Browser",
+        "security": "Security",
+        "productivity": "Productivity",
+        "development": "Development"
+      }
+    },
+    "table": {
+      "name": "Name",
+      "version": "Version",
+      "publisher": "Publisher",
+      "installDate": "Install Date"
+    },
+    "empty": "No software found matching your search.",
+    "totalItems": "Total Items: {{count}}",
+    "values": {
+      "unknown": "Unknown"
+    }
   }
 }

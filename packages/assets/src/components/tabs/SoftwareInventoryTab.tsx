@@ -5,13 +5,16 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Search } from 'lucide-react';
 import type { Asset } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface SoftwareInventoryTabProps {
   asset: Asset;
 }
 
 export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asset }) => {
+  const { t } = useTranslation('msp/assets');
   const [search, setSearch] = useState('');
+  const unknownValue = t('softwareInventoryTab.values.unknown', { defaultValue: 'Unknown' });
   
   // Fallback to getting software from asset extension data
   // In a real implementation, this would query the normalized asset_software table
@@ -28,13 +31,13 @@ export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asse
     return rawList
       .map((item: any, index) => ({
         id: index,
-        name: item?.name || item?.softwareName || item?.displayName || item?.productName || 'Unknown',
-        version: item?.version || item?.displayVersion || 'Unknown',
-        publisher: item?.publisher || item?.vendor || 'Unknown',
+        name: item?.name || item?.softwareName || item?.displayName || item?.productName || unknownValue,
+        version: item?.version || item?.displayVersion || unknownValue,
+        publisher: item?.publisher || item?.vendor || unknownValue,
         installDate: item?.installDate || item?.installedOn || null,
       }))
-      .filter(item => item.name && item.name !== 'Unknown');
-  }, [asset]);
+      .filter(item => item.name && item.name !== unknownValue);
+  }, [asset, unknownValue]);
 
   const filteredSoftware = softwareList.filter(sw => {
     const searchLower = search.toLowerCase();
@@ -46,27 +49,31 @@ export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asse
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Software Inventory</CardTitle>
+        <CardTitle>{t('softwareInventoryTab.title', { defaultValue: 'Software Inventory' })}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-4 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input 
-              placeholder="Search software..." 
+              placeholder={t('softwareInventoryTab.searchPlaceholder', {
+                defaultValue: 'Search software...'
+              })}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
             />
           </div>
           <CustomSelect 
-            placeholder="Category" 
+            placeholder={t('softwareInventoryTab.category.placeholder', {
+              defaultValue: 'Category'
+            })}
             options={[
-              { value: 'All', label: 'All' },
-              { value: 'Browser', label: 'Browser' },
-              { value: 'Security', label: 'Security' },
-              { value: 'Productivity', label: 'Productivity' },
-              { value: 'Development', label: 'Development' }
+              { value: 'All', label: t('softwareInventoryTab.category.options.all', { defaultValue: 'All' }) },
+              { value: 'Browser', label: t('softwareInventoryTab.category.options.browser', { defaultValue: 'Browser' }) },
+              { value: 'Security', label: t('softwareInventoryTab.category.options.security', { defaultValue: 'Security' }) },
+              { value: 'Productivity', label: t('softwareInventoryTab.category.options.productivity', { defaultValue: 'Productivity' }) },
+              { value: 'Development', label: t('softwareInventoryTab.category.options.development', { defaultValue: 'Development' }) }
             ]}
             value="All"
             onValueChange={() => {}}
@@ -78,10 +85,10 @@ export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asse
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Version</TableHead>
-                <TableHead>Publisher</TableHead>
-                <TableHead>Install Date</TableHead>
+                <TableHead>{t('softwareInventoryTab.table.name', { defaultValue: 'Name' })}</TableHead>
+                <TableHead>{t('softwareInventoryTab.table.version', { defaultValue: 'Version' })}</TableHead>
+                <TableHead>{t('softwareInventoryTab.table.publisher', { defaultValue: 'Publisher' })}</TableHead>
+                <TableHead>{t('softwareInventoryTab.table.installDate', { defaultValue: 'Install Date' })}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -99,7 +106,9 @@ export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asse
               ) : (
                 <TableRow>
                   <TableCell colSpan={4} className="h-24 text-center text-gray-400">
-                    No software found matching your search.
+                    {t('softwareInventoryTab.empty', {
+                      defaultValue: 'No software found matching your search.'
+                    })}
                   </TableCell>
                 </TableRow>
               )}
@@ -108,7 +117,10 @@ export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asse
         </div>
         
         <div className="mt-4 text-xs text-gray-400 text-right">
-          Total Items: {filteredSoftware.length}
+          {t('softwareInventoryTab.totalItems', {
+            defaultValue: 'Total Items: {{count}}',
+            count: filteredSoftware.length
+          })}
         </div>
       </CardContent>
     </Card>

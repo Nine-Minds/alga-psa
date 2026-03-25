@@ -9,19 +9,21 @@ import { getAssetLinkedTickets } from '../../actions/assetActions';
 import { formatDateTime } from '@alga-psa/core';
 import type { Asset } from '@alga-psa/types';
 import { useAssetCrossFeature } from '../../context/AssetCrossFeatureContext';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ServiceHistoryTabProps {
   asset: Asset;
 }
 
 export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) => {
+  const { t } = useTranslation('msp/assets');
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const { mutate } = useSWRConfig();
   const { renderQuickAddTicket, openTicketDetailsDrawer } = useAssetCrossFeature();
   
   const { data: tickets, isLoading } = useSWR(
     asset.asset_id ? ['asset', asset.asset_id, 'tickets'] : null,
-    ([_, id]) => getAssetLinkedTickets(id)
+    ([, id]) => getAssetLinkedTickets(id)
   );
 
   const handleTicketAdded = () => {
@@ -40,7 +42,9 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-base font-semibold">Service History</CardTitle>
+          <CardTitle className="text-base font-semibold">
+            {t('serviceHistoryTab.title', { defaultValue: 'Service History' })}
+          </CardTitle>
           <Button 
             id="create-ticket-btn"
             size="xs"
@@ -48,7 +52,7 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
             className="flex items-center gap-2"
           >
             <Ticket size={16} />
-            Create Ticket
+            {t('serviceHistoryTab.actions.createTicket', { defaultValue: 'Create Ticket' })}
           </Button>
         </CardHeader>
         <CardContent>
@@ -56,11 +60,11 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ticket ID</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Date Linked</TableHead>
+                  <TableHead>{t('serviceHistoryTab.table.ticketId', { defaultValue: 'Ticket ID' })}</TableHead>
+                  <TableHead>{t('serviceHistoryTab.table.subject', { defaultValue: 'Subject' })}</TableHead>
+                  <TableHead>{t('serviceHistoryTab.table.status', { defaultValue: 'Status' })}</TableHead>
+                  <TableHead>{t('serviceHistoryTab.table.priority', { defaultValue: 'Priority' })}</TableHead>
+                  <TableHead>{t('serviceHistoryTab.table.dateLinked', { defaultValue: 'Date Linked' })}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -95,7 +99,9 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center text-[rgb(var(--color-text-400))]">
-                      No tickets linked to this asset.
+                      {t('serviceHistoryTab.empty', {
+                        defaultValue: 'No tickets linked to this asset.'
+                      })}
                     </TableCell>
                   </TableRow>
                 )}
@@ -111,7 +117,9 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
         onTicketAdded: handleTicketAdded,
         prefilledClient: asset.client_id ? {
           id: asset.client_id,
-          name: asset.client?.client_name || 'Unknown Client'
+          name: asset.client?.client_name || t('serviceHistoryTab.clientFallback', {
+            defaultValue: 'Unknown Client'
+          })
         } : undefined,
         assetId: asset.asset_id,
       })}

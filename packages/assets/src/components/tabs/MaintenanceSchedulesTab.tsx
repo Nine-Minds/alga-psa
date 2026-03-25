@@ -4,30 +4,32 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CalendarPlus, Pencil, Trash2 } from 'lucide-react';
-import { getAssetMaintenanceReport, getAssetMaintenanceSchedules, updateMaintenanceSchedule, deleteMaintenanceSchedule } from '../../actions/assetActions';
+import { getAssetMaintenanceReport, getAssetMaintenanceSchedules, deleteMaintenanceSchedule } from '../../actions/assetActions';
 import { formatDateOnly } from '@alga-psa/core';
 import { cn } from '@alga-psa/ui';
 import { CreateMaintenanceScheduleDialog } from './CreateMaintenanceScheduleDialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { AssetMaintenanceSchedule } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface MaintenanceSchedulesTabProps {
   assetId: string;
 }
 
 export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = ({ assetId }) => {
+  const { t } = useTranslation('msp/assets');
   const [showDialog, setShowDialog] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<AssetMaintenanceSchedule | null>(null);
   const [deletingSchedule, setDeletingSchedule] = useState<AssetMaintenanceSchedule | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { data: report, isLoading, mutate } = useSWR(
     assetId ? ['asset', assetId, 'maintenance'] : null,
-    ([_, id]) => getAssetMaintenanceReport(id)
+    ([, id]) => getAssetMaintenanceReport(id)
   );
   const { data: schedules, mutate: mutateSchedules } = useSWR(
     assetId ? ['asset', assetId, 'maintenance-schedules'] : null,
-    ([_, id]) => getAssetMaintenanceSchedules(id)
+    ([, id]) => getAssetMaintenanceSchedules(id)
   );
 
   const handleDelete = async () => {
@@ -41,7 +43,9 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
       setDeletingSchedule(null);
     } catch (error) {
       console.error('Error deleting schedule:', error);
-      alert('Failed to delete maintenance schedule');
+      alert(t('maintenanceSchedulesTab.errors.deleteFailed', {
+        defaultValue: 'Failed to delete maintenance schedule'
+      }));
     } finally {
       setIsDeleting(false);
     }
@@ -57,7 +61,9 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
          <div className="flex flex-col sm:flex-row gap-4">
             <Card className="p-6 flex-1">
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Compliance Rate</span>
+                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">
+                  {t('maintenanceSchedulesTab.summary.complianceRate', { defaultValue: 'Compliance Rate' })}
+                </span>
                 <span className={cn(
                   "text-2xl font-bold",
                   report?.compliance_rate && report.compliance_rate >= 90 ? 'text-emerald-600' : 'text-amber-600'
@@ -68,11 +74,13 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
             </Card>
             <Card className="p-6 flex-1">
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Next Maintenance</span>
+                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">
+                  {t('maintenanceSchedulesTab.summary.nextMaintenance', { defaultValue: 'Next Maintenance' })}
+                </span>
                 <span className="text-xl font-medium text-gray-900">
                   {report?.next_maintenance 
                     ? formatDateOnly(new Date(report.next_maintenance))
-                    : 'None Scheduled'}
+                    : t('maintenanceSchedulesTab.summary.noneScheduled', { defaultValue: 'None Scheduled' })}
                 </span>
               </div>
             </Card>
@@ -80,7 +88,9 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <CardTitle className="text-base font-semibold">Maintenance Schedules</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              {t('maintenanceSchedulesTab.title', { defaultValue: 'Maintenance Schedules' })}
+            </CardTitle>
             <Button 
               id="schedule-maintenance-btn" 
               size="xs" 
@@ -88,7 +98,9 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
               onClick={() => setShowDialog(true)}
             >
               <CalendarPlus size={16} />
-              Schedule Maintenance
+              {t('maintenanceSchedulesTab.actions.scheduleMaintenance', {
+                defaultValue: 'Schedule Maintenance'
+              })}
             </Button>
           </CardHeader>
           <CardContent>
@@ -96,13 +108,13 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Schedule Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Frequency</TableHead>
-                    <TableHead>Next Maintenance</TableHead>
-                    <TableHead>Last Maintenance</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t('maintenanceSchedulesTab.table.scheduleName', { defaultValue: 'Schedule Name' })}</TableHead>
+                    <TableHead>{t('maintenanceSchedulesTab.table.type', { defaultValue: 'Type' })}</TableHead>
+                    <TableHead>{t('maintenanceSchedulesTab.table.frequency', { defaultValue: 'Frequency' })}</TableHead>
+                    <TableHead>{t('maintenanceSchedulesTab.table.nextMaintenance', { defaultValue: 'Next Maintenance' })}</TableHead>
+                    <TableHead>{t('maintenanceSchedulesTab.table.lastMaintenance', { defaultValue: 'Last Maintenance' })}</TableHead>
+                    <TableHead>{t('maintenanceSchedulesTab.table.status', { defaultValue: 'Status' })}</TableHead>
+                    <TableHead>{t('maintenanceSchedulesTab.table.actions', { defaultValue: 'Actions' })}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -113,11 +125,19 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                           {schedule.schedule_name}
                         </TableCell>
                         <TableCell className="text-gray-500 capitalize">
-                          {schedule.maintenance_type}
+                          {t(`maintenanceSchedulesTab.types.${schedule.maintenance_type}`, {
+                            defaultValue: schedule.maintenance_type
+                          })}
                         </TableCell>
                         <TableCell className="text-gray-500">
-                          Every {schedule.frequency_interval} {schedule.frequency}
-                          {schedule.frequency_interval > 1 ? 's' : ''}
+                          {t('maintenanceSchedulesTab.frequency.every', {
+                            defaultValue: 'Every {{count}} {{frequency}}{{suffix}}',
+                            count: schedule.frequency_interval,
+                            frequency: t(`maintenanceSchedulesTab.frequency.units.${schedule.frequency}`, {
+                              defaultValue: schedule.frequency
+                            }),
+                            suffix: schedule.frequency_interval > 1 ? 's' : ''
+                          })}
                         </TableCell>
                         <TableCell className="text-gray-900">
                           {schedule.next_maintenance 
@@ -131,7 +151,9 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                         </TableCell>
                         <TableCell>
                           <Badge variant={schedule.is_active ? 'success' : 'secondary'}>
-                            {schedule.is_active ? 'Active' : 'Inactive'}
+                            {schedule.is_active
+                              ? t('maintenanceSchedulesTab.status.active', { defaultValue: 'Active' })
+                              : t('maintenanceSchedulesTab.status.inactive', { defaultValue: 'Inactive' })}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -161,7 +183,9 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                   ) : (
                     <TableRow>
                       <TableCell colSpan={7} className="h-24 text-center text-gray-400">
-                        No maintenance schedules found. Click "Schedule Maintenance" to create one.
+                        {t('maintenanceSchedulesTab.empty.schedules', {
+                          defaultValue: 'No maintenance schedules found. Click "Schedule Maintenance" to create one.'
+                        })}
                       </TableCell>
                     </TableRow>
                   )}
@@ -173,16 +197,18 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <CardTitle className="text-base font-semibold">Maintenance History</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              {t('maintenanceSchedulesTab.history.title', { defaultValue: 'Maintenance History' })}
+            </CardTitle>
           </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Performed At</TableHead>
-                  <TableHead>Performed By</TableHead>
-                  <TableHead>Notes</TableHead>
+                  <TableHead>{t('maintenanceSchedulesTab.history.performedAt', { defaultValue: 'Performed At' })}</TableHead>
+                  <TableHead>{t('maintenanceSchedulesTab.history.performedBy', { defaultValue: 'Performed By' })}</TableHead>
+                  <TableHead>{t('maintenanceSchedulesTab.history.notes', { defaultValue: 'Notes' })}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -199,7 +225,9 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                 ) : (
                   <TableRow>
                     <TableCell colSpan={3} className="h-24 text-center text-gray-400">
-                      No maintenance history recorded.
+                      {t('maintenanceSchedulesTab.history.empty', {
+                        defaultValue: 'No maintenance history recorded.'
+                      })}
                     </TableCell>
                   </TableRow>
                 )}
@@ -237,10 +265,15 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
       isOpen={!!deletingSchedule}
       onClose={() => setDeletingSchedule(null)}
       onConfirm={handleDelete}
-      title="Delete Maintenance Schedule"
-      message={`Are you sure you want to delete "${deletingSchedule?.schedule_name}"? This action cannot be undone.`}
-      confirmLabel="Delete"
-      cancelLabel="Cancel"
+      title={t('maintenanceSchedulesTab.dialog.delete.title', {
+        defaultValue: 'Delete Maintenance Schedule'
+      })}
+      message={t('maintenanceSchedulesTab.dialog.delete.message', {
+        defaultValue: 'Are you sure you want to delete "{{name}}"? This action cannot be undone.',
+        name: deletingSchedule?.schedule_name ?? ''
+      })}
+      confirmLabel={t('common.actions.delete', { defaultValue: 'Delete' })}
+      cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
       isConfirming={isDeleting}
       id="delete-maintenance-schedule-dialog"
     />
