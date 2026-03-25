@@ -95,7 +95,7 @@
   {
     "id": "T033",
     "description": "2b-16: Visual QA (xx) — onboarding wizard all steps show '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F034"]
   },
   {
