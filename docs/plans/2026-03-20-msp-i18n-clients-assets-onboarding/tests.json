@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "2b-10: Visual QA (xx) — client list, client detail, quick-add, import dialog, billing config all show '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
 
