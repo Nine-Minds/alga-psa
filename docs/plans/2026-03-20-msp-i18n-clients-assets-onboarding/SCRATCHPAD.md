@@ -131,6 +131,9 @@
   - `for f in server/public/locales/{de,es,fr,it,nl,pl}/msp/assets.json; do node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log(process.argv[1]+': ok')" "$f" || exit 1; done` reported all six production locale files as `ok`
   - spot check over `server/public/locales/{xx,yy}/msp/assets.json` confirmed representative keys resolve to `11111` / `55555` while preserving interpolation tokens (`createTicketFromAssetButton.defaultTitle` → `11111 {{name}} 11111`, `55555 {{name}} 55555`)
   - `node scripts/validate-translations.cjs` → `PASSED` (`Errors: 0`, `Warnings: 0`)
+- (2026-03-25) Completed `F027`: ran the targeted Italian dropped-accent audit on `server/public/locales/it/msp/assets.json`. The strict scan for the known broken forms (`puo`, `gia`, `verra`, `funzionalita`, `perche`, `cosi`, `piu`, plus the common `e necessario` / `e possibile` phrases) returned no matches, and representative spot checks confirmed accented strings exist in the asset locale file (`Sì`, `è`, `già`, `obbligatorio` copy with accents preserved where applicable). Validation:
+  - `rg -n '\b(puo|gia|verra|funzionalita|perche|cosi|piu)\b| e necessario| e possibile| e richiesto| e richiesta| e configurato| e configurata' server/public/locales/it/msp/assets.json` returned no matches
+  - `rg -n 'Sì| è |più|funzionalità|perché|così|già|verrà' server/public/locales/it/msp/assets.json | head -n 20` returned representative accented strings
 
 ## Commands / Runbooks
 

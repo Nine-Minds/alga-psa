@@ -21,7 +21,7 @@
   {"id": "F024", "description": "Wire useTranslation in panel components (AssetInfoPanel, RmmVitalsPanel, HardwareSpecsPanel, SecurityPatchingPanel, AssetNotesPanel)", "implemented": true, "prdRefs": ["2b-12"]},
   {"id": "F025", "description": "Wire useTranslation in remaining asset files (StatusBadge, MetricsBanner, CommandPalette, CreateTicketFromAsset, DeleteAssetButton, etc.)", "implemented": true, "prdRefs": ["2b-12"]},
   {"id": "F026", "description": "Generate msp/assets translations for 6 non-English locales + 2 pseudo-locales", "implemented": true, "prdRefs": ["2b-12"]},
-  {"id": "F027", "description": "Italian accent audit on it/msp/assets.json", "implemented": false, "prdRefs": ["2b-12"]},
+  {"id": "F027", "description": "Italian accent audit on it/msp/assets.json", "implemented": true, "prdRefs": ["2b-12"]},
 
   {"id": "F030", "description": "Create en/msp/onboarding.json with all keys for wizard steps (excluding already-translated dashboard components)", "implemented": false, "prdRefs": ["2b-16"]},
   {"id": "F031", "description": "Wire useTranslation('msp/onboarding') in TicketingConfigStep.tsx (largest file, ~300-600 strings, now 3,040 LOC)", "implemented": false, "prdRefs": ["2b-16"]},
