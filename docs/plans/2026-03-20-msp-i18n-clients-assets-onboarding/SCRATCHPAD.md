@@ -56,6 +56,7 @@
   - DashboardOnboardingSkeleton.tsx — no strings
 - (2026-03-24) Wizard-only onboarding form/help/alert text should stay in the new `msp/onboarding` namespace rather than extending `msp/dashboard.json`. Existing dashboard overlap remains under `onboarding.*` keys in `msp/dashboard.json`, but wizard steps do not reuse that namespace today.
 - (2026-03-24) Keep stable onboarding ids/values untranslated: `OnboardingStepId`, `step.id`, `substep.id`, `data_import`, checklist status enums (`complete`, `in_progress`, `not_started`, `blocked`), role values (`admin`, `technician`, `manager`, `user`), billing mode values (`fixed`, `hourly`, `usage`), `USD`, and ticketing sentinels like `none`, `board`, `category`, `status`, `priority`.
+- (2026-03-25) `F030` scaffold created `server/public/locales/en/msp/onboarding.json` with shared `common.actions` / `common.states` plus component-scoped roots for `OnboardingProvider`, `OnboardingWizard`, and the six in-scope wizard steps. This mirrors the earlier batch scaffolds: enough stable section names for follow-up wiring, without pretending the full key inventory is known before the large `TicketingConfigStep.tsx` migration happens.
 
 ## Progress Log
 
@@ -134,6 +135,8 @@
 - (2026-03-25) Completed `F027`: ran the targeted Italian dropped-accent audit on `server/public/locales/it/msp/assets.json`. The strict scan for the known broken forms (`puo`, `gia`, `verra`, `funzionalita`, `perche`, `cosi`, `piu`, plus the common `e necessario` / `e possibile` phrases) returned no matches, and representative spot checks confirmed accented strings exist in the asset locale file (`Sì`, `è`, `già`, `obbligatorio` copy with accents preserved where applicable). Validation:
   - `rg -n '\b(puo|gia|verra|funzionalita|perche|cosi|piu)\b| e necessario| e possibile| e richiesto| e richiesta| e configurato| e configurata' server/public/locales/it/msp/assets.json` returned no matches
   - `rg -n 'Sì| è |più|funzionalità|perché|così|già|verrà' server/public/locales/it/msp/assets.json | head -n 20` returned representative accented strings
+- (2026-03-25) Completed `F030`: created `server/public/locales/en/msp/onboarding.json` as the initial English scaffold for the onboarding batch. Added shared `common.actions` / `common.states` keys plus component-scoped `title` / `description` entries for `OnboardingProvider`, `OnboardingWizard`, `AddClientStep`, `BillingSetupStep`, `ClientContactStep`, `ClientInfoStep`, `TeamMembersStep`, and `TicketingConfigStep`. Dashboard onboarding components remain intentionally excluded because they already live under `msp/dashboard.json`. Validation:
+  - `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/onboarding.json','utf8')); console.log('onboarding json ok')"` returned `onboarding json ok`
 
 ## Commands / Runbooks
 

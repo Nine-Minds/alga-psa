@@ -1,0 +1,57 @@
+{
+  "common": {
+    "actions": {
+      "back": "Back",
+      "cancel": "Cancel",
+      "close": "Close",
+      "continue": "Continue",
+      "finish": "Finish",
+      "invite": "Invite",
+      "next": "Next",
+      "retry": "Retry",
+      "save": "Save",
+      "saving": "Saving...",
+      "skip": "Skip",
+      "submit": "Submit"
+    },
+    "states": {
+      "loading": "Loading...",
+      "optional": "Optional",
+      "required": "Required"
+    },
+    "no": "No",
+    "yes": "Yes"
+  },
+  "onboardingProvider": {
+    "title": "Onboarding Provider",
+    "description": "Route-level onboarding gate that checks tenant completion state and redirects incomplete tenants into the wizard"
+  },
+  "onboardingWizard": {
+    "title": "Onboarding Wizard",
+    "description": "Wizard shell for MSP tenant setup with dialog/full-page presentation, progress, validation, and completion flows"
+  },
+  "addClientStep": {
+    "title": "Add Client Step",
+    "description": "Wizard step for creating or revisiting the primary client record during onboarding"
+  },
+  "billingSetupStep": {
+    "title": "Billing Setup Step",
+    "description": "Wizard step for defining the initial service, pricing, billing mode, and contract line defaults"
+  },
+  "clientContactStep": {
+    "title": "Client Contact Step",
+    "description": "Wizard step for collecting the main client contact details"
+  },
+  "clientInfoStep": {
+    "title": "Client Info Step",
+    "description": "Wizard step for collecting MSP operator identity, company information, and initial client basics"
+  },
+  "teamMembersStep": {
+    "title": "Team Members Step",
+    "description": "Wizard step for inviting initial team members and assigning onboarding roles"
+  },
+  "ticketingConfigStep": {
+    "title": "Ticketing Config Step",
+    "description": "Wizard step for configuring boards, statuses, priorities, categories, and SLA defaults during onboarding"
+  }
+}

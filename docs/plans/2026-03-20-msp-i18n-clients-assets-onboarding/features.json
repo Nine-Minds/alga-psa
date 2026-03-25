@@ -23,7 +23,7 @@
   {"id": "F026", "description": "Generate msp/assets translations for 6 non-English locales + 2 pseudo-locales", "implemented": true, "prdRefs": ["2b-12"]},
   {"id": "F027", "description": "Italian accent audit on it/msp/assets.json", "implemented": true, "prdRefs": ["2b-12"]},
 
-  {"id": "F030", "description": "Create en/msp/onboarding.json with all keys for wizard steps (excluding already-translated dashboard components)", "implemented": false, "prdRefs": ["2b-16"]},
+  {"id": "F030", "description": "Create en/msp/onboarding.json with all keys for wizard steps (excluding already-translated dashboard components)", "implemented": true, "prdRefs": ["2b-16"]},
   {"id": "F031", "description": "Wire useTranslation('msp/onboarding') in TicketingConfigStep.tsx (largest file, ~300-600 strings, now 3,040 LOC)", "implemented": false, "prdRefs": ["2b-16"]},
   {"id": "F032", "description": "Wire useTranslation in BillingSetupStep.tsx, OnboardingWizard.tsx, TeamMembersStep.tsx", "implemented": false, "prdRefs": ["2b-16"]},
   {"id": "F033", "description": "Wire useTranslation in ClientInfoStep.tsx, AddClientStep.tsx, ClientContactStep.tsx, OnboardingProvider.tsx", "implemented": false, "prdRefs": ["2b-16"]},
