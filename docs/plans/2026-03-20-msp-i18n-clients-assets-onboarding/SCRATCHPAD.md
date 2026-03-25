@@ -40,6 +40,7 @@
 - (2026-03-20) `AssetCommandPalette.tsx` (256 LOC) — search/command interface, needs accessible translations
 - (2026-03-20) `index.ts` (13 LOC) — just exports, skip
 - (2026-03-24) Asset wrapper-only files need lighter handling in the namespace scaffold: `AssetDashboard.tsx`, `AssetFormClient.tsx`, `AssetAlertsSection.tsx`, `AssetPatchStatusSection.tsx`, and `AssetSoftwareInventory.tsx` are mostly wrappers/dynamic imports, while `AssetDetailDrawer.types.ts`, `index.ts`, and the component test files are non-UI sources that should stay out of locale coverage checks.
+- (2026-03-25) `F022` audit showed `AssetDetailDrawerClient.tsx`, `AssociatedAssets.tsx`, and `QuickAddAsset.tsx` were already wired to `useTranslation('msp/assets')` on the branch. A Babel AST audit found `93 + 33 + 45` unique `t(...)` keys across those files with `missing=0` against `server/public/locales/en/msp/assets.json`, so the checklist item could be flipped without further code edits.
 
 ### Onboarding (2b-16)
 - (2026-03-24) `TicketingConfigStep.tsx` (3,040 LOC, was 2,920) is MASSIVE — larger than most entire components. Has ticketing board setup, status configuration, priority settings, category management, SLA configuration. This is effectively a mini settings page embedded in the wizard. **Updated**: +120 LOC for board-scoped status configuration (board-specific-statuses merge).
@@ -105,6 +106,9 @@
   - `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/assets.json','utf8')); console.log('assets json ok')"` returned `assets json ok`
   - `npx eslint packages/assets/src/components/AssetForm.tsx packages/assets/src/components/AssetDashboardClient.tsx packages/assets/src/components/AssetDetails.tsx` (3 existing `no-explicit-any` warnings in `AssetDashboardClient.tsx`, 0 errors)
   - key-presence audit over the three files against `server/public/locales/en/msp/assets.json` reported `assets F021 keys ok`
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-25) Completed `F022`: audited `packages/assets/src/components/AssetDetailDrawerClient.tsx`, `packages/assets/src/components/AssociatedAssets.tsx`, and `packages/assets/src/components/QuickAddAsset.tsx` and confirmed the branch already had the planned `msp/assets` wiring. `AssetDetailDrawerClient` covers drawer tabs, overview/maintenance/ticket/configuration copy, relative-time strings, and type-detail labels; `AssociatedAssets` covers relationship management, drawer-loading errors, search/add flows, and status/type labels; `QuickAddAsset` covers dialog chrome, field labels/placeholders, validation copy, and type-specific option labels. Validation:
+  - Babel AST key audit over the three files reported `AssetDetailDrawerClient=93`, `AssociatedAssets=33`, `QuickAddAsset=45`, `missing=0` against `server/public/locales/en/msp/assets.json`
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
 
 ## Commands / Runbooks

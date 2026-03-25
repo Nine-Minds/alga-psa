@@ -16,7 +16,7 @@
 
   {"id": "F020", "description": "Create en/msp/assets.json with all keys for 41 asset components", "implemented": true, "prdRefs": ["2b-12"]},
   {"id": "F021", "description": "Wire useTranslation('msp/assets') in AssetForm.tsx, AssetDashboardClient.tsx, AssetDetails.tsx (largest files)", "implemented": true, "prdRefs": ["2b-12"]},
-  {"id": "F022", "description": "Wire useTranslation in AssetDetailDrawerClient.tsx, AssociatedAssets.tsx, QuickAddAsset.tsx", "implemented": false, "prdRefs": ["2b-12"]},
+  {"id": "F022", "description": "Wire useTranslation in AssetDetailDrawerClient.tsx, AssociatedAssets.tsx, QuickAddAsset.tsx", "implemented": true, "prdRefs": ["2b-12"]},
   {"id": "F023", "description": "Wire useTranslation in tab components (MaintenanceSchedulesTab, RelatedAssetsTab, ServiceHistoryTab, SoftwareInventoryTab, AuditLogTab, DocumentsPasswordsTab)", "implemented": false, "prdRefs": ["2b-12"]},
   {"id": "F024", "description": "Wire useTranslation in panel components (AssetInfoPanel, RmmVitalsPanel, HardwareSpecsPanel, SecurityPatchingPanel, AssetNotesPanel)", "implemented": false, "prdRefs": ["2b-12"]},
   {"id": "F025", "description": "Wire useTranslation in remaining asset files (StatusBadge, MetricsBanner, CommandPalette, CreateTicketFromAsset, DeleteAssetButton, etc.)", "implemented": false, "prdRefs": ["2b-12"]},
