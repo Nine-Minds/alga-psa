@@ -47,9 +47,7 @@ function simulateContentHeight(height: number) {
   act(() => capturedOnContentHeight!({ height }));
 }
 
-function findByType(root: ReactTestRenderer, type: string) {
-  return root.root.findAllByType(type as any);
-}
+
 
 function findPressables(root: ReactTestRenderer) {
   // In RN mock, Pressable renders as "Pressable"

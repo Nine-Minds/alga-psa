@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { act, create } from "react-test-renderer";
 import { useTicketTitle } from "./useTicketTitle";
 import type { TicketDetail } from "../../../api/tickets";
