@@ -154,37 +154,37 @@
   {
     "id": "T030",
     "description": "Feature 11: GET /api/v1/tickets/{id}/materials returns materials list with product names",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030", "F031"]
   },
   {
     "id": "T031",
     "description": "Feature 11: GET materials returns empty array for ticket with no materials",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {
     "id": "T032",
     "description": "Feature 11: POST /api/v1/tickets/{id}/materials creates material with valid data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032", "F033"]
   },
   {
     "id": "T033",
     "description": "Feature 11: POST materials resolves client_id from ticket automatically",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F034"]
   },
   {
     "id": "T034",
     "description": "Feature 11: POST materials validates required fields (service_id, quantity, rate)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033"]
   },
   {
     "id": "T035",
     "description": "Feature 11: POST materials rejects invalid service_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033"]
   },
   {
