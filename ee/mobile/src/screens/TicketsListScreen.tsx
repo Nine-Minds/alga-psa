@@ -24,6 +24,7 @@ import { formatDateShort, formatDateTimeWithRelative } from "../ui/formatters/da
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { DatePickerField } from "../ui/components/DatePickerField";
+import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -36,7 +37,9 @@ type Props = CompositeScreenProps<
 type TicketListFilters = {
   status: "any" | "open" | "closed";
   statusIds: string[];
-  assignee: "any" | "me" | "unassigned";
+  assignee: "any" | "me" | "unassigned" | "agent";
+  assigneeUserId?: string;
+  assigneeName?: string;
   priorityName: string;
   updatedSinceDays: number | null;
   updatedSinceDate: string;
@@ -160,6 +163,9 @@ export function TicketsListScreen({ navigation }: Props) {
     if (filters.assignee === "me") {
       const me = session.user?.id;
       if (me) out.assigned_to = me;
+    }
+    if (filters.assignee === "agent" && filters.assigneeUserId) {
+      out.assigned_to = filters.assigneeUserId;
     }
     if (filters.assignee === "unassigned") out.has_assignment = false;
 
@@ -528,6 +534,7 @@ export function TicketsListScreen({ navigation }: Props) {
           filters={filters}
           setFilters={setFilters}
           canFilterMe={Boolean(session?.user?.id)}
+          baseUrl={config.ok ? config.baseUrl : null}
           onClose={() => setFiltersOpen(false)}
         />
       </View>
@@ -651,6 +658,7 @@ export function TicketsListScreen({ navigation }: Props) {
         filters={filters}
         setFilters={setFilters}
         canFilterMe={Boolean(session?.user?.id)}
+        baseUrl={config.ok ? config.baseUrl : null}
         onClose={() => setFiltersOpen(false)}
       />
     </View>
@@ -672,7 +680,7 @@ function FilterChipBar({
   const chips: string[] = [];
   if (filters.statusIds.length > 0) chips.push(t("filters.statusesCount", { count: filters.statusIds.length }));
   else if (filters.status !== "any") chips.push(t("filters.statusLabel", { status: filters.status === "open" ? t("filters.open") : t("filters.closed") }));
-  if (filters.assignee !== "any") chips.push(t("filters.assigneeLabel", { assignee: filters.assignee === "me" ? t("filters.me") : t("quickFilters.unassigned") }));
+  if (filters.assignee !== "any") chips.push(t("filters.assigneeLabel", { assignee: filters.assignee === "me" ? t("filters.me") : filters.assignee === "agent" ? (filters.assigneeName ?? "Agent") : t("quickFilters.unassigned") }));
   if (filters.priorityName.trim()) chips.push(t("filters.priorityLabel", { priority: filters.priorityName.trim() }));
   const dateOnly = filters.updatedSinceDate.trim();
   if (dateOnly) chips.push(t("filters.updatedDate", { date: dateOnly }));
@@ -744,6 +752,7 @@ function FiltersModal({
   filters,
   setFilters,
   canFilterMe,
+  baseUrl,
   onClose,
 }: {
   theme: Theme;
@@ -751,29 +760,10 @@ function FiltersModal({
   client: ApiClient | null;
   apiKey: string | null;
   tenantId: string | null;
-  filters: {
-    status: "any" | "open" | "closed";
-    statusIds: string[];
-    assignee: "any" | "me" | "unassigned";
-    priorityName: string;
-    updatedSinceDays: number | null;
-    updatedSinceDate: string;
-    sortField: "updated_at" | "entered_at" | "priority_name" | "status_name" | "client_name";
-    sortOrder: "asc" | "desc";
-  };
-  setFilters: Dispatch<
-    SetStateAction<{
-      status: "any" | "open" | "closed";
-      statusIds: string[];
-      assignee: "any" | "me" | "unassigned";
-      priorityName: string;
-      updatedSinceDays: number | null;
-      updatedSinceDate: string;
-      sortField: "updated_at" | "entered_at" | "priority_name" | "status_name" | "client_name";
-      sortOrder: "asc" | "desc";
-    }>
-  >;
+  filters: TicketListFilters;
+  setFilters: Dispatch<SetStateAction<TicketListFilters>>;
   canFilterMe: boolean;
+  baseUrl: string | null;
   onClose: () => void;
 }) {
   const { t } = useTranslation("tickets");
@@ -783,6 +773,7 @@ function FiltersModal({
   const [priorityOptions, setPriorityOptions] = useState<TicketPriority[]>([]);
   const [priorityOptionsLoading, setPriorityOptionsLoading] = useState(false);
   const [priorityOptionsError, setPriorityOptionsError] = useState<string | null>(null);
+  const [agentFilterPickerOpen, setAgentFilterPickerOpen] = useState(false);
 
   useEffect(() => {
     let canceled = false;
@@ -924,14 +915,50 @@ function FiltersModal({
             { label: t("filters.me"), value: "me", disabled: !canFilterMe },
             { label: t("quickFilters.unassigned"), value: "unassigned" },
           ]}
-          value={filters.assignee}
-          onChange={(assignee) => setFilters({ ...filters, assignee })}
+          value={filters.assignee === "agent" ? "any" : filters.assignee}
+          onChange={(assignee) => setFilters({ ...filters, assignee, assigneeUserId: undefined, assigneeName: undefined })}
         />
         {!canFilterMe ? (
           <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
             {t("filters.meFilterHint")}
           </Text>
         ) : null}
+        <Pressable
+          onPress={() => setAgentFilterPickerOpen(true)}
+          accessibilityRole="button"
+          style={({ pressed }) => ({
+            marginTop: theme.spacing.sm,
+            paddingHorizontal: theme.spacing.md,
+            paddingVertical: theme.spacing.sm,
+            borderRadius: theme.borderRadius.full,
+            borderWidth: 1,
+            borderColor: filters.assignee === "agent" ? theme.colors.primary : theme.colors.border,
+            backgroundColor: filters.assignee === "agent" ? theme.colors.primary : theme.colors.card,
+            alignSelf: "flex-start",
+            opacity: pressed ? 0.95 : 1,
+          })}
+        >
+          <Text style={{ ...theme.typography.caption, color: filters.assignee === "agent" ? theme.colors.textInverse : theme.colors.text, fontWeight: "600" }}>
+            {filters.assignee === "agent" && filters.assigneeName
+              ? `${t("filters.agent")}: ${filters.assigneeName}`
+              : t("filters.pickAgent")}
+          </Text>
+        </Pressable>
+        <AgentPickerModal
+          visible={agentFilterPickerOpen}
+          updating={false}
+          updateError={null}
+          currentAssignedToName={null}
+          onSelect={(userId, displayName) => {
+            setFilters({ ...filters, assignee: "agent", assigneeUserId: userId, assigneeName: displayName });
+            setAgentFilterPickerOpen(false);
+          }}
+          onUnassign={() => {}}
+          onClose={() => setAgentFilterPickerOpen(false)}
+          client={client}
+          apiKey={apiKey ?? ""}
+          baseUrl={baseUrl}
+        />
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.priority")}</Text>
         {priorityOptionsLoading ? (

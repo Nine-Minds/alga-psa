@@ -423,9 +423,10 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
             onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
             javaScriptEnabled
             domStorageEnabled
-            scrollEnabled={scrollEnabledProp ?? !editable}
+            scrollEnabled={scrollEnabledProp ?? true}
             setSupportMultipleWindows={false}
             javaScriptCanOpenWindowsAutomatically={false}
+            nestedScrollEnabled={Platform.OS === "android"}
             {...(Platform.OS === "android" ? { androidLayerType: "hardware" } : {})}
             style={{
               backgroundColor: "transparent",

@@ -60,6 +60,8 @@
     "updatedDate": "Updated: {{date}}",
     "updatedDays": "Updated: {{days}}d",
     "sortLabel": "Sort: {{field}} {{order}}",
+    "agent": "Agent",
+    "pickAgent": "Pick specific agent\u2026",
     "option24h": "24h",
     "option7d": "7d",
     "option30d": "30d"
@@ -92,6 +94,7 @@
     "unassigning": "Unassigning\u2026",
     "assignedTo": "Assigned to {{name}}",
     "unassigned": "Unassigned",
+    "reassign": "Reassign",
     "editTitle": "Edit title",
     "requester": "Contact",
     "contact": "Contact",
@@ -205,6 +208,15 @@
   "priorityPicker": {
     "title": "Select priority",
     "setPriority": "Set priority {{name}}"
+  },
+  "agentPicker": {
+    "title": "Assign to agent",
+    "searchPlaceholder": "Search agents\u2026",
+    "assignTo": "Assign to {{name}}",
+    "unassign": "Unassign",
+    "currentlyAssigned": "Currently assigned to {{name}}",
+    "unableToLoad": "Unable to load agents.",
+    "noResults": "No agents found."
   },
   "dueDateModal": {
     "title": "Due date",
