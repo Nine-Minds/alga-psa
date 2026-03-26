@@ -64,6 +64,7 @@
 - F015 complete: `uploadTicketDocument()` now posts `FormData` to the same ticket documents endpoint, and `ApiClient.request()` was updated so multipart bodies bypass JSON encoding and omit the JSON content type header.
 - F016 complete: `DocumentsSection` is now mounted in `TicketDetailScreen` below the description card and loads ticket documents into a dedicated card section on first render.
 - F017 complete: each document row now renders the document name plus a secondary metadata line composed from the resolved type label, formatted file size, and formatted `updated_at` timestamp.
+- F018 complete: the documents card header now includes a neutral `Badge` showing the current document count next to the attach action, satisfying the count badge requirement.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`

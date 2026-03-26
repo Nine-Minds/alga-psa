@@ -87,7 +87,7 @@
   {
     "id": "F018",
     "description": "Feature 10: Mobile — Document count badge/header in section",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
