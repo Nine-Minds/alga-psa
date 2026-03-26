@@ -184,7 +184,7 @@
   {
     "id": "F038",
     "description": "Feature 11: Mobile — MaterialsSection component in ticket detail showing materials list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {
