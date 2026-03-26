@@ -196,7 +196,7 @@
   {
     "id": "F040",
     "description": "Feature 11: Mobile — Add Product button opens searchable product picker (EntityPickerModal)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {

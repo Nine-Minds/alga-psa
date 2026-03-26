@@ -82,6 +82,7 @@
 - F037 complete: `listProducts()` now wraps the existing `GET /api/v1/products` endpoint with mobile-friendly search and limit parameters, reusing the catalog’s `default_rate` and `sku` fields for picker display and defaults.
 - F038 complete: `MaterialsSection` is now mounted in `TicketDetailScreen` as a dedicated ticket detail card that loads and manages material data independently of comments/documents.
 - F039 complete: each material row now renders the product name, SKU, localized quantity/rate line, and a billed or unbilled badge directly in the ticket detail UI.
+- F040 complete: the materials card now exposes an `Add Product` action that opens `EntityPickerModal`, loads product results from `/api/v1/products`, and supports search-driven filtering.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`
