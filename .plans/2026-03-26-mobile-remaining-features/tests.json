@@ -2,31 +2,31 @@
   {
     "id": "T001",
     "description": "Feature 15: Ticket detail API response includes contact_avatar_url when contact has avatar",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F003"]
   },
   {
     "id": "T002",
     "description": "Feature 15: Ticket detail API response includes client_logo_url when client has logo",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F003"]
   },
   {
     "id": "T003",
     "description": "Feature 15: contact_avatar_url is null when contact has no avatar",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F006"]
   },
   {
     "id": "T004",
     "description": "Feature 15: client_logo_url is null when client has no logo",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F006"]
   },
   {
     "id": "T005",
     "description": "Feature 15: Avatar URLs are null when ticket has no contact or client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F002"]
   },
   {
