@@ -113,6 +113,22 @@ Recommended upgrade sequence:
 4. Run the upgrade.
 5. Watch `Status` and `Workloads` until the appliance stabilizes.
 
+## Bootstrap Troubleshooting
+
+If first install does not complete cleanly:
+
+1. Open `Status`.
+2. Open `Workloads`.
+3. Inspect logs for the failing pod.
+4. Export a support bundle before making large manual changes.
+
+Use this flow for:
+
+- Talos/bootstrap failures
+- stuck Flux or Helm reconciliation
+- failed bootstrap jobs
+- unhealthy `alga-core`, `db`, `redis`, or `pgbouncer` startup
+
 ## Reset
 
 Use `Reset` only when you intend to wipe appliance runtime state.

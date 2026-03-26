@@ -82,9 +82,10 @@ Options:
 
 If kubeconfig is not supplied, the script will generate Talos config, apply it to
 the node, bootstrap the cluster, persist talosconfig and kubeconfig under
-~/nm-kube-config/alga-psa/talos/<site-id>/, install storage, install Flux, apply
+~/.alga-psa-appliance/<site-id>/ by default, install storage, install Flux, apply
 runtime values derived from the appliance release manifest, and wait for the
-first-run Alga bootstrap to complete.
+first-run Alga bootstrap to complete. Set ALGA_APPLIANCE_HOME to override the
+default operator config root.
 
 Bootstrap modes:
   fresh    Wipes existing appliance namespaces and local-path data before reinstall
@@ -241,10 +242,13 @@ resolve_repo_defaults() {
 }
 
 resolve_config_paths() {
+  local config_root
+
   if [ -n "$OUTPUT_DIR_OVERRIDE" ]; then
     CONFIG_DIR="$OUTPUT_DIR_OVERRIDE"
   elif [ -z "$CONFIG_DIR" ]; then
-    CONFIG_DIR="$HOME/nm-kube-config/alga-psa/talos/$SITE_ID"
+    config_root="${ALGA_APPLIANCE_HOME:-$HOME/.alga-psa-appliance}"
+    CONFIG_DIR="$config_root/$SITE_ID"
   fi
 
   mkdir -p "$CONFIG_DIR"

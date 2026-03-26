@@ -137,7 +137,7 @@ Example:
 ```bash
 ee/appliance/scripts/upgrade-appliance.sh \
   --release-version 1.0-rc5 \
-  --kubeconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/kubeconfig
+  --kubeconfig ~/.alga-psa-appliance/appliance-single-node/kubeconfig
 ```
 
 The script:
@@ -160,7 +160,7 @@ Use the destructive reset helper directly when you need to clear persisted appli
 
 ```bash
 ee/appliance/scripts/reset-appliance-data.sh \
-  --kubeconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/kubeconfig \
+  --kubeconfig ~/.alga-psa-appliance/appliance-single-node/kubeconfig \
   --force
 ```
 
@@ -174,8 +174,8 @@ Example:
 
 ```bash
 ee/appliance/scripts/collect-support-bundle.sh \
-  --kubeconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/kubeconfig \
-  --talosconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/talosconfig \
+  --kubeconfig ~/.alga-psa-appliance/appliance-single-node/kubeconfig \
+  --talosconfig ~/.alga-psa-appliance/appliance-single-node/talosconfig \
   --node-ip 192.168.64.5 \
   --site-id appliance-single-node
 ```

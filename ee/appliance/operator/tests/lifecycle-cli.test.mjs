@@ -56,7 +56,7 @@ function makeTempRuntime({ upgradeFailure = false, resetCheck = false } = {}) {
 
 function makeHome(siteId = 'site-a') {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'appliance-operator-home-'));
-  const siteDir = path.join(home, 'nm-kube-config/alga-psa/talos', siteId);
+  const siteDir = path.join(home, '.alga-psa-appliance', siteId);
   fs.mkdirSync(siteDir, { recursive: true });
   fs.writeFileSync(path.join(siteDir, 'kubeconfig'), 'fake');
   fs.writeFileSync(path.join(siteDir, 'talosconfig'), 'fake');
@@ -282,7 +282,7 @@ test('T003: CLI reset enforces force flag and invokes reset helper when confirme
 test('CLI fails fast when multiple site configs exist and --site-id is omitted', async () => {
   const runtime = makeTempRuntime();
   const home = makeHome('site-a');
-  const secondSiteDir = path.join(home, 'nm-kube-config/alga-psa/talos', 'site-b');
+  const secondSiteDir = path.join(home, '.alga-psa-appliance', 'site-b');
   fs.mkdirSync(secondSiteDir, { recursive: true });
   fs.writeFileSync(path.join(secondSiteDir, 'kubeconfig'), 'fake');
   fs.writeFileSync(path.join(secondSiteDir, 'talosconfig'), 'fake');

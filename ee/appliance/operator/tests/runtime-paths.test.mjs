@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { discoverEnvironment, selectDiscoveredSite } from '../lib/environment.mjs';
-import { resolveRuntimePaths } from '../lib/runtime-paths.mjs';
+import { resolveConfigBase, resolveRuntimePaths } from '../lib/runtime-paths.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,10 +31,15 @@ test('T006: resolves standalone asset-root runtime paths', () => {
   assert.equal(runtime.releasesDir, path.join(fixtureRoot, 'releases'));
 });
 
+test('resolveConfigBase defaults to a product-owned appliance config home', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'appliance-operator-home-'));
+  assert.equal(resolveConfigBase(home), path.join(home, '.alga-psa-appliance'));
+});
+
 test('environment discovery defers site selection in TUI mode when multiple sites exist', () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'appliance-operator-home-'));
   for (const siteId of ['site-a', 'site-b']) {
-    const siteDir = path.join(home, 'nm-kube-config/alga-psa/talos', siteId);
+    const siteDir = path.join(home, '.alga-psa-appliance', siteId);
     fs.mkdirSync(siteDir, { recursive: true });
     fs.writeFileSync(path.join(siteDir, 'kubeconfig'), 'fake');
     fs.writeFileSync(path.join(siteDir, 'talosconfig'), 'fake');
@@ -51,5 +56,5 @@ test('environment discovery defers site selection in TUI mode when multiple site
 
   const selected = selectDiscoveredSite(env, 'site-b');
   assert.equal(selected.site.siteId, 'site-b');
-  assert.equal(selected.paths.kubeconfig, path.join(home, 'nm-kube-config/alga-psa/talos', 'site-b', 'kubeconfig'));
+  assert.equal(selected.paths.kubeconfig, path.join(home, '.alga-psa-appliance', 'site-b', 'kubeconfig'));
 });

@@ -68,7 +68,7 @@ For deeper release semantics:
 The bootstrap/operator flow persists appliance access files under:
 
 ```text
-~/nm-kube-config/alga-psa/talos/<site-id>/
+~/.alga-psa-appliance/<site-id>/
 ```
 
 Typical contents:
@@ -80,6 +80,7 @@ Typical contents:
 - `app-url`
 
 These files are the durable operator access path. They should survive across sessions and should not be replaced with temporary working files.
+Set `ALGA_APPLIANCE_HOME` if you need a different operator config root.
 
 ## Bootstrap Model
 

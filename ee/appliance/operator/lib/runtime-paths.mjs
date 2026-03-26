@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const DEFAULT_CONFIG_BASE = path.join('nm-kube-config', 'alga-psa', 'talos');
+const DEFAULT_CONFIG_DIRNAME = '.alga-psa-appliance';
 
 function exists(filePath) {
   try {
@@ -81,7 +81,12 @@ export function resolveRuntimePaths(options = {}) {
 }
 
 export function resolveConfigBase(homeDir) {
-  return path.join(homeDir, DEFAULT_CONFIG_BASE);
+  const explicitRoot = process.env.ALGA_APPLIANCE_HOME;
+  if (explicitRoot) {
+    return path.resolve(explicitRoot);
+  }
+
+  return path.join(homeDir, DEFAULT_CONFIG_DIRNAME);
 }
 
 export function listSiteIds(configBaseDir) {
