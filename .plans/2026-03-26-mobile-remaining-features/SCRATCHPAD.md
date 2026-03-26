@@ -60,6 +60,7 @@
 - F011 complete: the upload controller reads `multipart/form-data` with `req.formData()`, extracts the `file` field, and `TicketService.uploadTicketDocument()` persists the payload through `StorageService.validateFileUpload()` and `StorageService.uploadFile()`.
 - F012 complete: `TicketService.uploadTicketDocument()` now inserts a `documents` row and a matching `document_associations` row with `entity_type: 'ticket'` inside one transaction, after resolving the folder path and document type.
 - F013 complete: after upload, the service reloads the enriched `IDocument` via `getDocumentById()` and the controller returns that object in the API success payload with HTTP 201.
+- F014 complete: `ee/mobile/src/api/documents.ts` now exposes `getTicketDocuments()` as the mobile wrapper around `GET /api/v1/tickets/{ticketId}/documents`, including the required `x-api-key` header and typed `TicketDocument[]` response.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`

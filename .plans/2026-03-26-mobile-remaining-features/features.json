@@ -63,7 +63,7 @@
   {
     "id": "F014",
     "description": "Feature 10: Mobile API — getTicketDocuments() function calling GET /api/v1/tickets/{id}/documents",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
