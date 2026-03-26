@@ -239,7 +239,7 @@
   {
     "id": "F051",
     "description": "Feature 15: Tests — Run npx vitest run, all tests pass including new avatar tests",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 15"]
   },
   {
@@ -257,7 +257,7 @@
   {
     "id": "F054",
     "description": "Feature 10: Tests — Run npx vitest run, all tests pass including new document tests",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
@@ -275,7 +275,7 @@
   {
     "id": "F057",
     "description": "Feature 11: Tests — Run npx vitest run, all tests pass including new material tests",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {

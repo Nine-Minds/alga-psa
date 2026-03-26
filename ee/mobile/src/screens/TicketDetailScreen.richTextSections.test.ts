@@ -105,6 +105,14 @@ vi.mock("../ui/components/PrimaryButton", () => ({
     React.createElement("MockPrimaryButton", props, props.children as React.ReactNode),
 }));
 
+vi.mock("../features/ticketDetail/components/DocumentsSection", () => ({
+  DocumentsSection: (props: Record<string, unknown>) => React.createElement("MockDocumentsSection", props),
+}));
+
+vi.mock("../features/ticketDetail/components/MaterialsSection", () => ({
+  MaterialsSection: (props: Record<string, unknown>) => React.createElement("MockMaterialsSection", props),
+}));
+
 vi.mock("../features/ticketRichText/TicketRichTextEditor", () => ({
   TicketRichTextEditor: (props: Record<string, unknown>) =>
     React.createElement("MockRichTextEditor", props),
