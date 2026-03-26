@@ -55,8 +55,6 @@ export function buildTicketStatusFilterOptions(
   selectedBoardId?: string | null,
   selectedStatusId?: string | null
 ): TicketStatusFilterOption[] {
-  const parsedSelection = parseTicketStatusFilterValue(selectedStatusId);
-  const restrictToOpenStatuses = parsedSelection.kind === 'open';
   const groupedStatuses = new Map<string, TicketStatusFilterOption>();
 
   for (const option of statusOptions) {
@@ -68,10 +66,6 @@ export function buildTicketStatusFilterOptions(
     }
 
     if (selectedBoardId && option.boardId !== selectedBoardId) {
-      continue;
-    }
-
-    if (restrictToOpenStatuses && option.isClosed) {
       continue;
     }
 

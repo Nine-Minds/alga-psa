@@ -41,7 +41,7 @@ describe('ticketStatusFilter', () => {
     ]);
   });
 
-  it('filters grouped options to open statuses when the open sentinel is selected', () => {
+  it('still shows closed grouped options when the open sentinel is selected', () => {
     const options = buildTicketStatusFilterOptions(
       STATUS_OPTIONS,
       undefined,
@@ -52,6 +52,7 @@ describe('ticketStatusFilter', () => {
       TICKET_STATUS_FILTER_OPEN,
       TICKET_STATUS_FILTER_ALL,
       createTicketStatusNameFilterValue('New'),
+      createTicketStatusNameFilterValue('Closed'),
       createTicketStatusNameFilterValue('Review'),
     ]);
   });
