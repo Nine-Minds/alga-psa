@@ -111,7 +111,7 @@
   {
     "id": "F022",
     "description": "Feature 10: Mobile — Upload progress indicator during file upload",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
