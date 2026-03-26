@@ -154,7 +154,7 @@
   {
     "id": "F033",
     "description": "Feature 11: Server — POST endpoint validates service_id, quantity, rate, currency_code",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {
