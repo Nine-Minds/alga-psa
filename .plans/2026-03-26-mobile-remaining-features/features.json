@@ -190,7 +190,7 @@
   {
     "id": "F039",
     "description": "Feature 11: Mobile — Material list shows product name, SKU, quantity, rate, billed status",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {

@@ -81,6 +81,7 @@
 - F036 complete: the same mobile API module now exposes `addTicketMaterial()` for posting `{ service_id, quantity, rate, currency_code, description? }` to the ticket materials endpoint.
 - F037 complete: `listProducts()` now wraps the existing `GET /api/v1/products` endpoint with mobile-friendly search and limit parameters, reusing the catalog’s `default_rate` and `sku` fields for picker display and defaults.
 - F038 complete: `MaterialsSection` is now mounted in `TicketDetailScreen` as a dedicated ticket detail card that loads and manages material data independently of comments/documents.
+- F039 complete: each material row now renders the product name, SKU, localized quantity/rate line, and a billed or unbilled badge directly in the ticket detail UI.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`
