@@ -142,7 +142,7 @@
   {
     "id": "F031",
     "description": "Feature 11: Server — Materials list joins service_catalog for service_name and sku",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {
