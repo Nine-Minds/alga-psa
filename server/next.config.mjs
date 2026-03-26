@@ -240,10 +240,10 @@ const nextConfig = {
       '@alga-psa/reference-data/actions': '../packages/reference-data/src/actions/index.ts',
       '@alga-psa/reference-data/components': '../packages/reference-data/src/components/index.ts',
       // Assets package
-      '@alga-psa/assets': '../packages/assets/dist',
-      '@alga-psa/assets/': '../packages/assets/dist/',
-      '@alga-psa/assets/actions': '../packages/assets/dist/actions/index.js',
-      '@alga-psa/assets/components': '../packages/assets/dist/components/index.js',
+      '@alga-psa/assets': '../packages/assets/src',
+      '@alga-psa/assets/': '../packages/assets/src/',
+      '@alga-psa/assets/actions': '../packages/assets/src/actions/index.ts',
+      '@alga-psa/assets/components': '../packages/assets/src/components/index.ts',
       // MSP Composition package
       '@alga-psa/msp-composition': '../packages/msp-composition/src',
       '@alga-psa/msp-composition/': '../packages/msp-composition/src/',
@@ -485,7 +485,7 @@ const nextConfig = {
       '@alga-psa/formatting': path.join(__dirname, '../packages/formatting/src'),
       '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/dist'),
       '@alga-psa/sla': path.join(__dirname, '../packages/sla/dist'),
-      '@alga-psa/assets': path.join(__dirname, '../packages/assets/dist'),
+      '@alga-psa/assets': path.join(__dirname, '../packages/assets/src'),
       '@alga-psa/tags': path.join(__dirname, '../packages/tags/dist'),
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
