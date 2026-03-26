@@ -11,6 +11,11 @@ import { IBoard } from '@alga-psa/types';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { useTicketFormOptions, type TicketFormOptions } from '../hooks/useTicketFormOptions';
+import {
+  isTicketStatusOpenFilter,
+  shouldApplyOpenOnlyStatusFilter,
+  TICKET_STATUS_FILTER_OPEN,
+} from '../lib/ticketStatusFilter';
 
 const TICKETS_PAGE_SIZE_SETTING = 'tickets_list_page_size';
 
@@ -75,7 +80,7 @@ function parseTicketListStateFromSearch(search: string): {
   const filters: Partial<ITicketListFilters> = {
     boardId: params.get('boardId') || undefined,
     clientId: params.get('clientId') || undefined,
-    statusId: params.get('statusId') || 'open',
+    statusId: params.get('statusId') || TICKET_STATUS_FILTER_OPEN,
     priorityId: params.get('priorityId') || 'all',
     categoryId: params.get('categoryId') || undefined,
     searchQuery: params.get('searchQuery') || '',
@@ -94,6 +99,7 @@ function parseTicketListStateFromSearch(search: string): {
     dueDateTo: params.get('dueDateTo') || undefined,
     responseState,
     slaStatusFilter,
+    showOpenOnly: isTicketStatusOpenFilter(params.get('statusId') || TICKET_STATUS_FILTER_OPEN),
     sortBy,
     sortDirection,
   };
@@ -143,6 +149,7 @@ export default function TicketingDashboardContainer({
   canUpdateTickets,
   renderClientDetails,
 }: TicketingDashboardContainerProps) {
+  const initialStatusId = initialFilters?.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const latestFetchRequestIdRef = useRef(0);
   const pendingFetchCountRef = useRef(0);
   const filterFetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -174,11 +181,11 @@ export default function TicketingDashboardContainer({
 
   const [activeFilters, setActiveFilters] = useState<Partial<ITicketListFilters>>(() => {
     return {
-      statusId: 'open',
+      statusId: initialStatusId,
       priorityId: 'all',
       searchQuery: '',
       boardFilterState: 'active',
-      showOpenOnly: true,
+      showOpenOnly: isTicketStatusOpenFilter(initialStatusId),
       bundleView: initialFilters?.bundleView ?? 'bundled',
       boardId: undefined,
       categoryId: undefined,
@@ -227,7 +234,7 @@ export default function TicketingDashboardContainer({
     // Only add non-default/non-empty values to URL
     if (filters.boardId) params.set('boardId', filters.boardId);
     if (filters.clientId) params.set('clientId', filters.clientId);
-    if (filters.statusId && filters.statusId !== 'open') params.set('statusId', filters.statusId);
+    if (filters.statusId && filters.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', filters.statusId);
     if (filters.priorityId && filters.priorityId !== 'all') params.set('priorityId', filters.priorityId);
     if (filters.categoryId) params.set('categoryId', filters.categoryId);
     if (filters.searchQuery) params.set('searchQuery', filters.searchQuery);
@@ -300,13 +307,13 @@ export default function TicketingDashboardContainer({
 
       const currentFiltersWithDefaults: ITicketListFilters = {
         boardId: filters.boardId || undefined,
-        statusId: filters.statusId || 'all',
+        statusId: filters.statusId || TICKET_STATUS_FILTER_OPEN,
         priorityId: filters.priorityId || 'all',
         categoryId: filters.categoryId || undefined,
         clientId: filters.clientId || undefined,
         searchQuery: filters.searchQuery || '',
         boardFilterState: filters.boardFilterState || 'active',
-        showOpenOnly: (filters.statusId === 'open') || (filters.showOpenOnly === true),
+        showOpenOnly: shouldApplyOpenOnlyStatusFilter(filters.statusId, filters.showOpenOnly),
         tags: filters.tags && filters.tags.length > 0 ? Array.from(new Set(filters.tags)) : undefined,
         assignedToIds: filters.assignedToIds && filters.assignedToIds.length > 0 ? filters.assignedToIds : undefined,
         assignedTeamIds: filters.assignedTeamIds && filters.assignedTeamIds.length > 0 ? filters.assignedTeamIds : undefined,
@@ -516,7 +523,7 @@ export default function TicketingDashboardContainer({
     };
     // Auto-derive showOpenOnly when statusId changes
     if ('statusId' in update) {
-      mergedFilters.showOpenOnly = update.statusId === 'open';
+      mergedFilters.showOpenOnly = isTicketStatusOpenFilter(update.statusId);
     }
     setActiveFilters(mergedFilters);
     // Update ref immediately so rapid back-to-back calls merge with fresh state

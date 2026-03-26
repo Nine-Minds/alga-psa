@@ -28,6 +28,10 @@ import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { TagFilter } from '@alga-psa/ui/components';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import {
+  isTicketStatusOpenFilter,
+  TICKET_STATUS_FILTER_OPEN,
+} from '@alga-psa/tickets/lib';
 
 interface ClientTicketsProps {
   clientId: string;
@@ -79,7 +83,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
 
   // Filter states
   const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string>('open');
+  const [selectedStatus, setSelectedStatus] = useState<string>(TICKET_STATUS_FILTER_OPEN);
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
@@ -142,7 +146,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
         categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
         searchQuery: debouncedSearchQuery,
         boardFilterState: boardFilterState,
-        showOpenOnly: selectedStatus === 'open',
+        showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
         tags: selectedTags.length > 0 ? selectedTags : undefined,
         assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
         includeUnassigned: includeUnassigned,
@@ -310,7 +314,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
 
   const isFiltered = useMemo(() => {
     return selectedBoard !== null ||
-      selectedStatus !== 'open' ||
+      selectedStatus !== TICKET_STATUS_FILTER_OPEN ||
       selectedPriority !== 'all' ||
       selectedCategories.length > 0 ||
       excludedCategories.length > 0 ||
@@ -322,7 +326,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
 
   const handleResetFilters = useCallback(() => {
     setSelectedBoard(null);
-    setSelectedStatus('open');
+    setSelectedStatus(TICKET_STATUS_FILTER_OPEN);
     setSelectedPriority('all');
     setSelectedCategories([]);
     setExcludedCategories([]);
