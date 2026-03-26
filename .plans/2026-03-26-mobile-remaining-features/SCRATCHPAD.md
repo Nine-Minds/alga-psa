@@ -51,6 +51,7 @@
 
 ## Progress Log
 - F001 complete: `TicketService.getById()` now resolves `contact_avatar_url` via `getContactAvatarUrl()` when `contact_name_id` is present; implemented together with the rest of Feature 15 to avoid partial dead code.
+- F002 complete: the same `Promise.all` enrichment in `TicketService.getById()` now resolves `client_logo_url` via `getClientLogoUrl()` when `client_id` is present, matching the PRD’s server contract.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`

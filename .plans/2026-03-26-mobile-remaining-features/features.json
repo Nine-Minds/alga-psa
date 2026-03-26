@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Feature 15: Server — Add getClientLogoUrl call in TicketService.getById after ticket query",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 15"]
   },
   {
