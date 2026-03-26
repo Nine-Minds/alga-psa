@@ -37,6 +37,7 @@ import { DueDateModal } from "../features/ticketDetail/components/DueDateModal";
 import { TimeEntryModal } from "../features/ticketDetail/components/TimeEntryModal";
 import { PriorityPickerModal } from "../features/ticketDetail/components/PriorityPickerModal";
 import { StatusPickerModal } from "../features/ticketDetail/components/StatusPickerModal";
+import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 
 // Utils
 import { getDueDateIso, getWatcherUserIds, isoToDateInput, stringOrDash } from "../features/ticketDetail/utils";
@@ -115,7 +116,8 @@ export function TicketDetailBody({
 
   const commentDraftHook = useCommentDraft({ ...deps, isOffline, fetchTicket, fetchComments, setComments });
   const descEditor = useDescriptionEditor({ ...deps, ticket, setTicket: ticketData.setTicket });
-  const statusHook = useTicketStatus({ ...deps, fetchTicket });
+  const boardId = ticket?.board_id as string | undefined;
+  const statusHook = useTicketStatus({ ...deps, fetchTicket, boardId });
   const priorityHook = useTicketPriority({ ...deps, fetchTicket });
   const dueDateHook = useTicketDueDate({ ...deps, ticket, fetchTicket });
   const watchHook = useTicketWatch({ ...deps, ticket, fetchTicket });
@@ -350,6 +352,11 @@ export function TicketDetailBody({
             disabled={assignmentHook.assignmentUpdating || isAssignedToMe}
             onPress={() => { void assignmentHook.assignToMe(); }}
           />
+          <ActionChip
+            label={t("detail.reassign")}
+            disabled={assignmentHook.assignmentUpdating}
+            onPress={assignmentHook.openAgentPicker}
+          />
           {ticket.assigned_to_name ? (
             <ActionChip
               label={assignmentHook.assignmentUpdating && assignmentHook.assignmentAction === "unassign" ? t("detail.unassigning") : t("detail.unassign")}
@@ -573,6 +580,19 @@ export function TicketDetailBody({
         updateError={statusHook.statusUpdateError}
         onSelect={(id) => void statusHook.submitStatus(id)}
         onClose={() => statusHook.setStatusPickerOpen(false)}
+      />
+
+      <AgentPickerModal
+        visible={assignmentHook.agentPickerOpen}
+        updating={assignmentHook.assignmentUpdating}
+        updateError={assignmentHook.assignmentError}
+        currentAssignedToName={ticket.assigned_to_name}
+        onSelect={(userId) => { void assignmentHook.assignToUser(userId); }}
+        onUnassign={() => { void assignmentHook.unassign(); assignmentHook.closeAgentPicker(); }}
+        onClose={assignmentHook.closeAgentPicker}
+        client={client}
+        apiKey={session?.accessToken ?? ""}
+        baseUrl={config.ok ? config.baseUrl : null}
       />
     </>
   );

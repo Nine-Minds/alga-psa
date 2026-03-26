@@ -15,6 +15,7 @@ export function useTicketAssignment(
   const [assignmentUpdating, setAssignmentUpdating] = useState(false);
   const [assignmentAction, setAssignmentAction] = useState<"assign" | "unassign" | null>(null);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
+  const [agentPickerOpen, setAgentPickerOpen] = useState(false);
 
   const updateAssignment = async (assignedTo: string | null, action: "assign" | "unassign") => {
     if (!client || !session) return;
@@ -65,11 +66,29 @@ export function useTicketAssignment(
     await updateAssignment(null, "unassign");
   };
 
+  const assignToUser = async (userId: string) => {
+    await updateAssignment(userId, "assign");
+    setAgentPickerOpen(false);
+  };
+
+  const openAgentPicker = () => {
+    setAssignmentError(null);
+    setAgentPickerOpen(true);
+  };
+
+  const closeAgentPicker = () => {
+    setAgentPickerOpen(false);
+  };
+
   return {
     assignmentUpdating,
     assignmentAction,
     assignmentError,
     assignToMe,
     unassign,
+    assignToUser,
+    agentPickerOpen,
+    openAgentPicker,
+    closeAgentPicker,
   };
 }

@@ -10,9 +10,10 @@ import { getApiErrorMessage } from "../utils";
 export function useTicketStatus(
   deps: TicketDetailDeps & {
     fetchTicket: () => Promise<void>;
+    boardId?: string | null;
   },
 ) {
-  const { client, session, ticketId, showToast, t, fetchTicket } = deps;
+  const { client, session, ticketId, showToast, t, fetchTicket, boardId } = deps;
 
   const [statusPickerOpen, setStatusPickerOpen] = useState(false);
   const [statusOptions, setStatusOptions] = useState<TicketStatus[]>([]);
@@ -23,13 +24,21 @@ export function useTicketStatus(
   const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null);
 
   const statusUpdateInFlightRef = useRef(false);
+  const lastBoardIdRef = useRef<string | null | undefined>(boardId);
+
+  // Reset cached options when boardId changes (e.g. after ticket refetch)
+  if (boardId !== lastBoardIdRef.current) {
+    lastBoardIdRef.current = boardId;
+    setStatusOptions([]);
+  }
 
   const openStatusPicker = async () => {
     if (!client || !session) return;
     setStatusPickerOpen(true);
     if (statusOptions.length > 0) return;
     const tenantKey = session.tenantId ?? "unknownTenant";
-    const cached = getCachedTicketStatuses(tenantKey);
+    const cacheKey = boardId ? `${tenantKey}:board:${boardId}` : tenantKey;
+    const cached = getCachedTicketStatuses(cacheKey);
     if (Array.isArray(cached) && cached.length > 0) {
       setStatusOptions(cached as TicketStatus[]);
       return;
@@ -37,13 +46,16 @@ export function useTicketStatus(
     setStatusOptionsLoading(true);
     setStatusOptionsError(null);
     try {
-      const res = await getTicketStatuses(client, { apiKey: session.accessToken });
+      const res = await getTicketStatuses(client, {
+        apiKey: session.accessToken,
+        board_id: boardId ?? undefined,
+      });
       if (!res.ok) {
         setStatusOptionsError(t("detail.errors.unableToLoadStatuses"));
         return;
       }
       setStatusOptions(res.data.data);
-      setCachedTicketStatuses(tenantKey, res.data.data);
+      setCachedTicketStatuses(cacheKey, res.data.data);
     } finally {
       setStatusOptionsLoading(false);
     }

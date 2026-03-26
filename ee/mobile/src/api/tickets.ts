@@ -85,6 +85,7 @@ export type TicketComment = {
 
 export type TicketStatus = {
   status_id: string;
+  board_id: string;
   name: string;
   is_closed: boolean;
 };
@@ -201,11 +202,12 @@ export function addTicketComment(
 
 export function getTicketStatuses(
   client: ApiClient,
-  params: { apiKey: string },
+  params: { apiKey: string; board_id?: string },
 ): Promise<ApiResult<SuccessResponse<TicketStatus[]>>> {
   return client.request<SuccessResponse<TicketStatus[]>>({
     method: "GET",
     path: "/api/v1/tickets/statuses",
+    query: params.board_id ? { board_id: params.board_id } : undefined,
     headers: {
       "x-api-key": params.apiKey,
     },
@@ -350,6 +352,39 @@ export function updateTicketAttributes(
     body: {
       attributes: params.attributes,
     },
+  });
+}
+
+// --- Create Ticket ---
+
+export type CreateTicketParams = {
+  apiKey: string;
+  title: string;
+  board_id: string;
+  client_id: string;
+  status_id: string;
+  priority_id: string;
+  location_id?: string;
+  contact_name_id?: string;
+  category_id?: string;
+  assigned_to?: string;
+  attributes?: Record<string, unknown>;
+  auditHeaders?: Record<string, string | undefined>;
+};
+
+export function createTicket(
+  client: ApiClient,
+  params: CreateTicketParams,
+): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
+  const { apiKey, auditHeaders, ...body } = params;
+  return client.request<SuccessResponse<TicketDetail>>({
+    method: "POST",
+    path: "/api/v1/tickets",
+    headers: {
+      "x-api-key": apiKey,
+      ...auditHeaders,
+    },
+    body,
   });
 }
 
