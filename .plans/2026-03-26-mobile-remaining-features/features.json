@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Feature 15: Mobile — Render Avatar component next to client name in KeyValue section",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 15"]
   },
   {
