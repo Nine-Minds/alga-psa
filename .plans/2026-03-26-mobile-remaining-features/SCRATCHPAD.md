@@ -62,6 +62,7 @@
 - F013 complete: after upload, the service reloads the enriched `IDocument` via `getDocumentById()` and the controller returns that object in the API success payload with HTTP 201.
 - F014 complete: `ee/mobile/src/api/documents.ts` now exposes `getTicketDocuments()` as the mobile wrapper around `GET /api/v1/tickets/{ticketId}/documents`, including the required `x-api-key` header and typed `TicketDocument[]` response.
 - F015 complete: `uploadTicketDocument()` now posts `FormData` to the same ticket documents endpoint, and `ApiClient.request()` was updated so multipart bodies bypass JSON encoding and omit the JSON content type header.
+- F016 complete: `DocumentsSection` is now mounted in `TicketDetailScreen` below the description card and loads ticket documents into a dedicated card section on first render.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`

@@ -75,7 +75,7 @@
   {
     "id": "F016",
     "description": "Feature 10: Mobile — DocumentsSection component in ticket detail showing document list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
