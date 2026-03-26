@@ -33,6 +33,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface SectionState {
   numbering: boolean;
@@ -87,6 +88,7 @@ interface PriorityFormData {
 
 export function TicketingConfigStep({ data, updateData }: StepProps) {
   const { data: session } = useSession();
+  const { t } = useTranslation('msp/onboarding');
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [expandedSections, setExpandedSections] = useState<SectionState>({
     numbering: false,
@@ -217,6 +219,14 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       label: board.board_name
     })),
     [importedBoards]
+  );
+
+  const getStatusTypeLabel = useCallback(
+    (isClosed: boolean) =>
+      t(`ticketingConfigStep.statuses.types.${isClosed ? 'closed' : 'open'}`, {
+        defaultValue: isClosed ? 'Closed' : 'Open'
+      }),
+    [t]
   );
 
   // Function to load existing ticketing data
@@ -459,7 +469,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           // Update the board to be default
           await updateBoard(firstBoard.board_id, { is_default: true });
           firstBoard.is_default = true;
-          toast.success('First board automatically set as default', {
+          toast.success(t('ticketingConfigStep.boards.toasts.firstDefaultSet', {
+            defaultValue: 'First board automatically set as default'
+          }), {
             duration: 3000
           });
         }
@@ -487,7 +499,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setShowImportDialogs(prev => ({ ...prev, boards: false }));
       await loadAvailableBoards();
     } catch (error) {
-      handleError(error, 'Failed to import boards');
+      handleError(error, t('ticketingConfigStep.boards.errors.import', {
+        defaultValue: 'Failed to import boards'
+      }));
     } finally {
       setIsImporting(prev => ({ ...prev, boards: false }));
     }
@@ -509,9 +523,14 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     if (missingParents.length > 0) {
       const parentNames = missingParents.map(subcat => {
         const parent = availableCategories.find(c => c.id === subcat.parent_category_uuid);
-        return parent?.category_name || 'Unknown parent';
+        return parent?.category_name || t('ticketingConfigStep.categories.import.unknownParent', {
+          defaultValue: 'Unknown parent'
+        });
       });
-      toast.error(`Cannot import subcategories without their parent categories. Please also select: ${[...new Set(parentNames)].join(', ')}`);
+      toast.error(t('ticketingConfigStep.categories.errors.missingParents', {
+        defaultValue: 'Cannot import subcategories without their parent categories. Please also select: {{parents}}',
+        parents: [...new Set(parentNames)].join(', ')
+      }));
       return;
     }
     
@@ -587,7 +606,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           if (firstOpenStatus) {
             await updateBoardTicketStatus(activeBoardId, firstOpenStatus.status_id, { is_default: true });
             firstOpenStatus.is_default = true;
-            toast.success('First open status automatically set as default', {
+            toast.success(t('ticketingConfigStep.statuses.toasts.firstDefaultSet', {
+              defaultValue: 'First open status automatically set as default'
+            }), {
               duration: 3000
             });
           }
@@ -662,7 +683,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     
     // Check if category already exists
     if (data.categories.some(cat => cat.category_name === categoryForm.name && cat.board_id === categoryForm.boardId)) {
-      toast.error('Category already exists in this board');
+      toast.error(t('ticketingConfigStep.categories.errors.duplicate', {
+        defaultValue: 'Category already exists in this board'
+      }));
       return;
     }
     
@@ -719,7 +742,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setCategoryForm({ name: '', parentCategory: '', displayOrder: 0, boardId: '' });
       setShowAddForms(prev => ({ ...prev, category: false }));
     } catch (error) {
-      handleError(error, 'Failed to create category. Please try again.');
+      handleError(error, t('ticketingConfigStep.categories.errors.create', {
+        defaultValue: 'Failed to create category. Please try again.'
+      }));
     }
   };
 
@@ -729,7 +754,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     
     // Check if priority already exists
     if (data.priorities.some(p => (typeof p === 'string' ? p : p.priority_name) === priorityForm.name)) {
-      toast.error('Priority already exists');
+      toast.error(t('ticketingConfigStep.priorities.errors.duplicate', {
+        defaultValue: 'Priority already exists'
+      }));
       return;
     }
     
@@ -737,7 +764,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       // Get current user ID
       const userId = session?.user?.id;
       if (!userId) {
-        toast.error('User session not found. Please refresh and try again.');
+        toast.error(t('ticketingConfigStep.priorities.errors.missingSession', {
+          defaultValue: 'User session not found. Please refresh and try again.'
+        }));
         return;
       }
       
@@ -784,7 +813,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setPriorityForm({ name: '', color: '#3b82f6', displayOrder: 0 });
       setShowAddForms(prev => ({ ...prev, priority: false }));
     } catch (error) {
-      handleError(error, 'Failed to create priority. Please try again.');
+      handleError(error, t('ticketingConfigStep.priorities.errors.create', {
+        defaultValue: 'Failed to create priority. Please try again.'
+      }));
     }
   };
 
@@ -819,7 +850,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setBoardDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('ticketingConfigStep.common.errors.validateDeletion', {
+          defaultValue: 'Failed to validate deletion. Please try again.'
+        }),
         dependencies: [],
         alternatives: []
       });
@@ -832,7 +865,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     const board = importedBoards.find(ch => ch.board_id === boardId);
     setBoardToDelete({
       id: boardId,
-      name: board?.board_name || 'this board'
+      name: board?.board_name || t('ticketingConfigStep.boards.delete.fallbackEntity', {
+        defaultValue: 'this board'
+      })
     });
     void runBoardDeleteValidation(boardId);
   };
@@ -853,14 +888,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       }
 
       loadExistingData();
-      toast.success('Board deleted successfully');
+      toast.success(t('ticketingConfigStep.boards.toasts.deleted', {
+        defaultValue: 'Board deleted successfully'
+      }));
       resetBoardDeleteState();
     } catch (error) {
       console.error('Error deleting board:', error);
       setBoardDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to delete board.',
+        message: t('ticketingConfigStep.boards.errors.delete', {
+          defaultValue: 'Failed to delete board.'
+        }),
         dependencies: [],
         alternatives: []
       });
@@ -876,7 +915,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       
       // Don't allow removing default status - at least one board must be default
       if (board.is_default) {
-        toast.error('At least one board must be set as default', {
+        toast.error(t('ticketingConfigStep.boards.errors.defaultRequired', {
+          defaultValue: 'At least one board must be set as default'
+        }), {
           duration: 3000
         });
         return;
@@ -896,9 +937,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         });
       }
       
-      toast.success('Default board updated successfully');
+      toast.success(t('ticketingConfigStep.boards.toasts.defaultUpdated', {
+        defaultValue: 'Default board updated successfully'
+      }));
     } catch (error) {
-      handleError(error, 'Failed to set default board');
+      handleError(error, t('ticketingConfigStep.boards.errors.defaultUpdate', {
+        defaultValue: 'Failed to set default board'
+      }));
     }
   };
 
@@ -919,7 +964,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setCategoryDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('ticketingConfigStep.common.errors.validateDeletion', {
+          defaultValue: 'Failed to validate deletion. Please try again.'
+        }),
         dependencies: [],
         alternatives: []
       });
@@ -932,7 +979,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     const category = data.categories.find(cat => cat.category_id === categoryId);
     setCategoryToDelete({
       id: categoryId,
-      name: category?.category_name || 'this category'
+      name: category?.category_name || t('ticketingConfigStep.categories.delete.fallbackEntity', {
+        defaultValue: 'this category'
+      })
     });
     void runCategoryDeleteValidation(categoryId);
   };
@@ -956,14 +1005,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       }
 
       loadExistingData();
-      toast.success('Category deleted successfully');
+      toast.success(t('ticketingConfigStep.categories.toasts.deleted', {
+        defaultValue: 'Category deleted successfully'
+      }));
       resetCategoryDeleteState();
     } catch (error) {
       console.error('Error deleting category:', error);
       setCategoryDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to delete category.',
+        message: t('ticketingConfigStep.categories.errors.delete', {
+          defaultValue: 'Failed to delete category.'
+        }),
         dependencies: [],
         alternatives: []
       });
@@ -989,7 +1042,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setStatusDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('ticketingConfigStep.common.errors.validateDeletion', {
+          defaultValue: 'Failed to validate deletion. Please try again.'
+        }),
         dependencies: [],
         alternatives: []
       });
@@ -1002,7 +1057,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     const status = (data.statuses || []).find(s => s.status_id === statusId);
     setStatusToDelete({
       id: statusId,
-      name: status?.name || 'this status'
+      name: status?.name || t('ticketingConfigStep.statuses.delete.fallbackEntity', {
+        defaultValue: 'this status'
+      })
     });
     void runStatusDeleteValidation(statusId);
   };
@@ -1023,14 +1080,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       });
 
       loadExistingData();
-      toast.success('Status deleted successfully');
+      toast.success(t('ticketingConfigStep.statuses.toasts.deleted', {
+        defaultValue: 'Status deleted successfully'
+      }));
       resetStatusDeleteState();
     } catch (error) {
       console.error('Error deleting status:', error);
       setStatusDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to delete status.',
+        message: t('ticketingConfigStep.statuses.errors.delete', {
+          defaultValue: 'Failed to delete status.'
+        }),
         dependencies: [],
         alternatives: []
       });
@@ -1056,7 +1117,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setPriorityDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('ticketingConfigStep.common.errors.validateDeletion', {
+          defaultValue: 'Failed to validate deletion. Please try again.'
+        }),
         dependencies: [],
         alternatives: []
       });
@@ -1067,7 +1130,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
   const openPriorityDeleteDialog = (priorityId: string) => {
     const priority = data.priorities.find(p => typeof p === 'object' && p.priority_id === priorityId);
-    const priorityName = typeof priority === 'object' ? priority.priority_name : 'this priority';
+    const priorityName = typeof priority === 'object'
+      ? priority.priority_name
+      : t('ticketingConfigStep.priorities.delete.fallbackEntity', {
+          defaultValue: 'this priority'
+        });
     setPriorityToDelete({
       id: priorityId,
       name: priorityName
@@ -1099,14 +1166,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       }
 
       loadExistingData();
-      toast.success('Priority deleted successfully');
+      toast.success(t('ticketingConfigStep.priorities.toasts.deleted', {
+        defaultValue: 'Priority deleted successfully'
+      }));
       resetPriorityDeleteState();
     } catch (error) {
       console.error('Error deleting priority:', error);
       setPriorityDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to delete priority.',
+        message: t('ticketingConfigStep.priorities.errors.delete', {
+          defaultValue: 'Failed to delete priority.'
+        }),
         dependencies: [],
         alternatives: []
       });
@@ -1122,7 +1193,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       
       // Don't allow removing default status - at least one status must be default
       if (status.is_default) {
-        toast.error('At least one status must be set as default', {
+        toast.error(t('ticketingConfigStep.statuses.errors.defaultRequired', {
+          defaultValue: 'At least one status must be set as default'
+        }), {
           duration: 3000
         });
         return;
@@ -1130,14 +1203,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       
       // Don't allow closed statuses to be default
       if (status.is_closed) {
-        toast.error('Closed statuses cannot be set as default');
+        toast.error(t('ticketingConfigStep.statuses.errors.closedCannotBeDefault', {
+          defaultValue: 'Closed statuses cannot be set as default'
+        }));
         return;
       }
       
       // Update status to be default (this will automatically unset others)
       const boardIdForStatus = status.board_id || effectiveStatusBoardId;
       if (!boardIdForStatus) {
-        toast.error('Select or create a board before changing status defaults.');
+        toast.error(t('ticketingConfigStep.statuses.errors.selectBoardForDefault', {
+          defaultValue: 'Select or create a board before changing status defaults.'
+        }));
         return;
       }
       await updateBoardTicketStatus(boardIdForStatus, statusId, { is_default: true });
@@ -1145,9 +1222,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       // Refresh data from server to get updated default states
       await loadExistingData();
       
-      toast.success('Default status updated successfully');
+      toast.success(t('ticketingConfigStep.statuses.toasts.defaultUpdated', {
+        defaultValue: 'Default status updated successfully'
+      }));
     } catch (error) {
-      handleError(error, 'Failed to set default status');
+      handleError(error, t('ticketingConfigStep.statuses.errors.defaultUpdate', {
+        defaultValue: 'Failed to set default status'
+      }));
     }
   };
 
@@ -1155,8 +1236,16 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     return (
       <div className="space-y-6">
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold">Configure Ticketing System</h2>
-          <p className="text-sm text-gray-600">Loading existing configuration...</p>
+          <h2 className="text-xl font-semibold">
+            {t('ticketingConfigStep.header.title', {
+              defaultValue: 'Configure Ticketing System'
+            })}
+          </h2>
+          <p className="text-sm text-gray-600">
+            {t('ticketingConfigStep.loading.description', {
+              defaultValue: 'Loading existing configuration...'
+            })}
+          </p>
         </div>
       </div>
     );
@@ -1165,9 +1254,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-xl font-semibold">Configure Ticketing System</h2>
+        <h2 className="text-xl font-semibold">
+          {t('ticketingConfigStep.header.title', {
+            defaultValue: 'Configure Ticketing System'
+          })}
+        </h2>
         <p className="text-sm text-gray-600">
-          Set up your support ticketing system. Import standard configurations or create your own.
+          {t('ticketingConfigStep.header.description', {
+            defaultValue: 'Set up your support ticketing system. Import standard configurations or create your own.'
+          })}
         </p>
       </div>
 
@@ -1180,7 +1275,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         >
           <div className="flex items-center gap-2">
             <Settings className="w-5 h-5 text-gray-500" />
-            <span className="font-medium">Ticket Numbering</span>
+            <span className="font-medium">
+              {t('ticketingConfigStep.numbering.title', {
+                defaultValue: 'Ticket Numbering'
+              })}
+            </span>
           </div>
           {expandedSections.numbering ? (
             <ChevronUp className="w-4 h-4 text-gray-500" />
@@ -1193,25 +1292,39 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           <div className="p-4 border-t space-y-4">
             <Alert variant="info" className="mb-4">
               <AlertDescription>
-                Configure how ticket numbers are generated. Each ticket will have a unique identifier consisting of an optional prefix and a sequential number with optional zero-padding.
+                {t('ticketingConfigStep.numbering.description', {
+                  defaultValue: 'Configure how ticket numbers are generated. Each ticket will have a unique identifier consisting of an optional prefix and a sequential number with optional zero-padding.'
+                })}
               </AlertDescription>
             </Alert>
             
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="ticketPrefix">Ticket Prefix</Label>
+                <Label htmlFor="ticketPrefix">
+                  {t('ticketingConfigStep.numbering.fields.prefix.label', {
+                    defaultValue: 'Ticket Prefix'
+                  })}
+                </Label>
                 <Input
                   id="ticketPrefix"
                   value={data.ticketPrefix ?? ''}
                   onChange={(e) => updateData({ ticketPrefix: e.target.value })}
-                  placeholder="TK-"
+                  placeholder={t('ticketingConfigStep.numbering.fields.prefix.placeholder', {
+                    defaultValue: 'TK-'
+                  })}
                 />
                 <p className="text-xs text-gray-500">
-                  Optional. Leave empty for no prefix or enter a custom prefix (e.g., "TK-", "TICKET-")
+                  {t('ticketingConfigStep.numbering.fields.prefix.help', {
+                    defaultValue: 'Optional. Leave empty for no prefix or enter a custom prefix (e.g., "TK-", "TICKET-")'
+                  })}
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ticketPaddingLength">Padding Length</Label>
+                <Label htmlFor="ticketPaddingLength">
+                  {t('ticketingConfigStep.numbering.fields.paddingLength.label', {
+                    defaultValue: 'Padding Length'
+                  })}
+                </Label>
                 <Input
                   id="ticketPaddingLength"
                   type="number"
@@ -1221,11 +1334,17 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   max="10"
                 />
                 <p className="text-xs text-gray-500">
-                  Minimum total digits. E.g., 6 makes "1" become "000001"
+                  {t('ticketingConfigStep.numbering.fields.paddingLength.help', {
+                    defaultValue: 'Minimum total digits. E.g., 6 makes "1" become "000001"'
+                  })}
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ticketStartNumber">Starting Number</Label>
+                <Label htmlFor="ticketStartNumber">
+                  {t('ticketingConfigStep.numbering.fields.startNumber.label', {
+                    defaultValue: 'Starting Number'
+                  })}
+                </Label>
                 <Input
                   id="ticketStartNumber"
                   type="number"
@@ -1237,7 +1356,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             </div>
             
             <p className="text-xs text-gray-500">
-              Example: {data.ticketPrefix || ''}{String(data.ticketStartNumber || 1).padStart(data.ticketPaddingLength || 0, '0')}
+              {t('ticketingConfigStep.numbering.example', {
+                defaultValue: 'Example: {{value}}',
+                value: `${data.ticketPrefix || ''}${String(data.ticketStartNumber || 1).padStart(data.ticketPaddingLength || 0, '0')}`
+              })}
             </p>
           </div>
         )}
@@ -1252,9 +1374,17 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         >
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-gray-500" />
-            <span className="font-medium">Boards</span>
+            <span className="font-medium">
+              {t('ticketingConfigStep.boards.title', {
+                defaultValue: 'Boards'
+              })}
+            </span>
             {!hasBoard() && (
-              <span className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded">Required</span>
+              <span className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded">
+                {t('common.states.required', {
+                  defaultValue: 'Required'
+                })}
+              </span>
             )}
           </div>
           {expandedSections.boards ? (
@@ -1269,11 +1399,25 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             <Alert variant="info" className="mb-4">
               <AlertDescription>
                 <p>
-                  <span className="font-semibold">Note:</span> Boards help organize tickets by department, team, or workflow type. When clients create tickets through the client portal, they will automatically be assigned to the board marked as default.
+                  <span className="font-semibold">
+                    {t('ticketingConfigStep.common.noteLabel', {
+                      defaultValue: 'Note:'
+                    })}
+                  </span>{' '}
+                  {t('ticketingConfigStep.boards.description', {
+                    defaultValue: 'Boards help organize tickets by department, team, or workflow type. When clients create tickets through the client portal, they will automatically be assigned to the board marked as default.'
+                  })}
                 </p>
                 {importedBoards.length > 1 && (
                   <p className="mt-2">
-                    <span className="font-semibold">Tip:</span> Click the star in the Default column to change which board is the default.
+                    <span className="font-semibold">
+                      {t('ticketingConfigStep.common.tipLabel', {
+                        defaultValue: 'Tip:'
+                      })}
+                    </span>{' '}
+                    {t('ticketingConfigStep.boards.tip', {
+                      defaultValue: 'Click the star in the Default column to change which board is the default.'
+                    })}
                   </p>
                 )}
               </AlertDescription>
@@ -1289,7 +1433,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 className="flex-1"
               >
                 <Package className="w-4 h-4 mr-2" />
-                Import from Standard
+                {t('ticketingConfigStep.boards.actions.import', {
+                  defaultValue: 'Import from Standard'
+                })}
               </Button>
               <Button
                 id="add-board-button"
@@ -1299,61 +1445,97 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 className="flex-1"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add New Board
+                {t('ticketingConfigStep.boards.actions.add', {
+                  defaultValue: 'Add New Board'
+                })}
               </Button>
             </div>
 
             {/* Add New Board Form - Right under buttons */}
             {showAddForms.board && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Add New Board</h4>
+                <h4 className="font-medium">
+                  {t('ticketingConfigStep.boards.addForm.title', {
+                    defaultValue: 'Add New Board'
+                  })}
+                </h4>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="new-board-name">Board Name *</Label>
+                    <Label htmlFor="new-board-name">
+                      {t('ticketingConfigStep.boards.addForm.fields.name.label', {
+                        defaultValue: 'Board Name *'
+                      })}
+                    </Label>
                     <Input
                       id="new-board-name"
                       value={boardForm.name}
                       onChange={(e) => setBoardForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Enter board name"
+                      placeholder={t('ticketingConfigStep.boards.addForm.fields.name.placeholder', {
+                        defaultValue: 'Enter board name'
+                      })}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="new-board-description">Description</Label>
+                    <Label htmlFor="new-board-description">
+                      {t('ticketingConfigStep.boards.addForm.fields.description.label', {
+                        defaultValue: 'Description'
+                      })}
+                    </Label>
                     <Input
                       id="new-board-description"
                       value={boardForm.description}
                       onChange={(e) => setBoardForm(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Enter description"
+                      placeholder={t('ticketingConfigStep.boards.addForm.fields.description.placeholder', {
+                        defaultValue: 'Enter description'
+                      })}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="new-board-order">Display Order</Label>
+                    <Label htmlFor="new-board-order">
+                      {t('ticketingConfigStep.boards.addForm.fields.displayOrder.label', {
+                        defaultValue: 'Display Order'
+                      })}
+                    </Label>
                     <Input
                       id="new-board-order"
                       type="number"
                       value={boardForm.displayOrder}
                       onChange={(e) => setBoardForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
-                      placeholder="Leave empty for auto-generate"
+                      placeholder={t('ticketingConfigStep.boards.addForm.fields.displayOrder.placeholder', {
+                        defaultValue: 'Leave empty for auto-generate'
+                      })}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Controls the order in which boards appear in dropdown menus throughout the platform. Lower numbers appear first.
+                      {t('ticketingConfigStep.boards.addForm.fields.displayOrder.help', {
+                        defaultValue: 'Controls the order in which boards appear in dropdown menus throughout the platform. Lower numbers appear first.'
+                      })}
                     </p>
                   </div>
                 </div>
 
                 {/* ITIL Configuration */}
                 <div className="border-t pt-4 space-y-4">
-                  <h4 className="font-medium text-gray-800">Board Configuration</h4>
+                  <h4 className="font-medium text-gray-800">
+                    {t('ticketingConfigStep.boards.addForm.configurationTitle', {
+                      defaultValue: 'Board Configuration'
+                    })}
+                  </h4>
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Label htmlFor="board-itil-compliant">Make this board ITIL compliant</Label>
+                      <Label htmlFor="board-itil-compliant">
+                        {t('ticketingConfigStep.boards.addForm.fields.itil.label', {
+                          defaultValue: 'Make this board ITIL compliant'
+                        })}
+                      </Label>
                       <button
                         type="button"
                         onClick={() => setShowItilInfoModal(true)}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
-                        title="View ITIL categories and priority matrix"
+                        title={t('ticketingConfigStep.itil.actions.openReference', {
+                          defaultValue: 'View ITIL categories and priority matrix'
+                        })}
                       >
                         <HelpCircle className="w-4 h-4" />
                       </button>
@@ -1376,7 +1558,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     }}
                     className="flex-1"
                   >
-                    Cancel
+                    {t('common.actions.cancel', {
+                      defaultValue: 'Cancel'
+                    })}
                   </Button>
                   <Button
                     id="save-add-board-form"
@@ -1385,7 +1569,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       
                       // Check if board already exists
                       if (importedBoards.some(ch => ch.board_name === boardForm.name)) {
-                        toast.error('Board already exists');
+                        toast.error(t('ticketingConfigStep.boards.errors.duplicate', {
+                          defaultValue: 'Board already exists'
+                        }));
                         return;
                       }
                       
@@ -1444,13 +1630,17 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         // Reload available boards for category creation
                         await loadAvailableBoards();
                       } catch (error) {
-                        handleError(error, 'Failed to create board. Please try again.');
+                        handleError(error, t('ticketingConfigStep.boards.errors.create', {
+                          defaultValue: 'Failed to create board. Please try again.'
+                        }));
                       }
                     }}
                     disabled={!boardForm.name.trim()}
                     className="flex-1"
                   >
-                    Add Board
+                    {t('ticketingConfigStep.boards.actions.confirmAdd', {
+                      defaultValue: 'Add Board'
+                    })}
                   </Button>
                 </div>
               </div>
@@ -1459,13 +1649,24 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {/* Import Dialog - Right under buttons */}
             {showImportDialogs.boards && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Import Standard Boards</h4>
+                <h4 className="font-medium">
+                  {t('ticketingConfigStep.boards.import.title', {
+                    defaultValue: 'Import Standard Boards'
+                  })}
+                </h4>
                 
                 {importResults.boards && (
                   <div className="rounded-md bg-success/10 border border-success/30 p-3 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
                     <p className="text-sm text-success">
-                      Successfully imported {importResults.boards.imported} board{importResults.boards.imported !== 1 ? 's' : ''}.
+                      {importResults.boards.imported === 1
+                        ? t('ticketingConfigStep.boards.import.success.one', {
+                            defaultValue: 'Successfully imported 1 board.'
+                          })
+                        : t('ticketingConfigStep.boards.import.success.other', {
+                            defaultValue: 'Successfully imported {{count}} boards.',
+                            count: importResults.boards.imported
+                          })}
                     </p>
                   </div>
                 )}
@@ -1490,17 +1691,33 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               disabled={availableBoards.length === 0}
                             />
                           </th>
-                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Name</th>
-                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Default</th>
-                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Order</th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            {t('ticketingConfigStep.boards.table.headers.name', {
+                              defaultValue: 'Name'
+                            })}
+                          </th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            {t('ticketingConfigStep.boards.table.headers.default', {
+                              defaultValue: 'Default'
+                            })}
+                          </th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            {t('ticketingConfigStep.boards.table.headers.order', {
+                              defaultValue: 'Order'
+                            })}
+                          </th>
                           <th className="px-3 py-2 text-center text-sm font-medium text-gray-700">
                             <div className="flex items-center justify-center gap-1">
-                              ITIL
+                              {t('ticketingConfigStep.boards.table.headers.itil', {
+                                defaultValue: 'ITIL'
+                              })}
                               <button
                                 type="button"
                                 onClick={() => setShowItilInfoModal(true)}
                                 className="text-gray-400 hover:text-gray-600 transition-colors"
-                                title="View ITIL categories and priority matrix"
+                                title={t('ticketingConfigStep.itil.actions.openReference', {
+                                  defaultValue: 'View ITIL categories and priority matrix'
+                                })}
                               >
                                 <HelpCircle className="w-3 h-3" />
                               </button>
@@ -1560,7 +1777,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     }}
                     className="flex-1"
                   >
-                    Cancel
+                    {t('common.actions.cancel', {
+                      defaultValue: 'Cancel'
+                    })}
                   </Button>
                   <Button
                     id="confirm-import-boards"
@@ -1569,7 +1788,14 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     disabled={selectedBoards.length === 0 || isImporting.boards}
                     className="flex-1"
                   >
-                    {isImporting.boards ? 'Importing...' : `Import (${selectedBoards.length})`}
+                    {isImporting.boards
+                      ? t('ticketingConfigStep.common.actions.importing', {
+                          defaultValue: 'Importing...'
+                        })
+                      : t('ticketingConfigStep.common.actions.importCount', {
+                          defaultValue: 'Import ({{count}})',
+                          count: selectedBoards.length
+                        })}
                   </Button>
                 </div>
               </div>
@@ -1578,16 +1804,40 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {/* Existing Boards */}
             {(importedBoards.length > 0 || data.boardName) && (
               <div>
-                <Label className="mb-2 block">Current Boards</Label>
+                <Label className="mb-2 block">
+                  {t('ticketingConfigStep.boards.current.title', {
+                    defaultValue: 'Current Boards'
+                  })}
+                </Label>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">Name</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Default</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Order</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">ITIL</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Actions</th>
+                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.boards.table.headers.name', {
+                            defaultValue: 'Name'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.boards.table.headers.default', {
+                            defaultValue: 'Default'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.boards.table.headers.order', {
+                            defaultValue: 'Order'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.boards.table.headers.itil', {
+                            defaultValue: 'ITIL'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.common.table.actions', {
+                            defaultValue: 'Actions'
+                          })}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -1603,7 +1853,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               size="sm"
                               onClick={() => setDefaultBoard(board.board_id)}
                               className="p-0.5 h-5 w-5"
-                              title={board.is_default ? "Default board" : "Set as default board"}
+                              title={board.is_default
+                                ? t('ticketingConfigStep.boards.current.defaultTitle', {
+                                    defaultValue: 'Default board'
+                                  })
+                                : t('ticketingConfigStep.boards.current.setDefaultTitle', {
+                                    defaultValue: 'Set as default board'
+                                  })}
                             >
                               <Star className={`h-3.5 w-3.5 ${board.is_default ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400 hover:text-yellow-500'}`} />
                             </Button>
@@ -1612,7 +1868,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-center">
                             {board.category_type === 'itil' && board.priority_type === 'itil' ? (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                                ITIL
+                                {t('ticketingConfigStep.boards.table.headers.itil', {
+                                  defaultValue: 'ITIL'
+                                })}
                               </span>
                             ) : (
                               <span className="text-gray-500 text-xs">-</span>
@@ -1627,7 +1885,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               size="sm"
                               onClick={() => openBoardDeleteDialog(board.board_id)}
                               className="p-1 h-6 w-6"
-                              title="Remove board"
+                              title={t('ticketingConfigStep.boards.current.removeTitle', {
+                                defaultValue: 'Remove board'
+                              })}
                               disabled={board.is_default}
                             >
                               <Trash2 className={`h-3 w-3 ${board.is_default ? 'text-gray-300' : 'text-gray-500 hover:text-red-600'}`} />
@@ -1643,7 +1903,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-center">
                             {data.is_itil_compliant ? (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                                ITIL
+                                {t('ticketingConfigStep.boards.table.headers.itil', {
+                                  defaultValue: 'ITIL'
+                                })}
                               </span>
                             ) : (
                               <span className="text-gray-500 text-xs">-</span>
@@ -1672,9 +1934,17 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         >
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-gray-500" />
-            <span className="font-medium">Categories</span>
+            <span className="font-medium">
+              {t('ticketingConfigStep.categories.title', {
+                defaultValue: 'Categories'
+              })}
+            </span>
             {!hasBoard() && (
-              <span className="text-xs text-gray-500">(requires board)</span>
+              <span className="text-xs text-gray-500">
+                {t('ticketingConfigStep.categories.requiresBoard', {
+                  defaultValue: '(requires board)'
+                })}
+              </span>
             )}
           </div>
           {expandedSections.categories ? (
@@ -1688,7 +1958,14 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           <div className="p-4 border-t space-y-4">
             <Alert variant="info" className="mb-4">
               <AlertDescription>
-                <span className="font-semibold">Note:</span> Categories help organize tickets by type of issue or request. You can create parent categories with subcategories for better organization. Examples include Technical Support (with subcategories like Hardware, Software, Network) or Service Requests.
+                <span className="font-semibold">
+                  {t('ticketingConfigStep.common.noteLabel', {
+                    defaultValue: 'Note:'
+                  })}
+                </span>{' '}
+                {t('ticketingConfigStep.categories.description', {
+                  defaultValue: 'Categories help organize tickets by type of issue or request. You can create parent categories with subcategories for better organization. Examples include Technical Support (with subcategories like Hardware, Software, Network) or Service Requests.'
+                })}
               </AlertDescription>
             </Alert>
 
@@ -1702,7 +1979,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 className="flex-1"
               >
                 <Package className="w-4 h-4 mr-2" />
-                Import from Standard
+                {t('ticketingConfigStep.categories.actions.import', {
+                  defaultValue: 'Import from Standard'
+                })}
               </Button>
               <Button
                 id="add-category-button"
@@ -1712,27 +1991,43 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 className="flex-1"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add New Category
+                {t('ticketingConfigStep.categories.actions.add', {
+                  defaultValue: 'Add New Category'
+                })}
               </Button>
             </div>
 
             {/* Add New Category Form - Right under buttons */}
             {showAddForms.category && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Add New Category</h4>
+                <h4 className="font-medium">
+                  {t('ticketingConfigStep.categories.addForm.title', {
+                    defaultValue: 'Add New Category'
+                  })}
+                </h4>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="new-category-name">Category Name *</Label>
+                    <Label htmlFor="new-category-name">
+                      {t('ticketingConfigStep.categories.addForm.fields.name.label', {
+                        defaultValue: 'Category Name *'
+                      })}
+                    </Label>
                     <Input
                       id="new-category-name"
                       value={categoryForm.name}
                       onChange={(e) => setCategoryForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Enter category name"
+                      placeholder={t('ticketingConfigStep.categories.addForm.fields.name.placeholder', {
+                        defaultValue: 'Enter category name'
+                      })}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="new-category-board">Target Board *</Label>
+                    <Label htmlFor="new-category-board">
+                      {t('ticketingConfigStep.categories.addForm.fields.board.label', {
+                        defaultValue: 'Target Board *'
+                      })}
+                    </Label>
                     <CustomSelect
                       id="new-category-board-select"
                       value={categoryForm.boardId}
@@ -1741,12 +2036,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         value: ch.board_id,
                         label: ch.board_name
                       }))}
-                      placeholder="Select a board"
+                      placeholder={t('ticketingConfigStep.categories.addForm.fields.board.placeholder', {
+                        defaultValue: 'Select a board'
+                      })}
                       className="w-full"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="new-category-parent">Parent Category</Label>
+                    <Label htmlFor="new-category-parent">
+                      {t('ticketingConfigStep.categories.addForm.fields.parent.label', {
+                        defaultValue: 'Parent Category'
+                      })}
+                    </Label>
                     <CustomSelect
                       id="new-category-parent-select"
                       value={categoryForm.parentCategory || 'none'}
@@ -1755,7 +2056,12 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         parentCategory: value === 'none' ? '' : value 
                       }))}
                       options={[
-                        { value: 'none', label: 'None (Top-level category)' },
+                        {
+                          value: 'none',
+                          label: t('ticketingConfigStep.categories.addForm.fields.parent.noneOption', {
+                            defaultValue: 'None (Top-level category)'
+                          })
+                        },
                         ...data.categories
                           .filter(cat => !cat.parent_category && cat.board_id === categoryForm.boardId)
                           .map(cat => ({
@@ -1763,22 +2069,32 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                             label: cat.category_name
                           }))
                       ]}
-                      placeholder="Select parent category"
+                      placeholder={t('ticketingConfigStep.categories.addForm.fields.parent.placeholder', {
+                        defaultValue: 'Select parent category'
+                      })}
                       className="w-full"
                       disabled={!categoryForm.boardId}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="new-category-order">Display Order</Label>
+                    <Label htmlFor="new-category-order">
+                      {t('ticketingConfigStep.categories.addForm.fields.displayOrder.label', {
+                        defaultValue: 'Display Order'
+                      })}
+                    </Label>
                     <Input
                       id="new-category-order"
                       type="number"
                       value={categoryForm.displayOrder}
                       onChange={(e) => setCategoryForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
-                      placeholder="Leave empty for auto-generate"
+                      placeholder={t('ticketingConfigStep.categories.addForm.fields.displayOrder.placeholder', {
+                        defaultValue: 'Leave empty for auto-generate'
+                      })}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Controls the order in which categories appear in dropdown menus throughout the platform. Lower numbers appear first.
+                      {t('ticketingConfigStep.categories.addForm.fields.displayOrder.help', {
+                        defaultValue: 'Controls the order in which categories appear in dropdown menus throughout the platform. Lower numbers appear first.'
+                      })}
                     </p>
                   </div>
                 </div>
@@ -1793,7 +2109,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     }}
                     className="flex-1"
                   >
-                    Cancel
+                    {t('common.actions.cancel', {
+                      defaultValue: 'Cancel'
+                    })}
                   </Button>
                   <Button
                     id="save-add-category-form"
@@ -1801,7 +2119,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     disabled={!categoryForm.name.trim() || !categoryForm.boardId}
                     className="flex-1"
                   >
-                    Add Category
+                    {t('ticketingConfigStep.categories.actions.confirmAdd', {
+                      defaultValue: 'Add Category'
+                    })}
                   </Button>
                 </div>
               </div>
@@ -1810,20 +2130,35 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {/* Import Dialog - Right under buttons */}
             {showImportDialogs.categories && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Import Standard Categories</h4>
+                <h4 className="font-medium">
+                  {t('ticketingConfigStep.categories.import.title', {
+                    defaultValue: 'Import Standard Categories'
+                  })}
+                </h4>
                 
                 {importResults.categories && (
                   <div className="rounded-md bg-success/10 border border-success/30 p-3 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
                     <p className="text-sm text-success">
-                      Successfully imported {importResults.categories.imported} categor{importResults.categories.imported !== 1 ? 'ies' : 'y'}.
+                      {importResults.categories.imported === 1
+                        ? t('ticketingConfigStep.categories.import.success.one', {
+                            defaultValue: 'Successfully imported 1 category.'
+                          })
+                        : t('ticketingConfigStep.categories.import.success.other', {
+                            defaultValue: 'Successfully imported {{count}} categories.',
+                            count: importResults.categories.imported
+                          })}
                     </p>
                   </div>
                 )}
 
                 {/* Board Selection */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Target Board *</Label>
+                  <Label className="text-sm font-medium">
+                    {t('ticketingConfigStep.categories.import.targetBoard.label', {
+                      defaultValue: 'Target Board *'
+                    })}
+                  </Label>
                   <CustomSelect
                     id="import-category-target-select"
                     value={importTargetBoard}
@@ -1834,11 +2169,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         label: ch.board_name
                       }))
                     ]}
-                    placeholder="Select a board for imported categories"
+                    placeholder={t('ticketingConfigStep.categories.import.targetBoard.placeholder', {
+                      defaultValue: 'Select a board for imported categories'
+                    })}
                     className="w-full"
                   />
                   <p className="text-xs text-gray-600">
-                    All imported categories will be assigned to this board
+                    {t('ticketingConfigStep.categories.import.targetBoard.help', {
+                      defaultValue: 'All imported categories will be assigned to this board'
+                    })}
                   </p>
                 </div>
 
@@ -1862,8 +2201,16 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               disabled={availableCategories.length === 0}
                             />
                           </th>
-                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Name</th>
-                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Order</th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            {t('ticketingConfigStep.categories.table.headers.name', {
+                              defaultValue: 'Name'
+                            })}
+                          </th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            {t('ticketingConfigStep.categories.table.headers.order', {
+                              defaultValue: 'Order'
+                            })}
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -1918,7 +2265,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                                       }}
                                     />
                                     {parentNotSelected && selectedCategories.includes(category.id) && (
-                                      <div title="Parent category will be automatically selected">
+                                      <div title={t('ticketingConfigStep.categories.import.parentAutoSelectTitle', {
+                                        defaultValue: 'Parent category will be automatically selected'
+                                      })}>
                                         <AlertTriangle className="h-3 w-3 text-orange-600" />
                                       </div>
                                     )}
@@ -1965,7 +2314,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     }}
                     className="flex-1"
                   >
-                    Cancel
+                    {t('common.actions.cancel', {
+                      defaultValue: 'Cancel'
+                    })}
                   </Button>
                   <Button
                     id="confirm-import-categories"
@@ -1974,7 +2325,14 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     disabled={selectedCategories.length === 0 || !importTargetBoard || isImporting.categories}
                     className="flex-1"
                   >
-                    {isImporting.categories ? 'Importing...' : `Import (${selectedCategories.length})`}
+                    {isImporting.categories
+                      ? t('ticketingConfigStep.common.actions.importing', {
+                          defaultValue: 'Importing...'
+                        })
+                      : t('ticketingConfigStep.common.actions.importCount', {
+                          defaultValue: 'Import ({{count}})',
+                          count: selectedCategories.length
+                        })}
                   </Button>
                 </div>
               </div>
@@ -1983,14 +2341,31 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {/* Existing Categories */}
             {data.categories.length > 0 && (
               <div>
-                <Label className="mb-2 block">Current Categories ({data.categories.filter(c => typeof c === 'object' && c.category_id).length} total)</Label>
+                <Label className="mb-2 block">
+                  {t('ticketingConfigStep.categories.current.title', {
+                    defaultValue: 'Current Categories ({{count}} total)',
+                    count: data.categories.filter(c => typeof c === 'object' && c.category_id).length
+                  })}
+                </Label>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">Name</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Order</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Actions</th>
+                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.categories.table.headers.name', {
+                            defaultValue: 'Name'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.categories.table.headers.order', {
+                            defaultValue: 'Order'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.common.table.actions', {
+                            defaultValue: 'Actions'
+                          })}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -2093,7 +2468,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                                   size="sm"
                                   onClick={() => openCategoryDeleteDialog(category.category_id)}
                                   className="p-1 h-6 w-6"
-                                  title="Remove category"
+                                  title={t('ticketingConfigStep.categories.current.removeTitle', {
+                                    defaultValue: 'Remove category'
+                                  })}
                                 >
                                   <Trash2 className="h-3 w-3 text-gray-500 hover:text-red-600" />
                                 </Button>
@@ -2121,7 +2498,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         >
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-gray-500" />
-            <span className="font-medium">Statuses</span>
+            <span className="font-medium">
+              {t('ticketingConfigStep.statuses.title', {
+                defaultValue: 'Statuses'
+              })}
+            </span>
           </div>
           {expandedSections.statuses ? (
             <ChevronUp className="w-4 h-4 text-gray-500" />
@@ -2135,11 +2516,25 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             <Alert variant="info" className="mb-4">
               <AlertDescription>
                 <p>
-                  <span className="font-semibold">Note:</span> Statuses are configured <span className="font-semibold">per board</span>. Select a board below to define the lifecycle for tickets on that board. The <span className="font-semibold">Default</span> open status for the selected board is automatically assigned to new tickets created on that board.
+                  <span className="font-semibold">
+                    {t('ticketingConfigStep.common.noteLabel', {
+                      defaultValue: 'Note:'
+                    })}
+                  </span>{' '}
+                  {t('ticketingConfigStep.statuses.description', {
+                    defaultValue: 'Statuses are configured per board. Select a board below to define the lifecycle for tickets on that board. The Default open status for the selected board is automatically assigned to new tickets created on that board.'
+                  })}
                 </p>
                 {importedBoards.length > 1 && (
                   <p className="mt-2">
-                    <span className="font-semibold">Tip:</span> Boards do not share statuses. Switch boards here to review or change each board's status set.
+                    <span className="font-semibold">
+                      {t('ticketingConfigStep.common.tipLabel', {
+                        defaultValue: 'Tip:'
+                      })}
+                    </span>{' '}
+                    {t('ticketingConfigStep.statuses.tip', {
+                      defaultValue: 'Boards do not share statuses. Switch boards here to review or change each board\'s status set.'
+                    })}
                   </p>
                 )}
               </AlertDescription>
@@ -2147,19 +2542,27 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
             {importedBoards.length > 0 ? (
               <div className="max-w-sm">
-                <Label htmlFor="status-board-selector">Board</Label>
+                <Label htmlFor="status-board-selector">
+                  {t('ticketingConfigStep.statuses.fields.board.label', {
+                    defaultValue: 'Board'
+                  })}
+                </Label>
                 <CustomSelect
                   id="status-board-selector"
                   value={effectiveStatusBoardId}
                   onValueChange={setSelectedStatusBoardId}
                   options={statusBoardOptions}
-                  placeholder="Select board"
+                  placeholder={t('ticketingConfigStep.statuses.fields.board.placeholder', {
+                    defaultValue: 'Select board'
+                  })}
                 />
               </div>
             ) : (
               <Alert variant="warning">
                 <AlertDescription>
-                  Create or import a board before configuring statuses. Each board needs its own open default status.
+                  {t('ticketingConfigStep.statuses.noBoardWarning', {
+                    defaultValue: 'Create or import a board before configuring statuses. Each board needs its own open default status.'
+                  })}
                 </AlertDescription>
               </Alert>
             )}
@@ -2175,7 +2578,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 disabled={!effectiveStatusBoardId}
               >
                 <Package className="w-4 h-4 mr-2" />
-                Import from Standard
+                {t('ticketingConfigStep.statuses.actions.import', {
+                  defaultValue: 'Import from Standard'
+                })}
               </Button>
               <Button
                 id="add-status-button"
@@ -2186,36 +2591,56 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 disabled={!effectiveStatusBoardId}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add New Status
+                {t('ticketingConfigStep.statuses.actions.add', {
+                  defaultValue: 'Add New Status'
+                })}
               </Button>
             </div>
 
             {/* Add New Status Form - Right under buttons */}
             {showAddForms.status && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Add New Status</h4>
+                <h4 className="font-medium">
+                  {t('ticketingConfigStep.statuses.addForm.title', {
+                    defaultValue: 'Add New Status'
+                  })}
+                </h4>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="new-status-name">Status Name *</Label>
+                    <Label htmlFor="new-status-name">
+                      {t('ticketingConfigStep.statuses.addForm.fields.name.label', {
+                        defaultValue: 'Status Name *'
+                      })}
+                    </Label>
                     <Input
                       id="new-status-name"
                       value={statusForm.name}
                       onChange={(e) => setStatusForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Enter status name"
+                      placeholder={t('ticketingConfigStep.statuses.addForm.fields.name.placeholder', {
+                        defaultValue: 'Enter status name'
+                      })}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="new-status-order">Display Order</Label>
+                    <Label htmlFor="new-status-order">
+                      {t('ticketingConfigStep.statuses.addForm.fields.displayOrder.label', {
+                        defaultValue: 'Display Order'
+                      })}
+                    </Label>
                     <Input
                       id="new-status-order"
                       type="number"
                       value={statusForm.displayOrder}
                       onChange={(e) => setStatusForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
-                      placeholder="Leave empty for auto-generate"
+                      placeholder={t('ticketingConfigStep.statuses.addForm.fields.displayOrder.placeholder', {
+                        defaultValue: 'Leave empty for auto-generate'
+                      })}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Controls the order in which statuses appear in dropdown menus throughout the platform. Lower numbers appear first.
+                      {t('ticketingConfigStep.statuses.addForm.fields.displayOrder.help', {
+                        defaultValue: 'Controls the order in which statuses appear in dropdown menus throughout the platform. Lower numbers appear first.'
+                      })}
                     </p>
                   </div>
                   <div className="col-span-2">
@@ -2225,12 +2650,24 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         checked={statusForm.isClosed}
                         onCheckedChange={(checked) => setStatusForm(prev => ({ ...prev, isClosed: checked }))}
                       />
-                      <Label>{statusForm.isClosed ? 'Closed Status' : 'Open Status'}</Label>
+                      <Label>
+                        {statusForm.isClosed
+                          ? t('ticketingConfigStep.statuses.addForm.fields.state.closedLabel', {
+                              defaultValue: 'Closed Status'
+                            })
+                          : t('ticketingConfigStep.statuses.addForm.fields.state.openLabel', {
+                              defaultValue: 'Open Status'
+                            })}
+                      </Label>
                     </div>
                     <p className="text-xs text-gray-600 mt-2">
                       {statusForm.isClosed 
-                        ? "This status indicates the ticket is resolved and closed"
-                        : "This status indicates the ticket is still open and needs attention"}
+                        ? t('ticketingConfigStep.statuses.addForm.fields.state.closedHelp', {
+                            defaultValue: 'This status indicates the ticket is resolved and closed'
+                          })
+                        : t('ticketingConfigStep.statuses.addForm.fields.state.openHelp', {
+                            defaultValue: 'This status indicates the ticket is still open and needs attention'
+                          })}
                     </p>
                   </div>
                 </div>
@@ -2245,7 +2682,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     }}
                     className="flex-1"
                   >
-                    Cancel
+                    {t('common.actions.cancel', {
+                      defaultValue: 'Cancel'
+                    })}
                   </Button>
                   <Button
                     id="save-add-status-form"
@@ -2254,14 +2693,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       
                       // Check if status already exists
                       if (statusesForSelectedBoard.some(s => s.name === statusForm.name)) {
-                        toast.error('Status already exists');
+                        toast.error(t('ticketingConfigStep.statuses.errors.duplicate', {
+                          defaultValue: 'Status already exists'
+                        }));
                         return;
                       }
                       
                       try {
                         const activeBoardId = effectiveStatusBoardId;
                         if (!activeBoardId) {
-                          toast.error('Select or create a board before adding statuses.');
+                          toast.error(t('ticketingConfigStep.statuses.errors.selectBoardForAdd', {
+                            defaultValue: 'Select or create a board before adding statuses.'
+                          }));
                           return;
                         }
 
@@ -2311,13 +2754,17 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         setStatusForm({ name: '', isClosed: false, isDefault: false, displayOrder: 0 });
                         setShowAddForms(prev => ({ ...prev, status: false }));
                       } catch (error) {
-                        handleError(error, 'Failed to create status. Please try again.');
+                        handleError(error, t('ticketingConfigStep.statuses.errors.create', {
+                          defaultValue: 'Failed to create status. Please try again.'
+                        }));
                       }
                     }}
                     disabled={!statusForm.name.trim()}
                     className="flex-1"
                   >
-                    Add Status
+                    {t('ticketingConfigStep.statuses.actions.confirmAdd', {
+                      defaultValue: 'Add Status'
+                    })}
                   </Button>
                 </div>
               </div>
@@ -2326,10 +2773,17 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {/* Import Dialog - Right under buttons */}
             {showImportDialogs.statuses && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Import Standard Statuses</h4>
+                <h4 className="font-medium">
+                  {t('ticketingConfigStep.statuses.import.title', {
+                    defaultValue: 'Import Standard Statuses'
+                  })}
+                </h4>
                 {selectedStatusBoard && (
                   <p className="text-sm text-gray-600">
-                    Importing into <span className="font-medium">{selectedStatusBoard.board_name}</span>.
+                    {t('ticketingConfigStep.statuses.import.targetBoard', {
+                      defaultValue: 'Importing into {{boardName}}.',
+                      boardName: selectedStatusBoard.board_name
+                    })}
                   </p>
                 )}
                 
@@ -2337,7 +2791,14 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   <div className="rounded-md bg-success/10 border border-success/30 p-3 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
                     <p className="text-sm text-success">
-                      Successfully imported {importResults.statuses.imported} status{importResults.statuses.imported !== 1 ? 'es' : ''}.
+                      {importResults.statuses.imported === 1
+                        ? t('ticketingConfigStep.statuses.import.success.one', {
+                            defaultValue: 'Successfully imported 1 status.'
+                          })
+                        : t('ticketingConfigStep.statuses.import.success.other', {
+                            defaultValue: 'Successfully imported {{count}} statuses.',
+                            count: importResults.statuses.imported
+                          })}
                     </p>
                   </div>
                 )}
@@ -2362,10 +2823,26 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               disabled={availableStatuses.length === 0}
                             />
                           </th>
-                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Name</th>
-                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Type</th>
-                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Default</th>
-                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Order</th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            {t('ticketingConfigStep.statuses.table.headers.name', {
+                              defaultValue: 'Name'
+                            })}
+                          </th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            {t('ticketingConfigStep.statuses.table.headers.type', {
+                              defaultValue: 'Type'
+                            })}
+                          </th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            {t('ticketingConfigStep.statuses.table.headers.default', {
+                              defaultValue: 'Default'
+                            })}
+                          </th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            {t('ticketingConfigStep.statuses.table.headers.order', {
+                              defaultValue: 'Order'
+                            })}
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -2386,7 +2863,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                             </td>
                             <td className="px-3 py-2 text-sm">{status.name}</td>
                             <td className="px-3 py-2 text-sm text-gray-600">
-                              {status.is_closed ? 'Closed' : 'Open'}
+                              {getStatusTypeLabel(status.is_closed)}
                             </td>
                             <td className="px-3 py-2 text-center">
                               {status.is_default && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 inline" />}
@@ -2410,7 +2887,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     }}
                     className="flex-1"
                   >
-                    Cancel
+                    {t('common.actions.cancel', {
+                      defaultValue: 'Cancel'
+                    })}
                   </Button>
                   <Button
                     id="confirm-import-statuses"
@@ -2419,7 +2898,14 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     disabled={selectedStatuses.length === 0 || isImporting.statuses}
                     className="flex-1"
                   >
-                    {isImporting.statuses ? 'Importing...' : `Import (${selectedStatuses.length})`}
+                    {isImporting.statuses
+                      ? t('ticketingConfigStep.common.actions.importing', {
+                          defaultValue: 'Importing...'
+                        })
+                      : t('ticketingConfigStep.common.actions.importCount', {
+                          defaultValue: 'Import ({{count}})',
+                          count: selectedStatuses.length
+                        })}
                   </Button>
                 </div>
               </div>
@@ -2429,17 +2915,44 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {effectiveStatusBoardId && statusesForSelectedBoard.length > 0 && (
               <div>
                 <Label className="mb-2 block">
-                  Current Statuses{selectedStatusBoard ? ` for ${selectedStatusBoard.board_name}` : ''}
+                  {selectedStatusBoard
+                    ? t('ticketingConfigStep.statuses.current.titleWithBoard', {
+                        defaultValue: 'Current Statuses for {{boardName}}',
+                        boardName: selectedStatusBoard.board_name
+                      })
+                    : t('ticketingConfigStep.statuses.current.title', {
+                        defaultValue: 'Current Statuses'
+                      })}
                 </Label>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">Name</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Type</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Default</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Order</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Actions</th>
+                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.statuses.table.headers.name', {
+                            defaultValue: 'Name'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.statuses.table.headers.type', {
+                            defaultValue: 'Type'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.statuses.table.headers.default', {
+                            defaultValue: 'Default'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.statuses.table.headers.order', {
+                            defaultValue: 'Order'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.common.table.actions', {
+                            defaultValue: 'Actions'
+                          })}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -2447,7 +2960,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         <tr key={status.status_id}>
                           <td className="px-2 py-1 text-xs">{status.name}</td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">
-                            {status.is_closed ? 'Closed' : 'Open'}
+                            {getStatusTypeLabel(status.is_closed)}
                           </td>
                           <td className="px-2 py-1 text-center">
                             <Button
@@ -2458,7 +2971,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               size="sm"
                               onClick={() => setDefaultStatus(status.status_id)}
                               className="p-0.5 h-5 w-5"
-                              title={status.is_default ? "Default status" : "Set as default status"}
+                              title={status.is_default
+                                ? t('ticketingConfigStep.statuses.current.defaultTitle', {
+                                    defaultValue: 'Default status'
+                                  })
+                                : t('ticketingConfigStep.statuses.current.setDefaultTitle', {
+                                    defaultValue: 'Set as default status'
+                                  })}
                               disabled={status.is_closed}
                             >
                               <Star className={`h-3.5 w-3.5 ${status.is_default ? 'text-yellow-500 fill-yellow-500' : status.is_closed ? 'text-gray-300' : 'text-gray-400 hover:text-yellow-500'}`} />
@@ -2474,7 +2993,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               size="sm"
                               onClick={() => openStatusDeleteDialog(status.status_id)}
                               className="p-1 h-6 w-6"
-                              title="Remove status"
+                              title={t('ticketingConfigStep.statuses.current.removeTitle', {
+                                defaultValue: 'Remove status'
+                              })}
                               disabled={status.is_default}
                             >
                               <Trash2 className={`h-3 w-3 ${status.is_default ? 'text-gray-300' : 'text-gray-500 hover:text-red-600'}`} />
@@ -2492,8 +3013,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
               <Alert variant="warning">
                 <AlertDescription>
                   {selectedStatusBoard
-                    ? `${selectedStatusBoard.board_name} does not have any statuses yet. Add or import at least one open default status before completing onboarding.`
-                    : 'Select a board to configure its statuses.'}
+                    ? t('ticketingConfigStep.statuses.empty.forBoard', {
+                        defaultValue: '{{boardName}} does not have any statuses yet. Add or import at least one open default status before completing onboarding.',
+                        boardName: selectedStatusBoard.board_name
+                      })
+                    : t('ticketingConfigStep.statuses.empty.noBoardSelected', {
+                        defaultValue: 'Select a board to configure its statuses.'
+                      })}
                 </AlertDescription>
               </Alert>
             )}
@@ -2511,9 +3037,17 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         >
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-gray-500" />
-            <span className="font-medium">Priorities</span>
+            <span className="font-medium">
+              {t('ticketingConfigStep.priorities.title', {
+                defaultValue: 'Priorities'
+              })}
+            </span>
             {data.priorities.length === 0 && (
-              <span className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded">Required</span>
+              <span className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded">
+                {t('common.states.required', {
+                  defaultValue: 'Required'
+                })}
+              </span>
             )}
           </div>
           {expandedSections.priorities ? (
@@ -2527,7 +3061,14 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           <div className="p-4 border-t space-y-4">
             <Alert variant="info" className="mb-4">
               <AlertDescription>
-                <span className="font-semibold">Note:</span> Priorities help determine the urgency of tickets and service level agreements (SLAs). Each priority has a color for quick visual identification. Typical priorities include Critical (red), High (orange), Medium (blue), and Low (green).
+                <span className="font-semibold">
+                  {t('ticketingConfigStep.common.noteLabel', {
+                    defaultValue: 'Note:'
+                  })}
+                </span>{' '}
+                {t('ticketingConfigStep.priorities.description', {
+                  defaultValue: 'Priorities help determine the urgency of tickets and service level agreements (SLAs). Each priority has a color for quick visual identification. Typical priorities include Critical (red), High (orange), Medium (blue), and Low (green).'
+                })}
               </AlertDescription>
             </Alert>
 
@@ -2541,7 +3082,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 className="flex-1"
               >
                 <Package className="w-4 h-4 mr-2" />
-                Import from Standard
+                {t('ticketingConfigStep.priorities.actions.import', {
+                  defaultValue: 'Import from Standard'
+                })}
               </Button>
               <Button
                 id="add-priority-button"
@@ -2551,40 +3094,64 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 className="flex-1"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add New Priority
+                {t('ticketingConfigStep.priorities.actions.add', {
+                  defaultValue: 'Add New Priority'
+                })}
               </Button>
             </div>
 
             {/* Add New Priority Form - Right under buttons */}
             {showAddForms.priority && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Add New Priority</h4>
+                <h4 className="font-medium">
+                  {t('ticketingConfigStep.priorities.addForm.title', {
+                    defaultValue: 'Add New Priority'
+                  })}
+                </h4>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="new-priority-name">Priority Name *</Label>
+                    <Label htmlFor="new-priority-name">
+                      {t('ticketingConfigStep.priorities.addForm.fields.name.label', {
+                        defaultValue: 'Priority Name *'
+                      })}
+                    </Label>
                     <Input
                       id="new-priority-name"
                       value={priorityForm.name}
                       onChange={(e) => setPriorityForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Enter priority name"
+                      placeholder={t('ticketingConfigStep.priorities.addForm.fields.name.placeholder', {
+                        defaultValue: 'Enter priority name'
+                      })}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="new-priority-order">Display Order</Label>
+                    <Label htmlFor="new-priority-order">
+                      {t('ticketingConfigStep.priorities.addForm.fields.displayOrder.label', {
+                        defaultValue: 'Display Order'
+                      })}
+                    </Label>
                     <Input
                       id="new-priority-order"
                       type="number"
                       value={priorityForm.displayOrder}
                       onChange={(e) => setPriorityForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
-                      placeholder="Leave empty for auto-generate"
+                      placeholder={t('ticketingConfigStep.priorities.addForm.fields.displayOrder.placeholder', {
+                        defaultValue: 'Leave empty for auto-generate'
+                      })}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Controls the order in which priorities appear in dropdown menus throughout the platform. Lower numbers appear first.
+                      {t('ticketingConfigStep.priorities.addForm.fields.displayOrder.help', {
+                        defaultValue: 'Controls the order in which priorities appear in dropdown menus throughout the platform. Lower numbers appear first.'
+                      })}
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <Label>Priority Color</Label>
+                    <Label>
+                      {t('ticketingConfigStep.priorities.addForm.fields.color.label', {
+                        defaultValue: 'Priority Color'
+                      })}
+                    </Label>
                     <div className="flex items-center gap-2 mt-2">
                       <div 
                         className="w-10 h-10 rounded border border-gray-300" 
@@ -2609,7 +3176,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                             size="sm"
                             className="flex items-center gap-2">
                             <Palette className="h-4 w-4" />
-                            <span>Choose Color</span>
+                            <span>
+                              {t('ticketingConfigStep.priorities.addForm.fields.color.choose', {
+                                defaultValue: 'Choose Color'
+                              })}
+                            </span>
                           </Button>
                         }
                       />
@@ -2628,7 +3199,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     }}
                     className="flex-1"
                   >
-                    Cancel
+                    {t('common.actions.cancel', {
+                      defaultValue: 'Cancel'
+                    })}
                   </Button>
                   <Button
                     id="save-add-priority-form"
@@ -2636,7 +3209,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     disabled={!priorityForm.name.trim()}
                     className="flex-1"
                   >
-                    Add Priority
+                    {t('ticketingConfigStep.priorities.actions.confirmAdd', {
+                      defaultValue: 'Add Priority'
+                    })}
                   </Button>
                 </div>
               </div>
@@ -2645,13 +3220,24 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {/* Import Dialog - Right under buttons */}
             {showImportDialogs.priorities && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Import Standard Priorities</h4>
+                <h4 className="font-medium">
+                  {t('ticketingConfigStep.priorities.import.title', {
+                    defaultValue: 'Import Standard Priorities'
+                  })}
+                </h4>
                 
                 {importResults.priorities && (
                   <div className="rounded-md bg-success/10 border border-success/30 p-3 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
                     <p className="text-sm text-success">
-                      Successfully imported {importResults.priorities.imported} priorit{importResults.priorities.imported !== 1 ? 'ies' : 'y'}.
+                      {importResults.priorities.imported === 1
+                        ? t('ticketingConfigStep.priorities.import.success.one', {
+                            defaultValue: 'Successfully imported 1 priority.'
+                          })
+                        : t('ticketingConfigStep.priorities.import.success.other', {
+                            defaultValue: 'Successfully imported {{count}} priorities.',
+                            count: importResults.priorities.imported
+                          })}
                     </p>
                   </div>
                 )}
@@ -2676,9 +3262,21 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               disabled={availablePriorities.length === 0}
                             />
                           </th>
-                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Name</th>
-                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Color</th>
-                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Order</th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            {t('ticketingConfigStep.priorities.table.headers.name', {
+                              defaultValue: 'Name'
+                            })}
+                          </th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            {t('ticketingConfigStep.priorities.table.headers.color', {
+                              defaultValue: 'Color'
+                            })}
+                          </th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            {t('ticketingConfigStep.priorities.table.headers.order', {
+                              defaultValue: 'Order'
+                            })}
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -2723,7 +3321,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     }}
                     className="flex-1"
                   >
-                    Cancel
+                    {t('common.actions.cancel', {
+                      defaultValue: 'Cancel'
+                    })}
                   </Button>
                   <Button
                     id="confirm-import-priorities"
@@ -2732,7 +3332,14 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     disabled={selectedPriorities.length === 0 || isImporting.priorities}
                     className="flex-1"
                   >
-                    {isImporting.priorities ? 'Importing...' : `Import (${selectedPriorities.length})`}
+                    {isImporting.priorities
+                      ? t('ticketingConfigStep.common.actions.importing', {
+                          defaultValue: 'Importing...'
+                        })
+                      : t('ticketingConfigStep.common.actions.importCount', {
+                          defaultValue: 'Import ({{count}})',
+                          count: selectedPriorities.length
+                        })}
                   </Button>
                 </div>
               </div>
@@ -2741,15 +3348,35 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {/* Existing Priorities */}
             {data.priorities.length > 0 && (
               <div>
-                <Label className="mb-2 block">Current Priorities</Label>
+                <Label className="mb-2 block">
+                  {t('ticketingConfigStep.priorities.current.title', {
+                    defaultValue: 'Current Priorities'
+                  })}
+                </Label>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">Name</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Color</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Order</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Actions</th>
+                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.priorities.table.headers.name', {
+                            defaultValue: 'Name'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.priorities.table.headers.color', {
+                            defaultValue: 'Color'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.priorities.table.headers.order', {
+                            defaultValue: 'Order'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('ticketingConfigStep.common.table.actions', {
+                            defaultValue: 'Actions'
+                          })}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -2795,7 +3422,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                                   size="sm"
                                   onClick={() => openPriorityDeleteDialog(priorityId)}
                                   className="p-1 h-6 w-6"
-                                  title="Remove priority"
+                                  title={t('ticketingConfigStep.priorities.current.removeTitle', {
+                                    defaultValue: 'Remove priority'
+                                  })}
                                 >
                                   <Trash2 className="h-3 w-3 text-gray-500 hover:text-red-600" />
                                 </Button>
@@ -2817,24 +3446,38 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       {/* Support Email Field */}
       <div className="border rounded-lg p-4 bg-gray-50">
         <div className="space-y-2">
-          <Label htmlFor="supportEmail">Support Email</Label>
+          <Label htmlFor="supportEmail">
+            {t('ticketingConfigStep.supportEmail.label', {
+              defaultValue: 'Support Email'
+            })}
+          </Label>
           <Input
             id="supportEmail"
             type="email"
             value={data.supportEmail}
             onChange={(e) => updateData({ supportEmail: e.target.value })}
-            placeholder="support@yourclient.com"
+            placeholder={t('ticketingConfigStep.supportEmail.placeholder', {
+              defaultValue: 'support@yourclient.com'
+            })}
           />
           <p className="text-xs text-gray-600">
-            This email address will be used to create support tickets. Emails sent to this address will automatically generate tickets in your system.
+            {t('ticketingConfigStep.supportEmail.help', {
+              defaultValue: 'This email address will be used to create support tickets. Emails sent to this address will automatically generate tickets in your system.'
+            })}
           </p>
         </div>
       </div>
 
       <Alert variant="info">
         <AlertDescription>
-          <span className="font-semibold">Required:</span> Please configure at least one board and one priority to complete setup.
-          Import standard configurations to quickly set up your ticketing system.
+          <span className="font-semibold">
+            {t('ticketingConfigStep.finalRequirement.label', {
+              defaultValue: 'Required:'
+            })}
+          </span>{' '}
+          {t('ticketingConfigStep.finalRequirement.description', {
+            defaultValue: 'Please configure at least one board and one priority to complete setup. Import standard configurations to quickly set up your ticketing system.'
+          })}
         </AlertDescription>
       </Alert>
 
@@ -2842,80 +3485,106 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       <Dialog
         isOpen={showItilInfoModal}
         onClose={() => setShowItilInfoModal(false)}
-        title="ITIL Standards Reference"
+        title={t('ticketingConfigStep.itil.title', {
+          defaultValue: 'ITIL Standards Reference'
+        })}
       >
         <DialogContent className="max-w-4xl">
           <div className="space-y-6">
             {/* ITIL Categories Section */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">ITIL Standard Categories and Subcategories</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                {t('ticketingConfigStep.itil.categories.title', {
+                  defaultValue: 'ITIL Standard Categories and Subcategories'
+                })}
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                 {/* Hardware */}
                 <div className="border rounded-lg p-4">
-                  <h4 className="font-medium text-blue-800 mb-2">Hardware</h4>
+                  <h4 className="font-medium text-blue-800 mb-2">
+                    {t('ticketingConfigStep.itil.categories.hardware.title', {
+                      defaultValue: 'Hardware'
+                    })}
+                  </h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Server</li>
-                    <li>• Desktop/Laptop</li>
-                    <li>• Network Equipment</li>
-                    <li>• Printer</li>
-                    <li>• Storage</li>
-                    <li>• Mobile Device</li>
+                    <li>{t('ticketingConfigStep.itil.categories.hardware.server', { defaultValue: '• Server' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.hardware.desktopLaptop', { defaultValue: '• Desktop/Laptop' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.hardware.networkEquipment', { defaultValue: '• Network Equipment' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.hardware.printer', { defaultValue: '• Printer' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.hardware.storage', { defaultValue: '• Storage' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.hardware.mobileDevice', { defaultValue: '• Mobile Device' })}</li>
                   </ul>
                 </div>
 
                 {/* Software */}
                 <div className="border rounded-lg p-4">
-                  <h4 className="font-medium text-blue-800 mb-2">Software</h4>
+                  <h4 className="font-medium text-blue-800 mb-2">
+                    {t('ticketingConfigStep.itil.categories.software.title', {
+                      defaultValue: 'Software'
+                    })}
+                  </h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Operating System</li>
-                    <li>• Business Application</li>
-                    <li>• Database</li>
-                    <li>• Email/Collaboration</li>
-                    <li>• Security Software</li>
-                    <li>• Custom Application</li>
+                    <li>{t('ticketingConfigStep.itil.categories.software.operatingSystem', { defaultValue: '• Operating System' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.software.businessApplication', { defaultValue: '• Business Application' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.software.database', { defaultValue: '• Database' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.software.emailCollaboration', { defaultValue: '• Email/Collaboration' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.software.securitySoftware', { defaultValue: '• Security Software' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.software.customApplication', { defaultValue: '• Custom Application' })}</li>
                   </ul>
                 </div>
 
                 {/* Network */}
                 <div className="border rounded-lg p-4">
-                  <h4 className="font-medium text-blue-800 mb-2">Network</h4>
+                  <h4 className="font-medium text-blue-800 mb-2">
+                    {t('ticketingConfigStep.itil.categories.network.title', {
+                      defaultValue: 'Network'
+                    })}
+                  </h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Connectivity</li>
-                    <li>• VPN</li>
-                    <li>• Wi-Fi</li>
-                    <li>• Internet Access</li>
-                    <li>• LAN/WAN</li>
-                    <li>• Firewall</li>
+                    <li>{t('ticketingConfigStep.itil.categories.network.connectivity', { defaultValue: '• Connectivity' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.network.vpn', { defaultValue: '• VPN' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.network.wifi', { defaultValue: '• Wi-Fi' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.network.internetAccess', { defaultValue: '• Internet Access' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.network.lanWan', { defaultValue: '• LAN/WAN' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.network.firewall', { defaultValue: '• Firewall' })}</li>
                   </ul>
                 </div>
 
                 {/* Security */}
                 <div className="border rounded-lg p-4">
-                  <h4 className="font-medium text-blue-800 mb-2">Security</h4>
+                  <h4 className="font-medium text-blue-800 mb-2">
+                    {t('ticketingConfigStep.itil.categories.security.title', {
+                      defaultValue: 'Security'
+                    })}
+                  </h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Malware/Virus</li>
-                    <li>• Unauthorized Access</li>
-                    <li>• Data Breach</li>
-                    <li>• Phishing/Spam</li>
-                    <li>• Policy Violation</li>
-                    <li>• Account Lockout</li>
+                    <li>{t('ticketingConfigStep.itil.categories.security.malwareVirus', { defaultValue: '• Malware/Virus' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.security.unauthorizedAccess', { defaultValue: '• Unauthorized Access' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.security.dataBreach', { defaultValue: '• Data Breach' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.security.phishingSpam', { defaultValue: '• Phishing/Spam' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.security.policyViolation', { defaultValue: '• Policy Violation' })}</li>
+                    <li>{t('ticketingConfigStep.itil.categories.security.accountLockout', { defaultValue: '• Account Lockout' })}</li>
                   </ul>
                 </div>
 
                 {/* Service Request */}
                 <div className="border rounded-lg p-4 md:col-span-2">
-                  <h4 className="font-medium text-blue-800 mb-2">Service Request</h4>
+                  <h4 className="font-medium text-blue-800 mb-2">
+                    {t('ticketingConfigStep.itil.categories.serviceRequest.title', {
+                      defaultValue: 'Service Request'
+                    })}
+                  </h4>
                   <div className="grid grid-cols-2 gap-4">
                     <ul className="text-sm text-gray-600 space-y-1">
-                      <li>• Access Request</li>
-                      <li>• New User Setup</li>
-                      <li>• Software Installation</li>
+                      <li>{t('ticketingConfigStep.itil.categories.serviceRequest.accessRequest', { defaultValue: '• Access Request' })}</li>
+                      <li>{t('ticketingConfigStep.itil.categories.serviceRequest.newUserSetup', { defaultValue: '• New User Setup' })}</li>
+                      <li>{t('ticketingConfigStep.itil.categories.serviceRequest.softwareInstallation', { defaultValue: '• Software Installation' })}</li>
                     </ul>
                     <ul className="text-sm text-gray-600 space-y-1">
-                      <li>• Equipment Request</li>
-                      <li>• Information Request</li>
-                      <li>• Change Request</li>
+                      <li>{t('ticketingConfigStep.itil.categories.serviceRequest.equipmentRequest', { defaultValue: '• Equipment Request' })}</li>
+                      <li>{t('ticketingConfigStep.itil.categories.serviceRequest.informationRequest', { defaultValue: '• Information Request' })}</li>
+                      <li>{t('ticketingConfigStep.itil.categories.serviceRequest.changeRequest', { defaultValue: '• Change Request' })}</li>
                     </ul>
                   </div>
                 </div>
@@ -2924,74 +3593,80 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
             {/* ITIL Priority Matrix Section */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">ITIL Priority Matrix (Impact × Urgency)</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                {t('ticketingConfigStep.itil.matrix.title', {
+                  defaultValue: 'ITIL Priority Matrix (Impact × Urgency)'
+                })}
+              </h3>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-xs border border-gray-200">
                   <thead>
                     <tr>
                       <th className="px-3 py-2 text-left text-gray-600 border-b border-r bg-gray-50"></th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">High<br/>Urgency (1)</th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Medium-High<br/>Urgency (2)</th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Medium<br/>Urgency (3)</th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Medium-Low<br/>Urgency (4)</th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Low<br/>Urgency (5)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">{t('ticketingConfigStep.itil.matrix.urgency.high', { defaultValue: 'High' })}<br/>{t('ticketingConfigStep.itil.matrix.urgency.label', { defaultValue: 'Urgency' })} (1)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">{t('ticketingConfigStep.itil.matrix.urgency.mediumHigh', { defaultValue: 'Medium-High' })}<br/>{t('ticketingConfigStep.itil.matrix.urgency.label', { defaultValue: 'Urgency' })} (2)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">{t('ticketingConfigStep.itil.matrix.urgency.medium', { defaultValue: 'Medium' })}<br/>{t('ticketingConfigStep.itil.matrix.urgency.label', { defaultValue: 'Urgency' })} (3)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">{t('ticketingConfigStep.itil.matrix.urgency.mediumLow', { defaultValue: 'Medium-Low' })}<br/>{t('ticketingConfigStep.itil.matrix.urgency.label', { defaultValue: 'Urgency' })} (4)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">{t('ticketingConfigStep.itil.matrix.urgency.low', { defaultValue: 'Low' })}<br/>{t('ticketingConfigStep.itil.matrix.urgency.label', { defaultValue: 'Urgency' })} (5)</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">High Impact (1)</td>
-                      <td className="px-3 py-2 text-center bg-destructive/10 text-destructive font-semibold border">Critical (1)</td>
-                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">{t('ticketingConfigStep.itil.matrix.impact.high', { defaultValue: 'High Impact (1)' })}</td>
+                      <td className="px-3 py-2 text-center bg-destructive/10 text-destructive font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.critical', { defaultValue: 'Critical (1)' })}</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.high', { defaultValue: 'High (2)' })}</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.high', { defaultValue: 'High (2)' })}</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.medium', { defaultValue: 'Medium (3)' })}</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.medium', { defaultValue: 'Medium (3)' })}</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium-High Impact (2)</td>
-                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">{t('ticketingConfigStep.itil.matrix.impact.mediumHigh', { defaultValue: 'Medium-High Impact (2)' })}</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.high', { defaultValue: 'High (2)' })}</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.high', { defaultValue: 'High (2)' })}</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.medium', { defaultValue: 'Medium (3)' })}</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.medium', { defaultValue: 'Medium (3)' })}</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.low', { defaultValue: 'Low (4)' })}</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium Impact (3)</td>
-                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">{t('ticketingConfigStep.itil.matrix.impact.medium', { defaultValue: 'Medium Impact (3)' })}</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.high', { defaultValue: 'High (2)' })}</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.medium', { defaultValue: 'Medium (3)' })}</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.medium', { defaultValue: 'Medium (3)' })}</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.low', { defaultValue: 'Low (4)' })}</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.low', { defaultValue: 'Low (4)' })}</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium-Low Impact (4)</td>
-                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">{t('ticketingConfigStep.itil.matrix.impact.mediumLow', { defaultValue: 'Medium-Low Impact (4)' })}</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.medium', { defaultValue: 'Medium (3)' })}</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.medium', { defaultValue: 'Medium (3)' })}</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.low', { defaultValue: 'Low (4)' })}</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.low', { defaultValue: 'Low (4)' })}</td>
+                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.planning', { defaultValue: 'Planning (5)' })}</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Low Impact (5)</td>
-                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
-                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">{t('ticketingConfigStep.itil.matrix.impact.low', { defaultValue: 'Low Impact (5)' })}</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.medium', { defaultValue: 'Medium (3)' })}</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.low', { defaultValue: 'Low (4)' })}</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.low', { defaultValue: 'Low (4)' })}</td>
+                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.planning', { defaultValue: 'Planning (5)' })}</td>
+                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">{t('ticketingConfigStep.itil.matrix.priority.planning', { defaultValue: 'Planning (5)' })}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
               <div className="mt-4 text-sm text-gray-600 space-y-1">
-                <p><strong>Impact:</strong> How many users/business functions are affected?</p>
-                <p><strong>Urgency:</strong> How quickly does this need to be resolved?</p>
-                <p><strong>Priority:</strong> Automatically calculated based on Impact × Urgency matrix above.</p>
+                <p>{t('ticketingConfigStep.itil.matrix.explanation.impact', { defaultValue: 'Impact: How many users/business functions are affected?' })}</p>
+                <p>{t('ticketingConfigStep.itil.matrix.explanation.urgency', { defaultValue: 'Urgency: How quickly does this need to be resolved?' })}</p>
+                <p>{t('ticketingConfigStep.itil.matrix.explanation.priority', { defaultValue: 'Priority: Automatically calculated based on Impact × Urgency matrix above.' })}</p>
               </div>
             </div>
           </div>
         </DialogContent>
         <DialogFooter>
           <Button id="close-itil-info" onClick={() => setShowItilInfoModal(false)}>
-            Close
+            {t('common.actions.close', {
+              defaultValue: 'Close'
+            })}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -3000,7 +3675,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         isOpen={Boolean(boardToDelete)}
         onClose={resetBoardDeleteState}
         onConfirmDelete={confirmDeleteBoard}
-        entityName={boardToDelete?.name || 'this board'}
+        entityName={boardToDelete?.name || t('ticketingConfigStep.boards.delete.fallbackEntity', {
+          defaultValue: 'this board'
+        })}
         validationResult={boardDeleteValidation}
         isValidating={isBoardDeleteValidating}
         isDeleting={isBoardDeleteProcessing}
@@ -3010,7 +3687,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         isOpen={Boolean(categoryToDelete)}
         onClose={resetCategoryDeleteState}
         onConfirmDelete={confirmDeleteCategory}
-        entityName={categoryToDelete?.name || 'this category'}
+        entityName={categoryToDelete?.name || t('ticketingConfigStep.categories.delete.fallbackEntity', {
+          defaultValue: 'this category'
+        })}
         validationResult={categoryDeleteValidation}
         isValidating={isCategoryDeleteValidating}
         isDeleting={isCategoryDeleteProcessing}
@@ -3020,7 +3699,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         isOpen={Boolean(statusToDelete)}
         onClose={resetStatusDeleteState}
         onConfirmDelete={confirmDeleteStatus}
-        entityName={statusToDelete?.name || 'this status'}
+        entityName={statusToDelete?.name || t('ticketingConfigStep.statuses.delete.fallbackEntity', {
+          defaultValue: 'this status'
+        })}
         validationResult={statusDeleteValidation}
         isValidating={isStatusDeleteValidating}
         isDeleting={isStatusDeleteProcessing}
@@ -3030,7 +3711,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         isOpen={Boolean(priorityToDelete)}
         onClose={resetPriorityDeleteState}
         onConfirmDelete={confirmDeletePriority}
-        entityName={priorityToDelete?.name || 'this priority'}
+        entityName={priorityToDelete?.name || t('ticketingConfigStep.priorities.delete.fallbackEntity', {
+          defaultValue: 'this priority'
+        })}
         validationResult={priorityDeleteValidation}
         isValidating={isPriorityDeleteValidating}
         isDeleting={isPriorityDeleteProcessing}

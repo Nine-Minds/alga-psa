@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { IClient } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientSideDetailsProps {
     client: IClient & {
@@ -15,6 +16,7 @@ interface ClientSideDetailsProps {
 }
 
 const ClientSideDetails = ({ client }: ClientSideDetailsProps) => {
+    const { t } = useTranslation('msp/clients');
     // Format location address
     const formatAddress = () => {
         const parts: string[] = [];
@@ -45,28 +47,28 @@ const ClientSideDetails = ({ client }: ClientSideDetailsProps) => {
                 <h3 className="text-md font-bold mb-1">{client.client_name}</h3>
                 <div className="space-y-4 text-sm">
                     <div>
-                        <p className="font-semibold text-gray-700">Phone:</p>
-                        <p>{client.location_phone || 'N/A'}</p>
+                        <p className="font-semibold text-gray-700">{t('clientSideDetails.phone', { defaultValue: 'Phone:' })}</p>
+                        <p>{client.location_phone || t('common.states.na', { defaultValue: 'N/A' })}</p>
                     </div>
                     <div>
-                        <p className="font-semibold text-gray-700">URL:</p>
+                        <p className="font-semibold text-gray-700">{t('clientSideDetails.url', { defaultValue: 'URL:' })}</p>
                         {client.url ? (
                             <Link href={client.url} className="text-blue-500">
                                 {client.url}
                             </Link>
                         ) : (
-                            <p>N/A</p>
+                            <p>{t('common.states.na', { defaultValue: 'N/A' })}</p>
                         )}
                     </div>
                     <div>
-                        <p className="font-semibold text-gray-700">Address:</p>
+                        <p className="font-semibold text-gray-700">{t('clientSideDetails.address', { defaultValue: 'Address:' })}</p>
                         <p className="whitespace-pre-line">
-                            {client.address_line1 ? formatAddress() : 'N/A'}
+                            {client.address_line1 ? formatAddress() : t('common.states.na', { defaultValue: 'N/A' })}
                         </p>
                     </div>
                     {client.location_email && (
                         <div>
-                            <p className="font-semibold text-gray-700">Email:</p>
+                            <p className="font-semibold text-gray-700">{t('clientSideDetails.email', { defaultValue: 'Email:' })}</p>
                             <p>{client.location_email}</p>
                         </div>
                     )}

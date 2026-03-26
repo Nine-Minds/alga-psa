@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -9,7 +9,14 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { createMaintenanceSchedule, updateMaintenanceSchedule } from '../../actions/assetActions';
-import type { MaintenanceType, MaintenanceFrequency, AssetMaintenanceSchedule } from '@alga-psa/types';
+import type {
+  MaintenanceType,
+  MaintenanceFrequency,
+  AssetMaintenanceSchedule,
+  CreateMaintenanceScheduleRequest,
+  UpdateMaintenanceScheduleRequest
+} from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface CreateMaintenanceScheduleDialogProps {
   isOpen: boolean;
@@ -26,6 +33,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
   schedule,
   onSuccess
 }) => {
+  const { t } = useTranslation('msp/assets');
   const isEditing = !!schedule;
   const [scheduleName, setScheduleName] = useState('');
   const [description, setDescription] = useState('');
@@ -60,18 +68,18 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
   }, [schedule, isOpen]);
 
   const maintenanceTypeOptions = [
-    { value: 'preventive', label: 'Preventive' },
-    { value: 'inspection', label: 'Inspection' },
-    { value: 'calibration', label: 'Calibration' },
-    { value: 'replacement', label: 'Replacement' }
+    { value: 'preventive', label: t('maintenanceSchedulesTab.types.preventive', { defaultValue: 'Preventive' }) },
+    { value: 'inspection', label: t('maintenanceSchedulesTab.types.inspection', { defaultValue: 'Inspection' }) },
+    { value: 'calibration', label: t('maintenanceSchedulesTab.types.calibration', { defaultValue: 'Calibration' }) },
+    { value: 'replacement', label: t('maintenanceSchedulesTab.types.replacement', { defaultValue: 'Replacement' }) }
   ];
 
   const frequencyOptions = [
-    { value: 'daily', label: 'Daily' },
-    { value: 'weekly', label: 'Weekly' },
-    { value: 'monthly', label: 'Monthly' },
-    { value: 'quarterly', label: 'Quarterly' },
-    { value: 'yearly', label: 'Yearly' }
+    { value: 'daily', label: t('createMaintenanceScheduleDialog.frequencyOptions.daily', { defaultValue: 'Daily' }) },
+    { value: 'weekly', label: t('createMaintenanceScheduleDialog.frequencyOptions.weekly', { defaultValue: 'Weekly' }) },
+    { value: 'monthly', label: t('createMaintenanceScheduleDialog.frequencyOptions.monthly', { defaultValue: 'Monthly' }) },
+    { value: 'quarterly', label: t('createMaintenanceScheduleDialog.frequencyOptions.quarterly', { defaultValue: 'Quarterly' }) },
+    { value: 'yearly', label: t('createMaintenanceScheduleDialog.frequencyOptions.yearly', { defaultValue: 'Yearly' }) }
   ];
 
 
@@ -80,35 +88,45 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
     setError(null);
 
     if (!scheduleName.trim()) {
-      setError('Schedule name is required');
+      setError(t('createMaintenanceScheduleDialog.errors.scheduleNameRequired', {
+        defaultValue: 'Schedule name is required'
+      }));
       return;
     }
 
     if (!maintenanceType) {
-      setError('Maintenance type is required');
+      setError(t('createMaintenanceScheduleDialog.errors.maintenanceTypeRequired', {
+        defaultValue: 'Maintenance type is required'
+      }));
       return;
     }
 
     if (!frequency) {
-      setError('Frequency is required');
+      setError(t('createMaintenanceScheduleDialog.errors.frequencyRequired', {
+        defaultValue: 'Frequency is required'
+      }));
       return;
     }
 
     if (!nextMaintenance) {
-      setError('Next maintenance date is required');
+      setError(t('createMaintenanceScheduleDialog.errors.nextMaintenanceRequired', {
+        defaultValue: 'Next maintenance date is required'
+      }));
       return;
     }
 
     const interval = parseInt(frequencyInterval, 10);
     if (isNaN(interval) || interval < 1) {
-      setError('Frequency interval must be at least 1');
+      setError(t('createMaintenanceScheduleDialog.errors.frequencyIntervalMin', {
+        defaultValue: 'Frequency interval must be at least 1'
+      }));
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const scheduleData: any = {
+      const scheduleData: CreateMaintenanceScheduleRequest = {
         asset_id: assetId,
         schedule_name: scheduleName.trim(),
         maintenance_type: maintenanceType as MaintenanceType,
@@ -124,10 +142,11 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
       }
 
       if (isEditing && schedule) {
-        await updateMaintenanceSchedule(schedule.schedule_id, {
+        const updateData: UpdateMaintenanceScheduleRequest = {
           ...scheduleData,
           is_active: isActive
-        });
+        };
+        await updateMaintenanceSchedule(schedule.schedule_id, updateData);
       } else {
         await createMaintenanceSchedule(scheduleData);
       }
@@ -145,7 +164,11 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create maintenance schedule');
+      setError(err instanceof Error
+        ? err.message
+        : t('createMaintenanceScheduleDialog.errors.saveFailed', {
+          defaultValue: 'Failed to create maintenance schedule'
+        }));
     } finally {
       setIsSubmitting(false);
     }
@@ -169,7 +192,9 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
     <Dialog 
       isOpen={isOpen} 
       onClose={handleClose} 
-      title={isEditing ? 'Edit Maintenance Schedule' : 'Schedule Maintenance'} 
+      title={isEditing
+        ? t('createMaintenanceScheduleDialog.titles.edit', { defaultValue: 'Edit Maintenance Schedule' })
+        : t('createMaintenanceScheduleDialog.titles.create', { defaultValue: 'Schedule Maintenance' })} 
       id={isEditing ? 'edit-maintenance-schedule-dialog' : 'create-maintenance-schedule-dialog'}
     >
       <DialogContent>
@@ -181,37 +206,51 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
           )}
 
           <div>
-            <Label htmlFor="schedule-name">Schedule Name *</Label>
+            <Label htmlFor="schedule-name">
+              {t('createMaintenanceScheduleDialog.fields.scheduleName', { defaultValue: 'Schedule Name *' })}
+            </Label>
             <Input
               id="schedule-name"
               value={scheduleName}
               onChange={(e) => setScheduleName(e.target.value)}
-              placeholder="e.g., Monthly Server Maintenance"
+              placeholder={t('createMaintenanceScheduleDialog.placeholders.scheduleName', {
+                defaultValue: 'e.g., Monthly Server Maintenance'
+              })}
               className="mt-1"
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">
+              {t('createMaintenanceScheduleDialog.fields.description', { defaultValue: 'Description' })}
+            </Label>
             <TextArea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description..."
+              placeholder={t('createMaintenanceScheduleDialog.placeholders.description', {
+                defaultValue: 'Optional description...'
+              })}
               className="mt-1"
               rows={3}
             />
           </div>
 
           <div>
-            <Label htmlFor="maintenance-type">Maintenance Type *</Label>
+            <Label htmlFor="maintenance-type">
+              {t('createMaintenanceScheduleDialog.fields.maintenanceType', {
+                defaultValue: 'Maintenance Type *'
+              })}
+            </Label>
             <CustomSelect
               id="maintenance-type"
               options={maintenanceTypeOptions}
               value={maintenanceType}
               onValueChange={(value) => setMaintenanceType(value as MaintenanceType)}
-              placeholder="Select maintenance type"
+              placeholder={t('createMaintenanceScheduleDialog.placeholders.maintenanceType', {
+                defaultValue: 'Select maintenance type'
+              })}
               className="mt-1"
               required
             />
@@ -219,43 +258,61 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="frequency">Frequency *</Label>
+              <Label htmlFor="frequency">
+                {t('createMaintenanceScheduleDialog.fields.frequency', { defaultValue: 'Frequency *' })}
+              </Label>
               <CustomSelect
                 id="frequency"
                 options={frequencyOptions}
                 value={frequency}
                 onValueChange={(value) => setFrequency(value as MaintenanceFrequency)}
-                placeholder="Select frequency"
+                placeholder={t('createMaintenanceScheduleDialog.placeholders.frequency', {
+                  defaultValue: 'Select frequency'
+                })}
                 className="mt-1"
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="frequency-interval">Interval *</Label>
+              <Label htmlFor="frequency-interval">
+                {t('createMaintenanceScheduleDialog.fields.interval', { defaultValue: 'Interval *' })}
+              </Label>
               <Input
                 id="frequency-interval"
                 type="number"
                 min="1"
                 value={frequencyInterval}
                 onChange={(e) => setFrequencyInterval(e.target.value)}
-                placeholder="1"
+                placeholder={t('createMaintenanceScheduleDialog.placeholders.interval', { defaultValue: '1' })}
                 className="mt-1"
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                {frequency && `Every ${frequencyInterval} ${frequency}${parseInt(frequencyInterval) > 1 ? 's' : ''}`}
+                {frequency && t('maintenanceSchedulesTab.frequency.every', {
+                  count: parseInt(frequencyInterval, 10) || 0,
+                  frequency: t(`maintenanceSchedulesTab.frequency.units.${frequency}`, {
+                    defaultValue: frequency
+                  }),
+                  suffix: parseInt(frequencyInterval, 10) > 1 ? 's' : ''
+                })}
               </p>
             </div>
           </div>
 
           <div>
-            <Label htmlFor="next-maintenance">Next Maintenance Date *</Label>
+            <Label htmlFor="next-maintenance">
+              {t('createMaintenanceScheduleDialog.fields.nextMaintenanceDate', {
+                defaultValue: 'Next Maintenance Date *'
+              })}
+            </Label>
             <DatePicker
               id="next-maintenance"
               value={nextMaintenance}
               onChange={setNextMaintenance}
-              placeholder="Select date"
+              placeholder={t('createMaintenanceScheduleDialog.placeholders.nextMaintenanceDate', {
+                defaultValue: 'Select date'
+              })}
               className="mt-1"
               required
             />
@@ -264,7 +321,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
           {isEditing && (
             <div>
               <SwitchWithLabel
-                label="Active"
+                label={t('createMaintenanceScheduleDialog.fields.active', { defaultValue: 'Active' })}
                 checked={isActive}
                 onCheckedChange={setIsActive}
               />
@@ -279,14 +336,20 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
               onClick={handleClose}
               disabled={isSubmitting}
             >
-              Cancel
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               id="submit-maintenance-schedule-btn"
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Schedule' : 'Create Schedule')}
+              {isSubmitting
+                ? (isEditing
+                    ? t('createMaintenanceScheduleDialog.actions.updating', { defaultValue: 'Updating...' })
+                    : t('createMaintenanceScheduleDialog.actions.creating', { defaultValue: 'Creating...' }))
+                : (isEditing
+                    ? t('createMaintenanceScheduleDialog.actions.update', { defaultValue: 'Update Schedule' })
+                    : t('createMaintenanceScheduleDialog.actions.create', { defaultValue: 'Create Schedule' }))}
             </Button>
           </DialogFooter>
         </form>

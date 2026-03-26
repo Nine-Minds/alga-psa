@@ -9,6 +9,7 @@ import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { TagManager } from '@alga-psa/tags/components';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientGridCardProps {
     client: IClient;
@@ -34,6 +35,7 @@ const ClientGridCard = ({
     onTagsChange
 }: ClientGridCardProps) => {
     const router = useRouter();
+    const { t } = useTranslation('msp/clients');
     const isDefault = (client as any).is_default;
 
     const handleCardClick = () => {
@@ -57,7 +59,10 @@ const ClientGridCard = ({
                         id={`client-checkbox-${client.client_id}`}
                         checked={selectedClients.includes(client.client_id)}
                         onChange={() => handleCheckboxChange(client.client_id)}
-                        aria-label={`Select client ${client.client_name}`}
+                        aria-label={t('clientGridCard.selectClient', {
+                            defaultValue: 'Select client {{name}}',
+                            name: client.client_name
+                        })}
                         data-testid={`client-checkbox-${client.client_id}`}
                     />
                 </div>
@@ -83,39 +88,39 @@ const ClientGridCard = ({
                             {client.client_name}
                         </a>
                         {isDefault && (
-                            <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40" title="Default Client">
+                            <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40" title={t('clientGridCard.defaultClient', { defaultValue: 'Default Client' })}>
                                 <Shield className="h-3 w-3 text-purple-600 dark:text-purple-400 mr-1" />
-                                <span className="text-xs text-purple-700 dark:text-purple-300 font-medium">Default</span>
+                                <span className="text-xs text-purple-700 dark:text-purple-300 font-medium">{t('clientGridCard.default', { defaultValue: 'Default' })}</span>
                             </div>
                         )}
                         {client.is_tax_exempt && (
-                            <Tooltip content="This client is tax exempt - no taxes will be applied to their invoices">
+                            <Tooltip content={t('clientGridCard.taxExemptTooltip', { defaultValue: 'This client is tax exempt - no taxes will be applied to their invoices' })}>
                                 <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40">
                                     <ShieldOff className="h-3 w-3 text-amber-600 dark:text-amber-400 mr-1" />
-                                    <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">Tax Exempt</span>
+                                    <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">{t('clientGridCard.taxExempt', { defaultValue: 'Tax Exempt' })}</span>
                                 </div>
                             </Tooltip>
                         )}
                     </h2>
                     <div className="text-sm text-gray-600 mt-1 space-y-0.5">
                         <p className="truncate">
-                            <span className="font-medium text-gray-700">Type:</span>
-                            <span className="ml-1">{client.client_type || 'N/A'}</span>
+                            <span className="font-medium text-gray-700">{t('clientGridCard.type', { defaultValue: 'Type:' })}</span>
+                            <span className="ml-1">{client.client_type || t('common.states.na', { defaultValue: 'N/A' })}</span>
                         </p>
                         <p className="truncate">
-                            <span className="font-medium text-gray-700">Phone:</span>
-                            <span className="ml-1">{(client as any).location_phone || 'N/A'}</span>
+                            <span className="font-medium text-gray-700">{t('clientGridCard.phone', { defaultValue: 'Phone:' })}</span>
+                            <span className="ml-1">{(client as any).location_phone || t('common.states.na', { defaultValue: 'N/A' })}</span>
                         </p>
                         <p className="truncate">
-                            <span className="font-medium text-gray-700">Address:</span>
+                            <span className="font-medium text-gray-700">{t('clientGridCard.address', { defaultValue: 'Address:' })}</span>
                             <span className="ml-1">{(
                                 (client as any).address_line1 
                                     ? [(client as any).address_line1, (client as any).city, (client as any).state_province].filter(Boolean).join(', ')
-                                    : 'N/A'
+                                    : t('common.states.na', { defaultValue: 'N/A' })
                             )}</span>
                         </p>
                         <div className="truncate">
-                            <span className="font-medium text-gray-700">URL:</span>
+                            <span className="font-medium text-gray-700">{t('clientGridCard.url', { defaultValue: 'URL:' })}</span>
                             {client.url && client.url.trim() !== '' ? (
                                 <a
                                     href={client.url.startsWith('http') ? client.url : `https://${client.url}`}
@@ -128,7 +133,7 @@ const ClientGridCard = ({
                                     {client.url}
                                 </a>
                             ) : (
-                                <span className="ml-1">N/A</span>
+                                <span className="ml-1">{t('common.states.na', { defaultValue: 'N/A' })}</span>
                             )}
                         </div>
                         
@@ -150,7 +155,7 @@ const ClientGridCard = ({
                 <div onClick={stopPropagation} className="flex-shrink-0">
                     <ReflectedDropdownMenu
                         id={`client-actions-${client.client_id}`}
-                        triggerLabel="Client Actions"
+                        triggerLabel={t('clientGridCard.clientActions', { defaultValue: 'Client Actions' })}
                         trigger={
                             <Button
                                 id={`client-actions-trigger-${client.client_id}`}
@@ -160,27 +165,27 @@ const ClientGridCard = ({
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <MoreVertical className="h-4 w-4" />
-                                <span className="sr-only">Client Actions</span>
+                                <span className="sr-only">{t('clientGridCard.clientActions', { defaultValue: 'Client Actions' })}</span>
                             </Button>
                         }
                         items={[
                             ...(onQuickView ? [{
                                 id: 'quick-view',
-                                text: 'Quick View',
+                                text: t('clientGridCard.quickView', { defaultValue: 'Quick View' }),
                                 icon: <ExternalLink size={14} />,
                                 variant: 'default' as const,
                                 onSelect: () => onQuickView(client)
                             }] : []),
                             {
                                 id: 'edit',
-                                text: 'Edit',
+                                text: t('common.actions.edit', { defaultValue: 'Edit' }),
                                 icon: <Pencil size={14} />,
                                 variant: 'default',
                                 onSelect: () => handleEditClient(client.client_id)
                             },
                             ...(!isDefault ? [{
                                 id: 'delete',
-                                text: 'Delete',
+                                text: t('common.actions.delete', { defaultValue: 'Delete' }),
                                 icon: <Trash2 size={14} />,
                                 variant: 'destructive' as const,
                                 onSelect: () => handleDeleteClient(client)

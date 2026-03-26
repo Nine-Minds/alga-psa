@@ -26,6 +26,7 @@ import {
   completeOnboarding,
   validateOnboardingDefaults
 } from '../actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const STEPS = ONBOARDING_WIZARD_STEPS;
 const REQUIRED_STEPS = ONBOARDING_WIZARD_REQUIRED_STEP_INDEXES;
@@ -51,6 +52,7 @@ export function OnboardingWizard({
   fullPage = false,
   isRevisit = false,
 }: OnboardingWizardProps) {
+  const { t } = useTranslation('msp/onboarding');
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
@@ -107,6 +109,27 @@ export function OnboardingWizard({
     setWizardData((prev) => ({ ...prev, ...data }));
   };
 
+  const translatedSteps = [
+    t('onboardingWizard.steps.clientInfo', {
+      defaultValue: 'Client Info'
+    }),
+    t('onboardingWizard.steps.teamMembers', {
+      defaultValue: 'Team Members'
+    }),
+    t('onboardingWizard.steps.addClient', {
+      defaultValue: 'Add Client'
+    }),
+    t('onboardingWizard.steps.clientContact', {
+      defaultValue: 'Client Contact'
+    }),
+    t('onboardingWizard.steps.billing', {
+      defaultValue: 'Billing'
+    }),
+    t('onboardingWizard.steps.ticketing', {
+      defaultValue: 'Ticketing'
+    })
+  ];
+
   const saveStepData = async (stepIndex: number): Promise<boolean> => {
     if (testMode) return true;
     
@@ -124,7 +147,9 @@ export function OnboardingWizard({
             newPassword: wizardData.newPassword
           });
           if (!clientResult.success) {
-            setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || 'Failed to save client info' }));
+            setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || t('onboardingWizard.errors.saveClientInfo', {
+              defaultValue: 'Failed to save client info'
+            }) }));
             return false;
           }
           break;
@@ -140,7 +165,9 @@ export function OnboardingWizard({
           if (newMembers.length > 0) {
             const teamResult = await addTeamMembers(newMembers);
             if (!teamResult.success) {
-              setErrors(prev => ({ ...prev, [stepIndex]: teamResult.error || 'Failed to add team members' }));
+              setErrors(prev => ({ ...prev, [stepIndex]: teamResult.error || t('onboardingWizard.errors.addTeamMembers', {
+                defaultValue: 'Failed to add team members'
+              }) }));
               return false;
             }
             
@@ -167,7 +194,9 @@ export function OnboardingWizard({
               clientId: wizardData.clientId // Pass existing ID if available for updates
             });
             if (!clientResult.success) {
-              setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || 'Failed to save client' }));
+              setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || t('onboardingWizard.errors.saveClient', {
+                defaultValue: 'Failed to save client'
+              }) }));
               return false;
             }
             // Store client ID for contact step (if it's a new client)
@@ -188,7 +217,9 @@ export function OnboardingWizard({
                 clientId: wizardData.clientId
               });
               if (!contactResult.success) {
-                setErrors(prev => ({ ...prev, [stepIndex]: contactResult.error || 'Failed to add contact' }));
+                setErrors(prev => ({ ...prev, [stepIndex]: contactResult.error || t('onboardingWizard.errors.addContact', {
+                  defaultValue: 'Failed to add contact'
+                }) }));
                 return false;
               }
               // Store contact ID
@@ -214,7 +245,9 @@ export function OnboardingWizard({
                 currencyCode: wizardData.currencyCode,
               });
               if (!billingResult.success) {
-                setErrors(prev => ({ ...prev, [stepIndex]: billingResult.error || 'Failed to setup billing' }));
+                setErrors(prev => ({ ...prev, [stepIndex]: billingResult.error || t('onboardingWizard.errors.setupBilling', {
+                  defaultValue: 'Failed to setup billing'
+                }) }));
                 return false;
               }
               // Store service ID
@@ -228,7 +261,9 @@ export function OnboardingWizard({
       }
       return true;
     } catch (error) {
-      setErrors(prev => ({ ...prev, [stepIndex]: error instanceof Error ? error.message : 'Unknown error' }));
+      setErrors(prev => ({ ...prev, [stepIndex]: error instanceof Error ? error.message : t('onboardingWizard.errors.unknown', {
+        defaultValue: 'Unknown error'
+      }) }));
       return false;
     } finally {
       setIsLoading(false);
@@ -286,7 +321,9 @@ export function OnboardingWizard({
         const validationResult = await validateOnboardingDefaults();
         
         if (!validationResult.success) {
-          setErrors(prev => ({ ...prev, [5]: validationResult.error || 'Validation failed' }));
+          setErrors(prev => ({ ...prev, [5]: validationResult.error || t('onboardingWizard.errors.validationFailed', {
+            defaultValue: 'Validation failed'
+          }) }));
           setIsLoading(false);
           return;
         }
@@ -307,7 +344,9 @@ export function OnboardingWizard({
         });
         
         if (!ticketingResult.success) {
-          setErrors(prev => ({ ...prev, [5]: ticketingResult.error || 'Failed to configure ticketing' }));
+          setErrors(prev => ({ ...prev, [5]: ticketingResult.error || t('onboardingWizard.errors.configureTicketing', {
+            defaultValue: 'Failed to configure ticketing'
+          }) }));
           return;
         }
       }
@@ -315,7 +354,9 @@ export function OnboardingWizard({
       // Complete onboarding
       const completionResult = await completeOnboarding();
       if (!completionResult.success) {
-        setErrors(prev => ({ ...prev, [5]: completionResult.error || 'Failed to complete onboarding' }));
+        setErrors(prev => ({ ...prev, [5]: completionResult.error || t('onboardingWizard.errors.completeOnboarding', {
+          defaultValue: 'Failed to complete onboarding'
+        }) }));
         return;
       }
       
@@ -325,7 +366,9 @@ export function OnboardingWizard({
       }
     } catch (error) {
       console.error('Error completing onboarding:', error);
-      setErrors(prev => ({ ...prev, [5]: error instanceof Error ? error.message : 'Unknown error' }));
+      setErrors(prev => ({ ...prev, [5]: error instanceof Error ? error.message : t('onboardingWizard.errors.unknown', {
+        defaultValue: 'Unknown error'
+      }) }));
     } finally {
       setIsLoading(false);
     }
@@ -431,7 +474,7 @@ export function OnboardingWizard({
   const wizardContent = (
     <>
       <WizardProgress
-        steps={STEPS}
+        steps={translatedSteps}
         currentStep={currentStep}
         completedSteps={completedSteps}
         onStepClick={handleStepClick}
@@ -449,12 +492,40 @@ export function OnboardingWizard({
 
       {debugMode && (
         <div className="mt-4 p-4 bg-gray-100 rounded text-xs">
-          <p className="font-bold mb-2">Debug Info:</p>
-          <p>Current Step: {currentStep} ({STEPS[currentStep]})</p>
-          <p>Is Valid: {isStepValid() ? 'Yes' : 'No'}</p>
-          <p>Is Required: {REQUIRED_STEPS.includes(currentStep) ? 'Yes' : 'No'}</p>
+          <p className="font-bold mb-2">
+            {t('onboardingWizard.debug.title', {
+              defaultValue: 'Debug Info:'
+            })}
+          </p>
+          <p>
+            {t('onboardingWizard.debug.currentStep', {
+              defaultValue: 'Current Step: {{stepIndex}} ({{stepName}})',
+              stepIndex: currentStep,
+              stepName: translatedSteps[currentStep]
+            })}
+          </p>
+          <p>
+            {t('onboardingWizard.debug.isValid', {
+              defaultValue: 'Is Valid: {{value}}',
+              value: isStepValid()
+                ? t('common.yes', { defaultValue: 'Yes' })
+                : t('common.no', { defaultValue: 'No' })
+            })}
+          </p>
+          <p>
+            {t('onboardingWizard.debug.isRequired', {
+              defaultValue: 'Is Required: {{value}}',
+              value: REQUIRED_STEPS.includes(currentStep)
+                ? t('common.yes', { defaultValue: 'Yes' })
+                : t('common.no', { defaultValue: 'No' })
+            })}
+          </p>
           <details className="mt-2">
-            <summary className="cursor-pointer">View Data</summary>
+            <summary className="cursor-pointer">
+              {t('onboardingWizard.debug.viewData', {
+                defaultValue: 'View Data'
+              })}
+            </summary>
             <pre className="mt-2 text-xs overflow-auto">
               {JSON.stringify(wizardData, null, 2)}
             </pre>
@@ -478,6 +549,24 @@ export function OnboardingWizard({
         isNextDisabled={!isStepValid() || isLoading}
         isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
         isLoading={isLoading}
+        backLabel={t('common.actions.back', {
+          defaultValue: 'Back'
+        })}
+        skipLabel={t('common.actions.skip', {
+          defaultValue: 'Skip'
+        })}
+        nextLabel={t('common.actions.next', {
+          defaultValue: 'Next'
+        })}
+        finishLabel={t('onboardingWizard.actions.finish', {
+          defaultValue: 'Finish Setup'
+        })}
+        savingLabel={t('onboardingWizard.actions.saving', {
+          defaultValue: 'Saving...'
+        })}
+        completingLabel={t('onboardingWizard.actions.completing', {
+          defaultValue: 'Completing...'
+        })}
       />
     </>
   );
@@ -487,8 +576,16 @@ export function OnboardingWizard({
       <div className="min-h-screen bg-white">
         <div className="mx-auto max-w-5xl px-4 py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Setup Your System</h1>
-            <p className="mt-2 text-lg text-gray-600">Let's get your workspace configured and ready to use.</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {t('onboardingWizard.shell.title', {
+                defaultValue: 'Setup Your System'
+              })}
+            </h1>
+            <p className="mt-2 text-lg text-gray-600">
+              {t('onboardingWizard.shell.description', {
+                defaultValue: 'Let\'s get your workspace configured and ready to use.'
+              })}
+            </p>
           </div>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             {wizardContent}
@@ -499,7 +596,14 @@ export function OnboardingWizard({
   }
 
   return (
-    <Dialog isOpen={open} onClose={() => onOpenChange?.(false)} title="Setup Your System" className="max-w-4xl">
+    <Dialog
+      isOpen={open}
+      onClose={() => onOpenChange?.(false)}
+      title={t('onboardingWizard.shell.title', {
+        defaultValue: 'Setup Your System'
+      })}
+      className="max-w-4xl"
+    >
       <div className="max-h-[90vh] overflow-y-auto">
         {wizardContent}
       </div>

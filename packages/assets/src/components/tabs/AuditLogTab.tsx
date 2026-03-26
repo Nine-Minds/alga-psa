@@ -3,15 +3,17 @@ import useSWR from 'swr';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { getAssetHistory } from '../../actions/assetActions';
 import { formatDateTime } from '@alga-psa/core';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AuditLogTabProps {
   assetId: string;
 }
 
 export const AuditLogTab: React.FC<AuditLogTabProps> = ({ assetId }) => {
+  const { t } = useTranslation('msp/assets');
   const { data: history, isLoading } = useSWR(
     assetId ? ['asset', assetId, 'history'] : null,
-    ([_, id]) => getAssetHistory(id)
+    ([, id]) => getAssetHistory(id)
   );
 
   if (isLoading) {
@@ -21,7 +23,7 @@ export const AuditLogTab: React.FC<AuditLogTabProps> = ({ assetId }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Audit Log</CardTitle>
+        <CardTitle>{t('auditLogTab.title', { defaultValue: 'Audit Log' })}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-6 relative before:absolute before:inset-0 before:left-2 before:h-full before:w-0.5 before:bg-gray-100">
@@ -30,10 +32,18 @@ export const AuditLogTab: React.FC<AuditLogTabProps> = ({ assetId }) => {
               <div className="absolute left-0 top-1 w-4 h-4 rounded-full border-2 border-white bg-gray-400 shadow-sm" />
               <div className="flex flex-col">
                 <h4 className="text-sm font-semibold text-gray-900">
-                  {record.change_type.charAt(0).toUpperCase() + record.change_type.slice(1)}
+                  {t(`auditLogTab.changeTypes.${record.change_type}`, {
+                    defaultValue: record.change_type.charAt(0).toUpperCase() + record.change_type.slice(1)
+                  })}
                 </h4>
                 <p className="text-sm text-gray-500">
-                  Changed by {record.changed_by_name || `user ${record.changed_by}`}
+                  {t('auditLogTab.changedBy', {
+                    defaultValue: 'Changed by {{name}}',
+                    name: record.changed_by_name || t('auditLogTab.userFallback', {
+                      defaultValue: 'user {{id}}',
+                      id: record.changed_by
+                    })
+                  })}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
                   {formatDateTime(new Date(record.changed_at), Intl.DateTimeFormat().resolvedOptions().timeZone)}
@@ -42,7 +52,9 @@ export const AuditLogTab: React.FC<AuditLogTabProps> = ({ assetId }) => {
             </div>
           ))}
           {(!history || history.length === 0) && (
-            <p className="text-sm text-gray-400 text-center py-4">No audit history available.</p>
+            <p className="text-sm text-gray-400 text-center py-4">
+              {t('auditLogTab.empty', { defaultValue: 'No audit history available.' })}
+            </p>
           )}
         </div>
       </CardContent>

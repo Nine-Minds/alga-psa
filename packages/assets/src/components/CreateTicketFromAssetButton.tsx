@@ -13,8 +13,8 @@ import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface CreateTicketFromAssetButtonProps {
     asset: Asset;
@@ -24,9 +24,13 @@ interface CreateTicketFromAssetButtonProps {
 }
 
 export default function CreateTicketFromAssetButton({ asset, defaultBoardId, variant = 'default', size = 'sm' }: CreateTicketFromAssetButtonProps) {
+    const { t } = useTranslation('msp/assets');
     const { createTicketFromAsset, getAllBoards } = useAssetCrossFeature();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [title, setTitle] = useState(`Issue with ${asset.name}`);
+    const [title, setTitle] = useState(() => t('createTicketFromAssetButton.defaultTitle', {
+        defaultValue: 'Issue with {{name}}',
+        name: asset.name
+    }));
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState('');
     const [status, setStatus] = useState('');
@@ -40,14 +44,6 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
     const [isLoadingBoards, setIsLoadingBoards] = useState(false);
     const router = useRouter();
 
-    const updateDialog = useRegisterUIComponent({
-        id: 'create-ticket-dialog',
-        type: 'dialog',
-        label: 'Create Ticket from Asset',
-        title: 'Create Ticket from Asset',
-        open: isDialogOpen
-    });
-
     // Load priorities and boards when dialog opens.
     useEffect(() => {
         if (isDialogOpen) {
@@ -58,7 +54,9 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                         setPriorities(fetchedPriorities);
                     })
                     .catch((error) => {
-                        handleError(error, 'Failed to load priorities');
+                        handleError(error, t('createTicketFromAssetButton.errors.loadPriorities', {
+                            defaultValue: 'Failed to load priorities'
+                        }));
                     })
                     .finally(() => {
                         setIsLoadingPriorities(false);
@@ -85,14 +83,16 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                         }
                     })
                     .catch((error) => {
-                        handleError(error, 'Failed to load boards');
+                        handleError(error, t('createTicketFromAssetButton.errors.loadBoards', {
+                            defaultValue: 'Failed to load boards'
+                        }));
                     })
                     .finally(() => {
                         setIsLoadingBoards(false);
                     });
             }
         }
-    }, [isDialogOpen, priorities.length, boards.length, board, defaultBoardId, getAllBoards]);
+    }, [isDialogOpen, priorities.length, boards.length, board, defaultBoardId, getAllBoards, t]);
 
     useEffect(() => {
         if (!isDialogOpen) {
@@ -129,7 +129,9 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                 if (!cancelled) {
                     setStatuses([]);
                     setStatus('');
-                    handleError(error, 'Failed to load statuses');
+                    handleError(error, t('createTicketFromAssetButton.errors.loadStatuses', {
+                        defaultValue: 'Failed to load statuses'
+                    }));
                 }
             })
             .finally(() => {
@@ -141,7 +143,7 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
         return () => {
             cancelled = true;
         };
-    }, [isDialogOpen, board]);
+    }, [isDialogOpen, board, t]);
 
     const priorityOptions: SelectOption[] = priorities.map((p) => ({
         value: p.priority_id,
@@ -154,10 +156,10 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
     }));
 
     const boardOptions: SelectOption[] = boards
-        .filter((b) => b.board_id && b.board_name)
+        .filter((b): b is IBoard & { board_id: string; board_name: string } => Boolean(b.board_id && b.board_name))
         .map((b) => ({
-            value: b.board_id!,
-            label: b.board_name!
+            value: b.board_id,
+            label: b.board_name
         }));
 
     const handleBoardChange = (nextBoardId: string) => {
@@ -167,7 +169,9 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
 
     const handleSubmit = async () => {
         if (!title.trim() || !priority || !status || !board) {
-            toast.error('Please fill in title, board, status, and priority');
+            toast.error(t('createTicketFromAssetButton.errors.requiredFields', {
+                defaultValue: 'Please fill in title, board, status, and priority'
+            }));
             return;
         }
 
@@ -184,13 +188,17 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                 client_id: asset.client_id
             });
 
-            toast.success('Ticket created successfully');
+            toast.success(t('createTicketFromAssetButton.success.created', {
+                defaultValue: 'Ticket created successfully'
+            }));
             setIsDialogOpen(false);
             
             // Navigate to the new ticket
             router.push(`/msp/tickets/${ticket.ticket_id}`);
         } catch (error) {
-            handleError(error, 'Failed to create ticket');
+            handleError(error, t('createTicketFromAssetButton.errors.createFailed', {
+                defaultValue: 'Failed to create ticket'
+            }));
         } finally {
             setIsSubmitting(false);
         }
@@ -204,60 +212,72 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                 variant={variant}
                 size={size}
             >
-                Create Ticket
+                {t('createTicketFromAssetButton.actions.open', { defaultValue: 'Create Ticket' })}
             </Button>
 
             <Dialog
                 {...withDataAutomationId({ id: 'create-ticket-dialog' })}
                 isOpen={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
-                title="Create Ticket from Asset"
+                title={t('createTicketFromAssetButton.title', { defaultValue: 'Create Ticket from Asset' })}
             >
                 <div {...withDataAutomationId({ id: 'create-ticket-form' })} className="space-y-4">
                     <Input
                         {...withDataAutomationId({ id: 'ticket-title-input' })}
-                        label="Title"
+                        label={t('createTicketFromAssetButton.fields.title', { defaultValue: 'Title' })}
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Enter ticket title"
+                        placeholder={t('createTicketFromAssetButton.placeholders.title', {
+                            defaultValue: 'Enter ticket title'
+                        })}
                     />
 
                     <TextArea
                         {...withDataAutomationId({ id: 'ticket-description-input' })}
-                        label="Description"
+                        label={t('createTicketFromAssetButton.fields.description', { defaultValue: 'Description' })}
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Describe the issue..."
+                        placeholder={t('createTicketFromAssetButton.placeholders.description', {
+                            defaultValue: 'Describe the issue...'
+                        })}
                         rows={4}
                     />
 
                     <CustomSelect
                         {...withDataAutomationId({ id: 'ticket-board-select' })}
-                        label="Board"
+                        label={t('createTicketFromAssetButton.fields.board', { defaultValue: 'Board' })}
                         options={boardOptions}
                         value={board}
                         onValueChange={handleBoardChange}
-                        placeholder={isLoadingBoards ? "Loading boards..." : "Select board..."}
+                        placeholder={isLoadingBoards
+                            ? t('createTicketFromAssetButton.placeholders.loadingBoards', { defaultValue: 'Loading boards...' })
+                            : t('createTicketFromAssetButton.placeholders.selectBoard', { defaultValue: 'Select board...' })}
                         disabled={isLoadingBoards}
                     />
 
                     <CustomSelect
                         {...withDataAutomationId({ id: 'ticket-status-select' })}
-                        label="Status"
+                        label={t('createTicketFromAssetButton.fields.status', { defaultValue: 'Status' })}
                         options={statusOptions}
                         value={status}
                         onValueChange={setStatus}
-                        placeholder={!board ? "Select board first..." : isLoadingStatuses ? "Loading statuses..." : "Select status..."}
+                        placeholder={!board
+                            ? t('createTicketFromAssetButton.placeholders.selectBoardFirst', { defaultValue: 'Select board first...' })
+                            : isLoadingStatuses
+                                ? t('createTicketFromAssetButton.placeholders.loadingStatuses', { defaultValue: 'Loading statuses...' })
+                                : t('createTicketFromAssetButton.placeholders.selectStatus', { defaultValue: 'Select status...' })}
                         disabled={isLoadingStatuses || !board}
                     />
 
                     <CustomSelect
                         {...withDataAutomationId({ id: 'ticket-priority-select' })}
-                        label="Priority"
+                        label={t('createTicketFromAssetButton.fields.priority', { defaultValue: 'Priority' })}
                         options={priorityOptions}
                         value={priority}
                         onValueChange={setPriority}
-                        placeholder={isLoadingPriorities ? "Loading priorities..." : "Select priority..."}
+                        placeholder={isLoadingPriorities
+                            ? t('createTicketFromAssetButton.placeholders.loadingPriorities', { defaultValue: 'Loading priorities...' })
+                            : t('createTicketFromAssetButton.placeholders.selectPriority', { defaultValue: 'Select priority...' })}
                         disabled={isLoadingPriorities}
                     />
 
@@ -268,14 +288,16 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                             onClick={() => setIsDialogOpen(false)}
                             disabled={isSubmitting}
                         >
-                            Cancel
+                            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
                         </Button>
                         <Button
                             {...withDataAutomationId({ id: 'submit-ticket-button' })}
                             onClick={handleSubmit}
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? 'Creating...' : 'Create Ticket'}
+                            {isSubmitting
+                                ? t('createTicketFromAssetButton.actions.creating', { defaultValue: 'Creating...' })
+                                : t('createTicketFromAssetButton.actions.create', { defaultValue: 'Create Ticket' })}
                         </Button>
                     </div>
                 </div>

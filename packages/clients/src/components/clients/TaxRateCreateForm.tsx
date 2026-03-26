@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { addTaxRateAsync, getActiveTaxRegionsAsync } from '../../lib/billingHelpers';
 import { ITaxRegion } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TaxRateCreateFormProps {
     onSuccess: () => Promise<void>; // Callback on successful creation
@@ -15,6 +16,7 @@ interface TaxRateCreateFormProps {
 }
 
 const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onError }) => {
+    const { t } = useTranslation('msp/clients');
     const [regionCode, setRegionCode] = useState('');
     const [percentage, setPercentage] = useState(''); // Store as string for input flexibility
     const [description, setDescription] = useState('');
@@ -39,7 +41,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                 setErrorTaxRegions(null);
             } catch (error) {
                 console.error('Error loading tax regions:', error);
-                setErrorTaxRegions('Failed to load tax regions.');
+                setErrorTaxRegions(t('taxRateCreateForm.loadTaxRegionsError', { defaultValue: 'Failed to load tax regions.' }));
                 setTaxRegions([]);
             } finally {
                 setIsLoadingTaxRegions(false);
@@ -47,35 +49,35 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
         };
         
         fetchTaxRegions();
-    }, []);
+    }, [t]);
 
     const validateForm = () => {
         const validationErrors: string[] = [];
 
         // Validate tax region
         if (!regionCode || regionCode.trim() === '') {
-            validationErrors.push('Tax region is required');
+            validationErrors.push(t('taxRateCreateForm.validation.regionRequired', { defaultValue: 'Tax region is required' }));
         }
 
         // Validate percentage
         const percValue = parseFloat(percentage);
         if (!percentage.trim()) {
-            validationErrors.push('Tax percentage is required');
+            validationErrors.push(t('taxRateCreateForm.validation.percentageRequired', { defaultValue: 'Tax percentage is required' }));
         } else if (isNaN(percValue)) {
-            validationErrors.push('Tax percentage must be a valid number');
+            validationErrors.push(t('taxRateCreateForm.validation.percentageNumber', { defaultValue: 'Tax percentage must be a valid number' }));
         } else if (percValue < 0) {
-            validationErrors.push('Tax percentage cannot be negative');
+            validationErrors.push(t('taxRateCreateForm.validation.percentageNonNegative', { defaultValue: 'Tax percentage cannot be negative' }));
         } else if (percValue > 100) {
-            validationErrors.push('Tax percentage cannot exceed 100%');
+            validationErrors.push(t('taxRateCreateForm.validation.percentageMax', { defaultValue: 'Tax percentage cannot exceed 100%' }));
         }
 
         // Validate start date
         if (!startDate || startDate.trim() === '') {
-            validationErrors.push('Start date is required');
+            validationErrors.push(t('taxRateCreateForm.validation.startDateRequired', { defaultValue: 'Start date is required' }));
         } else {
             const startDateObj = new Date(startDate);
             if (isNaN(startDateObj.getTime())) {
-                validationErrors.push('Start date must be a valid date');
+                validationErrors.push(t('taxRateCreateForm.validation.startDateValid', { defaultValue: 'Start date must be a valid date' }));
             }
         }
 
@@ -85,15 +87,15 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
             const startDateObj = new Date(startDate);
 
             if (isNaN(endDateObj.getTime())) {
-                validationErrors.push('End date must be a valid date');
+                validationErrors.push(t('taxRateCreateForm.validation.endDateValid', { defaultValue: 'End date must be a valid date' }));
             } else if (startDate && endDateObj <= startDateObj) {
-                validationErrors.push('End date must be after start date');
+                validationErrors.push(t('taxRateCreateForm.validation.endDateAfterStart', { defaultValue: 'End date must be after start date' }));
             }
         }
 
         // Validate description length
         if (description && description.trim().length > 255) {
-            validationErrors.push('Description cannot exceed 255 characters');
+            validationErrors.push(t('taxRateCreateForm.validation.descriptionLength', { defaultValue: 'Description cannot exceed 255 characters' }));
         }
 
         return validationErrors;
@@ -109,7 +111,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
     const handleRegionCodeChange = (value: string) => {
         setRegionCode(value);
         if (hasAttemptedSubmit && value.trim() !== '') {
-            setValidationErrors(prev => prev.filter(error => !error.includes('Tax region')));
+            setValidationErrors(prev => prev.filter(error => !error.includes(t('taxRateCreateForm.validation.regionRequired', { defaultValue: 'Tax region is required' }))));
         }
     };
 
@@ -118,7 +120,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
         if (hasAttemptedSubmit && value.trim() !== '') {
             const percValue = parseFloat(value);
             if (!isNaN(percValue) && percValue >= 0 && percValue <= 100) {
-                setValidationErrors(prev => prev.filter(error => !error.includes('percentage')));
+                setValidationErrors(prev => prev.filter(error => !error.includes(t('taxRateCreateForm.validation.percentage', { defaultValue: 'percentage' }))));
             }
         }
     };
@@ -126,7 +128,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
     const handleDescriptionChange = (value: string) => {
         setDescription(value);
         if (hasAttemptedSubmit && value.trim().length <= 255) {
-            setValidationErrors(prev => prev.filter(error => !error.includes('Description')));
+            setValidationErrors(prev => prev.filter(error => !error.includes(t('taxRateCreateForm.validation.description', { defaultValue: 'Description' }))));
         }
     };
 
@@ -154,7 +156,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
             });
             await onSuccess(); // Call parent success handler
         } catch (error) {
-            onError(error instanceof Error ? error : new Error('An unknown error occurred'));
+            onError(error instanceof Error ? error : new Error(t('taxRateCreateForm.unknownError', { defaultValue: 'An unknown error occurred' })));
         } finally {
             setIsSubmitting(false);
         }
@@ -165,7 +167,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
             {hasAttemptedSubmit && validationErrors.length > 0 && (
                 <Alert variant="destructive" className="mb-4">
                     <AlertDescription>
-                        <p className="font-medium mb-2">Please fill in the required fields:</p>
+                        <p className="font-medium mb-2">{t('taxRateCreateForm.validationHeader', { defaultValue: 'Please fill in the required fields:' })}</p>
                         <ul className="list-disc list-inside space-y-1">
                             {validationErrors.map((err, index) => (
                                 <li key={index}>{err}</li>
@@ -178,44 +180,44 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                 <p className="text-red-600 text-sm">{errorTaxRegions}</p>
             )}
             <div>
-                <Label htmlFor="tax-rate-region">Tax Region *</Label>
+                <Label htmlFor="tax-rate-region">{t('taxRateCreateForm.regionLabel', { defaultValue: 'Tax Region *' })}</Label>
                 <CustomSelect
                     id="tax-rate-region"
                     value={regionCode}
                     onValueChange={handleRegionCodeChange}
                     options={taxRegions.map(r => ({ value: r.region_code, label: r.region_name }))}
-                    placeholder={isLoadingTaxRegions ? "Loading regions..." : "Select Tax Region *"}
+                    placeholder={isLoadingTaxRegions ? t('taxRateCreateForm.loadingRegions', { defaultValue: 'Loading regions...' }) : t('taxRateCreateForm.selectRegion', { defaultValue: 'Select Tax Region *' })}
                     disabled={isSubmitting || isLoadingTaxRegions}
                     required={true}
                     className={hasAttemptedSubmit && !regionCode ? 'ring-1 ring-red-500' : ''}
                 />
             </div>
             <div>
-                <Label htmlFor="tax-rate-percentage">Percentage (%) *</Label>
+                <Label htmlFor="tax-rate-percentage">{t('taxRateCreateForm.percentageLabel', { defaultValue: 'Percentage (%) *' })}</Label>
                 <Input
                     id="tax-rate-percentage"
                     type="number"
                     step="0.01" // Allow decimals
                     value={percentage}
                     onChange={(e) => handlePercentageChange(e.target.value)}
-                    placeholder="e.g., 8.25 *"
+                    placeholder={t('taxRateCreateForm.percentagePlaceholder', { defaultValue: 'e.g., 8.25 *' })}
                     disabled={isSubmitting}
                     required
                     className={hasAttemptedSubmit && (!percentage.trim() || parseFloat(percentage) <= 0 || parseFloat(percentage) > 100) ? 'border-red-500' : ''}
                 />
             </div>
             <div>
-                <Label htmlFor="tax-rate-description">Description (Optional)</Label>
+                <Label htmlFor="tax-rate-description">{t('taxRateCreateForm.descriptionLabel', { defaultValue: 'Description (Optional)' })}</Label>
                 <Input
                     id="tax-rate-description"
                     value={description}
                     onChange={(e) => handleDescriptionChange(e.target.value)}
-                    placeholder="e.g., California State Tax"
+                    placeholder={t('taxRateCreateForm.descriptionPlaceholder', { defaultValue: 'e.g., California State Tax' })}
                     disabled={isSubmitting}
                 />
             </div>
             <div>
-                <Label htmlFor="tax-rate-start-date">Start Date *</Label>
+                <Label htmlFor="tax-rate-start-date">{t('taxRateCreateForm.startDateLabel', { defaultValue: 'Start Date *' })}</Label>
                 <Input
                     id="tax-rate-start-date"
                     type="date"
@@ -230,7 +232,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                 />
             </div>
             <div>
-                <Label htmlFor="tax-rate-end-date">End Date (Optional)</Label>
+                <Label htmlFor="tax-rate-end-date">{t('taxRateCreateForm.endDateLabel', { defaultValue: 'End Date (Optional)' })}</Label>
                 <Input
                     id="tax-rate-end-date"
                     type="date"
@@ -250,14 +252,14 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                     const closeButton = document.querySelector('button[aria-label="Close"]') as HTMLElement | null;
                     closeButton?.click();
                     // If that doesn't work, the parent's onOpenChange(false) should handle it
-                }} disabled={isSubmitting}>Cancel</Button>
+                }} disabled={isSubmitting}>{t('taxRateCreateForm.cancel', { defaultValue: 'Cancel' })}</Button>
                 <Button 
                     id="submit-create-tax-rate-button" 
                     type="submit" 
                     disabled={isSubmitting}
                     className={!regionCode || !percentage.trim() || !startDate ? 'opacity-50' : ''}
                 >
-                    {isSubmitting ? 'Creating...' : 'Create Tax Rate'}
+                    {isSubmitting ? t('taxRateCreateForm.creating', { defaultValue: 'Creating...' }) : t('taxRateCreateForm.create', { defaultValue: 'Create Tax Rate' })}
                 </Button>
             </div>
         </form>

@@ -8,6 +8,7 @@ import {
   X, 
   HelpCircle 
 } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export type StatusBadgeStatus = 'online' | 'offline' | 'healthy' | 'warning' | 'critical' | 'unknown' | 'secure' | 'at_risk' | 'active' | 'expiring_soon' | 'expired';
 // Note: 'overdue' is distinct from 'offline' for Tactical RMM and other providers that support it.
@@ -28,38 +29,20 @@ const getStatusConfig = (status: StatusBadgeStatus | RmmConnectivityStatus) => {
     case 'healthy':
     case 'secure':
     case 'active':
-      return { variant: 'success' as const, icon: Check, label: 'Healthy' };
+      return { variant: 'success' as const, icon: Check };
     case 'overdue':
-      return { variant: 'warning' as const, icon: AlertTriangle, label: 'Overdue' };
+      return { variant: 'warning' as const, icon: AlertTriangle };
     case 'warning':
     case 'at_risk':
     case 'expiring_soon':
-      return { variant: 'warning' as const, icon: AlertTriangle, label: 'Warning' };
+      return { variant: 'warning' as const, icon: AlertTriangle };
     case 'critical':
     case 'expired':
     case 'offline':
-      return { variant: 'error' as const, icon: X, label: 'Critical' };
+      return { variant: 'error' as const, icon: X };
     case 'unknown':
     default:
-      return { variant: 'default-muted' as const, icon: HelpCircle, label: 'Unknown' };
-  }
-};
-
-const getStatusLabel = (status: StatusBadgeStatus | RmmConnectivityStatus) => {
-  switch (status) {
-    case 'online': return 'Online';
-    case 'offline': return 'Offline';
-    case 'overdue': return 'Overdue';
-    case 'healthy': return 'Healthy';
-    case 'warning': return 'Warning';
-    case 'critical': return 'Critical';
-    case 'unknown': return 'Unknown';
-    case 'secure': return 'Secure';
-    case 'at_risk': return 'At Risk';
-    case 'active': return 'Active';
-    case 'expiring_soon': return 'Expiring Soon';
-    case 'expired': return 'Expired';
-    default: return status;
+      return { variant: 'default-muted' as const, icon: HelpCircle };
   }
 };
 
@@ -71,8 +54,15 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   tooltip,
   className 
 }) => {
+  const { t } = useTranslation('msp/assets');
   const config = getStatusConfig(status);
-  const label = getStatusLabel(status);
+  const label = t(`statusBadge.statuses.${status}`, {
+    defaultValue: status === 'at_risk'
+      ? 'At Risk'
+      : status === 'expiring_soon'
+        ? 'Expiring Soon'
+        : status.charAt(0).toUpperCase() + status.slice(1)
+  });
   const Icon = config.icon;
 
   const content = (

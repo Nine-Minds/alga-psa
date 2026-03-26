@@ -12,8 +12,10 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
 import { getAvailableRoles, addSingleTeamMember } from '@alga-psa/onboarding/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {
+  const { t } = useTranslation('msp/onboarding');
   const [licenseInfo, setLicenseInfo] = useState<{
     limit: number;
     current: number;
@@ -27,6 +29,11 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
   const [saveErrors, setSaveErrors] = useState<Record<number, string>>({});
   const [hasUnsavedForm, setHasUnsavedForm] = useState(false);
   const [showPasswords, setShowPasswords] = useState<Record<number, boolean>>({});
+
+  const translateRoleLabel = (value: string, fallback?: string) =>
+    t(`teamMembersStep.roles.${value}`, {
+      defaultValue: fallback || value
+    });
 
   useEffect(() => {
     checkLicenseStatus();
@@ -54,24 +61,29 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
       const result = await getAvailableRoles();
       
       if (result.success && result.data) {
-        setRoleOptions(result.data);
+        setRoleOptions(
+          result.data.map((role) => ({
+            value: role.value,
+            label: translateRoleLabel(role.value, role.label)
+          }))
+        );
       } else {
         // Fallback to default roles if fetch fails
         setRoleOptions([
-          { value: 'admin', label: 'Admin' },
-          { value: 'technician', label: 'Technician' },
-          { value: 'manager', label: 'Manager' },
-          { value: 'user', label: 'User' }
+          { value: 'admin', label: translateRoleLabel('admin', 'Admin') },
+          { value: 'technician', label: translateRoleLabel('technician', 'Technician') },
+          { value: 'manager', label: translateRoleLabel('manager', 'Manager') },
+          { value: 'user', label: translateRoleLabel('user', 'User') }
         ]);
       }
     } catch (error) {
       console.error('Error fetching roles:', error);
       // Fallback to default roles
       setRoleOptions([
-        { value: 'admin', label: 'Admin' },
-        { value: 'technician', label: 'Technician' },
-        { value: 'manager', label: 'Manager' },
-        { value: 'user', label: 'User' }
+        { value: 'admin', label: translateRoleLabel('admin', 'Admin') },
+        { value: 'technician', label: translateRoleLabel('technician', 'Technician') },
+        { value: 'manager', label: translateRoleLabel('manager', 'Manager') },
+        { value: 'user', label: translateRoleLabel('user', 'User') }
       ]);
     } finally {
       setIsLoadingRoles(false);
@@ -102,10 +114,21 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
           
           let message: string | undefined = undefined;
           if (!canAddMore) {
-            message = `License limit reached (${actualCurrent}/${limit}). Contact support to increase your license limit.`;
+            message = t('teamMembersStep.license.limitReached', {
+              defaultValue: 'License limit reached ({{current}}/{{limit}}). Contact support to increase your license limit.',
+              current: actualCurrent,
+              limit
+            });
           } else {
             const canAdd = limit - actualCurrent;
-            message = `You can add ${canAdd} more team member${canAdd !== 1 ? 's' : ''}.`;
+            message = canAdd === 1
+              ? t('teamMembersStep.license.remaining.one', {
+                  defaultValue: 'You can add 1 more team member.'
+                })
+              : t('teamMembersStep.license.remaining.other', {
+                  defaultValue: 'You can add {{count}} more team members.',
+                  count: canAdd
+                });
           }
           
           setLicenseInfo({ 
@@ -132,20 +155,26 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
     
     // Validate fields
     if (!member.firstName || !member.lastName || !member.email || !member.password) {
-      setSaveErrors(prev => ({ ...prev, [index]: 'Please fill in all required fields including password' }));
+      setSaveErrors(prev => ({ ...prev, [index]: t('teamMembersStep.errors.requiredFields', {
+        defaultValue: 'Please fill in all required fields including password'
+      }) }));
       return;
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(member.email)) {
-      setSaveErrors(prev => ({ ...prev, [index]: 'Please enter a valid email address' }));
+      setSaveErrors(prev => ({ ...prev, [index]: t('teamMembersStep.errors.invalidEmail', {
+        defaultValue: 'Please enter a valid email address'
+      }) }));
       return;
     }
 
     // Validate password strength (at least 8 characters)
     if (member.password.length < 8) {
-      setSaveErrors(prev => ({ ...prev, [index]: 'Password must be at least 8 characters long' }));
+      setSaveErrors(prev => ({ ...prev, [index]: t('teamMembersStep.errors.passwordLength', {
+        defaultValue: 'Password must be at least 8 characters long'
+      }) }));
       return;
     }
 
@@ -165,12 +194,16 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         // Re-check license status
         await checkLicenseStatus();
       } else {
-        setSaveErrors(prev => ({ ...prev, [index]: result.error || 'Failed to save team member' }));
+        setSaveErrors(prev => ({ ...prev, [index]: result.error || t('teamMembersStep.errors.saveFailed', {
+          defaultValue: 'Failed to save team member'
+        }) }));
       }
     } catch (error) {
       setSaveErrors(prev => ({ 
         ...prev, 
-        [index]: error instanceof Error ? error.message : 'An error occurred' 
+        [index]: error instanceof Error ? error.message : t('teamMembersStep.errors.generic', {
+          defaultValue: 'An error occurred'
+        })
       }));
     } finally {
       setSavingMemberIndex(null);
@@ -211,9 +244,15 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-xl font-semibold">Invite Team Members</h2>
+        <h2 className="text-xl font-semibold">
+          {t('teamMembersStep.header.title', {
+            defaultValue: 'Invite Team Members'
+          })}
+        </h2>
         <p className="text-sm text-gray-600">
-          Add your team members to get them started. You can skip this step and add them later.
+          {t('teamMembersStep.header.description', {
+            defaultValue: 'Add your team members to get them started. You can skip this step and add them later.'
+          })}
         </p>
       </div>
 
@@ -222,10 +261,20 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         <Alert variant="success">
           <AlertDescription>
             <p className="font-medium">
-              {data.createdTeamMemberEmails.length} team member{data.createdTeamMemberEmails.length > 1 ? 's' : ''} created successfully!
+              {data.createdTeamMemberEmails.length === 1
+                ? t('teamMembersStep.created.titleOne', {
+                    defaultValue: '1 team member created successfully!'
+                  })
+                : t('teamMembersStep.created.titleOther', {
+                    defaultValue: '{{count}} team members created successfully!',
+                    count: data.createdTeamMemberEmails.length
+                  })}
             </p>
             <p className="text-sm mt-1">
-              Created users: {data.createdTeamMemberEmails.join(', ')}
+              {t('teamMembersStep.created.users', {
+                defaultValue: 'Created users: {{users}}',
+                users: data.createdTeamMemberEmails.join(', ')
+              })}
             </p>
           </AlertDescription>
         </Alert>
@@ -242,8 +291,15 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
           <AlertDescription>
             <div className="font-medium">
               {licenseInfo.limit === Infinity
-                ? `Users: ${licenseInfo.current} (No limit)`
-                : `Users: ${licenseInfo.current}/${licenseInfo.limit}`
+                ? t('teamMembersStep.license.summary.noLimit', {
+                    defaultValue: 'Users: {{count}} (No limit)',
+                    count: licenseInfo.current
+                  })
+                : t('teamMembersStep.license.summary.limited', {
+                    defaultValue: 'Users: {{current}}/{{limit}}',
+                    current: licenseInfo.current,
+                    limit: licenseInfo.limit
+                  })
               }
             </div>
             {licenseInfo.message && (
@@ -267,10 +323,17 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         }`}>
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <h3 className="font-medium">Team Member {index + 1}</h3>
+              <h3 className="font-medium">
+                {t('teamMembersStep.member.title', {
+                  defaultValue: 'Team Member {{index}}',
+                  index: index + 1
+                })}
+              </h3>
               {isAlreadyCreated && (
                 <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success">
-                  Created
+                  {t('teamMembersStep.member.createdBadge', {
+                    defaultValue: 'Created'
+                  })}
                 </span>
               )}
             </div>
@@ -284,7 +347,13 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                   onClick={() => saveMember(index)}
                   disabled={isSaving}
                 >
-                  {isSaving ? 'Saving...' : 'Save'}
+                  {isSaving
+                    ? t('teamMembersStep.member.actions.saving', {
+                        defaultValue: 'Saving...'
+                      })
+                    : t('teamMembersStep.member.actions.save', {
+                        defaultValue: 'Save'
+                      })}
                 </Button>
               )}
               {data.teamMembers.length > 1 && (
@@ -304,21 +373,33 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>First Name</Label>
+              <Label>
+                {t('teamMembersStep.fields.firstName.label', {
+                  defaultValue: 'First Name'
+                })}
+              </Label>
               <Input
                 value={member.firstName}
                 onChange={(e) => updateTeamMember(index, 'firstName', e.target.value)}
-                placeholder="Jane"
+                placeholder={t('teamMembersStep.fields.firstName.placeholder', {
+                  defaultValue: 'Jane'
+                })}
                 disabled={isAlreadyCreated}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Last Name</Label>
+              <Label>
+                {t('teamMembersStep.fields.lastName.label', {
+                  defaultValue: 'Last Name'
+                })}
+              </Label>
               <Input
                 value={member.lastName}
                 onChange={(e) => updateTeamMember(index, 'lastName', e.target.value)}
-                placeholder="Smith"
+                placeholder={t('teamMembersStep.fields.lastName.placeholder', {
+                  defaultValue: 'Smith'
+                })}
                 disabled={isAlreadyCreated}
               />
             </div>
@@ -326,19 +407,29 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label>
+                {t('teamMembersStep.fields.email.label', {
+                  defaultValue: 'Email'
+                })}
+              </Label>
               <Input
                 type="email"
                 value={member.email}
                 onChange={(e) => updateTeamMember(index, 'email', e.target.value)}
-                placeholder="jane@client.com"
+                placeholder={t('teamMembersStep.fields.email.placeholder', {
+                  defaultValue: 'jane@client.com'
+                })}
                 disabled={isAlreadyCreated}
                 autoComplete="off"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Role</Label>
+              <Label>
+                {t('teamMembersStep.fields.role.label', {
+                  defaultValue: 'Role'
+                })}
+              </Label>
               <CustomSelect
                 value={member.role}
                 onValueChange={(value) => updateTeamMember(index, 'role', value)}
@@ -350,13 +441,19 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
           {!isAlreadyCreated && (
             <div className="space-y-2">
-              <Label>Temporary Password</Label>
+              <Label>
+                {t('teamMembersStep.fields.password.label', {
+                  defaultValue: 'Temporary Password'
+                })}
+              </Label>
               <div className="relative">
                 <Input
                   type={showPasswords[index] ? "text" : "password"}
                   value={member.password || ''}
                   onChange={(e) => updateTeamMember(index, 'password', e.target.value)}
-                  placeholder="Set temporary password"
+                  placeholder={t('teamMembersStep.fields.password.placeholder', {
+                    defaultValue: 'Set temporary password'
+                  })}
                   disabled={isAlreadyCreated}
                   className="pr-10"
                   autoComplete="new-password"
@@ -375,7 +472,9 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 </button>
               </div>
               <p className="text-xs text-gray-500">
-                The user will need to change this password on first login
+                {t('teamMembersStep.fields.password.help', {
+                  defaultValue: 'The user will need to change this password on first login'
+                })}
               </p>
             </div>
           )}
@@ -398,14 +497,28 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         className="w-full"
       >
         <Plus className="w-4 h-4 mr-2" />
-        {hasUnsavedForm ? 'Save Current Team Member First' : 'Add Another Team Member'}
+        {hasUnsavedForm
+          ? t('teamMembersStep.actions.saveCurrentFirst', {
+              defaultValue: 'Save Current Team Member First'
+            })
+          : t('teamMembersStep.actions.addAnother', {
+              defaultValue: 'Add Another Team Member'
+            })}
       </Button>
 
       {hasUnsavedForm && (
         <Alert variant="warning">
           <AlertDescription>
-            <p className="font-medium">Unsaved team member</p>
-            <p className="text-xs mt-1">Please save the current team member before adding a new one.</p>
+            <p className="font-medium">
+              {t('teamMembersStep.unsaved.title', {
+                defaultValue: 'Unsaved team member'
+              })}
+            </p>
+            <p className="text-xs mt-1">
+              {t('teamMembersStep.unsaved.description', {
+                defaultValue: 'Please save the current team member before adding a new one.'
+              })}
+            </p>
           </AlertDescription>
         </Alert>
       )}
@@ -413,15 +526,30 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
       {licenseInfo && !licenseInfo.allowed && !hasUnsavedForm && (
         <Alert variant="destructive">
           <AlertDescription>
-            <p className="font-medium">User limit reached</p>
-            <p className="text-xs mt-1">You've reached the maximum number of users for your current plan. Contact support to increase your limit.</p>
+            <p className="font-medium">
+              {t('teamMembersStep.limitReached.title', {
+                defaultValue: 'User limit reached'
+              })}
+            </p>
+            <p className="text-xs mt-1">
+              {t('teamMembersStep.limitReached.description', {
+                defaultValue: 'You\'ve reached the maximum number of users for your current plan. Contact support to increase your limit.'
+              })}
+            </p>
           </AlertDescription>
         </Alert>
       )}
 
       <Alert variant="info">
         <AlertDescription>
-          <span className="font-semibold">Optional:</span> You can skip this step and invite team members later from the settings page.
+          <span className="font-semibold">
+            {t('teamMembersStep.optional.label', {
+              defaultValue: 'Optional:'
+            })}
+          </span>{' '}
+          {t('teamMembersStep.optional.description', {
+            defaultValue: 'You can skip this step and invite team members later from the settings page.'
+          })}
         </AlertDescription>
       </Alert>
     </div>

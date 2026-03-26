@@ -21,13 +21,13 @@ import type { Asset } from '@alga-psa/types';
 import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 import { RemoteAccessButton } from './RemoteAccessButton';
 import { getRmmProviderDisplayName } from '../lib/rmmProviderDisplay';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { 
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel
+  DropdownMenuSeparator
 } from '@alga-psa/ui/components/DropdownMenu';
 
 interface AssetDetailHeaderProps {
@@ -52,6 +52,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
   onRefresh,
   isRefreshing 
 }) => {
+  const { t } = useTranslation('msp/assets');
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const { mutate } = useSWRConfig();
   const { renderQuickAddTicket } = useAssetCrossFeature();
@@ -71,7 +72,9 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
           <BackNav href="/msp/assets">
             <div className="flex items-center gap-2">
               <ArrowLeft size={16} />
-              <span className="hidden sm:inline">Back to Assets</span>
+              <span className="hidden sm:inline">
+                {t('assetDetailHeader.backToAssets', { defaultValue: 'Back to Assets' })}
+              </span>
             </div>
           </BackNav>
           <div className="h-10 w-px bg-gray-200 mx-2 hidden md:block" />
@@ -90,7 +93,10 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
               )}
             </div>
             <p className="text-sm text-gray-500 mt-1">
-              Asset Tag: {asset.asset_tag}
+              {t('assetDetailHeader.assetTag', {
+                defaultValue: 'Asset Tag: {{tag}}',
+                tag: asset.asset_tag
+              })}
             </p>
           </div>
         </div>
@@ -109,7 +115,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
             className="bg-white hover:bg-gray-50 text-gray-700 border-gray-300 flex items-center gap-2"
             onClick={() => setIsTicketDialogOpen(true)}
           >
-            Create Ticket
+            {t('assetDetailHeader.actions.createTicket', { defaultValue: 'Create Ticket' })}
           </Button>
 
           <DropdownMenu>
@@ -119,33 +125,37 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
                 variant="outline" 
                 className="bg-white hover:bg-gray-50 text-gray-700 border-gray-300 flex items-center gap-2 px-3"
               >
-                Actions
+                {t('assetDetailHeader.actions.menu', { defaultValue: 'Actions' })}
                 <MoreVertical size={16} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <div className="px-2 py-1.5 text-sm font-semibold text-gray-900">Actions</div>
+              <div className="px-2 py-1.5 text-sm font-semibold text-gray-900">
+                {t('assetDetailHeader.actions.menu', { defaultValue: 'Actions' })}
+              </div>
               {asset.rmm_provider && (
                 <>
                   <DropdownMenuItem onClick={onRefresh} disabled={isRefreshing}>
                     <RefreshCw className="mr-2 h-4 w-4" />
-                    {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                    {isRefreshing
+                      ? t('assetDetailHeader.actions.refreshing', { defaultValue: 'Refreshing...' })
+                      : t('assetDetailHeader.actions.refreshData', { defaultValue: 'Refresh Data' })}
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Power className="mr-2 h-4 w-4" />
-                    Reboot Device
+                    {t('assetDetailHeader.actions.rebootDevice', { defaultValue: 'Reboot Device' })}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
               <DropdownMenuItem>
                 <Edit className="mr-2 h-4 w-4" />
-                Edit Asset
+                {t('assetDetailHeader.actions.editAsset', { defaultValue: 'Edit Asset' })}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-red-600 focus:text-red-600">
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete Asset
+                {t('assetDetailHeader.actions.deleteAsset', { defaultValue: 'Delete Asset' })}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -158,7 +168,9 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
         onTicketAdded: handleTicketAdded,
         prefilledClient: asset.client_id ? {
           id: asset.client_id,
-          name: asset.client?.client_name || 'Unknown Client'
+          name: asset.client?.client_name || t('assetDetailHeader.values.unknownClient', {
+            defaultValue: 'Unknown Client'
+          })
         } : undefined,
         assetId: asset.asset_id,
       })}

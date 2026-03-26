@@ -5,6 +5,7 @@ import { RefreshCw, WifiOff } from 'lucide-react';
 import type { RmmCachedData } from '@alga-psa/types';
 import { StatusBadge } from '../shared/StatusBadge';
 import { formatRelativeDateTime } from '@alga-psa/core';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface RmmVitalsPanelProps {
   data: RmmCachedData | null | undefined;
@@ -28,12 +29,20 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
   onRefresh,
   isRefreshing
 }) => {
+  const { t } = useTranslation('msp/assets');
   const formatUptime = (seconds: number | null) => {
-    if (!seconds) return 'N/A';
+    if (!seconds) {
+      return t('common.states.na', { defaultValue: 'N/A' });
+    }
     const days = Math.floor(seconds / (3600 * 24));
     const hours = Math.floor((seconds % (3600 * 24)) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    return `${days} days, ${hours} hours, ${minutes} minutes`;
+    return t('rmmVitalsPanel.uptime', {
+      defaultValue: '{{days}} days, {{hours}} hours, {{minutes}} minutes',
+      days,
+      hours,
+      minutes
+    });
   };
 
   if (isLoading) {
@@ -44,12 +53,14 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
     return (
       <Card className="bg-white">
         <CardHeader>
-          <CardTitle>RMM Vitals</CardTitle>
+          <CardTitle>{t('rmmVitalsPanel.empty.title', { defaultValue: 'RMM Vitals' })}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center h-48 text-gray-400">
             <WifiOff size={48} className="mb-2" />
-            <span className="text-sm">Not connected to RMM</span>
+            <span className="text-sm">
+              {t('rmmVitalsPanel.empty.notConnected', { defaultValue: 'Not connected to RMM' })}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -60,7 +71,9 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
     <Card className="bg-white">
       <CardHeader className="pb-2">
         <div className="flex flex-row items-center justify-between">
-          <CardTitle>RMM Vitals & Connectivity</CardTitle>
+          <CardTitle>
+            {t('rmmVitalsPanel.title', { defaultValue: 'RMM Vitals & Connectivity' })}
+          </CardTitle>
           <Button 
             id="refresh-rmm-vitals-btn"
             variant="ghost" 
@@ -74,41 +87,54 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
             ) : (
               <RefreshCw size={14} />
             )}
-            Refresh
+            {t('rmmVitalsPanel.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
         </div>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-2">
           <VitalRow 
-            label="Agent Status" 
+            label={t('rmmVitalsPanel.fields.agentStatus', { defaultValue: 'Agent Status' })}
             value={
               <div className="flex items-center gap-2">
                 <StatusBadge status={(data.agent_status as any) || 'unknown'} size="sm" showIcon={false} />
                 {data.last_check_in && (
                   <span className="text-sm text-gray-500">
-                    (Last check-in: {formatRelativeDateTime(new Date(data.last_check_in), Intl.DateTimeFormat().resolvedOptions().timeZone)})
+                    {t('rmmVitalsPanel.fields.lastCheckIn', {
+                      defaultValue: '(Last check-in: {{value}})',
+                      value: formatRelativeDateTime(new Date(data.last_check_in), Intl.DateTimeFormat().resolvedOptions().timeZone)
+                    })}
                   </span>
                 )}
               </div>
             } 
           />
 
-          <VitalRow label="Current User" value={data.current_user || 'None'} />
+          <VitalRow
+            label={t('rmmVitalsPanel.fields.currentUser', { defaultValue: 'Current User' })}
+            value={data.current_user || t('common.states.none', { defaultValue: 'None' })}
+          />
           
-          <VitalRow label="Uptime" value={formatUptime(data.uptime_seconds)} />
+          <VitalRow
+            label={t('rmmVitalsPanel.fields.uptime', { defaultValue: 'Uptime' })}
+            value={formatUptime(data.uptime_seconds)}
+          />
           
           <VitalRow 
-            label="Last RMM Sync" 
+            label={t('rmmVitalsPanel.fields.lastSync', { defaultValue: 'Last RMM Sync' })}
             value={data.last_rmm_sync_at 
               ? formatRelativeDateTime(new Date(data.last_rmm_sync_at), Intl.DateTimeFormat().resolvedOptions().timeZone) 
-              : 'Never'
+              : t('rmmVitalsPanel.values.never', { defaultValue: 'Never' })
             } 
           />
 
           <VitalRow 
-            label="Network" 
-            value={`LAN IP: ${data.lan_ip || 'N/A'}  |  WAN IP: ${data.wan_ip || 'N/A'}`} 
+            label={t('rmmVitalsPanel.fields.network', { defaultValue: 'Network' })}
+            value={t('rmmVitalsPanel.fields.networkValue', {
+              defaultValue: 'LAN IP: {{lan}} | WAN IP: {{wan}}',
+              lan: data.lan_ip || t('common.states.na', { defaultValue: 'N/A' }),
+              wan: data.wan_ip || t('common.states.na', { defaultValue: 'N/A' })
+            })}
           />
         </div>
       </CardContent>

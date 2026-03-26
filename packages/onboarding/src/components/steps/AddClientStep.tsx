@@ -8,8 +8,10 @@ import { Label } from '@alga-psa/ui/components/Label';
 import type { StepProps } from '@alga-psa/types';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function AddClientStep({ data, updateData }: StepProps) {
+  const { t } = useTranslation('msp/onboarding');
   const isClientCreated = !!data.clientId;
   const [emailError, setEmailError] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -29,12 +31,14 @@ export function AddClientStep({ data, updateData }: StepProps) {
     if (email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        setEmailError('Please enter a valid email address');
+        setEmailError(t('addClientStep.validation.email.invalid', {
+          defaultValue: 'Please enter a valid email address'
+        }));
       } else {
         setEmailError(null);
       }
     }
-  }, [data.clientEmail, hasInteractedWithEmail]);
+  }, [data.clientEmail, hasInteractedWithEmail, t]);
 
   // URL validation - simplified
   useEffect(() => {
@@ -50,14 +54,18 @@ export function AddClientStep({ data, updateData }: StepProps) {
       const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,})([\/\w \.-]*)*\/?$/i;
       
       if (!url.includes('.')) {
-        setUrlError('Please enter a valid website (e.g., example.com)');
+        setUrlError(t('addClientStep.validation.website.example', {
+          defaultValue: 'Please enter a valid website (e.g., example.com)'
+        }));
       } else if (!urlPattern.test(url)) {
-        setUrlError('Please enter a valid website format');
+        setUrlError(t('addClientStep.validation.website.format', {
+          defaultValue: 'Please enter a valid website format'
+        }));
       } else {
         setUrlError(null);
       }
     }
-  }, [data.clientUrl, hasInteractedWithUrl]);
+  }, [data.clientUrl, hasInteractedWithUrl, t]);
 
   // Phone validation - light validation
   useEffect(() => {
@@ -73,33 +81,52 @@ export function AddClientStep({ data, updateData }: StepProps) {
       
       // Check length (7-20 characters to accommodate letters)
       if (cleanedPhone.length < 7) {
-        setPhoneError('Phone number seems too short');
+        setPhoneError(t('addClientStep.validation.phone.tooShort', {
+          defaultValue: 'Phone number seems too short'
+        }));
       } else if (cleanedPhone.length > 20) {
-        setPhoneError('Phone number seems too long');
+        setPhoneError(t('addClientStep.validation.phone.tooLong', {
+          defaultValue: 'Phone number seems too long'
+        }));
       } else if (!/^[a-zA-Z0-9]+$/.test(cleanedPhone)) {
         // Only allow letters and numbers after removing formatting
-        setPhoneError('Phone number contains invalid characters');
+        setPhoneError(t('addClientStep.validation.phone.invalidCharacters', {
+          defaultValue: 'Phone number contains invalid characters'
+        }));
       } else {
         setPhoneError(null);
       }
     }
-  }, [data.clientPhone, hasInteractedWithPhone]);
+  }, [data.clientPhone, hasInteractedWithPhone, t]);
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-xl font-semibold">Add Your First Client</h2>
+        <h2 className="text-xl font-semibold">
+          {t('addClientStep.header.title', {
+            defaultValue: 'Add Your First Client'
+          })}
+        </h2>
         <p className="text-sm text-gray-600">
-          Let's add your first client to get started. You can skip this and add clients later.
+          {t('addClientStep.header.description', {
+            defaultValue: 'Let\'s add your first client to get started. You can skip this and add clients later.'
+          })}
         </p>
       </div>
 
       {isClientCreated && (
         <Alert variant="success">
           <AlertDescription>
-            <p className="font-medium">Client created successfully!</p>
+            <p className="font-medium">
+              {t('addClientStep.created.title', {
+                defaultValue: 'Client created successfully!'
+              })}
+            </p>
             <p className="text-sm mt-1">
-              <span className="font-semibold">{data.clientName}</span> has been added to your client list.
+              {t('addClientStep.created.description', {
+                defaultValue: '{{clientName}} has been added to your client list.',
+                clientName: data.clientName
+              })}
             </p>
           </AlertDescription>
         </Alert>
@@ -107,7 +134,11 @@ export function AddClientStep({ data, updateData }: StepProps) {
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="clientName">Client Name</Label>
+          <Label htmlFor="clientName">
+            {t('addClientStep.fields.clientName.label', {
+              defaultValue: 'Client Name'
+            })}
+          </Label>
           <Input
             id="clientName"
             value={data.clientName}
@@ -118,12 +149,18 @@ export function AddClientStep({ data, updateData }: StepProps) {
                 // This would be handled by the validation logic if implemented
               }
             }}
-            placeholder="Example Corp"
+            placeholder={t('addClientStep.fields.clientName.placeholder', {
+              defaultValue: 'Example Corp'
+            })}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="clientEmail">Client Email</Label>
+          <Label htmlFor="clientEmail">
+            {t('addClientStep.fields.clientEmail.label', {
+              defaultValue: 'Client Email'
+            })}
+          </Label>
           <Input
             id="clientEmail"
             type="email"
@@ -135,7 +172,9 @@ export function AddClientStep({ data, updateData }: StepProps) {
               }
             }}
             onBlur={() => setHasInteractedWithEmail(true)}
-            placeholder="contact@example.com"
+            placeholder={t('addClientStep.fields.clientEmail.placeholder', {
+              defaultValue: 'contact@example.com'
+            })}
             className={emailError ? 'border-red-500' : ''}
             aria-describedby="email-error"
           />
@@ -148,7 +187,11 @@ export function AddClientStep({ data, updateData }: StepProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="clientPhone">Phone Number</Label>
+          <Label htmlFor="clientPhone">
+            {t('addClientStep.fields.clientPhone.label', {
+              defaultValue: 'Phone Number'
+            })}
+          </Label>
           <Input
             id="clientPhone"
             value={data.clientPhone}
@@ -159,7 +202,9 @@ export function AddClientStep({ data, updateData }: StepProps) {
               }
             }}
             onBlur={() => setHasInteractedWithPhone(true)}
-            placeholder="+1 (555) 123-4567"
+            placeholder={t('addClientStep.fields.clientPhone.placeholder', {
+              defaultValue: '+1 (555) 123-4567'
+            })}
             className={phoneError ? 'border-red-500' : ''}
             aria-describedby="phone-error"
           />
@@ -172,7 +217,11 @@ export function AddClientStep({ data, updateData }: StepProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="clientUrl">Website</Label>
+          <Label htmlFor="clientUrl">
+            {t('addClientStep.fields.website.label', {
+              defaultValue: 'Website'
+            })}
+          </Label>
           <Input
             id="clientUrl"
             value={data.clientUrl}
@@ -183,7 +232,9 @@ export function AddClientStep({ data, updateData }: StepProps) {
               }
             }}
             onBlur={() => setHasInteractedWithUrl(true)}
-            placeholder="https://example.com"
+            placeholder={t('addClientStep.fields.website.placeholder', {
+              defaultValue: 'https://example.com'
+            })}
             className={urlError ? 'border-red-500' : ''}
             aria-describedby="url-error"
           />
@@ -200,10 +251,24 @@ export function AddClientStep({ data, updateData }: StepProps) {
         <Alert variant="info">
           <AlertDescription className="space-y-2">
             <p>
-              <span className="font-semibold">Note:</span> The client will be created with default non-taxable (0%) tax settings. You can configure tax rates later in the client settings.
+              <span className="font-semibold">
+                {t('addClientStep.common.noteLabel', {
+                  defaultValue: 'Note:'
+                })}
+              </span>{' '}
+              {t('addClientStep.note.defaultTaxSettings', {
+                defaultValue: 'The client will be created with default non-taxable (0%) tax settings. You can configure tax rates later in the client settings.'
+              })}
             </p>
             <p>
-              <span className="font-semibold">Optional:</span> You can skip this step and add clients later from your dashboard.
+              <span className="font-semibold">
+                {t('addClientStep.common.optionalLabel', {
+                  defaultValue: 'Optional:'
+                })}
+              </span>{' '}
+              {t('addClientStep.note.optional', {
+                defaultValue: 'You can skip this step and add clients later from your dashboard.'
+              })}
             </p>
           </AlertDescription>
         </Alert>

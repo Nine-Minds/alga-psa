@@ -1,0 +1,856 @@
+{
+  "common": {
+    "actions": {
+      "back": "11111",
+      "cancel": "11111",
+      "close": "11111",
+      "continue": "11111",
+      "finish": "11111",
+      "invite": "11111",
+      "next": "11111",
+      "retry": "11111",
+      "save": "11111",
+      "saving": "11111",
+      "skip": "11111",
+      "submit": "11111"
+    },
+    "states": {
+      "loading": "11111",
+      "optional": "11111",
+      "required": "11111"
+    },
+    "no": "11111",
+    "yes": "11111"
+  },
+  "onboardingProvider": {
+    "title": "11111",
+    "description": "11111"
+  },
+  "onboardingWizard": {
+    "title": "11111",
+    "description": "11111",
+    "steps": {
+      "clientInfo": "11111",
+      "teamMembers": "11111",
+      "addClient": "11111",
+      "clientContact": "11111",
+      "billing": "11111",
+      "ticketing": "11111"
+    },
+    "errors": {
+      "saveClientInfo": "11111",
+      "addTeamMembers": "11111",
+      "saveClient": "11111",
+      "addContact": "11111",
+      "setupBilling": "11111",
+      "unknown": "11111",
+      "validationFailed": "11111",
+      "configureTicketing": "11111",
+      "completeOnboarding": "11111"
+    },
+    "debug": {
+      "title": "11111",
+      "currentStep": "11111 {{stepIndex}} 11111 {{stepName}} 11111",
+      "isValid": "11111 {{value}} 11111",
+      "isRequired": "11111 {{value}} 11111",
+      "viewData": "11111"
+    },
+    "actions": {
+      "finish": "11111",
+      "saving": "11111",
+      "completing": "11111"
+    },
+    "shell": {
+      "title": "11111",
+      "description": "11111"
+    }
+  },
+  "addClientStep": {
+    "title": "11111",
+    "description": "11111",
+    "validation": {
+      "email": {
+        "invalid": "11111"
+      },
+      "website": {
+        "example": "11111",
+        "format": "11111"
+      },
+      "phone": {
+        "tooShort": "11111",
+        "tooLong": "11111",
+        "invalidCharacters": "11111"
+      }
+    },
+    "header": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "created": {
+      "title": "11111",
+      "description": "11111 {{clientName}} 11111"
+    },
+    "fields": {
+      "clientName": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "clientEmail": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "clientPhone": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "website": {
+        "label": "11111",
+        "placeholder": "11111"
+      }
+    },
+    "common": {
+      "noteLabel": "11111",
+      "optionalLabel": "11111"
+    },
+    "note": {
+      "defaultTaxSettings": "11111",
+      "optional": "11111"
+    }
+  },
+  "billingSetupStep": {
+    "title": "11111",
+    "description": "11111",
+    "serviceTypes": {
+      "toasts": {
+        "deleted": "11111"
+      },
+      "errors": {
+        "delete": "11111",
+        "nameRequired": "11111",
+        "duplicate": "11111",
+        "create": "11111",
+        "createRetry": "11111"
+      },
+      "actions": {
+        "manage": "11111",
+        "import": "11111",
+        "add": "11111",
+        "confirmAdd": "11111"
+      },
+      "noteLabel": "11111",
+      "description": "11111",
+      "addForm": {
+        "title": "11111",
+        "fields": {
+          "name": {
+            "label": "11111",
+            "placeholder": "11111"
+          },
+          "description": {
+            "label": "11111",
+            "placeholder": "11111"
+          },
+          "billingMethod": {
+            "label": "11111"
+          },
+          "displayOrder": {
+            "label": "11111",
+            "placeholder": "11111",
+            "help": "11111"
+          }
+        }
+      },
+      "import": {
+        "title": "11111",
+        "description": "11111",
+        "success": {
+          "titleOne": "11111",
+          "titleOther": "11111",
+          "description": "11111 {{count}} 11111 {{suffix}} 11111",
+          "skipped": "11111 {{count}} 11111"
+        },
+        "actions": {
+          "importing": "11111",
+          "importSelected": "11111 {{count}} 11111"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "11111",
+          "billingMethod": "11111",
+          "order": "11111",
+          "actions": "11111"
+        }
+      },
+      "current": {
+        "title": "11111",
+        "removeTitle": "11111"
+      }
+    },
+    "header": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "created": {
+      "title": "11111",
+      "description": "11111 {{serviceName}} 11111"
+    },
+    "fields": {
+      "serviceName": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "serviceDescription": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "serviceType": {
+        "label": "11111",
+        "required": "11111",
+        "emptyPlaceholder": "11111",
+        "placeholder": "11111",
+        "emptyHelp": "11111"
+      },
+      "billingMode": {
+        "label": "11111"
+      },
+      "defaultRate": {
+        "label": "11111",
+        "placeholder": "11111"
+      }
+    },
+    "billingMethods": {
+      "fixed": "11111",
+      "hourly": "11111",
+      "usageBased": "11111",
+      "usage": "11111"
+    },
+    "validation": {
+      "actionRequiredLabel": "11111",
+      "actionRequiredDescription": "11111"
+    }
+  },
+  "clientContactStep": {
+    "title": "11111",
+    "description": "11111",
+    "validation": {
+      "email": {
+        "invalid": "11111"
+      }
+    },
+    "empty": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "header": {
+      "title": "11111 {{clientName}} 11111",
+      "clientFallback": "11111",
+      "description": "11111"
+    },
+    "created": {
+      "title": "11111",
+      "description": "11111 {{contactName}} 11111 {{clientName}} 11111",
+      "contactFallback": "11111",
+      "clientFallback": "11111"
+    },
+    "fields": {
+      "contactName": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "contactEmail": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "contactRole": {
+        "label": "11111",
+        "placeholder": "11111"
+      }
+    },
+    "common": {
+      "optionalLabel": "11111"
+    },
+    "footer": {
+      "optional": "11111"
+    }
+  },
+  "clientInfoStep": {
+    "title": "11111",
+    "description": "11111",
+    "revisit": {
+      "title": "11111",
+      "description": "11111",
+      "fields": {
+        "companyName": {
+          "label": "11111",
+          "placeholder": "11111"
+        }
+      },
+      "note": "11111"
+    },
+    "common": {
+      "noteLabel": "11111"
+    },
+    "header": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "fields": {
+      "firstName": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "lastName": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "clientName": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "email": {
+        "label": "11111",
+        "placeholder": "11111",
+        "help": "11111"
+      }
+    },
+    "password": {
+      "resetRequired": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "title": "11111",
+      "description": "11111",
+      "fields": {
+        "newPassword": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "confirmPassword": {
+          "label": "11111",
+          "placeholder": "11111",
+          "match": "11111",
+          "mismatch": "11111"
+        }
+      },
+      "requirements": {
+        "title": "11111",
+        "minLength": "11111",
+        "uppercase": "11111",
+        "lowercase": "11111",
+        "number": "11111",
+        "specialCharacter": "11111"
+      },
+      "strength": {
+        "label": "11111 {{strength}} 11111",
+        "strong": "11111",
+        "medium": "11111",
+        "weak": "11111"
+      }
+    },
+    "footer": {
+      "note": "11111"
+    }
+  },
+  "teamMembersStep": {
+    "title": "11111",
+    "description": "11111",
+    "license": {
+      "limitReached": "11111 {{current}} 11111 {{limit}} 11111",
+      "remaining": {
+        "one": "11111",
+        "other": "11111 {{count}} 11111"
+      },
+      "summary": {
+        "noLimit": "11111 {{count}} 11111",
+        "limited": "11111 {{current}} 11111 {{limit}} 11111"
+      }
+    },
+    "errors": {
+      "requiredFields": "11111",
+      "invalidEmail": "11111",
+      "passwordLength": "11111",
+      "saveFailed": "11111",
+      "generic": "11111"
+    },
+    "header": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "created": {
+      "titleOne": "11111",
+      "titleOther": "11111 {{count}} 11111",
+      "users": "11111 {{users}} 11111"
+    },
+    "member": {
+      "title": "11111 {{index}} 11111",
+      "createdBadge": "11111",
+      "actions": {
+        "saving": "11111",
+        "save": "11111"
+      }
+    },
+    "fields": {
+      "firstName": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "lastName": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "email": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "role": {
+        "label": "11111"
+      },
+      "password": {
+        "label": "11111",
+        "placeholder": "11111",
+        "help": "11111"
+      }
+    },
+    "roles": {
+      "admin": "11111",
+      "technician": "11111",
+      "manager": "11111",
+      "user": "11111"
+    },
+    "actions": {
+      "saveCurrentFirst": "11111",
+      "addAnother": "11111"
+    },
+    "unsaved": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "limitReached": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "optional": {
+      "label": "11111",
+      "description": "11111"
+    }
+  },
+  "ticketingConfigStep": {
+    "title": "11111",
+    "description": "11111",
+    "boards": {
+      "toasts": {
+        "firstDefaultSet": "11111",
+        "deleted": "11111",
+        "defaultUpdated": "11111"
+      },
+      "errors": {
+        "import": "11111",
+        "delete": "11111",
+        "defaultRequired": "11111",
+        "defaultUpdate": "11111",
+        "duplicate": "11111",
+        "create": "11111"
+      },
+      "delete": {
+        "fallbackEntity": "11111"
+      },
+      "title": "11111",
+      "description": "11111",
+      "tip": "11111",
+      "actions": {
+        "import": "11111",
+        "add": "11111",
+        "confirmAdd": "11111"
+      },
+      "addForm": {
+        "title": "11111",
+        "fields": {
+          "name": {
+            "label": "11111",
+            "placeholder": "11111"
+          },
+          "description": {
+            "label": "11111",
+            "placeholder": "11111"
+          },
+          "displayOrder": {
+            "label": "11111",
+            "placeholder": "11111",
+            "help": "11111"
+          },
+          "itil": {
+            "label": "11111"
+          }
+        },
+        "configurationTitle": "11111"
+      },
+      "import": {
+        "title": "11111",
+        "success": {
+          "one": "11111",
+          "other": "11111 {{count}} 11111"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "11111",
+          "default": "11111",
+          "order": "11111",
+          "itil": "11111"
+        }
+      },
+      "current": {
+        "title": "11111",
+        "defaultTitle": "11111",
+        "setDefaultTitle": "11111",
+        "removeTitle": "11111"
+      }
+    },
+    "categories": {
+      "import": {
+        "unknownParent": "11111",
+        "title": "11111",
+        "success": {
+          "one": "11111",
+          "other": "11111 {{count}} 11111"
+        },
+        "targetBoard": {
+          "label": "11111",
+          "placeholder": "11111",
+          "help": "11111"
+        },
+        "parentAutoSelectTitle": "11111"
+      },
+      "errors": {
+        "missingParents": "11111 {{parents}} 11111",
+        "duplicate": "11111",
+        "create": "11111",
+        "delete": "11111"
+      },
+      "delete": {
+        "fallbackEntity": "11111"
+      },
+      "toasts": {
+        "deleted": "11111"
+      },
+      "title": "11111",
+      "requiresBoard": "11111",
+      "description": "11111",
+      "actions": {
+        "import": "11111",
+        "add": "11111",
+        "confirmAdd": "11111"
+      },
+      "addForm": {
+        "title": "11111",
+        "fields": {
+          "name": {
+            "label": "11111",
+            "placeholder": "11111"
+          },
+          "board": {
+            "label": "11111",
+            "placeholder": "11111"
+          },
+          "parent": {
+            "label": "11111",
+            "noneOption": "11111",
+            "placeholder": "11111"
+          },
+          "displayOrder": {
+            "label": "11111",
+            "placeholder": "11111",
+            "help": "11111"
+          }
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "11111",
+          "order": "11111"
+        }
+      },
+      "current": {
+        "title": "11111 {{count}} 11111",
+        "removeTitle": "11111"
+      }
+    },
+    "statuses": {
+      "toasts": {
+        "firstDefaultSet": "11111",
+        "deleted": "11111",
+        "defaultUpdated": "11111"
+      },
+      "delete": {
+        "fallbackEntity": "11111"
+      },
+      "errors": {
+        "delete": "11111",
+        "defaultRequired": "11111",
+        "closedCannotBeDefault": "11111",
+        "selectBoardForDefault": "11111",
+        "defaultUpdate": "11111",
+        "duplicate": "11111",
+        "selectBoardForAdd": "11111",
+        "create": "11111"
+      },
+      "title": "11111",
+      "description": "11111",
+      "tip": "11111",
+      "fields": {
+        "board": {
+          "label": "11111",
+          "placeholder": "11111"
+        }
+      },
+      "noBoardWarning": "11111",
+      "actions": {
+        "import": "11111",
+        "add": "11111",
+        "confirmAdd": "11111"
+      },
+      "addForm": {
+        "title": "11111",
+        "fields": {
+          "name": {
+            "label": "11111",
+            "placeholder": "11111"
+          },
+          "displayOrder": {
+            "label": "11111",
+            "placeholder": "11111",
+            "help": "11111"
+          },
+          "state": {
+            "closedLabel": "11111",
+            "openLabel": "11111",
+            "closedHelp": "11111",
+            "openHelp": "11111"
+          }
+        }
+      },
+      "import": {
+        "title": "11111",
+        "targetBoard": "11111 {{boardName}} 11111",
+        "success": {
+          "one": "11111",
+          "other": "11111 {{count}} 11111"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "11111",
+          "type": "11111",
+          "default": "11111",
+          "order": "11111"
+        }
+      },
+      "types": {
+        "closed": "11111",
+        "open": "11111"
+      },
+      "current": {
+        "title": "11111",
+        "titleWithBoard": "11111 {{boardName}} 11111",
+        "defaultTitle": "11111",
+        "setDefaultTitle": "11111",
+        "removeTitle": "11111"
+      },
+      "empty": {
+        "forBoard": "11111 {{boardName}} 11111",
+        "noBoardSelected": "11111"
+      }
+    },
+    "priorities": {
+      "errors": {
+        "duplicate": "11111",
+        "missingSession": "11111",
+        "create": "11111",
+        "delete": "11111"
+      },
+      "delete": {
+        "fallbackEntity": "11111"
+      },
+      "toasts": {
+        "deleted": "11111"
+      },
+      "title": "11111",
+      "description": "11111",
+      "actions": {
+        "import": "11111",
+        "add": "11111",
+        "confirmAdd": "11111"
+      },
+      "addForm": {
+        "title": "11111",
+        "fields": {
+          "name": {
+            "label": "11111",
+            "placeholder": "11111"
+          },
+          "displayOrder": {
+            "label": "11111",
+            "placeholder": "11111",
+            "help": "11111"
+          },
+          "color": {
+            "label": "11111",
+            "choose": "11111"
+          }
+        }
+      },
+      "import": {
+        "title": "11111",
+        "success": {
+          "one": "11111",
+          "other": "11111 {{count}} 11111"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "11111",
+          "color": "11111",
+          "order": "11111"
+        }
+      },
+      "current": {
+        "title": "11111",
+        "removeTitle": "11111"
+      }
+    },
+    "common": {
+      "errors": {
+        "validateDeletion": "11111"
+      },
+      "noteLabel": "11111",
+      "tipLabel": "11111",
+      "actions": {
+        "importing": "11111",
+        "importCount": "11111 {{count}} 11111"
+      },
+      "table": {
+        "actions": "11111"
+      }
+    },
+    "header": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "loading": {
+      "description": "11111"
+    },
+    "numbering": {
+      "title": "11111",
+      "description": "11111",
+      "fields": {
+        "prefix": {
+          "label": "11111",
+          "placeholder": "11111",
+          "help": "11111"
+        },
+        "paddingLength": {
+          "label": "11111",
+          "help": "11111"
+        },
+        "startNumber": {
+          "label": "11111"
+        }
+      },
+      "example": "11111 {{value}} 11111"
+    },
+    "itil": {
+      "actions": {
+        "openReference": "11111"
+      },
+      "title": "11111",
+      "categories": {
+        "title": "11111",
+        "hardware": {
+          "title": "11111",
+          "server": "11111",
+          "desktopLaptop": "11111",
+          "networkEquipment": "11111",
+          "printer": "11111",
+          "storage": "11111",
+          "mobileDevice": "11111"
+        },
+        "software": {
+          "title": "11111",
+          "operatingSystem": "11111",
+          "businessApplication": "11111",
+          "database": "11111",
+          "emailCollaboration": "11111",
+          "securitySoftware": "11111",
+          "customApplication": "11111"
+        },
+        "network": {
+          "title": "11111",
+          "connectivity": "11111",
+          "vpn": "11111",
+          "wifi": "11111",
+          "internetAccess": "11111",
+          "lanWan": "11111",
+          "firewall": "11111"
+        },
+        "security": {
+          "title": "11111",
+          "malwareVirus": "11111",
+          "unauthorizedAccess": "11111",
+          "dataBreach": "11111",
+          "phishingSpam": "11111",
+          "policyViolation": "11111",
+          "accountLockout": "11111"
+        },
+        "serviceRequest": {
+          "title": "11111",
+          "accessRequest": "11111",
+          "newUserSetup": "11111",
+          "softwareInstallation": "11111",
+          "equipmentRequest": "11111",
+          "informationRequest": "11111",
+          "changeRequest": "11111"
+        }
+      },
+      "matrix": {
+        "title": "11111",
+        "urgency": {
+          "high": "11111",
+          "label": "11111",
+          "mediumHigh": "11111",
+          "medium": "11111",
+          "mediumLow": "11111",
+          "low": "11111"
+        },
+        "impact": {
+          "high": "11111",
+          "mediumHigh": "11111",
+          "medium": "11111",
+          "mediumLow": "11111",
+          "low": "11111"
+        },
+        "priority": {
+          "critical": "11111",
+          "high": "11111",
+          "medium": "11111",
+          "low": "11111",
+          "planning": "11111"
+        },
+        "explanation": {
+          "impact": "11111",
+          "urgency": "11111",
+          "priority": "11111"
+        }
+      }
+    },
+    "supportEmail": {
+      "label": "11111",
+      "placeholder": "11111",
+      "help": "11111"
+    },
+    "finalRequirement": {
+      "label": "11111",
+      "description": "11111"
+    }
+  }
+}
