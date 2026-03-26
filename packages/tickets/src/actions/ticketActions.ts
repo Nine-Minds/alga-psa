@@ -52,6 +52,10 @@ import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
 } from '../lib/workflowTicketSlaStageEvents';
+import {
+  parseTicketStatusFilterValue,
+  shouldApplyOpenOnlyStatusFilter,
+} from '../lib/ticketStatusFilter';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((ticketId: string) => Promise<void>) | null = null;
 
@@ -920,6 +924,7 @@ export const getTickets = withAuth(async (user, { tenant }): Promise<ITicket[]> 
 export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITicketListFilters): Promise<ITicketListItem[]> => {
   try {
     const validatedFilters = validateData(ticketListFiltersSchema, filters) as ITicketListFilters;
+    const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
     const {knex: db} = await createTenantKnex();
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -982,7 +987,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       query = query.whereIn('t.board_id', boardSubquery);
     }
 
-    if (validatedFilters.showOpenOnly) {
+    if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {
       query = query.whereExists(function() {
         this.select('*')
             .from('statuses')
@@ -990,8 +995,10 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
             .andWhere('statuses.is_closed', false)
             .andWhere('statuses.tenant', tenant);
       });
-    } else if (validatedFilters.statusId && validatedFilters.statusId !== 'all') {
-      query = query.where('t.status_id', validatedFilters.statusId);
+    } else if (parsedStatusFilter.kind === 'name') {
+      query = query.where('s.name', parsedStatusFilter.statusName);
+    } else if (parsedStatusFilter.kind === 'id') {
+      query = query.where('t.status_id', parsedStatusFilter.statusId);
     }
 
     if (validatedFilters.priorityId && validatedFilters.priorityId !== 'all') {
