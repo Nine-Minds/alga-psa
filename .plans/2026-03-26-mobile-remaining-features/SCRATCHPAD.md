@@ -96,6 +96,7 @@
 - T030-T035 complete: `server/src/test/unit/api/ticketMaterials.service.test.ts` and `ticketMaterials.contract.test.ts` exercise list-with-join behavior, empty lists, successful material creation, ticket-derived `client_id`, validation failures, invalid `service_id`, and the controller’s authenticated validation path.
 - F055/F056/T036-T043/T053-T054 complete: `ee/mobile/src/api/materials.test.ts` and `ee/mobile/src/features/ticketDetail/components/MaterialsSection.test.ts` cover material API wrappers, rendered product metadata and billed badges, picker search, SKU display, quantity/rate modal defaults, create-and-refresh flow, empty state, and add-failure messaging.
 - F051/F054/F057/T050 complete: `cd ee/mobile && npx vitest run` now passes with the new avatar/document/material suites included. The only follow-up needed was mocking `DocumentsSection` and `MaterialsSection` inside the rich-text screen tests so those suites stay isolated from Expo native file-system bindings.
+- F058/T055 complete: the final full mobile suite run now passes at `45` test files / `169` tests, confirming the pre-existing suite still passes alongside the new avatar, document, and material coverage.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`
