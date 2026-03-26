@@ -19,6 +19,7 @@ import { auditLog } from '@/lib/logging/auditLog';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { createNinjaOneClient, disconnectNinjaOne } from '../../integrations/ninjaone';
 import { removeNinjaOneWebhook } from '../../integrations/ninjaone/webhooks/webhookRegistration';
+import { cancelNinjaOneProactiveRefresh } from '../../integrations/ninjaone/proactiveRefresh';
 import type { SyncOptions } from '../../integrations/ninjaone/sync/syncEngine';
 import { getNinjaOneSyncStrategy } from '../../integrations/ninjaone/sync/syncStrategy';
 import {
@@ -316,6 +317,14 @@ export const disconnectNinjaOneIntegration = withAuth(async (user, { tenant }): 
     const existingIntegration = await knex('rmm_integrations')
       .where({ tenant, provider: 'ninjaone' })
       .first();
+
+    if (existingIntegration?.integration_id) {
+      await cancelNinjaOneProactiveRefresh(
+        tenant,
+        existingIntegration.integration_id,
+        'disconnect'
+      );
+    }
 
     if (existingIntegration) {
       // Parse existing settings - handle both string and object cases

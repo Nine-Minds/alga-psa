@@ -23,6 +23,10 @@ import {
   registerNinjaOneWebhook,
   generateWebhookSecret,
 } from '../../../../../lib/integrations/ninjaone/webhooks/webhookRegistration';
+import {
+  clearNinjaOneReconnectRequiredState,
+  scheduleNinjaOneProactiveRefresh,
+} from '../../../../../lib/integrations/ninjaone/proactiveRefresh';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { buildIntegrationConnectedPayload } from '@alga-psa/workflow-streams';
 
@@ -340,6 +344,18 @@ export async function GET(request: NextRequest) {
 
     // 7b. Emit workflow v2 integration connection event (best-effort)
     if (integrationId) {
+      try {
+        await clearNinjaOneReconnectRequiredState(tenantId, integrationId);
+        await scheduleNinjaOneProactiveRefresh({
+          tenantId,
+          integrationId,
+          expiresAtMs: expiresAt,
+          source: 'oauth_connected',
+        });
+      } catch (scheduleError) {
+        console.warn('[NinjaOne Callback] Failed to schedule proactive token refresh', scheduleError);
+      }
+
       try {
         await publishWorkflowEvent({
           eventType: 'INTEGRATION_CONNECTED',
