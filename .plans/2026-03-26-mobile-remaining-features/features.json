@@ -117,7 +117,7 @@
   {
     "id": "F023",
     "description": "Feature 10: Mobile — Refresh document list after successful upload",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
