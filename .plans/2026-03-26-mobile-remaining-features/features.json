@@ -51,7 +51,7 @@
   {
     "id": "F012",
     "description": "Feature 10: Server — Upload endpoint creates document record + ticket association",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
