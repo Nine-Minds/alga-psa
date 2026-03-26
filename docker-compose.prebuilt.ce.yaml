@@ -310,8 +310,8 @@ services:
       file: ./hocuspocus/docker-compose.yaml
       service: hocuspocus
     build:
-      context: .
-      dockerfile: hocuspocus/Dockerfile
+      context: ./hocuspocus
+      dockerfile: Dockerfile
     environment:
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
