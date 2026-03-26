@@ -59,6 +59,7 @@
 - F010 complete: `POST /api/v1/tickets/{id}/documents` now exists via the ticket documents route plus `ApiTicketController.uploadDocument()`, using API-key auth and ticket update permission checks before delegating to the service upload path.
 - F011 complete: the upload controller reads `multipart/form-data` with `req.formData()`, extracts the `file` field, and `TicketService.uploadTicketDocument()` persists the payload through `StorageService.validateFileUpload()` and `StorageService.uploadFile()`.
 - F012 complete: `TicketService.uploadTicketDocument()` now inserts a `documents` row and a matching `document_associations` row with `entity_type: 'ticket'` inside one transaction, after resolving the folder path and document type.
+- F013 complete: after upload, the service reloads the enriched `IDocument` via `getDocumentById()` and the controller returns that object in the API success payload with HTTP 201.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`

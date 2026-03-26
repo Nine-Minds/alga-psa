@@ -57,7 +57,7 @@
   {
     "id": "F013",
     "description": "Feature 10: Server — Upload endpoint returns created IDocument in response",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
