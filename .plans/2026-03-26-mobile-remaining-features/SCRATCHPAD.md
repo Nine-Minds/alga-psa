@@ -70,6 +70,7 @@
 - F021 complete: the same attach affordance now exposes a File option backed by `expo-document-picker`, allowing arbitrary picked files to be posted as ticket documents.
 - F022 complete: while an upload request is in flight, `DocumentsSection` switches on an `ActivityIndicator` plus localized uploading text so technicians get explicit progress feedback instead of a dead UI.
 - F023 complete: successful uploads now call `loadDocuments()` before clearing the upload state, so the section refreshes immediately and the new attachment appears without reopening the screen.
+- F024 complete: when the ticket has no attachments, the documents card now renders a dedicated localized empty-state message instead of an empty container.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`

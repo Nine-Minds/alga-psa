@@ -123,7 +123,7 @@
   {
     "id": "F024",
     "description": "Feature 10: Mobile — Empty state when no documents are attached",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
