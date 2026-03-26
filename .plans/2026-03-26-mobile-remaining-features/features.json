@@ -69,7 +69,7 @@
   {
     "id": "F015",
     "description": "Feature 10: Mobile API — uploadTicketDocument() function sending multipart/form-data POST",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
