@@ -22,7 +22,6 @@ type PickerField = "board" | "client" | "contact" | "location" | "status" | "pri
 
 export function CreateTicketScreen({ navigation }: Props) {
   const { t } = useTranslation("tickets");
-  const { t: tCommon } = useTranslation("common");
   const { colors, spacing, typography } = useTheme();
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession } = useAuth();

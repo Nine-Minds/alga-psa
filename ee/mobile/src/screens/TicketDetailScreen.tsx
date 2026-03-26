@@ -587,7 +587,7 @@ export function TicketDetailBody({
         updating={assignmentHook.assignmentUpdating}
         updateError={assignmentHook.assignmentError}
         currentAssignedToName={ticket.assigned_to_name}
-        onSelect={(userId, _name) => { void assignmentHook.assignToUser(userId); }}
+        onSelect={(userId) => { void assignmentHook.assignToUser(userId); }}
         onUnassign={() => { void assignmentHook.unassign(); assignmentHook.closeAgentPicker(); }}
         onClose={assignmentHook.closeAgentPicker}
         client={client}
