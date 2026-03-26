@@ -51,13 +51,13 @@
   {
     "id": "T010",
     "description": "Feature 10: GET /api/v1/tickets/{id}/documents returns document list for ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
     "id": "T011",
     "description": "Feature 10: GET documents returns empty array for ticket with no documents",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
