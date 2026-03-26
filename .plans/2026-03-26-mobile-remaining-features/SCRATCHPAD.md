@@ -92,6 +92,7 @@
 - T001-T005 complete: `server/src/test/unit/api/ticketService.avatarUrls.test.ts` covers populated contact/client image URLs, null helper fallbacks, and the no-contact/no-client branch so the ticket detail API enrichment is exercised end to end at the service layer.
 - F050/T006-T008 complete: `ee/mobile/src/screens/TicketDetailScreen.avatars.test.ts` verifies both avatar image rendering paths and the initials fallback path for contact/client rows in the mobile detail screen.
 - T012-T016 complete: `ticketDocumentUpload.service.test.ts` and `ticketDocumentsUpload.contract.test.ts` cover document creation, ticket association creation, response reloading, missing-file rejection, and the shared authenticated controller flow for upload requests.
+- F052/F053/T017-T026/T051-T052 complete: `ee/mobile/src/api/documents.test.ts` and `ee/mobile/src/features/ticketDetail/components/DocumentsSection.test.ts` cover the document API wrappers, list metadata, count badge, download/open action, camera/file uploads, upload progress, refresh-after-upload, empty state, upload failure messaging, and camera-permission denial behavior.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`

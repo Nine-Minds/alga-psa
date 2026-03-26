@@ -93,61 +93,61 @@
   {
     "id": "T017",
     "description": "Feature 10: Mobile document list displays document name, type, size, date",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F017"]
   },
   {
     "id": "T018",
     "description": "Feature 10: Mobile document count shows in section header",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
     "id": "T019",
     "description": "Feature 10: Tapping a document triggers download/open",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
     "id": "T020",
     "description": "Feature 10: Camera option launches expo-image-picker and uploads photo",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020", "F015"]
   },
   {
     "id": "T021",
     "description": "Feature 10: File option launches expo-document-picker and uploads file",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021", "F015"]
   },
   {
     "id": "T022",
     "description": "Feature 10: Upload shows progress indicator while uploading",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T023",
     "description": "Feature 10: Document list refreshes after successful upload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
     "id": "T024",
     "description": "Feature 10: Empty state message shown when no documents attached",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
     "id": "T025",
     "description": "Feature 10: Upload failure shows error message to user",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
     "id": "T026",
     "description": "Feature 10: Camera permission denied shows appropriate message",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020", "F025"]
   },
 
@@ -245,13 +245,13 @@
   {
     "id": "T051",
     "description": "Test file: documents.test.ts exists and passes via npx vitest run",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F052", "F054"]
   },
   {
     "id": "T052",
     "description": "Test file: DocumentsSection.test.ts exists and passes via npx vitest run",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F053", "F054"]
   },
   {

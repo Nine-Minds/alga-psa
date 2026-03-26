@@ -245,13 +245,13 @@
   {
     "id": "F052",
     "description": "Feature 10: Tests — Write documents.test.ts for getTicketDocuments and uploadTicketDocument API wrappers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
     "id": "F053",
     "description": "Feature 10: Tests — Write DocumentsSection.test.ts for document list rendering, empty state, upload trigger",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
