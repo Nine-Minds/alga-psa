@@ -63,31 +63,31 @@
   {
     "id": "T012",
     "description": "Feature 10: POST /api/v1/tickets/{id}/documents accepts file upload and creates document",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F011", "F012"]
   },
   {
     "id": "T013",
     "description": "Feature 10: POST upload creates document_association with entity_type='ticket'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
     "id": "T014",
     "description": "Feature 10: POST upload returns created IDocument in response",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T015",
     "description": "Feature 10: POST upload rejects request without file",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
     "id": "T016",
     "description": "Feature 10: POST upload requires valid API key authentication",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
