@@ -81,6 +81,14 @@ const resolveNinjaOneClientCredentials = async (
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const TOKEN_REFRESH_BUFFER = 300; // 5 minutes before expiry
 
+function buildNinjaOneApiBaseUrl(instanceUrl: string): string {
+  const normalizedBase = instanceUrl
+    .replace(/\/+$/, '')
+    .replace(/\/api(?:\/v2)?$/, '');
+
+  return `${normalizedBase}/api/v2`;
+}
+
 /**
  * Extract safe error info for logging (avoids circular reference issues with axios errors)
  */
@@ -129,7 +137,7 @@ export class NinjaOneClient {
     this.workflowContext = config.workflowContext;
 
     this.axiosInstance = axios.create({
-      baseURL: `${this.instanceUrl}/v2`,
+      baseURL: buildNinjaOneApiBaseUrl(this.instanceUrl),
       timeout: DEFAULT_TIMEOUT,
       headers: {
         'Accept': 'application/json',
