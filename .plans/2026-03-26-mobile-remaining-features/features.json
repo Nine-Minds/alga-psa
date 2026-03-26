@@ -45,7 +45,7 @@
   {
     "id": "F011",
     "description": "Feature 10: Server — Upload endpoint accepts multipart/form-data, stores via StorageService",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {

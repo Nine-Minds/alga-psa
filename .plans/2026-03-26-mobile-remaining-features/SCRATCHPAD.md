@@ -57,6 +57,7 @@
 - F005 complete: the client `KeyValue` field now uses the same avatar row pattern so logos render beside the client name instead of plain text only.
 - F006 complete: null `contact_avatar_url`/`client_logo_url` now fall back cleanly because the screen always renders the shared `Avatar` component and `KeyValue` accepts rich value content instead of string-only text.
 - F010 complete: `POST /api/v1/tickets/{id}/documents` now exists via the ticket documents route plus `ApiTicketController.uploadDocument()`, using API-key auth and ticket update permission checks before delegating to the service upload path.
+- F011 complete: the upload controller reads `multipart/form-data` with `req.formData()`, extracts the `file` field, and `TicketService.uploadTicketDocument()` persists the payload through `StorageService.validateFileUpload()` and `StorageService.uploadFile()`.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`
