@@ -220,7 +220,7 @@
   {
     "id": "F044",
     "description": "Feature 11: Mobile — Empty state when no materials on ticket",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {
