@@ -99,7 +99,7 @@
   {
     "id": "F020",
     "description": "Feature 10: Mobile — Attach button with Camera option (expo-image-picker)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
