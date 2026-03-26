@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Feature 15: Server — Return contact_avatar_url and client_logo_url in ticket detail response",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 15"]
   },
   {
