@@ -77,6 +77,8 @@ interface ServiceCatalogPickerProps {
   value: string;
   selectedLabel?: string;
   onSelect: (item: ServiceCatalogPickerItem) => void;
+  /** Called when user adds a custom line item via the dropdown footer. */
+  onAddCustom?: (description: string) => void;
   billingMethods?: BillingMethod[];
   itemKinds?: ItemKind[];
   isActive?: boolean;
@@ -94,6 +96,7 @@ export function ServiceCatalogPicker({
   value,
   selectedLabel,
   onSelect,
+  onAddCustom,
   billingMethods,
   itemKinds,
   isActive = true,
@@ -192,6 +195,29 @@ export function ServiceCatalogPicker({
       emptyMessage="No matching items."
       disabled={disabled}
       showMoreIndicator
+      footerContent={onAddCustom ? ({ search, close }) => {
+        const trimmed = search.trim();
+        return (
+          <button
+            type="button"
+            className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors ${trimmed ? 'hover:bg-[rgb(var(--color-border-100))] cursor-pointer' : 'opacity-50 cursor-default'}`}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              if (!trimmed) return;
+              onAddCustom(trimmed);
+              close();
+            }}
+          >
+            <span className="inline-flex items-center rounded bg-[rgb(var(--color-border-100))] px-1.5 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))]">
+              Custom
+            </span>
+            {trimmed
+              ? <span>Add &ldquo;{trimmed}&rdquo; as custom item</span>
+              : <span className="text-[rgb(var(--color-text-400))]">Type a name to add a custom item</span>
+            }
+          </button>
+        );
+      } : undefined}
     />
   );
 }

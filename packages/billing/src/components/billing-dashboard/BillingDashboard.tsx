@@ -29,6 +29,7 @@ import ProductsManager from '../settings/billing/ProductsManager';
 import AccountingExportsTab from './accounting/AccountingExportsTab';
 import QuotesTab from './quotes/QuotesTab';
 import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
+import QuoteTemplatesList from './quotes/QuoteTemplatesList';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -59,7 +60,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const tabDefinitions = useMemo(() => {
     if (isQuotingEnabled) return billingTabDefinitions;
     return billingTabDefinitions.filter(
-      (tab) => tab.value !== 'quotes' && tab.value !== 'quote-templates'
+      (tab) => tab.value !== 'quotes' && tab.value !== 'quote-templates' && tab.value !== 'quote-business-templates'
     );
   }, [isQuotingEnabled]);
 
@@ -167,6 +168,19 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         {isQuotingEnabled && (
           <Tabs.Content value="quote-templates">
             <QuoteDocumentTemplatesPage />
+          </Tabs.Content>
+        )}
+
+        {isQuotingEnabled && (
+          <Tabs.Content value="quote-business-templates">
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold">Quote Templates</h2>
+              <QuoteTemplatesList
+                onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
+                onCreateFromTemplate={(id) => router.push(`/msp/billing?tab=quotes&quoteId=new&templateId=${id}`)}
+                onNewTemplate={() => router.push('/msp/billing?tab=quotes&quoteId=new&isTemplate=true')}
+              />
+            </div>
           </Tabs.Content>
         )}
 

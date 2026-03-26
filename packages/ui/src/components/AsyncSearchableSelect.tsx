@@ -43,6 +43,8 @@ interface AsyncSearchableSelectProps {
   portalContainer?: Element | null;
   debounceMs?: number;
   showMoreIndicator?: boolean;
+  /** Content rendered below the scrollable list, always visible (sticky footer). */
+  footerContent?: (args: { search: string; close: () => void }) => React.ReactNode;
 }
 
 export function AsyncSearchableSelect({
@@ -65,6 +67,7 @@ export function AsyncSearchableSelect({
   portalContainer,
   debounceMs = 300,
   showMoreIndicator = true,
+  footerContent,
 }: AsyncSearchableSelectProps & AutomationProps): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -331,6 +334,12 @@ export function AsyncSearchableSelect({
             <div className="py-6 text-center text-sm text-[rgb(var(--color-text-400))]">{emptyMessage}</div>
           )}
         </Command.List>
+
+        {footerContent && (
+          <div className="border-t border-gray-200 dark:border-[rgb(var(--color-border-200))]">
+            {footerContent({ search, close: () => setOpen(false) })}
+          </div>
+        )}
       </Command>
     </div>
   );

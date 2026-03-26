@@ -12,6 +12,8 @@ export type DraftQuoteItem = {
   description: string;
   quantity: number;
   unit_price: number;
+  /** True when the service has no price in the quote's currency and the user must enter one. */
+  needs_price?: boolean;
   unit_of_measure?: string | null;
   phase?: string | null;
   is_optional: boolean;
@@ -72,7 +74,13 @@ export function createDraftQuoteItemFromQuoteItem(item: IQuoteItem): DraftQuoteI
   };
 }
 
-export function createDraftQuoteItemFromService(item: CatalogPickerItem): DraftQuoteItem {
+export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCurrencyCode?: string): DraftQuoteItem {
+  const hasCurrencyRate = item.currency_rate != null;
+  // Only flag needs_price when the service has multi-currency pricing configured
+  // but no rate for the quote's currency. Services without any service_prices rows
+  // use default_rate as their universal price.
+  const needsPrice = Boolean(quoteCurrencyCode) && !hasCurrencyRate && Boolean(item.has_currency_prices);
+
   return {
     local_id: buildLocalId(),
     service_id: item.service_id,
@@ -82,7 +90,8 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem): DraftQ
     billing_method: item.billing_method,
     description: item.service_name,
     quantity: 1,
-    unit_price: Number(item.currency_rate ?? item.default_rate ?? 0),
+    unit_price: needsPrice ? 0 : Number(item.currency_rate ?? item.default_rate ?? 0),
+    needs_price: needsPrice,
     unit_of_measure: item.unit_of_measure ?? null,
     phase: null,
     is_optional: false,
