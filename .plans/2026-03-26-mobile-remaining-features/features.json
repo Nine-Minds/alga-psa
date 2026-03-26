@@ -208,7 +208,7 @@
   {
     "id": "F042",
     "description": "Feature 11: Mobile — Rate pre-filled from product default_rate",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {

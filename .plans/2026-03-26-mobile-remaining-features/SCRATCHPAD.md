@@ -84,6 +84,7 @@
 - F039 complete: each material row now renders the product name, SKU, localized quantity/rate line, and a billed or unbilled badge directly in the ticket detail UI.
 - F040 complete: the materials card now exposes an `Add Product` action that opens `EntityPickerModal`, loads product results from `/api/v1/products`, and supports search-driven filtering.
 - F041 complete: selecting a product now closes the picker and opens a dedicated modal with quantity and rate inputs so the technician can confirm billable details before creation.
+- F042 complete: the rate input is seeded from the selected product’s `default_rate`, converted from minor units into a currency input string so the default price is editable rather than blank.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`
