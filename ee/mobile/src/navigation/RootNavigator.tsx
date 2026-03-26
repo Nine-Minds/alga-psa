@@ -5,6 +5,7 @@ import type { RootStackParamList } from "./types";
 import { TabsNavigator } from "./TabsNavigator";
 import { SignInScreen } from "../screens/SignInScreen";
 import { TicketDetailScreen } from "../screens/TicketDetailScreen";
+import { CreateTicketScreen } from "../screens/CreateTicketScreen";
 import { AuthCallbackScreen } from "../screens/AuthCallbackScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
@@ -42,6 +43,30 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             name="AuthCallback"
             component={AuthCallbackScreen}
             options={{ title: tAuth("callback.title", "Signing in") }}
+          />
+          <Stack.Screen
+            name="CreateTicket"
+            component={CreateTicketScreen}
+            options={({ navigation }) => ({
+              title: tTickets("create.title", "New Ticket"),
+              headerBackTitle: tTickets("list.title", "Tickets"),
+              ...(Platform.OS === "android" ? {
+                headerTitleAlign: "left" as const,
+                headerLeft: () => (
+                  <Pressable
+                    onPress={() => navigation.goBack()}
+                    accessibilityRole="button"
+                    accessibilityLabel={tTickets("list.title", "Tickets")}
+                    style={{ flexDirection: "row", alignItems: "center", marginRight: 8 }}
+                  >
+                    <Feather name="chevron-left" size={24} color={theme.colors.text} />
+                    <Text style={{ color: theme.colors.text, fontSize: 16, marginLeft: 2 }}>
+                      {tTickets("list.title", "Tickets")}
+                    </Text>
+                  </Pressable>
+                ),
+              } : {}),
+            })}
           />
           <Stack.Screen
             name="TicketDetail"

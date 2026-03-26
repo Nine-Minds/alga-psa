@@ -21,7 +21,8 @@
     "unassignedCount": "Unassigned {{count}}",
     "overdueCount": "Overdue {{count}}",
     "assignedTo": "Assigned to {{name}}",
-    "ticketAccessibility": "Ticket {{number}}: {{title}}"
+    "ticketAccessibility": "Ticket {{number}}: {{title}}",
+    "createTicket": "New ticket"
   },
   "filters": {
     "title": "Filters",
@@ -208,6 +209,52 @@
   "priorityPicker": {
     "title": "Select priority",
     "setPriority": "Set priority {{name}}"
+  },
+  "create": {
+    "title": "New Ticket",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Enter ticket title",
+    "board": "Board",
+    "client": "Client",
+    "contact": "Contact",
+    "location": "Location",
+    "status": "Status",
+    "priority": "Priority",
+    "assignee": "Assignee",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional description\u2026",
+    "selectBoard": "Select board",
+    "selectClient": "Select client",
+    "selectContact": "Select contact",
+    "selectLocation": "Select location",
+    "selectStatus": "Select status",
+    "selectPriority": "Select priority",
+    "selectAssignee": "Assign to agent",
+    "searchClients": "Search clients\u2026",
+    "searchContacts": "Search contacts\u2026",
+    "searchAgents": "Search agents\u2026",
+    "defaultBoard": "Default",
+    "noBoards": "No boards available.",
+    "noClients": "No clients found.",
+    "noContacts": "No contacts found.",
+    "noLocations": "No locations available.",
+    "noStatuses": "No statuses available.",
+    "noPriorities": "No priorities available.",
+    "noAgents": "No agents found.",
+    "submit": "Create Ticket",
+    "submitting": "Creating\u2026",
+    "errors": {
+      "loadBoards": "Unable to load boards.",
+      "loadClients": "Unable to load clients.",
+      "loadContacts": "Unable to load contacts.",
+      "loadLocations": "Unable to load locations.",
+      "loadStatuses": "Unable to load statuses.",
+      "loadPriorities": "Unable to load priorities.",
+      "loadAgents": "Unable to load agents.",
+      "permission": "You don't have permission to create tickets.",
+      "validation": "Ticket creation was rejected by the server.",
+      "generic": "Unable to create ticket. Please try again."
+    }
   },
   "agentPicker": {
     "title": "Assign to agent",

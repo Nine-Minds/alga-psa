@@ -456,7 +456,12 @@ export function TicketsListScreen({ navigation }: Props) {
       <EmptyState
         title={t("list.noTickets")}
         description={t("list.noTicketsDescription")}
-        action={<PrimaryButton onPress={() => void refresh()}>{t("common:refresh")}</PrimaryButton>}
+        action={
+          <View style={{ gap: theme.spacing.sm }}>
+            <PrimaryButton onPress={() => navigation.navigate("CreateTicket")}>{t("list.createTicket")}</PrimaryButton>
+            <PrimaryButton onPress={() => void refresh()}>{t("common:refresh")}</PrimaryButton>
+          </View>
+        }
       />
     );
   }

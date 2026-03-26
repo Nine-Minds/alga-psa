@@ -355,6 +355,39 @@ export function updateTicketAttributes(
   });
 }
 
+// --- Create Ticket ---
+
+export type CreateTicketParams = {
+  apiKey: string;
+  title: string;
+  board_id: string;
+  client_id: string;
+  status_id: string;
+  priority_id: string;
+  location_id?: string;
+  contact_name_id?: string;
+  category_id?: string;
+  assigned_to?: string;
+  attributes?: Record<string, unknown>;
+  auditHeaders?: Record<string, string | undefined>;
+};
+
+export function createTicket(
+  client: ApiClient,
+  params: CreateTicketParams,
+): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
+  const { apiKey, auditHeaders, ...body } = params;
+  return client.request<SuccessResponse<TicketDetail>>({
+    method: "POST",
+    path: "/api/v1/tickets",
+    headers: {
+      "x-api-key": apiKey,
+      ...auditHeaders,
+    },
+    body,
+  });
+}
+
 // --- Emoji Reactions ---
 
 export type AggregatedReaction = {
