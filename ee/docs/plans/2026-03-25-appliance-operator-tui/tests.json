@@ -1,0 +1,139 @@
+[
+  {
+    "id": "T001",
+    "description": "Interactive bootstrap: starting from a discovered appliance environment, the TUI collects required bootstrap inputs, resolves the target release manifest, invokes the existing bootstrap flow, and renders staged progress plus final success/failure classification.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F009",
+      "F010",
+      "F024"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Interactive upgrade: the TUI shows the current release, offers published target releases, invokes the existing upgrade path, and reports a no-auto-rollback failure state with a clear next step.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F011",
+      "F012",
+      "F013",
+      "F023"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Interactive reset: the TUI requires explicit destructive confirmation, states what data will be wiped, and invokes the existing reset helper only after confirmation.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F014",
+      "F015",
+      "F023"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Status dashboard: with a reachable appliance, the TUI summarizes Talos, Kubernetes, Flux, HelmRelease, workload, release-selection, app URL, and config-path state without requiring direct kubectl or talosctl use.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F016",
+      "F017",
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F024"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Partial-failure status: simulated or fixture-backed states for Talos-only, cluster-down, Flux-degraded, and workload-unhealthy conditions render the correct top-level blocker and operator guidance.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F021",
+      "F022"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Packaging boundary: operator core path resolution works both from the repo layout and from an abstracted non-repo runtime layout without changing lifecycle behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F023"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Ink shell: the interactive entrypoint renders a full-screen layout with persistent header, action navigation, and content regions instead of falling back to a sequential readline prompt flow.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F027",
+      "F031"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Ink lifecycle forms: bootstrap, upgrade, and reset can be completed through keyboard navigation inside the full-screen UI, including destructive confirmation and missing-release error states.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F028"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Ink progress and dashboard views: long-running lifecycle actions stream into a dedicated progress region and the status summary remains accessible without collapsing into plain printed sections.",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F029",
+      "F030"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Workload console: with an appliance-relevant cluster fixture, the TUI lists only appliance-relevant pods and shows current status, readiness, restart count, and uptime columns while preserving selection across refreshes.",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F033",
+      "F034",
+      "F035",
+      "F040"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Log viewer navigation: selecting a pod opens a full-screen log view, Escape returns to the previous workload layout, and keyboard scroll state is preserved correctly across the transition.",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F039"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Bounded log scrollback: the log viewer loads recent lines first, prepends older log chunks on upward scroll near the top, follows live logs at the bottom, pauses live-follow when scrolled away, and keeps memory bounded.",
+    "implemented": true,
+    "featureIds": [
+      "F037",
+      "F038",
+      "F039",
+      "F040"
+    ]
+  }
+]

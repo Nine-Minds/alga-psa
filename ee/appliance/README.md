@@ -2,6 +2,13 @@
 
 This directory owns appliance-specific assets and automation for Alga PSA.
 
+For user-facing appliance installation and operation guides, start with:
+
+- `ee/docs/appliance/README.md`
+- `ee/docs/appliance/quick-start.md`
+- `ee/docs/appliance/operators-manual.md`
+- `ee/docs/appliance/technical-reference.md`
+
 For the stable operating model and generic Talos appliance assumptions, start with:
 
 - `ee/docs/premise/README.md`
@@ -32,7 +39,7 @@ Build command:
 
 ```bash
 ee/appliance/scripts/build-images.sh \
-  --release-version 0.0.1 \
+  --release-version 1.0-rc5 \
   --talos-version v1.12.0 \
   --kubernetes-version v1.31.4 \
   --app-version 1.0-rc3 \
@@ -48,7 +55,7 @@ Dry-run example:
 ```bash
 EE_APPLIANCE_SCHEMATIC_ID_OVERRIDE=testschematic \
 ee/appliance/scripts/build-images.sh \
-  --release-version 0.0.1 \
+  --release-version 1.0-rc5 \
   --talos-version v1.12.0 \
   --kubernetes-version v1.31.4 \
   --app-version 1.0-rc3 \
@@ -67,7 +74,27 @@ The build script writes:
 
 The release manifest couples the Talos version, schematic ID, ISO URL/checksum, and installer image so later bootstrap flows can consume one deterministic contract.
 
-## Guided appliance bootstrap
+## Preferred operator workflow (TUI + CLI)
+
+Use `ee/appliance/appliance` as the primary operator entrypoint for appliance lifecycle actions:
+
+```bash
+ee/appliance/appliance tui
+```
+
+The same operator core is available for non-interactive usage:
+
+```bash
+ee/appliance/appliance bootstrap --bootstrap-mode recover --release-version 1.0-rc5
+ee/appliance/appliance upgrade --release-version 1.0-rc5
+ee/appliance/appliance reset --force
+ee/appliance/appliance status
+ee/appliance/appliance support-bundle --output-dir ./bundles
+```
+
+The shell scripts below remain supported internals and advanced fallbacks.
+
+## Guided appliance bootstrap (script-level fallback)
 
 Use `ee/appliance/scripts/bootstrap-appliance.sh` as the primary operator entrypoint.
 
@@ -86,7 +113,7 @@ Example fresh bring-up:
 
 ```bash
 ee/appliance/scripts/bootstrap-appliance.sh \
-  --release-version 0.0.1 \
+  --release-version 1.0-rc5 \
   --bootstrap-mode fresh \
   --node-ip 192.168.64.5 \
   --hostname alga-appliance \
@@ -109,8 +136,8 @@ Example:
 
 ```bash
 ee/appliance/scripts/upgrade-appliance.sh \
-  --release-version 0.0.1 \
-  --kubeconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/kubeconfig
+  --release-version 1.0-rc5 \
+  --kubeconfig ~/.alga-psa-appliance/appliance-single-node/kubeconfig
 ```
 
 The script:
@@ -133,7 +160,7 @@ Use the destructive reset helper directly when you need to clear persisted appli
 
 ```bash
 ee/appliance/scripts/reset-appliance-data.sh \
-  --kubeconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/kubeconfig \
+  --kubeconfig ~/.alga-psa-appliance/appliance-single-node/kubeconfig \
   --force
 ```
 
@@ -147,8 +174,8 @@ Example:
 
 ```bash
 ee/appliance/scripts/collect-support-bundle.sh \
-  --kubeconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/kubeconfig \
-  --talosconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/talosconfig \
+  --kubeconfig ~/.alga-psa-appliance/appliance-single-node/kubeconfig \
+  --talosconfig ~/.alga-psa-appliance/appliance-single-node/talosconfig \
   --node-ip 192.168.64.5 \
   --site-id appliance-single-node
 ```
