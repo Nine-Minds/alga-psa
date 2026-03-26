@@ -1,0 +1,275 @@
+[
+  {
+    "id": "T001",
+    "description": "Feature 15: Ticket detail API response includes contact_avatar_url when contact has avatar",
+    "implemented": false,
+    "featureIds": ["F001", "F003"]
+  },
+  {
+    "id": "T002",
+    "description": "Feature 15: Ticket detail API response includes client_logo_url when client has logo",
+    "implemented": false,
+    "featureIds": ["F002", "F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Feature 15: contact_avatar_url is null when contact has no avatar",
+    "implemented": false,
+    "featureIds": ["F001", "F006"]
+  },
+  {
+    "id": "T004",
+    "description": "Feature 15: client_logo_url is null when client has no logo",
+    "implemented": false,
+    "featureIds": ["F002", "F006"]
+  },
+  {
+    "id": "T005",
+    "description": "Feature 15: Avatar URLs are null when ticket has no contact or client",
+    "implemented": false,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T006",
+    "description": "Feature 15: Mobile shows Avatar with image next to contact name",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T007",
+    "description": "Feature 15: Mobile shows Avatar with image next to client name",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T008",
+    "description": "Feature 15: Mobile shows initials fallback when avatar/logo URL is null",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+
+  {
+    "id": "T010",
+    "description": "Feature 10: GET /api/v1/tickets/{id}/documents returns document list for ticket",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T011",
+    "description": "Feature 10: GET documents returns empty array for ticket with no documents",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T012",
+    "description": "Feature 10: POST /api/v1/tickets/{id}/documents accepts file upload and creates document",
+    "implemented": false,
+    "featureIds": ["F010", "F011", "F012"]
+  },
+  {
+    "id": "T013",
+    "description": "Feature 10: POST upload creates document_association with entity_type='ticket'",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T014",
+    "description": "Feature 10: POST upload returns created IDocument in response",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T015",
+    "description": "Feature 10: POST upload rejects request without file",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T016",
+    "description": "Feature 10: POST upload requires valid API key authentication",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T017",
+    "description": "Feature 10: Mobile document list displays document name, type, size, date",
+    "implemented": false,
+    "featureIds": ["F016", "F017"]
+  },
+  {
+    "id": "T018",
+    "description": "Feature 10: Mobile document count shows in section header",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T019",
+    "description": "Feature 10: Tapping a document triggers download/open",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T020",
+    "description": "Feature 10: Camera option launches expo-image-picker and uploads photo",
+    "implemented": false,
+    "featureIds": ["F020", "F015"]
+  },
+  {
+    "id": "T021",
+    "description": "Feature 10: File option launches expo-document-picker and uploads file",
+    "implemented": false,
+    "featureIds": ["F021", "F015"]
+  },
+  {
+    "id": "T022",
+    "description": "Feature 10: Upload shows progress indicator while uploading",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T023",
+    "description": "Feature 10: Document list refreshes after successful upload",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T024",
+    "description": "Feature 10: Empty state message shown when no documents attached",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T025",
+    "description": "Feature 10: Upload failure shows error message to user",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T026",
+    "description": "Feature 10: Camera permission denied shows appropriate message",
+    "implemented": false,
+    "featureIds": ["F020", "F025"]
+  },
+
+  {
+    "id": "T030",
+    "description": "Feature 11: GET /api/v1/tickets/{id}/materials returns materials list with product names",
+    "implemented": false,
+    "featureIds": ["F030", "F031"]
+  },
+  {
+    "id": "T031",
+    "description": "Feature 11: GET materials returns empty array for ticket with no materials",
+    "implemented": false,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T032",
+    "description": "Feature 11: POST /api/v1/tickets/{id}/materials creates material with valid data",
+    "implemented": false,
+    "featureIds": ["F032", "F033"]
+  },
+  {
+    "id": "T033",
+    "description": "Feature 11: POST materials resolves client_id from ticket automatically",
+    "implemented": false,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T034",
+    "description": "Feature 11: POST materials validates required fields (service_id, quantity, rate)",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T035",
+    "description": "Feature 11: POST materials rejects invalid service_id",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T036",
+    "description": "Feature 11: Mobile materials list displays product name, SKU, quantity, rate",
+    "implemented": false,
+    "featureIds": ["F038", "F039"]
+  },
+  {
+    "id": "T037",
+    "description": "Feature 11: Materials list shows billed/unbilled status badge",
+    "implemented": false,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T038",
+    "description": "Feature 11: Add Product button opens product picker with search",
+    "implemented": false,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T039",
+    "description": "Feature 11: Product picker shows product name and SKU",
+    "implemented": false,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T040",
+    "description": "Feature 11: After product selection, quantity/rate modal appears with pre-filled rate",
+    "implemented": false,
+    "featureIds": ["F041", "F042"]
+  },
+  {
+    "id": "T041",
+    "description": "Feature 11: Submitting quantity/rate creates material and refreshes list",
+    "implemented": false,
+    "featureIds": ["F043"]
+  },
+  {
+    "id": "T042",
+    "description": "Feature 11: Empty state shown when no materials on ticket",
+    "implemented": false,
+    "featureIds": ["F044"]
+  },
+  {
+    "id": "T043",
+    "description": "Feature 11: Add material failure shows error message",
+    "implemented": false,
+    "featureIds": ["F045"]
+  },
+
+  {
+    "id": "T050",
+    "description": "Test file: TicketDetailScreen.avatars.test.ts exists and passes via npx vitest run",
+    "implemented": false,
+    "featureIds": ["F050", "F051"]
+  },
+  {
+    "id": "T051",
+    "description": "Test file: documents.test.ts exists and passes via npx vitest run",
+    "implemented": false,
+    "featureIds": ["F052", "F054"]
+  },
+  {
+    "id": "T052",
+    "description": "Test file: DocumentsSection.test.ts exists and passes via npx vitest run",
+    "implemented": false,
+    "featureIds": ["F053", "F054"]
+  },
+  {
+    "id": "T053",
+    "description": "Test file: materials.test.ts exists and passes via npx vitest run",
+    "implemented": false,
+    "featureIds": ["F055", "F057"]
+  },
+  {
+    "id": "T054",
+    "description": "Test file: MaterialsSection.test.ts exists and passes via npx vitest run",
+    "implemented": false,
+    "featureIds": ["F056", "F057"]
+  },
+  {
+    "id": "T055",
+    "description": "Full test suite: npx vitest run passes with all existing 126+ tests plus new tests",
+    "implemented": false,
+    "featureIds": ["F058"]
+  }
+]

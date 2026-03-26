@@ -1,0 +1,287 @@
+[
+  {
+    "id": "F001",
+    "description": "Feature 15: Server — Add getContactAvatarUrl call in TicketService.getById after ticket query",
+    "implemented": false,
+    "prdRefs": ["Feature 15"]
+  },
+  {
+    "id": "F002",
+    "description": "Feature 15: Server — Add getClientLogoUrl call in TicketService.getById after ticket query",
+    "implemented": false,
+    "prdRefs": ["Feature 15"]
+  },
+  {
+    "id": "F003",
+    "description": "Feature 15: Server — Return contact_avatar_url and client_logo_url in ticket detail response",
+    "implemented": false,
+    "prdRefs": ["Feature 15"]
+  },
+  {
+    "id": "F004",
+    "description": "Feature 15: Mobile — Render Avatar component next to contact name in KeyValue section",
+    "implemented": false,
+    "prdRefs": ["Feature 15"]
+  },
+  {
+    "id": "F005",
+    "description": "Feature 15: Mobile — Render Avatar component next to client name in KeyValue section",
+    "implemented": false,
+    "prdRefs": ["Feature 15"]
+  },
+  {
+    "id": "F006",
+    "description": "Feature 15: Mobile — Graceful fallback to initials when avatar/logo URL is null",
+    "implemented": false,
+    "prdRefs": ["Feature 15"]
+  },
+
+  {
+    "id": "F010",
+    "description": "Feature 10: Server — Create POST /api/v1/tickets/{id}/documents upload endpoint",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F011",
+    "description": "Feature 10: Server — Upload endpoint accepts multipart/form-data, stores via StorageService",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F012",
+    "description": "Feature 10: Server — Upload endpoint creates document record + ticket association",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F013",
+    "description": "Feature 10: Server — Upload endpoint returns created IDocument in response",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F014",
+    "description": "Feature 10: Mobile API — getTicketDocuments() function calling GET /api/v1/tickets/{id}/documents",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F015",
+    "description": "Feature 10: Mobile API — uploadTicketDocument() function sending multipart/form-data POST",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F016",
+    "description": "Feature 10: Mobile — DocumentsSection component in ticket detail showing document list",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F017",
+    "description": "Feature 10: Mobile — Document list shows name, type, size, upload date for each document",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F018",
+    "description": "Feature 10: Mobile — Document count badge/header in section",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F019",
+    "description": "Feature 10: Mobile — Tap document to download/open via system handler",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F020",
+    "description": "Feature 10: Mobile — Attach button with Camera option (expo-image-picker)",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F021",
+    "description": "Feature 10: Mobile — Attach button with File option (expo-document-picker)",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F022",
+    "description": "Feature 10: Mobile — Upload progress indicator during file upload",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F023",
+    "description": "Feature 10: Mobile — Refresh document list after successful upload",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F024",
+    "description": "Feature 10: Mobile — Empty state when no documents are attached",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F025",
+    "description": "Feature 10: Mobile — Error handling for upload failures (network, permission, size)",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+
+  {
+    "id": "F030",
+    "description": "Feature 11: Server — Create GET /api/v1/tickets/{id}/materials endpoint",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F031",
+    "description": "Feature 11: Server — Materials list joins service_catalog for service_name and sku",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F032",
+    "description": "Feature 11: Server — Create POST /api/v1/tickets/{id}/materials endpoint",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F033",
+    "description": "Feature 11: Server — POST endpoint validates service_id, quantity, rate, currency_code",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F034",
+    "description": "Feature 11: Server — POST endpoint resolves client_id from ticket internally",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F035",
+    "description": "Feature 11: Mobile API — getTicketMaterials() function",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F036",
+    "description": "Feature 11: Mobile API — addTicketMaterial() function",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F037",
+    "description": "Feature 11: Mobile API — listProducts() function for product search (uses existing GET /api/v1/products)",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F038",
+    "description": "Feature 11: Mobile — MaterialsSection component in ticket detail showing materials list",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F039",
+    "description": "Feature 11: Mobile — Material list shows product name, SKU, quantity, rate, billed status",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F040",
+    "description": "Feature 11: Mobile — Add Product button opens searchable product picker (EntityPickerModal)",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F041",
+    "description": "Feature 11: Mobile — After product selection, show quantity/rate input modal",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F042",
+    "description": "Feature 11: Mobile — Rate pre-filled from product default_rate",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F043",
+    "description": "Feature 11: Mobile — Submit creates material and refreshes list",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F044",
+    "description": "Feature 11: Mobile — Empty state when no materials on ticket",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F045",
+    "description": "Feature 11: Mobile — Error handling for add material failures",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+
+  {
+    "id": "F050",
+    "description": "Feature 15: Tests — Write TicketDetailScreen.avatars.test.ts verifying Avatar renders with contact/client URLs and initials fallback",
+    "implemented": false,
+    "prdRefs": ["Feature 15"]
+  },
+  {
+    "id": "F051",
+    "description": "Feature 15: Tests — Run npx vitest run, all tests pass including new avatar tests",
+    "implemented": false,
+    "prdRefs": ["Feature 15"]
+  },
+  {
+    "id": "F052",
+    "description": "Feature 10: Tests — Write documents.test.ts for getTicketDocuments and uploadTicketDocument API wrappers",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F053",
+    "description": "Feature 10: Tests — Write DocumentsSection.test.ts for document list rendering, empty state, upload trigger",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F054",
+    "description": "Feature 10: Tests — Run npx vitest run, all tests pass including new document tests",
+    "implemented": false,
+    "prdRefs": ["Feature 10"]
+  },
+  {
+    "id": "F055",
+    "description": "Feature 11: Tests — Write materials.test.ts for getTicketMaterials, addTicketMaterial, listProducts API wrappers",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F056",
+    "description": "Feature 11: Tests — Write MaterialsSection.test.ts for materials list rendering, empty state, add product flow",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F057",
+    "description": "Feature 11: Tests — Run npx vitest run, all tests pass including new material tests",
+    "implemented": false,
+    "prdRefs": ["Feature 11"]
+  },
+  {
+    "id": "F058",
+    "description": "Final validation — Run full test suite (npx vitest run from ee/mobile/), all 126+ existing tests still pass alongside new tests",
+    "implemented": false,
+    "prdRefs": ["Feature 10", "Feature 11", "Feature 15"]
+  }
+]
