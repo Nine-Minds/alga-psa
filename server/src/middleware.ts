@@ -49,6 +49,39 @@ function getCanonicalUrl(): URL | null {
   return process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL) : null;
 }
 
+export function getVanityClientPortalInternalRedirectTarget(args: {
+  pathname: string;
+  isAuthPage: boolean;
+  requestHostname: string;
+  canonicalUrlEnv: URL | null;
+  userType?: string | null;
+}): URL | null {
+  const {
+    pathname,
+    isAuthPage,
+    requestHostname,
+    canonicalUrlEnv,
+    userType,
+  } = args;
+
+  if (
+    userType !== 'internal' ||
+    !canonicalUrlEnv ||
+    requestHostname === canonicalUrlEnv.hostname
+  ) {
+    return null;
+  }
+
+  if (
+    pathname === '/auth/client-portal/signin' ||
+    (pathname.startsWith(clientPortalPrefix) && !isAuthPage)
+  ) {
+    return new URL('/msp/dashboard', canonicalUrlEnv.origin);
+  }
+
+  return null;
+}
+
 const _middleware = auth((request) => {
   const pathname = request.nextUrl.pathname;
   const requestHost = request.headers.get('host') || '';
@@ -171,6 +204,19 @@ const _middleware = auth((request) => {
     const canonicalUrlEnv = getCanonicalUrl();
 
     if (canonicalUrlEnv && requestHostname !== canonicalUrlEnv.hostname) {
+      const redirectTarget = getVanityClientPortalInternalRedirectTarget({
+        pathname,
+        isAuthPage,
+        requestHostname,
+        canonicalUrlEnv,
+        userType: request.auth?.user?.user_type,
+      });
+      if (redirectTarget) {
+        const redirectResponse = NextResponse.redirect(redirectTarget);
+        redirectResponse.headers.set('x-pathname', redirectTarget.pathname);
+        return redirectResponse;
+      }
+
       const canonicalLogin = new URL('/auth/client-portal/signin', canonicalUrlEnv.origin);
       const hostHeader = request.headers.get('host') || requestHostname;
 
@@ -296,6 +342,19 @@ const _middleware = auth((request) => {
       redirectResponse.headers.set('x-pathname', loginUrl.pathname);
       return redirectResponse;
     } else if (request.auth.user?.user_type !== 'client') {
+      const redirectTarget = getVanityClientPortalInternalRedirectTarget({
+        pathname,
+        isAuthPage,
+        requestHostname,
+        canonicalUrlEnv: getCanonicalUrl(),
+        userType: request.auth.user?.user_type,
+      });
+      if (redirectTarget) {
+        const redirectResponse = NextResponse.redirect(redirectTarget);
+        redirectResponse.headers.set('x-pathname', redirectTarget.pathname);
+        return redirectResponse;
+      }
+
       // Prevent non-client users (internal) from accessing client portal
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/auth/client-portal/signin';
