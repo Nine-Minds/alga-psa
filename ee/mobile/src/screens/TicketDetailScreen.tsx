@@ -13,6 +13,7 @@ import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useToast } from "../ui/toast/ToastProvider";
 import { Badge } from "../ui/components/Badge";
+import { Avatar } from "../ui/components/Avatar";
 import { formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import type { TicketRichTextQaScenario } from "../qa/ticketRichTextQa";
 
@@ -183,6 +184,20 @@ export function TicketDetailBody({
   const meUserId = session.user?.id;
   const isWatching = meUserId ? getWatcherUserIds(ticket).includes(meUserId) : false;
   const isAssignedToMe = Boolean(meUserId && ticket.assigned_to && ticket.assigned_to === meUserId);
+  const renderEntityValue = useCallback((name: string | null | undefined, imageUri: string | null | undefined, accessibilityLabel: string) => (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+      <Avatar
+        name={name ?? undefined}
+        imageUri={imageUri ?? undefined}
+        authToken={session.accessToken}
+        size="sm"
+        accessibilityLabel={accessibilityLabel}
+      />
+      <Text style={{ ...typography.body, color: colors.text, flexShrink: 1 }}>
+        {stringOrDash(name)}
+      </Text>
+    </View>
+  ), [colors.text, session.accessToken, spacing.sm, typography.body]);
 
   // --- Render ---
   return (
@@ -396,7 +411,14 @@ export function TicketDetailBody({
         )}
 
         <View style={{ marginTop: spacing.lg }}>
-          <KeyValue label={t("detail.contact")} value={stringOrDash(ticket.contact_name)}>
+          <KeyValue
+            label={t("detail.contact")}
+            value={renderEntityValue(
+              ticket.contact_name,
+              typeof ticket.contact_avatar_url === "string" ? ticket.contact_avatar_url : null,
+              t("detail.contact"),
+            )}
+          >
             {ticket.contact_phone ? (
               <Pressable
                 onPress={() => void Linking.openURL(`tel:${ticket.contact_phone}`)}
@@ -423,7 +445,14 @@ export function TicketDetailBody({
             ) : null}
           </KeyValue>
           <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.client")} value={stringOrDash(ticket.client_name)}>
+          <KeyValue
+            label={t("detail.client")}
+            value={renderEntityValue(
+              ticket.client_name,
+              typeof ticket.client_logo_url === "string" ? ticket.client_logo_url : null,
+              t("detail.client"),
+            )}
+          >
             {ticket.client_phone ? (
               <Pressable
                 onPress={() => void Linking.openURL(`tel:${ticket.client_phone}`)}

@@ -48,3 +48,10 @@
 - `packages/tickets/src/actions/materialCatalogActions.ts` — material actions
 - `ee/mobile/src/screens/TicketDetailScreen.tsx` — mobile ticket detail
 - `ee/mobile/src/api/tickets.ts` — mobile ticket API
+
+## Progress Log
+- F001 complete: `TicketService.getById()` now resolves `contact_avatar_url` via `getContactAvatarUrl()` when `contact_name_id` is present; implemented together with the rest of Feature 15 to avoid partial dead code.
+
+## Commands / Runbooks
+- Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`
+- Mobile targeted test: `cd ee/mobile && npx vitest run src/screens/TicketDetailScreen.avatars.test.ts`

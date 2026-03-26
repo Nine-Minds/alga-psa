@@ -30,7 +30,7 @@ import { ListOptions } from '../controllers/types';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
 import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketRichRender';
-import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
+import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 // import { performanceTracker } from '../../analytics/performanceTracking';
 
@@ -332,11 +332,17 @@ export class TicketService extends BaseService<ITicket> {
       return null;
     }
 
-    const documents = await this.getTicketDocuments(id, context);
+    const [documents, contactAvatarUrl, clientLogoUrl] = await Promise.all([
+      this.getTicketDocuments(id, context),
+      ticket.contact_name_id ? getContactAvatarUrl(ticket.contact_name_id, context.tenant) : Promise.resolve(null),
+      ticket.client_id ? getClientLogoUrl(ticket.client_id, context.tenant) : Promise.resolve(null),
+    ]);
 
     return {
       ...this.withDescriptionHtml(ticket as ITicketWithDetails),
-      documents
+      documents,
+      contact_avatar_url: contactAvatarUrl,
+      client_logo_url: clientLogoUrl,
     } as ITicketWithDetails;
   }
 

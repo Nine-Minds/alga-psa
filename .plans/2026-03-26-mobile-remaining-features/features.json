@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Feature 15: Server — Add getContactAvatarUrl call in TicketService.getById after ticket query",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 15"]
   },
   {
