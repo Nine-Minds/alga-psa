@@ -202,7 +202,7 @@
   {
     "id": "F041",
     "description": "Feature 11: Mobile — After product selection, show quantity/rate input modal",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {

@@ -83,6 +83,7 @@
 - F038 complete: `MaterialsSection` is now mounted in `TicketDetailScreen` as a dedicated ticket detail card that loads and manages material data independently of comments/documents.
 - F039 complete: each material row now renders the product name, SKU, localized quantity/rate line, and a billed or unbilled badge directly in the ticket detail UI.
 - F040 complete: the materials card now exposes an `Add Product` action that opens `EntityPickerModal`, loads product results from `/api/v1/products`, and supports search-driven filtering.
+- F041 complete: selecting a product now closes the picker and opens a dedicated modal with quantity and rate inputs so the technician can confirm billable details before creation.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`
