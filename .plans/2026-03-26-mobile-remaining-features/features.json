@@ -178,7 +178,7 @@
   {
     "id": "F037",
     "description": "Feature 11: Mobile API — listProducts() function for product search (uses existing GET /api/v1/products)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {
