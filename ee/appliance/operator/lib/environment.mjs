@@ -69,6 +69,7 @@ export function discoverEnvironment(options = {}) {
     runtime,
     configBaseDir,
     siteIds,
+    suggestedSiteId: resolveDefaultSite(siteIds),
     siteSelectionRequired: selectedSite.requiresSelection,
     site,
     paths: {
@@ -86,6 +87,9 @@ export function selectDiscoveredSite(environment, siteId) {
   const site = resolveSitePaths(environment.configBaseDir, siteId);
   return {
     ...environment,
+    siteIds: environment.siteIds.includes(siteId)
+      ? environment.siteIds
+      : [...environment.siteIds, siteId].sort(),
     siteSelectionRequired: false,
     site,
     paths: {

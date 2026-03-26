@@ -17,6 +17,8 @@ DNS_SERVERS=""
 INSTALL_DISK="/dev/sda"
 KUBECONFIG_PATH="${KUBECONFIG:-}"
 TALOSCONFIG_PATH="${TALOSCONFIG:-}"
+KUBECONFIG_EXPLICIT=false
+TALOSCONFIG_EXPLICIT=false
 CONFIG_DIR=""
 ALGA_CORE_TAG=""
 WORKFLOW_WORKER_TAG=""
@@ -34,6 +36,14 @@ TEMP_PROFILE_DIR=""
 RELEASE_APP_VERSION=""
 RELEASE_APP_BRANCH=""
 REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)"
+
+if [ -n "$KUBECONFIG_PATH" ]; then
+  KUBECONFIG_EXPLICIT=true
+fi
+
+if [ -n "$TALOSCONFIG_PATH" ]; then
+  TALOSCONFIG_EXPLICIT=true
+fi
 
 usage() {
   cat <<'EOF'
@@ -56,7 +66,7 @@ Options:
   --dns-servers <csv>            Comma-separated resolvers (for example: 8.8.8.8,1.1.1.1)
   --install-disk <path>          Talos install disk (default: /dev/sda)
   --config-dir <path>            Directory for persisted talosconfig, kubeconfig, and values
-  --kubeconfig <path>            Existing kubeconfig path (skips Talos bootstrap when present)
+  --kubeconfig <path>            Existing kubeconfig path (explicitly reuses installed cluster)
   --talosconfig <path>           Existing talosconfig path
   --repo-url <url>               Git repository URL for Flux source
   --repo-branch <branch>         Git repository branch for Flux source
@@ -248,6 +258,10 @@ resolve_config_paths() {
   fi
 }
 
+reuse_existing_cluster_config() {
+  [ "$KUBECONFIG_EXPLICIT" = true ] && [ -f "$KUBECONFIG_PATH" ]
+}
+
 resolve_runtime_inputs() {
   resolve_release_version
   resolve_repo_defaults
@@ -300,7 +314,7 @@ resolve_runtime_inputs() {
     REPO_BRANCH="$(prompt_value "Git repository branch")"
   fi
 
-  if [ ! -f "$KUBECONFIG_PATH" ] && [ -z "$NODE_IP" ]; then
+  if ! reuse_existing_cluster_config && [ -z "$NODE_IP" ]; then
     NODE_IP="$(prompt_value "Talos node IP")"
   fi
 
@@ -322,15 +336,15 @@ resolve_runtime_inputs() {
       ;;
   esac
 
-  if [ ! -f "$KUBECONFIG_PATH" ] && [ -z "$NETWORK_MODE" ]; then
+  if ! reuse_existing_cluster_config && [ -z "$NETWORK_MODE" ]; then
     NETWORK_MODE="$(prompt_value "Network mode (dhcp/static)" "dhcp")"
   fi
 
-  if [ ! -f "$KUBECONFIG_PATH" ] && [ -z "$INTERFACE_NAME" ]; then
+  if ! reuse_existing_cluster_config && [ -z "$INTERFACE_NAME" ]; then
     INTERFACE_NAME="$(prompt_value "Network interface name" "enp0s1")"
   fi
 
-  if [ ! -f "$KUBECONFIG_PATH" ] && [ "$NETWORK_MODE" = "static" ]; then
+  if ! reuse_existing_cluster_config && [ "$NETWORK_MODE" = "static" ]; then
     if [ -z "$STATIC_ADDRESS" ]; then
       STATIC_ADDRESS="$(prompt_value "Static IPv4 address in CIDR form")"
     fi
@@ -339,7 +353,7 @@ resolve_runtime_inputs() {
     fi
   fi
 
-  if [ ! -f "$KUBECONFIG_PATH" ] && [ -z "$DNS_SERVERS" ] && is_interactive; then
+  if ! reuse_existing_cluster_config && [ -z "$DNS_SERVERS" ] && is_interactive; then
     DNS_SERVERS="$(prompt_value "DNS resolvers (comma-separated, leave blank to accept defaults)" "")"
   fi
 
@@ -634,7 +648,7 @@ wait_for_kubernetes_node_ready() {
 }
 
 bootstrap_talos_cluster() {
-  if [ -f "$KUBECONFIG_PATH" ]; then
+  if reuse_existing_cluster_config; then
     return 0
   fi
 
@@ -715,8 +729,8 @@ create_runtime_values_dir() {
   cp "$source_profile_dir/values/"*.yaml "$values_dir/"
 
   set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "bootstrap.mode" "$BOOTSTRAP_MODE"
-  set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "setup.image.tag" "$ALGA_CORE_TAG"
-  set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "server.image.tag" "$ALGA_CORE_TAG"
+  set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "setup.image.tag" "$(yaml_string "$ALGA_CORE_TAG")"
+  set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "server.image.tag" "$(yaml_string "$ALGA_CORE_TAG")"
   if [ -n "$APP_URL" ]; then
     local app_host
     app_host="$(url_host "$APP_URL")"
@@ -724,9 +738,9 @@ create_runtime_values_dir() {
     set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "host" "$(yaml_string "$app_host")"
     set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "domainSuffix" '""'
   fi
-  set_yaml_value "$values_dir/workflow-worker.$PROFILE.yaml" "image.tag" "$WORKFLOW_WORKER_TAG"
-  set_yaml_value "$values_dir/email-service.$PROFILE.yaml" "image.tag" "$EMAIL_SERVICE_TAG"
-  set_yaml_value "$values_dir/temporal-worker.$PROFILE.yaml" "image.tag" "$TEMPORAL_WORKER_TAG"
+  set_yaml_value "$values_dir/workflow-worker.$PROFILE.yaml" "image.tag" "$(yaml_string "$WORKFLOW_WORKER_TAG")"
+  set_yaml_value "$values_dir/email-service.$PROFILE.yaml" "image.tag" "$(yaml_string "$EMAIL_SERVICE_TAG")"
+  set_yaml_value "$values_dir/temporal-worker.$PROFILE.yaml" "image.tag" "$(yaml_string "$TEMPORAL_WORKER_TAG")"
 
   mkdir -p "$CONFIG_DIR/values"
   cp "$values_dir/"*.yaml "$CONFIG_DIR/values/"
@@ -997,10 +1011,12 @@ while [ "$#" -gt 0 ]; do
       ;;
     --kubeconfig)
       KUBECONFIG_PATH="$2"
+      KUBECONFIG_EXPLICIT=true
       shift 2
       ;;
     --talosconfig)
       TALOSCONFIG_PATH="$2"
+      TALOSCONFIG_EXPLICIT=true
       shift 2
       ;;
     --repo-url)
@@ -1065,7 +1081,7 @@ require_command talosctl
 resolve_runtime_inputs
 create_runtime_values_dir
 
-if [ ! -f "$KUBECONFIG_PATH" ]; then
+if ! reuse_existing_cluster_config; then
   generate_machine_config
   bootstrap_talos_cluster
 fi

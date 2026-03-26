@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { spawn } from 'node:child_process';
-import { runBootstrap } from '../lib/lifecycle.mjs';
+import { runBootstrap, runRepairRelease, runUpgrade } from '../lib/lifecycle.mjs';
 
 class MockStreamingRunner {
   constructor({ code = 0, lines = [] }) {
@@ -117,9 +117,138 @@ test('T001: bootstrap resolves release from environment and classifies failure l
 
   assert.equal(result.ok, false);
   assert.equal(result.failureLayer, 'kubernetes');
-  assert.deepEqual(runner.calls[0].args.slice(0, 4), ['--release-version', '1.0.0', '--bootstrap-mode', 'recover']);
+  assert.deepEqual(runner.calls[0].args.slice(0, 6), [
+    '--site-id',
+    'appliance-single-node',
+    '--release-version',
+    '1.0.0',
+    '--bootstrap-mode',
+    'recover',
+  ]);
+  assert(!runner.calls[0].args.includes('--kubeconfig'));
+  assert(!runner.calls[0].args.includes('--talosconfig'));
   assert(events.some((event) => event.type === 'phase' && event.phase === 'Talos'));
   assert(events.some((event) => event.type === 'phase' && event.phase === 'Kubernetes'));
+});
+
+test('runBootstrap derives site id and config dir when no site is preselected', async () => {
+  const env = {
+    runtime: {
+      bootstrapScript: '/tmp/bootstrap-appliance.sh',
+      assetRoot: '/tmp',
+    },
+    configBaseDir: '/tmp/config-base',
+    site: null,
+    suggestedSiteId: 'appliance-new-site',
+    paths: { kubeconfig: null, talosconfig: null },
+    nodeIp: '10.0.0.10',
+    appUrl: 'https://psa.example.com',
+    defaultReleaseVersion: '1.0.0',
+  };
+
+  const runner = new MockStreamingRunner({
+    code: 0,
+    lines: ['Talos bootstrap starting'],
+  });
+
+  const result = await runBootstrap(env, {
+    siteId: 'appliance-new-site',
+    bootstrapMode: 'fresh',
+    hostname: 'alga-appliance',
+    runner,
+  });
+
+  assert.equal(result.ok, true);
+  assert.match(runner.calls[0].args.join(' '), /--site-id appliance-new-site/);
+  assert.match(runner.calls[0].args.join(' '), /--config-dir \/tmp\/config-base\/appliance-new-site/);
+});
+
+test('runBootstrap only reuses kubeconfig and talosconfig when explicitly provided', async () => {
+  const env = {
+    runtime: {
+      bootstrapScript: '/tmp/bootstrap-appliance.sh',
+      assetRoot: '/tmp',
+    },
+    site: { configDir: '/tmp/site', siteId: 'appliance-single-node' },
+    paths: { kubeconfig: '/tmp/site/kubeconfig', talosconfig: '/tmp/site/talosconfig' },
+    nodeIp: '10.0.0.10',
+    appUrl: 'https://psa.example.com',
+    defaultReleaseVersion: '1.0.0',
+  };
+
+  const runner = new MockStreamingRunner({
+    code: 0,
+    lines: ['Talos bootstrap starting'],
+  });
+
+  const result = await runBootstrap(env, {
+    bootstrapMode: 'recover',
+    hostname: 'alga-appliance',
+    kubeconfig: '/tmp/override.kubeconfig',
+    talosconfig: '/tmp/override.talosconfig',
+    runner,
+  });
+
+  assert.equal(result.ok, true);
+  assert.match(runner.calls[0].args.join(' '), /--kubeconfig \/tmp\/override\.kubeconfig/);
+  assert.match(runner.calls[0].args.join(' '), /--talosconfig \/tmp\/override\.talosconfig/);
+});
+
+test('runUpgrade passes skip-reconcile only when reconcileAfterApply is disabled', async () => {
+  const env = {
+    runtime: {
+      upgradeScript: '/tmp/upgrade-appliance.sh',
+      assetRoot: '/tmp',
+    },
+    site: { configDir: '/tmp/site', siteId: 'appliance-single-node' },
+    paths: { kubeconfig: '/tmp/site/kubeconfig' },
+    defaultReleaseVersion: '1.0-rc5',
+  };
+
+  const runner = new MockStreamingRunner({
+    code: 0,
+    lines: ['upgrade starting'],
+  });
+
+  await runUpgrade(env, {
+    releaseVersion: '1.0-rc5',
+    reconcileAfterApply: false,
+    runner,
+  });
+
+  assert.match(runner.calls[0].args.join(' '), /--skip-reconcile/);
+
+  runner.calls.length = 0;
+
+  await runUpgrade(env, {
+    releaseVersion: '1.0-rc5',
+    reconcileAfterApply: true,
+    runner,
+  });
+
+  assert(!runner.calls[0].args.includes('--skip-reconcile'));
+});
+
+test('runRepairRelease passes cleanup toggle through to the repair script', async () => {
+  const env = {
+    runtime: {
+      repairScript: '/tmp/repair-release.sh',
+      assetRoot: '/tmp',
+    },
+    paths: { kubeconfig: '/tmp/site/kubeconfig' },
+  };
+
+  const runner = new MockStreamingRunner({
+    code: 0,
+    lines: ['repair starting'],
+  });
+
+  await runRepairRelease(env, {
+    cleanupWorkloads: false,
+    runner,
+  });
+
+  assert.match(runner.calls[0].args.join(' '), /--skip-cleanup-workloads/);
 });
 
 test('T002: CLI upgrade surfaces no-auto-rollback guidance on failure', async () => {

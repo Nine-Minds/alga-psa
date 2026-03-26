@@ -119,6 +119,30 @@ function parseAppUrlFromAlgaCoreConfigMap(configMapJson) {
   return null;
 }
 
+function parseDesiredAlgaCoreImages(configMapJson) {
+  const data = configMapJson?.data || {};
+  for (const value of Object.values(data)) {
+    const text = String(value);
+    const setupName = text.match(/setup:\n(?:.*\n)*?\s+image:\n(?:.*\n)*?\s+name:\s*([^\n]+)/m);
+    const setupTag = text.match(/setup:\n(?:.*\n)*?\s+image:\n(?:.*\n)*?\s+tag:\s*"?([^\n"]+)"?/m);
+    const serverName = text.match(/server:\n(?:.*\n)*?\s+image:\n(?:.*\n)*?\s+name:\s*([^\n]+)/m);
+    const serverTag = text.match(/server:\n(?:.*\n)*?\s+image:\n(?:.*\n)*?\s+tag:\s*"?([^\n"]+)"?/m);
+
+    return {
+      setupImage: setupName && setupTag ? `${setupName[1].trim()}:${setupTag[1].trim()}` : null,
+      serverImage: serverName && serverTag ? `${serverName[1].trim()}:${serverTag[1].trim()}` : null,
+    };
+  }
+  return { setupImage: null, serverImage: null };
+}
+
+function parseActualAlgaCoreImages(deploymentJson) {
+  return {
+    setupImage: deploymentJson?.spec?.template?.spec?.initContainers?.[0]?.image || null,
+    serverImage: deploymentJson?.spec?.template?.spec?.containers?.[0]?.image || null,
+  };
+}
+
 function determineConnectivity(status) {
   if (status.cluster.apiReachable && status.workloads.status === 'healthy') {
     return 'app-healthy';
@@ -154,6 +178,14 @@ function determineTopBlocker(status) {
       layer: 'Flux source/reconcile failure',
       reason: 'One or more Flux resources are not Ready',
       nextAction: 'Review Flux GitRepository and Kustomization conditions.',
+    };
+  }
+
+  if (status.release.imageDrift?.detected) {
+    return {
+      layer: 'release drift',
+      reason: 'Desired alga-core image differs from the live deployment image',
+      nextAction: 'Run Repair Release to clean up alga-core workloads and reconcile the HelmRelease.',
     };
   }
 
@@ -276,6 +308,17 @@ export async function collectStatus(env, options = {}) {
     selectedReleaseVersion: null,
     metadata: null,
     appUrl: env.appUrl,
+    desiredImages: {
+      setupImage: null,
+      serverImage: null,
+    },
+    actualImages: {
+      setupImage: null,
+      serverImage: null,
+    },
+    imageDrift: {
+      detected: false,
+    },
   };
 
   if (cluster.apiReachable) {
@@ -284,9 +327,22 @@ export async function collectStatus(env, options = {}) {
 
     const values = await kubeJson(shell, kubeconfig, 'alga-system', 'configmap/appliance-values-alga-core');
     const parsedAppUrl = parseAppUrlFromAlgaCoreConfigMap(values.json);
+    release.desiredImages = parseDesiredAlgaCoreImages(values.json);
     if (parsedAppUrl) {
       release.appUrl = parsedAppUrl;
     }
+
+    const algaCoreDeployment = await kubeJson(shell, kubeconfig, 'msp', 'deployment/alga-core-sebastian');
+    release.actualImages = parseActualAlgaCoreImages(algaCoreDeployment.json);
+    release.imageDrift = {
+      detected:
+        !!release.desiredImages.serverImage &&
+        !!release.actualImages.serverImage &&
+        (release.desiredImages.serverImage !== release.actualImages.serverImage ||
+          (release.desiredImages.setupImage &&
+            release.actualImages.setupImage &&
+            release.desiredImages.setupImage !== release.actualImages.setupImage)),
+    };
   }
 
   if (release.selectedReleaseVersion) {

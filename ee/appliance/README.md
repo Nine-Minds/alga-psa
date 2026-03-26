@@ -2,6 +2,13 @@
 
 This directory owns appliance-specific assets and automation for Alga PSA.
 
+For user-facing appliance installation and operation guides, start with:
+
+- `ee/docs/appliance/README.md`
+- `ee/docs/appliance/quick-start.md`
+- `ee/docs/appliance/operators-manual.md`
+- `ee/docs/appliance/technical-reference.md`
+
 For the stable operating model and generic Talos appliance assumptions, start with:
 
 - `ee/docs/premise/README.md`
@@ -32,7 +39,7 @@ Build command:
 
 ```bash
 ee/appliance/scripts/build-images.sh \
-  --release-version 0.0.1 \
+  --release-version 1.0-rc5 \
   --talos-version v1.12.0 \
   --kubernetes-version v1.31.4 \
   --app-version 1.0-rc3 \
@@ -48,7 +55,7 @@ Dry-run example:
 ```bash
 EE_APPLIANCE_SCHEMATIC_ID_OVERRIDE=testschematic \
 ee/appliance/scripts/build-images.sh \
-  --release-version 0.0.1 \
+  --release-version 1.0-rc5 \
   --talos-version v1.12.0 \
   --kubernetes-version v1.31.4 \
   --app-version 1.0-rc3 \
@@ -78,8 +85,8 @@ ee/appliance/appliance tui
 The same operator core is available for non-interactive usage:
 
 ```bash
-ee/appliance/appliance bootstrap --bootstrap-mode recover --release-version 0.0.1
-ee/appliance/appliance upgrade --release-version 0.0.1
+ee/appliance/appliance bootstrap --bootstrap-mode recover --release-version 1.0-rc5
+ee/appliance/appliance upgrade --release-version 1.0-rc5
 ee/appliance/appliance reset --force
 ee/appliance/appliance status
 ee/appliance/appliance support-bundle --output-dir ./bundles
@@ -106,7 +113,7 @@ Example fresh bring-up:
 
 ```bash
 ee/appliance/scripts/bootstrap-appliance.sh \
-  --release-version 0.0.1 \
+  --release-version 1.0-rc5 \
   --bootstrap-mode fresh \
   --node-ip 192.168.64.5 \
   --hostname alga-appliance \
@@ -129,7 +136,7 @@ Example:
 
 ```bash
 ee/appliance/scripts/upgrade-appliance.sh \
-  --release-version 0.0.1 \
+  --release-version 1.0-rc5 \
   --kubeconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/kubeconfig
 ```
 

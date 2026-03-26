@@ -1,4 +1,5 @@
 import { ShellRunner } from './runner.mjs';
+import { resolveSitePaths } from './runtime-paths.mjs';
 
 function nowStamp() {
   return new Date().toISOString().replace('T', ' ').replace('Z', 'Z');
@@ -110,7 +111,10 @@ async function runLifecycleScript({ script, args, runner, cwd, onProgress, phase
 
 export async function runBootstrap(env, options = {}) {
   const releaseVersion = normalizeReleaseVersion(env, options.releaseVersion);
+  const siteId = options.siteId || env.site?.siteId || env.suggestedSiteId || 'appliance-single-node';
+  const derivedSite = env.site || (env.configBaseDir ? resolveSitePaths(env.configBaseDir, siteId) : null);
   const args = buildScriptArgs({
+    'site-id': siteId,
     'release-version': releaseVersion,
     'bootstrap-mode': options.bootstrapMode,
     'node-ip': options.nodeIp || env.nodeIp,
@@ -121,9 +125,9 @@ export async function runBootstrap(env, options = {}) {
     'static-address': options.staticAddress,
     'static-gateway': options.staticGateway,
     'dns-servers': options.dnsServers,
-    'config-dir': options.configDir || env.site.configDir,
-    kubeconfig: options.kubeconfig || env.paths.kubeconfig,
-    talosconfig: options.talosconfig || env.paths.talosconfig,
+    'config-dir': options.configDir || derivedSite?.configDir,
+    kubeconfig: options.kubeconfig,
+    talosconfig: options.talosconfig,
     'repo-url': options.repoUrl,
     'repo-branch': options.repoBranch,
     'prepull-images': options.prepullImages,
@@ -147,6 +151,7 @@ export async function runUpgrade(env, options = {}) {
     kubeconfig: options.kubeconfig || env.paths.kubeconfig,
     'config-dir': options.configDir || env.site.configDir,
     profile: options.profile,
+    'skip-reconcile': options.reconcileAfterApply === false,
     'dry-run': options.dryRun,
   });
 
@@ -156,6 +161,26 @@ export async function runUpgrade(env, options = {}) {
     runner: options.runner,
     cwd: env.runtime.assetRoot,
     onProgress: options.onProgress,
+  });
+}
+
+export async function runRepairRelease(env, options = {}) {
+  const args = buildScriptArgs({
+    kubeconfig: options.kubeconfig || env.paths.kubeconfig,
+    'release-name': options.releaseName || 'alga-core',
+    'release-namespace': options.releaseNamespace || 'alga-system',
+    'workload-namespace': options.workloadNamespace || 'msp',
+    'skip-cleanup-workloads': options.cleanupWorkloads === false,
+    'dry-run': options.dryRun,
+  });
+
+  return runLifecycleScript({
+    script: env.runtime.repairScript,
+    args,
+    runner: options.runner,
+    cwd: env.runtime.assetRoot,
+    onProgress: options.onProgress,
+    phaseDetector: detectBootstrapPhase,
   });
 }
 

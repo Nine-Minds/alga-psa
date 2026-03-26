@@ -52,6 +52,7 @@ export function resolveRuntimePaths(options = {}) {
       supportBundleScript: path.resolve(assetRoot, 'scripts', 'collect-support-bundle.sh'),
       bootstrapScript: path.resolve(assetRoot, 'scripts', 'bootstrap-appliance.sh'),
       upgradeScript: path.resolve(assetRoot, 'scripts', 'upgrade-appliance.sh'),
+      repairScript: path.resolve(assetRoot, 'scripts', 'repair-release.sh'),
       resetScript: path.resolve(assetRoot, 'scripts', 'reset-appliance-data.sh'),
     };
   }
@@ -74,6 +75,7 @@ export function resolveRuntimePaths(options = {}) {
     supportBundleScript: path.join(base, 'ee', 'appliance', 'scripts', 'collect-support-bundle.sh'),
     bootstrapScript: path.join(base, 'ee', 'appliance', 'scripts', 'bootstrap-appliance.sh'),
     upgradeScript: path.join(base, 'ee', 'appliance', 'scripts', 'upgrade-appliance.sh'),
+    repairScript: path.join(base, 'ee', 'appliance', 'scripts', 'repair-release.sh'),
     resetScript: path.join(base, 'ee', 'appliance', 'scripts', 'reset-appliance-data.sh'),
   };
 }

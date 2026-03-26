@@ -56,6 +56,8 @@ export function formatStatusReport(status) {
         'App URL: unknown',
         'Release app version: unknown',
         'Release branch: unknown',
+        'Desired server image: unknown',
+        'Actual server image: unknown',
       ],
       paths: [
         'Config dir: unknown',
@@ -103,6 +105,9 @@ export function formatStatusReport(status) {
       `App URL: ${status.release.appUrl || 'unknown'}`,
       `Release app version: ${status.release.metadata?.app?.version || 'unknown'}`,
       `Release branch: ${status.release.metadata?.app?.releaseBranch || 'unknown'}`,
+      `Desired server image: ${status.release.desiredImages?.serverImage || 'unknown'}`,
+      `Actual server image: ${status.release.actualImages?.serverImage || 'unknown'}`,
+      ...(status.release.imageDrift?.detected ? ['Release drift: desired and actual alga-core images differ'] : []),
     ],
     paths: [
       `Config dir: ${status.configPaths.configDir}`,

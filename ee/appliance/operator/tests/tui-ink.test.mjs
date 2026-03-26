@@ -91,6 +91,7 @@ function makeActions(overrides = {}) {
     collectStatus: async () => makeStatus(),
     runBootstrap: async () => ({ ok: true }),
     runUpgrade: async () => ({ ok: true }),
+    runRepairRelease: async () => ({ ok: true }),
     runReset: async () => ({ ok: true }),
     runSupportBundle: async () => ({ ok: true }),
     listAppliancePods: async () => ({
@@ -177,6 +178,41 @@ test('T008: Ink lifecycle forms are keyboard-navigable, including reset confirma
   bootstrapUi.unmount();
 
   // Open a fresh shell for reset flow.
+  const upgradeUi = render(
+    React.createElement(TuiApp, {
+      initialEnv: makeEnv(),
+      actions: makeActions(),
+      onExit: () => {},
+    }),
+  );
+  await sleep(20);
+  pressJ(upgradeUi, 1);
+  await sleep(20);
+  pressEnter(upgradeUi);
+  await sleep(20);
+  frame = upgradeUi.lastFrame() || '';
+  assert.match(frame, /Upgrade Form/);
+  assert.match(frame, /Reconcile After Apply/);
+  upgradeUi.unmount();
+
+  const repairUi = render(
+    React.createElement(TuiApp, {
+      initialEnv: makeEnv(),
+      actions: makeActions(),
+      onExit: () => {},
+    }),
+  );
+  await sleep(20);
+  pressJ(repairUi, 4);
+  await sleep(20);
+  pressEnter(repairUi);
+  await sleep(20);
+  frame = repairUi.lastFrame() || '';
+  assert.match(frame, /Repair Release Form/);
+  assert.match(frame, /Cleanup Failed Workloads/);
+  repairUi.unmount();
+
+  // Open a fresh shell for reset flow.
   const resetUi = render(
     React.createElement(TuiApp, {
       initialEnv: makeEnv(),
@@ -187,7 +223,7 @@ test('T008: Ink lifecycle forms are keyboard-navigable, including reset confirma
   await sleep(20);
 
   // Navigate to Reset and verify challenge behavior.
-  pressJ(resetUi, 5);
+  pressJ(resetUi, 6);
   await sleep(20);
   pressEnter(resetUi);
   await sleep(20);
@@ -210,7 +246,7 @@ test('T008: Ink lifecycle forms are keyboard-navigable, including reset confirma
     }),
   );
   await sleep(20);
-  pressJ(resetConfirmUi, 5);
+  pressJ(resetConfirmUi, 6);
   await sleep(20);
   pressEnter(resetConfirmUi);
   await sleep(20);
@@ -238,6 +274,51 @@ test('T008: Ink lifecycle forms are keyboard-navigable, including reset confirma
   assert.match(noReleaseFrame, /No published appliance releases were/);
   assert.match(noReleaseFrame, /found\./);
   noReleaseUi.unmount();
+});
+
+test('Bootstrap is available before site selection, while site-bound actions defer to site picker', async () => {
+  const env = makeEnv({
+    siteIds: ['site-a', 'site-b'],
+    siteSelectionRequired: true,
+    suggestedSiteId: 'site-a',
+    site: null,
+    paths: {
+      kubeconfig: null,
+      talosconfig: null,
+    },
+    nodeIp: '10.0.0.9',
+    appUrl: 'http://10.0.0.9:3000',
+  });
+
+  const ui = render(
+    React.createElement(TuiApp, {
+      initialEnv: env,
+      actions: makeActions(),
+      onExit: () => {},
+    }),
+  );
+
+  await sleep(20);
+  let frame = ui.lastFrame() || '';
+  assert.match(frame, /Selected appliance: unselected/);
+  assert.match(frame, /Bootstrap/);
+
+  pressEnter(ui);
+  await sleep(20);
+  frame = ui.lastFrame() || '';
+  assert.match(frame, /Bootstrap Form/);
+  assert.match(frame, /Site ID/);
+
+  ui.stdin.write('\u001B');
+  await sleep(20);
+  pressJ(ui, 2); // Status
+  await sleep(20);
+  pressEnter(ui);
+  await sleep(20);
+  frame = ui.lastFrame() || '';
+  assert.match(frame, /Select Appliance Site/);
+  assert.match(frame, /continue to Status/);
+  ui.unmount();
 });
 
 test('T009: Ink progress stream stays in dedicated region while status dashboard remains visible', async () => {
