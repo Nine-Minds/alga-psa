@@ -8,11 +8,15 @@ export const KNOWN_PROVIDER_CAPABILITIES = [
   'cap:user.read',
   'cap:scheduler.manage',
   'cap:invoice.manual.create',
+  'cap:client.read',
+  'cap:service.read',
 ] as const;
 
 export const DEFAULT_PROVIDER_CAPABILITIES = ['cap:context.read', 'cap:log.emit', 'cap:user.read'] as const;
 
 export const CAP_INVOICE_MANUAL_CREATE = 'cap:invoice.manual.create' as const;
+export const CAP_CLIENT_READ = 'cap:client.read' as const;
+export const CAP_SERVICE_READ = 'cap:service.read' as const;
 
 export type ProviderCapability = (typeof KNOWN_PROVIDER_CAPABILITIES)[number];
 

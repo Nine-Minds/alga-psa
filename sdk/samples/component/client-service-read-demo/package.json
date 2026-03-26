@@ -1,0 +1,14 @@
+{
+  "name": "@alga-samples/client-service-read-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@alga-psa/extension-runtime": "^0.3.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.18"
+  }
+}
