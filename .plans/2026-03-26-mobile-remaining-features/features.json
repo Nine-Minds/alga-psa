@@ -166,7 +166,7 @@
   {
     "id": "F035",
     "description": "Feature 11: Mobile API — getTicketMaterials() function",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {
