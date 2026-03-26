@@ -1,4 +1,4 @@
-import { getConnection } from 'server/src/lib/db'
+import { getConnection } from '@alga-psa/db'
 import type { Knex } from 'knex'
 
 export type ServiceItemKind = 'service' | 'product'

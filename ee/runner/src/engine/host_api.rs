@@ -1697,8 +1697,8 @@ fn parse_clients_list_result(value: &Value) -> Option<ClientsListResult> {
         .cloned()
         .unwrap_or_default()
         .iter()
-        .filter_map(parse_client_summary)
-        .collect();
+        .map(parse_client_summary)
+        .collect::<Option<Vec<_>>>()?;
 
     let total_count = obj
         .get("totalCount")
@@ -1720,18 +1720,20 @@ fn parse_clients_list_result(value: &Value) -> Option<ClientsListResult> {
     })
 }
 
-fn parse_service_item_kind(value: Option<&Value>) -> ServiceItemKind {
+fn parse_service_item_kind(value: Option<&Value>) -> Option<ServiceItemKind> {
     match value.and_then(|v| v.as_str()) {
-        Some("product") => ServiceItemKind::Product,
-        _ => ServiceItemKind::Service,
+        Some("service") => Some(ServiceItemKind::Service),
+        Some("product") => Some(ServiceItemKind::Product),
+        _ => None,
     }
 }
 
-fn parse_service_billing_method(value: Option<&Value>) -> ServiceBillingMethod {
+fn parse_service_billing_method(value: Option<&Value>) -> Option<ServiceBillingMethod> {
     match value.and_then(|v| v.as_str()) {
-        Some("hourly") => ServiceBillingMethod::Hourly,
-        Some("usage") => ServiceBillingMethod::Usage,
-        _ => ServiceBillingMethod::Fixed,
+        Some("fixed") => Some(ServiceBillingMethod::Fixed),
+        Some("hourly") => Some(ServiceBillingMethod::Hourly),
+        Some("usage") => Some(ServiceBillingMethod::Usage),
+        _ => None,
     }
 }
 
@@ -1748,10 +1750,10 @@ fn parse_service_summary(value: &Value) -> Option<ServiceSummary> {
             .or(obj.get("service_name"))?
             .as_str()?
             .to_string(),
-        item_kind: parse_service_item_kind(obj.get("itemKind").or(obj.get("item_kind"))),
+        item_kind: parse_service_item_kind(obj.get("itemKind").or(obj.get("item_kind")))?,
         billing_method: parse_service_billing_method(
             obj.get("billingMethod").or(obj.get("billing_method")),
-        ),
+        )?,
         service_type_id: obj
             .get("serviceTypeId")
             .or(obj.get("service_type_id"))
@@ -1788,8 +1790,8 @@ fn parse_services_list_result(value: &Value) -> Option<ServicesListResult> {
         .cloned()
         .unwrap_or_default()
         .iter()
-        .filter_map(parse_service_summary)
-        .collect();
+        .map(parse_service_summary)
+        .collect::<Option<Vec<_>>>()?;
 
     let total_count = obj
         .get("totalCount")
@@ -2603,9 +2605,11 @@ impl clients::HostWithStore for HasSelf<HostState> {
             }
 
             let response = clients_request(&install_id, "get", payload).await?;
-            let item = response
-                .get("item")
-                .and_then(|v| if v.is_null() { None } else { parse_client_summary(v) });
+            let item = match response.get("item") {
+                Some(value) if value.is_null() => None,
+                Some(value) => Some(parse_client_summary(value).ok_or(ClientReadError::Internal)?),
+                None => return Err(ClientReadError::Internal),
+            };
 
             tracing::info!(
                 tenant=%tenant,
@@ -2743,9 +2747,11 @@ impl services::HostWithStore for HasSelf<HostState> {
             }
 
             let response = services_request(&install_id, "get", payload).await?;
-            let item = response
-                .get("item")
-                .and_then(|v| if v.is_null() { None } else { parse_service_summary(v) });
+            let item = match response.get("item") {
+                Some(value) if value.is_null() => None,
+                Some(value) => Some(parse_service_summary(value).ok_or(ServiceReadError::Internal)?),
+                None => return Err(ServiceReadError::Internal),
+            };
 
             tracing::info!(
                 tenant=%tenant,
@@ -2930,6 +2936,75 @@ mod tests {
         let providers = HashSet::from([CAP_INVOICE_MANUAL_CREATE.to_string()]);
         let result = require_invoicing_access(&providers, None);
         assert_eq!(result.unwrap_err(), "Permission denied: install_id missing");
+    }
+
+    #[test]
+    fn client_list_parser_rejects_malformed_items() {
+        let value = serde_json::json!({
+            "items": [
+                {
+                    "clientId": "client-1",
+                    "clientName": "Acme",
+                    "isInactive": false
+                },
+                {
+                    "clientId": 42,
+                    "clientName": "Broken",
+                    "isInactive": false
+                }
+            ],
+            "totalCount": 2,
+            "page": 1,
+            "pageSize": 25
+        });
+
+        assert!(parse_clients_list_result(&value).is_none());
+    }
+
+    #[test]
+    fn service_parser_rejects_unknown_enums() {
+        let value = serde_json::json!({
+            "serviceId": "service-1",
+            "serviceName": "Monitoring",
+            "itemKind": "unsupported",
+            "billingMethod": "fixed",
+            "defaultRate": 100.0,
+            "unitOfMeasure": "month",
+            "isActive": true
+        });
+
+        assert!(parse_service_summary(&value).is_none());
+    }
+
+    #[test]
+    fn service_list_parser_rejects_malformed_items() {
+        let value = serde_json::json!({
+            "items": [
+                {
+                    "serviceId": "service-1",
+                    "serviceName": "Monitoring",
+                    "itemKind": "service",
+                    "billingMethod": "fixed",
+                    "defaultRate": 100.0,
+                    "unitOfMeasure": "month",
+                    "isActive": true
+                },
+                {
+                    "serviceId": "service-2",
+                    "serviceName": "Bad Method",
+                    "itemKind": "service",
+                    "billingMethod": "bogus",
+                    "defaultRate": 200.0,
+                    "unitOfMeasure": "month",
+                    "isActive": true
+                }
+            ],
+            "totalCount": 2,
+            "page": 1,
+            "pageSize": 25
+        });
+
+        assert!(parse_services_list_result(&value).is_none());
     }
 
     #[tokio::test]

@@ -228,15 +228,15 @@ interface user-v2 {
 /// Read tenant-scoped client summaries.
 /// @requires(cap:client.read)
 interface clients {
-    list: func(input: clients-list-input) -> result<clients-list-result, client-read-error>;
-    get: func(client-id: string) -> result<option<client-summary>, client-read-error>;
+    list-clients: func(input: clients-list-input) -> result<clients-list-result, client-read-error>;
+    get-client: func(client-id: string) -> result<option<client-summary>, client-read-error>;
 }
 
 /// Read tenant-scoped service catalog summaries.
 /// @requires(cap:service.read)
 interface services {
-    list: func(input: services-list-input) -> result<services-list-result, service-read-error>;
-    get: func(service-id: string) -> result<option<service-summary>, service-read-error>;
+    list-services: func(input: services-list-input) -> result<services-list-result, service-read-error>;
+    get-service: func(service-id: string) -> result<option<service-summary>, service-read-error>;
 }
 
 /// Guest exported HTTP-style handler entrypoint (initial contract).
