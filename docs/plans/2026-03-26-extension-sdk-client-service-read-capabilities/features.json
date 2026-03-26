@@ -1,0 +1,152 @@
+[
+  {
+    "id": "F001",
+    "description": "Define new manifest capability names for read-only client and service access: `cap:client.read` and `cap:service.read`.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F002",
+    "description": "Extend the extension WIT contract with a `clients` interface that supports `list` and `get` operations plus typed inputs, outputs, and error enums.",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations", "Functional Requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "Extend the extension WIT contract with a `services` interface that supports `list` and `get` operations plus typed inputs, outputs, and error enums.",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations", "Functional Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "Add TypeScript runtime host bindings and mock bindings for `clients` and `services` in the extension runtime package.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F005",
+    "description": "Add runner capability providers for client read operations that resolve tenant and optional user context from the runner execute payload.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F006",
+    "description": "Add runner capability providers for service read operations that resolve tenant and optional user context from the runner execute payload.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F007",
+    "description": "Enforce install capability checks for all client capability invocations and return a stable not-allowed error when the capability is missing.",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F008",
+    "description": "Enforce install capability checks for all service capability invocations and return a stable not-allowed error when the capability is missing.",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F009",
+    "description": "When a user is present, require the existing `client:read` permission before returning client data from the capability provider.",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F010",
+    "description": "When a user is present, require the existing `service:read` permission before returning service data from the capability provider.",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F011",
+    "description": "When no user is present, allow tenant-scoped client reads for installs granted `cap:client.read`.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F012",
+    "description": "When no user is present, allow tenant-scoped service reads for installs granted `cap:service.read`.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F013",
+    "description": "Keep tenant identity runner-derived and reject any attempt for extension inputs to choose or alter the tenant scope.",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F014",
+    "description": "Extract or factor reusable client read query logic into a shared service callable by the runner provider without HTTP or Next.js server action wrappers.",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F015",
+    "description": "Extract or factor reusable service read query logic into a shared service callable by the runner provider without HTTP or Next.js server action wrappers.",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F016",
+    "description": "Return a stable paginated list result for clients with `items`, `totalCount`, `page`, and `pageSize`.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F017",
+    "description": "Return a stable paginated list result for services with `items`, `totalCount`, `page`, and `pageSize`.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F018",
+    "description": "Map internal client entities into a constrained extension-safe `ClientSummary` response shape.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Non-goals"]
+  },
+  {
+    "id": "F019",
+    "description": "Map internal service entities into a constrained extension-safe `ServiceSummary` response shape.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Non-goals"]
+  },
+  {
+    "id": "F020",
+    "description": "Support minimal client list filters for search, includeInactive, page, and pageSize.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F021",
+    "description": "Support minimal service list filters for search, itemKind, isActive, billingMethod, page, and pageSize.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F022",
+    "description": "Return nullable results rather than thrown not-found errors for `clients.get` and `services.get` misses.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F023",
+    "description": "Validate list input values and return a stable invalid-input error for unsupported filter or pagination values.",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F024",
+    "description": "Emit structured logs for client and service capability calls including tenant, extension, operation, and result summary.",
+    "implemented": false,
+    "prdRefs": ["Observability"]
+  },
+  {
+    "id": "F025",
+    "description": "Add a sample extension that demonstrates client and service capability usage end to end.",
+    "implemented": false,
+    "prdRefs": ["Rollout / Migration", "Acceptance Criteria (Definition of Done)"]
+  }
+]
