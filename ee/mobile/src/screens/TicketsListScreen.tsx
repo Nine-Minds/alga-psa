@@ -743,6 +743,77 @@ function QuickChip({ theme, label, onPress }: { theme: Theme; label: string; onP
   );
 }
 
+/**
+ * Groups statuses by name across boards and toggles all matching status_ids at once.
+ */
+function GroupedStatusChips({
+  statusOptions,
+  selectedStatusIds,
+  theme,
+  onToggle,
+}: {
+  statusOptions: TicketStatus[];
+  selectedStatusIds: string[];
+  theme: Theme;
+  onToggle: (nextIds: string[]) => void;
+}) {
+  const grouped = useMemo(() => {
+    const map = new Map<string, TicketStatus[]>();
+    for (const s of statusOptions) {
+      const existing = map.get(s.name);
+      if (existing) existing.push(s);
+      else map.set(s.name, [s]);
+    }
+    return Array.from(map.entries()).map(([name, statuses]) => ({
+      name,
+      ids: statuses.map((s) => s.status_id),
+      isClosed: statuses[0].is_closed,
+    }));
+  }, [statusOptions]);
+
+  const selectedSet = useMemo(() => new Set(selectedStatusIds), [selectedStatusIds]);
+
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
+      {grouped.map((group) => {
+        const selected = group.ids.some((id) => selectedSet.has(id));
+        return (
+          <View key={group.name} style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+            <Pressable
+              onPress={() => {
+                let next: string[];
+                if (selected) {
+                  const removeSet = new Set(group.ids);
+                  next = selectedStatusIds.filter((id) => !removeSet.has(id));
+                } else {
+                  next = [...selectedStatusIds, ...group.ids];
+                }
+                onToggle(next);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={group.name}
+              style={({ pressed }) => ({
+                paddingHorizontal: theme.spacing.md,
+                paddingVertical: theme.spacing.sm,
+                borderRadius: theme.borderRadius.full,
+                borderWidth: 1,
+                borderColor: selected ? theme.colors.primary : theme.colors.border,
+                backgroundColor: selected ? theme.colors.primary : theme.colors.card,
+                opacity: pressed ? 0.95 : 1,
+              })}
+            >
+              <Text style={{ ...theme.typography.caption, color: selected ? theme.colors.textInverse : theme.colors.text, fontWeight: "600" }}>
+                {selected ? "\u2713 " : ""}
+                {group.name}
+              </Text>
+            </Pressable>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function FiltersModal({
   theme,
   visible,
@@ -868,39 +939,12 @@ function FiltersModal({
             {statusOptionsError}
           </Text>
         ) : statusOptions.length > 0 ? (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
-            {statusOptions.map((s) => {
-              const selected = filters.statusIds.includes(s.status_id);
-              return (
-                <View key={s.status_id} style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
-                  <Pressable
-                    onPress={() => {
-                      const next = selected
-                        ? filters.statusIds.filter((id) => id !== s.status_id)
-                        : [...filters.statusIds, s.status_id];
-                      setFilters({ ...filters, status: "any", statusIds: next });
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={s.name}
-                    style={({ pressed }) => ({
-                      paddingHorizontal: theme.spacing.md,
-                      paddingVertical: theme.spacing.sm,
-                      borderRadius: theme.borderRadius.full,
-                      borderWidth: 1,
-                      borderColor: selected ? theme.colors.primary : theme.colors.border,
-                      backgroundColor: selected ? theme.colors.primary : theme.colors.card,
-                      opacity: pressed ? 0.95 : 1,
-                    })}
-                  >
-                    <Text style={{ ...theme.typography.caption, color: selected ? theme.colors.textInverse : theme.colors.text, fontWeight: "600" }}>
-                      {selected ? "✓ " : ""}
-                      {s.name}
-                    </Text>
-                  </Pressable>
-                </View>
-              );
-            })}
-          </View>
+          <GroupedStatusChips
+            statusOptions={statusOptions}
+            selectedStatusIds={filters.statusIds}
+            theme={theme}
+            onToggle={(nextIds) => setFilters({ ...filters, status: "any", statusIds: nextIds })}
+          />
         ) : (
           <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
             {t("filters.noStatusesAvailable")}

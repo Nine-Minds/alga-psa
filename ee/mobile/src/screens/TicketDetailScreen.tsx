@@ -116,7 +116,8 @@ export function TicketDetailBody({
 
   const commentDraftHook = useCommentDraft({ ...deps, isOffline, fetchTicket, fetchComments, setComments });
   const descEditor = useDescriptionEditor({ ...deps, ticket, setTicket: ticketData.setTicket });
-  const statusHook = useTicketStatus({ ...deps, fetchTicket });
+  const boardId = ticket?.board_id as string | undefined;
+  const statusHook = useTicketStatus({ ...deps, fetchTicket, boardId });
   const priorityHook = useTicketPriority({ ...deps, fetchTicket });
   const dueDateHook = useTicketDueDate({ ...deps, ticket, fetchTicket });
   const watchHook = useTicketWatch({ ...deps, ticket, fetchTicket });

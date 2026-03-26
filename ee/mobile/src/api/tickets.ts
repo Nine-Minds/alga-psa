@@ -85,6 +85,7 @@ export type TicketComment = {
 
 export type TicketStatus = {
   status_id: string;
+  board_id: string;
   name: string;
   is_closed: boolean;
 };
@@ -201,11 +202,12 @@ export function addTicketComment(
 
 export function getTicketStatuses(
   client: ApiClient,
-  params: { apiKey: string },
+  params: { apiKey: string; board_id?: string },
 ): Promise<ApiResult<SuccessResponse<TicketStatus[]>>> {
   return client.request<SuccessResponse<TicketStatus[]>>({
     method: "GET",
     path: "/api/v1/tickets/statuses",
+    query: params.board_id ? { board_id: params.board_id } : undefined,
     headers: {
       "x-api-key": params.apiKey,
     },
