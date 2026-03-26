@@ -32,19 +32,19 @@
   {
     "id": "T006",
     "description": "Feature 15: Mobile shows Avatar with image next to contact name",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
     "id": "T007",
     "description": "Feature 15: Mobile shows Avatar with image next to client name",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T008",
     "description": "Feature 15: Mobile shows initials fallback when avatar/logo URL is null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
 

@@ -233,7 +233,7 @@
   {
     "id": "F050",
     "description": "Feature 15: Tests — Write TicketDetailScreen.avatars.test.ts verifying Avatar renders with contact/client URLs and initials fallback",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 15"]
   },
   {
