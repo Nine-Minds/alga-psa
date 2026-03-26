@@ -99,20 +99,12 @@ function shouldBackfillNinjaOneIntegration(row: NinjaOneBackfillRow): boolean {
   const settings = parseSettings(row.settings);
   const lifecycle = (settings.tokenLifecycle || {}) as {
     reconnectRequired?: boolean;
-    activeWorkflowId?: string;
-    nextRefreshAt?: string;
   };
 
   if (lifecycle.reconnectRequired) {
     return false;
   }
 
-  // If an active workflow is already tracked, keep current ownership.
-  if (lifecycle.activeWorkflowId) {
-    return false;
-  }
-
-  // If nextRefreshAt exists without active handle, seed to recover ownership.
   return true;
 }
 

@@ -16,8 +16,8 @@ const state = {
     is_active: true,
     settings: JSON.stringify({
       tokenLifecycle: {
-        scheduleNonce: 1,
-        activeWorkflowId: 'ninjaone:token-refresh:tenant-1:integration-1:1',
+        status: 'scheduled',
+        nextRefreshAt: '2026-03-27T00:00:00.000Z',
       },
     }),
   } as IntegrationRow,
@@ -34,9 +34,8 @@ const state = {
 };
 
 const axiosPostMock = vi.fn();
-const workflowStartMock = vi.fn();
-const terminateMock = vi.fn();
-const getHandleMock = vi.fn(() => ({ terminate: terminateMock }));
+const workflowSignalMock = vi.fn();
+const getHandleMock = vi.fn(() => ({ signal: workflowSignalMock }));
 const connectMock = vi.fn(async () => ({}));
 const publishWorkflowEventMock = vi.fn(async () => undefined);
 
@@ -55,7 +54,6 @@ vi.mock('@temporalio/client', () => ({
   },
   Client: vi.fn(() => ({
     workflow: {
-      start: workflowStartMock,
       getHandle: getHandleMock,
     },
   })),
@@ -120,8 +118,8 @@ describe('executeNinjaOneProactiveRefresh', () => {
       is_active: true,
       settings: JSON.stringify({
         tokenLifecycle: {
-          scheduleNonce: 1,
-          activeWorkflowId: 'ninjaone:token-refresh:tenant-1:integration-1:1',
+          status: 'scheduled',
+          nextRefreshAt: '2026-03-27T00:00:00.000Z',
         },
       }),
     };
@@ -138,8 +136,7 @@ describe('executeNinjaOneProactiveRefresh', () => {
     };
 
     axiosPostMock.mockReset();
-    workflowStartMock.mockReset();
-    terminateMock.mockReset();
+    workflowSignalMock.mockReset();
     getHandleMock.mockClear();
     connectMock.mockClear();
     publishWorkflowEventMock.mockReset();
@@ -161,11 +158,11 @@ describe('executeNinjaOneProactiveRefresh', () => {
     const result = await executeNinjaOneProactiveRefresh({
       tenantId: 'tenant-1',
       integrationId: 'integration-1',
-      scheduleNonce: 1,
       scheduledFor: new Date().toISOString(),
     });
 
     expect(result.outcome).toBe('success');
+    expect(result.nextExpiresAtMs).toBeGreaterThan(Date.now());
 
     const refreshBody = String(axiosPostMock.mock.calls[0]?.[1] || '');
     expect(refreshBody).toContain('refresh_token=latest-refresh-token');
@@ -175,20 +172,14 @@ describe('executeNinjaOneProactiveRefresh', () => {
     expect(savedCredentials.refresh_token).toBe('new-refresh');
     expect(savedCredentials.expires_at).toBeGreaterThan(Date.now());
 
-    // Successful proactive refresh should immediately seed the next delayed run.
-    expect(workflowStartMock).toHaveBeenCalledTimes(1);
-    expect(getHandleMock).toHaveBeenCalledTimes(1);
-    expect(terminateMock).toHaveBeenCalledTimes(1);
-
     const lifecycle = (JSON.parse(state.integration.settings) as { tokenLifecycle: any }).tokenLifecycle;
-    expect(lifecycle.scheduleNonce).toBe(2);
-    expect(typeof lifecycle.activeWorkflowId).toBe('string');
-    expect(lifecycle.activeWorkflowId).toContain(':2');
-    expect(state.integration.settings).not.toContain('new-access');
-    expect(state.integration.settings).not.toContain('new-refresh');
+    expect(lifecycle.status).toBe('scheduled');
+    expect(lifecycle.lastScheduleSource).toBe('proactive_refresh_success');
+    expect(typeof lifecycle.nextRefreshAt).toBe('string');
+    expect(workflowSignalMock).not.toHaveBeenCalled();
   });
 
-  it('marks reconnect-required and does not schedule next refresh on terminal invalid_token errors', async () => {
+  it('marks reconnect-required and clears the lifecycle wait on terminal invalid_token errors', async () => {
     const axiosError = {
       isAxiosError: true,
       message: 'Request failed',
@@ -204,20 +195,21 @@ describe('executeNinjaOneProactiveRefresh', () => {
     const result = await executeNinjaOneProactiveRefresh({
       tenantId: 'tenant-1',
       integrationId: 'integration-1',
-      scheduleNonce: 1,
       scheduledFor: new Date().toISOString(),
     });
 
     expect(result.outcome).toBe('reconnect_required');
-    expect(workflowStartMock).not.toHaveBeenCalled();
+    expect(getHandleMock).toHaveBeenCalledWith('ninjaone:token-lifecycle:tenant-1:integration-1');
+    expect(workflowSignalMock).toHaveBeenCalledWith(
+      'cancelNinjaOneProactiveTokenRefresh',
+      expect.objectContaining({ reason: 'terminal_failure' })
+    );
 
     const lifecycle = (JSON.parse(state.integration.settings) as { tokenLifecycle: any }).tokenLifecycle;
     expect(lifecycle.reconnectRequired).toBe(true);
     expect(lifecycle.status).toBe('reconnect_required');
+    expect(lifecycle.nextRefreshAt).toBeUndefined();
     expect(publishWorkflowEventMock).toHaveBeenCalledTimes(1);
-    expect(String(JSON.stringify(publishWorkflowEventMock.mock.calls[0]?.[0] || {}))).toContain(
-      'INTEGRATION_TOKEN_REFRESH_FAILED'
-    );
   });
 
   it('marks missing credentials as unschedulable and avoids reschedule loops', async () => {
@@ -229,12 +221,14 @@ describe('executeNinjaOneProactiveRefresh', () => {
     const result = await executeNinjaOneProactiveRefresh({
       tenantId: 'tenant-1',
       integrationId: 'integration-1',
-      scheduleNonce: 1,
       scheduledFor: new Date().toISOString(),
     });
 
     expect(result.outcome).toBe('unschedulable');
-    expect(workflowStartMock).not.toHaveBeenCalled();
+    expect(workflowSignalMock).toHaveBeenCalledWith(
+      'cancelNinjaOneProactiveTokenRefresh',
+      expect.objectContaining({ reason: 'manual_reset' })
+    );
 
     const serializedSettings = state.integration.settings;
     expect(serializedSettings).not.toContain('access_token');
@@ -253,13 +247,12 @@ describe('executeNinjaOneProactiveRefresh', () => {
     const result = await executeNinjaOneProactiveRefresh({
       tenantId: 'tenant-1',
       integrationId: 'integration-1',
-      scheduleNonce: 1,
       scheduledFor: new Date().toISOString(),
     });
 
     expect(result.outcome).toBe('inactive');
     expect(axiosPostMock).not.toHaveBeenCalled();
-    expect(workflowStartMock).not.toHaveBeenCalled();
+    expect(workflowSignalMock).not.toHaveBeenCalled();
     expect(state.secrets.ninjaone_credentials).toBe(credentialsBefore);
   });
 });

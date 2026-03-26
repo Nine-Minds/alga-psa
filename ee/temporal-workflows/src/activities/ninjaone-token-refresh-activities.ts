@@ -7,7 +7,6 @@ import {
 export interface ProactiveNinjaOneTokenRefreshActivityInput {
   tenantId: string;
   integrationId: string;
-  scheduleNonce: number;
   scheduledFor: string;
 }
 
@@ -17,7 +16,6 @@ export async function proactiveNinjaOneTokenRefreshActivity(
   logger.info('[NinjaOneProactiveRefreshActivity] Starting proactive refresh activity', {
     tenantId: input.tenantId,
     integrationId: input.integrationId,
-    scheduleNonce: input.scheduleNonce,
     scheduledFor: input.scheduledFor,
   });
 

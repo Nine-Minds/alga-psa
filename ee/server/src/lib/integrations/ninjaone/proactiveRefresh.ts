@@ -21,9 +21,11 @@ const DEFAULT_TEMPORAL_TASK_QUEUE = 'alga-jobs';
 
 const DEFAULT_REFRESH_BUFFER_SECONDS = 15 * 60;
 const DEFAULT_MIN_REFRESH_DELAY_SECONDS = 30;
-const DEFAULT_REFRESH_WORKFLOW_TIMEOUT = '20m';
 
 export const NINJAONE_PROACTIVE_REFRESH_WORKFLOW_NAME = 'ninjaOneProactiveTokenRefreshWorkflow';
+export const NINJAONE_PROACTIVE_REFRESH_RECONCILE_SIGNAL =
+  'reconcileNinjaOneProactiveTokenRefresh';
+export const NINJAONE_PROACTIVE_REFRESH_CANCEL_SIGNAL = 'cancelNinjaOneProactiveTokenRefresh';
 
 export type NinjaOneRefreshScheduleSource =
   | 'oauth_connected'
@@ -43,8 +45,6 @@ interface NinjaOneTokenLifecycleState {
   status?: 'scheduled' | 'healthy' | 'reconnect_required' | 'unschedulable' | 'inactive';
   reconnectRequired?: boolean;
   reconnectReason?: string;
-  scheduleNonce?: number;
-  activeWorkflowId?: string;
   nextRefreshAt?: string;
   lastScheduledAt?: string;
   lastScheduleSource?: NinjaOneRefreshScheduleSource;
@@ -80,21 +80,25 @@ export interface ScheduleNinjaOneProactiveRefreshResult {
 export interface NinjaOneProactiveRefreshWorkflowInput {
   tenantId: string;
   integrationId: string;
-  scheduleNonce: number;
-  scheduledFor: string;
+  expiresAtMs: number;
+  scheduledBy: NinjaOneRefreshScheduleSource;
+}
+
+export interface NinjaOneProactiveRefreshSignalInput {
+  expiresAtMs: number;
   scheduledBy: NinjaOneRefreshScheduleSource;
 }
 
 export interface ExecuteNinjaOneProactiveRefreshInput {
   tenantId: string;
   integrationId: string;
-  scheduleNonce: number;
   scheduledFor: string;
 }
 
 export interface ExecuteNinjaOneProactiveRefreshResult {
-  outcome: 'success' | 'stale_schedule' | 'inactive' | 'reconnect_required' | 'unschedulable';
+  outcome: 'success' | 'inactive' | 'reconnect_required' | 'unschedulable';
   details?: string;
+  nextExpiresAtMs?: number;
 }
 
 function getRefreshBufferMs(): number {
@@ -104,7 +108,10 @@ function getRefreshBufferMs(): number {
 }
 
 function getMinRefreshDelayMs(): number {
-  const raw = Number.parseInt(process.env.NINJAONE_PROACTIVE_REFRESH_MIN_DELAY_SECONDS || '', 10);
+  const raw = Number.parseInt(
+    process.env.NINJAONE_PROACTIVE_REFRESH_MIN_DELAY_SECONDS || '',
+    10
+  );
   const value = Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_MIN_REFRESH_DELAY_SECONDS;
   return value * 1000;
 }
@@ -132,7 +139,7 @@ function parseIntegrationSettings(value: unknown): NinjaOneIntegrationSettings {
         return parsed as NinjaOneIntegrationSettings;
       }
     } catch {
-      // ignore malformed settings and fall back to empty.
+      // Ignore malformed settings and fall back to empty.
     }
   }
 
@@ -153,8 +160,8 @@ function mergeLifecycleSettings(
   };
 }
 
-function buildRefreshWorkflowId(tenantId: string, integrationId: string, scheduleNonce: number): string {
-  return `ninjaone:token-refresh:${tenantId}:${integrationId}:${scheduleNonce}`;
+function buildLifecycleWorkflowId(tenantId: string, integrationId: string): string {
+  return `ninjaone:token-lifecycle:${tenantId}:${integrationId}`;
 }
 
 function extractErrorInfo(error: unknown): object {
@@ -222,26 +229,69 @@ async function updateIntegrationLifecycle(
   });
 }
 
-async function terminateExistingWorkflow(workflowId?: string): Promise<void> {
-  if (!workflowId) {
-    return;
-  }
+function isWorkflowAlreadyStartedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const name = error && typeof error === 'object' ? String((error as { name?: string }).name || '') : '';
+  const code = error && typeof error === 'object' ? (error as { code?: unknown }).code : undefined;
 
-  try {
-    const client = await getTemporalClient();
-    const handle = client.workflow.getHandle(workflowId);
-    await handle.terminate('superseded_ninjaone_refresh_schedule');
-  } catch (error) {
-    logger.warn('[NinjaOneProactiveRefresh] Failed to terminate existing workflow', {
-      workflowId,
-      error: extractErrorInfo(error),
-    });
-  }
+  return Boolean(
+    code === 6 ||
+      name.includes('AlreadyStarted') ||
+      message.includes('AlreadyExists') ||
+      message.includes('already started')
+  );
 }
 
-async function loadNinjaOneCredentials(tenantId: string): Promise<NinjaOneOAuthCredentials | null> {
+function isWorkflowNotFoundError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const name = error && typeof error === 'object' ? String((error as { name?: string }).name || '') : '';
+  const code = error && typeof error === 'object' ? (error as { code?: unknown }).code : undefined;
+
+  return Boolean(code === 5 || name.includes('NotFound') || message.includes('NotFound'));
+}
+
+async function ensureLifecycleWorkflow(
+  input: ScheduleNinjaOneProactiveRefreshInput
+): Promise<string> {
+  const workflowId = buildLifecycleWorkflowId(input.tenantId, input.integrationId);
+  const client = await getTemporalClient();
+
+  try {
+    await client.workflow.start(NINJAONE_PROACTIVE_REFRESH_WORKFLOW_NAME, {
+      taskQueue: getTemporalTaskQueue(),
+      workflowId,
+      args: [
+        {
+          tenantId: input.tenantId,
+          integrationId: input.integrationId,
+          expiresAtMs: input.expiresAtMs,
+          scheduledBy: input.source,
+        } satisfies NinjaOneProactiveRefreshWorkflowInput,
+      ],
+    });
+  } catch (error) {
+    if (!isWorkflowAlreadyStartedError(error)) {
+      throw error;
+    }
+
+    const handle = client.workflow.getHandle(workflowId);
+    await handle.signal(NINJAONE_PROACTIVE_REFRESH_RECONCILE_SIGNAL, {
+      expiresAtMs: input.expiresAtMs,
+      scheduledBy: input.source,
+    } satisfies NinjaOneProactiveRefreshSignalInput);
+  }
+
+  return workflowId;
+}
+
+async function loadNinjaOneCredentials(
+  tenantId: string
+): Promise<NinjaOneOAuthCredentials | null> {
   const secretProvider = await getSecretProviderInstance();
-  const credentialsJson = await secretProvider.getTenantSecret(tenantId, NINJAONE_CREDENTIALS_SECRET);
+  const credentialsJson = await secretProvider.getTenantSecret(
+    tenantId,
+    NINJAONE_CREDENTIALS_SECRET
+  );
 
   if (!credentialsJson) {
     return null;
@@ -254,7 +304,10 @@ async function loadNinjaOneCredentials(tenantId: string): Promise<NinjaOneOAuthC
   }
 }
 
-async function saveNinjaOneCredentials(tenantId: string, credentials: NinjaOneOAuthCredentials): Promise<void> {
+async function saveNinjaOneCredentials(
+  tenantId: string,
+  credentials: NinjaOneOAuthCredentials
+): Promise<void> {
   const secretProvider = await getSecretProviderInstance();
   await secretProvider.setTenantSecret(
     tenantId,
@@ -299,7 +352,9 @@ function isTerminalRefreshFailure(error: unknown): boolean {
   }
 
   const status = error.response?.status;
-  const data = error.response?.data as { error?: string; error_description?: string } | undefined;
+  const data = error.response?.data as
+    | { error?: string; error_description?: string }
+    | undefined;
   const code = `${data?.error || ''}`.toLowerCase();
   const description = `${data?.error_description || ''}`.toLowerCase();
 
@@ -307,7 +362,10 @@ function isTerminalRefreshFailure(error: unknown): boolean {
     return true;
   }
 
-  if (status === 401 && (description.includes('invalid token') || description.includes('invalid refresh'))) {
+  if (
+    status === 401 &&
+    (description.includes('invalid token') || description.includes('invalid refresh'))
+  ) {
     return true;
   }
 
@@ -318,7 +376,11 @@ function buildFailureMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
     const data = error.response?.data;
-    const parts = [status ? `status=${status}` : '', error.message, data ? JSON.stringify(data) : '']
+    const parts = [
+      status ? `status=${status}` : '',
+      error.message,
+      data ? JSON.stringify(data) : '',
+    ]
       .filter(Boolean)
       .join(' | ');
     return parts.slice(0, 500) || 'NinjaOne token refresh failed';
@@ -360,11 +422,14 @@ async function publishProactiveTokenRefreshFailedEvent(input: {
       idempotencyKey: `integration_token_refresh_failed:proactive:${input.tenantId}:${input.integrationId}:${bucket}`,
     });
   } catch (error) {
-    logger.warn('[NinjaOneProactiveRefresh] Failed to publish proactive token refresh failed event', {
-      tenantId: input.tenantId,
-      integrationId: input.integrationId,
-      error: extractErrorInfo(error),
-    });
+    logger.warn(
+      '[NinjaOneProactiveRefresh] Failed to publish proactive token refresh failed event',
+      {
+        tenantId: input.tenantId,
+        integrationId: input.integrationId,
+        error: extractErrorInfo(error),
+      }
+    );
   }
 }
 
@@ -388,35 +453,13 @@ export async function scheduleNinjaOneProactiveRefresh(
   }
 
   const refreshAt = computeRefreshTime(input.expiresAtMs);
-  const now = Date.now();
-  const delayMs = Math.max(0, refreshAt.getTime() - now);
-  const nextScheduleNonce = (lifecycle.scheduleNonce || 0) + 1;
-  const workflowId = buildRefreshWorkflowId(input.tenantId, input.integrationId, nextScheduleNonce);
-
-  await terminateExistingWorkflow(lifecycle.activeWorkflowId);
-
-  const client = await getTemporalClient();
-  await client.workflow.start(NINJAONE_PROACTIVE_REFRESH_WORKFLOW_NAME, {
-    taskQueue: getTemporalTaskQueue(),
-    workflowId,
-    workflowExecutionTimeout: DEFAULT_REFRESH_WORKFLOW_TIMEOUT,
-    startDelay: `${delayMs}ms`,
-    args: [{
-      tenantId: input.tenantId,
-      integrationId: input.integrationId,
-      scheduleNonce: nextScheduleNonce,
-      scheduledFor: refreshAt.toISOString(),
-      scheduledBy: input.source,
-    } satisfies NinjaOneProactiveRefreshWorkflowInput],
-  });
+  const workflowId = await ensureLifecycleWorkflow(input);
 
   await updateIntegrationLifecycle(input.tenantId, input.integrationId, {
     tokenLifecycle: {
       status: 'scheduled',
       reconnectRequired: false,
       reconnectReason: undefined,
-      scheduleNonce: nextScheduleNonce,
-      activeWorkflowId: workflowId,
       nextRefreshAt: refreshAt.toISOString(),
       lastScheduledAt: new Date().toISOString(),
       lastScheduleSource: input.source,
@@ -424,7 +467,7 @@ export async function scheduleNinjaOneProactiveRefresh(
     },
   });
 
-  logger.info('[NinjaOneProactiveRefresh] Scheduled token refresh workflow', {
+  logger.info('[NinjaOneProactiveRefresh] Reconciled lifecycle workflow', {
     tenantId: input.tenantId,
     integrationId: input.integrationId,
     workflowId,
@@ -465,14 +508,26 @@ export async function cancelNinjaOneProactiveRefresh(
   }
 
   const settings = parseIntegrationSettings(integration.settings);
-  const existingWorkflowId = settings.tokenLifecycle?.activeWorkflowId;
+  const workflowId = buildLifecycleWorkflowId(tenantId, integrationId);
 
-  await terminateExistingWorkflow(existingWorkflowId);
+  try {
+    const client = await getTemporalClient();
+    const handle = client.workflow.getHandle(workflowId);
+    await handle.signal(NINJAONE_PROACTIVE_REFRESH_CANCEL_SIGNAL, { reason });
+  } catch (error) {
+    if (!isWorkflowNotFoundError(error)) {
+      logger.warn('[NinjaOneProactiveRefresh] Failed to signal lifecycle workflow cancellation', {
+        tenantId,
+        integrationId,
+        workflowId,
+        error: extractErrorInfo(error),
+      });
+    }
+  }
 
   await updateIntegrationLifecycle(tenantId, integrationId, {
     tokenLifecycle: {
       status: reason === 'disconnect' ? 'inactive' : settings.tokenLifecycle?.status,
-      activeWorkflowId: undefined,
       nextRefreshAt: undefined,
     },
   });
@@ -491,6 +546,7 @@ async function markReconnectRequired(
       reconnectRequired: true,
       reconnectReason: reason,
       status: 'reconnect_required',
+      nextRefreshAt: undefined,
       lastRefreshFailure: {
         code: reason,
         message,
@@ -512,6 +568,7 @@ async function markUnschedulable(
       status: 'unschedulable',
       reconnectRequired: true,
       reconnectReason: 'missing_or_invalid_credentials',
+      nextRefreshAt: undefined,
       lastRefreshFailure: {
         code: 'missing_or_invalid_credentials',
         message: details,
@@ -537,34 +594,33 @@ export async function executeNinjaOneProactiveRefresh(
   const settings = parseIntegrationSettings(integration.settings);
   const lifecycle = settings.tokenLifecycle;
 
-  if (!lifecycle) {
-    return { outcome: 'stale_schedule', details: 'missing_lifecycle' };
-  }
-
-  if ((lifecycle.scheduleNonce || 0) !== input.scheduleNonce) {
-    return { outcome: 'stale_schedule', details: 'nonce_mismatch' };
-  }
-
-  if (lifecycle.reconnectRequired) {
+  if (lifecycle?.reconnectRequired) {
     return { outcome: 'reconnect_required', details: 'reconnect_required_already' };
   }
 
   await updateIntegrationLifecycle(input.tenantId, input.integrationId, {
     tokenLifecycle: {
       lastRefreshAttemptAt: new Date().toISOString(),
-      activeWorkflowId: lifecycle.activeWorkflowId,
     },
   });
 
   const credentials = await loadNinjaOneCredentials(input.tenantId);
   if (!credentials?.refresh_token || !credentials?.instance_url || !credentials.expires_at) {
-    await markUnschedulable(input.tenantId, input.integrationId, 'Missing or unreadable NinjaOne credentials');
+    await markUnschedulable(
+      input.tenantId,
+      input.integrationId,
+      'Missing or unreadable NinjaOne credentials'
+    );
     return { outcome: 'unschedulable', details: 'missing_or_unreadable_credentials' };
   }
 
   const { clientId, clientSecret } = await resolveNinjaOneClientCredentials(input.tenantId);
   if (!clientId || !clientSecret) {
-    await markUnschedulable(input.tenantId, input.integrationId, 'Missing NinjaOne client credentials');
+    await markUnschedulable(
+      input.tenantId,
+      input.integrationId,
+      'Missing NinjaOne client credentials'
+    );
     return { outcome: 'unschedulable', details: 'missing_client_credentials' };
   }
 
@@ -599,32 +655,32 @@ export async function executeNinjaOneProactiveRefresh(
 
     await saveNinjaOneCredentials(input.tenantId, nextCredentials);
 
+    const nowIso = new Date().toISOString();
+    const nextRefreshAt = computeRefreshTime(nextCredentials.expires_at).toISOString();
+
     await updateIntegrationLifecycle(input.tenantId, input.integrationId, {
       tokenLifecycle: {
-        status: 'healthy',
+        status: 'scheduled',
         reconnectRequired: false,
         reconnectReason: undefined,
-        lastRefreshAt: new Date().toISOString(),
+        nextRefreshAt,
+        lastScheduledAt: nowIso,
+        lastScheduleSource: 'proactive_refresh_success',
+        lastRefreshAt: nowIso,
         lastRefreshFailure: undefined,
       },
     });
 
-    await scheduleNinjaOneProactiveRefresh({
-      tenantId: input.tenantId,
-      integrationId: input.integrationId,
-      expiresAtMs: nextCredentials.expires_at,
-      source: 'proactive_refresh_success',
-    });
-
-    logger.info('[NinjaOneProactiveRefresh] Successfully refreshed and rescheduled', {
+    logger.info('[NinjaOneProactiveRefresh] Successfully refreshed token', {
       tenantId: input.tenantId,
       integrationId: input.integrationId,
       scheduledFor: input.scheduledFor,
       previousExpiry: new Date(credentials.expires_at).toISOString(),
       nextExpiry: new Date(nextCredentials.expires_at).toISOString(),
+      nextRefreshAt,
     });
 
-    return { outcome: 'success' };
+    return { outcome: 'success', nextExpiresAtMs: nextCredentials.expires_at };
   } catch (error) {
     const message = buildFailureMessage(error);
 
@@ -638,12 +694,15 @@ export async function executeNinjaOneProactiveRefresh(
         retryable: false,
       });
 
-      logger.warn('[NinjaOneProactiveRefresh] Terminal token refresh failure. Reconnect required.', {
-        tenantId: input.tenantId,
-        integrationId: input.integrationId,
-        scheduledFor: input.scheduledFor,
-        error: extractErrorInfo(error),
-      });
+      logger.warn(
+        '[NinjaOneProactiveRefresh] Terminal token refresh failure. Reconnect required.',
+        {
+          tenantId: input.tenantId,
+          integrationId: input.integrationId,
+          scheduledFor: input.scheduledFor,
+          error: extractErrorInfo(error),
+        }
+      );
 
       return { outcome: 'reconnect_required', details: message };
     }
@@ -651,7 +710,11 @@ export async function executeNinjaOneProactiveRefresh(
     await updateIntegrationLifecycle(input.tenantId, input.integrationId, {
       tokenLifecycle: {
         lastRefreshFailure: {
-          code: axios.isAxiosError(error) ? (error.response?.status ? String(error.response.status) : error.code) : undefined,
+          code: axios.isAxiosError(error)
+            ? error.response?.status
+              ? String(error.response.status)
+              : error.code
+            : undefined,
           message,
           retryable: true,
           failedAt: new Date().toISOString(),
@@ -662,7 +725,9 @@ export async function executeNinjaOneProactiveRefresh(
       tenantId: input.tenantId,
       integrationId: input.integrationId,
       errorCode: axios.isAxiosError(error)
-        ? (error.response?.status ? String(error.response.status) : error.code)
+        ? error.response?.status
+          ? String(error.response.status)
+          : error.code
         : undefined,
       errorMessage: message,
       retryable: true,
@@ -701,8 +766,9 @@ export async function seedNinjaOneProactiveRefreshFromStoredCredentials(input: {
 export function __privateForTests() {
   return {
     computeRefreshTime,
-    buildRefreshWorkflowId,
+    buildLifecycleWorkflowId,
     parseIntegrationSettings,
     mergeLifecycleSettings,
+    isWorkflowAlreadyStartedError,
   };
 }

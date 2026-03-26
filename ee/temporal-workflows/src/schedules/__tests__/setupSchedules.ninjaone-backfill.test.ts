@@ -68,7 +68,7 @@ describe('setupSchedules ninjaone backfill', () => {
       {
         tenantId: 'tenant-2',
         integrationId: 'integration-owned',
-        settings: JSON.stringify({ tokenLifecycle: { activeWorkflowId: 'existing' } }),
+        settings: JSON.stringify({ tokenLifecycle: { nextRefreshAt: '2026-03-27T00:00:00.000Z' } }),
       },
       {
         tenantId: 'tenant-3',
@@ -83,10 +83,15 @@ describe('setupSchedules ninjaone backfill', () => {
 
     await setupSchedules();
 
-    expect(seedBackfillMock).toHaveBeenCalledTimes(1);
-    expect(seedBackfillMock).toHaveBeenCalledWith({
+    expect(seedBackfillMock).toHaveBeenCalledTimes(2);
+    expect(seedBackfillMock).toHaveBeenNthCalledWith(1, {
       tenantId: 'tenant-1',
       integrationId: 'integration-seed',
+      source: 'backfill',
+    });
+    expect(seedBackfillMock).toHaveBeenNthCalledWith(2, {
+      tenantId: 'tenant-2',
+      integrationId: 'integration-owned',
       source: 'backfill',
     });
   });

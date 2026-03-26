@@ -19,8 +19,8 @@ const state = {
 };
 
 const workflowStartMock = vi.fn();
-const terminateMock = vi.fn();
-const getHandleMock = vi.fn(() => ({ terminate: terminateMock }));
+const workflowSignalMock = vi.fn();
+const getHandleMock = vi.fn(() => ({ signal: workflowSignalMock }));
 const connectMock = vi.fn(async () => ({}));
 
 vi.mock('@temporalio/client', () => ({
@@ -82,12 +82,12 @@ describe('scheduleNinjaOneProactiveRefresh', () => {
     };
 
     workflowStartMock.mockReset();
-    terminateMock.mockReset();
+    workflowSignalMock.mockReset();
     getHandleMock.mockClear();
     connectMock.mockClear();
   });
 
-  it('schedules exactly one delayed workflow before expiry when connected', async () => {
+  it('starts the stable lifecycle workflow and records the next refresh window', async () => {
     const { scheduleNinjaOneProactiveRefresh } = await import(
       '@/lib/integrations/ninjaone/proactiveRefresh'
     );
@@ -102,41 +102,51 @@ describe('scheduleNinjaOneProactiveRefresh', () => {
 
     expect(result.scheduled).toBe(true);
     expect(workflowStartMock).toHaveBeenCalledTimes(1);
+    expect(workflowSignalMock).not.toHaveBeenCalled();
 
     const startArgs = workflowStartMock.mock.calls[0]?.[1] as {
-      startDelay: string;
       workflowId: string;
+      args: Array<{ expiresAtMs: number; scheduledBy: string }>;
     };
 
-    expect(startArgs.workflowId).toContain('ninjaone:token-refresh:tenant-1:integration-1:1');
+    expect(startArgs.workflowId).toBe('ninjaone:token-lifecycle:tenant-1:integration-1');
+    expect(startArgs.args[0]).toEqual(
+      expect.objectContaining({
+        expiresAtMs,
+        scheduledBy: 'oauth_connected',
+      })
+    );
 
-    const delayMs = Number.parseInt(startArgs.startDelay.replace('ms', ''), 10);
-    expect(delayMs).toBeGreaterThan(0);
-    expect(delayMs).toBeLessThan(expiresAtMs - Date.now());
+    const lifecycle = (JSON.parse(state.integration.settings) as { tokenLifecycle: any }).tokenLifecycle;
+    expect(lifecycle.status).toBe('scheduled');
+    expect(typeof lifecycle.nextRefreshAt).toBe('string');
   });
 
-  it('terminates previous scheduled workflow before scheduling the next one', async () => {
+  it('signals the existing stable workflow when it is already running', async () => {
+    workflowStartMock.mockRejectedValueOnce(new Error('Workflow execution already started'));
+
     const { scheduleNinjaOneProactiveRefresh } = await import(
       '@/lib/integrations/ninjaone/proactiveRefresh'
     );
 
-    await scheduleNinjaOneProactiveRefresh({
+    const expiresAtMs = Date.now() + 2 * 60 * 60 * 1000;
+    const result = await scheduleNinjaOneProactiveRefresh({
       tenantId: 'tenant-1',
       integrationId: 'integration-1',
-      expiresAtMs: Date.now() + 60 * 60 * 1000,
-      source: 'oauth_connected',
-    });
-
-    await scheduleNinjaOneProactiveRefresh({
-      tenantId: 'tenant-1',
-      integrationId: 'integration-1',
-      expiresAtMs: Date.now() + 2 * 60 * 60 * 1000,
+      expiresAtMs,
       source: 'lazy_refresh_success',
     });
 
-    expect(workflowStartMock).toHaveBeenCalledTimes(2);
-    expect(getHandleMock).toHaveBeenCalledTimes(1);
-    expect(terminateMock).toHaveBeenCalledTimes(1);
+    expect(result.scheduled).toBe(true);
+    expect(workflowStartMock).toHaveBeenCalledTimes(1);
+    expect(getHandleMock).toHaveBeenCalledWith('ninjaone:token-lifecycle:tenant-1:integration-1');
+    expect(workflowSignalMock).toHaveBeenCalledWith(
+      'reconcileNinjaOneProactiveTokenRefresh',
+      expect.objectContaining({
+        expiresAtMs,
+        scheduledBy: 'lazy_refresh_success',
+      })
+    );
   });
 
   it('clears reconnect-required lifecycle state and seeds a fresh schedule on reconnect', async () => {
@@ -164,6 +174,6 @@ describe('scheduleNinjaOneProactiveRefresh', () => {
     const lifecycle = (JSON.parse(state.integration.settings) as { tokenLifecycle: any }).tokenLifecycle;
     expect(lifecycle.reconnectRequired).toBe(false);
     expect(lifecycle.status).toBe('scheduled');
-    expect(typeof lifecycle.activeWorkflowId).toBe('string');
+    expect(typeof lifecycle.nextRefreshAt).toBe('string');
   });
 });

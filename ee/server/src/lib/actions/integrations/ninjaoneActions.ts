@@ -304,17 +304,8 @@ export const disconnectNinjaOneIntegration = withAuth(async (user, { tenant }): 
       });
     }
 
-    // 2. Remove OAuth token credentials from secret storage
-    await disconnectNinjaOne(tenant);
-
-    // 3. Remove client credentials (client ID and secret) from secret storage
-    const secretProvider = await getSecretProviderInstance();
-    await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
-    await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_SECRET_SECRET);
-    logger.info('[NinjaOneActions] Cleared NinjaOne client credentials', { tenant });
-
-    // 4. Update integration record (clear webhook-related settings)
-    const existingIntegration = await knex('rmm_integrations')
+    // 2. Load the integration row and stop its lifecycle workflow before mutating secrets.
+    let existingIntegration = await knex('rmm_integrations')
       .where({ tenant, provider: 'ninjaone' })
       .first();
 
@@ -324,8 +315,22 @@ export const disconnectNinjaOneIntegration = withAuth(async (user, { tenant }): 
         existingIntegration.integration_id,
         'disconnect'
       );
+
+      existingIntegration = await knex('rmm_integrations')
+        .where({ tenant, provider: 'ninjaone' })
+        .first();
     }
 
+    // 3. Remove OAuth token credentials from secret storage
+    await disconnectNinjaOne(tenant);
+
+    // 4. Remove client credentials (client ID and secret) from secret storage
+    const secretProvider = await getSecretProviderInstance();
+    await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
+    await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_SECRET_SECRET);
+    logger.info('[NinjaOneActions] Cleared NinjaOne client credentials', { tenant });
+
+    // 5. Update integration record (clear webhook-related settings)
     if (existingIntegration) {
       // Parse existing settings - handle both string and object cases
       let settings: Record<string, any> = {};
