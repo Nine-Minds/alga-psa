@@ -39,7 +39,7 @@
   {
     "id": "F010",
     "description": "Feature 10: Server — Create POST /api/v1/tickets/{id}/documents upload endpoint",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {

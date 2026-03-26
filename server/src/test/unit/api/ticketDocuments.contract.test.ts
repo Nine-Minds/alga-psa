@@ -16,8 +16,9 @@ describe('Ticket documents API contract', () => {
   it('T061: getById enriches tickets with associated documents', () => {
     const source = readTicketServiceSource();
 
-    expect(source).toContain('const documents = await this.getTicketDocuments(id, context);');
-    expect(source).toContain('documents');
+    expect(source).toContain('this.getTicketDocuments(id, context)');
+    expect(source).toContain('const [documents, contactAvatarUrl, clientLogoUrl] = await Promise.all([');
+    expect(source).toContain('documents,');
   });
 
   it('T062: getTicketDocuments filters document associations for ticket entity type', () => {
@@ -33,6 +34,8 @@ describe('Ticket documents API contract', () => {
     const source = readTicketDocumentsRouteSource();
 
     expect(source).toContain('GET /api/v1/tickets/{id}/documents');
+    expect(source).toContain('POST /api/v1/tickets/{id}/documents');
     expect(source).toContain('export const GET = controller.getDocuments();');
+    expect(source).toContain('export const POST = controller.uploadDocument();');
   });
 });

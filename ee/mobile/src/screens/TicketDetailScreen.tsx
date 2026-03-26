@@ -53,6 +53,7 @@ export { extractDescription } from "../features/ticketDetail/utils";
 import { CommentComposer } from "../features/ticketDetail/components/CommentComposer";
 import { CommentsSection } from "../features/ticketDetail/components/CommentsSection";
 import { DescriptionSection } from "../features/ticketDetail/components/DescriptionSection";
+import { DocumentsSection } from "../features/ticketDetail/components/DocumentsSection";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -512,6 +513,13 @@ export function TicketDetailBody({
               descEditor.setDescriptionDraft(nextContent);
               descEditor.setDescriptionPlainText(nextPlainText);
             }}
+          />
+          <View style={{ height: spacing.sm }} />
+          <DocumentsSection
+            client={client}
+            apiKey={session.accessToken}
+            ticketId={ticketId}
+            baseUrl={config.ok ? config.baseUrl : null}
           />
           <View style={{ height: spacing.sm }} />
           <CommentsSection

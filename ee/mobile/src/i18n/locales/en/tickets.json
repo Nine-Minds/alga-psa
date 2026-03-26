@@ -200,6 +200,21 @@
       "loadFailed": "Unable to load comments."
     }
   },
+  "documents": {
+    "title": "Documents",
+    "attach": "Attach",
+    "camera": "Camera",
+    "file": "File",
+    "uploading": "Uploading attachment…",
+    "empty": "No documents attached.",
+    "unknownType": "Unknown type",
+    "errors": {
+      "load": "Unable to load documents.",
+      "upload": "Unable to upload the document. Please try again.",
+      "open": "Unable to open this document right now.",
+      "cameraPermission": "Camera access is required to attach a photo."
+    }
+  },
   "statusPicker": {
     "title": "Select status",
     "setStatus": "Set status {{name}}",

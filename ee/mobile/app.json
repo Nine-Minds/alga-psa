@@ -38,7 +38,9 @@
     "plugins": [
       "expo-secure-store",
       "expo-localization",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-image-picker",
+      "expo-document-picker"
     ],
     "extra": {
       "eas": {

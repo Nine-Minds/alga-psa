@@ -229,6 +229,10 @@ vi.mock("../features/ticketDetail/components/DescriptionSection", () => ({
   DescriptionSection: (props: Record<string, unknown>) => React.createElement("MockDescriptionSection", props),
 }));
 
+vi.mock("../features/ticketDetail/components/DocumentsSection", () => ({
+  DocumentsSection: (props: Record<string, unknown>) => React.createElement("MockDocumentsSection", props),
+}));
+
 import { TicketDetailBody } from "./TicketDetailScreen";
 
 function render(node: React.ReactElement): ReactTestRenderer {
