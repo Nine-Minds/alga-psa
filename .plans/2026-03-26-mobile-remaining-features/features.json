@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Feature 15: Mobile — Render Avatar component next to contact name in KeyValue section",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 15"]
   },
   {
