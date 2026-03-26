@@ -214,7 +214,7 @@
   {
     "id": "F043",
     "description": "Feature 11: Mobile — Submit creates material and refreshes list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {
