@@ -190,49 +190,49 @@
   {
     "id": "T036",
     "description": "Feature 11: Mobile materials list displays product name, SKU, quantity, rate",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F038", "F039"]
   },
   {
     "id": "T037",
     "description": "Feature 11: Materials list shows billed/unbilled status badge",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F039"]
   },
   {
     "id": "T038",
     "description": "Feature 11: Add Product button opens product picker with search",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"]
   },
   {
     "id": "T039",
     "description": "Feature 11: Product picker shows product name and SKU",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"]
   },
   {
     "id": "T040",
     "description": "Feature 11: After product selection, quantity/rate modal appears with pre-filled rate",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F041", "F042"]
   },
   {
     "id": "T041",
     "description": "Feature 11: Submitting quantity/rate creates material and refreshes list",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F043"]
   },
   {
     "id": "T042",
     "description": "Feature 11: Empty state shown when no materials on ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F044"]
   },
   {
     "id": "T043",
     "description": "Feature 11: Add material failure shows error message",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F045"]
   },
 
@@ -257,13 +257,13 @@
   {
     "id": "T053",
     "description": "Test file: materials.test.ts exists and passes via npx vitest run",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F055", "F057"]
   },
   {
     "id": "T054",
     "description": "Test file: MaterialsSection.test.ts exists and passes via npx vitest run",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F056", "F057"]
   },
   {

@@ -94,6 +94,7 @@
 - T012-T016 complete: `ticketDocumentUpload.service.test.ts` and `ticketDocumentsUpload.contract.test.ts` cover document creation, ticket association creation, response reloading, missing-file rejection, and the shared authenticated controller flow for upload requests.
 - F052/F053/T017-T026/T051-T052 complete: `ee/mobile/src/api/documents.test.ts` and `ee/mobile/src/features/ticketDetail/components/DocumentsSection.test.ts` cover the document API wrappers, list metadata, count badge, download/open action, camera/file uploads, upload progress, refresh-after-upload, empty state, upload failure messaging, and camera-permission denial behavior.
 - T030-T035 complete: `server/src/test/unit/api/ticketMaterials.service.test.ts` and `ticketMaterials.contract.test.ts` exercise list-with-join behavior, empty lists, successful material creation, ticket-derived `client_id`, validation failures, invalid `service_id`, and the controller’s authenticated validation path.
+- F055/F056/T036-T043/T053-T054 complete: `ee/mobile/src/api/materials.test.ts` and `ee/mobile/src/features/ticketDetail/components/MaterialsSection.test.ts` cover material API wrappers, rendered product metadata and billed badges, picker search, SKU display, quantity/rate modal defaults, create-and-refresh flow, empty state, and add-failure messaging.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`

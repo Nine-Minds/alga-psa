@@ -263,13 +263,13 @@
   {
     "id": "F055",
     "description": "Feature 11: Tests — Write materials.test.ts for getTicketMaterials, addTicketMaterial, listProducts API wrappers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {
     "id": "F056",
     "description": "Feature 11: Tests — Write MaterialsSection.test.ts for materials list rendering, empty state, add product flow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {
