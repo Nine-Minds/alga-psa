@@ -1,5 +1,6 @@
 import React, { useState, type RefObject } from "react";
-import { Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { TicketDetail } from "../../../api/tickets";
 import { useTheme } from "../../../ui/ThemeContext";
@@ -13,7 +14,6 @@ import {
   isMalformedRichEditorContent,
   serializeRichEditorJson,
 } from "../../ticketRichText/helpers";
-import { ActionChip } from "./ActionChip";
 import { extractDescription } from "../utils";
 
 export function DescriptionSection({
@@ -67,9 +67,37 @@ export function DescriptionSection({
         borderRadius: 10,
       }}
     >
-      <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.textSecondary }}>
-        {t("description.label")}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.textSecondary }}>
+          {t("description.label")}
+        </Text>
+        {isEditing ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+            <Pressable
+              onPress={onCancelEditing}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel={t("common:cancel")}
+              style={{ padding: spacing.xs, opacity: saving ? 0.4 : 1 }}
+            >
+              <Feather name="x" size={20} color={colors.textSecondary} />
+            </Pressable>
+            <Pressable
+              onPress={onSave}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel={t("common:save")}
+              style={{ padding: spacing.xs, opacity: saving ? 0.4 : 1 }}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Feather name="check" size={20} color={colors.primary} />
+              )}
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
       <View style={{ marginTop: spacing.sm }}>
         {isEditing ? (
           <>
@@ -87,58 +115,46 @@ export function DescriptionSection({
                 );
               }}
             />
-            <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.sm }}>
-              {t("description.characters", { count: draftPlainText.length })}
-            </Text>
             {error ? (
               <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
                 {error}
               </Text>
             ) : null}
-            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
-              <ActionChip label={t("common:cancel")} onPress={onCancelEditing} disabled={saving} />
-              <View style={{ width: spacing.sm }} />
-              <ActionChip label={saving ? t("common:saving") : t("common:save")} onPress={onSave} disabled={saving} loading={saving} />
-            </View>
           </>
         ) : description && !isMalformedRichEditorContent(description) ? (
           <>
-            <TicketRichTextEditor
-              content={description}
-              editable={false}
-              height={expanded || !needsExpansion ? (contentHeight ?? DESCRIPTION_COLLAPSED_HEIGHT) : DESCRIPTION_COLLAPSED_HEIGHT}
-              scrollEnabled={false}
-              loadingLabel={t("description.loadingDescription")}
-              onLinkPress={onLinkPress}
-              qaAutoPressFirstLink={qaAutoPressFirstLink}
-              imageAuth={imageAuth}
-              onContentHeight={({ height }) => setContentHeight(height)}
-            />
+            <Pressable onPress={onStartEditing} accessibilityRole="button" accessibilityLabel={t("description.edit")}>
+              <TicketRichTextEditor
+                content={description}
+                editable={false}
+                height={expanded || !needsExpansion ? (contentHeight ?? DESCRIPTION_COLLAPSED_HEIGHT) : DESCRIPTION_COLLAPSED_HEIGHT}
+                scrollEnabled={false}
+                loadingLabel={t("description.loadingDescription")}
+                onLinkPress={onLinkPress}
+                qaAutoPressFirstLink={qaAutoPressFirstLink}
+                imageAuth={imageAuth}
+                onContentHeight={({ height }) => setContentHeight(height)}
+              />
+            </Pressable>
             {needsExpansion ? (
               <Pressable
                 onPress={() => setExpanded((v) => !v)}
                 accessibilityRole="button"
                 accessibilityLabel={expanded ? t("comments.seeLess") : t("comments.seeMore")}
-                style={{ paddingTop: spacing.xs }}
+                style={{ paddingTop: spacing.xs, alignSelf: "flex-end" }}
               >
                 <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
                   {expanded ? t("comments.seeLess") : t("comments.seeMore")}
                 </Text>
               </Pressable>
             ) : null}
-            <View style={{ marginTop: spacing.sm }}>
-              <ActionChip label={t("description.edit")} onPress={onStartEditing} />
-            </View>
           </>
         ) : (
-          <>
-            <Text style={{ ...typography.body, color: colors.text }}>
-              {description ? extractPlainTextFromSerializedRichEditorContent(description) : draftPlainText || "—"}
+          <Pressable onPress={onStartEditing} accessibilityRole="button" accessibilityLabel={t("description.add")}>
+            <Text style={{ ...typography.body, color: colors.textSecondary }}>
+              {description ? extractPlainTextFromSerializedRichEditorContent(description) : draftPlainText || t("description.tapToAdd")}
             </Text>
-            <View style={{ marginTop: spacing.sm }}>
-              <ActionChip label={t("description.add")} onPress={onStartEditing} />
-            </View>
-          </>
+          </Pressable>
         )}
       </View>
     </View>

@@ -50,6 +50,12 @@ export type TicketDetail = TicketListItem & {
   priority_id?: string | null;
   assigned_to?: string | null;
   due_date?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  client_email?: string | null;
+  client_phone?: string | null;
+  location_name?: string | null;
+  location_id?: string | null;
 } & Record<string, unknown>;
 
 export type TicketStats = {
@@ -65,6 +71,7 @@ export type TicketComment = {
   comment_text: string;
   comment_html?: string | null;
   is_internal?: boolean;
+  created_by?: string | null;
   created_by_name?: string | null;
   created_by_avatar_url?: string | null;
   created_at?: string | null;
@@ -275,6 +282,51 @@ export function updateTicketPriority(
     },
     body: {
       priority_id: params.priority_id,
+    },
+  });
+}
+
+export function updateTicketComment(
+  client: ApiClient,
+  params: {
+    apiKey: string;
+    ticketId: string;
+    commentId: string;
+    comment_text: string;
+    auditHeaders?: Record<string, string | undefined>;
+  },
+): Promise<ApiResult<SuccessResponse<TicketComment>>> {
+  return client.request<SuccessResponse<TicketComment>>({
+    method: "PUT",
+    path: `/api/v1/tickets/${params.ticketId}/comments/${params.commentId}`,
+    headers: {
+      "x-api-key": params.apiKey,
+      ...params.auditHeaders,
+    },
+    body: {
+      comment_text: params.comment_text,
+    },
+  });
+}
+
+export function updateTicketTitle(
+  client: ApiClient,
+  params: {
+    apiKey: string;
+    ticketId: string;
+    title: string;
+    auditHeaders?: Record<string, string | undefined>;
+  },
+): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
+  return client.request<SuccessResponse<TicketDetail>>({
+    method: "PUT",
+    path: `/api/v1/tickets/${params.ticketId}`,
+    headers: {
+      "x-api-key": params.apiKey,
+      ...params.auditHeaders,
+    },
+    body: {
+      title: params.title,
     },
   });
 }

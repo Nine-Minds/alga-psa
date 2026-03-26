@@ -3,7 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import { useTheme } from "../../../ui/ThemeContext";
 import { TicketRichTextEditor } from "../../ticketRichText/TicketRichTextEditor";
 
-const COMMENT_COLLAPSED_HEIGHT = 96;
+export const COMMENT_COLLAPSED_HEIGHT = 96;
 
 export function ExpandableComment({
   content,
@@ -14,6 +14,7 @@ export function ExpandableComment({
   typography,
   spacing,
   t,
+  renderFooter,
 }: {
   content: string;
   loadingLabel: string;
@@ -23,10 +24,14 @@ export function ExpandableComment({
   typography: ReturnType<typeof useTheme>["typography"];
   spacing: ReturnType<typeof useTheme>["spacing"];
   t: (key: string) => string;
+  /** Called with expansion controls so the parent can render "see more" inline with other elements. */
+  renderFooter?: (opts: { needsExpansion: boolean; expanded: boolean; toggle: () => void }) => React.ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState<number | null>(null);
   const needsExpansion = contentHeight !== null && contentHeight > COMMENT_COLLAPSED_HEIGHT;
+
+  const toggle = () => setExpanded((v) => !v);
 
   return (
     <View style={{ marginTop: spacing.xs }}>
@@ -40,12 +45,14 @@ export function ExpandableComment({
         imageAuth={imageAuth}
         onContentHeight={({ height }) => setContentHeight(height)}
       />
-      {needsExpansion ? (
+      {renderFooter ? (
+        renderFooter({ needsExpansion, expanded, toggle })
+      ) : needsExpansion ? (
         <Pressable
-          onPress={() => setExpanded((v) => !v)}
+          onPress={toggle}
           accessibilityRole="button"
           accessibilityLabel={expanded ? t("comments.seeLess") : t("comments.seeMore")}
-          style={{ paddingTop: spacing.xs }}
+          style={{ paddingTop: spacing.xs, alignSelf: "flex-end" }}
         >
           <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
             {expanded ? t("comments.seeLess") : t("comments.seeMore")}

@@ -17,11 +17,12 @@ import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 // Event types no longer needed as we create objects directly
-import { 
-  CreateTicketData, 
-  UpdateTicketData, 
+import {
+  CreateTicketData,
+  UpdateTicketData,
   TicketFilterData,
   CreateTicketCommentData,
+  UpdateTicketCommentData,
   TicketSearchData,
   CreateTicketFromAssetData
 } from '../schemas/ticket';
@@ -308,6 +309,7 @@ export class TicketService extends BaseService<ITicket> {
       .select(
         't.*',
         'comp.client_name',
+        'cl.location_name as location_name',
         'cl.email as client_email',
         'cl.phone as client_phone',
         'cont.full_name as contact_name',
@@ -830,6 +832,52 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_id: comment.contact_id ?? null,
         author_contact_name: null,
         author_contact_email: null
+      };
+    });
+  }
+
+  /**
+   * Update an existing comment (only the comment author may edit)
+   */
+  async updateComment(
+    ticketId: string,
+    commentId: string,
+    data: UpdateTicketCommentData,
+    context: ServiceContext
+  ): Promise<any> {
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      const comment = await trx('comments')
+        .where({ comment_id: commentId, ticket_id: ticketId, tenant: context.tenant })
+        .first();
+
+      if (!comment) {
+        throw new NotFoundError('Comment not found');
+      }
+
+      if (comment.is_system_generated) {
+        throw new ValidationError('System-generated comments cannot be edited');
+      }
+
+      if (comment.user_id !== context.userId) {
+        throw new ValidationError('You can only edit your own comments');
+      }
+
+      const [updated] = await trx('comments')
+        .where({ comment_id: commentId, tenant: context.tenant })
+        .update({
+          note: data.comment_text,
+          updated_at: knex.raw('now()'),
+        })
+        .returning('*');
+
+      return {
+        ...updated,
+        comment_text: updated.note,
+        comment_html: renderTicketRichTextHtml(updated.note),
+        created_by: updated.user_id ?? null,
+        author_contact_id: updated.contact_id ?? null,
       };
     });
   }
