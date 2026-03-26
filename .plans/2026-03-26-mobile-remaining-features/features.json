@@ -148,7 +148,7 @@
   {
     "id": "F032",
     "description": "Feature 11: Server — Create POST /api/v1/tickets/{id}/materials endpoint",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {

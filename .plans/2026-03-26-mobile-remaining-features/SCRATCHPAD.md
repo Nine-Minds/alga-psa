@@ -74,6 +74,7 @@
 - F025 complete: document loading/open/upload failures now surface localized errors in the section, with a specific camera-permission denial path and fallback server/network error messaging for rejected uploads.
 - F030 complete: `GET /api/v1/tickets/{id}/materials` now exists through the new ticket materials route plus `ApiTicketController.getMaterials()`, and the service exposes `getTicketMaterials()` for the shared list path.
 - F031 complete: `getTicketMaterials()` and `getTicketMaterialById()` both join `service_catalog` so material payloads include `service_name` and `sku` directly from the product catalog.
+- F032 complete: `POST /api/v1/tickets/{id}/materials` now exists via `ApiTicketController.addMaterial()` and the dedicated ticket materials route, returning a created material payload with HTTP 201.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`
