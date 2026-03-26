@@ -67,6 +67,7 @@
 - F018 complete: the documents card header now includes a neutral `Badge` showing the current document count next to the attach action, satisfying the count badge requirement.
 - F019 complete: tapping a document row now downloads the file to Expo FileSystem with the API key header and immediately hands the cached URI off to `Linking.openURL()` for the platform handler.
 - F020 complete: the attach UI now exposes a Camera option backed by `expo-image-picker`, including explicit camera permission checks and upload of the captured asset through the document API wrapper.
+- F021 complete: the same attach affordance now exposes a File option backed by `expo-document-picker`, allowing arbitrary picked files to be posted as ticket documents.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`

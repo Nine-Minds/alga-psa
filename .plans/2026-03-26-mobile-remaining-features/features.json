@@ -105,7 +105,7 @@
   {
     "id": "F021",
     "description": "Feature 10: Mobile — Attach button with File option (expo-document-picker)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
