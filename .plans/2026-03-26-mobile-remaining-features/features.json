@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Feature 15: Mobile — Graceful fallback to initials when avatar/logo URL is null",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 15"]
   },
 
