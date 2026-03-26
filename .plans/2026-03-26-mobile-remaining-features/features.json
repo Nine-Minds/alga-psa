@@ -129,7 +129,7 @@
   {
     "id": "F025",
     "description": "Feature 10: Mobile — Error handling for upload failures (network, permission, size)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
 
