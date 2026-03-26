@@ -87,6 +87,7 @@
 - F042 complete: the rate input is seeded from the selected product’s `default_rate`, converted from minor units into a currency input string so the default price is editable rather than blank.
 - F043 complete: saving from the material modal now posts the selected product, quantity, and rate, then closes the modal and reloads the materials list so the new row is visible immediately.
 - F044 complete: when a ticket has no materials, the section now renders a dedicated localized empty-state message instead of an empty list shell.
+- F045 complete: materials loading, product search, input validation, and add failures now surface localized or server-provided errors in the section/modal instead of failing silently.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`
