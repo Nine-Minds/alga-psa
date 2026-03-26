@@ -215,6 +215,30 @@
       "cameraPermission": "Camera access is required to attach a photo."
     }
   },
+  "materials": {
+    "title": "Materials",
+    "addProduct": "Add Product",
+    "pickerTitle": "Select product",
+    "searchProducts": "Search products…",
+    "noProducts": "No products found.",
+    "configureTitle": "Add material",
+    "quantityLabel": "Quantity",
+    "rateLabel": "Rate",
+    "saveMaterial": "Add material",
+    "saving": "Saving…",
+    "empty": "No materials added.",
+    "billed": "Billed",
+    "unbilled": "Unbilled",
+    "unknownProduct": "Unknown product",
+    "quantityRate": "Qty {{quantity}} • Rate {{rate}}",
+    "errors": {
+      "load": "Unable to load materials.",
+      "products": "Unable to load products.",
+      "add": "Unable to add the material. Please try again.",
+      "quantity": "Enter a quantity of at least 1.",
+      "rate": "Enter a valid rate."
+    }
+  },
   "statusPicker": {
     "title": "Select status",
     "setStatus": "Set status {{name}}",

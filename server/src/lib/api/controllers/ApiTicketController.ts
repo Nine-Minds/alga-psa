@@ -12,10 +12,11 @@ import {
   ticketListQuerySchema,
   ticketSearchSchema,
   ticketStatsResponseSchema,
+  createTicketMaterialSchema,
   createTicketCommentSchema,
   updateTicketCommentSchema,
   updateTicketStatusSchema,
-  updateTicketAssignmentSchema,
+  updateTicketAssignmentSchema,  
   createTicketFromAssetSchema
 } from '../schemas/ticket';
 import { 
@@ -359,6 +360,51 @@ export class ApiTicketController extends ApiBaseController {
           const document = await this.ticketService.uploadTicketDocument(ticketId, file, apiRequest.context!);
 
           return createSuccessResponse(document, 201, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Get ticket materials
+   */
+  getMaterials() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const materials = await this.ticketService.getTicketMaterials(ticketId, apiRequest.context!);
+
+          return createSuccessResponse(materials, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Add a material to a ticket
+   */
+  addMaterial() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        const validatedData = await this.validateData(apiRequest, createTicketMaterialSchema);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const material = await this.ticketService.addTicketMaterial(ticketId, validatedData, apiRequest.context!);
+
+          return createSuccessResponse(material, 201, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);

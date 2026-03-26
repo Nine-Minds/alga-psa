@@ -7,6 +7,7 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
+import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
@@ -22,6 +23,7 @@ import {
   UpdateTicketData,
   TicketFilterData,
   CreateTicketCommentData,
+  CreateTicketMaterialData,
   UpdateTicketCommentData,
   TicketSearchData,
   CreateTicketFromAssetData
@@ -460,6 +462,103 @@ export class TicketService extends BaseService<ITicket> {
     return createdDocument;
   }
 
+  async getTicketMaterials(ticketId: string, context: ServiceContext): Promise<ITicketMaterial[]> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const materials = await knex('ticket_materials as tm')
+      .leftJoin('service_catalog as sc', function () {
+        this.on('tm.service_id', '=', 'sc.service_id')
+          .andOn('tm.tenant', '=', 'sc.tenant');
+      })
+      .where({
+        'tm.ticket_id': ticketId,
+        'tm.tenant': context.tenant,
+      })
+      .select('tm.*', 'sc.service_name as service_name', 'sc.sku as sku')
+      .orderBy('tm.created_at', 'desc');
+
+    return materials as ITicketMaterial[];
+  }
+
+  async addTicketMaterial(
+    ticketId: string,
+    data: CreateTicketMaterialData,
+    context: ServiceContext,
+  ): Promise<ITicketMaterial> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const quantity = Math.floor(Number(data.quantity));
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      throw new ValidationError('Validation failed', [
+        { path: ['quantity'], message: 'quantity must be greater than 0' },
+      ]);
+    }
+
+    const rate = Math.round(Number(data.rate));
+    if (!Number.isFinite(rate) || rate < 0) {
+      throw new ValidationError('Validation failed', [
+        { path: ['rate'], message: 'rate must be 0 or greater' },
+      ]);
+    }
+
+    const ticket = await knex('tickets')
+      .where({ ticket_id: ticketId, tenant: context.tenant })
+      .select('ticket_id', 'client_id')
+      .first();
+
+    if (!ticket) {
+      throw new NotFoundError('Ticket not found');
+    }
+
+    if (!ticket.client_id) {
+      throw new ValidationError('Validation failed', [
+        { path: ['ticket_id'], message: 'ticket must be associated with a client' },
+      ]);
+    }
+
+    const product = await knex('service_catalog')
+      .where({
+        tenant: context.tenant,
+        service_id: data.service_id,
+        item_kind: 'product',
+      })
+      .select('service_id')
+      .first();
+
+    if (!product) {
+      throw new ValidationError('Validation failed', [
+        { path: ['service_id'], message: 'service_id must reference an existing product' },
+      ]);
+    }
+
+    const [createdMaterial] = await knex('ticket_materials')
+      .insert({
+        tenant: context.tenant,
+        ticket_id: ticketId,
+        client_id: ticket.client_id,
+        service_id: data.service_id,
+        quantity,
+        rate,
+        currency_code: data.currency_code,
+        description: data.description ?? null,
+        is_billed: false,
+      })
+      .returning('ticket_material_id');
+
+    const material = await this.getTicketMaterialById(
+      createdMaterial.ticket_material_id,
+      context,
+    );
+
+    if (!material) {
+      throw new Error('Created material could not be loaded');
+    }
+
+    return material;
+  }
+
   private async getDocumentById(documentId: string, context: ServiceContext): Promise<IDocument | null> {
     const { knex } = await this.getKnex();
 
@@ -486,6 +585,27 @@ export class TicketService extends BaseService<ITicket> {
       .first();
 
     return (document as IDocument | undefined) ?? null;
+  }
+
+  private async getTicketMaterialById(
+    ticketMaterialId: string,
+    context: ServiceContext,
+  ): Promise<ITicketMaterial | null> {
+    const { knex } = await this.getKnex();
+
+    const material = await knex('ticket_materials as tm')
+      .leftJoin('service_catalog as sc', function () {
+        this.on('tm.service_id', '=', 'sc.service_id')
+          .andOn('tm.tenant', '=', 'sc.tenant');
+      })
+      .where({
+        'tm.ticket_material_id': ticketMaterialId,
+        'tm.tenant': context.tenant,
+      })
+      .select('tm.*', 'sc.service_name as service_name', 'sc.sku as sku')
+      .first();
+
+    return (material as ITicketMaterial | undefined) ?? null;
   }
 
   private async getDocumentTypeIdForMime(

@@ -55,6 +55,14 @@ export const updateTicketAssignmentSchema = z.object({
   assigned_to: uuidSchema.nullable().optional()
 });
 
+export const createTicketMaterialSchema = z.object({
+  service_id: uuidSchema,
+  quantity: z.number().positive('Quantity must be greater than 0'),
+  rate: z.number().min(0, 'Rate must be 0 or greater'),
+  currency_code: z.string().trim().min(3).max(3).transform((value) => value.toUpperCase()),
+  description: z.string().trim().max(1000).nullable().optional(),
+});
+
 // Ticket filter schema
 export const ticketFilterSchema = baseFilterSchema.extend({
   title: z.string().optional(),
@@ -196,6 +204,7 @@ export const updateTicketCommentSchema = z.object({
 });
 
 export type UpdateTicketCommentData = z.infer<typeof updateTicketCommentSchema>;
+export type CreateTicketMaterialData = z.infer<typeof createTicketMaterialSchema>;
 
 export const ticketCommentResponseSchema = z.object({
   comment_id: uuidSchema,

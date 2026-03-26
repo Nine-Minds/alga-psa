@@ -54,6 +54,7 @@ import { CommentComposer } from "../features/ticketDetail/components/CommentComp
 import { CommentsSection } from "../features/ticketDetail/components/CommentsSection";
 import { DescriptionSection } from "../features/ticketDetail/components/DescriptionSection";
 import { DocumentsSection } from "../features/ticketDetail/components/DocumentsSection";
+import { MaterialsSection } from "../features/ticketDetail/components/MaterialsSection";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -520,6 +521,12 @@ export function TicketDetailBody({
             apiKey={session.accessToken}
             ticketId={ticketId}
             baseUrl={config.ok ? config.baseUrl : null}
+          />
+          <View style={{ height: spacing.sm }} />
+          <MaterialsSection
+            client={client}
+            apiKey={session.accessToken}
+            ticketId={ticketId}
           />
           <View style={{ height: spacing.sm }} />
           <CommentsSection

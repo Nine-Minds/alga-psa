@@ -72,7 +72,10 @@
 - F023 complete: successful uploads now call `loadDocuments()` before clearing the upload state, so the section refreshes immediately and the new attachment appears without reopening the screen.
 - F024 complete: when the ticket has no attachments, the documents card now renders a dedicated localized empty-state message instead of an empty container.
 - F025 complete: document loading/open/upload failures now surface localized errors in the section, with a specific camera-permission denial path and fallback server/network error messaging for rejected uploads.
+- F030 complete: `GET /api/v1/tickets/{id}/materials` now exists through the new ticket materials route plus `ApiTicketController.getMaterials()`, and the service exposes `getTicketMaterials()` for the shared list path.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`
 - Mobile targeted test: `cd ee/mobile && npx vitest run src/screens/TicketDetailScreen.avatars.test.ts`
+- Server targeted tests: `cd server && npx vitest run src/test/unit/api/ticketMaterials.service.test.ts src/test/unit/api/ticketMaterials.contract.test.ts src/test/unit/api/ticketDocumentsUpload.contract.test.ts src/test/unit/api/ticketDocumentUpload.service.test.ts src/test/unit/api/ticketService.avatarUrls.test.ts`
+- Mobile targeted tests: `cd ee/mobile && npx vitest run src/api/materials.test.ts src/features/ticketDetail/components/MaterialsSection.test.ts src/api/documents.test.ts src/features/ticketDetail/components/DocumentsSection.test.ts src/screens/TicketDetailScreen.avatars.test.ts`
