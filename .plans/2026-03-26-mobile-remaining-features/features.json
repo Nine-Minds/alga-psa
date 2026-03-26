@@ -160,7 +160,7 @@
   {
     "id": "F034",
     "description": "Feature 11: Server — POST endpoint resolves client_id from ticket internally",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 11"]
   },
   {

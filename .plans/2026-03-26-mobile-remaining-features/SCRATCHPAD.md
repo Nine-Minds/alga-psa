@@ -76,6 +76,7 @@
 - F031 complete: `getTicketMaterials()` and `getTicketMaterialById()` both join `service_catalog` so material payloads include `service_name` and `sku` directly from the product catalog.
 - F032 complete: `POST /api/v1/tickets/{id}/materials` now exists via `ApiTicketController.addMaterial()` and the dedicated ticket materials route, returning a created material payload with HTTP 201.
 - F033 complete: create requests now pass through `createTicketMaterialSchema` for body validation and are revalidated in the service for positive quantity, non-negative rate, and product-backed `service_id` enforcement before insert.
+- F034 complete: `addTicketMaterial()` now looks up the ticket first and copies `client_id` from the ticket row into `ticket_materials`, so mobile callers do not send client context explicitly.
 
 ## Commands / Runbooks
 - Server targeted test: `cd server && npx vitest run src/test/unit/api/ticketService.avatarUrls.test.ts`
