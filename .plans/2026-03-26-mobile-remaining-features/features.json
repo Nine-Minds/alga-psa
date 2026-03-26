@@ -81,7 +81,7 @@
   {
     "id": "F017",
     "description": "Feature 10: Mobile — Document list shows name, type, size, upload date for each document",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
