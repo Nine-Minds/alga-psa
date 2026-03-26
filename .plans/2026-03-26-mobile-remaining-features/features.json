@@ -93,7 +93,7 @@
   {
     "id": "F019",
     "description": "Feature 10: Mobile — Tap document to download/open via system handler",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature 10"]
   },
   {
