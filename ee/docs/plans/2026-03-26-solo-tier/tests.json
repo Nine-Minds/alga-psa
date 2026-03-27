@@ -695,7 +695,7 @@
   {
     "id": "T085",
     "description": "downgradeTier Pro->Solo removes per-user line item",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
