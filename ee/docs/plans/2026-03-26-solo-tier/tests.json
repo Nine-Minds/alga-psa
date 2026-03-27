@@ -638,7 +638,7 @@
   {
     "id": "T078",
     "description": "Pro checkout still creates session with two line items (base + per-user)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
