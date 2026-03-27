@@ -91,7 +91,7 @@
   {
     "id": "T012",
     "description": "resolveTier('solo') returns { tier: 'solo', isMisconfigured: false }",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
