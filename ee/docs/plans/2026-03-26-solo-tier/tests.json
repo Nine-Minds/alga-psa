@@ -566,7 +566,7 @@
   {
     "id": "T069",
     "description": "assertAddOnAccess(AI_ASSISTANT) passes for Solo tenant with AI add-on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
