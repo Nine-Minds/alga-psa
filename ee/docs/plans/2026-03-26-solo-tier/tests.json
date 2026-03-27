@@ -343,7 +343,7 @@
   {
     "id": "T042",
     "description": "assertAddOnAccess bypasses check in CE edition (never throws)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
