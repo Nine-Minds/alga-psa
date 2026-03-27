@@ -145,3 +145,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T040 test: assertAddOnAccess throws when tenant lacks the requested add-on
 - (2026-03-26) Completed T041 test: assertAddOnAccess passes when tenant has the requested add-on
 - (2026-03-26) Completed T042 test: assertAddOnAccess bypasses check in CE edition (never throws)
+- (2026-03-26) Completed T043 test: assertAddOnAccess works for Solo tier with AI add-on active
