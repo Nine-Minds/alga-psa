@@ -548,7 +548,7 @@
   {
     "id": "F069",
     "description": "Show 'Upgrade to Pro' card for Solo tenants in AccountManagement",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.3"
     ]

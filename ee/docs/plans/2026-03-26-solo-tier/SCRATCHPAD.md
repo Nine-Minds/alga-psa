@@ -211,3 +211,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F024 feature: Add STRIPE_AI_ADDON_PRICE_ID and STRIPE_AI_ADDON_ANNUAL_PRICE_ID env vars to Stripe config
 - (2026-03-26) Completed F067 feature: Extend `FEATURE_DISPLAY_NAMES` in `AccountManagement` to cover all new Pro-gated Solo exclusions, which also clears the remaining `ee/server` TypeScript exhaustiveness error
 - (2026-03-26) Completed F068 feature: Add Solo-specific account messaging and adjust the empty-feature-state copy so Solo tenants see upgrade guidance instead of the old Pro-only text
+- (2026-03-26) Completed F069 feature: Extend the existing tier-upgrade confirmation flow so Solo tenants get an `Upgrade to Pro` card and Pro/Premium upgrades share the same preview dialog

@@ -65,7 +65,9 @@ export default function AccountManagement() {
   const [scheduledChanges, setScheduledChanges] = useState<IScheduledLicenseChange | null>(null);
   const { tier, isMisconfigured, isSolo, isPro, refreshTier, isTrialing, trialDaysLeft, trialEndDate, isPaymentFailed, subscriptionStatus, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate } = useTier();
   const upgradeFlowFlag = useFeatureFlag('tier-upgrade-flow');
-  const showUpgradeFlow = isPro && (typeof upgradeFlowFlag === 'boolean' ? upgradeFlowFlag : upgradeFlowFlag?.enabled ?? false);
+  const tierUpgradeFlowEnabled = typeof upgradeFlowFlag === 'boolean'
+    ? upgradeFlowFlag
+    : upgradeFlowFlag?.enabled ?? false;
 
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState({
@@ -263,6 +265,7 @@ export default function AccountManagement() {
 
   const [upgrading, setUpgrading] = useState(false);
   const [showUpgradeConfirm, setShowUpgradeConfirm] = useState(false);
+  const [upgradeTargetTier, setUpgradeTargetTier] = useState<'pro' | 'premium'>('premium');
   const [upgradePreview, setUpgradePreview] = useState<{
     currentMonthly?: number;
     newMonthly?: number;
@@ -466,7 +469,7 @@ export default function AccountManagement() {
     }
   };
 
-  const handleUpgradeClick = async () => {
+  const handleUpgradeClick = async (targetTier: 'pro' | 'premium') => {
     if (!canManageAccount) {
       toast.error('You do not have permission to manage the subscription');
       return;
@@ -474,11 +477,12 @@ export default function AccountManagement() {
 
     setLoadingPreview(true);
     try {
-      const preview = await getUpgradePreviewAction('premium');
+      const preview = await getUpgradePreviewAction(targetTier);
       if (!preview.success) {
         toast.error(preview.error || 'Failed to get upgrade pricing');
         return;
       }
+      setUpgradeTargetTier(targetTier);
       setUpgradePreview(preview);
       setShowUpgradeConfirm(true);
     } catch (error) {
@@ -492,9 +496,9 @@ export default function AccountManagement() {
   const handleConfirmUpgrade = async () => {
     setUpgrading(true);
     try {
-      const result = await upgradeTierAction('premium');
+      const result = await upgradeTierAction(upgradeTargetTier);
       if (result.success) {
-        toast.success('Upgraded to Premium! Refreshing your session...');
+        toast.success(`Upgraded to ${TIER_LABELS[upgradeTargetTier]}! Refreshing your session...`);
         setShowUpgradeConfirm(false);
         await refreshTier();
       } else {
@@ -799,8 +803,26 @@ export default function AccountManagement() {
                 )}
               </div>
 
+              {/* Upgrade to Pro */}
+              {isSolo && tierUpgradeFlowEnabled && (
+                <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h4 className="font-semibold">Upgrade to Pro</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Unlock integrations, managed email, workflow design, mobile access, and support for a growing team.
+                      </p>
+                    </div>
+                    <Button id="upgrade-to-pro-btn" onClick={() => handleUpgradeClick('pro')} disabled={upgrading || loadingPreview}>
+                      <Rocket className="mr-2 h-4 w-4" />
+                      {loadingPreview ? 'Loading...' : 'Upgrade'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Upgrade to Premium */}
-              {showUpgradeFlow && (
+              {isPro && tierUpgradeFlowEnabled && (
                 <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -809,7 +831,7 @@ export default function AccountManagement() {
                         Unlock the visual Invoice Designer and upcoming premium features.
                       </p>
                     </div>
-                    <Button id="upgrade-to-premium-btn" onClick={handleUpgradeClick} disabled={upgrading || loadingPreview}>
+                    <Button id="upgrade-to-premium-btn" onClick={() => handleUpgradeClick('premium')} disabled={upgrading || loadingPreview}>
                       <Rocket className="mr-2 h-4 w-4" />
                       {loadingPreview ? 'Loading...' : 'Upgrade'}
                     </Button>
@@ -1290,13 +1312,15 @@ export default function AccountManagement() {
         isOpen={showUpgradeConfirm}
         onClose={() => setShowUpgradeConfirm(false)}
         onConfirm={handleConfirmUpgrade}
-        title="Upgrade to Premium"
+        title={`Upgrade to ${TIER_LABELS[upgradeTargetTier]}`}
         confirmLabel={upgrading ? 'Upgrading...' : 'Confirm Upgrade'}
         isConfirming={upgrading}
         message={
           upgradePreview ? (
             <div className="space-y-4">
-              <p>You are about to upgrade to the <strong>Premium</strong> plan.</p>
+              <p>
+                You are about to upgrade to the <strong>{TIER_LABELS[upgradeTargetTier]}</strong> plan.
+              </p>
 
               <div className="rounded-lg border p-4 space-y-2">
                 <div className="flex justify-between text-sm">
@@ -1304,7 +1328,7 @@ export default function AccountManagement() {
                   <span>${upgradePreview.currentMonthly?.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Premium base fee</span>
+                  <span className="text-muted-foreground">{TIER_LABELS[upgradeTargetTier]} base fee</span>
                   <span>${upgradePreview.newBasePrice?.toFixed(2)}/mo</span>
                 </div>
                 <div className="flex justify-between text-sm">
