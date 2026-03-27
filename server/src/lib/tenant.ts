@@ -1,5 +1,5 @@
 // server/src/lib/tenant.ts
-import { headers } from 'next/headers';
+import { headers } from 'next/headers.js';
 
 export async function getTenantForCurrentRequest(fallbackTenant?: string): Promise<string | null> {
   const headerValues = await headers();

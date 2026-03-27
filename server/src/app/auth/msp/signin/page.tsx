@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies } from 'next/headers.js';
 import { redirect } from 'next/navigation';
 import { MspSignIn, PortalSwitchPrompt } from '@alga-psa/auth/client';
 import { getSession } from '@alga-psa/auth';

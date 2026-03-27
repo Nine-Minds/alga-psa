@@ -10,7 +10,7 @@ import { AppThemeProvider } from '@/components/providers/AppThemeProvider';
 import { ThemeBridge } from '@/components/providers/ThemeBridge';
 import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateProvider';
 import { getServerLocale } from "@alga-psa/ui/lib/i18n/serverOnly";
-import { cookies, headers } from 'next/headers';
+import { cookies, headers } from 'next/headers.js';
 import { generateBrandingStyles } from "@alga-psa/tenancy";
 import '@mantine/core/styles.css';
 import 'reactflow/dist/style.css';
