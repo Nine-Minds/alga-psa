@@ -99,7 +99,7 @@
   {
     "id": "T013",
     "description": "resolveTier(null) defaults to { tier: 'pro', isMisconfigured: false }",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
