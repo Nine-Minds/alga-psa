@@ -448,7 +448,7 @@
   {
     "id": "T055",
     "description": "Sidebar hides Workflow Editor subitem for Solo tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031",
       "F033"
