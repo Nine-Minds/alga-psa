@@ -142,7 +142,7 @@
   {
     "id": "T018",
     "description": "tierHasFeature('solo', EXTENSIONS) returns false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F014"
