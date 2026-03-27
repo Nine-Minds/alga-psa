@@ -79,3 +79,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F013 feature: Add MOBILE_ACCESS to TIER_FEATURES enum with min tier 'pro'
 - (2026-03-26) Completed F014 feature: Rewrite tierHasFeature() to use TIER_RANK comparison instead of map lookup
 - (2026-03-26) Completed F015 feature: Derive TIER_FEATURE_MAP from FEATURE_MINIMUM_TIER + TIER_RANK
+- (2026-03-26) Completed F016 feature: Add AI_ASSISTANT to ADD_ONS enum
