@@ -815,7 +815,7 @@
   {
     "id": "T100",
     "description": "AccountManagement shows 'Downgrade to Solo' for Pro tenants with 1 user",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
