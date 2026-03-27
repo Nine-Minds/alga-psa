@@ -35,7 +35,7 @@ vi.mock('@temporalio/client', () => ({
   })),
 }));
 
-vi.mock('@/lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<unknown>) => fn()),
   createTenantKnex: vi.fn(async () => {
     const builder = {

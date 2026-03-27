@@ -2,9 +2,9 @@ import axios from 'axios';
 import { Connection, Client } from '@temporalio/client';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildIntegrationTokenRefreshFailedPayload } from '@alga-psa/workflow-streams';
-import { createTenantKnex, runWithTenant } from '@/lib/db';
 import type {
   NinjaOneOAuthCredentials,
   NinjaOneOAuthTokenResponse,
