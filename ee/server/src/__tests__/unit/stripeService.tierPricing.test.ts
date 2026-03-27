@@ -9,6 +9,14 @@ vi.mock('@/lib/db/db', () => ({
 
 function createTenantKnex(planByTenant: Record<string, string>) {
   return ((table: string) => {
+    if (table === 'stripe_subscriptions') {
+      return {
+        where: () => ({
+          first: async () => null,
+        }),
+      };
+    }
+
     if (table !== 'tenants') {
       throw new Error(`Unexpected table ${table}`);
     }
@@ -21,6 +29,133 @@ function createTenantKnex(planByTenant: Record<string, string>) {
       }),
     };
   }) as any;
+}
+
+function createCheckoutWebhookKnex(state: {
+  customer?: Record<string, any>;
+  tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
+  subscriptionUpdate?: Record<string, any>;
+}) {
+  const knex = ((table: string) => {
+    if (table === 'stripe_customers') {
+      return {
+        where: (_criteria: Record<string, any>) => ({
+          first: async () => state.customer ?? {
+            tenant: 'tenant-solo',
+            stripe_customer_id: 'cust_db_checkout',
+            stripe_customer_external_id: 'cus_checkout',
+          },
+        }),
+      };
+    }
+
+    if (table === 'tenants') {
+      return {
+        where: (criteria: Record<string, any>) => ({
+          update: async (values: Record<string, any>) => {
+            state.tenantUpdates.push({ criteria, values });
+            return 1;
+          },
+        }),
+      };
+    }
+
+    throw new Error(`Unexpected table ${table}`);
+  }) as any;
+
+  knex.fn = {
+    now: () => new Date('2026-03-26T00:00:00.000Z'),
+  };
+
+  return knex;
+}
+
+function createSubscriptionWebhookKnex(state: {
+  existingSubscription: Record<string, any>;
+  subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
+  tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
+}) {
+  const knex = ((table: string) => {
+    if (table === 'stripe_subscriptions') {
+      return {
+        where: (criteria: Record<string, any>) => ({
+          first: async () => (
+            criteria.tenant === state.existingSubscription.tenant &&
+            criteria.stripe_subscription_external_id === state.existingSubscription.stripe_subscription_external_id
+          )
+            ? state.existingSubscription
+            : null,
+          update: async (values: Record<string, any>) => {
+            state.subscriptionUpdates.push({ criteria, values });
+            return 1;
+          },
+        }),
+      };
+    }
+
+    if (table === 'tenants') {
+      return {
+        where: (criteria: Record<string, any>) => ({
+          update: async (values: Record<string, any>) => {
+            state.tenantUpdates.push({ criteria, values });
+            return 1;
+          },
+        }),
+      };
+    }
+
+    throw new Error(`Unexpected table ${table}`);
+  }) as any;
+
+  knex.fn = {
+    now: () => new Date('2026-03-26T00:00:00.000Z'),
+  };
+
+  return knex;
+}
+
+function createSoloTrialKnex(state: {
+  tenantPlan: 'solo' | 'pro';
+  existingSubscription: Record<string, any> | null;
+  subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
+}) {
+  const knex = ((table: string) => {
+    if (table === 'tenants') {
+      return {
+        where: (_criteria: Record<string, any>) => ({
+          select: (_field: string) => ({
+            first: async () => ({ plan: state.tenantPlan }),
+          }),
+        }),
+      };
+    }
+
+    if (table === 'stripe_subscriptions') {
+      return {
+        where: (criteria: Record<string, any>) => ({
+          whereIn: (_column: string, _values: string[]) => ({
+            first: async () => state.existingSubscription
+              && criteria.tenant === state.existingSubscription.tenant
+              && criteria.stripe_customer_id === state.existingSubscription.stripe_customer_id
+              ? state.existingSubscription
+              : null,
+          }),
+          update: async (values: Record<string, any>) => {
+            state.subscriptionUpdates.push({ criteria, values });
+            return 1;
+          },
+        }),
+      };
+    }
+
+    throw new Error(`Unexpected table ${table}`);
+  }) as any;
+
+  knex.fn = {
+    now: () => new Date('2026-03-26T00:00:00.000Z'),
+  };
+
+  return knex;
 }
 
 function createUpgradeKnex(state: {
@@ -218,6 +353,21 @@ describe('StripeService tier pricing', () => {
     );
   });
 
+  it('includes a 7-day trial when creating a brand-new Solo checkout session', async () => {
+    const service = createService({ 'tenant-solo': 'solo' });
+    service.initPromise = Promise.resolve();
+
+    await service.updateOrCreateLicenseSubscription('tenant-solo', 1);
+
+    expect(service.stripe.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subscription_data: expect.objectContaining({
+          trial_period_days: 7,
+        }),
+      }),
+    );
+  });
+
   it('forces licensed user count to 1 for Solo subscriptions', () => {
     const service = createService({});
 
@@ -240,6 +390,57 @@ describe('StripeService tier pricing', () => {
           { price: 'price_pro_base', quantity: 1 },
           { price: 'price_pro_user', quantity: 4 },
         ],
+      }),
+    );
+  });
+
+  it('does not add a default trial when creating a brand-new Pro checkout session', async () => {
+    const service = createService({ 'tenant-pro': 'pro' });
+    service.initPromise = Promise.resolve();
+
+    await service.updateOrCreateLicenseSubscription('tenant-pro', 1);
+
+    expect(service.stripe.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subscription_data: expect.not.objectContaining({
+          trial_period_days: expect.anything(),
+        }),
+      }),
+    );
+  });
+
+  it('sets licensed_user_count=1 on checkout completion for Solo subscriptions', async () => {
+    const service = createService({});
+    const tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+    service.importSubscription = vi.fn().mockResolvedValue(undefined);
+    service.stripe.subscriptions = {
+      retrieve: vi.fn().mockResolvedValue({
+        id: 'sub_checkout_solo',
+        items: {
+          data: [{ id: 'si_solo_flat', quantity: 1, price: { id: 'price_solo_month', product: { name: 'alga-psa-solo' } } }],
+        },
+      }),
+    };
+
+    await service.handleCheckoutCompleted(
+      {
+        data: {
+          object: {
+            id: 'cs_checkout_solo',
+            subscription: 'sub_checkout_solo',
+            customer: 'cus_checkout',
+            metadata: {},
+          },
+        },
+      },
+      'tenant-solo',
+      createCheckoutWebhookKnex({ tenantUpdates }),
+    );
+
+    expect(tenantUpdates[0]?.values).toEqual(
+      expect.objectContaining({
+        licensed_user_count: 1,
+        plan: 'solo',
       }),
     );
   });
@@ -431,6 +632,152 @@ describe('StripeService tier pricing', () => {
       error: 'Solo downgrade requires exactly 1 active internal user',
     });
     expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
+  });
+
+  it('sets licensed_user_count=1 on subscription updates for Solo subscriptions', async () => {
+    const service = createService({});
+    const subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+    const tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+    service.stripe.prices = {
+      retrieve: vi.fn().mockResolvedValue({
+        id: 'price_solo_month',
+        product: { name: 'alga-psa-solo' },
+      }),
+    };
+
+    await service.handleSubscriptionUpdated(
+      {
+        data: {
+          object: {
+            id: 'sub_solo_update',
+            status: 'active',
+            metadata: {},
+            current_period_start: Math.floor(new Date('2026-03-26T00:00:00.000Z').getTime() / 1000),
+            current_period_end: Math.floor(new Date('2026-04-26T00:00:00.000Z').getTime() / 1000),
+            cancel_at: null,
+            canceled_at: null,
+            items: {
+              data: [
+                {
+                  id: 'si_solo_flat',
+                  quantity: 4,
+                  price: {
+                    id: 'price_solo_month',
+                    recurring: { interval: 'month' },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+      'tenant-solo',
+      createSubscriptionWebhookKnex({
+        existingSubscription: {
+          tenant: 'tenant-solo',
+          stripe_subscription_external_id: 'sub_solo_update',
+          quantity: 1,
+          metadata: {},
+        },
+        subscriptionUpdates,
+        tenantUpdates,
+      }),
+    );
+
+    expect(subscriptionUpdates[0]?.values).toEqual(
+      expect.objectContaining({
+        quantity: 4,
+      }),
+    );
+    expect(tenantUpdates[0]?.values).toEqual(
+      expect.objectContaining({
+        licensed_user_count: 1,
+        plan: 'solo',
+      }),
+    );
+  });
+
+  it('starts a Solo -> Pro trial for established Solo customers', async () => {
+    const service = createService({});
+    const subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+    getConnectionMock.mockResolvedValue(
+      createSoloTrialKnex({
+        tenantPlan: 'solo',
+        existingSubscription: {
+          tenant: 'tenant-solo',
+          stripe_subscription_id: 'sub_db_trial',
+          stripe_subscription_external_id: 'sub_ext_trial',
+          stripe_customer_id: 'cust_db_trial',
+          status: 'active',
+          metadata: {},
+        },
+        subscriptionUpdates,
+      }),
+    );
+    service.getOrImportCustomer = vi.fn().mockResolvedValue({
+      stripe_customer_id: 'cust_db_trial',
+      stripe_customer_external_id: 'cus_ext_trial',
+    });
+    service.initPromise = Promise.resolve();
+    service.stripe.subscriptions = {
+      update: vi.fn().mockResolvedValue({}),
+    };
+
+    const result = await service.startSoloProTrial('tenant-solo');
+
+    expect(result.success).toBe(true);
+    expect(result.trialEnd).toBeTruthy();
+    expect(service.stripe.subscriptions.update).toHaveBeenCalledWith(
+      'sub_ext_trial',
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          solo_pro_trial: 'true',
+        }),
+      }),
+    );
+    expect(subscriptionUpdates[0]?.values).toEqual(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          solo_pro_trial: 'true',
+        }),
+      }),
+    );
+  });
+
+  it('blocks a Solo -> Pro trial while the Solo subscription is still trialing', async () => {
+    const service = createService({});
+    const subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+    getConnectionMock.mockResolvedValue(
+      createSoloTrialKnex({
+        tenantPlan: 'solo',
+        existingSubscription: {
+          tenant: 'tenant-solo',
+          stripe_subscription_id: 'sub_db_trialing',
+          stripe_subscription_external_id: 'sub_ext_trialing',
+          stripe_customer_id: 'cust_db_trialing',
+          status: 'trialing',
+          metadata: {},
+        },
+        subscriptionUpdates,
+      }),
+    );
+    service.getOrImportCustomer = vi.fn().mockResolvedValue({
+      stripe_customer_id: 'cust_db_trialing',
+      stripe_customer_external_id: 'cus_ext_trialing',
+    });
+    service.initPromise = Promise.resolve();
+    service.stripe.subscriptions = {
+      update: vi.fn(),
+    };
+
+    const result = await service.startSoloProTrial('tenant-solo');
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Cannot start a Pro trial while your Solo trial is still active',
+    });
+    expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
+    expect(subscriptionUpdates).toEqual([]);
   });
 
   it('creates an embedded checkout session for the AI add-on', async () => {

@@ -614,7 +614,7 @@
   {
     "id": "T075",
     "description": "getTierPriceIds('solo') returns basePriceId with userPriceId: null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
