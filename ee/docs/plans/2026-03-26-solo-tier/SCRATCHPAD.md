@@ -226,3 +226,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T068 test: assertAddOnAccess(AI_ASSISTANT) throws for tenant without AI add-on
 - (2026-03-26) Completed T069 test: assertAddOnAccess(AI_ASSISTANT) passes for Solo tenant with AI add-on
 - (2026-03-26) Completed T070 test: exchangeOttForSession rejects Solo tenant with 403 status
+- (2026-03-26) Completed T071 test: exchangeOttForSession 403 response includes upgrade message

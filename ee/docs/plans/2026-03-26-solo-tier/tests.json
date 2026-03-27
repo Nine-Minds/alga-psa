@@ -582,7 +582,7 @@
   {
     "id": "T071",
     "description": "exchangeOttForSession 403 response includes upgrade message",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
