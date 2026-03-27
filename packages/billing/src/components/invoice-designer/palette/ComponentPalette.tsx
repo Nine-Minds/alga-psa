@@ -1,3 +1,4 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Invoice designer palette uses shared expression-authoring utilities to enumerate available template fields */
 import React, { useMemo, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import {

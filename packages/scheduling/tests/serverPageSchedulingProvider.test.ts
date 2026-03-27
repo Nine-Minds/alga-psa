@@ -7,9 +7,9 @@ const root = path.resolve(__dirname, '../../..');
 const readFile = (relativePath: string) =>
   fs.readFileSync(path.join(root, relativePath), 'utf-8');
 
-describe('DefaultLayout includes MspSchedulingProvider', () => {
-  it('wraps DrawerProvider with MspSchedulingProvider in DefaultLayout', () => {
+describe('DefaultLayout includes SchedulingProviderWithCallbacks', () => {
+  it('wraps DrawerProvider with SchedulingProviderWithCallbacks in DefaultLayout', () => {
     const content = readFile('server/src/components/layout/DefaultLayout.tsx');
-    expect(content).toContain('MspSchedulingProvider');
+    expect(content).toContain('SchedulingProviderWithCallbacks');
   });
 });

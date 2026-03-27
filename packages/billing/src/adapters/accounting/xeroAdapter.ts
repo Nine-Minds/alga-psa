@@ -1,3 +1,4 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export adapter - intentionally bridges billing and Xero integration APIs */
 import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {

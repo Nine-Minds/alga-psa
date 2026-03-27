@@ -16,7 +16,7 @@ import type { IClient, IContact, IQuote, IQuoteListItem } from '@alga-psa/types'
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { addQuoteItem, createQuote, createQuoteFromTemplate, getQuote, listQuotes, removeQuoteItem, reorderQuoteItems, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
-import { getAllContacts } from '@alga-psa/clients/actions';
+import { getContactsForPicker } from '@alga-psa/user-composition/actions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
 import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 
@@ -88,7 +88,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
 
       const [fetchedClients, fetchedContacts, fetchedTemplates] = await Promise.all([
         getAllClientsForBilling(false),
-        getAllContacts('active'),
+        getContactsForPicker('active'),
         listQuotes({ is_template: true, pageSize: 200 }),
       ]);
 

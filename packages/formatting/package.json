@@ -21,6 +21,10 @@
     "./imageUrl": {
       "import": "./src/imageUrl.ts",
       "types": "./src/imageUrl.ts"
+    },
+    "./timeFormatting": {
+      "import": "./src/timeFormatting.ts",
+      "types": "./src/timeFormatting.ts"
     }
   },
   "scripts": {

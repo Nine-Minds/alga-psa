@@ -32,7 +32,7 @@ import {
   ISlaTicketAtRisk,
   ISlaReportingFilters
 } from '@alga-psa/sla/types';
-import { getAllBoards } from '@alga-psa/tickets/actions';
+import { getAllBoards } from '@alga-psa/reference-data/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ArrowLeft, RefreshCw, Calendar } from 'lucide-react';

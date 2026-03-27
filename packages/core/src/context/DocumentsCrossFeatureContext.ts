@@ -16,11 +16,16 @@ export interface FolderSelectorModalRenderProps {
   [key: string]: unknown;
 }
 
+export interface DocumentStorageCardRenderProps {
+  [key: string]: unknown;
+}
+
 export interface DocumentsCrossFeatureCallbacks {
   renderDocuments: (props: DocumentsRenderProps) => ReactNode;
   renderDocumentUpload: (props: DocumentUploadRenderProps) => ReactNode;
   renderDocumentSelector: (props: DocumentSelectorRenderProps) => ReactNode;
   renderFolderSelectorModal: (props: FolderSelectorModalRenderProps) => ReactNode;
+  renderDocumentStorageCard: (props: DocumentStorageCardRenderProps) => ReactNode;
   downloadDocument: (
     documentUrl: string,
     fileName?: string,

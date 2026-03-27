@@ -15,11 +15,11 @@ import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
-import { MspSchedulingProvider } from '@alga-psa/msp-composition/scheduling';
+import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks';
 import { MspTicketIntegrationProvider, MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects';
-import { MspClientDrawerProvider, MspQuickAddClientProvider, MspClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients';
+import { MspClientDrawerProvider, MspClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients';
+import { QuickAddClientProviderWithCallbacks } from '@alga-psa/clients/providers/QuickAddClientProviderWithCallbacks';
 import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets';
-import { MspTicketCrossFeatureProvider } from '@alga-psa/msp-composition/tickets';
 import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents';
 import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
 import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows';
@@ -405,7 +405,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
 
   return (
-    <MspSchedulingProvider>
+    <SchedulingProviderWithCallbacks>
     <DrawerProvider>
     <MspTicketIntegrationProvider>
     <MspClientIntegrationProvider>
@@ -413,11 +413,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
       <MspClientDrawerProvider>
       <MspClientCrossFeatureProvider>
       <MspAssetCrossFeatureProvider>
-      <MspTicketCrossFeatureProvider>
       <MspDocumentsCrossFeatureProvider>
       <MspSchedulingCrossFeatureProvider>
       <MspActivityCrossFeatureProvider>
-      <MspQuickAddClientProvider>
+      <QuickAddClientProviderWithCallbacks>
         <div className="flex h-screen overflow-hidden bg-gray-100">
           <SidebarWithFeatureFlags
             sidebarOpen={sidebarOpen}
@@ -513,11 +512,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
           }
         />
         <DrawerOutlet />
-      </MspQuickAddClientProvider>
+      </QuickAddClientProviderWithCallbacks>
       </MspActivityCrossFeatureProvider>
       </MspSchedulingCrossFeatureProvider>
       </MspDocumentsCrossFeatureProvider>
-      </MspTicketCrossFeatureProvider>
       </MspAssetCrossFeatureProvider>
       </MspClientCrossFeatureProvider>
       </MspClientDrawerProvider>
@@ -525,6 +523,6 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     </MspClientIntegrationProvider>
     </MspTicketIntegrationProvider>
     </DrawerProvider>
-    </MspSchedulingProvider>
+    </SchedulingProviderWithCallbacks>
   );
 }

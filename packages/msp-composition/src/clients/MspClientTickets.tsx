@@ -21,7 +21,6 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
-import { useTicketCrossFeature } from '@alga-psa/tickets/context/TicketCrossFeatureContext';
 import { getTicketingDisplaySettings, type TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { ITag } from '@alga-psa/types';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
@@ -67,7 +66,6 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   initialTags = [],
   initialUsers = []
 }) => {
-  const { renderSlaIndicator } = useTicketCrossFeature();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -289,8 +287,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       showClient: false, // Don't show client column since we're already on client page
-      renderSlaIndicator,
-    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, renderSlaIndicator]);
+    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange]);
 
   // Filter tickets by selected tags
   const filteredTickets = useMemo(() => {

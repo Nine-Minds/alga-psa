@@ -1,3 +1,4 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Company sync adapter - intentionally bridges billing and QuickBooks integration APIs */
 import {
   AccountingCompanyAdapter,
   CompanyAdapterContext,

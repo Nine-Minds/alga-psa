@@ -40,7 +40,6 @@ import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings'
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
-import { useTicketCrossFeature } from '../context/TicketCrossFeatureContext';
 import Spinner from '@alga-psa/ui/components/Spinner';
 
 import QuickAddCategory from './QuickAddCategory';
@@ -137,7 +136,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
-  const { renderSlaIndicator } = useTicketCrossFeature();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
 
@@ -894,7 +892,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       teamAvatarUrls,
       isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
       onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
-      renderSlaIndicator,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {

@@ -15,7 +15,6 @@ import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
-import { DocumentStorageCard } from '@alga-psa/documents/components';
 
 const DEFAULT_BLOCKS: PartialBlock[] = [{
   type: "paragraph",
@@ -72,6 +71,7 @@ export default function TaskDocumentsSimple({
     renderDocumentUpload,
     renderDocumentSelector,
     renderFolderSelectorModal,
+    renderDocumentStorageCard,
   } = useDocumentsCrossFeature();
 
   // Pending mode is active when we don't have a taskId yet (task creation)
@@ -615,13 +615,13 @@ export default function TaskDocumentsSimple({
         ) : (
           /* Edit mode: card grid with thumbnails, matching ticket/client documents */
           <div className="grid grid-cols-2 gap-3">
-            {documents.map((doc) => (
-              <DocumentStorageCard
-                key={doc.document_id}
-                id={`task-document-card-${doc.document_id}`}
-                document={doc}
-                showDisassociate={true}
-                onDisassociate={async (docToRemove) => {
+            {documents.map((doc) =>
+              renderDocumentStorageCard({
+                key: doc.document_id,
+                id: `task-document-card-${doc.document_id}`,
+                document: doc,
+                showDisassociate: true,
+                onDisassociate: async (docToRemove: any) => {
                   try {
                     await removeDocumentAssociations(taskId!, 'project_task', [docToRemove.document_id]);
                     toast.success('Document removed from task');
@@ -629,11 +629,11 @@ export default function TaskDocumentsSimple({
                   } catch (error) {
                     handleError(error, 'Failed to remove document');
                   }
-                }}
-                onClick={() => handleDocumentClick(doc)}
-                isContentDocument={!doc.file_id}
-              />
-            ))}
+                },
+                onClick: () => handleDocumentClick(doc),
+                isContentDocument: !doc.file_id,
+              })
+            )}
           </div>
         )}
           </>

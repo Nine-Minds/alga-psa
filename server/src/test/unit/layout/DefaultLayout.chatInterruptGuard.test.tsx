@@ -102,8 +102,8 @@ vi.mock('@alga-psa/workflows/components', () => ({
   ActivityDrawerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@alga-psa/msp-composition/scheduling', () => ({
-  MspSchedulingProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+vi.mock('@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks', () => ({
+  SchedulingProviderWithCallbacks: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider', () => ({
@@ -117,8 +117,11 @@ vi.mock('@alga-psa/msp-composition/projects', () => ({
 
 vi.mock('@alga-psa/msp-composition/clients', () => ({
   MspClientDrawerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  MspQuickAddClientProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   MspClientCrossFeatureProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/clients/providers/QuickAddClientProviderWithCallbacks', () => ({
+  QuickAddClientProviderWithCallbacks: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('@alga-psa/msp-composition/assets', () => ({
