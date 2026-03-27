@@ -311,7 +311,7 @@
   {
     "id": "T038",
     "description": "getActiveAddOns returns empty array when no add-ons exist for tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
