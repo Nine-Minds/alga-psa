@@ -550,7 +550,7 @@
   {
     "id": "T067",
     "description": "assertTierAccess(EXTENSIONS) throws for Solo tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
