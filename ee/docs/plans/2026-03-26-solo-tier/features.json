@@ -612,7 +612,7 @@
   {
     "id": "F077",
     "description": "Solo->Pro trial blocked if customer is still in their Solo trial period",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.8"
     ]
