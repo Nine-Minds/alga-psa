@@ -775,7 +775,7 @@
   {
     "id": "T095",
     "description": "Add User button is disabled when isSolo in user management UI",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
