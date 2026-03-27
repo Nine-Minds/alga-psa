@@ -258,3 +258,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T100 test: AccountManagement shows 'Downgrade to Solo' for Pro tenants with 1 user
 - (2026-03-26) Completed T101 test: AccountManagement hides 'Downgrade to Solo' for Pro tenants with 2+ users
 - (2026-03-26) Completed T102 test: AccountManagement shows 'Add AI Assistant' card when add-on not active
+- (2026-03-26) Completed T103 test: AccountManagement shows 'AI Assistant (active)' when add-on is active

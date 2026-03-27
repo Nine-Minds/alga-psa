@@ -839,7 +839,7 @@
   {
     "id": "T103",
     "description": "AccountManagement shows 'AI Assistant (active)' when add-on is active",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
