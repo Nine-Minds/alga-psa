@@ -363,7 +363,7 @@
   {
     "id": "F046",
     "description": "Add assertAddOnAccess(ADD_ONS.AI_ASSISTANT) to chat completions route",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.2"
     ]

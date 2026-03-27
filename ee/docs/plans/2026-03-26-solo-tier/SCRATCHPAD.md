@@ -114,6 +114,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F043 feature: Added `MANAGED_EMAIL` tier enforcement to the managed-email server actions (`get/updateEmailSettings`, `getEmailProviders`, and EE managed-domain actions) so Solo tenants cannot bypass the gated Email settings tab.
 - (2026-03-26) Completed F044 feature: Added `SSO` tier enforcement to EE SSO/OAuth actions by guarding the shared SSO permission helper, SSO preferences/account-link actions, provider-option loading, and tenant-scoped linked-provider lookups.
 - (2026-03-26) Completed F045 feature: Added `ADVANCED_ASSETS` tier enforcement to authenticated RMM/NinjaOne server actions plus the NinjaOne OAuth callback and webhook routes, so Solo tenants cannot connect, sync, or operate RMM-managed assets through EE handlers.
+- (2026-03-26) Completed F046 feature: Added `assertAddOnAccess(ADD_ONS.AI_ASSISTANT)` to the non-stream chat completions route so AI chat requests now return 403 unless the tenant has the AI add-on and the existing feature flag is enabled.
 - (2026-03-26) Completed T001 test: isValidTier('solo') returns true
 - (2026-03-26) Completed T002 test: isValidTier('pro') and isValidTier('premium') still return true
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false
