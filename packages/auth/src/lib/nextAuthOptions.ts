@@ -1087,7 +1087,6 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
     const nextAuthSecret = await getNextAuthSecret();
 
     return {
-    trustHost: true,
     secret: nextAuthSecret,
     providers: [
         ...(secrets.googleClientId && secrets.googleClientSecret
@@ -1873,7 +1872,6 @@ export async function buildTeamsAuthOptions(tenantId: string): Promise<NextAuthC
 
 // Synchronous fallback that uses environment variables
 export const options: NextAuthConfig = {
-    trustHost: true,
     // Avoid throwing at module-evaluation time (e.g. during `next build`) when NEXTAUTH_SECRET is not set.
     // NextAuth will still require a secret at runtime for JWT/session operations; keep that enforcement in runtime paths.
     secret: process.env.NEXTAUTH_SECRET,

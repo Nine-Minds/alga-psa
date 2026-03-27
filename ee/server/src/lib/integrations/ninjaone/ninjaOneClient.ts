@@ -15,6 +15,7 @@ import {
   buildIntegrationTokenRefreshFailedPayload,
   getIntegrationTokenExpiringStatus,
 } from '@alga-psa/workflow-streams';
+import { scheduleNinjaOneProactiveRefresh } from './proactiveRefresh';
 import type {
   NinjaOneOAuthCredentials,
   NinjaOneOAuthTokenResponse,
@@ -348,6 +349,15 @@ export class NinjaOneClient {
         logger.info('[NinjaOneClient] Successfully refreshed access token', {
           tenantId: this.tenantId,
         });
+
+        if (this.workflowContext?.integrationId) {
+          await scheduleNinjaOneProactiveRefresh({
+            tenantId: this.tenantId,
+            integrationId: this.workflowContext.integrationId,
+            expiresAtMs: newCredentials.expires_at,
+            source: 'lazy_refresh_success',
+          });
+        }
       } catch (error) {
         logger.error('[NinjaOneClient] Failed to refresh access token:', extractErrorInfo(error));
         void this.maybePublishTokenRefreshFailed(error).catch((publishError) => {

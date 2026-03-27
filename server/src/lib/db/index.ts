@@ -1,9 +1,9 @@
 'use server'
 
 import { Knex as KnexType } from 'knex';
-import { headers } from 'next/headers';
-import { getTenantForCurrentRequest, getTenantFromHeaders } from '../tenant';
-import { getConnection } from './db'; // Use the tenant-scoped connection function
+import { headers } from 'next/headers.js';
+import { getTenantForCurrentRequest, getTenantFromHeaders } from '../tenant.js';
+import { getConnection } from './db.js'; // Use the tenant-scoped connection function
 import logger from '@alga-psa/core/logger';
 import { getTenantContext as getTenantContextFromDb, runWithTenant as runWithTenantFromDb, setTenantContext } from '@alga-psa/db';
 

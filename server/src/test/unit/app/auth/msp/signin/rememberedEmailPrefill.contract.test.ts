@@ -14,7 +14,7 @@ const formSource = fs.readFileSync(
 
 describe('MSP remembered-email prefill contract', () => {
   it('T012: the durable remembered-email cookie is read server-side for page prefill rather than from browser storage in the form component', () => {
-    expect(pageSource).toContain("import { cookies } from 'next/headers'");
+    expect(pageSource).toContain("import { cookies } from 'next/headers.js'");
     expect(pageSource).toContain('MSP_REMEMBERED_EMAIL_COOKIE');
     expect(pageSource).toContain('cookieStore.get(MSP_REMEMBERED_EMAIL_COOKIE)');
 

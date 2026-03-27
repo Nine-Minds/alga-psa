@@ -6,7 +6,7 @@ import { authenticateUser } from "@alga-psa/auth/actions/auth";
 import { verifyAuthenticator } from "server/src/utils/authenticator/authenticator";
 import logger from "@alga-psa/core/logger";
 import { getNextAuthSecret } from "server/src/lib/auth/sessionCookies";
-import { cookies } from "next/headers";
+import { cookies } from "next/headers.js";
 import { ensureSsoSettingsPermission } from "@ee/lib/actions/auth/ssoPermissions";
 
 interface AuthorizeSsoLinkingInput {
