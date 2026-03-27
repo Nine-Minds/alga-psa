@@ -82,3 +82,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F016 feature: Add AI_ASSISTANT to ADD_ONS enum
 - (2026-03-26) Completed F017 feature: Add ADD_ON_LABELS record with AI_ASSISTANT -> 'AI Assistant'
 - (2026-03-26) Completed F018 feature: Add ADD_ON_DESCRIPTIONS with marketing-friendly description for AI_ASSISTANT
+- (2026-03-26) Completed F019 feature: resolveTier() returns 'pro' for null/invalid input (unchanged behavior, Solo is opt-in)

@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "resolveTier() returns 'pro' for null/invalid input (unchanged behavior, Solo is opt-in)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.8"
     ]
