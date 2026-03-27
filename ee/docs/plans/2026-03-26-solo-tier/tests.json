@@ -407,7 +407,7 @@
   {
     "id": "T050",
     "description": "TierContext hasAddOn returns false when add-on is not in addOns array",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
