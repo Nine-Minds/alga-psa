@@ -121,6 +121,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F047 feature: Added tenant-scoped AI add-on enforcement for the document-assist API by introducing `assertTenantAddOnAccess(tenantId, addOn)` and using it in the sessionless document-assist route before AI generation.
 - (2026-03-26) Completed F048 feature: Threaded `hasAddOn(ADD_ONS.AI_ASSISTANT)` into `DefaultLayout` and the EE `RightSidebar` so keyboard shortcuts, Quick Ask, and sidebar rendering all shut off when the AI add-on is inactive.
 - (2026-03-26) Completed F049 feature: Added `MOBILE_ACCESS` tier enforcement inside `exchangeOttForSession()` so Solo tenants are rejected with a 403 before mobile API keys and refresh tokens are issued.
+- (2026-03-26) Completed F050 feature: Mobile auth exchange now returns the explicit upgrade message `"Mobile app access requires Pro or higher"` through the shared API error response when Solo tenants attempt to sign in on mobile.
 - (2026-03-26) Completed T001 test: isValidTier('solo') returns true
 - (2026-03-26) Completed T002 test: isValidTier('pro') and isValidTier('premium') still return true
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false

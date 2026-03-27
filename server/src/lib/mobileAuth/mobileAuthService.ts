@@ -327,7 +327,7 @@ async function assertMobileAccess(tenantId: string): Promise<void> {
     await assertTenantTierAccess(tenantId, TIER_FEATURES.MOBILE_ACCESS);
   } catch (error) {
     if (error instanceof TierAccessError) {
-      throw new ForbiddenError('Mobile app access is not available on your current plan.');
+      throw new ForbiddenError('Mobile app access requires Pro or higher');
     }
 
     throw error;

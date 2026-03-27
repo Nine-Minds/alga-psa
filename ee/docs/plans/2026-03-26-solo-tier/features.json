@@ -395,7 +395,7 @@
   {
     "id": "F050",
     "description": "Return upgrade message in 403 response for Solo mobile auth attempts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5b.2"
     ]
