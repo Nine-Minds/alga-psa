@@ -654,7 +654,7 @@
   {
     "id": "T080",
     "description": "handleSubscriptionUpdated sets licensed_user_count=1 for Solo tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
