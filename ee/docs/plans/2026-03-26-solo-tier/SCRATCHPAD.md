@@ -239,3 +239,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T081 test: upgradeTier Solo->Pro adds per-user line item to subscription
 - (2026-03-26) Completed T082 test: upgradeTier Solo->Pro swaps base price from Solo to Pro
 - (2026-03-26) Completed T083 test: downgradeTier Pro->Solo succeeds when active user count = 1
+- (2026-03-26) Completed T084 test: downgradeTier Pro->Solo fails when active user count > 1
