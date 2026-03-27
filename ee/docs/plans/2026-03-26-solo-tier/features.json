@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "Rewrite tierHasFeature() to use TIER_RANK comparison instead of map lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.5"
     ]
