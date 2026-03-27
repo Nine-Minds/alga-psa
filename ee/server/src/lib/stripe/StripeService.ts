@@ -1134,6 +1134,8 @@ export class StripeService {
         logger.warn(`[StripeService] Failed to resolve tier for subscription ${subscription.id}`, error);
       }
 
+      const quantity = this.getLicensedUserCountFromStripeItems(subscription.items.data, plan);
+
       const updateData: Record<string, any> = {
         licensed_user_count: quantity,
         updated_at: knex.fn.now(),
