@@ -196,7 +196,7 @@
   {
     "id": "T024",
     "description": "tierHasFeature('solo', WORKFLOW_DESIGNER) returns false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F014"
