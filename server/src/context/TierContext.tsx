@@ -3,9 +3,11 @@
 import React, { createContext, useContext, useMemo, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import {
+  type AddOnKey,
   type TenantTier,
   type TIER_FEATURES,
   resolveTier,
+  tenantHasAddOn,
   tierHasFeature,
 } from '@alga-psa/types';
 
@@ -15,10 +17,15 @@ interface TierContextValue {
   /** True if the plan was NULL, undefined, or invalid */
   isMisconfigured: boolean;
   /** Convenience checks for each tier level */
+  isSolo: boolean;
   isPro: boolean;
   isPremium: boolean;
+  /** Active tenant add-ons */
+  addOns: AddOnKey[];
   /** Check if tenant has access to a specific feature */
   hasFeature: (feature: TIER_FEATURES) => boolean;
+  /** Check if tenant has a specific add-on */
+  hasAddOn: (addOn: AddOnKey) => boolean;
   /** Force a session refresh to get updated tier (use after DB update) */
   refreshTier: () => Promise<void>;
   /** True while session is loading */
@@ -71,8 +78,13 @@ export function TierProvider({ children }: TierProviderProps) {
   }, [session?.user?.plan]);
 
   // Convenience tier checks
+  const isSolo = tier === 'solo';
   const isPro = tier === 'pro';
   const isPremium = tier === 'premium';
+  const addOns = useMemo<AddOnKey[]>(
+    () => ((session?.user?.addons ?? []) as AddOnKey[]),
+    [session?.user?.addons]
+  );
 
   // CE edition: all compiled-in features are unlocked, no tier restrictions
   const isCommunityEdition = process.env.NEXT_PUBLIC_EDITION !== 'enterprise';
@@ -84,6 +96,14 @@ export function TierProvider({ children }: TierProviderProps) {
       return tierHasFeature(tier, feature);
     },
     [tier, isCommunityEdition]
+  );
+
+  const hasAddOn = useCallback(
+    (addOn: AddOnKey): boolean => {
+      if (isCommunityEdition) return true;
+      return tenantHasAddOn(addOns, addOn);
+    },
+    [addOns, isCommunityEdition]
   );
 
   // Force session refresh to get updated tier
@@ -124,9 +144,12 @@ export function TierProvider({ children }: TierProviderProps) {
     () => ({
       tier,
       isMisconfigured,
+      isSolo,
       isPro,
       isPremium,
+      addOns,
       hasFeature,
+      hasAddOn,
       refreshTier,
       isLoading,
       isTrialing,
@@ -140,7 +163,7 @@ export function TierProvider({ children }: TierProviderProps) {
       subscriptionStatus,
       isPaymentFailed,
     }),
-    [tier, isMisconfigured, isPro, isPremium, hasFeature, refreshTier, isLoading, isTrialing, trialDaysLeft, trialEndDate, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate, subscriptionStatus, isPaymentFailed]
+    [tier, isMisconfigured, isSolo, isPro, isPremium, addOns, hasFeature, hasAddOn, refreshTier, isLoading, isTrialing, trialDaysLeft, trialEndDate, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate, subscriptionStatus, isPaymentFailed]
   );
 
   return <TierContext.Provider value={value}>{children}</TierContext.Provider>;

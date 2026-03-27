@@ -70,6 +70,7 @@ const SESSION_COOKIE = getSessionCookieConfig();
  */
 interface TenantSubscriptionInfo {
     plan?: string;
+    addons?: string[];
     trial_end?: string | null;
     subscription_status?: string | null;
     premium_trial_end?: string | null;
@@ -99,6 +100,7 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
     let premiumTrialEnd: string | null = null;
     let premiumTrialConfirmed = false;
     let premiumTrialEffectiveDate: string | null = null;
+    let addOns: string[] = [];
 
     try {
         const subscription = await knex('stripe_subscriptions')
@@ -131,8 +133,27 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
         // stripe_subscriptions table may not exist in CE or early setup — ignore
     }
 
+    try {
+        const addOnRows = await knex('tenant_addons')
+            .where({ tenant: tenantId })
+            .select('addon_key', 'expires_at');
+
+        addOns = addOnRows
+            .filter((row: { addon_key: string; expires_at: string | Date | null }) => {
+                if (!row.expires_at) {
+                    return true;
+                }
+
+                return new Date(row.expires_at).getTime() > Date.now();
+            })
+            .map((row: { addon_key: string }) => row.addon_key);
+    } catch {
+        // tenant_addons may not exist in CE or early setup — ignore
+    }
+
     return {
         plan: tenantRecord?.plan ?? undefined,
+        addons: addOns,
         trial_end: trialEnd,
         subscription_status: subscriptionStatus,
         premium_trial_end: premiumTrialEnd,
@@ -1641,6 +1662,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     try {
                         const subInfo = await fetchTenantSubscriptionInfo(extendedUser.tenant);
                         token.plan = subInfo.plan;
+                        token.addons = subInfo.addons;
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.premium_trial_end = subInfo.premium_trial_end;
@@ -1752,6 +1774,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     try {
                         const subInfo = await fetchTenantSubscriptionInfo(token.tenant as string);
                         token.plan = subInfo.plan;
+                        token.addons = subInfo.addons;
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.premium_trial_end = subInfo.premium_trial_end;
@@ -1818,6 +1841,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
                 user.plan = token.plan as string | undefined;
+                (user as any).addons = (token.addons as string[] | undefined) ?? [];
                 (user as any).trial_end = token.trial_end ?? null;
                 (user as any).subscription_status = token.subscription_status ?? null;
                 (user as any).premium_trial_end = token.premium_trial_end ?? null;
@@ -2379,6 +2403,7 @@ export const options: NextAuthConfig = {
                     try {
                         const subInfo = await fetchTenantSubscriptionInfo(extendedUser.tenant);
                         token.plan = subInfo.plan;
+                        token.addons = subInfo.addons;
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.premium_trial_end = subInfo.premium_trial_end;
@@ -2490,6 +2515,7 @@ export const options: NextAuthConfig = {
                     try {
                         const subInfo = await fetchTenantSubscriptionInfo(token.tenant as string);
                         token.plan = subInfo.plan;
+                        token.addons = subInfo.addons;
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.premium_trial_end = subInfo.premium_trial_end;
@@ -2555,6 +2581,7 @@ export const options: NextAuthConfig = {
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
                 user.plan = token.plan as string | undefined;
+                (user as any).addons = (token.addons as string[] | undefined) ?? [];
                 (user as any).trial_end = token.trial_end ?? null;
                 (user as any).subscription_status = token.subscription_status ?? null;
                 (user as any).premium_trial_end = token.premium_trial_end ?? null;

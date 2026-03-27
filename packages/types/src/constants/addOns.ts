@@ -23,14 +23,28 @@
  * and assertTierAccess alongside the tier feature checks.
  */
 export enum ADD_ONS {
-  // Future examples:
-  // AI_ASSISTANT = 'ai_assistant',
+  AI_ASSISTANT = 'ai_assistant',
 }
 
 /**
  * Type for add-on keys. Resolves to string literal union when enum has values, `never` when empty.
  */
 export type AddOnKey = `${ADD_ONS}`;
+
+/**
+ * Display labels for supported add-ons.
+ */
+export const ADD_ON_LABELS: Record<ADD_ONS, string> = {
+  [ADD_ONS.AI_ASSISTANT]: 'AI Assistant',
+} as const;
+
+/**
+ * Marketing descriptions for supported add-ons.
+ */
+export const ADD_ON_DESCRIPTIONS: Record<ADD_ONS, string> = {
+  [ADD_ONS.AI_ASSISTANT]:
+    'Unlock AI chat, document assistance, sidebar help, and workflow AI tools for your team.',
+} as const;
 
 /**
  * Check if a tenant has a specific add-on active.

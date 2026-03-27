@@ -1,6 +1,7 @@
 // server/src/config/menuConfig.ts
 
 import type { ElementType } from 'react';
+import { TIER_FEATURES } from '@alga-psa/types';
 import {
   AtSign,
   BarChart3,
@@ -58,6 +59,7 @@ export interface MenuItem {
   translationKey?: string;
   href?: string;
   subItems?: MenuItem[];
+  requiredFeature?: TIER_FEATURES;
   underConstruction?: boolean;
 }
 
@@ -164,7 +166,13 @@ export const navigationSections: NavigationSection[] = [
         icon: Rocket,
         subItems: [
           { name: 'Control Panel', translationKey: 'nav.controlPanel', icon: Gauge, href: '/msp/workflow-control' },
-          { name: 'Workflow Editor', translationKey: 'nav.workflowEditor', icon: ListTree, href: '/msp/workflow-editor' },
+          {
+            name: 'Workflow Editor',
+            translationKey: 'nav.workflowEditor',
+            icon: ListTree,
+            href: '/msp/workflow-editor',
+            requiredFeature: TIER_FEATURES.WORKFLOW_DESIGNER,
+          },
         ]
       },
       {
@@ -180,7 +188,8 @@ export const navigationSections: NavigationSection[] = [
         name: 'Extensions',
         translationKey: 'nav.extensions',
         icon: Puzzle,
-        href: '/msp/extensions'
+        href: '/msp/extensions',
+        requiredFeature: TIER_FEATURES.EXTENSIONS,
       }
     ]
   }

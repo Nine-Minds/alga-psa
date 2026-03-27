@@ -38,6 +38,7 @@ declare module "next-auth" {
             clientId?: string;
             contactId?: string;
             plan?: string;
+            addons?: string[];
             trial_end?: string | null;
             subscription_status?: string | null;
             premium_trial_end?: string | null;
@@ -59,6 +60,7 @@ declare module "next-auth" {
         clientId?: string;
         contactId?: string;
         plan?: string;
+        addons?: string[];
         trial_end?: string | null;
         subscription_status?: string | null;
         premium_trial_end?: string | null;

@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound, FlaskConical } from 'lucide-react';
 import type { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
+import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 import GeneralSettings from './general/GeneralSettings';
 import UserManagement from './general/UserManagement';
 import ClientPortalSettings from './general/ClientPortalSettings';
@@ -48,8 +49,12 @@ import { ProjectSettings } from '@alga-psa/projects/components';
 
 import { SecretsManagement } from './secrets';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import { useTierFeature } from '@/context/TierContext';
+import { useTier, useTierFeature } from '@/context/TierContext';
 import { TIER_FEATURES } from '@alga-psa/types';
+
+type SettingsTabContent = TabContent & {
+  requiredFeature?: TIER_FEATURES;
+};
 
 // Wrapper component with UnsavedChangesProvider
 type SettingsPageProps = {
@@ -80,8 +85,9 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   const canUseEntraSync = useTierFeature(TIER_FEATURES.ENTRA_SYNC);
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
   const canUseTeams = useTierFeature(TIER_FEATURES.TEAMS_INTEGRATION);
+  const { hasFeature } = useTier();
 
-  const baseTabContent: TabContent[] = [
+  const baseTabContent: SettingsTabContent[] = [
     {
       id: 'general',
       label: "General",
@@ -247,6 +253,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       id: 'email',
       label: "Email",
       icon: Mail,
+      requiredFeature: TIER_FEATURES.MANAGED_EMAIL,
       content: (
         <Card>
           <CardHeader>
@@ -264,6 +271,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       id: 'integrations',
       label: "Integrations",
       icon: Plug,
+      requiredFeature: TIER_FEATURES.INTEGRATIONS,
       content: <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} canUseTeams={canUseTeams} />,
     }
   ];
@@ -271,10 +279,11 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // Always include an "Extensions" tab.
   // - EE: full Manage + Install sub-tabs
   // - OSS: enterprise-only stub
-  const extensionsTab: TabContent = {
+  const extensionsTab: SettingsTabContent = {
     id: 'extensions',
     label: "Extensions",
     icon: Puzzle,
+    requiredFeature: TIER_FEATURES.EXTENSIONS,
     content: <ExtensionManagement />,
   };
 
@@ -298,11 +307,27 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   }, [initialTabId]);
 
   const activeTabContent = allTabs.find(tab => tab.id === activeTab);
+  const activeTabBody = useMemo(() => {
+    if (!activeTabContent) {
+      return null;
+    }
+
+    if (activeTabContent.requiredFeature && !hasFeature(activeTabContent.requiredFeature)) {
+      return (
+        <FeatureUpgradeNotice
+          featureName={activeTabContent.label}
+          requiredTier="pro"
+        />
+      );
+    }
+
+    return activeTabContent.content;
+  }, [activeTabContent, hasFeature]);
 
   return (
     <div className="h-full overflow-y-auto p-6">
       <h1 className="text-3xl font-bold mb-6">{t('page.title')}</h1>
-      {activeTabContent?.content}
+      {activeTabBody}
     </div>
   );
 };
