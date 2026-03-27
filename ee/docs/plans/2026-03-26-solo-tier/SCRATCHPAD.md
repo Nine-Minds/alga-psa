@@ -173,5 +173,6 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T063 test: Settings Integrations tab shows normal content for Pro tier
 - (2026-03-26) Completed T064 test: Settings sidebar items are never filtered by tier (all visible)
 - (2026-03-26) Completed T065 test: `assertTierAccess(TIER_FEATURES.INTEGRATIONS)` throws `TierAccessError` for Solo tenants with `requiredTier='pro'`
+- (2026-03-26) Completed T066 test: `assertTierAccess(TIER_FEATURES.INTEGRATIONS)` succeeds for Pro tenants without changing Premium-only gating
 - (2026-03-26) Completed T107 test: npm run build:shared compiles with all new types/features/add-ons
 - (2026-03-26) Completed F024 feature: Add STRIPE_AI_ADDON_PRICE_ID and STRIPE_AI_ADDON_ANNUAL_PRICE_ID env vars to Stripe config

@@ -542,7 +542,7 @@
   {
     "id": "T066",
     "description": "assertTierAccess(INTEGRATIONS) passes for Pro tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
