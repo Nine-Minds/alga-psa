@@ -51,7 +51,7 @@
   {
     "id": "T007",
     "description": "tierAtLeast('solo', 'solo') returns true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
