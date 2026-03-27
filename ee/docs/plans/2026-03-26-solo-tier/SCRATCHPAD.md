@@ -136,6 +136,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F060 feature: Added `cancelAddOn()` for `AI_ASSISTANT`, cancelling the stored add-on Stripe subscription referenced from `tenant_addons` metadata instead of touching the core license subscription.
 - (2026-03-26) Completed F061 feature: Added add-on-aware Stripe webhook handling that activates `tenant_addons` rows for AI subscriptions instead of importing them as license subscriptions.
 - (2026-03-26) Completed F062 feature: Extended the add-on-aware Stripe webhook path to expire `tenant_addons` rows when AI subscriptions are cancelled or otherwise leave an active/trialing state.
+- (2026-03-26) Completed F063 feature: Documented the new Solo and AI Stripe price IDs in the root `.env.example` so local/test billing setups expose the same configuration surface as the updated Stripe service.
 - (2026-03-26) Completed T001 test: isValidTier('solo') returns true
 - (2026-03-26) Completed T002 test: isValidTier('pro') and isValidTier('premium') still return true
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false

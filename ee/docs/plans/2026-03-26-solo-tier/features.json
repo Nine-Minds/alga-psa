@@ -499,7 +499,7 @@
   {
     "id": "F063",
     "description": "Add env vars to .env.example: STRIPE_SOLO_BASE_PRICE_ID, STRIPE_SOLO_BASE_ANNUAL_PRICE_ID, STRIPE_AI_ADDON_PRICE_ID, STRIPE_AI_ADDON_ANNUAL_PRICE_ID",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.2",
       "R1b.3"
