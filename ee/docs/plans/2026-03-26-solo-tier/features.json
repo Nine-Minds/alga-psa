@@ -339,7 +339,7 @@
   {
     "id": "F043",
     "description": "Add assertTierAccess(TIER_FEATURES.MANAGED_EMAIL) to managed email EE handlers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.1"
     ]

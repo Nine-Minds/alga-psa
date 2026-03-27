@@ -2,7 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import type { IUserWithRoles } from '@alga-psa/types';
+import { TIER_FEATURES, type IUserWithRoles } from '@alga-psa/types';
 import type {
   EmailProvider,
   GoogleEmailProviderConfig,
@@ -19,6 +19,7 @@ import { configureGmailProvider, type ConfigureGmailProviderResult } from './con
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
+import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 function throwPermissionError(action: string): never {
   throw new Error(`Permission denied: ${action}`);
@@ -545,6 +546,8 @@ export const getEmailProviders = withAuth(async (
   _user,
   { tenant }
 ): Promise<{ providers: EmailProvider[] }> => {
+  await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
+
   const { knex } = await createTenantKnex();
   
   try {

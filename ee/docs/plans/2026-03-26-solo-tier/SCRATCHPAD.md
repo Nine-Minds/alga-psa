@@ -108,6 +108,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F040 feature: Settings sidebar items remain visible regardless of tier (no requiredFeature filtering in settings mode)
 - (2026-03-26) Completed F041 feature: Added `INTEGRATIONS` tier enforcement to shared Entra API guard, Teams package status flow, and calendar OAuth callbacks; introduced tenant-aware tier lookup for callback routes that run without an authenticated web session.
 - (2026-03-26) Completed F042 feature: Added `EXTENSIONS` tier enforcement to EE extension install/uninstall API routes so Solo tenants receive a structured 403 instead of reaching the registry actions.
+- (2026-03-26) Completed F043 feature: Added `MANAGED_EMAIL` tier enforcement to the managed-email server actions (`get/updateEmailSettings`, `getEmailProviders`, and EE managed-domain actions) so Solo tenants cannot bypass the gated Email settings tab.
 - (2026-03-26) Completed T001 test: isValidTier('solo') returns true
 - (2026-03-26) Completed T002 test: isValidTier('pro') and isValidTier('premium') still return true
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false
