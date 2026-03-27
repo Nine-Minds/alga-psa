@@ -929,7 +929,7 @@
   {
     "id": "T114",
     "description": "'Try Pro free' CTA shown for established Solo customers in AccountManagement",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ]
