@@ -2,6 +2,7 @@
 
 import { getLicenseUsage, type LicenseUsage } from '../license/get-license-usage';
 import { getSession } from '@alga-psa/auth';
+import type { AddOnKey } from '@alga-psa/types';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { getStripeService } from '../stripe/StripeService';
 import { getConnection } from '@/lib/db/db';
@@ -1124,6 +1125,93 @@ export async function downgradeTierAction(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to downgrade plan',
+    };
+  }
+}
+
+/**
+ * Create an embedded Stripe checkout session for an add-on purchase.
+ */
+export async function purchaseAddOnAction(
+  addOn: AddOnKey,
+  interval: 'month' | 'year' = 'month'
+): Promise<{
+  success: boolean;
+  data?: {
+    clientSecret: string;
+    sessionId: string;
+    publishableKey: string;
+  };
+  error?: string;
+}> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage add-ons' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    const result = await stripeService.purchaseAddOn(session.user.tenant, addOn, interval);
+    if (!result.success || !result.clientSecret || !result.sessionId) {
+      return { success: false, error: result.error || 'Failed to create add-on checkout session' };
+    }
+
+    return {
+      success: true,
+      data: {
+        clientSecret: result.clientSecret,
+        sessionId: result.sessionId,
+        publishableKey: await stripeService.getPublishableKey(),
+      },
+    };
+  } catch (error) {
+    logger.error('[purchaseAddOnAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to purchase add-on',
+    };
+  }
+}
+
+/**
+ * Cancel an active add-on subscription for the current tenant.
+ */
+export async function cancelAddOnAction(
+  addOn: AddOnKey
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage add-ons' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.cancelAddOn(session.user.tenant, addOn);
+  } catch (error) {
+    logger.error('[cancelAddOnAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to cancel add-on',
     };
   }
 }

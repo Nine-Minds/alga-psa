@@ -564,7 +564,7 @@
   {
     "id": "F071",
     "description": "Show 'Add AI Assistant' purchase card when add-on is not active (any tier)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.5"
     ]

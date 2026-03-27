@@ -8,6 +8,9 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
 import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield, ArrowRightLeft, Clock } from 'lucide-react';
+import { loadStripe, type Stripe } from '@stripe/stripe-js';
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
 import {
   getLicenseUsageAction,
   getLicensePricingAction,
@@ -19,6 +22,8 @@ import {
   getScheduledLicenseChangesAction,
   sendCancellationFeedbackAction,
   upgradeTierAction,
+  purchaseAddOnAction,
+  cancelAddOnAction,
   getUpgradePreviewAction,
   downgradeTierAction,
   switchBillingIntervalAction,
@@ -36,7 +41,7 @@ import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
 import { signOut } from 'next-auth/react';
 import { useTier } from 'server/src/context/TierContext';
-import { TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES } from '@alga-psa/types';
+import { ADD_ONS, ADD_ON_LABELS, ADD_ON_DESCRIPTIONS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Feature display names for the tier features list
@@ -64,7 +69,7 @@ export default function AccountManagement() {
   const [showReduceModal, setShowReduceModal] = useState(false);
   const [showCancellationFeedback, setShowCancellationFeedback] = useState(false);
   const [scheduledChanges, setScheduledChanges] = useState<IScheduledLicenseChange | null>(null);
-  const { tier, isMisconfigured, isSolo, isPro, refreshTier, isTrialing, trialDaysLeft, trialEndDate, isPaymentFailed, subscriptionStatus, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate } = useTier();
+  const { tier, isMisconfigured, isSolo, isPro, hasAddOn, refreshTier, isTrialing, trialDaysLeft, trialEndDate, isPaymentFailed, subscriptionStatus, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate } = useTier();
   const upgradeFlowFlag = useFeatureFlag('tier-upgrade-flow');
   const tierUpgradeFlowEnabled = typeof upgradeFlowFlag === 'boolean'
     ? upgradeFlowFlag
@@ -279,6 +284,12 @@ export default function AccountManagement() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [showDowngradeConfirm, setShowDowngradeConfirm] = useState(false);
   const [downgrading, setDowngrading] = useState(false);
+  const [showAiCheckout, setShowAiCheckout] = useState(false);
+  const [aiCheckoutClientSecret, setAiCheckoutClientSecret] = useState<string | null>(null);
+  const [aiStripePromise, setAiStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [purchasingAi, setPurchasingAi] = useState(false);
+  const [showCancelAiConfirm, setShowCancelAiConfirm] = useState(false);
+  const [cancelingAi, setCancelingAi] = useState(false);
 
   // Billing interval switch state
   const [showIntervalSwitch, setShowIntervalSwitch] = useState(false);
@@ -533,6 +544,45 @@ export default function AccountManagement() {
       setDowngrading(false);
     }
   };
+  const handlePurchaseAiAssistant = async () => {
+    setPurchasingAi(true);
+    try {
+      const result = await purchaseAddOnAction(ADD_ONS.AI_ASSISTANT);
+      if (!result.success || !result.data) {
+        toast.error(result.error || 'Failed to start AI Assistant checkout');
+        return;
+      }
+
+      const stripe = await loadStripe(result.data.publishableKey);
+      setAiStripePromise(Promise.resolve(stripe));
+      setAiCheckoutClientSecret(result.data.clientSecret);
+      setShowAiCheckout(true);
+    } catch (error) {
+      console.error('Error purchasing AI Assistant:', error);
+      toast.error('Failed to start AI Assistant checkout');
+    } finally {
+      setPurchasingAi(false);
+    }
+  };
+
+  const handleCancelAiAssistant = async () => {
+    setCancelingAi(true);
+    try {
+      const result = await cancelAddOnAction(ADD_ONS.AI_ASSISTANT);
+      if (result.success) {
+        toast.success('AI Assistant will be removed from your subscription.');
+        setShowCancelAiConfirm(false);
+        await refreshTier();
+      } else {
+        toast.error(result.error || 'Failed to cancel AI Assistant');
+      }
+    } catch (error) {
+      console.error('Error cancelling AI Assistant:', error);
+      toast.error('Failed to cancel AI Assistant');
+    } finally {
+      setCancelingAi(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -546,6 +596,7 @@ export default function AccountManagement() {
     ? ((licenseInfo?.total_licenses || 0) * (licenseInfo?.price_per_license || 0))
     : 0;
   const canDowngradeToSolo = isPro && tierUpgradeFlowEnabled && (licenseInfo?.active_licenses ?? Number.POSITIVE_INFINITY) === 1;
+  const hasAiAssistant = hasAddOn(ADD_ONS.AI_ASSISTANT);
 
   return (
     <div className="space-y-6">
@@ -935,6 +986,63 @@ export default function AccountManagement() {
         )}
       </Card>
 
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle>{ADD_ON_LABELS[ADD_ONS.AI_ASSISTANT]}</CardTitle>
+              <CardDescription>{ADD_ON_DESCRIPTIONS[ADD_ONS.AI_ASSISTANT]}</CardDescription>
+            </div>
+            <Badge variant={hasAiAssistant ? 'success' : 'default-muted'}>
+              {hasAiAssistant ? 'Active' : 'Available'}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            AI Assistant is a separate paid add-on for Solo, Pro, and Premium tenants.
+          </p>
+          {hasAiAssistant ? (
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h4 className="font-semibold">AI Assistant (active)</h4>
+                  <p className="text-sm text-muted-foreground">
+                    AI chat, document assistance, and other AI-powered workflows are currently enabled for this tenant.
+                  </p>
+                </div>
+                <Button
+                  id="cancel-ai-assistant-btn"
+                  variant="outline"
+                  onClick={() => setShowCancelAiConfirm(true)}
+                  disabled={cancelingAi}
+                >
+                  {cancelingAi ? 'Cancelling...' : 'Cancel AI Assistant'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h4 className="font-semibold">Add AI Assistant</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Start a separate AI subscription without changing your core PSA tier.
+                  </p>
+                </div>
+                <Button
+                  id="purchase-ai-assistant-btn"
+                  onClick={handlePurchaseAiAssistant}
+                  disabled={purchasingAi}
+                >
+                  {purchasingAi ? 'Starting checkout...' : 'Add AI Assistant'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Scheduled License Changes Alert */}
       {scheduledChanges && (
         <Alert variant="info">
@@ -1282,6 +1390,28 @@ export default function AccountManagement() {
         onLogout={handleLogout}
       />
 
+      <Dialog
+        isOpen={showAiCheckout}
+        onClose={() => {
+          setShowAiCheckout(false);
+          setAiCheckoutClientSecret(null);
+        }}
+        title="Add AI Assistant"
+      >
+        {aiCheckoutClientSecret && aiStripePromise ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Complete your AI Assistant purchase below. This add-on is billed separately from your main tier subscription.
+            </p>
+            <EmbeddedCheckoutProvider stripe={aiStripePromise} options={{ clientSecret: aiCheckoutClientSecret }}>
+              <EmbeddedCheckout />
+            </EmbeddedCheckoutProvider>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Preparing checkout...</p>
+        )}
+      </Dialog>
+
       {/* Billing Interval Switch Dialog */}
       <ConfirmationDialog
         id="switch-interval-confirm"
@@ -1343,6 +1473,24 @@ export default function AccountManagement() {
           ) : (
             'Loading pricing details...'
           )
+        }
+      />
+
+      <ConfirmationDialog
+        id="cancel-ai-assistant-confirm"
+        isOpen={showCancelAiConfirm}
+        onClose={() => setShowCancelAiConfirm(false)}
+        onConfirm={handleCancelAiAssistant}
+        title="Cancel AI Assistant"
+        confirmLabel={cancelingAi ? 'Cancelling...' : 'Confirm Cancel'}
+        isConfirming={cancelingAi}
+        message={
+          <div className="space-y-3">
+            <p>You are about to cancel the <strong>AI Assistant</strong> add-on.</p>
+            <p className="text-sm text-muted-foreground">
+              AI chat, document assistance, and other add-on-only AI features will be disabled once the add-on is removed from your subscription.
+            </p>
+          </div>
         }
       />
 
