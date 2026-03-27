@@ -466,7 +466,7 @@
   {
     "id": "T057",
     "description": "Sidebar shows all items for Premium tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]

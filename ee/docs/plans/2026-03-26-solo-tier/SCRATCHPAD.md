@@ -159,3 +159,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T054 test: Sidebar hides Extensions item for Solo tier
 - (2026-03-26) Completed T055 test: Sidebar hides Workflow Editor subitem for Solo tier
 - (2026-03-26) Completed T056 test: Sidebar shows Extensions item for Pro tier
+- (2026-03-26) Completed T057 test: Sidebar shows all items for Premium tier
