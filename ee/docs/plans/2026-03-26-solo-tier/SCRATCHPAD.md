@@ -164,3 +164,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T059 test: Settings Integrations tab shows FeatureUpgradeNotice for Solo tier
 - (2026-03-26) Completed T060 test: Settings Extensions tab shows FeatureUpgradeNotice for Solo tier
 - (2026-03-26) Completed T061 test: Settings Email tab shows FeatureUpgradeNotice for Solo tier
+- (2026-03-26) Completed T062 test: Settings tabs remain visible and clickable even when gated

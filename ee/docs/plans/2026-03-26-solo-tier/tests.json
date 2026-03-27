@@ -509,7 +509,7 @@
   {
     "id": "T062",
     "description": "Settings tabs remain visible and clickable even when gated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
