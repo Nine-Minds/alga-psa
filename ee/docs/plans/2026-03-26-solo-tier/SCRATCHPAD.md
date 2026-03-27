@@ -139,6 +139,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F063 feature: Documented the new Solo and AI Stripe price IDs in the root `.env.example` so local/test billing setups expose the same configuration surface as the updated Stripe service.
 - (2026-03-26) Completed F064 feature: Added server-side Solo enforcement to `addUser()` so a second active internal user is rejected even if the UI is bypassed.
 - (2026-03-26) Completed F065 feature: The Solo user-cap enforcement now returns the explicit upgrade message `"Solo plan is limited to 1 user. Upgrade to Pro to add more users."` instead of the generic license-limit text.
+- (2026-03-26) Completed F066 feature: User Management now disables the MSP create-user button for Solo tenants once the single-user cap is reached and shows the same upgrade guidance inline in the button area.
 - (2026-03-26) Completed T001 test: isValidTier('solo') returns true
 - (2026-03-26) Completed T002 test: isValidTier('pro') and isValidTier('premium') still return true
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false

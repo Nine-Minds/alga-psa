@@ -524,7 +524,7 @@
   {
     "id": "F066",
     "description": "Disable 'Add User' button in user management UI when isSolo with upgrade CTA",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R7.2"
     ]
