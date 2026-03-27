@@ -670,7 +670,7 @@
   {
     "id": "T082",
     "description": "upgradeTier Solo->Pro swaps base price from Solo to Pro",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
