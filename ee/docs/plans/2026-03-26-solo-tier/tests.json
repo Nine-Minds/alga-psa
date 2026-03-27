@@ -855,7 +855,7 @@
   {
     "id": "T105",
     "description": "upgradeTierAction supports Solo -> Pro flow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073"
     ]
