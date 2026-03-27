@@ -84,10 +84,10 @@ const QuoteTemplatesList: React.FC<QuoteTemplatesListProps> = ({ onEdit, onCreat
     }
   };
 
-  const columns = useMemo<ColumnDefinition<IQuoteListItem>[]>(() => [
+  const columns: ColumnDefinition<IQuoteListItem>[] = useMemo(() => [
     {
       title: 'Title',
-      dataIndex: 'title',
+      dataIndex: 'title' as const,
     },
     {
       title: 'Items',

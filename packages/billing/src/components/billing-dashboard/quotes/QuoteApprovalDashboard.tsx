@@ -98,19 +98,19 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
     }
   };
 
-  const columns = useMemo<ColumnDefinition<IQuoteListItem>[]>(() => ([
+  const columns: ColumnDefinition<IQuoteListItem>[] = useMemo(() => ([
     {
       title: 'Quote #',
-      dataIndex: 'display_quote_number',
+      dataIndex: 'display_quote_number' as const,
     },
     {
       title: 'Client',
-      dataIndex: 'client_name',
+      dataIndex: 'client_name' as const,
       render: (value: string | null | undefined) => value || '—',
     },
     {
       title: 'Title',
-      dataIndex: 'title',
+      dataIndex: 'title' as const,
     },
     {
       title: 'Amount',
