@@ -921,7 +921,7 @@
   {
     "id": "T113",
     "description": "Solo->Pro trial reverts to Solo when trial expires without conversion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
