@@ -427,7 +427,7 @@
   {
     "id": "F054",
     "description": "handleCheckoutCompleted sets licensed_user_count = 1 for Solo (no per-user item)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.3"
     ]

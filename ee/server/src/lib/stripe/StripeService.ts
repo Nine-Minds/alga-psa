@@ -1037,15 +1037,12 @@ export class StripeService {
     // Import subscription
     await this.importSubscription(tenantId, customer.stripe_customer_id, subscription, knex);
 
-    // Update tenant licensed_user_count and plan
-    const subscriptionItem = this.findUserItemFromStripe(subscription.items.data);
-    const quantity = subscriptionItem?.quantity || 1;
-
     // Resolve plan from any item's product (all items share the same tier product)
     const anyItem = subscription.items.data[0];
     const product = anyItem?.price?.product as Stripe.Product | undefined;
     const productName = product?.name;
     const plan = tierFromStripeProduct(productName);
+    const quantity = this.getLicensedUserCountFromStripeItems(subscription.items.data, plan);
 
     await knex('tenants')
       .where({ tenant: tenantId })
@@ -1451,6 +1448,18 @@ export class StripeService {
     if (items.length === 1) return items[0];
     const knownUserPrices = this.getKnownUserPriceExternalIds();
     return items.find(item => knownUserPrices.includes(item.price.id)) || items[0];
+  }
+
+  private getLicensedUserCountFromStripeItems(
+    items: Stripe.SubscriptionItem[],
+    plan?: TenantTier
+  ): number {
+    if (plan === 'solo') {
+      return 1;
+    }
+
+    const userItem = this.findUserItemFromStripe(items);
+    return userItem?.quantity || 1;
   }
 
   /**

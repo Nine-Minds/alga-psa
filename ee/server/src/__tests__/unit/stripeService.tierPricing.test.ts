@@ -97,6 +97,17 @@ describe('StripeService tier pricing', () => {
     );
   });
 
+  it('forces licensed user count to 1 for Solo subscriptions', () => {
+    const service = createService({});
+
+    const quantity = service.getLicensedUserCountFromStripeItems(
+      [{ quantity: 9, price: { id: 'price_solo_month' } }],
+      'solo',
+    );
+
+    expect(quantity).toBe(1);
+  });
+
   it('keeps base plus per-user checkout line items for Pro pricing', async () => {
     const service = createService({ 'tenant-pro': 'pro' });
 
