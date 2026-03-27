@@ -50,12 +50,14 @@ async function getStripeConfig() {
   // Tier-specific prices (optional — null means legacy single-item mode)
   const proBasePriceId = process.env.STRIPE_PRO_BASE_PRICE_ID || null;
   const proUserPriceId = process.env.STRIPE_PRO_USER_PRICE_ID || null;
+  const soloBasePriceId = process.env.STRIPE_SOLO_BASE_PRICE_ID || null;
   const premiumBasePriceId = process.env.STRIPE_PREMIUM_BASE_PRICE_ID || null;
   const premiumUserPriceId = process.env.STRIPE_PREMIUM_USER_PRICE_ID || null;
 
   // Annual prices (pay for 10 months, get 12 — ~17% discount)
   const proBaseAnnualPriceId = process.env.STRIPE_PRO_BASE_ANNUAL_PRICE_ID || null;
   const proUserAnnualPriceId = process.env.STRIPE_PRO_USER_ANNUAL_PRICE_ID || null;
+  const soloBaseAnnualPriceId = process.env.STRIPE_SOLO_BASE_ANNUAL_PRICE_ID || null;
   const premiumBaseAnnualPriceId = process.env.STRIPE_PREMIUM_BASE_ANNUAL_PRICE_ID || null;
   const premiumUserAnnualPriceId = process.env.STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID || null;
   const aiAddOnPriceId = process.env.STRIPE_AI_ADDON_PRICE_ID || null;
@@ -92,10 +94,12 @@ async function getStripeConfig() {
     licensePriceId,
     proBasePriceId,
     proUserPriceId,
+    soloBasePriceId,
     premiumBasePriceId,
     premiumUserPriceId,
     proBaseAnnualPriceId,
     proUserAnnualPriceId,
+    soloBaseAnnualPriceId,
     premiumBaseAnnualPriceId,
     premiumUserAnnualPriceId,
     aiAddOnPriceId,
@@ -169,6 +173,11 @@ interface StripeSubscription {
   created_at: Date;
   updated_at: Date;
 }
+
+type TierPriceIds = {
+  basePriceId: string;
+  userPriceId: string | null;
+};
 
 export class StripeService {
   private stripe!: Stripe;
@@ -715,21 +724,12 @@ export class StripeService {
         const tenantTierPrices = this.getSubscriptionPriceIds(existingSubscription)
           || (tenantRecord?.plan ? this.getTierPriceIds(tenantRecord.plan) : null);
 
-        const userPriceId = existingSubscription.stripe_base_item_id
-          ? (tenantTierPrices?.userPriceId || this.config.licensePriceId!)
-          : this.config.licensePriceId!;
-
         const buildPhaseItems = (qty: number): Stripe.SubscriptionScheduleUpdateParams.Phase.Item[] => {
-          const items: Stripe.SubscriptionScheduleUpdateParams.Phase.Item[] = [];
-          // Base fee item (if multi-item subscription)
-          if (existingSubscription.stripe_base_item_id) {
-            const basePriceId = tenantTierPrices?.basePriceId;
-            if (basePriceId) {
-              items.push({ price: basePriceId, quantity: 1 });
-            }
+          if (existingSubscription.stripe_base_item_id && tenantTierPrices) {
+            return this.buildTierLineItems(tenantTierPrices, qty) as Stripe.SubscriptionScheduleUpdateParams.Phase.Item[];
           }
-          items.push({ price: userPriceId, quantity: qty });
-          return items;
+
+          return [{ price: this.config.licensePriceId!, quantity: qty }];
         };
 
         // Step 2: Update the schedule with metadata, end behavior, and phases
@@ -819,12 +819,10 @@ export class StripeService {
     let line_items: Stripe.Checkout.SessionCreateParams.LineItem[];
 
     if (tierPrices) {
-      // Multi-item: base fee + per-user
-      line_items = [
-        { price: tierPrices.basePriceId, quantity: 1 },
-        { price: tierPrices.userPriceId, quantity },
-      ];
-      logger.info(`[StripeService] Using multi-item checkout (tier: ${tenant.plan}, interval: ${interval})`);
+      line_items = this.buildTierLineItems(tierPrices, quantity);
+      logger.info(
+        `[StripeService] Using ${tierPrices.userPriceId ? 'multi-item' : 'flat-rate'} checkout (tier: ${tenant.plan}, interval: ${interval})`
+      );
     } else {
       // Legacy single-item: per-user only
       if (!this.config.licensePriceId) {
@@ -1346,8 +1344,11 @@ export class StripeService {
   private getTierPriceIds(
     tier: TenantTier,
     interval: 'month' | 'year' = 'month'
-  ): { basePriceId: string; userPriceId: string } | null {
+  ): TierPriceIds | null {
     if (interval === 'year') {
+      if (tier === 'solo' && this.config.soloBaseAnnualPriceId) {
+        return { basePriceId: this.config.soloBaseAnnualPriceId, userPriceId: null };
+      }
       if (tier === 'premium' && this.config.premiumBaseAnnualPriceId && this.config.premiumUserAnnualPriceId) {
         return { basePriceId: this.config.premiumBaseAnnualPriceId, userPriceId: this.config.premiumUserAnnualPriceId };
       }
@@ -1355,6 +1356,9 @@ export class StripeService {
         return { basePriceId: this.config.proBaseAnnualPriceId, userPriceId: this.config.proUserAnnualPriceId };
       }
       // Fall through to monthly if annual not configured
+    }
+    if (tier === 'solo' && this.config.soloBasePriceId) {
+      return { basePriceId: this.config.soloBasePriceId, userPriceId: null };
     }
     if (tier === 'premium' && this.config.premiumBasePriceId && this.config.premiumUserPriceId) {
       return { basePriceId: this.config.premiumBasePriceId, userPriceId: this.config.premiumUserPriceId };
@@ -1379,7 +1383,7 @@ export class StripeService {
   private getSubscriptionPriceIds(
     subscription: StripeSubscription,
     interval: 'month' | 'year' = 'month'
-  ): { basePriceId: string; userPriceId: string } | null {
+  ): TierPriceIds | null {
     if (this.isEarlyAdoptersSubscription(subscription)) {
       return this.getEarlyAdoptersPriceIds(interval);
     }
@@ -1391,7 +1395,7 @@ export class StripeService {
    */
   private getEarlyAdoptersPriceIds(
     interval: 'month' | 'year' = 'month'
-  ): { basePriceId: string; userPriceId: string } | null {
+  ): TierPriceIds | null {
     if (interval === 'year' && this.config.earlyAdoptersBaseAnnualPriceId && this.config.earlyAdoptersUserAnnualPriceId) {
       return { basePriceId: this.config.earlyAdoptersBaseAnnualPriceId, userPriceId: this.config.earlyAdoptersUserAnnualPriceId };
     }
@@ -1414,6 +1418,16 @@ export class StripeService {
    */
   private isMultiItemSubscription(sub: StripeSubscription): boolean {
     return sub.stripe_base_item_id !== null;
+  }
+
+  private buildTierLineItems(prices: TierPriceIds, quantity: number): Array<{ price: string; quantity: number }> {
+    const items = [{ price: prices.basePriceId, quantity: 1 }];
+
+    if (prices.userPriceId) {
+      items.push({ price: prices.userPriceId, quantity });
+    }
+
+    return items;
   }
 
   /**
@@ -1456,6 +1470,9 @@ export class StripeService {
     const tierPrices = this.getTierPriceIds(targetTier, interval);
     if (!tierPrices) {
       return { success: false, error: `Pricing not configured for ${targetTier} tier` };
+    }
+    if (!tierPrices.userPriceId) {
+      return { success: false, error: `Per-user pricing is not configured for ${targetTier} tier` };
     }
 
     const knex = await getConnection(tenantId);
@@ -1626,11 +1643,11 @@ export class StripeService {
       // Fetch target tier prices from Stripe
       const [basePrice, userPrice] = await Promise.all([
         this.stripe.prices.retrieve(tierPrices.basePriceId),
-        this.stripe.prices.retrieve(tierPrices.userPriceId),
+        tierPrices.userPriceId ? this.stripe.prices.retrieve(tierPrices.userPriceId) : Promise.resolve(null),
       ]);
 
       const basePriceAmount = (basePrice.unit_amount || 0) / 100;
-      const userPriceAmount = (userPrice.unit_amount || 0) / 100;
+      const userPriceAmount = ((userPrice?.unit_amount) || 0) / 100;
       const newMonthly = basePriceAmount + (userPriceAmount * userCount);
 
       // Calculate current monthly from existing subscription
@@ -1666,8 +1683,7 @@ export class StripeService {
                 ...(existingSubscription.stripe_base_item_id
                   ? [{ id: existingSubscription.stripe_base_item_id, deleted: true as const }]
                   : []),
-                { price: tierPrices.basePriceId, quantity: 1 },
-                { price: tierPrices.userPriceId, quantity: userCount },
+                ...this.buildTierLineItems(tierPrices, userCount),
               ],
               proration_behavior: 'always_invoice',
             },
@@ -1688,10 +1704,10 @@ export class StripeService {
         try {
           const [annualBase, annualUser] = await Promise.all([
             this.stripe.prices.retrieve(annualPrices.basePriceId),
-            this.stripe.prices.retrieve(annualPrices.userPriceId),
+            annualPrices.userPriceId ? this.stripe.prices.retrieve(annualPrices.userPriceId) : Promise.resolve(null),
           ]);
           annualBasePrice = (annualBase.unit_amount || 0) / 100;
-          annualUserPrice = (annualUser.unit_amount || 0) / 100;
+          annualUserPrice = ((annualUser?.unit_amount) || 0) / 100;
           annualTotal = annualBasePrice + (annualUserPrice * userCount);
           annualAvailable = true;
         } catch (e) {
@@ -1780,10 +1796,7 @@ export class StripeService {
             })),
           },
           {
-            items: [
-              { price: newPrices.basePriceId, quantity: 1 },
-              { price: newPrices.userPriceId, quantity: currentQuantity },
-            ],
+            items: this.buildTierLineItems(newPrices, currentQuantity),
           },
         ],
         end_behavior: 'release',
@@ -1857,12 +1870,12 @@ export class StripeService {
     try {
       const [newBase, newUser] = await Promise.all([
         this.stripe.prices.retrieve(newPrices.basePriceId),
-        this.stripe.prices.retrieve(newPrices.userPriceId),
+        newPrices.userPriceId ? this.stripe.prices.retrieve(newPrices.userPriceId) : Promise.resolve(null),
       ]);
 
       const userCount = existingSubscription.quantity;
       const newBaseAmount = (newBase.unit_amount || 0) / 100;
-      const newUserAmount = (newUser.unit_amount || 0) / 100;
+      const newUserAmount = ((newUser?.unit_amount) || 0) / 100;
       const newTotal = newBaseAmount + (newUserAmount * userCount);
 
       // Calculate current total
@@ -2068,10 +2081,7 @@ export class StripeService {
           },
           // Phase 2: switch to Premium prices
           {
-            items: [
-              { price: premiumPrices.basePriceId, quantity: 1 },
-              { price: premiumPrices.userPriceId, quantity: currentQuantity },
-            ],
+            items: this.buildTierLineItems(premiumPrices, currentQuantity),
           },
         ],
         end_behavior: 'release',

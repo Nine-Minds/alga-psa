@@ -411,7 +411,7 @@
   {
     "id": "F052",
     "description": "getTierPriceIds() returns { basePriceId, userPriceId: null } for Solo",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.2"
     ]

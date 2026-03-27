@@ -33,6 +33,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) `npx tsc -p ee/server/tsconfig.json --noEmit` is currently blocked by `ee/server/src/components/settings/account/AccountManagement.tsx` missing display names for the newly-added tier features; that aligns with still-pending F067 rather than the RMM gating changes.
 - (2026-03-26) Some `DefaultLayout` Vitest suites currently fail during module resolution for unrelated `@alga-psa/core/context/DocumentsCrossFeatureContext` imports pulled in by package components; narrow layout validation is currently more reliable via targeted sidebar tests.
 - (2026-03-26) `mobileAuth.test.ts` needed an explicit partial `@alga-psa/auth` mock once mobile tier gating was added; otherwise `ApiKeyService` resolved as missing under Vitest's mocked module graph.
+- (2026-03-26) After adding Solo Stripe price support, `npx tsc -p ee/server/tsconfig.json --noEmit` still only fails on the pre-existing F067 `FEATURE_DISPLAY_NAMES` gap in `AccountManagement.tsx`; no new Stripe typing regressions surfaced.
 
 ## Commands / Runbooks
 
@@ -123,6 +124,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F049 feature: Added `MOBILE_ACCESS` tier enforcement inside `exchangeOttForSession()` so Solo tenants are rejected with a 403 before mobile API keys and refresh tokens are issued.
 - (2026-03-26) Completed F050 feature: Mobile auth exchange now returns the explicit upgrade message `"Mobile app access requires Pro or higher"` through the shared API error response when Solo tenants attempt to sign in on mobile.
 - (2026-03-26) Completed F051 feature: Added `alga-psa-solo -> solo` to the Stripe product-tier map so Solo subscriptions and webhooks can resolve the tenant plan without special-case fallback logic.
+- (2026-03-26) Completed F052 feature: Extended Stripe tier pricing to support Solo base-only prices so `getTierPriceIds('solo')` returns `{ basePriceId, userPriceId: null }` for monthly and annual billing while Pro/Premium keep base+per-user pricing.
 - (2026-03-26) Completed T001 test: isValidTier('solo') returns true
 - (2026-03-26) Completed T002 test: isValidTier('pro') and isValidTier('premium') still return true
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false
