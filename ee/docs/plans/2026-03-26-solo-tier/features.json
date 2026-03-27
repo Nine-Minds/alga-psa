@@ -227,7 +227,7 @@
   {
     "id": "F029",
     "description": "Add requiredFeature?: TIER_FEATURES to MenuItem interface in menuConfig",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.1"
     ]
