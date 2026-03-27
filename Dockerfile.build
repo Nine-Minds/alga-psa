@@ -62,6 +62,7 @@ RUN npm install --include=optional
 # Build all upstream packages (shared + pre-built) via Nx (handles dependency ordering)
 WORKDIR /app
 RUN npx nx build-deps server
+ENV USE_PREBUILT="true"
 
 # Increase Node.js memory limit for the build process
 ENV NODE_OPTIONS="--max-old-space-size=8192"

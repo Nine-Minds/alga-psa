@@ -1,4 +1,5 @@
 'use server';
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Quote PDF generation creates document records - direct model access required in server action context */
 
 import { randomUUID } from 'crypto';
 import { createTenantKnex } from '@alga-psa/db';

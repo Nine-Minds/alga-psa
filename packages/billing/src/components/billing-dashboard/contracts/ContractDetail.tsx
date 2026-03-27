@@ -42,8 +42,7 @@ import {
   updateClientContractForBilling,
   getClientByIdForBilling,
 } from '@alga-psa/billing/actions/billingClientsActions';
-import { getAllBoards } from '@alga-psa/tickets/actions';
-import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getAllBoards, getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';

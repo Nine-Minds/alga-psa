@@ -4,7 +4,7 @@ import {
   ticketCustomerRepliedEventPayloadSchema,
   ticketInternalNoteAddedEventPayloadSchema,
   ticketMessageAddedEventPayloadSchema,
-} from '@alga-psa/workflows/runtime/schemas/ticketEventSchemas';
+} from '@alga-psa/shared/workflow/runtime/schemas/ticketEventSchemas';
 import { buildTicketCommunicationWorkflowEvents } from '../workflowTicketCommunicationEvents';
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000000';

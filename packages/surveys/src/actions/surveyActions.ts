@@ -7,9 +7,7 @@ import { z } from 'zod';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IBoard, IPriority, IStatus, IUserWithRoles, DeletionValidationResult } from '@alga-psa/types';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- server action needs board data for survey trigger config; composition layer (React context) not applicable in "use server" files
-import { getAllBoards } from '@alga-psa/tickets/actions';
-import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getAllBoards, getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 

@@ -24,6 +24,7 @@ import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';
 import Documents from '@alga-psa/documents/components/Documents';
 import DocumentUpload from '@alga-psa/documents/components/DocumentUpload';
 import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';
+import { DocumentStorageCard } from '@alga-psa/documents/components';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 
 export function MspDocumentsCrossFeatureProvider({ children }: { children: ReactNode }) {
@@ -47,12 +48,18 @@ export function MspDocumentsCrossFeatureProvider({ children }: { children: React
     []
   );
 
+  const renderDocumentStorageCard = useCallback(
+    ({ key, ...props }: Record<string, unknown>) => <DocumentStorageCard key={key as string} {...(props as any)} />,
+    []
+  );
+
   const value = useMemo<DocumentsCrossFeatureCallbacks>(
     () => ({
       renderDocuments,
       renderDocumentUpload,
       renderDocumentSelector,
       renderFolderSelectorModal,
+      renderDocumentStorageCard,
       downloadDocument: async (documentUrl: string, fileName?: string, useFileSystemAPI?: boolean) =>
         downloadDocument(documentUrl, fileName || 'document', useFileSystemAPI),
       getDocumentDownloadUrl: async (documentId: string) => getDocumentDownloadUrl(documentId),
@@ -72,7 +79,7 @@ export function MspDocumentsCrossFeatureProvider({ children }: { children: React
       createBlockDocument,
       ensureEntityFolders,
     }),
-    [renderDocuments, renderDocumentSelector, renderDocumentUpload, renderFolderSelectorModal]
+    [renderDocuments, renderDocumentSelector, renderDocumentUpload, renderFolderSelectorModal, renderDocumentStorageCard]
   );
 
   return <DocumentsCrossFeatureProvider value={value}>{children}</DocumentsCrossFeatureProvider>;

@@ -35,6 +35,10 @@
       "types": "./src/schemas/index.ts",
       "import": "./dist/schemas/index.js",
       "require": "./dist/schemas/index.js"
+    },
+    "./providers/*": {
+      "import": "./src/providers/*.tsx",
+      "types": "./src/providers/*.tsx"
     }
   },
   "scripts": {
@@ -49,6 +53,7 @@
     "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
     "@alga-psa/types": "*",
+    "@alga-psa/ui": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",

@@ -3,10 +3,10 @@
 import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { QuickAddClientProvider } from '@alga-psa/ui/context';
 import type { QuickAddClientCallbacks, QuickAddClientRenderProps, QuickAddContactRenderProps } from '@alga-psa/ui/context';
-import QuickAddClient from '@alga-psa/clients/components/clients/QuickAddClient';
-import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
+import QuickAddClient from '../components/clients/QuickAddClient';
+import QuickAddContact from '../components/contacts/QuickAddContact';
 
-export function MspQuickAddClientProvider({ children }: { children: ReactNode }) {
+export function QuickAddClientProviderWithCallbacks({ children }: { children: ReactNode }) {
   const renderQuickAddClient = useCallback(
     (props: QuickAddClientRenderProps) => (
       <QuickAddClient

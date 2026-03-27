@@ -8,3 +8,4 @@
 export * from './blocknoteUtils';
 export * from './avatarUtils';
 export { getImageUrlInternal } from './imageUrl';
+export * from './timeFormatting';

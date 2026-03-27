@@ -30,11 +30,6 @@
       "types": "./dist/lib/index.d.ts",
       "import": "./dist/lib/index.mjs",
       "require": "./dist/lib/index.js"
-    },
-    "./context/*": {
-      "types": "./src/context/*.d.ts",
-      "import": "./src/context/*",
-      "require": "./src/context/*"
     }
   },
   "scripts": {

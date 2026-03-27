@@ -1,3 +1,4 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export orchestration - requires integration-specific tenant settings for adapter configuration */
 import {
   AccountingExportBatch,
   AccountingExportError,

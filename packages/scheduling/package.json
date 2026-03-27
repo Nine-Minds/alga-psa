@@ -32,6 +32,10 @@
     "./context/*": {
       "import": "./src/context/*.tsx",
       "types": "./src/context/*.tsx"
+    },
+    "./providers/*": {
+      "import": "./src/providers/*.tsx",
+      "types": "./src/providers/*.tsx"
     }
   },
   "scripts": {
@@ -46,6 +50,7 @@
     "@alga-psa/types": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/ui": "*",
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "rrule": "^2.7.2",

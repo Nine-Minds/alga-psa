@@ -3,8 +3,7 @@
 import React from 'react';
 import toast from 'react-hot-toast';
 
-import { getAllBoards } from '@alga-psa/tickets/actions';
-import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getAllBoards, getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getDefaultBillingSettings, updateDefaultBillingSettings } from '@alga-psa/billing/actions';
 import type { BillingSettings } from '@alga-psa/billing/actions';
 import type { IStatus } from '@alga-psa/types';

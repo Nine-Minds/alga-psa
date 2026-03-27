@@ -15,7 +15,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
 import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
-import { getAllContacts } from '@alga-psa/clients/actions';
+import { getContactsForPicker } from '@alga-psa/user-composition/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
 interface QuoteDetailProps {
@@ -98,7 +98,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       const [loadedQuote, loadedClients, loadedContacts, approvalSettings, loadedTemplates] = await Promise.all([
         getQuote(quoteId),
         getAllClientsForBilling(false),
-        getAllContacts('active'),
+        getContactsForPicker('active'),
         getQuoteApprovalSettings(),
         getQuoteDocumentTemplates(),
       ]);

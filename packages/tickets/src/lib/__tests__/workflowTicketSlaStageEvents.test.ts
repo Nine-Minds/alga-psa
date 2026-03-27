@@ -4,7 +4,7 @@ import {
   ticketSlaStageBreachedEventPayloadSchema,
   ticketSlaStageEnteredEventPayloadSchema,
   ticketSlaStageMetEventPayloadSchema,
-} from '@alga-psa/workflows/runtime/schemas/ticketEventSchemas';
+} from '@alga-psa/shared/workflow/runtime/schemas/ticketEventSchemas';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,

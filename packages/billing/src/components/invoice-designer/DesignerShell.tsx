@@ -1,3 +1,4 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Invoice designer uses shared expression-authoring utilities for template variable insertion and validation */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { generateUUID } from '@alga-psa/core';
 import type { Modifier } from '@dnd-kit/core';
