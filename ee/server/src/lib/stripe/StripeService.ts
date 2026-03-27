@@ -18,7 +18,7 @@ import { getConnection } from '@/lib/db/db';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
-import type { TenantTier } from '@alga-psa/types';
+import { ADD_ONS, type AddOnKey, type TenantTier } from '@alga-psa/types';
 import { tierFromStripeProduct } from './stripeTierMapping';
 
 // Stripe configuration with secret provider support
@@ -999,6 +999,54 @@ export class StripeService {
     return null;
   }
 
+  private getAddOnKeyFromMetadata(metadata: Stripe.Metadata | null | undefined): AddOnKey | null {
+    const addOnKey = metadata?.addon_key;
+    if (addOnKey === ADD_ONS.AI_ASSISTANT) {
+      return addOnKey;
+    }
+    return null;
+  }
+
+  private async activateTenantAddOn(
+    tenantId: string,
+    addOn: AddOnKey,
+    metadata: Record<string, unknown>,
+    knex?: Knex
+  ): Promise<void> {
+    const db = knex || (await getConnection(tenantId));
+
+    await db('tenant_addons')
+      .insert({
+        tenant: tenantId,
+        addon_key: addOn,
+        activated_at: db.fn.now(),
+        expires_at: null,
+        metadata,
+      })
+      .onConflict(['tenant', 'addon_key'])
+      .merge({
+        activated_at: db.fn.now(),
+        expires_at: null,
+        metadata,
+      });
+  }
+
+  private async deactivateTenantAddOn(
+    tenantId: string,
+    addOn: AddOnKey,
+    metadata: Record<string, unknown>,
+    knex?: Knex
+  ): Promise<void> {
+    const db = knex || (await getConnection(tenantId));
+
+    await db('tenant_addons')
+      .where({ tenant: tenantId, addon_key: addOn })
+      .update({
+        expires_at: db.fn.now(),
+        metadata,
+      });
+  }
+
   /**
    * Handle checkout.session.completed event
    */
@@ -1020,6 +1068,23 @@ export class StripeService {
     const subscription = await this.stripe.subscriptions.retrieve(session.subscription as string, {
       expand: ['items.data.price.product'],
     });
+
+    const addOnKey = this.getAddOnKeyFromMetadata(subscription.metadata) || this.getAddOnKeyFromMetadata(session.metadata);
+    if (addOnKey) {
+      await this.activateTenantAddOn(
+        tenantId,
+        addOnKey,
+        {
+          stripe_subscription_external_id: subscription.id,
+          stripe_subscription_item_id: subscription.items.data[0]?.id || null,
+          stripe_price_external_id: subscription.items.data[0]?.price?.id || null,
+          checkout_session_id: session.id,
+        },
+        knex,
+      );
+      logger.info(`[StripeService] Activated add-on ${addOnKey} for tenant ${tenantId}`);
+      return;
+    }
 
     // Get customer
     const customer = await knex<StripeCustomer>('stripe_customers')
@@ -1066,6 +1131,36 @@ export class StripeService {
     const subscription = event.data.object as Stripe.Subscription;
 
     logger.info(`[StripeService] Subscription updated: ${subscription.id}`);
+
+    const addOnKey = this.getAddOnKeyFromMetadata(subscription.metadata);
+    if (addOnKey) {
+      if (subscription.status === 'active' || subscription.status === 'trialing') {
+        await this.activateTenantAddOn(
+          tenantId,
+          addOnKey,
+          {
+            stripe_subscription_external_id: subscription.id,
+            stripe_subscription_item_id: subscription.items.data[0]?.id || null,
+            stripe_price_external_id: subscription.items.data[0]?.price?.id || null,
+            status: subscription.status,
+          },
+          knex,
+        );
+      } else {
+        await this.deactivateTenantAddOn(
+          tenantId,
+          addOnKey,
+          {
+            stripe_subscription_external_id: subscription.id,
+            status: subscription.status,
+          },
+          knex,
+        );
+      }
+
+      logger.info(`[StripeService] Synced add-on ${addOnKey} for tenant ${tenantId} from subscription update`);
+      return;
+    }
 
     // Update subscription in database
     const subscriptionItem = this.findUserItemFromStripe(subscription.items.data);
@@ -1186,6 +1281,21 @@ export class StripeService {
     const subscription = event.data.object as Stripe.Subscription;
 
     logger.info(`[StripeService] Subscription deleted: ${subscription.id}`);
+
+    const addOnKey = this.getAddOnKeyFromMetadata(subscription.metadata);
+    if (addOnKey) {
+      await this.deactivateTenantAddOn(
+        tenantId,
+        addOnKey,
+        {
+          stripe_subscription_external_id: subscription.id,
+          status: subscription.status,
+        },
+        knex,
+      );
+      logger.info(`[StripeService] Deactivated add-on ${addOnKey} for tenant ${tenantId}`);
+      return;
+    }
 
     // Mark subscription as canceled in database
     await knex<StripeSubscription>('stripe_subscriptions')
@@ -1366,6 +1476,21 @@ export class StripeService {
       return { basePriceId: this.config.proBasePriceId, userPriceId: this.config.proUserPriceId };
     }
     return null;
+  }
+
+  private getAddOnPriceId(
+    addOn: AddOnKey,
+    interval: 'month' | 'year' = 'month'
+  ): string | null {
+    if (addOn !== ADD_ONS.AI_ASSISTANT) {
+      return null;
+    }
+
+    if (interval === 'year' && this.config.aiAddOnAnnualPriceId) {
+      return this.config.aiAddOnAnnualPriceId;
+    }
+
+    return this.config.aiAddOnPriceId;
   }
 
   /**
@@ -2368,6 +2493,87 @@ export class StripeService {
     }
 
     return { reverted, errors };
+  }
+
+  async purchaseAddOn(
+    tenantId: string,
+    addOn: AddOnKey,
+    interval: 'month' | 'year' = 'month'
+  ): Promise<{ success: boolean; clientSecret?: string; sessionId?: string; error?: string }> {
+    await this.ensureInitialized();
+
+    const priceId = this.getAddOnPriceId(addOn, interval);
+    if (!priceId) {
+      return { success: false, error: `Pricing not configured for add-on ${addOn}` };
+    }
+
+    try {
+      const customer = await this.getOrImportCustomer(tenantId);
+      const session = await this.stripe.checkout.sessions.create({
+        customer: customer.stripe_customer_external_id,
+        ui_mode: 'embedded',
+        mode: 'subscription',
+        line_items: [{ price: priceId, quantity: 1 }],
+        subscription_data: {
+          metadata: {
+            tenant_id: tenantId,
+            addon_key: addOn,
+            source: 'algapsa_addon_purchase',
+            billing_interval: interval,
+          },
+        },
+        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/msp/settings/account?session_id={CHECKOUT_SESSION_ID}`,
+        metadata: {
+          tenant_id: tenantId,
+          addon_key: addOn,
+          billing_interval: interval,
+        },
+      });
+
+      if (!session.client_secret) {
+        throw new Error('Stripe checkout session created without client_secret');
+      }
+
+      return {
+        success: true,
+        clientSecret: session.client_secret,
+        sessionId: session.id,
+      };
+    } catch (error: any) {
+      logger.error(`[StripeService] Failed to purchase add-on ${addOn} for tenant ${tenantId}:`, error);
+      return {
+        success: false,
+        error: error.message || 'Failed to purchase add-on',
+      };
+    }
+  }
+
+  async cancelAddOn(
+    tenantId: string,
+    addOn: AddOnKey
+  ): Promise<{ success: boolean; error?: string }> {
+    await this.ensureInitialized();
+
+    try {
+      const knex = await getConnection(tenantId);
+      const addOnRecord = await knex('tenant_addons')
+        .where({ tenant: tenantId, addon_key: addOn })
+        .first();
+
+      const subscriptionId = addOnRecord?.metadata?.stripe_subscription_external_id;
+      if (!subscriptionId) {
+        return { success: false, error: `${addOn} is not active for this tenant` };
+      }
+
+      await this.stripe.subscriptions.cancel(subscriptionId, { prorate: true });
+      return { success: true };
+    } catch (error: any) {
+      logger.error(`[StripeService] Failed to cancel add-on ${addOn} for tenant ${tenantId}:`, error);
+      return {
+        success: false,
+        error: error.message || 'Failed to cancel add-on',
+      };
+    }
   }
 
   /**

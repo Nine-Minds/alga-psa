@@ -467,7 +467,7 @@
   {
     "id": "F059",
     "description": "purchaseAddOn(AI_ASSISTANT) creates checkout session for AI add-on subscription item",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.6"
     ]

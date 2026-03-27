@@ -88,6 +88,20 @@ function createUpgradeKnex(state: {
   return knex;
 }
 
+function createAddOnKnex(addOnRecord?: Record<string, any>) {
+  return ((table: string) => {
+    if (table !== 'tenant_addons') {
+      throw new Error(`Unexpected table ${table}`);
+    }
+
+    return {
+      where: (_criteria: Record<string, any>) => ({
+        first: async () => addOnRecord ?? null,
+      }),
+    };
+  }) as any;
+}
+
 function createService(planByTenant: Record<string, string>) {
   const service = new StripeService() as any;
 
@@ -103,6 +117,8 @@ function createService(planByTenant: Record<string, string>) {
     premiumUserPriceId: 'price_premium_user',
     premiumBaseAnnualPriceId: 'price_premium_base_year',
     premiumUserAnnualPriceId: 'price_premium_user_year',
+    aiAddOnPriceId: 'price_ai_addon',
+    aiAddOnAnnualPriceId: 'price_ai_addon_year',
     earlyAdoptersBasePriceId: null,
     earlyAdoptersUserPriceId: null,
     earlyAdoptersBaseAnnualPriceId: null,
@@ -375,5 +391,47 @@ describe('StripeService tier pricing', () => {
       error: 'Solo downgrade requires exactly 1 active internal user',
     });
     expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
+  });
+
+  it('creates an embedded checkout session for the AI add-on', async () => {
+    const service = createService({});
+    service.initPromise = Promise.resolve();
+
+    const result = await service.purchaseAddOn('tenant-ai', 'ai_assistant', 'month');
+
+    expect(result).toEqual({
+      success: true,
+      clientSecret: 'cs_secret_123',
+      sessionId: 'cs_test_123',
+    });
+    expect(service.stripe.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        line_items: [{ price: service.config.aiAddOnPriceId, quantity: 1 }],
+        metadata: expect.objectContaining({
+          tenant_id: 'tenant-ai',
+          addon_key: 'ai_assistant',
+        }),
+      }),
+    );
+  });
+
+  it('cancels the stored AI add-on subscription', async () => {
+    const service = createService({});
+    service.initPromise = Promise.resolve();
+    service.stripe.subscriptions = {
+      cancel: vi.fn().mockResolvedValue({}),
+    };
+    getConnectionMock.mockResolvedValue(
+      createAddOnKnex({
+        metadata: {
+          stripe_subscription_external_id: 'sub_addon_1',
+        },
+      }),
+    );
+
+    const result = await service.cancelAddOn('tenant-ai', 'ai_assistant');
+
+    expect(result).toEqual({ success: true });
+    expect(service.stripe.subscriptions.cancel).toHaveBeenCalledWith('sub_addon_1', { prorate: true });
   });
 });
