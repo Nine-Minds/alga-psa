@@ -255,7 +255,7 @@
   {
     "id": "T031",
     "description": "TIER_FEATURE_MAP['pro'] contains all 8 pro-minimum features",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
