@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "Add WORKFLOW_DESIGNER to TIER_FEATURES enum with min tier 'pro'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.4"
     ]
