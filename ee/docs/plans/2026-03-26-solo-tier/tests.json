@@ -622,7 +622,7 @@
   {
     "id": "T076",
     "description": "getTierPriceIds('pro') still returns both basePriceId and userPriceId",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]

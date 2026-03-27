@@ -231,3 +231,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T073 test: exchangeOttForSession succeeds for Premium tenant
 - (2026-03-26) Completed T074 test: stripeTierMapping maps 'alga-psa-solo' to 'solo'
 - (2026-03-26) Completed T075 test: getTierPriceIds('solo') returns basePriceId with userPriceId: null
+- (2026-03-26) Completed T076 test: getTierPriceIds('pro') still returns both basePriceId and userPriceId
