@@ -253,3 +253,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T095 test: Add User button is disabled when isSolo in user management UI
 - (2026-03-26) Completed T096 test: Add User button shows upgrade CTA when disabled for Solo
 - (2026-03-26) Completed T097 test: FEATURE_DISPLAY_NAMES has entries for all 8 new tier features
+- (2026-03-26) Completed T098 test: AccountManagement shows Solo-specific messaging for solo tier

@@ -799,7 +799,7 @@
   {
     "id": "T098",
     "description": "AccountManagement shows Solo-specific messaging for solo tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]
