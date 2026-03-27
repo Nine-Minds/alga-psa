@@ -1095,6 +1095,40 @@ export async function upgradeTierAction(
 }
 
 /**
+ * Downgrade the tenant's subscription to Solo.
+ * Validates active user count in the Stripe service before changing pricing.
+ */
+export async function downgradeTierAction(
+  interval: 'month' | 'year' = 'month'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to change the subscription plan' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.downgradeTier(session.user.tenant, interval);
+  } catch (error) {
+    logger.error('[downgradeTierAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to downgrade plan',
+    };
+  }
+}
+
+/**
  * Get a preview of what upgrading to a new tier will cost.
  * Used by the UI to show a confirmation dialog before charging.
  */

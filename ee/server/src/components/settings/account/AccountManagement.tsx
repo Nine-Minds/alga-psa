@@ -20,6 +20,7 @@ import {
   sendCancellationFeedbackAction,
   upgradeTierAction,
   getUpgradePreviewAction,
+  downgradeTierAction,
   switchBillingIntervalAction,
   getIntervalSwitchPreviewAction,
   sendPremiumTrialRequestAction,
@@ -276,6 +277,8 @@ export default function AccountManagement() {
     prorationAmount?: number;
   } | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [showDowngradeConfirm, setShowDowngradeConfirm] = useState(false);
+  const [downgrading, setDowngrading] = useState(false);
 
   // Billing interval switch state
   const [showIntervalSwitch, setShowIntervalSwitch] = useState(false);
@@ -512,6 +515,25 @@ export default function AccountManagement() {
     }
   };
 
+  const handleConfirmDowngrade = async () => {
+    setDowngrading(true);
+    try {
+      const result = await downgradeTierAction('month');
+      if (result.success) {
+        toast.success('Downgraded to Solo! Refreshing your session...');
+        setShowDowngradeConfirm(false);
+        await refreshTier();
+      } else {
+        toast.error(result.error || 'Failed to downgrade plan');
+      }
+    } catch (error) {
+      console.error('Error downgrading plan:', error);
+      toast.error('Failed to downgrade plan');
+    } finally {
+      setDowngrading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card className="p-6">
@@ -523,6 +545,7 @@ export default function AccountManagement() {
   const monthlyTotal = licenseInfo?.total_licenses !== null
     ? ((licenseInfo?.total_licenses || 0) * (licenseInfo?.price_per_license || 0))
     : 0;
+  const canDowngradeToSolo = isPro && tierUpgradeFlowEnabled && (licenseInfo?.active_licenses ?? Number.POSITIVE_INFINITY) === 1;
 
   return (
     <div className="space-y-6">
@@ -834,6 +857,22 @@ export default function AccountManagement() {
                     <Button id="upgrade-to-premium-btn" onClick={() => handleUpgradeClick('premium')} disabled={upgrading || loadingPreview}>
                       <Rocket className="mr-2 h-4 w-4" />
                       {loadingPreview ? 'Loading...' : 'Upgrade'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {canDowngradeToSolo && (
+                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h4 className="font-semibold">Downgrade to Solo</h4>
+                      <p className="text-sm text-muted-foreground">
+                        You currently have one active user, so you can move to Solo and keep core PSA features at the flat-rate single-user tier.
+                      </p>
+                    </div>
+                    <Button id="downgrade-to-solo-btn" variant="outline" onClick={() => setShowDowngradeConfirm(true)} disabled={downgrading}>
+                      {downgrading ? 'Downgrading...' : 'Downgrade'}
                     </Button>
                   </div>
                 </div>
@@ -1356,6 +1395,38 @@ export default function AccountManagement() {
           ) : (
             'Loading pricing details...'
           )
+        }
+      />
+
+      <ConfirmationDialog
+        id="downgrade-tier-confirm"
+        isOpen={showDowngradeConfirm}
+        onClose={() => setShowDowngradeConfirm(false)}
+        onConfirm={handleConfirmDowngrade}
+        title="Downgrade to Solo"
+        confirmLabel={downgrading ? 'Downgrading...' : 'Confirm Downgrade'}
+        isConfirming={downgrading}
+        message={
+          <div className="space-y-4">
+            <p>You are about to downgrade to the <strong>Solo</strong> plan.</p>
+            <div className="rounded-lg border p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Current active users</span>
+                <span>{licenseInfo?.active_licenses ?? 0}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Target tier</span>
+                <span>Solo</span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t">
+                <span className="text-muted-foreground">What changes</span>
+                <span>Flat-rate billing, 1-user limit</span>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Integrations, managed email, workflow design, and mobile access will no longer be available after the downgrade.
+            </p>
+          </div>
         }
       />
 

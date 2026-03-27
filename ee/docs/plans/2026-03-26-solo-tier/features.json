@@ -556,7 +556,7 @@
   {
     "id": "F070",
     "description": "Show 'Downgrade to Solo' option for Pro tenants when active user count = 1",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.4"
     ]
