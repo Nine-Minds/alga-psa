@@ -590,7 +590,7 @@
   {
     "id": "T072",
     "description": "exchangeOttForSession succeeds for Pro tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
