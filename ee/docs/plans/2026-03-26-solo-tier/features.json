@@ -235,7 +235,7 @@
   {
     "id": "F030",
     "description": "Annotate Extensions menu item with requiredFeature: TIER_FEATURES.EXTENSIONS",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.2"
     ]

@@ -92,3 +92,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F027 feature: Add hasAddOn(addOn) helper to TierContextValue
 - (2026-03-26) Completed F028 feature: CE edition bypasses add-on checks (hasAddOn returns true for all)
 - (2026-03-26) Completed F029 feature: Add requiredFeature?: TIER_FEATURES to MenuItem interface in menuConfig
+- (2026-03-26) Completed F030 feature: Annotate Extensions menu item with requiredFeature: TIER_FEATURES.EXTENSIONS
