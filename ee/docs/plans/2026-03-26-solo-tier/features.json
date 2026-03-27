@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "isValidTier('solo') returns true",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.1"
     ]
