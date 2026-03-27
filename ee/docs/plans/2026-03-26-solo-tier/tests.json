@@ -457,7 +457,7 @@
   {
     "id": "T056",
     "description": "Sidebar shows Extensions item for Pro tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F032"
