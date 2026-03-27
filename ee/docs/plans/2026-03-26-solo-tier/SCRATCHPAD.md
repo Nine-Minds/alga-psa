@@ -125,3 +125,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T020 test: tierHasFeature('solo', MANAGED_EMAIL) returns false
 - (2026-03-26) Completed T021 test: tierHasFeature('solo', SSO) returns false
 - (2026-03-26) Completed T022 test: tierHasFeature('solo', ADVANCED_ASSETS) returns false
+- (2026-03-26) Completed T023 test: tierHasFeature('solo', CLIENT_PORTAL_ADMIN) returns false
