@@ -703,7 +703,7 @@
   {
     "id": "T086",
     "description": "downgradeTier Pro->Solo swaps base price from Pro to Solo",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]

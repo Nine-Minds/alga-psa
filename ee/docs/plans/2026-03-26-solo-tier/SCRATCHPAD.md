@@ -241,3 +241,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T083 test: downgradeTier Pro->Solo succeeds when active user count = 1
 - (2026-03-26) Completed T084 test: downgradeTier Pro->Solo fails when active user count > 1
 - (2026-03-26) Completed T085 test: downgradeTier Pro->Solo removes per-user line item
+- (2026-03-26) Completed T086 test: downgradeTier Pro->Solo swaps base price from Pro to Solo
