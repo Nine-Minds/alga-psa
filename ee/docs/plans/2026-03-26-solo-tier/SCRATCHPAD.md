@@ -154,3 +154,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T049 test: TierContext hasAddOn returns true when add-on is in addOns array
 - (2026-03-26) Completed T050 test: TierContext hasAddOn returns false when add-on is not in addOns array
 - (2026-03-26) Completed T051 test: CE edition: hasAddOn always returns true regardless of addOns array
+- (2026-03-26) Completed T052 test: CE edition: hasFeature always returns true regardless of tier

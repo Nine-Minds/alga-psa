@@ -423,7 +423,7 @@
   {
     "id": "T052",
     "description": "CE edition: hasFeature always returns true regardless of tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
