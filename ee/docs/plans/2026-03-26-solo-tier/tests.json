@@ -889,7 +889,7 @@
   {
     "id": "T109",
     "description": "Pro checkout does not include trial unless explicitly requested",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]
