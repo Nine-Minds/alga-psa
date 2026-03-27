@@ -628,7 +628,7 @@
   {
     "id": "F079",
     "description": "Show 'Try Pro free' CTA for established Solo customers in AccountManagement",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.8",
       "R8.3"
