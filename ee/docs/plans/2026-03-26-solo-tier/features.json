@@ -387,7 +387,7 @@
   {
     "id": "F049",
     "description": "Check tenant tier in exchangeOttForSession() — reject Solo with 403",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5b.1"
     ]
