@@ -125,6 +125,9 @@
       "name": "quickbooks"
     },
     {
+      "name": "quotes"
+    },
+    {
       "name": "rbac"
     },
     {
@@ -209,80 +212,6 @@
       "PlaceholderObject": {
         "type": "object",
         "properties": {}
-      },
-      "KBArticle": {
-        "type": "object",
-        "properties": {
-          "article_id": { "type": "string", "format": "uuid" },
-          "tenant": { "type": "string", "format": "uuid" },
-          "document_id": { "type": "string", "format": "uuid" },
-          "document_name": { "type": "string" },
-          "slug": { "type": "string" },
-          "article_type": { "type": "string", "enum": ["how_to", "faq", "troubleshooting", "reference"] },
-          "audience": { "type": "string", "enum": ["internal", "client", "public"] },
-          "status": { "type": "string", "enum": ["draft", "review", "published", "archived"] },
-          "category_id": { "type": "string", "format": "uuid", "nullable": true },
-          "view_count": { "type": "integer" },
-          "helpful_count": { "type": "integer" },
-          "not_helpful_count": { "type": "integer" },
-          "review_cycle_days": { "type": "integer", "nullable": true },
-          "next_review_due": { "type": "string", "format": "date-time", "nullable": true },
-          "created_at": { "type": "string", "format": "date-time" },
-          "updated_at": { "type": "string", "format": "date-time" },
-          "published_at": { "type": "string", "format": "date-time", "nullable": true },
-          "block_data": { "type": "string", "nullable": true, "description": "BlockNote JSON content (present on getById)" }
-        }
-      },
-      "KBArticleCreateRequest": {
-        "type": "object",
-        "required": ["title"],
-        "properties": {
-          "title": { "type": "string", "minLength": 1, "maxLength": 255 },
-          "slug": { "type": "string", "maxLength": 255 },
-          "article_type": { "type": "string", "enum": ["how_to", "faq", "troubleshooting", "reference"], "default": "how_to" },
-          "audience": { "type": "string", "enum": ["internal", "client", "public"], "default": "internal" },
-          "category_id": { "type": "string", "format": "uuid" },
-          "review_cycle_days": { "type": "integer", "minimum": 1 },
-          "content": { "type": "string", "description": "Article body as markdown text or BlockNote JSON string" },
-          "content_format": { "type": "string", "enum": ["markdown", "blocknote"], "default": "markdown" }
-        }
-      },
-      "KBArticleUpdateRequest": {
-        "type": "object",
-        "properties": {
-          "title": { "type": "string", "minLength": 1, "maxLength": 255 },
-          "slug": { "type": "string", "maxLength": 255 },
-          "article_type": { "type": "string", "enum": ["how_to", "faq", "troubleshooting", "reference"] },
-          "audience": { "type": "string", "enum": ["internal", "client", "public"] },
-          "category_id": { "type": "string", "format": "uuid", "nullable": true },
-          "review_cycle_days": { "type": "integer", "minimum": 1, "nullable": true },
-          "status": { "type": "string", "enum": ["draft", "review", "published", "archived"] }
-        }
-      },
-      "KBArticleContentUpdateRequest": {
-        "type": "object",
-        "required": ["content"],
-        "properties": {
-          "content": { "type": "string", "minLength": 1, "description": "Article body as markdown or BlockNote JSON" },
-          "format": { "type": "string", "enum": ["markdown", "blocknote"], "default": "markdown" }
-        }
-      },
-      "PaginatedKBArticleResponse": {
-        "type": "object",
-        "properties": {
-          "data": { "type": "array", "items": { "$ref": "#/components/schemas/KBArticle" } },
-          "pagination": {
-            "type": "object",
-            "properties": {
-              "page": { "type": "integer" },
-              "limit": { "type": "integer" },
-              "total": { "type": "integer" },
-              "totalPages": { "type": "integer" },
-              "hasNext": { "type": "boolean" },
-              "hasPrev": { "type": "boolean" }
-            }
-          }
-        }
       },
       "ServiceCategory": {
         "type": "object",
@@ -14271,6 +14200,1095 @@
         },
         "responses": {
           "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes": {
+      "get": {
+        "summary": "GET v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}": {
+      "get": {
+        "summary": "GET v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "PUT v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "DELETE v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "204": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/activities": {
+      "get": {
+        "summary": "GET v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/approve": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/convert": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/convert/preview": {
+      "get": {
+        "summary": "GET v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/items": {
+      "get": {
+        "summary": "GET v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/items/{itemId}": {
+      "put": {
+        "summary": "PUT v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "DELETE v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "204": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/items/reorder": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/remind": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/request-changes": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/resend": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/revisions": {
+      "get": {
+        "summary": "GET v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/send": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{id}/submit-for-approval": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "quotes"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
             "description": "Placeholder success response",
             "content": {
               "application/json": {
@@ -29416,317 +30434,6 @@
               }
             }
           }
-        }
-      }
-    },
-    "/api/v1/kb-articles": {
-      "get": {
-        "operationId": "listKbArticles",
-        "summary": "List KB articles",
-        "description": "Returns a paginated list of knowledge base articles with optional filtering.",
-        "tags": ["Knowledge Base"],
-        "security": [{ "ApiKeyAuth": [] }],
-        "extensions": {
-          "x-tenant-header-required": true,
-          "x-rbac-resource": "document",
-          "x-chat-callable": true,
-          "x-chat-display-name": "List KB Articles",
-          "x-chat-rbac-resource": "document",
-          "x-chat-approval-required": false
-        },
-        "parameters": [
-          { "name": "search", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Search by title or slug" },
-          { "name": "status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["draft", "review", "published", "archived"] } },
-          { "name": "audience", "in": "query", "required": false, "schema": { "type": "string", "enum": ["internal", "client", "public"] } },
-          { "name": "article_type", "in": "query", "required": false, "schema": { "type": "string", "enum": ["how_to", "faq", "troubleshooting", "reference"] } },
-          { "name": "category_id", "in": "query", "required": false, "schema": { "type": "string", "format": "uuid" } },
-          { "name": "page", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1 } },
-          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100 } },
-          { "name": "sort", "in": "query", "required": false, "schema": { "type": "string" } },
-          { "name": "order", "in": "query", "required": false, "schema": { "type": "string", "enum": ["asc", "desc"] } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated list of KB articles.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedKBArticleResponse" } } }
-          },
-          "401": { "description": "Authentication failed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
-          "403": { "description": "Permission denied.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      },
-      "post": {
-        "operationId": "createKbArticle",
-        "summary": "Create KB article",
-        "description": "Creates a new knowledge base article with optional content. Articles start in draft status. Content can be markdown (default) or BlockNote JSON.",
-        "tags": ["Knowledge Base"],
-        "security": [{ "ApiKeyAuth": [] }],
-        "extensions": {
-          "x-tenant-header-required": true,
-          "x-rbac-resource": "document",
-          "x-chat-callable": true,
-          "x-chat-display-name": "Create KB Article",
-          "x-chat-rbac-resource": "document",
-          "x-chat-approval-required": true
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/KBArticleCreateRequest" }
-            }
-          }
-        },
-        "responses": {
-          "201": { "description": "Article created.", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/KBArticle" } } } } } },
-          "400": { "description": "Validation error.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
-          "401": { "description": "Authentication failed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
-          "403": { "description": "Permission denied.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      }
-    },
-    "/api/v1/kb-articles/{id}": {
-      "get": {
-        "operationId": "getKbArticle",
-        "summary": "Get KB article",
-        "description": "Returns a KB article by ID with document name and block content.",
-        "tags": ["Knowledge Base"],
-        "security": [{ "ApiKeyAuth": [] }],
-        "extensions": {
-          "x-tenant-header-required": true,
-          "x-rbac-resource": "document",
-          "x-chat-callable": true,
-          "x-chat-display-name": "Get KB Article",
-          "x-chat-rbac-resource": "document",
-          "x-chat-approval-required": false
-        },
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "responses": {
-          "200": { "description": "Article details.", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/KBArticle" } } } } } },
-          "404": { "description": "Article not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      },
-      "put": {
-        "operationId": "updateKbArticle",
-        "summary": "Update KB article metadata",
-        "description": "Updates article metadata (title, slug, type, audience, category, status). To update body content, use PUT /api/v1/kb-articles/{id}/content.",
-        "tags": ["Knowledge Base"],
-        "security": [{ "ApiKeyAuth": [] }],
-        "extensions": {
-          "x-tenant-header-required": true,
-          "x-rbac-resource": "document",
-          "x-chat-callable": true,
-          "x-chat-display-name": "Update KB Article",
-          "x-chat-rbac-resource": "document",
-          "x-chat-approval-required": true
-        },
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/KBArticleUpdateRequest" } } }
-        },
-        "responses": {
-          "200": { "description": "Article updated.", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/KBArticle" } } } } } },
-          "404": { "description": "Article not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      },
-      "delete": {
-        "operationId": "deleteKbArticle",
-        "summary": "Delete KB article",
-        "description": "Deletes a KB article and its associated document.",
-        "tags": ["Knowledge Base"],
-        "security": [{ "ApiKeyAuth": [] }],
-        "extensions": {
-          "x-tenant-header-required": true,
-          "x-rbac-resource": "document",
-          "x-chat-callable": true,
-          "x-chat-display-name": "Delete KB Article",
-          "x-chat-rbac-resource": "document",
-          "x-chat-approval-required": true
-        },
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "responses": {
-          "204": { "description": "Article deleted." },
-          "404": { "description": "Article not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      }
-    },
-    "/api/v1/kb-articles/{id}/publish": {
-      "post": {
-        "operationId": "publishKbArticle",
-        "summary": "Publish KB article",
-        "description": "Sets article status to published. Auto-enables client visibility for client/public audience articles.",
-        "tags": ["Knowledge Base"],
-        "security": [{ "ApiKeyAuth": [] }],
-        "extensions": {
-          "x-tenant-header-required": true,
-          "x-rbac-resource": "document",
-          "x-chat-callable": true,
-          "x-chat-display-name": "Publish KB Article",
-          "x-chat-rbac-resource": "document",
-          "x-chat-approval-required": true
-        },
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "responses": {
-          "200": { "description": "Article published.", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/KBArticle" } } } } } },
-          "404": { "description": "Article not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      }
-    },
-    "/api/v1/kb-articles/{id}/archive": {
-      "post": {
-        "operationId": "archiveKbArticle",
-        "summary": "Archive KB article",
-        "description": "Sets article status to archived and clears client visibility.",
-        "tags": ["Knowledge Base"],
-        "security": [{ "ApiKeyAuth": [] }],
-        "extensions": {
-          "x-tenant-header-required": true,
-          "x-rbac-resource": "document",
-          "x-chat-callable": true,
-          "x-chat-display-name": "Archive KB Article",
-          "x-chat-rbac-resource": "document",
-          "x-chat-approval-required": true
-        },
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "responses": {
-          "200": { "description": "Article archived.", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/KBArticle" } } } } } },
-          "404": { "description": "Article not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      }
-    },
-    "/api/v1/kb-articles/{id}/content": {
-      "get": {
-        "operationId": "getKbArticleContent",
-        "summary": "Get KB article content",
-        "description": "Returns the article body as readable markdown text.",
-        "tags": ["Knowledge Base"],
-        "security": [{ "ApiKeyAuth": [] }],
-        "extensions": {
-          "x-tenant-header-required": true,
-          "x-rbac-resource": "document",
-          "x-chat-callable": true,
-          "x-chat-display-name": "Get KB Article Content",
-          "x-chat-rbac-resource": "document",
-          "x-chat-approval-required": false
-        },
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Article content.",
-            "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "type": "object", "properties": { "content": { "type": "string" }, "format": { "type": "string" } } } } } } }
-          },
-          "404": { "description": "Article not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      },
-      "put": {
-        "operationId": "updateKbArticleContent",
-        "summary": "Update KB article content",
-        "description": "Updates the body content of a KB article. Accepts markdown (default) or BlockNote JSON.",
-        "tags": ["Knowledge Base"],
-        "security": [{ "ApiKeyAuth": [] }],
-        "extensions": {
-          "x-tenant-header-required": true,
-          "x-rbac-resource": "document",
-          "x-chat-callable": true,
-          "x-chat-display-name": "Update KB Article Content",
-          "x-chat-rbac-resource": "document",
-          "x-chat-approval-required": true
-        },
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/KBArticleContentUpdateRequest" } } }
-        },
-        "responses": {
-          "200": { "description": "Content updated.", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/KBArticle" } } } } } },
-          "404": { "description": "Article not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      }
-    },
-    "/api/v1/kb-articles/categories": {
-      "get": {
-        "operationId": "listKbArticleCategories",
-        "summary": "List KB categories",
-        "description": "Returns available categories for KB articles.",
-        "tags": ["Knowledge Base"],
-        "security": [{ "ApiKeyAuth": [] }],
-        "extensions": {
-          "x-tenant-header-required": true,
-          "x-rbac-resource": "document",
-          "x-chat-callable": true,
-          "x-chat-display-name": "List KB Categories",
-          "x-chat-rbac-resource": "document",
-          "x-chat-approval-required": false
-        },
-        "responses": {
-          "200": {
-            "description": "List of categories.",
-            "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" }, "category_name": { "type": "string" }, "parent_category_uuid": { "type": "string", "nullable": true }, "display_order": { "type": "integer" } } } } } } } }
-          }
-        }
-      }
-    },
-    "/api/v1/kb-articles/templates": {
-      "get": {
-        "operationId": "listKbArticleTemplates",
-        "summary": "List KB templates",
-        "description": "Returns available KB article templates with their content structures.",
-        "tags": ["Knowledge Base"],
-        "security": [{ "ApiKeyAuth": [] }],
-        "extensions": {
-          "x-tenant-header-required": true,
-          "x-rbac-resource": "document",
-          "x-chat-callable": true,
-          "x-chat-display-name": "List KB Templates",
-          "x-chat-rbac-resource": "document",
-          "x-chat-approval-required": false
-        },
-        "parameters": [
-          { "name": "article_type", "in": "query", "required": false, "schema": { "type": "string", "enum": ["how_to", "faq", "troubleshooting", "reference"] } }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of templates.",
-            "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "type": "array", "items": { "type": "object" } } } } } }
-          }
-        }
-      }
-    },
-    "/api/v1/kb-articles/from-ticket/{ticketId}": {
-      "post": {
-        "operationId": "createKbArticleFromTicket",
-        "summary": "Create KB article from ticket",
-        "description": "Creates a KB article pre-populated from a ticket's title, description, and resolution. Created as a troubleshooting article in draft status.",
-        "tags": ["Knowledge Base"],
-        "security": [{ "ApiKeyAuth": [] }],
-        "extensions": {
-          "x-tenant-header-required": true,
-          "x-rbac-resource": "document",
-          "x-chat-callable": true,
-          "x-chat-display-name": "Create KB Article from Ticket",
-          "x-chat-rbac-resource": "document",
-          "x-chat-approval-required": true
-        },
-        "parameters": [
-          { "name": "ticketId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "responses": {
-          "201": { "description": "Article created from ticket.", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/KBArticle" } } } } } },
-          "404": { "description": "Ticket not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     }
