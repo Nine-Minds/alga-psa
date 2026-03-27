@@ -251,7 +251,7 @@
   {
     "id": "F032",
     "description": "SidebarWithFeatureFlags filters out menu items where requiredFeature is set and tier lacks it",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.3"
     ]
