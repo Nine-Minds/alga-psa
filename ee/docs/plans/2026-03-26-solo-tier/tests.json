@@ -863,7 +863,7 @@
   {
     "id": "T106",
     "description": "downgradeTierAction validates user count before downgrading",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]
