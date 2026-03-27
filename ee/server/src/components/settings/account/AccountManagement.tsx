@@ -63,7 +63,7 @@ export default function AccountManagement() {
   const [showReduceModal, setShowReduceModal] = useState(false);
   const [showCancellationFeedback, setShowCancellationFeedback] = useState(false);
   const [scheduledChanges, setScheduledChanges] = useState<IScheduledLicenseChange | null>(null);
-  const { tier, isMisconfigured, isPro, refreshTier, isTrialing, trialDaysLeft, trialEndDate, isPaymentFailed, subscriptionStatus, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate } = useTier();
+  const { tier, isMisconfigured, isSolo, isPro, refreshTier, isTrialing, trialDaysLeft, trialEndDate, isPaymentFailed, subscriptionStatus, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate } = useTier();
   const upgradeFlowFlag = useFeatureFlag('tier-upgrade-flow');
   const showUpgradeFlow = isPro && (typeof upgradeFlowFlag === 'boolean' ? upgradeFlowFlag : upgradeFlowFlag?.enabled ?? false);
 
@@ -763,6 +763,14 @@ export default function AccountManagement() {
                 </Badge>
               </div>
 
+              {isSolo && (
+                <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                  <p className="text-sm text-blue-900">
+                    Your Solo plan includes core PSA features. Upgrade to Pro for integrations, mobile access, and more.
+                  </p>
+                </div>
+              )}
+
               {isMisconfigured && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>
@@ -784,7 +792,9 @@ export default function AccountManagement() {
                 </ul>
                 {TIER_FEATURE_MAP[tier].length === 0 && (
                   <p className="text-sm text-muted-foreground">
-                    Your Pro plan includes all standard features.
+                    {isSolo
+                      ? 'Core PSA tools are active on Solo. Upgrade to Pro to unlock integrations, managed email, workflow design, and mobile access.'
+                      : 'Your Pro plan includes all standard features.'}
                   </p>
                 )}
               </div>

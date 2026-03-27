@@ -540,7 +540,7 @@
   {
     "id": "F068",
     "description": "Solo-specific messaging on account page: 'Your Solo plan includes core PSA features...'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.2"
     ]
