@@ -6,6 +6,7 @@ import type {
   IProjectTicketLink,
   IProjectTicketLinkWithDetails,
   IProjectTaskCardInfo,
+  ITicketLinkedTask,
 } from '@alga-psa/types';
 import ProjectModel from './project';
 
@@ -768,6 +769,57 @@ const ProjectTaskModel = {
       }, {});
     } catch (error) {
       console.error('Error getting all task ticket links:', error);
+      throw error;
+    }
+  },
+
+  getLinkedTasksForTicket: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, ticketId: string): Promise<ITicketLinkedTask[]> => {
+    try {
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
+      const links = await knexOrTrx('project_ticket_links')
+        .where('project_ticket_links.ticket_id', ticketId)
+        .andWhere('project_ticket_links.tenant', tenant)
+        .whereNotNull('project_ticket_links.task_id')
+        .leftJoin('project_tasks', function() {
+          this.on('project_ticket_links.task_id', 'project_tasks.task_id')
+              .andOn('project_ticket_links.tenant', 'project_tasks.tenant');
+        })
+        .leftJoin('projects', function() {
+          this.on('project_ticket_links.project_id', 'projects.project_id')
+              .andOn('project_ticket_links.tenant', 'projects.tenant');
+        })
+        .leftJoin('project_phases', function() {
+          this.on('project_tasks.phase_id', 'project_phases.phase_id')
+              .andOn('project_tasks.tenant', 'project_phases.tenant');
+        })
+        .leftJoin('project_status_mappings as psm', function() {
+          this.on('project_tasks.project_status_mapping_id', 'psm.project_status_mapping_id')
+              .andOn('project_tasks.tenant', 'psm.tenant');
+        })
+        .leftJoin('statuses as s', function() {
+          this.on('psm.status_id', 's.status_id')
+              .andOn('psm.tenant', 's.tenant');
+        })
+        .leftJoin('standard_statuses as ss', function() {
+          this.on('psm.standard_status_id', 'ss.standard_status_id')
+              .andOn('psm.tenant', 'ss.tenant');
+        })
+        .select(
+          'project_ticket_links.link_id',
+          'project_tasks.task_id',
+          'project_tasks.task_name',
+          'projects.project_id',
+          'projects.project_name',
+          'project_phases.phase_id',
+          'project_phases.phase_name',
+          knexOrTrx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
+          knexOrTrx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+        );
+      return links;
+    } catch (error) {
+      console.error('Error getting linked tasks for ticket:', error);
       throw error;
     }
   },
