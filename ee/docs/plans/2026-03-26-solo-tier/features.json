@@ -419,7 +419,7 @@
   {
     "id": "F053",
     "description": "createLicenseCheckoutSession() emits single line item when userPriceId is null",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.2"
     ]

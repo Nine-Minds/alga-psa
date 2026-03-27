@@ -41,6 +41,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - Run unit tests: `npm run test:unit`
 - Run focused server unit tests from `server/`: `npx vitest run src/lib/tier-gating/assertTierAccess.test.ts`
 - Run focused EE SSO unit tests from `ee/server/`: `npx vitest run src/__tests__/unit/ssoActions.test.ts src/__tests__/unit/auth/getLinkedSsoProvidersAction.test.ts`
+- Run focused EE Stripe pricing tests from `ee/server/`: `npx vitest run src/__tests__/unit/stripeTierMapping.test.ts src/__tests__/unit/stripeService.tierPricing.test.ts`
 - Run focused mobile auth unit tests from `server/`: `npx vitest run src/test/unit/mobileAuth.test.ts`
 - Test Solo locally: Set tenant plan to 'solo' in DB: `UPDATE tenants SET plan = 'solo' WHERE tenant = '<id>'`
 - Test AI add-on: Insert into tenant_addons: `INSERT INTO tenant_addons (tenant, addon_key, activated_at) VALUES ('<id>', 'ai_assistant', NOW())`
@@ -125,6 +126,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F050 feature: Mobile auth exchange now returns the explicit upgrade message `"Mobile app access requires Pro or higher"` through the shared API error response when Solo tenants attempt to sign in on mobile.
 - (2026-03-26) Completed F051 feature: Added `alga-psa-solo -> solo` to the Stripe product-tier map so Solo subscriptions and webhooks can resolve the tenant plan without special-case fallback logic.
 - (2026-03-26) Completed F052 feature: Extended Stripe tier pricing to support Solo base-only prices so `getTierPriceIds('solo')` returns `{ basePriceId, userPriceId: null }` for monthly and annual billing while Pro/Premium keep base+per-user pricing.
+- (2026-03-26) Completed F053 feature: Updated Stripe checkout session creation to emit a single flat-rate line item for Solo pricing while preserving the existing base-plus-per-user checkout payload for Pro and Premium tiers.
 - (2026-03-26) Completed T001 test: isValidTier('solo') returns true
 - (2026-03-26) Completed T002 test: isValidTier('pro') and isValidTier('premium') still return true
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false
