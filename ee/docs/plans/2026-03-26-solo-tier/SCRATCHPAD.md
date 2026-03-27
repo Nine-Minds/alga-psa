@@ -148,3 +148,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T043 test: assertAddOnAccess works for Solo tier with AI add-on active
 - (2026-03-26) Completed T044 test: assertAddOnAccess works for Pro tier with AI add-on active
 - (2026-03-26) Completed T045 test: assertAddOnAccess works for Premium tier with AI add-on active
+- (2026-03-26) Completed T046 test: TierContext provides isSolo=true when tier is solo
