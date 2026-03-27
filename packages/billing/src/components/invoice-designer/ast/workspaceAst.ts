@@ -1044,11 +1044,45 @@ const mapDesignerNodeToAstNode = (
       const preservedAltExpression = isInvoiceTemplateValueExpression(metadata.astAltExpression)
         ? metadata.astAltExpression
         : null;
+
+      // Detect whether the user changed the src/alt after import.
+      // Follow the same pattern as resolveTextNodeContentExpression: compare the
+      // current value with the imported preview value and only preserve the original
+      // AST expression when the value is unchanged.
+      // For non-literal expressions (bindings, templates, paths) the imported
+      // preview value is an empty sentinel — any non-empty user-entered value
+      // means the user is overriding the dynamic expression with a static URL.
+      const srcChanged = preservedSrcExpression
+        ? (() => {
+            const importedPreview = asTrimmedString(metadata.__astSrcPreviewValue);
+            if (preservedSrcExpression.type === 'literal') {
+              // Literal: changed if the current value differs from the imported one.
+              return importedPreview.length > 0
+                ? src !== importedPreview
+                : src !== asTrimmedString(preservedSrcExpression.value);
+            }
+            // Non-literal (binding/template/path): the imported preview is '' (sentinel).
+            // If the user typed a non-empty URL, they want to override the expression.
+            return src.length > 0;
+          })()
+        : false;
+      const altChanged = preservedAltExpression
+        ? (() => {
+            const importedPreview = asTrimmedString(metadata.__astAltPreviewValue);
+            if (preservedAltExpression.type === 'literal') {
+              return importedPreview.length > 0
+                ? alt !== importedPreview
+                : alt !== asTrimmedString(preservedAltExpression.value);
+            }
+            return alt.length > 0;
+          })()
+        : false;
+
       return {
         ...createBaseNode(node),
         type: 'image',
-        src: preservedSrcExpression ?? { type: 'literal', value: src },
-        alt: preservedAltExpression ?? { type: 'literal', value: alt },
+        src: (!srcChanged && preservedSrcExpression) ? preservedSrcExpression : { type: 'literal', value: src },
+        alt: (!altChanged && preservedAltExpression) ? preservedAltExpression : { type: 'literal', value: alt },
       };
     }
     case 'signature':
@@ -1622,12 +1656,24 @@ export const importInvoiceTemplateAstToWorkspace = (
         } else if (inputNode.type === 'image') {
           metadata.astSrcExpression = inputNode.src;
           if (inputNode.src.type === 'literal') {
-            metadata.src = String(inputNode.src.value ?? '');
+            const literalSrc = String(inputNode.src.value ?? '');
+            metadata.src = literalSrc;
+            metadata.url = literalSrc;
+            metadata.__astSrcPreviewValue = literalSrc;
+          } else {
+            // Non-literal (binding/template/path): leave metadata.src empty but
+            // record an empty sentinel so the export can detect when the user
+            // replaces the dynamic expression with a typed URL.
+            metadata.__astSrcPreviewValue = '';
           }
           if (inputNode.alt) {
             metadata.astAltExpression = inputNode.alt;
             if (inputNode.alt.type === 'literal') {
-              metadata.alt = String(inputNode.alt.value ?? '');
+              const literalAlt = String(inputNode.alt.value ?? '');
+              metadata.alt = literalAlt;
+              metadata.__astAltPreviewValue = literalAlt;
+            } else {
+              metadata.__astAltPreviewValue = '';
             }
           }
         } else if (inputNode.type === 'section') {

@@ -26,10 +26,16 @@ export const renderInvoiceTemplateAstHtmlDocument = async (
   const additionalCss = options.additionalCss ?? '';
   const bodyClassName = options.bodyClassName ? ` class="${escapeHtml(options.bodyClassName)}"` : '';
 
+  // When Puppeteer renders HTML via page.setContent(), the page origin is about:blank.
+  // Relative URLs (e.g. /api/documents/view/...) cannot resolve without a base href.
+  // Use NEXTAUTH_URL so that tenant logo and other API-served images load correctly.
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_URL || '';
+  const baseTag = baseUrl ? `\n    <base href="${escapeHtml(baseUrl)}" />` : '';
+
   return `<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-8" />${baseTag}
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${title}</title>
     <style>
