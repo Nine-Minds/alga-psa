@@ -315,7 +315,7 @@
   {
     "id": "F040",
     "description": "Settings sidebar items remain visible regardless of tier (no requiredFeature filtering in settings mode)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R4.4"
     ]
