@@ -759,7 +759,7 @@
   {
     "id": "T093",
     "description": "addUser action allows adding first user on Solo plan",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
