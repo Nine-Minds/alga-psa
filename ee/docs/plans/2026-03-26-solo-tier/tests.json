@@ -807,7 +807,7 @@
   {
     "id": "T099",
     "description": "AccountManagement shows 'Upgrade to Pro' card for Solo tenants",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
