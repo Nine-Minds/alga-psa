@@ -88,6 +88,7 @@ const QuoteTemplatesList: React.FC<QuoteTemplatesListProps> = ({ onEdit, onCreat
     {
       title: 'Title',
       dataIndex: 'title' as const,
+      render: (value: string | null | undefined) => value || '—',
     },
     {
       title: 'Items',

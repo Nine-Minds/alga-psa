@@ -102,6 +102,7 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
     {
       title: 'Quote #',
       dataIndex: 'display_quote_number' as const,
+      render: (value: string | null | undefined) => value || '—',
     },
     {
       title: 'Client',
@@ -111,6 +112,7 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
     {
       title: 'Title',
       dataIndex: 'title' as const,
+      render: (value: string | null | undefined) => value || '—',
     },
     {
       title: 'Amount',
