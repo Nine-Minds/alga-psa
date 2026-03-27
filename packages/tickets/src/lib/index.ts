@@ -21,10 +21,12 @@ export { TicketMobileEditorRuntime } from './ticketMobileEditorRuntime';
 export {
   buildTicketStatusFilterOptions,
   createTicketStatusNameFilterValue,
+  isTicketStatusClosedFilter,
   isTicketStatusOpenFilter,
   parseTicketStatusFilterValue,
   shouldApplyOpenOnlyStatusFilter,
   TICKET_STATUS_FILTER_ALL,
+  TICKET_STATUS_FILTER_CLOSED,
   TICKET_STATUS_FILTER_OPEN,
 } from './ticketStatusFilter';
 export type {

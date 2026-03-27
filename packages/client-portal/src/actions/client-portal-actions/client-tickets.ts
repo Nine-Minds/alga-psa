@@ -16,7 +16,10 @@ import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { createTenantKnex, getConnection, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
-import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
+import {
+  getTicketOrigin,
+  parseTicketStatusFilterValue,
+} from '@alga-psa/tickets/lib';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions';
 
 const clientTicketSchema = z.object({
@@ -58,6 +61,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
     console.log('Debug - User ID:', user.user_id);
     console.log('Debug - Tenant:', tenant);
     console.log('Debug - Client user:', user.user_id);
+    const parsedStatusFilter = parseTicketStatusFilterValue(status);
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get user's client_id
@@ -153,15 +157,16 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       });
 
     // Filter by status
-    if (status === 'all') {
+    if (parsedStatusFilter.kind === 'all') {
       // No filter, show all tickets
-    } else if (status === 'open') {
-      query = query.whereNull('t.closed_at');
-    } else if (status === 'closed') {
-      query = query.whereNotNull('t.closed_at');
-    } else if (status) {
-      // Filter by specific status_id
-      query = query.where('t.status_id', status);
+    } else if (parsedStatusFilter.kind === 'open') {
+      query = query.where('s.is_closed', false);
+    } else if (parsedStatusFilter.kind === 'closed') {
+      query = query.where('s.is_closed', true);
+    } else if (parsedStatusFilter.kind === 'name') {
+      query = query.where('s.name', parsedStatusFilter.statusName);
+    } else if (parsedStatusFilter.kind === 'id') {
+      query = query.where('t.status_id', parsedStatusFilter.statusId);
     }
 
       const tickets = await query.orderBy('t.entered_at', 'desc');

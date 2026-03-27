@@ -4,6 +4,7 @@ import {
   createTicketStatusNameFilterValue,
   parseTicketStatusFilterValue,
   TICKET_STATUS_FILTER_ALL,
+  TICKET_STATUS_FILTER_CLOSED,
   TICKET_STATUS_FILTER_OPEN,
   type TicketStatusFilterOption,
 } from './ticketStatusFilter';
@@ -22,6 +23,12 @@ describe('ticketStatusFilter', () => {
     expect(parseTicketStatusFilterValue(createTicketStatusNameFilterValue('Needs Review'))).toEqual({
       kind: 'name',
       statusName: 'Needs Review',
+    });
+  });
+
+  it('parses the closed sentinel filter value', () => {
+    expect(parseTicketStatusFilterValue(TICKET_STATUS_FILTER_CLOSED)).toEqual({
+      kind: 'closed',
     });
   });
 
