@@ -110,7 +110,7 @@ interface TicketDetailsProps {
     initialAvailableAgents?: IUserWithRoles[];
     initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
     initialContactMap?: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>;
-    statusOptions?: { value: string; label: string; is_closed?: boolean; className?: string }[];
+    statusOptions?: { value: string; label: string; is_closed?: boolean; className?: string; board_id?: string | null }[];
     agentOptions?: { value: string; label: string }[];
     boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string }[];
@@ -237,13 +237,19 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
 
-    const closedStatusOptions = useMemo(
-        () =>
-            (statusOptions || [])
-                .filter((opt) => !!opt.is_closed)
-                .map(({ value, label }) => ({ value, label })),
-        [statusOptions]
-    );
+    const closedStatusOptions = useMemo(() => {
+        const boardId = ticket.board_id;
+        if (!boardId) {
+            return [];
+        }
+        return (statusOptions || [])
+            .filter(
+                (opt) =>
+                    !!opt.is_closed &&
+                    opt.board_id === boardId
+            )
+            .map(({ value, label }) => ({ value, label }));
+    }, [statusOptions, ticket.board_id]);
     const [board, setBoard] = useState<any>(initialBoard);
     const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);

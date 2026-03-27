@@ -49,7 +49,7 @@ interface TicketDetailsContainerProps {
       }
     >;
     options: {
-      status: { value: string; label: string; is_closed?: boolean }[];
+      status: { value: string; label: string; is_closed?: boolean; board_id?: string | null }[];
       agent: { value: string; label: string }[];
       board: { value: string; label: string }[];
       priority: { value: string; label: string }[];
