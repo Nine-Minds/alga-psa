@@ -6,7 +6,11 @@
   "tags": ["scope:clients", "type:vertical"],
   "targets": {
     "build": {
-      "executor": "nx:noop"
+      "executor": "nx:run-script",
+      "options": {
+        "script": "build"
+      },
+      "dependsOn": ["^build"]
     },
     "test": {
       "executor": "@nx/vitest:test",
