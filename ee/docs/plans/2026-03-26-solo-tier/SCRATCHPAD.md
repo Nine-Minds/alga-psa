@@ -143,3 +143,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T038 test: getActiveAddOns returns empty array when no add-ons exist for tenant
 - (2026-03-26) Completed T039 test: getActiveAddOns excludes expired add-ons (expires_at < now)
 - (2026-03-26) Completed T040 test: assertAddOnAccess throws when tenant lacks the requested add-on
+- (2026-03-26) Completed T041 test: assertAddOnAccess passes when tenant has the requested add-on

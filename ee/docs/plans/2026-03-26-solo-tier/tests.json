@@ -335,7 +335,7 @@
   {
     "id": "T041",
     "description": "assertAddOnAccess passes when tenant has the requested add-on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
