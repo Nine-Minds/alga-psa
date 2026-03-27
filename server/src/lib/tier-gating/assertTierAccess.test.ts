@@ -73,6 +73,17 @@ describe('assertTierAccess', () => {
       await expect(assertTierAccess(TIER_FEATURES.INTEGRATIONS)).resolves.toBeUndefined();
     });
 
+    it('does not throw for solo tenants during an active Solo -> Pro trial', async () => {
+      vi.mocked(getSession).mockResolvedValue({
+        user: {
+          plan: 'solo',
+          solo_pro_trial_end: '2099-04-25T00:00:00.000Z',
+        },
+      } as any);
+
+      await expect(assertTierAccess(TIER_FEATURES.MOBILE_ACCESS)).resolves.toBeUndefined();
+    });
+
     it('throws TierAccessError for solo tenant accessing EXTENSIONS', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: 'solo' },
@@ -94,6 +105,19 @@ describe('assertTierAccess', () => {
       await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toThrow(TierAccessError);
       await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toMatchObject({
         currentTier: 'pro',
+      });
+    });
+
+    it('reverts expired Solo -> Pro trials back to solo access', async () => {
+      vi.mocked(getSession).mockResolvedValue({
+        user: {
+          plan: 'solo',
+          solo_pro_trial_end: '2000-04-25T00:00:00.000Z',
+        },
+      } as any);
+
+      await expect(assertTierAccess(TIER_FEATURES.MOBILE_ACCESS)).rejects.toMatchObject({
+        currentTier: 'solo',
       });
     });
   });

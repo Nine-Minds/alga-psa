@@ -913,7 +913,7 @@
   {
     "id": "T112",
     "description": "Solo->Pro trial grants access to all Pro tier features during trial period",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]

@@ -98,4 +98,42 @@ describe('TierContext', () => {
     expect(result.current.hasAddOn(ADD_ONS.AI_ASSISTANT)).toBe(true);
     expect(result.current.hasFeature(TIER_FEATURES.ENTRA_SYNC)).toBe(true);
   });
+
+  it('unlocks Pro-tier features during an active Solo -> Pro trial', () => {
+    useSession.mockReturnValue({
+      status: 'authenticated',
+      update: vi.fn(),
+      data: {
+        user: {
+          plan: 'solo',
+          addons: [],
+          solo_pro_trial_end: '2099-04-25T00:00:00.000Z',
+        },
+      },
+    });
+
+    const { result } = renderHook(() => useTier(), { wrapper });
+
+    expect(result.current.isSoloProTrial).toBe(true);
+    expect(result.current.hasFeature(TIER_FEATURES.MOBILE_ACCESS)).toBe(true);
+  });
+
+  it('reverts Solo -> Pro trial feature access after the trial end passes', () => {
+    useSession.mockReturnValue({
+      status: 'authenticated',
+      update: vi.fn(),
+      data: {
+        user: {
+          plan: 'solo',
+          addons: [],
+          solo_pro_trial_end: '2000-04-25T00:00:00.000Z',
+        },
+      },
+    });
+
+    const { result } = renderHook(() => useTier(), { wrapper });
+
+    expect(result.current.isSoloProTrial).toBe(false);
+    expect(result.current.hasFeature(TIER_FEATURES.MOBILE_ACCESS)).toBe(false);
+  });
 });
