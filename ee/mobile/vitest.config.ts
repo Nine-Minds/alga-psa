@@ -13,6 +13,7 @@ export default defineConfig({
       "expo-modules-core": path.resolve(__dirname, "test/mocks/expo-modules-core.ts"),
       "expo-localization": path.resolve(__dirname, "test/mocks/expo-localization.ts"),
       "rn-emoji-keyboard": path.resolve(__dirname, "test/mocks/rn-emoji-keyboard.ts"),
+      "@expo/vector-icons": path.resolve(__dirname, "test/mocks/expo-vector-icons.ts"),
     },
   },
   test: {

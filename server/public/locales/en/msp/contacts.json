@@ -1,0 +1,573 @@
+{
+  "common": {
+    "actions": {
+      "add": "Add",
+      "back": "Back",
+      "cancel": "Cancel",
+      "close": "Close",
+      "create": "Create",
+      "delete": "Delete",
+      "downloadCsv": "Download CSV",
+      "edit": "Edit",
+      "import": "Import",
+      "reactivate": "Reactivate",
+      "remove": "Remove",
+      "retry": "Retry",
+      "save": "Save",
+      "saving": "Saving...",
+      "search": "Search",
+      "select": "Select",
+      "update": "Update",
+      "uploadCsv": "Upload CSV",
+      "view": "View"
+    },
+    "states": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "loading": "Loading...",
+      "na": "N/A",
+      "none": "None"
+    },
+    "no": "No",
+    "yes": "Yes"
+  },
+  "contactsPage": {
+    "title": "Contacts Page",
+    "description": "Main contacts management page with search, filters, list view, and bulk actions",
+    "heading": "Contacts",
+    "addContact": "+ Add Contact",
+    "actions": "Actions",
+    "searchPlaceholder": "Search contacts",
+    "resetFilters": "Reset",
+    "unknownClient": "Unknown Client",
+    "noClient": "No Client",
+    "thisContact": "this contact",
+    "actionsMenuSrOnly": "Open menu",
+    "quickView": "Quick View",
+    "deleteValidationError": "Failed to validate deletion. Please try again.",
+    "deleteSuccess": "{{name}} has been deleted successfully.",
+    "deleteError": "Failed to delete contact. Please try again.",
+    "markInactiveSuccess": "{{name}} has been marked as inactive successfully.",
+    "markInactiveError": "An error occurred while marking the contact as inactive. Please try again.",
+    "statusOptions": {
+      "all": "All contacts",
+      "active": "Active contacts",
+      "inactive": "Inactive contacts"
+    },
+    "table": {
+      "name": "Name",
+      "created": "Created",
+      "email": "Email",
+      "phoneNumber": "Phone Number",
+      "client": "Client",
+      "tags": "Tags",
+      "actions": "Actions"
+    },
+    "lastPhoneTypeUsage": {
+      "title": "Last Phone Type Usage",
+      "message": "The following custom phone type{{suffix}} no longer used by any contact: {{labels}}. Delete the type definition{{definitionSuffix}}, or keep for future use?",
+      "deleteType": "Delete Type",
+      "keepType": "Keep Type"
+    }
+  },
+  "contactDetails": {
+    "title": "Contact Details",
+    "description": "Contact detail view with tabs, inline editing, portal access, tags, and notes",
+    "backToContacts": "Back to Contacts",
+    "inactiveBadge": "inactive",
+    "actions": {
+      "goToContact": "Go to contact",
+      "saveChanges": "Save Changes"
+    },
+    "tabs": {
+      "details": "Details",
+      "tickets": "Tickets",
+      "documents": "Documents",
+      "interactions": "Interactions",
+      "notes": "Notes",
+      "portal": "Portal"
+    },
+    "fields": {
+      "fullName": "Full Name",
+      "client": "Client",
+      "email": "Email",
+      "role": "Role",
+      "inboundTicketDestinationOverride": "Inbound ticket destination override",
+      "useClientDestination": "Use client destination",
+      "inboundTicketDestinationHelp": "If set, this overrides the client destination for this exact sender contact. Precedence: Contact override -> Client destination -> Provider default.",
+      "tags": "Tags",
+      "notes": "Notes"
+    },
+    "status": {
+      "label": "Status",
+      "helper": "Set contact status as active or inactive",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "loading": {
+      "destinations": "Loading destinations...",
+      "ticketFilters": "Loading ticket filters..."
+    },
+    "empty": {
+      "notSet": "Not set",
+      "unknownClient": "Unknown Client"
+    },
+    "client": {
+      "noClientAssigned": "No client assigned"
+    },
+    "delete": {
+      "successTitle": "Contact Deleted",
+      "successDescription": "Contact has been deleted successfully.",
+      "validationFailed": "Failed to validate deletion. Please try again.",
+      "failed": "Failed to delete contact. Please try again."
+    },
+    "deactivate": {
+      "successTitle": "Contact Deactivated",
+      "successDescription": "Contact has been marked as inactive successfully."
+    },
+    "reactivate": {
+      "successTitle": "Contact Reactivated",
+      "successDescription": "Contact has been reactivated successfully."
+    },
+    "update": {
+      "successTitle": "Contact Updated",
+      "successDescription": "Contact details have been saved successfully."
+    },
+    "saveFailed": {
+      "title": "Save Failed",
+      "description": "Could not save contact details. Please try again."
+    },
+    "error": {
+      "title": "Error"
+    },
+    "errors": {
+      "permissionDenied": "Permission denied. Please contact your administrator if you need additional access.",
+      "markInactiveFailed": "An error occurred while marking the contact as inactive. Please try again.",
+      "reactivateFailed": "An error occurred while reactivating the contact. Please try again."
+    }
+  },
+  "contactsImportDialog": {
+    "title": "Import Contacts",
+    "description": "CSV import dialog for contact mapping, preview, validation, and results",
+    "fields": {
+      "name": "Name *",
+      "email": "Email *",
+      "defaultPhoneNumber": "Default Phone Number",
+      "client": "Client",
+      "tags": "Tags",
+      "role": "Role",
+      "notes": "Notes"
+    },
+    "unassigned": "Select field",
+    "errors": {
+      "emptyCsv": "CSV file is empty or invalid",
+      "readingCsv": "Error reading CSV file: {{message}}",
+      "unknownError": "Unknown error",
+      "requiredFieldNotMapped": "Required field \"{{field}}\" is not mapped",
+      "nameRequired": "Name is required",
+      "emailRequired": "Email is required",
+      "invalidEmail": "Invalid email format",
+      "processingCsv": "Error processing CSV data",
+      "importFailed": "Import failed"
+    },
+    "importOptions": {
+      "updateExisting": {
+        "title": "Update existing contacts",
+        "description": "Replace data for existing contacts"
+      },
+      "skipInvalid": {
+        "title": "Skip invalid records",
+        "description": "Continue import even if some records have validation errors"
+      }
+    },
+    "results": {
+      "title": "Import Results",
+      "downloadFailedRecords": "Download Failed Records"
+    },
+    "table": {
+      "status": "Status",
+      "name": "Name",
+      "email": "Email",
+      "message": "Message",
+      "exists": "Exists",
+      "issues": "Issues"
+    },
+    "tooltips": {
+      "importSuccessful": "Import successful",
+      "importFailed": "Import failed",
+      "validReady": "Valid - Ready to import",
+      "invalidHasErrors": "Invalid - Has errors"
+    },
+    "upload": {
+      "help": "Upload a CSV file with contact data",
+      "requiredLabel": "Required:",
+      "contactFieldsLabel": "Contact fields:",
+      "contactFieldsDescription": "phone_number (imports as the default work phone), role, notes, tags",
+      "clientFieldLabel": "Client field:",
+      "clientFieldDescription": "client (matches existing clients by name)",
+      "noteLabel": "Note:",
+      "noteDescription": "CSV import/export in v1 handles one default phone number per contact. Tags should be comma-separated values.",
+      "downloadTemplate": "Download CSV Template"
+    },
+    "mapping": {
+      "title": "Map Contact Fields to CSV Columns",
+      "description": "Select which CSV column contains the data for each contact field. Fields marked with * are required.",
+      "contactFieldHeader": "Contact Field",
+      "csvColumnHeader": "Select CSV Column",
+      "notMapped": "Not mapped",
+      "requiredFieldsNote": "* Required fields must be mapped for import to proceed",
+      "largeImportWarning": "You are importing {{count}} records. Processing may take a moment.",
+      "processing": "Processing...",
+      "preview": "Preview"
+    },
+    "preview": {
+      "title": "Preview Import",
+      "totalRecords": "Total records:",
+      "valid": "Valid:",
+      "invalid": "Invalid:"
+    },
+    "importing": {
+      "title": "Importing Contacts",
+      "processing": "Processing: {{current}} of {{total}}",
+      "currentItem": "Currently processing: {{item}}"
+    },
+    "complete": {
+      "title": "Import Complete",
+      "successMessage": "Successfully imported {{count}} contacts"
+    },
+    "confirmUpdate": {
+      "title": "Update Existing Contacts",
+      "message": "{{count}} contacts already exist. Do you want to update them with the new data?"
+    }
+  },
+  "contactPhoneNumbersEditor": {
+    "title": "Phone Numbers",
+    "description": "Phone number editor with type management, validation, defaults, and extension support",
+    "actions": {
+      "addPhone": "Add phone"
+    },
+    "empty": "No phone numbers yet.",
+    "phoneTypes": {
+      "work": "Work",
+      "mobile": "Mobile",
+      "home": "Home",
+      "fax": "Fax",
+      "other": "Other",
+      "custom": "Custom"
+    },
+    "row": {
+      "title": "Phone {{number}}",
+      "defaultDescription": "Default phone number",
+      "secondaryDescription": "Secondary phone number",
+      "defaultLabel": "Default",
+      "moveUp": "Move phone {{number}} up",
+      "moveDown": "Move phone {{number}} down",
+      "remove": "Remove phone {{number}}"
+    },
+    "fields": {
+      "phoneNumber": "Phone Number",
+      "phoneType": "Phone Type",
+      "customPhoneType": "Custom Phone Type",
+      "customTypePlaceholder": "Select or enter a custom phone type",
+      "customTypeSearchPlaceholder": "Search or enter a custom phone type...",
+      "customTypeEmpty": "No matching custom phone types.",
+      "customTypeUseValue": "Use \"{{value}}\""
+    },
+    "validation": {
+      "selectExactlyOneDefault": "Select exactly one default phone number.",
+      "phoneRow": "Phone {{number}}",
+      "enterCompletePhoneNumber": "Enter a complete phone number.",
+      "enterCustomPhoneType": "Enter a custom phone type.",
+      "customTypesUnique": "Custom phone type labels must be unique."
+    },
+    "lastTypeUsage": {
+      "title": "Last Phone Type Usage",
+      "message": "This is the last use of custom phone type \"{{label}}\". Delete the type definition, or keep it for future use?",
+      "removeAndDelete": "Remove & Delete Type",
+      "removeAndKeep": "Remove & Keep Type"
+    }
+  },
+  "contactPortalTab": {
+    "title": "Portal Access",
+    "description": "Client portal access management for a contact, including invitations and role updates",
+    "loadingDescription": "Loading portal information...",
+    "information": "Invitation emails will be sent from your organization's email system. Replies will go to your client's default location email address.",
+    "activeAccess": "Portal access active",
+    "noAccess": {
+      "title": "No Portal Access",
+      "description": "This contact does not have client portal access yet"
+    },
+    "portalAdmin": {
+      "label": "Portal Administrator",
+      "helper": "When enabled, the user will be created with Client Admin role. When disabled, they'll get Client User role."
+    },
+    "roles": {
+      "label": "Portal Roles",
+      "none": "No roles assigned",
+      "placeholder": "Select role to add",
+      "addButton": "Add Role"
+    },
+    "userStatus": {
+      "label": "User Status",
+      "active": "User is currently active",
+      "inactive": "User is currently inactive"
+    },
+    "lastLogin": {
+      "label": "Last Login",
+      "via": "via {{method}}"
+    },
+    "history": {
+      "title": "Invitation History",
+      "description": "Recent portal invitations sent to this contact",
+      "empty": "No portal invitations have been sent to this contact yet.",
+      "sentPrefix": "Sent:",
+      "expiresPrefix": "Expires:",
+      "usedPrefix": "Used:",
+      "status": {
+        "pending": "Pending",
+        "used": "Used",
+        "expired": "Expired",
+        "revoked": "Revoked"
+      }
+    },
+    "actions": {
+      "sendInvitation": "Send Portal Invitation",
+      "sending": "Sending...",
+      "refresh": "Refresh",
+      "refreshing": "Refreshing...",
+      "resend": "Resend",
+      "resending": "Resending...",
+      "revoke": "Revoke"
+    },
+    "toast": {
+      "successTitle": "Success",
+      "errorTitle": "Error",
+      "permissionDeniedTitle": "Permission Denied",
+      "loadError": "Failed to load portal information",
+      "refreshHistoryError": "Failed to refresh invitation history",
+      "sendInvitePermissionDenied": "You do not have permission to send invitations",
+      "sendInviteSuccess": "Portal invitation sent successfully!",
+      "sendInviteFailed": "Failed to send invitation",
+      "revokeInviteSuccess": "Invitation revoked successfully",
+      "revokeInviteFailed": "Failed to revoke invitation",
+      "resendInviteSuccess": "Portal invitation resent successfully!",
+      "resendInviteFailed": "Failed to resend invitation",
+      "updatePortalSettingsPermissionDenied": "You do not have permission to update client settings",
+      "portalAdminEnabled": "Contact marked as admin for client portal",
+      "portalAdminDisabled": "Contact unmarked as admin for client portal",
+      "updatePortalAdminFailed": "Failed to update status",
+      "updateAdminFailed": "Failed to update admin flag",
+      "updateRolesPermissionDenied": "You do not have permission to update user roles",
+      "roleAdded": "Role added successfully",
+      "addRoleFailed": "Failed to add role",
+      "roleRemoved": "Role removed successfully",
+      "removeRoleFailed": "Failed to remove role",
+      "updateStatusPermissionDenied": "You do not have permission to update user status",
+      "userActivated": "User activated successfully",
+      "userDeactivated": "User deactivated successfully",
+      "updateUserStatusFailed": "Failed to update user status"
+    }
+  },
+  "quickAddContact": {
+    "title": "Add New Contact",
+    "description": "Quick-add form for creating a contact with client, role, phone, and tag fields",
+    "dialog": {
+      "title": "Add New Contact"
+    },
+    "errorFallback": {
+      "title": "Something went wrong:",
+      "tryAgain": "Try again"
+    },
+    "actions": {
+      "submit": "Add Contact"
+    },
+    "fields": {
+      "fullName": "Full Name *",
+      "email": "Email *",
+      "clientOptional": "Client (Optional)",
+      "role": "Role",
+      "rolePlaceholder": "e.g., Manager, Developer, etc.",
+      "notes": "Notes",
+      "notesPlaceholder": "Add any additional notes about the contact..."
+    },
+    "status": {
+      "label": "Status",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "validation": {
+      "alertIntro": "Please fix the following errors:",
+      "fullNameRequired": "Full name is required",
+      "fullNameEmpty": "Full name cannot be empty",
+      "fullNameSpaces": "Full name cannot contain only spaces",
+      "emailRequired": "Email address is required",
+      "emailSpaces": "Email address cannot contain only spaces",
+      "roleSpaces": "Role cannot contain only spaces",
+      "roleLength": "Role must be 100 characters or less",
+      "roleCharacters": "Role must contain letters or numbers",
+      "notesSpaces": "Notes cannot contain only spaces"
+    },
+    "toasts": {
+      "warningTitle": "Warning",
+      "tagsFailed": "{{count}} tag(s) could not be created",
+      "contactCreated": "Contact created",
+      "contactAdded": "{{name}} has been added successfully."
+    },
+    "errors": {
+      "createContactTitle": "Error creating contact",
+      "unexpected": "An unexpected error occurred. Please try again.",
+      "validationTitle": "Validation Error",
+      "emailExistsTitle": "Email Already Exists",
+      "invalidReferenceTitle": "Invalid Reference",
+      "systemTitle": "System Error",
+      "genericTitle": "Error",
+      "closeMessage": "Close error message",
+      "createContactHeading": "Error creating contact:",
+      "validationPrefix": "Please fix the following:",
+      "emailExistsPrefix": "Email already exists:",
+      "invalidReferencePrefix": "Invalid reference:",
+      "systemPrefix": "System error:"
+    }
+  },
+  "contactDetailsEdit": {
+    "title": "Edit Contact - {{name}}",
+    "heading": "Edit Contact: {{name}}",
+    "inactiveBadge": "inactive",
+    "description": "Editable contact form used from the detail view and drawer flows",
+    "validation": {
+      "fullNameRequired": "Full name is required",
+      "emailRequired": "Email address is required",
+      "invalidEmail": "Please enter a valid email address"
+    },
+    "errors": {
+      "validationPrefix": "Please fix the following:",
+      "emailExists": "Email already exists: A contact with this email address already exists in the system",
+      "invalidReferencePrefix": "Invalid reference:",
+      "systemPrefix": "System error:",
+      "saveFailed": "An error occurred while saving. Please try again.",
+      "unexpected": "An unexpected error occurred. Please try again."
+    },
+    "fields": {
+      "fullName": "Full Name",
+      "email": "Email",
+      "role": "Role",
+      "rolePlaceholder": "e.g., Manager, Developer, etc.",
+      "phoneNumbers": "Phone numbers:",
+      "inboundTicketDestinationOverride": "Inbound ticket destination override:",
+      "inboundTicketDestinationHelp": "Precedence: Contact override -> Client destination -> Provider default.",
+      "useClientDestination": "Use client destination",
+      "client": "Client:",
+      "status": "Status:",
+      "notes": "Notes:",
+      "notesPlaceholder": "Add any additional notes about the contact...",
+      "tags": "Tags:"
+    },
+    "loading": {
+      "destinations": "Loading destinations..."
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
+  },
+  "contactDetailsView": {
+    "title": "Contact Details - {{name}}",
+    "description": "Read-oriented contact summary with associated client, phones, and metadata",
+    "actions": {
+      "goToContact": "Go to contact"
+    },
+    "empty": {
+      "notSet": "Not set",
+      "unknownClient": "Unknown Client"
+    },
+    "phoneTypes": {
+      "work": "Work",
+      "mobile": "Mobile",
+      "home": "Home",
+      "fax": "Fax",
+      "other": "Other"
+    },
+    "fields": {
+      "fullName": "Full Name",
+      "email": "Email",
+      "phone": "Phone:",
+      "defaultPhone": "Default",
+      "client": "Client:",
+      "noClientAssigned": "No client assigned",
+      "role": "Role",
+      "status": "Status",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "notes": "Notes:",
+      "tags": "Tags:"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "sections": {
+      "documents": "Documents"
+    },
+    "errors": {
+      "loadTagsSystem": "An unexpected error occurred while loading tags. Please try again or contact support.",
+      "loadTagsFailed": "Failed to load tags. Please try refreshing the page.",
+      "unexpected": "An unexpected error occurred. Please try again.",
+      "clientNotFound": "Client not found. The client may have been deleted.",
+      "loadClientSystem": "An unexpected error occurred while loading client details. Please try again or contact support.",
+      "clientMissing": "The client no longer exists in the system.",
+      "loadClientFailed": "Failed to load client details. Please try again.",
+      "updateClientFailedWithMessage": "Failed to update client: {{message}}",
+      "updateClientFailed": "Failed to update client. Please try again."
+    }
+  },
+  "clientContactsList": {
+    "title": "Client Contacts",
+    "description": "Embedded client-specific contacts list with filters and row actions",
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "phoneNumber": "Phone Number",
+      "actions": "Actions"
+    },
+    "filter": {
+      "show": "Show:",
+      "active": "Active Contacts",
+      "inactive": "Inactive Contacts",
+      "all": "All Contacts"
+    },
+    "actions": {
+      "openMenu": "Open menu",
+      "quickView": "Quick View",
+      "addNewContact": "Add New Contact"
+    },
+    "errors": {
+      "loadFailed": "Failed to load contacts.",
+      "loadingTitle": "Error loading contacts",
+      "retryFailed": "Failed to load contacts. Please try again."
+    }
+  },
+  "contactsLayout": {
+    "title": "Contacts Layout",
+    "description": "Contacts route shell and page chrome"
+  },
+  "contactsSkeleton": {
+    "title": "Contacts Loading State",
+    "description": "Loading placeholders for contacts list and detail surfaces"
+  },
+  "contactAvatarUpload": {
+    "title": "Contact Avatar Upload",
+    "description": "Avatar upload affordance for contact profile images"
+  },
+  "contactNotesPanel": {
+    "title": "Notes & Quick Info",
+    "description": "Rich text notes panel with legacy note display and save/retry actions",
+    "legacy": {
+      "initialNote": "Initial Note"
+    },
+    "errors": {
+      "loadTitle": "Notes failed to load",
+      "unknown": "Unknown error"
+    },
+    "lastUpdated": "Last updated: {{date}}"
+  }
+}

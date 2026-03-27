@@ -3,12 +3,14 @@ import { Copy, Check } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { cn } from '@alga-psa/ui';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface CopyableFieldProps {
   label: string;
   value: string | null | undefined;
   showCopyButton?: boolean;
   truncate?: boolean;
+  copyId?: string;
 }
 
 export const CopyableField: React.FC<CopyableFieldProps> = ({
@@ -16,7 +18,9 @@ export const CopyableField: React.FC<CopyableFieldProps> = ({
   value,
   showCopyButton = true,
   truncate = false,
+  copyId,
 }) => {
+  const { t } = useTranslation('msp/assets');
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -31,7 +35,9 @@ export const CopyableField: React.FC<CopyableFieldProps> = ({
     return (
       <div className="flex flex-col">
         <span className="text-xs text-gray-500">{label}</span>
-        <span className="text-sm text-gray-400">N/A</span>
+        <span className="text-sm text-gray-400">
+          {t('common.states.na', { defaultValue: 'N/A' })}
+        </span>
       </div>
     );
   }
@@ -47,9 +53,13 @@ export const CopyableField: React.FC<CopyableFieldProps> = ({
           {value}
         </span>
         {showCopyButton && (
-          <Tooltip content={copied ? 'Copied' : 'Copy'}>
+          <Tooltip
+            content={copied
+              ? t('copyableField.actions.copied', { defaultValue: 'Copied' })
+              : t('copyableField.actions.copy', { defaultValue: 'Copy' })}
+          >
             <Button
-              id={`copy-${label.toLowerCase().replace(/\s+/g, '-')}`}
+              id={`copy-${copyId ?? label.toLowerCase().replace(/\s+/g, '-')}`}
               variant="ghost"
               size="icon"
               className={cn(

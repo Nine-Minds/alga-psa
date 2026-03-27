@@ -19,6 +19,8 @@ describe('extension-runtime', () => {
     expect(ctx.tenantId).toBe('tenant-mock');
     expect(await bindings.secrets.get('any')).toBe('secret');
     expect(typeof bindings.invoicing.createManualInvoice).toBe('function');
+    expect(typeof bindings.clients.list).toBe('function');
+    expect(typeof bindings.services.list).toBe('function');
   });
 
   it('wraps ui proxy calls', async () => {

@@ -1,0 +1,1192 @@
+{
+  "common": {
+    "actions": {
+      "add": "Toevoegen",
+      "back": "Rug",
+      "cancel": "Annuleren",
+      "close": "Dichtbij",
+      "copy": "Kopiëren",
+      "create": "Creëren",
+      "delete": "Verwijderen",
+      "download": "Downloaden",
+      "edit": "Bewerking",
+      "refresh": "Vernieuwen",
+      "remove": "Verwijderen",
+      "retry": "Opnieuw proberen",
+      "save": "Redden",
+      "saving": "Besparing...",
+      "search": "Zoekopdracht",
+      "select": "Selecteer",
+      "update": "Update",
+      "view": "Weergave"
+    },
+    "states": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "loading": "Laden...",
+      "na": "n.v.t.",
+      "none": "Geen"
+    },
+    "no": "Nee",
+    "yes": "Ja"
+  },
+  "assetAlertsSection": {
+    "title": "Sectie Activawaarschuwingen",
+    "description": "Wrapper voor ondernemingswaarschuwingen voor activaspecifieke RMM-waarschuwingen en herstelacties"
+  },
+  "assetCommandPalette": {
+    "title": "Commandopalet",
+    "description": "Commandopalet voor het zoeken naar assets en het starten van assetacties",
+    "register": {
+      "label": "Asset-opdrachtpalet",
+      "title": "Asset-opdrachtpalet"
+    },
+    "actions": {
+      "createAsset": {
+        "label": "Aanwinst maken",
+        "description": "Open snel toevoegen om een ​​nieuw activum te registreren"
+      },
+      "refreshData": {
+        "label": "Gegevens vernieuwen",
+        "description": "Haal assets opnieuw op van de server"
+      },
+      "reset": {
+        "label": "Opnieuw instellen",
+        "description": "Verwijder alle actieve filters en zoektermen"
+      }
+    },
+    "searchPlaceholder": "Zoek naar activa, klanten, tickets…",
+    "empty": "Nog geen wedstrijden. Probeer een ander zoekwoord.",
+    "groups": {
+      "quickActions": "Snelle acties",
+      "assets": "Activa",
+      "hints": "Tips"
+    },
+    "hint": {
+      "body": "Blijf typen om in de volledige lijst met activa te zoeken. Tickets en het opzoeken van klanten verschijnen later.",
+      "badge": "Binnenkort beschikbaar"
+    },
+    "values": {
+      "unassigned": "Niet toegewezen"
+    }
+  },
+  "assetDashboard": {
+    "title": "Activadashboard",
+    "description": "Assetdashboard-wrapper op het hoogste niveau die de activa-ervaring van de klant weergeeft"
+  },
+  "assetDashboardClient": {
+    "title": "Asset Dashboard-client",
+    "description": "Hoofdpagina met activalijst met filters, tabel- en rasterweergaven, bulkacties en ladestromen",
+    "reflection": {
+      "label": "Activadashboard"
+    },
+    "errors": {
+      "loadDrawerFailed": "Kan itemdetails momenteel niet laden. Probeer het opnieuw."
+    },
+    "details": {
+      "noIp": "Geen IP-adres",
+      "network": "Netwerk",
+      "local": "Lokaal",
+      "noDetails": "Geen details beschikbaar",
+      "unassigned": "Niet toegewezen"
+    },
+    "selection": {
+      "selectAllVisibleAssets": "Selecteer alle zichtbare assets",
+      "selectAsset": "Selecteer item {{name}}",
+      "selectedAssets": "{{count}} item{{suffix}} geselecteerd",
+      "clearSelection": "Duidelijke selectie",
+      "bulkActionsComingSoon": "Bulkacties binnenkort beschikbaar"
+    },
+    "actions": {
+      "openActionsForAsset": "Openstaande acties voor item {{name}}",
+      "viewDetails": "Bekijk details",
+      "editAsset": "Item bewerken",
+      "createTicket": "Ticket aanmaken",
+      "refreshData": "Gegevens vernieuwen"
+    },
+    "table": {
+      "name": "Naam",
+      "tag": "Label",
+      "type": "Type",
+      "details": "Details",
+      "status": "Status",
+      "agent": "Tussenpersoon",
+      "client": "Cliënt",
+      "location": "Locatie",
+      "actions": "Acties"
+    },
+    "metrics": {
+      "totalAssets": {
+        "title": "Totaal activa",
+        "helper": "Bij alle klanten"
+      },
+      "filteredView": {
+        "title": "Gefilterde weergave",
+        "helper": "Overeenkomende actieve filters"
+      },
+      "automationReady": {
+        "title": "Automatisering klaar",
+        "helper": "Actieve onderhoudsschema's",
+        "upcoming": "Aankomend: {{count}}",
+        "overdue": "Te laat: {{count}}"
+      },
+      "activeSchedules": {
+        "title": "Actieve schema's",
+        "helper": "Automatisering van de levenscyclus"
+      },
+      "overdueMaintenance": {
+        "title": "Onderhoud achterstallig",
+        "helper": "Heeft aandacht nodig"
+      },
+      "upcomingMaintenance": {
+        "title": "Aankomend onderhoud",
+        "helper": "Volgende 30 dagen"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Zoek op naam, tag of serienummer",
+      "reset": "Opnieuw instellen",
+      "status": "Status",
+      "type": "Type",
+      "agent": "Tussenpersoon",
+      "columns": "Kolommen",
+      "client": {
+        "loading": "Klanten laden…",
+        "placeholder": "Cliënt",
+        "clear": "Cliëntfilter wissen"
+      },
+      "rmmManaged": {
+        "managed": "RMM beheerd",
+        "unmanaged": "Niet beheerd"
+      },
+      "agentStatuses": {
+        "online": "Online",
+        "offline": "Offline",
+        "overdue": "Verlopen",
+        "unknown": "Onbekend"
+      }
+    },
+    "activeFilters": {
+      "status": "Status: {{value}}",
+      "type": "Type: {{value}}",
+      "client": "Klant: {{value}}",
+      "agent": "Agent: {{value}}"
+    },
+    "statuses": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "maintenance": "Onderhoud"
+    },
+    "types": {
+      "workstation": "Werkstation",
+      "server": "Server",
+      "network_device": "Netwerkapparaat",
+      "mobile_device": "Mobiel apparaat",
+      "printer": "Printer"
+    },
+    "columns": {
+      "select": "selecteren",
+      "name": "naam",
+      "asset_tag": "activatag",
+      "asset_type": "activatype",
+      "details": "details",
+      "status": "status",
+      "agent_status": "status van agent",
+      "client_name": "naam van de klant",
+      "location": "locatie",
+      "actions": "acties"
+    }
+  },
+  "assetDashboardGrid": {
+    "title": "Assetdashboardraster",
+    "description": "Samengestelde rasterindeling voor assetdetailkaarten, RMM-panelen en gerelateerde statuswidgets"
+  },
+  "assetDetailDrawer": {
+    "title": "Inventarisdetaillade",
+    "description": "Op lades gebaseerde snelle weergave van activa met acties, samenvattende gegevens en navigatie naar het volledige record",
+    "label": "Inventarisdetaillade",
+    "header": {
+      "title": "Activagegevens",
+      "subtitle": "Blijf in de context terwijl u de levenscyclus en configuratie beoordeelt"
+    },
+    "tabs": {
+      "overview": "Overzicht",
+      "maintenance": "Onderhoud",
+      "tickets": "Kaartjes",
+      "configuration": "Configuratie",
+      "documents": "Documenten"
+    },
+    "helper": {
+      "awaitingSelection": "In afwachting van activaselectie",
+      "selectedAsset": "{{name}} • {{tab}}"
+    },
+    "statuses": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "maintenance": "Onderhoud"
+    },
+    "empty": {
+      "selectAsset": "Selecteer een item om details te bekijken",
+      "nothingToDisplay": "Niets om weer te geven"
+    },
+    "actions": {
+      "openAssetRecord": "Activarecord openen",
+      "delete": "Verwijderen"
+    },
+    "overview": {
+      "assetTag": "Itemtag {{tag}} • {{type}}",
+      "client": "Klant: {{name}}",
+      "activeSchedules": "Actieve schema's",
+      "upcomingMaintenance": "Aankomend onderhoud",
+      "nextOn": "Volgende op {{date}}",
+      "completedMaintenance": "Voltooid onderhoud",
+      "compliance": "Naleving {{percent}}%",
+      "lastMaintenance": "Laatste onderhoud",
+      "noHistory": "Geen geschiedenis",
+      "maintenanceDataPending": "Onderhoudsgegevens verschijnen zodra de schema's zijn geconfigureerd.",
+      "assetSummary": "Samenvatting van activa",
+      "recentLifecycleEvents": "Recente levenscyclusgebeurtenissen"
+    },
+    "maintenance": {
+      "noSchedules": "Er zijn nog geen onderhoudsschema's gevonden voor dit asset.",
+      "totalSchedules": "Totaal schema's",
+      "active": "Actief",
+      "complianceRate": "Nalevingspercentage",
+      "history": "Onderhoudsgeschiedenis",
+      "loggedBy": "Gelogd door {{name}}",
+      "system": "systeem",
+      "noLogs": "Onderhoudslogboeken verschijnen hier na de eerste servicebeurt."
+    },
+    "tickets": {
+      "empty": "Er zijn nog geen tickets gekoppeld aan dit item. Gebruik de snelle actie om er een te maken.",
+      "linked": "Gekoppeld {{date}}",
+      "client": "Klant: {{name}}",
+      "assignee": "Ontvanger: {{name}}",
+      "openTicket": "Ticket openen"
+    },
+    "configuration": {
+      "coreAttributes": "Kernattributen",
+      "serialNumber": "Serienummer",
+      "location": "Locatie",
+      "purchaseDate": "Aankoopdatum",
+      "warrantyEnd": "Einde garantie",
+      "notProvided": "Niet voorzien"
+    },
+    "info": {
+      "client": "Cliënt",
+      "unassigned": "Niet toegewezen",
+      "assetTag": "Itemtag",
+      "status": "Status",
+      "created": "Gemaakt",
+      "updated": "Bijgewerkt",
+      "tenant": "Huurder"
+    },
+    "typeDetails": {
+      "workstation": "Details van het werkstation",
+      "networkDevice": "Details van netwerkapparaat",
+      "server": "Servergegevens",
+      "mobileDevice": "Gegevens van mobiele apparaten",
+      "printer": "Printergegevens",
+      "operatingSystem": "Besturingssysteem",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Opslag",
+      "gpu": "GPU",
+      "notProvided": "Niet voorzien",
+      "never": "Nooit",
+      "deviceType": "Apparaattype",
+      "managementIp": "Beheer-IP",
+      "portCount": "Aantal poorten",
+      "firmwareVersion": "Firmwareversie",
+      "poeSupport": "PoE-ondersteuning",
+      "powerDraw": "Stroomverbruik",
+      "virtualized": "Gevirtualiseerd",
+      "primaryIp": "Primair IP-adres",
+      "hypervisor": "Hypervisor",
+      "os": "OS",
+      "model": "Model",
+      "imei": "IMEI",
+      "phoneNumber": "Telefoonnummer",
+      "carrier": "Vervoerder",
+      "lastLogin": "Laatste aanmelding",
+      "lastCheckIn": "Laatste check-in",
+      "notReported": "Niet gerapporteerd",
+      "networkPrinter": "Netwerkprinter",
+      "ipAddress": "IP-adres",
+      "supportsColor": "Ondersteunt kleur",
+      "supportsDuplex": "Ondersteunt dubbelzijdig",
+      "monthlyDutyCycle": "Maandelijkse werkcyclus",
+      "monthlyDutyCycleValue": "{{count}} pagina's"
+    },
+    "relative": {
+      "momentsAgo": "momenten geleden",
+      "minutesAgo": "{{count}} minuut{{suffix}} geleden",
+      "hoursAgo": "{{count}} uur{{suffix}} geleden",
+      "daysAgo": "{{count}} dag{{suffix}} geleden"
+    }
+  },
+  "assetDetailHeader": {
+    "title": "Koptekst itemdetails",
+    "description": "Header chroom voor de itemdetailervaring, inclusief identiteit, badges en vernieuwingsacties",
+    "backToAssets": "Terug naar Activa",
+    "assetTag": "Itemtag: {{tag}}",
+    "actions": {
+      "createTicket": "Ticket aanmaken",
+      "menu": "Acties",
+      "refreshing": "Verfrissend...",
+      "refreshData": "Gegevens vernieuwen",
+      "rebootDevice": "Apparaat opnieuw opstarten",
+      "editAsset": "Activa bewerken",
+      "deleteAsset": "Activa verwijderen"
+    },
+    "values": {
+      "unknownClient": "Onbekende klant"
+    }
+  },
+  "assetDetailTabs": {
+    "title": "Tabbladen met itemdetails",
+    "description": "Activadetailnavigatie met tabbladen voor overzicht, onderhoud, documenten, geschiedenis en gerelateerde records",
+    "tabs": {
+      "serviceHistory": "Servicegeschiedenis",
+      "software": "Software",
+      "maintenance": "Onderhoud",
+      "relatedAssets": "Gerelateerde activa",
+      "documentsPasswords": "Documenten en wachtwoorden",
+      "auditLog": "Auditlogboek"
+    }
+  },
+  "assetDetailView": {
+    "title": "Detailweergave van activa",
+    "description": "Samenstelling van itemdetails met laden, fouten, statistieken, rasterpanelen en detailtabbladen",
+    "loading": "Itemgegevens laden...",
+    "errors": {
+      "title": "Fout",
+      "notFound": "Item niet gevonden of u heeft geen toestemming om het te bekijken."
+    }
+  },
+  "assetDetails": {
+    "title": "Activadetails",
+    "description": "Volledige pagina met activadetails met overzichtskaarten, koppelingen, documenten en operationele acties",
+    "assetTag": "Itemtag: {{tag}}",
+    "loading": {
+      "details": "Gegevens laden..."
+    },
+    "fields": {
+      "status": "Status",
+      "serialNumber": "Serienummer",
+      "location": "Locatie",
+      "client": "Cliënt",
+      "purchaseDate": "Aankoopdatum",
+      "warrantyEnd": "Einde garantie",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Opslag",
+      "gpu": "GPU",
+      "lastLogin": "Laatste aanmelding",
+      "managementIp": "Beheer-IP",
+      "portCount": "Haventelling",
+      "powerDraw": "Stroomverbruik",
+      "firmwareVersion": "Firmwareversie",
+      "poeSupport": "PoE-ondersteuning",
+      "type": "Type",
+      "hypervisor": "Hypervisor",
+      "primaryIp": "Primair IP-adres",
+      "operatingSystem": "Besturingssysteem",
+      "imei": "IMEI",
+      "phoneNumber": "Telefoonnummer",
+      "carrier": "Vervoerder",
+      "supervisionStatus": "Toezichtstatus",
+      "ipAddress": "IP-adres",
+      "networkPrinter": "Netwerkprinter",
+      "colorSupport": "Kleurondersteuning",
+      "duplexSupport": "Dubbelzijdige ondersteuning",
+      "monthlyDutyCycle": "Maandelijkse inschakelduur"
+    },
+    "sections": {
+      "basicInformation": "Basisinformatie",
+      "workstation": "Werkstationdetails",
+      "networkDevice": "Netwerkapparaatdetails",
+      "server": "Serverdetails",
+      "mobileDevice": "Gegevens van mobiele apparaten",
+      "printer": "Printerdetails",
+      "relatedAssets": "Gerelateerde activa"
+    },
+    "maintenance": {
+      "activeSchedules": "Actieve schema's",
+      "overdue": "Verlopen",
+      "upcoming": "Aankomend"
+    },
+    "tabs": {
+      "details": "Details",
+      "relatedAssets": "Gerelateerde activa",
+      "documents": "Documenten"
+    },
+    "relationships": {
+      "parentOf": "Ouder van",
+      "childOf": "Kind van"
+    },
+    "empty": {
+      "notSpecified": "Niet gespecificeerd",
+      "unassigned": "Niet toegewezen",
+      "never": "Nooit",
+      "noAdditionalDetails": "Geen aanvullende details beschikbaar",
+      "noRelatedAssets": "Geen gerelateerde items gevonden"
+    },
+    "values": {
+      "virtual": "Virtueel",
+      "physical": "Fysiek",
+      "supervised": "Onder toezicht",
+      "unsupervised": "Zonder toezicht",
+      "pagesUnit": "pagina's"
+    },
+    "statuses": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "maintenance": "Onderhoud"
+    },
+    "deviceTypes": {
+      "switch": "Schakelaar",
+      "router": "Router",
+      "firewall": "Firewall",
+      "access_point": "Toegangspunt",
+      "load_balancer": "Loadbalancer"
+    },
+    "relationshipTypes": {
+      "affected": "Aangetast",
+      "related": "Verwant"
+    }
+  },
+  "assetDocuments": {
+    "title": "Activadocumenten",
+    "description": "Lijst met activadocumenten en bijlagen voor bestanden die aan een activa zijn gekoppeld"
+  },
+  "assetForm": {
+    "title": "Activaformulier",
+    "description": "Formulier voor het maken en bewerken van primaire activa met identiteits-, levenscyclus-, contract- en metagegevensvelden",
+    "heading": "Activa bewerken",
+    "loading": {
+      "assetDetails": "Itemgegevens laden..."
+    },
+    "errors": {
+      "assetNotFound": "Item niet gevonden",
+      "loadFailed": "Kan itemdetails niet laden",
+      "clientsLoadFailed": "Kan klanten niet laden",
+      "locationsLoadFailed": "Kan locaties voor deze klant niet laden",
+      "updateFailed": "Kan item niet updaten"
+    },
+    "actions": {
+      "viewClient": "Klant bekijken",
+      "manageClientLocations": "Beheer klantlocaties",
+      "saveChanges": "Wijzigingen opslaan"
+    },
+    "alerts": {
+      "noLocationsSaved": "Deze klant heeft nog geen opgeslagen locaties. Gebruik aangepaste invoer of maak er een vanuit het klantrecord."
+    },
+    "sections": {
+      "basicInformation": "Basisinformatie",
+      "clientAndLocation": "Klant & Locatie",
+      "assetBasics": "Basisprincipes van activa"
+    },
+    "fields": {
+      "customLocationOption": "Aangepaste locatie",
+      "osType": "Besturingssysteemtype",
+      "osVersion": "OS-versie",
+      "cpuModel": "CPU-model",
+      "cpuCores": "CPU-kernen",
+      "ramGb": "RAM-geheugen (GB)",
+      "storageType": "Opslagtype",
+      "storageCapacityGb": "Opslagcapaciteit (GB)",
+      "gpuModel": "GPU-model",
+      "deviceType": "Apparaattype",
+      "managementIp": "Beheer-IP",
+      "portCount": "Haventelling",
+      "firmwareVersion": "Firmwareversie",
+      "powerDrawWatts": "Stroomverbruik (Watt)",
+      "supportsPoe": "Ondersteunt PoE",
+      "primaryIp": "Primair IP-adres",
+      "raidConfig": "RAID-configuratie",
+      "virtualMachine": "Virtuele machine",
+      "hypervisor": "Hypervisor",
+      "model": "Model",
+      "imei": "IMEI",
+      "phoneNumber": "Telefoonnummer",
+      "carrier": "Vervoerder",
+      "supervisedDevice": "Bewaakt apparaat",
+      "ipAddress": "IP-adres",
+      "monthlyDutyCycle": "Maandelijkse inschakelduur",
+      "networkPrinter": "Netwerkprinter",
+      "colorSupport": "Kleurondersteuning",
+      "duplexSupport": "Dubbelzijdige ondersteuning",
+      "client": "Cliënt",
+      "primaryLocation": "Primaire locatie",
+      "name": "Naam",
+      "assetTag": "Itemtag",
+      "serialNumber": "Serienummer",
+      "status": "Status",
+      "purchaseDate": "Aankoopdatum",
+      "warrantyEndDate": "Einddatum garantie"
+    },
+    "placeholders": {
+      "loadingClients": "Klanten laden…",
+      "selectClient": "Selecteer klant",
+      "loadingLocations": "Locaties laden…",
+      "selectLocation": "Selecteer een locatie",
+      "selectClientFirst": "Selecteer eerst een klant",
+      "customLocation": "Voer een aangepaste locatie of gebied in",
+      "selectPurchaseDate": "Selecteer aankoopdatum",
+      "selectWarrantyEndDate": "Selecteer de einddatum van de garantie"
+    },
+    "statusOptions": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "maintenance": "Onderhoud"
+    },
+    "networkDeviceTypes": {
+      "switch": "Schakelaar",
+      "router": "Router",
+      "firewall": "Firewall",
+      "access_point": "Toegangspunt",
+      "load_balancer": "Loadbalancer"
+    },
+    "storageTypes": {
+      "ssd": "SSD",
+      "hdd": "HDD",
+      "nvme": "NVMe"
+    },
+    "osTypes": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    },
+    "typeDetails": {
+      "workstation": "Werkstationdetails",
+      "networkDevice": "Netwerkapparaatdetails",
+      "server": "Serverdetails",
+      "mobileDevice": "Gegevens van mobiele apparaten",
+      "printer": "Printerdetails"
+    }
+  },
+  "assetFormClient": {
+    "title": "Activaformulier Klant",
+    "description": "Dynamische wrapper alleen voor klanten voor het activaformulier en de skeletervaring voor bewerken",
+    "loadingTitle": "Activa bewerken"
+  },
+  "assetMetricsBanner": {
+    "title": "Banner voor activastatistieken",
+    "description": "Metrische kaarten en rollups voor tickets, onderhoud, uptime en indicatoren voor de status van bedrijfsmiddelen",
+    "labels": {
+      "healthStatus": "Gezondheidsstatus",
+      "openTickets": "Kaartjes openen",
+      "securityStatus": "Beveiligingsstatus",
+      "warranty": "Garantie"
+    },
+    "healthStatuses": {
+      "healthy": "Gezond",
+      "warning": "Waarschuwing",
+      "critical": "Kritisch",
+      "unknown": "Onbekend"
+    },
+    "securityStatuses": {
+      "secure": "Zeker",
+      "missingPatches": "{{count}} Ontbrekende patches",
+      "critical": "Kritisch",
+      "unknown": "Onbekend"
+    },
+    "openTickets": {
+      "active": "[{{count}} Actief]"
+    },
+    "warrantyStatuses": {
+      "expiresIn": "Verloopt over {{count}} dagen",
+      "expired": "Verlopen",
+      "unknown": "Onbekend"
+    }
+  },
+  "assetPatchStatusSection": {
+    "title": "Sectie Asset-patchstatus",
+    "description": "Enterprise-patch en antivirusstatuswrapper weergegeven in de assetdetailervaring"
+  },
+  "assetSoftwareInventory": {
+    "title": "Software-inventarisatie van activa",
+    "description": "Enterprise-software-inventarisverpakking voor geïnstalleerde software en versiegegevens"
+  },
+  "associatedAssets": {
+    "title": "Bijbehorende activa",
+    "description": "Relatiebeheer van bovenliggende en onderliggende activa met gekoppelde activaacties",
+    "loading": {
+      "assets": "Activa laden..."
+    },
+    "actions": {
+      "addAsset": "Voeg item toe",
+      "showLess": "Laat minder zien",
+      "moreAssets": "{{count}} meer activa{{suffix}}"
+    },
+    "errors": {
+      "loadAvailableAssets": "Kan beschikbare middelen niet laden",
+      "loadDrawerFailed": "Kan itemdetails momenteel niet laden. Probeer het opnieuw.",
+      "loadAssociatedAssets": "Kan de bijbehorende items niet laden",
+      "selectAtLeastOneAsset": "Selecteer ten minste één item",
+      "associateFailed": "Kan activa niet koppelen. Mogelijk zijn ze al gekoppeld",
+      "associationFailed": "Kan items niet koppelen",
+      "removeFailed": "Kan itemkoppeling niet verwijderen"
+    },
+    "success": {
+      "associated": "{{count}} item{{suffix}} is succesvol gekoppeld",
+      "associatedPartial": "{{count}} asset{{suffix}} succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
+      "removed": "Itemkoppeling verwijderd"
+    },
+    "empty": {
+      "noneAssociated": "Er zijn geen items gekoppeld aan dit ticket.",
+      "unknownAsset": "Onbekend bezit"
+    },
+    "dialog": {
+      "title": "Voeg item toe",
+      "loadingAssets": "Activa laden...",
+      "selectedAssetsLabel": "Gekozen:",
+      "search": {
+        "label": "Zoek activa",
+        "placeholder": "Zoek op naam, tag of serienummer..."
+      },
+      "empty": {
+        "search": "Er zijn geen activa gevonden die overeenkomen met uw zoekopdracht",
+        "available": "Er zijn geen activa beschikbaar voor deze klant"
+      },
+      "relationship": {
+        "placeholder": "Type..."
+      },
+      "actions": {
+        "addAssets": "Item toevoegen{{suffix}}"
+      }
+    },
+    "table": {
+      "name": "Naam",
+      "assetTag": "Itemtag",
+      "type": "Type",
+      "status": "Status"
+    },
+    "assetStatuses": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "maintenance": "Onderhoud"
+    },
+    "assetTypes": {
+      "workstation": "Werkstation",
+      "server": "Server",
+      "network_device": "Netwerkapparaat",
+      "mobile_device": "Mobiel apparaat",
+      "printer": "Printer"
+    },
+    "relationshipTypes": {
+      "affected": "Aangetast",
+      "related": "Verwant"
+    }
+  },
+  "createTicketFromAssetButton": {
+    "title": "Ticket maken van asset",
+    "description": "Stroom voor het maken van tickets gestart vanuit een asset met bord-, status- en categorieselectie",
+    "register": {
+      "label": "Ticket maken van asset",
+      "title": "Ticket maken van asset"
+    },
+    "defaultTitle": "Probleem met {{name}}",
+    "actions": {
+      "open": "Ticket aanmaken",
+      "create": "Ticket aanmaken",
+      "creating": "Creëren..."
+    },
+    "fields": {
+      "title": "Titel",
+      "description": "Beschrijving",
+      "board": "Bord",
+      "status": "Status",
+      "priority": "Prioriteit"
+    },
+    "placeholders": {
+      "title": "Voer de tickettitel in",
+      "description": "Beschrijf het probleem...",
+      "loadingBoards": "Borden laden...",
+      "selectBoard": "Bord selecteren...",
+      "selectBoardFirst": "Selecteer eerst het bord...",
+      "loadingStatuses": "Statussen laden...",
+      "selectStatus": "Status selecteren...",
+      "loadingPriorities": "Prioriteiten laden...",
+      "selectPriority": "Prioriteit selecteren..."
+    },
+    "errors": {
+      "loadPriorities": "Kan prioriteiten niet laden",
+      "loadBoards": "Kan borden niet laden",
+      "loadStatuses": "Kan statussen niet laden",
+      "requiredFields": "Vul de titel, het bestuur, de status en de prioriteit in",
+      "createFailed": "Kan ticket niet maken"
+    },
+    "success": {
+      "created": "Ticket aangemaakt"
+    }
+  },
+  "deleteAssetButton": {
+    "title": "Knop Asset verwijderen",
+    "description": "Bevestigingsstroom verwijderen voor het verwijderen van een activarecord",
+    "actions": {
+      "removing": "Verwijderen…"
+    },
+    "entityNameFallback": "dit bezit",
+    "errors": {
+      "validationFailed": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
+      "deleteFailed": "Kan item niet verwijderen. Probeer het opnieuw."
+    }
+  },
+  "quickAddAsset": {
+    "title": "Snel item toevoegen",
+    "description": "Creëer snel een activastroom met essentiële velden voor het toevoegen van een nieuw activarecord",
+    "actions": {
+      "addAsset": "Voeg item toe",
+      "creating": "Creëren...",
+      "createAsset": "Activa maken"
+    },
+    "errors": {
+      "fetchClientsFailed": "Kan klanten niet ophalen",
+      "createFailed": "Kan item niet maken"
+    },
+    "validation": {
+      "client": "Cliënt",
+      "assetName": "Naam van item",
+      "assetTag": "Itemtag",
+      "assetType": "Type activa",
+      "requiredFields": "Vul de verplichte velden in:"
+    },
+    "fields": {
+      "osType": "Besturingssysteemtype",
+      "osVersion": "OS-versie",
+      "deviceType": "Apparaattype",
+      "managementIp": "Beheer-IP",
+      "model": "Model",
+      "clientRequired": "Klant *",
+      "assetNameRequired": "Itemnaam *",
+      "assetTagRequired": "Itemtag *",
+      "typeRequired": "Type *",
+      "status": "Status",
+      "serialNumber": "Serienummer"
+    },
+    "placeholders": {
+      "workstationOsType": "bijvoorbeeld Windows, macOS, Linux",
+      "workstationOsVersion": "bijvoorbeeld 11, Monterey, Ubuntu 22.04",
+      "selectDeviceType": "Selecteer apparaattype",
+      "managementIp": "bijvoorbeeld 192.168.1.1",
+      "serverOsType": "bijvoorbeeld Windows Server, Ubuntu Server",
+      "serverOsVersion": "bijv. 2022, 22.04 LTS",
+      "selectOsType": "Selecteer besturingssysteemtype",
+      "mobileModel": "bijvoorbeeld iPhone 14 Pro, Galaxy S23",
+      "printerModel": "bijvoorbeeld HP LaserJet Pro M404n",
+      "assetName": "Voer de naam van het item in",
+      "assetTag": "Voer de itemtag in",
+      "selectType": "Selecteer type",
+      "selectStatus": "Selecteer status",
+      "serialNumber": "Voer het serienummer in"
+    },
+    "sections": {
+      "typeSpecificDetails": "Typespecifieke details"
+    },
+    "statusOptions": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "maintenance": "Onderhoud"
+    },
+    "assetTypes": {
+      "workstation": "Werkstation",
+      "network_device": "Netwerkapparaat",
+      "server": "Server",
+      "mobile_device": "Mobiel apparaat",
+      "printer": "Printer"
+    },
+    "networkDeviceTypes": {
+      "switch": "Schakelaar",
+      "router": "Router",
+      "firewall": "Firewall",
+      "accessPoint": "Toegangspunt",
+      "loadBalancer": "Loadbalancer"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    }
+  },
+  "remoteAccessButton": {
+    "title": "Knop voor externe toegang",
+    "description": "Starter voor externe toegang voor activa met ondersteunde verbindingsintegraties"
+  },
+  "rmmStatusIndicator": {
+    "title": "RMM-statusindicator",
+    "description": "Aangesloten/losgekoppelde RMM-statuschip en ondersteunende statuslabels",
+    "titles": {
+      "unknown": "Agentstatus onbekend",
+      "status": "{{status}}{{suffix}}",
+      "lastSeen": "- Laatst gezien: {{value}}"
+    },
+    "statuses": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Verlopen",
+      "unknown": "Onbekend"
+    },
+    "relative": {
+      "justNow": "Zojuist",
+      "minutesAgo": "{{count}}m geleden",
+      "hoursAgo": "{{count}}u geleden",
+      "daysAgo": "{{count}}d geleden"
+    }
+  },
+  "assetInfoPanel": {
+    "title": "Informatie en levenscyclus van activa",
+    "description": "Paneel met algemene activa-informatie voor identificatie, eigenaar en levenscyclusdetails",
+    "actions": {
+      "copy": "Kopiëren",
+      "copied": "Gekopieerd"
+    },
+    "fields": {
+      "client": "Cliënt",
+      "location": "Locatie",
+      "model": "Model",
+      "serialNumber": "Serienummer",
+      "purchaseDate": "Aankoopdatum",
+      "warrantyEnd": "Einde garantie"
+    },
+    "values": {
+      "unknownClient": "Onbekende klant",
+      "unassigned": "Niet toegewezen",
+      "unknownModel": "Onbekend model"
+    }
+  },
+  "assetNotesPanel": {
+    "title": "Opmerkingen en snelle informatie",
+    "description": "Rich-text notitiepaneel voor asset-specifieke notities en snelle operationele context",
+    "errors": {
+      "loadTitle": "Notities kunnen niet worden geladen",
+      "unknown": "Onbekende fout"
+    },
+    "lastUpdated": "Laatst bijgewerkt: {{value}}"
+  },
+  "hardwareSpecsPanel": {
+    "title": "Hardwarespecificaties",
+    "description": "Hardwarespecificatiepaneel met informatie over CPU, geheugen, opslag en apparaatmetadata",
+    "fields": {
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Opslag",
+      "utilization": "Gebruik"
+    },
+    "values": {
+      "unknownCpu": "Onbekende CPU",
+      "unknown": "Onbekend",
+      "unifiedMemory": "{{size}}GB Uniform geheugen",
+      "memoryUsed": "({{size}}GB gebruikt)",
+      "freeStorage": "{{size}} GB Gratis"
+    },
+    "empty": "Geen hardwaregegevens beschikbaar",
+    "emptyStorage": "Geen opslagstations gedetecteerd"
+  },
+  "rmmVitalsPanel": {
+    "title": "RMM Vitals & Connectiviteit",
+    "description": "RMM vitals-paneel voor details over hartslag, monitoring en eindpuntstatus",
+    "actions": {
+      "refresh": "Vernieuwen"
+    },
+    "fields": {
+      "agentStatus": "Agentstatus",
+      "currentUser": "Huidige gebruiker",
+      "lastCheckIn": "(Laatste check-in: {{value}})",
+      "uptime": "Uptime",
+      "lastSync": "Laatste RMM-synchronisatie",
+      "network": "Netwerk",
+      "networkValue": "LAN-IP: {{lan}} | WAN IP: {{wan}}"
+    },
+    "values": {
+      "never": "Nooit"
+    },
+    "empty": {
+      "title": "RMM Vitals",
+      "notConnected": "Niet verbonden met RMM"
+    },
+    "uptime": "{{days}} dagen, {{hours}} uur, {{minutes}} minuten"
+  },
+  "securityPatchingPanel": {
+    "title": "Beveiliging en patchen",
+    "description": "Beveiligings- en patchstatuspaneel voor indicatoren voor kwetsbaarheid en updatestatus",
+    "fields": {
+      "osVersion": "OS-versie",
+      "antivirus": "Antivirus",
+      "patchStatus": "Patchstatus",
+      "firewall": "Firewall"
+    },
+    "values": {
+      "unknown": "Onbekend"
+    },
+    "antivirus": {
+      "running": "✔ Geïnstalleerd en actief",
+      "inactive": "Inactief",
+      "lastScan": "| Laatste scan: vandaag, 03:00 uur"
+    },
+    "patchStatus": {
+      "critical": "Kritisch",
+      "atRisk": "In gevaar",
+      "missingPatches": "- {{count}} Kritieke OS-patches ontbreken.",
+      "upToDate": "✔ Up-to-date"
+    },
+    "firewall": {
+      "on": "✔ Aan"
+    }
+  },
+  "copyableField": {
+    "title": "Kopieerbaar veld",
+    "description": "Gedeeld veld voor kopiëren naar klembord dat wordt gebruikt in activaformulieren en detailpanelen",
+    "actions": {
+      "copy": "Kopiëren",
+      "copied": "Gekopieerd"
+    }
+  },
+  "statusBadge": {
+    "title": "Statusbadge",
+    "description": "Gedeelde badge-renderer voor de levenscyclus van assets en monitoringstatussen",
+    "statuses": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Verlopen",
+      "healthy": "Gezond",
+      "warning": "Waarschuwing",
+      "critical": "Kritisch",
+      "unknown": "Onbekend",
+      "secure": "Zeker",
+      "at_risk": "In gevaar",
+      "active": "Actief",
+      "expiring_soon": "Verloopt binnenkort",
+      "expired": "Verlopen"
+    }
+  },
+  "utilizationBar": {
+    "title": "Gebruiksbalk",
+    "description": "Gedeelde voortgangsbalkcomponent voor gebruik en op percentages gebaseerde activastatistieken"
+  },
+  "auditLogTab": {
+    "title": "Auditlogboek",
+    "description": "Tabblad Activa-auditgeschiedenis voor tijdlijngebeurtenissen en recordwijzigingen",
+    "changedBy": "Gewijzigd door {{name}}",
+    "userFallback": "gebruiker {{id}}",
+    "empty": "Geen auditgeschiedenis beschikbaar.",
+    "changeTypes": {
+      "created": "Gemaakt",
+      "updated": "Bijgewerkt"
+    }
+  },
+  "createMaintenanceScheduleDialog": {
+    "title": "Onderhoudsschema maken",
+    "description": "Dialoogvenster voor het definiëren van onderhoudsschema's en herhalingsregels voor een activum",
+    "titles": {
+      "create": "Plan onderhoud",
+      "edit": "Onderhoudsschema bewerken"
+    },
+    "actions": {
+      "create": "Schema maken",
+      "creating": "Creëren...",
+      "update": "Schema bijwerken",
+      "updating": "Updaten..."
+    },
+    "fields": {
+      "scheduleName": "Schemanaam *",
+      "description": "Beschrijving",
+      "maintenanceType": "Onderhoudstype *",
+      "frequency": "Frequentie *",
+      "interval": "Interval *",
+      "nextMaintenanceDate": "Volgende onderhoudsdatum *",
+      "active": "Actief"
+    },
+    "placeholders": {
+      "scheduleName": "bijvoorbeeld maandelijks serveronderhoud",
+      "description": "Optionele beschrijving...",
+      "maintenanceType": "Selecteer onderhoudstype",
+      "frequency": "Selecteer frequentie",
+      "interval": "1",
+      "nextMaintenanceDate": "Datum selecteren"
+    },
+    "frequencyOptions": {
+      "daily": "Dagelijks",
+      "weekly": "Wekelijks",
+      "monthly": "Maandelijks",
+      "quarterly": "Driemaandelijks",
+      "yearly": "Jaarlijks"
+    },
+    "errors": {
+      "scheduleNameRequired": "Schemanaam is vereist",
+      "maintenanceTypeRequired": "Onderhoudstype is vereist",
+      "frequencyRequired": "Frequentie is vereist",
+      "nextMaintenanceRequired": "Volgende onderhoudsdatum is vereist",
+      "frequencyIntervalMin": "Het frequentie-interval moet minimaal 1 zijn",
+      "saveFailed": "Kan onderhoudsschema niet maken"
+    }
+  },
+  "documentsPasswordsTab": {
+    "title": "Documenten en wachtwoorden",
+    "description": "Gecombineerd tabblad voor activadocumenten, inloggegevens en gerelateerde beveiligde records",
+    "passwords": {
+      "title": "Wachtwoorden en geheimen",
+      "comingSoon": "Veilig wachtwoordbeheer binnenkort beschikbaar."
+    }
+  },
+  "maintenanceSchedulesTab": {
+    "title": "Onderhoudsschema's",
+    "description": "Tabblad Onderhoudsschemabeheer voor geplande service en terugkerende werkzaamheden",
+    "summary": {
+      "complianceRate": "Nalevingspercentage",
+      "nextMaintenance": "Volgende onderhoud",
+      "noneScheduled": "Geen gepland"
+    },
+    "actions": {
+      "scheduleMaintenance": "Plan onderhoud"
+    },
+    "errors": {
+      "deleteFailed": "Kan onderhoudsschema niet verwijderen"
+    },
+    "table": {
+      "scheduleName": "Schemanaam",
+      "type": "Type",
+      "frequency": "Frequentie",
+      "nextMaintenance": "Volgende onderhoud",
+      "lastMaintenance": "Laatste onderhoud",
+      "status": "Status",
+      "actions": "Acties"
+    },
+    "frequency": {
+      "every": "Elke {{count}} {{frequency}}{{suffix}}",
+      "units": {
+        "daily": "dag",
+        "weekly": "week",
+        "monthly": "maand",
+        "quarterly": "kwartaal",
+        "yearly": "jaar"
+      }
+    },
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "types": {
+      "preventive": "Preventief",
+      "inspection": "Inspectie",
+      "calibration": "Kalibratie",
+      "replacement": "Vervanging"
+    },
+    "empty": {
+      "schedules": "Geen onderhoudsschema's gevonden. Klik op 'Onderhoud plannen' om er een te maken."
+    },
+    "history": {
+      "title": "Onderhoudsgeschiedenis",
+      "performedAt": "Uitgevoerd bij",
+      "performedBy": "Uitgevoerd door",
+      "notes": "Opmerkingen",
+      "empty": "Geen onderhoudsgeschiedenis geregistreerd."
+    },
+    "dialog": {
+      "delete": {
+        "title": "Onderhoudsschema verwijderen",
+        "message": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+      }
+    }
+  },
+  "relatedAssetsTab": {
+    "title": "Gerelateerde activa ({{count}})",
+    "description": "Tabblad voor het bladeren en beheren van gerelateerde itemrelaties",
+    "loading": "Gerelateerde items laden...",
+    "actions": {
+      "linkAsset": "Link-item",
+      "unlink": "Ontkoppelen",
+      "linkEmptyState": "Koppel een asset"
+    },
+    "success": {
+      "linked": "Activa gekoppeld",
+      "unlinked": "Item ontkoppeld"
+    },
+    "errors": {
+      "selectAsset": "Selecteer een item om te koppelen",
+      "linkFailed": "Kan item niet koppelen",
+      "unlinkFailed": "Kan item niet ontkoppelen"
+    },
+    "table": {
+      "assetName": "Naam van item",
+      "relationship": "Relatie",
+      "linkedDate": "Gekoppelde datum",
+      "actions": "Acties"
+    },
+    "empty": {
+      "linked": "Geen gerelateerde activa gekoppeld."
+    },
+    "dialog": {
+      "title": "Link-item",
+      "loadingAssets": "Activa laden...",
+      "empty": "Geen beschikbare items gevonden.",
+      "search": {
+        "label": "Zoek activa",
+        "placeholder": "Zoek op naam, tag, serienummer..."
+      },
+      "relationshipType": {
+        "label": "Relatietype",
+        "placeholder": "verwant"
+      },
+      "table": {
+        "asset": "Bezit",
+        "select": "Selecteer"
+      },
+      "actions": {
+        "selected": "Gekozen",
+        "linking": "Koppelen...",
+        "confirm": "Link-item"
+      }
+    },
+    "relationshipTypes": {
+      "related": "Verwant",
+      "affected": "Aangetast"
+    }
+  },
+  "serviceHistoryTab": {
+    "title": "Servicegeschiedenis",
+    "description": "Tabblad Servicegeschiedenis met een overzicht van de onderhouds- en ticketactiviteiten voor het asset",
+    "actions": {
+      "createTicket": "Ticket aanmaken"
+    },
+    "table": {
+      "ticketId": "Ticket-ID",
+      "subject": "Onderwerp",
+      "status": "Status",
+      "priority": "Prioriteit",
+      "dateLinked": "Datum gekoppeld"
+    },
+    "empty": "Er zijn geen tickets gekoppeld aan dit item.",
+    "clientFallback": "Onbekende klant"
+  },
+  "softwareInventoryTab": {
+    "title": "Software-inventaris",
+    "description": "Tabblad Software-inventaris voor geïnstalleerde software, versies en detectiemetagegevens",
+    "searchPlaceholder": "Zoeksoftware...",
+    "category": {
+      "placeholder": "Categorie",
+      "options": {
+        "all": "Alle",
+        "browser": "Browser",
+        "security": "Beveiliging",
+        "productivity": "Productiviteit",
+        "development": "Ontwikkeling"
+      }
+    },
+    "table": {
+      "name": "Naam",
+      "version": "Versie",
+      "publisher": "Uitgever",
+      "installDate": "Installatiedatum"
+    },
+    "empty": "Er is geen software gevonden die voldoet aan uw zoekopdracht.",
+    "totalItems": "Totaal aantal artikelen: {{count}}",
+    "values": {
+      "unknown": "Onbekend"
+    }
+  }
+}

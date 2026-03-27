@@ -1,6 +1,6 @@
 {
-  "releaseVersion": "0.0.1",
-  "generatedAt": "2026-03-11T01:13:10Z",
+  "releaseVersion": "1.0-rc5",
+  "generatedAt": "2026-03-25T00:00:00Z",
   "talos": {
     "version": "v1.12.0",
     "schematicId": "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba",
@@ -14,7 +14,7 @@
     "architecture": "amd64",
     "iso": {
       "url": "https://factory.talos.dev/image/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba/v1.12.0/metal-amd64.iso",
-      "localPath": "dist/appliance/0.0.1/metal-amd64.iso",
+      "localPath": "dist/appliance/1.0-rc5/metal-amd64.iso",
       "sha256": "d4379a948d8edc545bba99989204d8639b258fe0c82bccaf7495c1af706524b1"
     },
     "installer": {
@@ -23,11 +23,11 @@
     }
   },
   "app": {
-    "version": "1.0-rc4",
-    "releaseBranch": "release/1.0-rc4",
+    "version": "1.0-rc5",
+    "releaseBranch": "release/1.0-rc5",
     "valuesProfile": "talos-single-node",
     "images": {
-      "algaCore": "1b87cf5b",
+      "algaCore": "94446747",
       "workflowWorker": "61e4a00e",
       "emailService": "61e4a00e",
       "temporalWorker": "61e4a00e"

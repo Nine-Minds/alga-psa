@@ -6,6 +6,8 @@ KUBECONFIG_PATH="${KUBECONFIG:-}"
 CONFIG_DIR=""
 PROFILE=""
 DRY_RUN=false
+SKIP_RECONCILE=false
+RECONCILE_TIMEOUT="45m"
 REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)"
 TEMP_DIR=""
 
@@ -19,6 +21,8 @@ Options:
   --kubeconfig <path>          Target appliance kubeconfig
   --config-dir <path>          Optional directory to persist rendered values
   --profile <name>             Override values profile (defaults to manifest value)
+  --skip-reconcile             Apply values without running flux reconcile helmrelease
+  --reconcile-timeout <dur>    Flux reconcile timeout (default: 45m)
   --dry-run                    Print the planned commands without mutating cluster state
   --help                       Show this help
 EOF
@@ -39,6 +43,15 @@ run_cmd() {
 release_field() {
   local jq_filter="$1"
   jq -r "$jq_filter" "$REPO_ROOT/ee/appliance/releases/$RELEASE_VERSION/release.json"
+}
+
+yaml_string() {
+  python3 - "$1" <<'PY'
+import json
+import sys
+
+print(json.dumps(sys.argv[1]))
+PY
 }
 
 set_yaml_value() {
@@ -110,6 +123,14 @@ while [ "$#" -gt 0 ]; do
       PROFILE="$2"
       shift 2
       ;;
+    --skip-reconcile)
+      SKIP_RECONCILE=true
+      shift
+      ;;
+    --reconcile-timeout)
+      RECONCILE_TIMEOUT="$2"
+      shift 2
+      ;;
     --dry-run)
       DRY_RUN=true
       shift
@@ -150,20 +171,26 @@ fi
 
 mkdir -p "$CONFIG_DIR/values"
 
+configmap_file_key() {
+  local name="$1"
+  printf '%s.%s.yaml' "$name" "$PROFILE"
+}
+
 for name in alga-core pgbouncer temporal workflow-worker email-service temporal-worker; do
+  file_key="$(configmap_file_key "$name")"
   if $DRY_RUN; then
-    echo "+ kubectl --kubeconfig $KUBECONFIG_PATH -n alga-system get configmap appliance-values-$name -o jsonpath={.data.$name.$PROFILE\\.yaml} > $CONFIG_DIR/values/$name.$PROFILE.yaml"
+    echo "+ kubectl --kubeconfig $KUBECONFIG_PATH -n alga-system get configmap appliance-values-$name -o go-template='{{ index .data \"$file_key\" }}' > $CONFIG_DIR/values/$name.$PROFILE.yaml"
     cp "$REPO_ROOT/ee/appliance/flux/profiles/$PROFILE/values/$name.$PROFILE.yaml" "$CONFIG_DIR/values/$name.$PROFILE.yaml"
   else
-    kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system get configmap "appliance-values-$name" -o "jsonpath={.data.${name}.${PROFILE}.yaml}" > "$CONFIG_DIR/values/$name.$PROFILE.yaml"
+    kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system get configmap "appliance-values-$name" -o "go-template={{ index .data \"$file_key\" }}" > "$CONFIG_DIR/values/$name.$PROFILE.yaml"
   fi
 done
 
-set_yaml_value "$CONFIG_DIR/values/alga-core.$PROFILE.yaml" "setup.image.tag" "$(release_field '.app.images.algaCore')"
-set_yaml_value "$CONFIG_DIR/values/alga-core.$PROFILE.yaml" "server.image.tag" "$(release_field '.app.images.algaCore')"
-set_yaml_value "$CONFIG_DIR/values/workflow-worker.$PROFILE.yaml" "image.tag" "$(release_field '.app.images.workflowWorker')"
-set_yaml_value "$CONFIG_DIR/values/email-service.$PROFILE.yaml" "image.tag" "$(release_field '.app.images.emailService')"
-set_yaml_value "$CONFIG_DIR/values/temporal-worker.$PROFILE.yaml" "image.tag" "$(release_field '.app.images.temporalWorker')"
+set_yaml_value "$CONFIG_DIR/values/alga-core.$PROFILE.yaml" "setup.image.tag" "$(yaml_string "$(release_field '.app.images.algaCore')")"
+set_yaml_value "$CONFIG_DIR/values/alga-core.$PROFILE.yaml" "server.image.tag" "$(yaml_string "$(release_field '.app.images.algaCore')")"
+set_yaml_value "$CONFIG_DIR/values/workflow-worker.$PROFILE.yaml" "image.tag" "$(yaml_string "$(release_field '.app.images.workflowWorker')")"
+set_yaml_value "$CONFIG_DIR/values/email-service.$PROFILE.yaml" "image.tag" "$(yaml_string "$(release_field '.app.images.emailService')")"
+set_yaml_value "$CONFIG_DIR/values/temporal-worker.$PROFILE.yaml" "image.tag" "$(yaml_string "$(release_field '.app.images.temporalWorker')")"
 
 cat >"$CONFIG_DIR/kustomization.yaml" <<EOF
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -200,7 +227,9 @@ EOF
 if $DRY_RUN; then
   echo "+ kubectl --kubeconfig $KUBECONFIG_PATH apply -k $CONFIG_DIR"
   echo "+ kubectl --kubeconfig $KUBECONFIG_PATH -n alga-system create configmap appliance-release-selection ..."
-  echo "+ flux --kubeconfig $KUBECONFIG_PATH reconcile helmrelease alga-core -n alga-system --with-source"
+  if ! $SKIP_RECONCILE; then
+    echo "+ flux --kubeconfig $KUBECONFIG_PATH reconcile helmrelease alga-core -n alga-system --with-source --timeout $RECONCILE_TIMEOUT"
+  fi
   exit 0
 fi
 
@@ -216,8 +245,8 @@ kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system create configmap applianc
   --from-literal=temporalWorkerTag="$(release_field '.app.images.temporalWorker')" \
   --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
 
-if command -v flux >/dev/null 2>&1; then
-  flux --kubeconfig "$KUBECONFIG_PATH" reconcile helmrelease alga-core -n alga-system --with-source
+if ! $SKIP_RECONCILE && command -v flux >/dev/null 2>&1; then
+  flux --kubeconfig "$KUBECONFIG_PATH" reconcile helmrelease alga-core -n alga-system --with-source --timeout "$RECONCILE_TIMEOUT"
 fi
 
 echo "Applied appliance release $RELEASE_VERSION"

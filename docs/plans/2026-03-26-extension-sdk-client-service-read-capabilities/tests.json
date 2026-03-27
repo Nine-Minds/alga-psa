@@ -1,0 +1,220 @@
+[
+  {
+    "id": "T001",
+    "description": "Runtime: the extension WIT contract defines `clients` list/get imports with stable typed request and response records.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Runtime: the extension WIT contract defines `services` list/get imports with stable typed request and response records.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Runtime: `sdk/extension-runtime` exposes typed `host.clients` bindings and mock implementations.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Runtime: `sdk/extension-runtime` exposes typed `host.services` bindings and mock implementations.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Provider: client capability calls fail with not-allowed when `cap:client.read` is not granted.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F007"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Provider: service capability calls fail with not-allowed when `cap:service.read` is not granted.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F008"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Provider: client list succeeds for a user-backed request with `client:read` permission and returns paginated summary results.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F009",
+      "F016",
+      "F018",
+      "F020"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Provider: client list fails with not-allowed for a user-backed request without `client:read` permission.",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Provider: service list succeeds for a user-backed request with `service:read` permission and returns paginated summary results.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F010",
+      "F017",
+      "F019",
+      "F021"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Provider: service list fails with not-allowed for a user-backed request without `service:read` permission.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Provider: client list succeeds for a non-user execution when `cap:client.read` is granted.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F016",
+      "F018"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Provider: service list succeeds for a non-user execution when `cap:service.read` is granted.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F017",
+      "F019"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Provider: tenant scope is always derived from runner context and extension inputs cannot read another tenant's clients.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Provider: tenant scope is always derived from runner context and extension inputs cannot read another tenant's services.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F015"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Client shared read service returns summary fields only and does not leak full internal client entity shape.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F018"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Service shared read service returns summary fields only and does not leak full internal service entity shape.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F019"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Client list validates invalid page or pageSize values and returns invalid-input instead of executing an unsafe query.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Service list validates invalid page, pageSize, or filter enum values and returns invalid-input instead of executing an unsafe query.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Client get returns null for a missing client id rather than surfacing an internal error.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Service get returns null for a missing service id rather than surfacing an internal error.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Observability: client capability provider emits structured logs for operation, tenant, extension, and result size.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Observability: service capability provider emits structured logs for operation, tenant, extension, and result size.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "E2E: a sample extension can list clients through the new host capability via direct runner execute without making HTTP API calls from the handler.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "E2E: a sample extension can list services through the new host capability via direct runner execute without making HTTP API calls from the handler.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "E2E: the sample extension works through the iframe/ui proxy path for a user-backed request and returns the same read-only summary data.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  }
+]

@@ -185,6 +185,18 @@ export const createTicketCommentSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 
+export const updateTicketCommentSchema = z.object({
+  comment_text: z.string()
+    .min(1, 'Comment text is required')
+    .refine((value) => getVisibleCommentLength(value) > 0, 'Comment text is required')
+    .refine(
+      (value) => getVisibleCommentLength(value) <= MAX_TICKET_COMMENT_LENGTH,
+      `Comment text is too long (max ${MAX_TICKET_COMMENT_LENGTH} characters)`
+    ),
+});
+
+export type UpdateTicketCommentData = z.infer<typeof updateTicketCommentSchema>;
+
 export const ticketCommentResponseSchema = z.object({
   comment_id: uuidSchema,
   ticket_id: uuidSchema,

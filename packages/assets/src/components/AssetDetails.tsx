@@ -7,10 +7,10 @@ import { getAssetMaintenanceReport } from '../actions/assetActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   Edit,
   AlertTriangle,
@@ -19,8 +19,6 @@ import {
   Monitor,
   Network,
   Server,
-  Smartphone,
-  Printer as PrinterIcon,
   HardDrive,
   Cpu,
   CircuitBoard,
@@ -54,16 +52,32 @@ interface AssetDetailsProps {
 }
 
 export default function AssetDetails({ asset, maintenanceReport: initialMaintenanceReport }: AssetDetailsProps) {
+  const { t } = useTranslation('msp/assets');
   const { renderDocuments } = useDocumentsCrossFeature();
-  const updateDetails = useRegisterUIComponent({
+  useRegisterUIComponent({
     id: 'asset-details',
     type: 'container',
-    label: 'Asset Details'
+    label: t('assetDetails.title', { defaultValue: 'Asset Details' })
   });
 
   const [maintenanceReport, setMaintenanceReport] = React.useState<AssetMaintenanceReport | null>(initialMaintenanceReport || null);
   const [isLoading, setIsLoading] = React.useState(!initialMaintenanceReport);
-  const router = useRouter();
+
+  const toTitleCase = (value: string) =>
+    value
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (match) => match.toUpperCase());
+
+  const getAssetStatusLabel = (status: Asset['status']) =>
+    t(`assetDetails.statuses.${status}`, { defaultValue: toTitleCase(status) });
+
+  const getDeviceTypeLabel = (deviceType: NetworkDeviceAsset['device_type']) =>
+    t(`assetDetails.deviceTypes.${deviceType}`, { defaultValue: toTitleCase(deviceType) });
+
+  const getRelationshipLabel = (relationshipType: AssetRelationship['relationship_type']) =>
+    t(`assetDetails.relationshipTypes.${relationshipType}`, {
+      defaultValue: toTitleCase(relationshipType)
+    });
 
   React.useEffect(() => {
     if (initialMaintenanceReport) {
@@ -97,50 +111,57 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
     }
   };
 
-  const getAssetTypeIcon = () => {
-    const iconClass = "h-16 w-16 text-primary-500";
-
-    if (asset.workstation) return <Monitor className={iconClass} />;
-    if (asset.network_device) return <Network className={iconClass} />;
-    if (asset.server) return <Server className={iconClass} />;
-    if (asset.mobile_device) return <Smartphone className={iconClass} />;
-    if (asset.printer) return <PrinterIcon className={iconClass} />;
-    return null;
-  };
-
   const renderBasicInfo = () => (
     <div {...withDataAutomationId({ id: 'basic-info-grid' })} className="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div {...withDataAutomationId({ id: 'asset-status-info' })}>
-        <Text as="div" size="2" className="font-medium text-gray-700">Status</Text>
+        <Text as="div" size="2" className="font-medium text-gray-700">
+          {t('assetDetails.fields.status', { defaultValue: 'Status' })}
+        </Text>
         <Badge variant={
           asset.status === 'active' ? 'success' :
           asset.status === 'inactive' ? 'default-muted' :
           'warning'
         }>
-          {asset.status}
+          {getAssetStatusLabel(asset.status)}
         </Badge>
       </div>
       <div {...withDataAutomationId({ id: 'asset-serial-info' })}>
-        <Text as="div" size="2" className="font-medium text-gray-700">Serial Number</Text>
-        <Text as="div" size="2">{asset.serial_number || 'Not specified'}</Text>
+        <Text as="div" size="2" className="font-medium text-gray-700">
+          {t('assetDetails.fields.serialNumber', { defaultValue: 'Serial Number' })}
+        </Text>
+        <Text as="div" size="2">
+          {asset.serial_number || t('assetDetails.empty.notSpecified', { defaultValue: 'Not specified' })}
+        </Text>
       </div>
       <div {...withDataAutomationId({ id: 'asset-location-info' })}>
-        <Text as="div" size="2" className="font-medium text-gray-700">Location</Text>
-        <Text as="div" size="2">{asset.location || 'Not specified'}</Text>
+        <Text as="div" size="2" className="font-medium text-gray-700">
+          {t('assetDetails.fields.location', { defaultValue: 'Location' })}
+        </Text>
+        <Text as="div" size="2">
+          {asset.location || t('assetDetails.empty.notSpecified', { defaultValue: 'Not specified' })}
+        </Text>
       </div>
       <div {...withDataAutomationId({ id: 'asset-client-info' })}>
-        <Text as="div" size="2" className="font-medium text-gray-700">Client</Text>
-        <Text as="div" size="2">{asset.client?.client_name || 'Unassigned'}</Text>
+        <Text as="div" size="2" className="font-medium text-gray-700">
+          {t('assetDetails.fields.client', { defaultValue: 'Client' })}
+        </Text>
+        <Text as="div" size="2">
+          {asset.client?.client_name || t('assetDetails.empty.unassigned', { defaultValue: 'Unassigned' })}
+        </Text>
       </div>
       {asset.purchase_date && (
         <div {...withDataAutomationId({ id: 'asset-purchase-date-info' })}>
-          <Text as="div" size="2" className="font-medium text-gray-700">Purchase Date</Text>
+          <Text as="div" size="2" className="font-medium text-gray-700">
+            {t('assetDetails.fields.purchaseDate', { defaultValue: 'Purchase Date' })}
+          </Text>
           <Text as="div" size="2">{new Date(asset.purchase_date).toLocaleDateString()}</Text>
         </div>
       )}
       {asset.warranty_end_date && (
         <div {...withDataAutomationId({ id: 'asset-warranty-info' })}>
-          <Text as="div" size="2" className="font-medium text-gray-700">Warranty End</Text>
+          <Text as="div" size="2" className="font-medium text-gray-700">
+            {t('assetDetails.fields.warrantyEnd', { defaultValue: 'Warranty End' })}
+          </Text>
           <Text as="div" size="2" className={new Date(asset.warranty_end_date) < new Date() ? 'text-red-600' : ''}>
             {new Date(asset.warranty_end_date).toLocaleDateString()}
           </Text>
@@ -156,7 +177,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
           <Flex align="center" gap="4" className="mb-6">
             <Monitor className="h-16 w-16 text-primary-500" />
             <div>
-              <Text as="div" size="5" weight="medium">Workstation Details</Text>
+              <Text as="div" size="5" weight="medium">
+                {t('assetDetails.sections.workstation', { defaultValue: 'Workstation Details' })}
+              </Text>
               <Text as="div" size="2" color="gray">{asset.workstation.os_type} {asset.workstation.os_version}</Text>
             </div>
           </Flex>
@@ -165,7 +188,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <Cpu className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">CPU</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.cpu', { defaultValue: 'CPU' })}
+                  </Text>
                   <Text as="div" size="2">{asset.workstation.cpu_model} ({asset.workstation.cpu_cores} cores)</Text>
                 </div>
               </Flex>
@@ -174,7 +199,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <CircuitBoard className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">RAM</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.ram', { defaultValue: 'RAM' })}
+                  </Text>
                   <Text as="div" size="2">{asset.workstation.ram_gb}GB</Text>
                 </div>
               </Flex>
@@ -183,7 +210,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <HardDrive className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">Storage</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.storage', { defaultValue: 'Storage' })}
+                  </Text>
                   <Text as="div" size="2">{asset.workstation.storage_type} - {asset.workstation.storage_capacity_gb}GB</Text>
                 </div>
               </Flex>
@@ -193,7 +222,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                 <Flex gap="3" align="center">
                   <Monitor className="h-6 w-6 text-primary-400" />
                   <div>
-                    <Text as="div" size="2" weight="medium">GPU</Text>
+                    <Text as="div" size="2" weight="medium">
+                      {t('assetDetails.fields.gpu', { defaultValue: 'GPU' })}
+                    </Text>
                     <Text as="div" size="2">{asset.workstation.gpu_model}</Text>
                   </div>
                 </Flex>
@@ -203,9 +234,13 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <Clock className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">Last Login</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.lastLogin', { defaultValue: 'Last Login' })}
+                  </Text>
                   <Text as="div" size="2">
-                    {asset.workstation.last_login ? new Date(asset.workstation.last_login).toLocaleString() : 'Never'}
+                    {asset.workstation.last_login
+                      ? new Date(asset.workstation.last_login).toLocaleString()
+                      : t('assetDetails.empty.never', { defaultValue: 'Never' })}
                   </Text>
                 </div>
               </Flex>
@@ -221,9 +256,11 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
           <Flex align="center" gap="4" className="mb-6">
             {getNetworkDeviceIcon(asset.network_device.device_type)}
             <div>
-              <Text as="div" size="5" weight="medium">Network Device Details</Text>
+              <Text as="div" size="5" weight="medium">
+                {t('assetDetails.sections.networkDevice', { defaultValue: 'Network Device Details' })}
+              </Text>
               <Text as="div" size="2" color="gray">
-                {asset.network_device.device_type.charAt(0).toUpperCase() + asset.network_device.device_type.slice(1)}
+                {getDeviceTypeLabel(asset.network_device.device_type)}
               </Text>
             </div>
           </Flex>
@@ -232,7 +269,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <Signal className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">Management IP</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.managementIp', { defaultValue: 'Management IP' })}
+                  </Text>
                   <Text as="div" size="2">{asset.network_device.management_ip}</Text>
                 </div>
               </Flex>
@@ -241,7 +280,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <Layers className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">Port Count</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.portCount', { defaultValue: 'Port Count' })}
+                  </Text>
                   <Text as="div" size="2">{asset.network_device.port_count}</Text>
                 </div>
               </Flex>
@@ -250,7 +291,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <Power className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">Power Draw</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.powerDraw', { defaultValue: 'Power Draw' })}
+                  </Text>
                   <Text as="div" size="2">{asset.network_device.power_draw_watts}W</Text>
                 </div>
               </Flex>
@@ -259,7 +302,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <RotateCw className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">Firmware Version</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.firmwareVersion', { defaultValue: 'Firmware Version' })}
+                  </Text>
                   <Text as="div" size="2">{asset.network_device.firmware_version}</Text>
                 </div>
               </Flex>
@@ -268,8 +313,14 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <Power className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">PoE Support</Text>
-                  <Text as="div" size="2">{asset.network_device.supports_poe ? 'Yes' : 'No'}</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.poeSupport', { defaultValue: 'PoE Support' })}
+                  </Text>
+                  <Text as="div" size="2">
+                    {asset.network_device.supports_poe
+                      ? t('common.yes', { defaultValue: 'Yes' })
+                      : t('common.no', { defaultValue: 'No' })}
+                  </Text>
                 </div>
               </Flex>
             </Card>
@@ -284,7 +335,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
           <Flex align="center" gap="4" className="mb-6">
             <Server className="h-16 w-16 text-primary-500" />
             <div>
-              <Text as="div" size="5" weight="medium">Server Details</Text>
+              <Text as="div" size="5" weight="medium">
+                {t('assetDetails.sections.server', { defaultValue: 'Server Details' })}
+              </Text>
               <Text as="div" size="2" color="gray">{asset.server.os_type} {asset.server.os_version}</Text>
             </div>
           </Flex>
@@ -293,7 +346,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <Cpu className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">CPU</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.cpu', { defaultValue: 'CPU' })}
+                  </Text>
                   <Text as="div" size="2">{asset.server.cpu_model} ({asset.server.cpu_cores} cores)</Text>
                 </div>
               </Flex>
@@ -302,7 +357,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <CircuitBoard className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">RAM</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.ram', { defaultValue: 'RAM' })}
+                  </Text>
                   <Text as="div" size="2">{asset.server.ram_gb}GB</Text>
                 </div>
               </Flex>
@@ -311,8 +368,14 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <Cloud className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">Type</Text>
-                  <Text as="div" size="2">{asset.server.is_virtual ? 'Virtual' : 'Physical'}</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.type', { defaultValue: 'Type' })}
+                  </Text>
+                  <Text as="div" size="2">
+                    {asset.server.is_virtual
+                      ? t('assetDetails.values.virtual', { defaultValue: 'Virtual' })
+                      : t('assetDetails.values.physical', { defaultValue: 'Physical' })}
+                  </Text>
                 </div>
               </Flex>
             </Card>
@@ -321,7 +384,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                 <Flex gap="3" align="center">
                   <Database className="h-6 w-6 text-primary-400" />
                   <div>
-                    <Text as="div" size="2" weight="medium">Hypervisor</Text>
+                    <Text as="div" size="2" weight="medium">
+                      {t('assetDetails.fields.hypervisor', { defaultValue: 'Hypervisor' })}
+                    </Text>
                     <Text as="div" size="2">{asset.server.hypervisor}</Text>
                   </div>
                 </Flex>
@@ -332,7 +397,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                 <Flex gap="3" align="center">
                   <Network className="h-6 w-6 text-primary-400" />
                   <div>
-                    <Text as="div" size="2" weight="medium">Primary IP</Text>
+                    <Text as="div" size="2" weight="medium">
+                      {t('assetDetails.fields.primaryIp', { defaultValue: 'Primary IP' })}
+                    </Text>
                     <Text as="div" size="2">{asset.server.primary_ip}</Text>
                   </div>
                 </Flex>
@@ -349,7 +416,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
           <Flex align="center" gap="4" className="mb-6">
             <PhoneIcon className="h-16 w-16 text-primary-500" />
             <div>
-              <Text as="div" size="5" weight="medium">Mobile Device Details</Text>
+              <Text as="div" size="5" weight="medium">
+                {t('assetDetails.sections.mobileDevice', { defaultValue: 'Mobile Device Details' })}
+              </Text>
               <Text as="div" size="2" color="gray">{asset.mobile_device.model}</Text>
             </div>
           </Flex>
@@ -358,7 +427,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <AppWindow className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">Operating System</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.operatingSystem', { defaultValue: 'Operating System' })}
+                  </Text>
                   <Text as="div" size="2">{asset.mobile_device.os_type} {asset.mobile_device.os_version}</Text>
                 </div>
               </Flex>
@@ -368,7 +439,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                 <Flex gap="3" align="center">
                   <Fingerprint className="h-6 w-6 text-primary-400" />
                   <div>
-                    <Text as="div" size="2" weight="medium">IMEI</Text>
+                    <Text as="div" size="2" weight="medium">
+                      {t('assetDetails.fields.imei', { defaultValue: 'IMEI' })}
+                    </Text>
                     <Text as="div" size="2">{asset.mobile_device.imei}</Text>
                   </div>
                 </Flex>
@@ -379,7 +452,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                 <Flex gap="3" align="center">
                   <PhoneIcon className="h-6 w-6 text-primary-400" />
                   <div>
-                    <Text as="div" size="2" weight="medium">Phone Number</Text>
+                    <Text as="div" size="2" weight="medium">
+                      {t('assetDetails.fields.phoneNumber', { defaultValue: 'Phone Number' })}
+                    </Text>
                     <Text as="div" size="2">{asset.mobile_device.phone_number}</Text>
                   </div>
                 </Flex>
@@ -390,7 +465,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                 <Flex gap="3" align="center">
                   <Signal className="h-6 w-6 text-primary-400" />
                   <div>
-                    <Text as="div" size="2" weight="medium">Carrier</Text>
+                    <Text as="div" size="2" weight="medium">
+                      {t('assetDetails.fields.carrier', { defaultValue: 'Carrier' })}
+                    </Text>
                     <Text as="div" size="2">{asset.mobile_device.carrier}</Text>
                   </div>
                 </Flex>
@@ -400,8 +477,14 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <Shield className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">Supervision Status</Text>
-                  <Text as="div" size="2">{asset.mobile_device.is_supervised ? 'Supervised' : 'Unsupervised'}</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.supervisionStatus', { defaultValue: 'Supervision Status' })}
+                  </Text>
+                  <Text as="div" size="2">
+                    {asset.mobile_device.is_supervised
+                      ? t('assetDetails.values.supervised', { defaultValue: 'Supervised' })
+                      : t('assetDetails.values.unsupervised', { defaultValue: 'Unsupervised' })}
+                  </Text>
                 </div>
               </Flex>
             </Card>
@@ -416,7 +499,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
           <Flex align="center" gap="4" className="mb-6">
             <Printer className="h-16 w-16 text-primary-500" />
             <div>
-              <Text as="div" size="5" weight="medium">Printer Details</Text>
+              <Text as="div" size="5" weight="medium">
+                {t('assetDetails.sections.printer', { defaultValue: 'Printer Details' })}
+              </Text>
               <Text as="div" size="2" color="gray">{asset.printer.model}</Text>
             </div>
           </Flex>
@@ -426,7 +511,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                 <Flex gap="3" align="center">
                   <Network className="h-6 w-6 text-primary-400" />
                   <div>
-                    <Text as="div" size="2" weight="medium">IP Address</Text>
+                    <Text as="div" size="2" weight="medium">
+                      {t('assetDetails.fields.ipAddress', { defaultValue: 'IP Address' })}
+                    </Text>
                     <Text as="div" size="2">{asset.printer.ip_address}</Text>
                   </div>
                 </Flex>
@@ -436,8 +523,14 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <Wifi className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">Network Printer</Text>
-                  <Text as="div" size="2">{asset.printer.is_network_printer ? 'Yes' : 'No'}</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.networkPrinter', { defaultValue: 'Network Printer' })}
+                  </Text>
+                  <Text as="div" size="2">
+                    {asset.printer.is_network_printer
+                      ? t('common.yes', { defaultValue: 'Yes' })
+                      : t('common.no', { defaultValue: 'No' })}
+                  </Text>
                 </div>
               </Flex>
             </Card>
@@ -445,8 +538,14 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <Palette className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">Color Support</Text>
-                  <Text as="div" size="2">{asset.printer.supports_color ? 'Yes' : 'No'}</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.colorSupport', { defaultValue: 'Color Support' })}
+                  </Text>
+                  <Text as="div" size="2">
+                    {asset.printer.supports_color
+                      ? t('common.yes', { defaultValue: 'Yes' })
+                      : t('common.no', { defaultValue: 'No' })}
+                  </Text>
                 </div>
               </Flex>
             </Card>
@@ -454,18 +553,28 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
               <Flex gap="3" align="center">
                 <FileStack className="h-6 w-6 text-primary-400" />
                 <div>
-                  <Text as="div" size="2" weight="medium">Duplex Support</Text>
-                  <Text as="div" size="2">{asset.printer.supports_duplex ? 'Yes' : 'No'}</Text>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.duplexSupport', { defaultValue: 'Duplex Support' })}
+                  </Text>
+                  <Text as="div" size="2">
+                    {asset.printer.supports_duplex
+                      ? t('common.yes', { defaultValue: 'Yes' })
+                      : t('common.no', { defaultValue: 'No' })}
+                  </Text>
                 </div>
               </Flex>
             </Card>
             {asset.printer.monthly_duty_cycle && (
               <Card {...withDataAutomationId({ id: 'printer-duty-cycle-card' })} className="p-4">
                 <Flex gap="3" align="center">
-                  <Gauge className="h-6 w-6 text-primary-400" />
-                  <div>
-                    <Text as="div" size="2" weight="medium">Monthly Duty Cycle</Text>
-                    <Text as="div" size="2">{asset.printer.monthly_duty_cycle.toLocaleString()} pages</Text>
+                <Gauge className="h-6 w-6 text-primary-400" />
+                <div>
+                  <Text as="div" size="2" weight="medium">
+                    {t('assetDetails.fields.monthlyDutyCycle', { defaultValue: 'Monthly Duty Cycle' })}
+                  </Text>
+                  <Text as="div" size="2">
+                    {asset.printer.monthly_duty_cycle.toLocaleString()} {t('assetDetails.values.pagesUnit', { defaultValue: 'pages' })}
+                  </Text>
                   </div>
                 </Flex>
               </Card>
@@ -475,7 +584,11 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
       );
     }
 
-    return <Text as="p">No additional details available</Text>;
+    return (
+      <Text as="p">
+        {t('assetDetails.empty.noAdditionalDetails', { defaultValue: 'No additional details available' })}
+      </Text>
+    );
   };
 
   const renderMaintenanceSummary = () => {
@@ -486,7 +599,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
         <Card {...withDataAutomationId({ id: 'active-schedules-card' })} className="p-4">
           <Flex justify="between" align="center">
             <div>
-              <Text as="div" size="2" color="gray" weight="medium">Active Schedules</Text>
+              <Text as="div" size="2" color="gray" weight="medium">
+                {t('assetDetails.maintenance.activeSchedules', { defaultValue: 'Active Schedules' })}
+              </Text>
               <Text as="div" size="6" weight="medium">{maintenanceReport.active_schedules}</Text>
             </div>
             <CheckCircle2 className="h-8 w-8 text-green-500" />
@@ -496,7 +611,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
         <Card {...withDataAutomationId({ id: 'overdue-maintenance-card' })} className="p-4">
           <Flex justify="between" align="center">
             <div>
-              <Text as="div" size="2" color="gray" weight="medium">Overdue</Text>
+              <Text as="div" size="2" color="gray" weight="medium">
+                {t('assetDetails.maintenance.overdue', { defaultValue: 'Overdue' })}
+              </Text>
               <Text as="div" size="6" weight="medium" className="text-amber-600">
                 {maintenanceReport.completed_maintenances}
               </Text>
@@ -508,7 +625,9 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
         <Card {...withDataAutomationId({ id: 'upcoming-maintenance-card' })} className="p-4">
           <Flex justify="between" align="center">
             <div>
-              <Text as="div" size="2" color="gray" weight="medium">Upcoming</Text>
+              <Text as="div" size="2" color="gray" weight="medium">
+                {t('assetDetails.maintenance.upcoming', { defaultValue: 'Upcoming' })}
+              </Text>
               <Text as="div" size="6" weight="medium" className="text-blue-600">
                 {maintenanceReport.upcoming_maintenances}
               </Text>
@@ -524,23 +643,32 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
     if (!asset.relationships || asset.relationships.length === 0) {
       return (
         <Card {...withDataAutomationId({ id: 'no-related-assets' })} className="p-6">
-          <Text as="p" color="gray">No related assets found</Text>
+          <Text as="p" color="gray">
+            {t('assetDetails.empty.noRelatedAssets', { defaultValue: 'No related assets found' })}
+          </Text>
         </Card>
       );
     }
 
     return (
       <Card {...withDataAutomationId({ id: 'related-assets-card' })} className="p-6">
-        <Text as="div" size="4" weight="medium" className="mb-4">Related Assets</Text>
+        <Text as="div" size="4" weight="medium" className="mb-4">
+          {t('assetDetails.sections.relatedAssets', { defaultValue: 'Related Assets' })}
+        </Text>
         <div {...withDataAutomationId({ id: 'related-assets-list' })} className="space-y-2">
           {asset.relationships.map((rel: AssetRelationship): React.JSX.Element => (
             <div {...withDataAutomationId({ id: `related-asset-${rel.parent_asset_id}-${rel.child_asset_id}` })}
                  key={`${rel.parent_asset_id}-${rel.child_asset_id}`}
                  className="flex justify-between items-center p-2 bg-gray-50 rounded">
               <div>
-                <Text as="div" size="2" weight="medium">{rel.relationship_type}</Text>
+                <Text as="div" size="2" weight="medium">
+                  {getRelationshipLabel(rel.relationship_type)}
+                </Text>
                 <Text as="div" size="2" color="gray">
-                  {rel.parent_asset_id === asset.asset_id ? 'Parent of' : 'Child of'} {rel.name}
+                  {rel.parent_asset_id === asset.asset_id
+                    ? t('assetDetails.relationships.parentOf', { defaultValue: 'Parent of' })
+                    : t('assetDetails.relationships.childOf', { defaultValue: 'Child of' })}{' '}
+                  {rel.name}
                 </Text>
               </div>
               <Link
@@ -548,7 +676,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                 href={`/msp/assets/${rel.parent_asset_id === asset.asset_id ? rel.child_asset_id : rel.parent_asset_id}`}
                 className="text-indigo-600 hover:text-indigo-700"
               >
-                View
+                {t('common.actions.view', { defaultValue: 'View' })}
               </Link>
             </div>
           ))}
@@ -560,11 +688,13 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
   const tabContent = [
     {
       id: 'details',
-      label: "Details",
+      label: t('assetDetails.tabs.details', { defaultValue: 'Details' }),
       content: (
         <div {...withDataAutomationId({ id: 'details-tab-content' })} className="space-y-6">
           <Card {...withDataAutomationId({ id: 'basic-info-card' })} className="p-6">
-            <Text as="div" size="4" weight="medium" className="mb-4">Basic Information</Text>
+            <Text as="div" size="4" weight="medium" className="mb-4">
+              {t('assetDetails.sections.basicInformation', { defaultValue: 'Basic Information' })}
+            </Text>
             {renderBasicInfo()}
           </Card>
 
@@ -578,12 +708,12 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
     },
     {
       id: 'related-assets',
-      label: "Related Assets",
+      label: t('assetDetails.tabs.relatedAssets', { defaultValue: 'Related Assets' }),
       content: renderRelatedAssets()
     },
     {
       id: 'documents',
-      label: "Documents",
+      label: t('assetDetails.tabs.documents', { defaultValue: 'Documents' }),
       content: (
         <Card {...withDataAutomationId({ id: 'documents-card' })} className="p-6">
           {renderDocuments({
@@ -605,14 +735,16 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
       <Flex {...withDataAutomationId({ id: 'asset-details-header' })} justify="between" align="center" className="mb-6">
         <div {...withDataAutomationId({ id: 'asset-title' })}>
           <Heading size="6">{asset.name}</Heading>
-          <Text as="p" size="2" color="gray">Asset Tag: {asset.asset_tag}</Text>
+          <Text as="p" size="2" color="gray">
+            {t('assetDetails.assetTag', { defaultValue: 'Asset Tag: {{tag}}', tag: asset.asset_tag })}
+          </Text>
         </div>
         <Flex {...withDataAutomationId({ id: 'asset-actions' })} gap="2">
           <CreateTicketFromAssetButton asset={asset} />
           <Link href={`/msp/assets/${asset.asset_id}/edit`}>
             <Button {...withDataAutomationId({ id: 'edit-asset-button' })} variant="outline" className="flex items-center gap-2">
               <Edit className="h-4 w-4" />
-              Edit
+              {t('common.actions.edit', { defaultValue: 'Edit' })}
             </Button>
           </Link>
           <DeleteAssetButton
@@ -627,13 +759,15 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
         {isLoading && (
           <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/70 backdrop-blur-sm">
             <Spinner size="md" className="text-primary-500" />
-            <Text as="p" size="2" className="mt-2 text-gray-600">Loading details…</Text>
+            <Text as="p" size="2" className="mt-2 text-gray-600">
+              {t('assetDetails.loading.details', { defaultValue: 'Loading details...' })}
+            </Text>
           </div>
         )}
         <CustomTabs
           tabs={tabContent.map((tab) => ({
             ...tab,
-            content: isLoading ? renderTabSkeleton(tab.label) : tab.content,
+            content: isLoading ? renderTabSkeleton(tab.id) : tab.content,
           }))}
         />
       </div>
@@ -641,12 +775,12 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
   );
 }
 
-function renderTabSkeleton(label: string) {
-  const rows = Array.from({ length: label === 'Documents' ? 6 : 4 });
+function renderTabSkeleton(tabId: string) {
+  const rows = Array.from({ length: tabId === 'documents' ? 6 : 4 });
   return (
     <div className="space-y-4">
       {rows.map((_, index) => (
-        <div key={`${label}-skeleton-${index}`} className="h-16 animate-pulse rounded-lg bg-gray-100" />
+        <div key={`${tabId}-skeleton-${index}`} className="h-16 animate-pulse rounded-lg bg-gray-100" />
       ))}
     </div>
   );

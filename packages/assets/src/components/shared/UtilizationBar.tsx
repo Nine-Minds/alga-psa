@@ -2,6 +2,7 @@ import React from 'react';
 import { Progress } from '@alga-psa/ui/components/Progress';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { cn } from '@alga-psa/ui';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface UtilizationBarProps {
   value: number | null; // 0-100
@@ -20,8 +21,9 @@ export const UtilizationBar: React.FC<UtilizationBarProps> = ({
   tooltip,
   size = 'md',
 }) => {
+  const { t } = useTranslation('msp/assets');
   if (value === null || value === undefined) {
-    return <span className="text-sm text-gray-400">N/A</span>;
+    return <span className="text-sm text-gray-400">{t('common.states.na', { defaultValue: 'N/A' })}</span>;
   }
 
   let indicatorColor = 'bg-emerald-500';

@@ -26,6 +26,7 @@ import { ButtonComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Stable empty array reference to avoid infinite re-render loops
 // when the `documents` prop is not passed (default `= []` creates a new ref each render).
@@ -82,6 +83,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   showInteractions = !quickView,
   clientReadOnly = false
 }) => {
+  const { t } = useTranslation('msp/contacts');
   const [contact, setContact] = useState<IContact>(initialContact);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
@@ -109,17 +111,23 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         console.error('Error fetching tags:', err);
         if (err instanceof Error) {
           if (err.message.includes('SYSTEM_ERROR:')) {
-            setError('An unexpected error occurred while loading tags. Please try again or contact support.');
+            setError(t('contactDetailsView.errors.loadTagsSystem', {
+              defaultValue: 'An unexpected error occurred while loading tags. Please try again or contact support.'
+            }));
           } else {
-            setError('Failed to load tags. Please try refreshing the page.');
+            setError(t('contactDetailsView.errors.loadTagsFailed', {
+              defaultValue: 'Failed to load tags. Please try refreshing the page.'
+            }));
           }
         } else {
-          setError('An unexpected error occurred. Please try again.');
+          setError(t('contactDetailsView.errors.unexpected', {
+            defaultValue: 'An unexpected error occurred. Please try again.'
+          }));
         }
       }
     };
     fetchData();
-  }, [contact.contact_name_id, contact.tenant, userId]);
+  }, [contact.contact_name_id, contact.tenant, userId, t]);
 
   // Update documents when initialDocuments changes
   useEffect(() => {
@@ -138,7 +146,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   }, [onDocumentCreated, router]);
 
   const formatDateForDisplay = (dateString: string | null | undefined): string => {
-    if (!dateString) return 'Not set';
+    if (!dateString) return t('contactDetailsView.empty.notSet', { defaultValue: 'Not set' });
     const date = new Date(dateString);
     return date.toLocaleDateString();
   };
@@ -149,10 +157,12 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
     }
 
     if (phone.canonical_type) {
-      return phone.canonical_type.charAt(0).toUpperCase() + phone.canonical_type.slice(1);
+      return t(`contactDetailsView.phoneTypes.${phone.canonical_type}`, {
+        defaultValue: phone.canonical_type.charAt(0).toUpperCase() + phone.canonical_type.slice(1)
+      });
     }
 
-    return 'Other';
+    return t('contactDetailsView.phoneTypes.other', { defaultValue: 'Other' });
   };
 
   const handleEditContact = () => {
@@ -194,7 +204,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
 
   const getClientName = (clientId: string) => {
     const client = clients.find(c => c.client_id === clientId);
-    return client ? client.client_name : 'Unknown Client';
+    return client ? client.client_name : t('contactDetailsView.empty.unknownClient', { defaultValue: 'Unknown Client' });
   };
 
   const handleClientClick = async () => {
@@ -218,20 +228,30 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
             />
           );
         } else {
-          setError('Client not found. The client may have been deleted.');
+          setError(t('contactDetailsView.errors.clientNotFound', {
+            defaultValue: 'Client not found. The client may have been deleted.'
+          }));
         }
       } catch (err) {
         console.error('Error fetching client details:', err);
         if (err instanceof Error) {
           if (err.message.includes('SYSTEM_ERROR:')) {
-            setError('An unexpected error occurred while loading client details. Please try again or contact support.');
+            setError(t('contactDetailsView.errors.loadClientSystem', {
+              defaultValue: 'An unexpected error occurred while loading client details. Please try again or contact support.'
+            }));
           } else if (err.message.includes('FOREIGN_KEY_ERROR:')) {
-            setError('The client no longer exists in the system.');
+            setError(t('contactDetailsView.errors.clientMissing', {
+              defaultValue: 'The client no longer exists in the system.'
+            }));
           } else {
-            setError('Failed to load client details. Please try again.');
+            setError(t('contactDetailsView.errors.loadClientFailed', {
+              defaultValue: 'Failed to load client details. Please try again.'
+            }));
           }
         } else {
-          setError('An unexpected error occurred. Please try again.');
+          setError(t('contactDetailsView.errors.unexpected', {
+            defaultValue: 'An unexpected error occurred. Please try again.'
+          }));
         }
       }
     }
@@ -261,9 +281,14 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
     } catch (err) {
       console.error('Error updating client:', err);
       if (err instanceof Error) {
-        setError(`Failed to update client: ${err.message}`);
+        setError(t('contactDetailsView.errors.updateClientFailedWithMessage', {
+          defaultValue: 'Failed to update client: {{message}}',
+          message: err.message
+        }));
       } else {
-        setError('Failed to update client. Please try again.');
+        setError(t('contactDetailsView.errors.updateClientFailed', {
+          defaultValue: 'Failed to update client. Please try again.'
+        }));
       }
       // Revert the selection on error
       setSelectedClientId(contact.client_id || null);
@@ -271,7 +296,13 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   };
   
   return (
-    <ReflectionContainer id={id} label={`Contact Details - ${contact.full_name}`}>
+    <ReflectionContainer
+      id={id}
+      label={t('contactDetailsView.title', {
+        defaultValue: 'Contact Details - {{name}}',
+        name: contact.full_name
+      })}
+    >
       <div className="p-6 bg-white shadow rounded-lg">
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -304,7 +335,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                   className="flex items-center"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
+                  {t('common.actions.back', { defaultValue: 'Back' })}
                 </Button>
               )}
               {isInDrawer && (
@@ -316,7 +347,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                   className="flex items-center"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Go to contact
+                  {t('contactDetailsView.actions.goToContact', { defaultValue: 'Go to contact' })}
                 </Button>
               )}
               {!isInDrawer && (
@@ -328,7 +359,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                   className="flex items-center"
                 >
                   <Pen className="h-4 w-4 mr-2" />
-                  Edit
+                  {t('common.actions.edit', { defaultValue: 'Edit' })}
                 </Button>
               )}
             </div>
@@ -336,13 +367,13 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         </div>
         <table className="min-w-full">
           <tbody>
-            <TableRow label="Full Name" value={contact.full_name} />
-            <TableRow label="Email" value={contact.email ?? 'N/A'} />
+            <TableRow label={t('contactDetailsView.fields.fullName', { defaultValue: 'Full Name' })} value={contact.full_name} />
+            <TableRow label={t('contactDetailsView.fields.email', { defaultValue: 'Email' })} value={contact.email ?? t('common.states.na', { defaultValue: 'N/A' })} />
             <tr>
-              <td className="py-2 font-semibold align-top">Phone:</td>
+              <td className="py-2 font-semibold align-top">{t('contactDetailsView.fields.phone', { defaultValue: 'Phone:' })}</td>
               <td className="py-2">
                 {contact.phone_numbers.length === 0 ? (
-                  'N/A'
+                  t('common.states.na', { defaultValue: 'N/A' })
                 ) : (
                   <div className="space-y-2">
                     {contact.phone_numbers.map((phone) => (
@@ -350,7 +381,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                         <div className="text-sm font-medium text-gray-900">{phone.phone_number}</div>
                         <div className="text-xs text-gray-500">
                           {getPhoneTypeLabel(phone)}
-                          {phone.is_default ? ' • Default' : ''}
+                          {phone.is_default ? ` • ${t('contactDetailsView.fields.defaultPhone', { defaultValue: 'Default' })}` : ''}
                         </div>
                       </div>
                     ))}
@@ -359,7 +390,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               </td>
             </tr>
             <tr>
-              <td className="py-2 font-semibold">Client:</td>
+              <td className="py-2 font-semibold">{t('contactDetailsView.fields.client', { defaultValue: 'Client:' })}</td>
               <td className="py-2">
                 {isEditingClient ? (
                   <div className="flex-1">
@@ -385,7 +416,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                         {getClientName(contact.client_id)}
                       </button>
                     ) : (
-                      <span className="text-gray-500 italic">No client assigned</span>
+                      <span className="text-gray-500 italic">{t('contactDetailsView.fields.noClientAssigned', { defaultValue: 'No client assigned' })}</span>
                     )}
                     {!clientReadOnly && (
                       <Button
@@ -402,18 +433,18 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                 )}
               </td>
             </tr>
-            <TableRow label="Role" value={contact.role || 'Not set'} />
-            <TableRow label="Status" value={contact.is_inactive ? 'Inactive' : 'Active'} />
-            <TableRow label="Created At" value={new Date(contact.created_at).toLocaleString()} />
-            <TableRow label="Updated At" value={new Date(contact.updated_at).toLocaleString()} />
+            <TableRow label={t('contactDetailsView.fields.role', { defaultValue: 'Role' })} value={contact.role || t('contactDetailsView.empty.notSet', { defaultValue: 'Not set' })} />
+            <TableRow label={t('contactDetailsView.fields.status', { defaultValue: 'Status' })} value={contact.is_inactive ? t('contactDetailsView.status.inactive', { defaultValue: 'Inactive' }) : t('contactDetailsView.status.active', { defaultValue: 'Active' })} />
+            <TableRow label={t('contactDetailsView.fields.createdAt', { defaultValue: 'Created At' })} value={new Date(contact.created_at).toLocaleString()} />
+            <TableRow label={t('contactDetailsView.fields.updatedAt', { defaultValue: 'Updated At' })} value={new Date(contact.updated_at).toLocaleString()} />
             {contact.notes && (
               <tr>
-                <td className="py-2 font-semibold align-top">Notes:</td>
+                <td className="py-2 font-semibold align-top">{t('contactDetailsView.fields.notes', { defaultValue: 'Notes:' })}</td>
                 <td className="py-2 whitespace-pre-wrap">{contact.notes}</td>
               </tr>
             )}
             <tr>
-              <td className="py-2 font-semibold">Tags:</td>
+              <td className="py-2 font-semibold">{t('contactDetailsView.fields.tags', { defaultValue: 'Tags:' })}</td>
               <td className="py-2">
                 <TagManager
                   id={`${id}-tags`}
@@ -429,7 +460,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
 
         {showDocuments && userId && (
           <div className="mt-6">
-            <Heading size="4" className="mb-4">Documents</Heading>
+            <Heading size="4" className="mb-4">{t('contactDetailsView.sections.documents', { defaultValue: 'Documents' })}</Heading>
             {renderDocuments({
               id: `${id}-documents`,
               documents,

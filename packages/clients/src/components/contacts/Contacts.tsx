@@ -38,6 +38,7 @@ import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useRouter } from 'next/navigation';
 import ContactsSkeleton from './ContactsSkeleton';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
 
@@ -48,6 +49,7 @@ interface ContactsProps {
 }
 
 const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelectedClientId }) => {
+  const { t } = useTranslation('msp/contacts');
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['contact']);
   const { getDocumentsByEntity } = useDocumentsCrossFeature();
@@ -101,11 +103,20 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const [refreshKey, setRefreshKey] = useState(0);
   const [changesSavedInDrawer, setChangesSavedInDrawer] = useState(false);
 
-  const statusOptions = [
-    { value: 'all', label: 'All contacts' },
-    { value: 'active', label: 'Active contacts' },
-    { value: 'inactive', label: 'Inactive contacts' }
-  ];
+  const statusOptions = useMemo(() => [
+    {
+      value: 'all',
+      label: t('contactsPage.statusOptions.all', { defaultValue: 'All contacts' })
+    },
+    {
+      value: 'active',
+      label: t('contactsPage.statusOptions.active', { defaultValue: 'Active contacts' })
+    },
+    {
+      value: 'inactive',
+      label: t('contactsPage.statusOptions.inactive', { defaultValue: 'Inactive contacts' })
+    }
+  ], [t]);
 
   const refreshContacts = async () => {
     // Force refresh by changing a key to trigger re-render
@@ -226,7 +237,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       }
     };
     fetchAllTags();
-  }, []);
+  }, [t]);
 
   const handleTagsChange = (contactId: string, updatedTags: ITag[]) => {
     contactTagsRef.current = {
@@ -243,7 +254,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
 
   const getClientName = (clientId: string) => {
     const client = clients.find(c => c.client_id === clientId);
-    return client ? client.client_name : 'Unknown Client';
+    return client
+      ? client.client_name
+      : t('contactsPage.unknownClient', { defaultValue: 'Unknown Client' });
   };
 
   const handleContactAdded = (newContact: IContact) => {
@@ -416,7 +429,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('contactsPage.deleteValidationError', {
+          defaultValue: 'Failed to validate deletion. Please try again.'
+        }),
         dependencies: [],
         alternatives: []
       });
@@ -447,7 +462,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         );
 
         resetDeleteState();
-        toast.success(`${contactToDelete.full_name} has been deleted successfully.`);
+        toast.success(
+          t('contactsPage.deleteSuccess', {
+            defaultValue: '{{name}} has been deleted successfully.',
+            name: contactToDelete.full_name
+          })
+        );
 
         // If there are orphaned phone types, ask the user what to do
         if (lastUsageTypes.length > 0) {
@@ -457,7 +477,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         setDeleteValidation(result);
       }
     } catch (err) {
-      handleError(err, 'Failed to delete contact. Please try again.');
+      handleError(
+        err,
+        t('contactsPage.deleteError', {
+          defaultValue: 'Failed to delete contact. Please try again.'
+        })
+      );
     } finally {
       setIsDeleteProcessing(false);
     }
@@ -495,9 +520,19 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       );
 
       resetDeleteState();
-      toast.success(`${contactToDelete.full_name} has been marked as inactive successfully.`);
+      toast.success(
+        t('contactsPage.markInactiveSuccess', {
+          defaultValue: '{{name}} has been marked as inactive successfully.',
+          name: contactToDelete.full_name
+        })
+      );
     } catch (error: any) {
-      handleError(error, 'An error occurred while marking the contact as inactive. Please try again.');
+      handleError(
+        error,
+        t('contactsPage.markInactiveError', {
+          defaultValue: 'An error occurred while marking the contact as inactive. Please try again.'
+        })
+      );
     }
   };
 
@@ -559,7 +594,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
 
   const columns: ColumnDefinition<IContact>[] = [
     {
-      title: 'Name',
+      title: t('contactsPage.table.name', { defaultValue: 'Name' }),
       dataIndex: 'full_name',
       width: '20%',
       render: (value, record): React.ReactNode => (
@@ -589,39 +624,46 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       ),
     },
     {
-      title: 'Created',
+      title: t('contactsPage.table.created', { defaultValue: 'Created' }),
       dataIndex: 'created_at',
       width: '12%',
       render: (value, record): React.ReactNode => {
-        if (!record.created_at) return 'N/A';
+        if (!record.created_at) {
+          return t('common.states.na', { defaultValue: 'N/A' });
+        }
         const date = new Date(record.created_at);
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       },
     },
     {
-      title: 'Email',
+      title: t('contactsPage.table.email', { defaultValue: 'Email' }),
       dataIndex: 'email',
       width: '18%',
-      render: (value, record): React.ReactNode => record.email || 'N/A',
+      render: (value, record): React.ReactNode =>
+        record.email || t('common.states.na', { defaultValue: 'N/A' }),
     },
     {
-      title: 'Phone Number',
+      title: t('contactsPage.table.phoneNumber', { defaultValue: 'Phone Number' }),
       dataIndex: 'default_phone_number',
       sortable: false,
       width: '15%',
       render: (value, record): React.ReactNode =>
         record.default_phone_number
         || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number
-        || 'N/A',
+        || t('common.states.na', { defaultValue: 'N/A' }),
     },
     {
-      title: 'Client',
+      title: t('contactsPage.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
       width: '13%',
       render: (value, record): React.ReactNode => {
         const clientId = record.client_id;
         if (typeof clientId !== 'string' || !clientId) {
-          return <span className="text-gray-500">No Client</span>;
+          return (
+            <span className="text-gray-500">
+              {t('contactsPage.noClient', { defaultValue: 'No Client' })}
+            </span>
+          );
         }
 
         const client = clients.find(c => c.client_id === clientId);
@@ -664,7 +706,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       },
     },
     {
-      title: 'Tags',
+      title: t('contactsPage.table.tags', { defaultValue: 'Tags' }),
       dataIndex: 'tags',
       sortable: false,
       width: '15%',
@@ -682,7 +724,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       },
     },
     {
-      title: 'Actions',
+      title: t('contactsPage.table.actions', { defaultValue: 'Actions' }),
       dataIndex: 'actions',
       sortable: false,
       width: '3%',
@@ -695,7 +737,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
               size="sm"
               className="h-8 w-8 p-0"
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">
+                {t('contactsPage.actionsMenuSrOnly', { defaultValue: 'Open menu' })}
+              </span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenu.Trigger>
@@ -708,21 +752,21 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
               onSelect={() => handleQuickView(record)}
             >
               <ExternalLink size={14} className="mr-2" />
-              Quick View
+              {t('contactsPage.quickView', { defaultValue: 'Quick View' })}
             </DropdownMenu.Item>
             <DropdownMenu.Item 
               className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
               onSelect={() => handleEditContact(record)}
             >
               <Pen size={14} className="mr-2" />
-              Edit
+              {t('common.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenu.Item>
             <DropdownMenu.Item 
               className="px-2 py-1 text-sm cursor-pointer hover:bg-red-100 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center rounded"
               onSelect={() => handleDeleteContact(record)}
             >
               <Trash2 size={14} className="mr-2" />
-              Delete
+              {t('common.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Root>
@@ -762,19 +806,21 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   return (
     <div className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">Contacts</h1>
+          <h1 className="text-2xl font-bold">
+            {t('contactsPage.heading', { defaultValue: 'Contacts' })}
+          </h1>
           <div className="flex items-center gap-2">
             <Button
               id="new-contact-dialog-button"
               onClick={() => setIsQuickAddOpen(true)}
             >
-              + Add Contact
+              {t('contactsPage.addContact', { defaultValue: '+ Add Contact' })}
             </Button>
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
                   <button className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
                     <MoreVertical size={16} />
-                    Actions
+                    {t('contactsPage.actions', { defaultValue: 'Actions' })}
                   </button>
               </DropdownMenu.Trigger>
                 <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
@@ -783,14 +829,14 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                     onSelect={() => setIsImportDialogOpen(true)}
                   >
                     <Upload size={14} className="mr-2" />
-                    Upload CSV
+                    {t('common.actions.uploadCsv', { defaultValue: 'Upload CSV' })}
                   </DropdownMenu.Item>
                   <DropdownMenu.Item 
                     className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
                     onSelect={() => void handleExportToCSV()}
                   >
                     <CloudDownload size={14} className="mr-2" />
-                    Download CSV
+                    {t('common.actions.downloadCsv', { defaultValue: 'Download CSV' })}
                   </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Root>
@@ -801,7 +847,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             <div className="flex items-center mb-4 gap-4">
                 <SearchInput
                   id='filter-contacts'
-                  placeholder="Search contacts"
+                  placeholder={t('contactsPage.searchPlaceholder', {
+                    defaultValue: 'Search contacts'
+                  })}
                   className="w-64"
                   value={searchTerm}
                   onChange={(e) => {
@@ -850,7 +898,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                   disabled={!isFiltered}
                 >
                   <XCircle className="h-4 w-4" />
-                  Reset
+                  {t('contactsPage.resetFilters', { defaultValue: 'Reset' })}
                 </Button>
             </div>
           </ReflectionContainer>
@@ -892,7 +940,10 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           onClose={resetDeleteState}
           onConfirmDelete={confirmDelete}
           onAlternativeAction={handleDeleteAlternativeAction}
-          entityName={contactToDelete?.full_name || 'this contact'}
+          entityName={
+            contactToDelete?.full_name
+            || t('contactsPage.thisContact', { defaultValue: 'this contact' })
+          }
           validationResult={deleteValidation}
           isValidating={isDeleteValidating}
           isDeleting={isDeleteProcessing}
@@ -904,11 +955,23 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           onClose={handleKeepPhoneTypes}
           onConfirm={handleConfirmDeletePhoneTypes}
           onCancel={handleKeepPhoneTypes}
-          title="Last Phone Type Usage"
-          message={`The following custom phone type${lastUsagePhoneTypes.length > 1 ? 's are' : ' is'} no longer used by any contact: ${lastUsagePhoneTypes.map(t => `"${t.label}"`).join(', ')}. Delete the type definition${lastUsagePhoneTypes.length > 1 ? 's' : ''}, or keep for future use?`}
-          confirmLabel="Delete Type"
-          thirdButtonLabel="Keep Type"
-          cancelLabel="Cancel"
+          title={t('contactsPage.lastPhoneTypeUsage.title', {
+            defaultValue: 'Last Phone Type Usage'
+          })}
+          message={t('contactsPage.lastPhoneTypeUsage.message', {
+            defaultValue:
+              'The following custom phone type{{suffix}} no longer used by any contact: {{labels}}. Delete the type definition{{definitionSuffix}}, or keep for future use?',
+            suffix: lastUsagePhoneTypes.length > 1 ? 's are' : ' is',
+            labels: lastUsagePhoneTypes.map(type => `"${type.label}"`).join(', '),
+            definitionSuffix: lastUsagePhoneTypes.length > 1 ? 's' : ''
+          })}
+          confirmLabel={t('contactsPage.lastPhoneTypeUsage.deleteType', {
+            defaultValue: 'Delete Type'
+          })}
+          thirdButtonLabel={t('contactsPage.lastPhoneTypeUsage.keepType', {
+            defaultValue: 'Keep Type'
+          })}
+          cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
         />
       </div>
   );

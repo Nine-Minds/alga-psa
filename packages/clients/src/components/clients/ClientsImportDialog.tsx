@@ -15,6 +15,7 @@ import { parseCSV } from '@alga-psa/core';
 import { checkExistingClients, importClientsFromCSV, generateClientCSVTemplate } from '@alga-psa/clients/actions';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientsImportDialogProps {
   isOpen: boolean;
@@ -85,6 +86,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
   onClose,
   onImportComplete,
 }) => {
+  const { t } = useTranslation('msp/clients');
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'importing' | 'complete'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<ICSVPreviewData | null>(null);
@@ -369,7 +371,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       <Dialog
         isOpen={isOpen} 
         onClose={handleClose} 
-        title="Import Clients"
+        title={t('clientsImportDialog.title', { defaultValue: 'Import Clients' })}
         className="max-w-5xl"
       >
         <DialogContent>
@@ -388,7 +390,9 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
           {step === 'upload' && (
             <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
               <Upload className="mx-auto h-12 w-12 text-gray-400" />
-              <p className="mt-2 text-sm text-gray-600">Upload a CSV file with client data</p>
+              <p className="mt-2 text-sm text-gray-600">
+                {t('clientsImportDialog.uploadDescription', { defaultValue: 'Upload a CSV file with client data' })}
+              </p>
               <p className="mt-1 text-xs text-gray-500">
                 <strong>Required:</strong> client_name<br />
                 <strong>Client fields:</strong> website, client_type, is_inactive, notes, tags<br />
@@ -420,7 +424,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                   }}
                   className="w-full"
                 >
-                  Download CSV Template
+                  {t('clientsImportDialog.downloadTemplate', { defaultValue: 'Download CSV Template' })}
                 </Button>
               </div>
             </div>
@@ -428,14 +432,18 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
 
           {step === 'mapping' && previewData && (
             <div>
-              <h3 className="text-lg font-medium mb-4">Map Client Fields to CSV Columns</h3>
+              <h3 className="text-lg font-medium mb-4">
+                {t('clientsImportDialog.mapFieldsTitle', { defaultValue: 'Map Client Fields to CSV Columns' })}
+              </h3>
               <p className="text-sm text-gray-600 mb-4">
-                Select which CSV column contains the data for each client field. Fields marked with * are required.
+                {t('clientsImportDialog.mapFieldsDescription', {
+                  defaultValue: 'Select which CSV column contains the data for each client field. Fields marked with * are required.',
+                })}
               </p>
               <div className="max-h-[60vh] overflow-y-auto pr-2">
                 <div className="mb-2 flex items-center gap-4 text-sm font-semibold text-gray-700">
-                  <span className="w-1/3">Client Field</span>
-                  <span className="w-2/3">Select CSV Column</span>
+                  <span className="w-1/3">{t('clientsImportDialog.clientField', { defaultValue: 'Client Field' })}</span>
+                  <span className="w-2/3">{t('clientsImportDialog.selectCsvColumn', { defaultValue: 'Select CSV Column' })}</span>
                 </div>
                 <div className="border-t pt-4 space-y-3">
                   {Object.entries(COMPANY_FIELDS).map(([fieldKey, fieldLabel]: [string, string]): React.JSX.Element => {
@@ -453,7 +461,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                         <span className="text-gray-400">←</span>
                         <CustomSelect
                           options={[
-                            { value: 'unassigned', label: 'Not mapped' },
+                            { value: 'unassigned', label: t('clientsImportDialog.notMapped', { defaultValue: 'Not mapped' }) },
                             ...previewData.headers
                               .filter(header => !mappedHeaders.includes(header))
                               .map(header => ({
@@ -488,21 +496,28 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                 </div>
               </div>
               <div className="mt-6 text-xs text-gray-500">
-                <p>* Required fields must be mapped for import to proceed</p>
+                <p>{t('clientsImportDialog.requiredHelp', { defaultValue: '* Required fields must be mapped for import to proceed' })}</p>
                 <p className="mt-1">Note: is_inactive should be 'true' or 'false' (case-insensitive)</p>
               </div>
               {fullCSVData && fullCSVData.length > 100 && (
                 <Alert variant="warning" className="mt-4">
                   <AlertDescription>
-                    You are importing {fullCSVData.length} records. Processing may take a moment.
+                    {t('clientsImportDialog.recordsMessage', {
+                      defaultValue: 'You are importing {{count}} records. Processing may take a moment.',
+                      count: fullCSVData.length,
+                    })}
                   </AlertDescription>
                 </Alert>
               )}
               <div className="mt-4">
                 <DialogFooter>
-                  <Button id="mapping-back-btn" variant="outline" onClick={() => setStep('upload')} disabled={isProcessing}>Back</Button>
+                  <Button id="mapping-back-btn" variant="outline" onClick={() => setStep('upload')} disabled={isProcessing}>
+                    {t('common.actions.back', { defaultValue: 'Back' })}
+                  </Button>
                   <Button id="mapping-preview-btn" onClick={handlePreview} disabled={isProcessing}>
-                    {isProcessing ? 'Processing...' : 'Preview'}
+                    {isProcessing
+                      ? t('clientsImportDialog.processing', { defaultValue: 'Processing...' })
+                      : t('clientsImportDialog.previewTitle', { defaultValue: 'Preview Import' })}
                   </Button>
                 </DialogFooter>
               </div>
@@ -511,7 +526,9 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
 
           {step === 'preview' && validationResults.length > 0 && (
             <div>
-              <h3 className="text-lg font-medium mb-4">Preview Import</h3>
+              <h3 className="text-lg font-medium mb-4">
+                {t('clientsImportDialog.previewTitle', { defaultValue: 'Preview Import' })}
+              </h3>
               <Alert variant="info" className="mb-4">
                 <AlertDescription>
                   <strong>Total records:</strong> {validationResults.length} |
@@ -522,12 +539,18 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
               <div className="mb-6 space-y-4">
                 <div className="flex items-center justify-between py-3">
                   <div>
-                    <div className="text-gray-900 font-medium">Update existing clients</div>
-                    <div className="text-sm text-gray-500">Replace data for existing clients</div>
+                    <div className="text-gray-900 font-medium">
+                      {t('clientsImportDialog.updateExistingLabel', { defaultValue: 'Update existing clients' })}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {t('clientsImportDialog.replaceExisting', { defaultValue: 'Replace data for existing clients' })}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-700">
-                      {importOptions.updateExisting ? 'Yes' : 'No'}
+                      {importOptions.updateExisting
+                        ? t('common.yes', { defaultValue: 'Yes' })
+                        : t('common.no', { defaultValue: 'No' })}
                     </span>
                     <Switch
                       checked={importOptions.updateExisting}
@@ -541,12 +564,20 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
 
                 <div className="flex items-center justify-between py-3">
                   <div>
-                    <div className="text-gray-900 font-medium">Skip invalid records</div>
-                    <div className="text-sm text-gray-500">Continue import even if some records have validation errors</div>
+                    <div className="text-gray-900 font-medium">
+                      {t('clientsImportDialog.skipInvalidRecords', { defaultValue: 'Skip invalid records' })}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {t('clientsImportDialog.continueOnValidationErrors', {
+                        defaultValue: 'Continue import even if some records have validation errors',
+                      })}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-700">
-                      {importOptions.skipInvalid ? 'Yes' : 'No'}
+                      {importOptions.skipInvalid
+                        ? t('common.yes', { defaultValue: 'Yes' })
+                        : t('common.no', { defaultValue: 'No' })}
                     </span>
                     <Switch
                       checked={importOptions.skipInvalid}
@@ -577,7 +608,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                   }))}
                   columns={[
                     {
-                      title: 'Status',
+                      title: t('clientsImportDialog.status', { defaultValue: 'Status' }),
                       dataIndex: 'status',
                       render: (value: boolean) => value ? (
                         <div className="flex justify-center">
@@ -594,19 +625,19 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                       ),
                     },
                     {
-                      title: 'Client Name',
+                      title: t('clientsImportDialog.clientName', { defaultValue: 'Client Name' }),
                       dataIndex: 'client_name',
                     },
                     {
-                      title: 'Email',
+                      title: t('clientsImportDialog.email', { defaultValue: 'Email' }),
                       dataIndex: 'email',
                     },
                     {
-                      title: 'Exists',
+                      title: t('clientsImportDialog.exists', { defaultValue: 'Exists' }),
                       dataIndex: 'exists',
                     },
                     {
-                      title: 'Issues',
+                      title: t('clientsImportDialog.issues', { defaultValue: 'Issues' }),
                       dataIndex: 'issues',
                       width: '40%',
                       render: (value: any, record: any) => {
@@ -648,14 +679,16 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                     onClick={() => setStep('mapping')}
                     disabled={isProcessing}
                   >
-                    Back
+                    {t('common.actions.back', { defaultValue: 'Back' })}
                   </Button>
                   <Button
                     id="preview-import-btn"
                     onClick={handleImport}
                     disabled={validationResults.every(result => !result.isValid) || isProcessing}
                   >
-                    {isProcessing ? 'Importing...' : 'Import'}
+                    {isProcessing
+                      ? t('clientsImportDialog.importing', { defaultValue: 'Importing...' })
+                      : t('common.actions.import', { defaultValue: 'Import' })}
                   </Button>
                 </DialogFooter>
               </div>
@@ -665,12 +698,19 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
           {step === 'complete' && (
             <div className="text-center">
               <Check className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Import Complete</h3>
+              <h3 className="text-lg font-medium mb-2">
+                {t('clientsImportDialog.importComplete', { defaultValue: 'Import Complete' })}
+              </h3>
               <p className="text-gray-600 mb-4">
-                Successfully imported {validationResults.filter(r => r.isValid).length} clients
+                {t('clientsImportDialog.importCompleteMessage', {
+                  defaultValue: 'Successfully imported {{count}} clients',
+                  count: validationResults.filter(r => r.isValid).length,
+                })}
               </p>
               <DialogFooter>
-                <Button id="complete-close-btn" onClick={handleClose}>Close</Button>
+                <Button id="complete-close-btn" onClick={handleClose}>
+                  {t('common.actions.close', { defaultValue: 'Close' })}
+                </Button>
               </DialogFooter>
             </div>
           )}
@@ -685,10 +725,13 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
           setImportOptions(prev => ({ ...prev, updateExisting: true }));
           setStep('preview');
         }}
-        title="Update Existing Clients"
-        message={`${existingClientsCount} clients already exist. Do you want to update them with the new data?`}
-        confirmLabel="Update"
-        cancelLabel="Cancel"
+        title={t('clientsImportDialog.updateExistingTitle', { defaultValue: 'Update Existing Clients' })}
+        message={t('clientsImportDialog.updateExistingMessage', {
+          defaultValue: '{{count}} clients already exist. Do you want to update them with the new data?',
+          count: existingClientsCount,
+        })}
+        confirmLabel={t('common.actions.update', { defaultValue: 'Update' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
       />
     </>
   );

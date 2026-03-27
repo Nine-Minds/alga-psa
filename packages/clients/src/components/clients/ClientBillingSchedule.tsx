@@ -27,40 +27,20 @@ interface BillingCyclePeriodPreview {
 import type { ISO8601String } from '@alga-psa/types';
 import type { ClientCadenceScheduleContext } from '@alga-psa/shared/billingClients';
 import type { BillingHistoryBootstrapPreview } from '@alga-psa/shared/billingClients';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'bi-weekly', label: 'Bi-Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'quarterly', label: 'Quarterly' },
-  { value: 'semi-annually', label: 'Semi-Annually' },
-  { value: 'annually', label: 'Annually' },
+const BILLING_CYCLE_OPTIONS: BillingCycleType[] = [
+  'weekly',
+  'bi-weekly',
+  'monthly',
+  'quarterly',
+  'semi-annually',
+  'annually',
 ];
 
-const MONTH_OPTIONS = [
-  { value: 1, label: 'January' },
-  { value: 2, label: 'February' },
-  { value: 3, label: 'March' },
-  { value: 4, label: 'April' },
-  { value: 5, label: 'May' },
-  { value: 6, label: 'June' },
-  { value: 7, label: 'July' },
-  { value: 8, label: 'August' },
-  { value: 9, label: 'September' },
-  { value: 10, label: 'October' },
-  { value: 11, label: 'November' },
-  { value: 12, label: 'December' },
-] as const;
+const MONTH_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 
-const WEEKDAY_OPTIONS = [
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' },
-  { value: 7, label: 'Sunday' },
-] as const;
+const WEEKDAY_OPTIONS = [1, 2, 3, 4, 5, 6, 7] as const;
 
 type AnchorDraft = {
   dayOfMonth: number | null;
@@ -83,25 +63,9 @@ function defaultAnchorDraftForCycle(billingCycle: BillingCycleType): AnchorDraft
   }
 }
 
-function formatScheduleSummary(billingCycle: BillingCycleType, anchor: AnchorDraft): string {
-  switch (billingCycle) {
-    case 'weekly':
-      return anchor.dayOfWeek ? `Weekly (weekday=${anchor.dayOfWeek})` : 'Weekly (rolling)';
-    case 'bi-weekly':
-      return anchor.referenceDate ? `Bi-weekly (starts ${anchor.referenceDate})` : 'Bi-weekly (rolling)';
-    case 'monthly':
-      return `Monthly (day ${anchor.dayOfMonth ?? 1})`;
-    case 'quarterly':
-      return `Quarterly (${anchor.monthOfYear ?? 1}/${anchor.dayOfMonth ?? 1})`;
-    case 'semi-annually':
-      return `Semi-annually (${anchor.monthOfYear ?? 1}/${anchor.dayOfMonth ?? 1})`;
-    case 'annually':
-      return `Annually (${anchor.monthOfYear ?? 1}/${anchor.dayOfMonth ?? 1})`;
-  }
-}
-
 export function ClientBillingSchedule(props: { clientId: string }): React.JSX.Element {
   const { clientId } = props;
+  const { t } = useTranslation('msp/clients');
 
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -120,7 +84,85 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
   const [billingCycle, setBillingCycle] = useState<BillingCycleType>('monthly');
   const [anchorDraft, setAnchorDraft] = useState<AnchorDraft>(defaultAnchorDraftForCycle('monthly'));
 
-  const scheduleSummary = useMemo(() => formatScheduleSummary(billingCycle, anchorDraft), [billingCycle, anchorDraft]);
+  const billingCycleOptions = useMemo(
+    () =>
+      BILLING_CYCLE_OPTIONS.map((value) => ({
+        value,
+        label: t(`clientBillingSchedule.cycleOptions.${value}`, {
+          defaultValue:
+            value === 'bi-weekly'
+              ? 'Bi-Weekly'
+              : value === 'semi-annually'
+                ? 'Semi-Annually'
+                : value.charAt(0).toUpperCase() + value.slice(1)
+        })
+      })),
+    [t]
+  );
+
+  const monthOptions = useMemo(
+    () =>
+      MONTH_OPTIONS.map((value) => ({
+        value: String(value),
+        label: t(`clientBillingSchedule.months.${value}`, {
+          defaultValue: new Date(Date.UTC(2020, value - 1, 1)).toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })
+        })
+      })),
+    [t]
+  );
+
+  const weekdayOptions = useMemo(
+    () =>
+      WEEKDAY_OPTIONS.map((value) => ({
+        value: String(value),
+        label: t(`clientBillingSchedule.weekdays.${value}`, {
+          defaultValue: new Date(Date.UTC(2020, 0, value + 5)).toLocaleString('en-US', { weekday: 'long', timeZone: 'UTC' })
+        })
+      })),
+    [t]
+  );
+
+  const scheduleSummary = useMemo(() => {
+    switch (billingCycle) {
+      case 'weekly':
+        return anchorDraft.dayOfWeek
+          ? t('clientBillingSchedule.summary.weeklyAnchored', {
+              defaultValue: 'Weekly (weekday={{dayOfWeek}})',
+              dayOfWeek: anchorDraft.dayOfWeek
+            })
+          : t('clientBillingSchedule.weeklyRolling', { defaultValue: 'Weekly (rolling)' });
+      case 'bi-weekly':
+        return anchorDraft.referenceDate
+          ? t('clientBillingSchedule.summary.biWeeklyAnchored', {
+              defaultValue: 'Bi-weekly (starts {{referenceDate}})',
+              referenceDate: anchorDraft.referenceDate
+            })
+          : t('clientBillingSchedule.biWeeklyRolling', { defaultValue: 'Bi-weekly (rolling)' });
+      case 'monthly':
+        return t('clientBillingSchedule.summary.monthly', {
+          defaultValue: 'Monthly (day {{dayOfMonth}})',
+          dayOfMonth: anchorDraft.dayOfMonth ?? 1
+        });
+      case 'quarterly':
+        return t('clientBillingSchedule.summary.quarterly', {
+          defaultValue: 'Quarterly ({{monthOfYear}}/{{dayOfMonth}})',
+          monthOfYear: anchorDraft.monthOfYear ?? 1,
+          dayOfMonth: anchorDraft.dayOfMonth ?? 1
+        });
+      case 'semi-annually':
+        return t('clientBillingSchedule.summary.semiAnnually', {
+          defaultValue: 'Semi-annually ({{monthOfYear}}/{{dayOfMonth}})',
+          monthOfYear: anchorDraft.monthOfYear ?? 1,
+          dayOfMonth: anchorDraft.dayOfMonth ?? 1
+        });
+      case 'annually':
+        return t('clientBillingSchedule.summary.annually', {
+          defaultValue: 'Annually ({{monthOfYear}}/{{dayOfMonth}})',
+          monthOfYear: anchorDraft.monthOfYear ?? 1,
+          dayOfMonth: anchorDraft.dayOfMonth ?? 1
+        });
+    }
+  }, [anchorDraft, billingCycle, t]);
 
   const loadFromServer = async (): Promise<void> => {
     setLoading(true);
@@ -137,7 +179,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
         referenceDate: config.anchor.referenceDate ? config.anchor.referenceDate.slice(0, 10) : defaults.referenceDate
       });
     } catch (e) {
-      handleError(e, 'Failed to load billing schedule');
+      handleError(e, t('clientBillingSchedule.loadError', { defaultValue: 'Failed to load billing schedule' }));
     } finally {
       setLoading(false);
     }
@@ -173,7 +215,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
         })
         .catch((e) => {
           if (previewRequestIdRef.current !== requestId) return;
-          handleError(e, 'Failed to preview billing periods');
+          handleError(e, t('clientBillingSchedule.previewError', { defaultValue: 'Failed to preview billing periods' }));
         })
         .finally(() => {
           if (previewRequestIdRef.current !== requestId) return;
@@ -219,7 +261,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
         })
         .catch((e) => {
           if (bootstrapPreviewRequestIdRef.current !== requestId) return;
-          handleError(e, 'Failed to preview billing history bootstrap');
+          handleError(e, t('clientBillingSchedule.historyPreviewError', { defaultValue: 'Failed to preview billing history bootstrap' }));
         })
         .finally(() => {
           if (bootstrapPreviewRequestIdRef.current !== requestId) return;
@@ -271,9 +313,9 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       });
 
       await loadFromServer();
-      toast.success('Billing schedule saved');
+      toast.success(t('clientBillingSchedule.saveSuccess', { defaultValue: 'Billing schedule saved' }));
     } catch (e) {
-      handleError(e, 'Failed to save billing schedule');
+      handleError(e, t('clientBillingSchedule.saveError', { defaultValue: 'Failed to save billing schedule' }));
     } finally {
       setSaving(false);
     }
@@ -284,12 +326,12 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
     try {
       const result = await createNextBillingCycleAsync(clientId);
       if (!result.success) {
-        toast.error(result.message || 'Failed to create next billing cycle');
+        toast.error(result.message || t('clientBillingSchedule.createNextCycleError', { defaultValue: 'Failed to create next billing cycle' }));
         return;
       }
-      toast.success('Created next billing cycle');
+      toast.success(t('clientBillingSchedule.createNextCycleSuccess', { defaultValue: 'Created next billing cycle' }));
     } catch (e) {
-      handleError(e, 'Failed to create next billing cycle');
+      handleError(e, t('clientBillingSchedule.createNextCycleError', { defaultValue: 'Failed to create next billing cycle' }));
     } finally {
       setCreatingCycle(false);
     }
@@ -299,7 +341,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
     <div className="mt-8 border-t pt-6" data-automation-id="client-billing-schedule-section">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">Billing Schedule</h3>
+          <h3 className="text-lg font-semibold">{t('clientBillingSchedule.title', { defaultValue: 'Billing Schedule' })}</h3>
           <Tooltip content={cadenceContext.changeScopeDescription}>
             <Info className="h-4 w-4 text-gray-500" />
           </Tooltip>
@@ -313,7 +355,9 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
 	            disabled={creatingCycle}
 	            data-automation-id="client-billing-create-next-cycle"
           >
-            {creatingCycle ? 'Creating...' : 'Create Next Cycle'}
+            {creatingCycle
+              ? t('clientBillingSchedule.createInProgress', { defaultValue: 'Creating...' })
+              : t('clientBillingSchedule.createNextCycle', { defaultValue: 'Create Next Cycle' })}
 	          </Button>
 	          <Button
 	            id="client-billing-edit-schedule"
@@ -323,13 +367,15 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
 	            disabled={loading}
 	            data-automation-id="client-billing-edit-schedule"
           >
-            {loading ? 'Loading…' : 'Edit Schedule'}
+            {loading
+              ? t('common.states.loading', { defaultValue: 'Loading...' })
+              : t('clientBillingSchedule.edit', { defaultValue: 'Edit Schedule' })}
 	          </Button>
 	        </div>
 	      </div>
 
       <div className="mt-2 text-sm text-gray-600">
-        {loading ? 'Loading current schedule…' : scheduleSummary}
+        {loading ? t('clientBillingSchedule.currentScheduleLoading', { defaultValue: 'Loading current schedule...' }) : scheduleSummary}
       </div>
       <div className="mt-1 text-sm text-gray-500">
         {cadenceContext.scheduleDescription}
@@ -338,95 +384,97 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       <Dialog
         isOpen={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title="Billing Schedule"
+        title={t('clientBillingSchedule.title', { defaultValue: 'Billing Schedule' })}
         id="client-billing-schedule-dialog"
         disableFocusTrap
       >
         <div className="space-y-4 p-1">
           <div className="text-sm text-gray-600">
-            Billing periods use <span className="font-mono">[start, end)</span> semantics. The end date is the start of the next period.
+            {t('clientBillingSchedule.billingPeriodsSemantics', {
+              defaultValue: 'Billing periods use [start, end) semantics. The end date is the start of the next period.'
+            })}
           </div>
           <div className="text-sm text-gray-600">
             {cadenceContext.previewDescription}
           </div>
 
           <div className="space-y-2">
-            <div className="text-sm font-medium">Cycle Type</div>
+            <div className="text-sm font-medium">{t('clientBillingSchedule.cycleType', { defaultValue: 'Cycle Type' })}</div>
             <CustomSelect
               id="client-billing-cycle-type"
-              options={BILLING_CYCLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
+              options={billingCycleOptions}
               value={billingCycle}
               onValueChange={(v) => onBillingCycleChange(v as BillingCycleType)}
-              placeholder="Select billing cycle..."
+              placeholder={t('clientBillingSchedule.selectBillingCycle', { defaultValue: 'Select billing cycle...' })}
             />
           </div>
 
           {(billingCycle === 'monthly') && (
             <div className="space-y-2">
-              <div className="text-sm font-medium">Day of month (1–28)</div>
+              <div className="text-sm font-medium">{t('clientBillingSchedule.dayOfMonth', { defaultValue: 'Day of month (1–28)' })}</div>
               <CustomSelect
                 id="client-billing-anchor-day-of-month"
                 options={Array.from({ length: 28 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))}
                 value={String(anchorDraft.dayOfMonth ?? 1)}
                 onValueChange={(v) => setAnchorDraft(d => ({ ...d, dayOfMonth: Number(v) }))}
-                placeholder="Select day..."
+                placeholder={t('clientBillingSchedule.selectDay', { defaultValue: 'Select day...' })}
               />
             </div>
           )}
 
           {(billingCycle === 'weekly') && (
             <div className="space-y-2">
-              <div className="text-sm font-medium">Weekday</div>
+              <div className="text-sm font-medium">{t('clientBillingSchedule.weekday', { defaultValue: 'Weekday' })}</div>
               <CustomSelect
                 id="client-billing-anchor-weekday"
-                options={[{ value: '', label: 'Rolling (no anchor)' }, ...WEEKDAY_OPTIONS.map(o => ({ value: String(o.value), label: o.label }))]}
+                options={[{ value: '', label: t('clientBillingSchedule.rollingNoAnchor', { defaultValue: 'Rolling (no anchor)' }) }, ...weekdayOptions]}
                 value={anchorDraft.dayOfWeek ? String(anchorDraft.dayOfWeek) : ''}
                 onValueChange={(v) => setAnchorDraft(d => ({ ...d, dayOfWeek: v ? Number(v) : null }))}
-                placeholder="Select weekday..."
+                placeholder={t('clientBillingSchedule.selectWeekday', { defaultValue: 'Select weekday...' })}
               />
             </div>
           )}
 
           {(billingCycle === 'bi-weekly') && (
             <div className="space-y-2">
-              <div className="text-sm font-medium">First cycle start date (UTC)</div>
+              <div className="text-sm font-medium">{t('clientBillingSchedule.firstCycleStartDate', { defaultValue: 'First cycle start date (UTC)' })}</div>
               <Input
                 id="client-billing-anchor-reference-date"
                 type="date"
                 value={anchorDraft.referenceDate ?? ''}
                 onChange={(e) => setAnchorDraft(d => ({ ...d, referenceDate: e.target.value || null }))}
               />
-              <div className="text-xs text-gray-500">Used to establish stable parity; leave blank for rolling bi-weekly cycles.</div>
+              <div className="text-xs text-gray-500">{t('clientBillingSchedule.firstCycleStartHelp', { defaultValue: 'Used to establish stable parity; leave blank for rolling bi-weekly cycles.' })}</div>
             </div>
           )}
 
           {(billingCycle === 'quarterly' || billingCycle === 'semi-annually' || billingCycle === 'annually') && (
             <div className="space-y-3">
               <div className="space-y-2">
-                <div className="text-sm font-medium">Start month</div>
+                <div className="text-sm font-medium">{t('clientBillingSchedule.startMonth', { defaultValue: 'Start month' })}</div>
                 <CustomSelect
                   id="client-billing-anchor-start-month"
-                  options={MONTH_OPTIONS.map(m => ({ value: String(m.value), label: m.label }))}
+                  options={monthOptions}
                   value={String(anchorDraft.monthOfYear ?? 1)}
                   onValueChange={(v) => setAnchorDraft(d => ({ ...d, monthOfYear: Number(v) }))}
-                  placeholder="Select month..."
+                  placeholder={t('clientBillingSchedule.selectMonth', { defaultValue: 'Select month...' })}
                 />
               </div>
               <div className="space-y-2">
-                <div className="text-sm font-medium">Day of month (1–28)</div>
+                <div className="text-sm font-medium">{t('clientBillingSchedule.dayOfMonth', { defaultValue: 'Day of month (1–28)' })}</div>
                 <CustomSelect
                   id="client-billing-anchor-day-of-month"
                   options={Array.from({ length: 28 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))}
                   value={String(anchorDraft.dayOfMonth ?? 1)}
                   onValueChange={(v) => setAnchorDraft(d => ({ ...d, dayOfMonth: Number(v) }))}
-                  placeholder="Select day..."
+                  placeholder={t('clientBillingSchedule.selectDay', { defaultValue: 'Select day...' })}
                 />
               </div>
             </div>
           )}
 
           <div className="space-y-2 border-t pt-3">
-            <div className="text-sm font-medium">Billing History Start Date (optional)</div>
+            <div className="text-sm font-medium">{t('clientBillingSchedule.historyStartDate', { defaultValue: 'Billing History Start Date (optional)' })}</div>
             <Input
               id="client-billing-history-start-date"
               type="date"
@@ -434,20 +482,29 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
               onChange={(e) => setBillingHistoryStartDate(e.target.value || null)}
             />
             <div className="text-xs text-gray-500">
-              If set, historical client billing cycles are generated from the containing billing-cycle boundary through today.
+              {t('clientBillingSchedule.historyStartHelp', { defaultValue: 'If set, historical client billing cycles are generated from the containing billing-cycle boundary through today.' })}
             </div>
             {bootstrapPreview ? (
               <div className="space-y-1 text-xs">
                 <div className="text-gray-700">
-                  Normalized history boundary: <span className="font-mono">{bootstrapPreview.normalizedHistoryStartBoundary.slice(0, 10)}</span>
+                  {t('clientBillingSchedule.normalizedHistoryBoundary', {
+                    defaultValue: 'Normalized history boundary: {{date}}',
+                    date: bootstrapPreview.normalizedHistoryStartBoundary.slice(0, 10)
+                  })}
                 </div>
                 {bootstrapPreview.earliestInvoicedCycleStartBoundary ? (
                   <div className="text-gray-700">
-                    Earliest invoiced boundary: <span className="font-mono">{bootstrapPreview.earliestInvoicedCycleStartBoundary.slice(0, 10)}</span>
+                    {t('clientBillingSchedule.earliestInvoicedBoundary', {
+                      defaultValue: 'Earliest invoiced boundary: {{date}}',
+                      date: bootstrapPreview.earliestInvoicedCycleStartBoundary.slice(0, 10)
+                    })}
                   </div>
                 ) : null}
                 <div className="text-gray-700">
-                  Uninvoiced cycles to regenerate: <span className="font-semibold">{bootstrapPreview.affectedUninvoicedCycleCount}</span>
+                  {t('clientBillingSchedule.uninvoicedCyclesToRegenerate', {
+                    defaultValue: 'Uninvoiced cycles to regenerate: {{count}}',
+                    count: bootstrapPreview.affectedUninvoicedCycleCount
+                  })}
                 </div>
                 {bootstrapPreview.status === 'blocked_invoiced_history' ? (
                   <div className="text-red-600">{bootstrapPreview.blockedReason}</div>
@@ -455,7 +512,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
               </div>
             ) : null}
             {bootstrapPreviewLoading ? (
-              <div className="text-xs text-gray-500">Updating billing history bootstrap preview…</div>
+              <div className="text-xs text-gray-500">{t('clientBillingSchedule.updatingHistoryPreview', { defaultValue: 'Updating billing history bootstrap preview...' })}</div>
             ) : null}
           </div>
 
@@ -467,7 +524,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
 	              onClick={() => setDialogOpen(false)}
 	              disabled={saving}
 	            >
-	              Close
+	              {t('common.actions.close', { defaultValue: 'Close' })}
 	            </Button>
 	            <Button
 	              id="client-billing-save-schedule"
@@ -476,7 +533,9 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
 	              disabled={saving || bootstrapPreview?.status === 'blocked_invoiced_history'}
 	              data-automation-id="client-billing-save-schedule"
             >
-              {saving ? 'Saving...' : 'Save Schedule'}
+              {saving
+                ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                : t('clientBillingSchedule.save', { defaultValue: 'Save Schedule' })}
             </Button>
           </div>
 
@@ -490,11 +549,11 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
                   </div>
                 ))}
                 {previewLoading && (
-                  <div className="text-xs text-gray-500">Updating client-cadence preview…</div>
+                  <div className="text-xs text-gray-500">{t('clientBillingSchedule.updatingCadencePreview', { defaultValue: 'Updating client-cadence preview...' })}</div>
                 )}
               </div>
             ) : (
-              <div className="text-sm text-gray-500">Loading client-cadence preview…</div>
+              <div className="text-sm text-gray-500">{t('clientBillingSchedule.previewLoading', { defaultValue: 'Loading client-cadence preview...' })}</div>
             )}
           </div>
         </div>

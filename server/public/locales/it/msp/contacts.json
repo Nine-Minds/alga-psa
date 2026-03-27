@@ -1,0 +1,573 @@
+{
+  "common": {
+    "actions": {
+      "add": "Aggiungi",
+      "back": "Indietro",
+      "cancel": "Annulla",
+      "close": "Chiudi",
+      "create": "Crea",
+      "delete": "Elimina",
+      "downloadCsv": "Scarica CSV",
+      "edit": "Modifica",
+      "import": "Importa",
+      "reactivate": "Riattiva",
+      "remove": "Rimuovi",
+      "retry": "Riprova",
+      "save": "Salva",
+      "saving": "Salvataggio...",
+      "search": "Cerca",
+      "select": "Seleziona",
+      "update": "Aggiorna",
+      "uploadCsv": "Carica CSV",
+      "view": "Visualizza"
+    },
+    "states": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "loading": "Caricamento...",
+      "na": "N/D",
+      "none": "Nessuno"
+    },
+    "no": "No",
+    "yes": "Sì"
+  },
+  "contactsPage": {
+    "title": "Pagina contatti",
+    "description": "Pagina principale di gestione dei contatti con ricerca, filtri, vista elenco e azioni di massa",
+    "heading": "Contatti",
+    "addContact": "+ Aggiungi contatto",
+    "actions": "Azioni",
+    "searchPlaceholder": "Cerca contatti",
+    "resetFilters": "Reimposta",
+    "unknownClient": "Cliente sconosciuto",
+    "noClient": "Nessun cliente",
+    "thisContact": "questo contatto",
+    "actionsMenuSrOnly": "Apri menu",
+    "quickView": "Anteprima rapida",
+    "deleteValidationError": "Impossibile convalidare l'eliminazione. Riprova.",
+    "deleteSuccess": "{{name}} è stato eliminato con successo.",
+    "deleteError": "Impossibile eliminare il contatto. Riprova.",
+    "markInactiveSuccess": "{{name}} è stato contrassegnato come inattivo con successo.",
+    "markInactiveError": "Si è verificato un errore durante il contrassegno del contatto come inattivo. Riprova.",
+    "statusOptions": {
+      "all": "Tutti i contatti",
+      "active": "Contatti attivi",
+      "inactive": "Contatti inattivi"
+    },
+    "table": {
+      "name": "Nome",
+      "created": "Creato",
+      "email": "Email",
+      "phoneNumber": "Numero di telefono",
+      "client": "Cliente",
+      "tags": "Tag",
+      "actions": "Azioni"
+    },
+    "lastPhoneTypeUsage": {
+      "title": "Ultimo utilizzo del tipo di telefono",
+      "message": "Il seguente tipo di telefono personalizzato{{suffix}} non è più usato da alcun contatto: {{labels}}. Eliminare la definizione del tipo{{definitionSuffix}}, o mantenerla per un uso futuro?",
+      "deleteType": "Elimina tipo",
+      "keepType": "Mantieni tipo"
+    }
+  },
+  "contactDetails": {
+    "title": "Dettagli contatto",
+    "description": "Vista dettagli del contatto con schede, modifica inline, accesso al portale, tag e note",
+    "backToContacts": "Indietro ai contatti",
+    "inactiveBadge": "inattivo",
+    "actions": {
+      "goToContact": "Vai al contatto",
+      "saveChanges": "Salva modifiche"
+    },
+    "tabs": {
+      "details": "Dettagli",
+      "tickets": "Ticket",
+      "documents": "Documenti",
+      "interactions": "Interazioni",
+      "notes": "Note",
+      "portal": "Portale"
+    },
+    "fields": {
+      "fullName": "Nome completo",
+      "client": "Cliente",
+      "email": "Email",
+      "role": "Ruolo",
+      "inboundTicketDestinationOverride": "Sovrascrittura destinazione ticket in ingresso",
+      "useClientDestination": "Usa destinazione cliente",
+      "inboundTicketDestinationHelp": "Se impostato, sovrascrive la destinazione del cliente per questo specifico contatto mittente. Priorità: sovrascrittura contatto -> destinazione cliente -> valore predefinito del provider.",
+      "tags": "Tag",
+      "notes": "Note"
+    },
+    "status": {
+      "label": "Stato",
+      "helper": "Imposta lo stato del contatto su attivo o inattivo",
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "loading": {
+      "destinations": "Caricamento destinazioni...",
+      "ticketFilters": "Caricamento filtri ticket..."
+    },
+    "empty": {
+      "notSet": "Non impostato",
+      "unknownClient": "Cliente sconosciuto"
+    },
+    "client": {
+      "noClientAssigned": "Nessun cliente assegnato"
+    },
+    "delete": {
+      "successTitle": "Contatto eliminato",
+      "successDescription": "Il contatto è stato eliminato con successo.",
+      "validationFailed": "Impossibile convalidare l'eliminazione. Riprova.",
+      "failed": "Impossibile eliminare il contatto. Riprova."
+    },
+    "deactivate": {
+      "successTitle": "Contatto disattivato",
+      "successDescription": "Il contatto è stato contrassegnato come inattivo con successo."
+    },
+    "reactivate": {
+      "successTitle": "Contatto riattivato",
+      "successDescription": "Il contatto è stato riattivato con successo."
+    },
+    "update": {
+      "successTitle": "Contatto aggiornato",
+      "successDescription": "I dettagli del contatto sono stati salvati con successo."
+    },
+    "saveFailed": {
+      "title": "Salvataggio non riuscito",
+      "description": "Impossibile salvare i dettagli del contatto. Riprova."
+    },
+    "error": {
+      "title": "Errore"
+    },
+    "errors": {
+      "permissionDenied": "Autorizzazione negata. Contatta l'amministratore se hai bisogno di ulteriori accessi.",
+      "markInactiveFailed": "Si è verificato un errore durante il contrassegno del contatto come inattivo. Riprova.",
+      "reactivateFailed": "Si è verificato un errore durante la riattivazione del contatto. Riprova."
+    }
+  },
+  "contactsImportDialog": {
+    "title": "Importa contatti",
+    "description": "Finestra di importazione CSV per mappatura, anteprima, convalida e risultati",
+    "fields": {
+      "name": "Nome *",
+      "email": "Email *",
+      "defaultPhoneNumber": "Numero di telefono predefinito",
+      "client": "Cliente",
+      "tags": "Tag",
+      "role": "Ruolo",
+      "notes": "Note"
+    },
+    "unassigned": "Seleziona campo",
+    "errors": {
+      "emptyCsv": "Il file CSV è vuoto o non valido",
+      "readingCsv": "Errore durante la lettura del file CSV: {{message}}",
+      "unknownError": "Errore sconosciuto",
+      "requiredFieldNotMapped": "Il campo obbligatorio \"{{field}}\" non è stato mappato",
+      "nameRequired": "Il nome è obbligatorio",
+      "emailRequired": "L'indirizzo email è obbligatorio",
+      "invalidEmail": "Formato email non valido",
+      "processingCsv": "Errore durante l'elaborazione dei dati CSV",
+      "importFailed": "Importazione non riuscita"
+    },
+    "importOptions": {
+      "updateExisting": {
+        "title": "Aggiorna i contatti esistenti",
+        "description": "Sostituisci i dati dei contatti esistenti"
+      },
+      "skipInvalid": {
+        "title": "Ignora i record non validi",
+        "description": "Continua l'importazione anche se alcuni record presentano errori di convalida"
+      }
+    },
+    "results": {
+      "title": "Risultati importazione",
+      "downloadFailedRecords": "Scarica i record non riusciti"
+    },
+    "table": {
+      "status": "Stato",
+      "name": "Nome",
+      "email": "Email",
+      "message": "Messaggio",
+      "exists": "Esiste",
+      "issues": "Problemi"
+    },
+    "tooltips": {
+      "importSuccessful": "Importazione riuscita",
+      "importFailed": "Importazione non riuscita",
+      "validReady": "Valido - pronto per l'importazione",
+      "invalidHasErrors": "Non valido - presenta errori"
+    },
+    "upload": {
+      "help": "Carica un file CSV con i dati dei contatti",
+      "requiredLabel": "Obbligatorio:",
+      "contactFieldsLabel": "Campi contatto:",
+      "contactFieldsDescription": "phone_number (importato come telefono di lavoro predefinito), role, notes, tags",
+      "clientFieldLabel": "Campo cliente:",
+      "clientFieldDescription": "client (corrisponde ai clienti esistenti per nome)",
+      "noteLabel": "Nota:",
+      "noteDescription": "Nella v1 l'import/export CSV gestisce un solo numero di telefono predefinito per contatto. I tag devono essere valori separati da virgole.",
+      "downloadTemplate": "Scarica modello CSV"
+    },
+    "mapping": {
+      "title": "Mappa i campi contatto alle colonne CSV",
+      "description": "Seleziona quale colonna CSV contiene i dati per ciascun campo contatto. I campi contrassegnati con * sono obbligatori.",
+      "contactFieldHeader": "Campo contatto",
+      "csvColumnHeader": "Seleziona colonna CSV",
+      "notMapped": "Non mappato",
+      "requiredFieldsNote": "* I campi obbligatori devono essere mappati per procedere con l'importazione",
+      "largeImportWarning": "Stai importando {{count}} record. L'elaborazione potrebbe richiedere un momento.",
+      "processing": "Elaborazione...",
+      "preview": "Anteprima"
+    },
+    "preview": {
+      "title": "Anteprima importazione",
+      "totalRecords": "Record totali:",
+      "valid": "Validi:",
+      "invalid": "Non validi:"
+    },
+    "importing": {
+      "title": "Importazione contatti",
+      "processing": "Elaborazione: {{current}} di {{total}}",
+      "currentItem": "In elaborazione: {{item}}"
+    },
+    "complete": {
+      "title": "Importazione completata",
+      "successMessage": "Importati con successo {{count}} contatti"
+    },
+    "confirmUpdate": {
+      "title": "Aggiorna i contatti esistenti",
+      "message": "{{count}} contatti esistono già. Vuoi aggiornarli con i nuovi dati?"
+    }
+  },
+  "contactPhoneNumbersEditor": {
+    "title": "Numeri di telefono",
+    "description": "Editor dei numeri di telefono con gestione dei tipi, convalida, valori predefiniti e supporto alle estensioni",
+    "actions": {
+      "addPhone": "Aggiungi numero"
+    },
+    "empty": "Nessun numero di telefono ancora.",
+    "phoneTypes": {
+      "work": "Lavoro",
+      "mobile": "Cellulare",
+      "home": "Casa",
+      "fax": "Fax",
+      "other": "Altro",
+      "custom": "Personalizzato"
+    },
+    "row": {
+      "title": "Telefono {{number}}",
+      "defaultDescription": "Numero di telefono predefinito",
+      "secondaryDescription": "Numero di telefono secondario",
+      "defaultLabel": "Predefinito",
+      "moveUp": "Sposta il telefono {{number}} verso l'alto",
+      "moveDown": "Sposta il telefono {{number}} verso il basso",
+      "remove": "Rimuovi telefono {{number}}"
+    },
+    "fields": {
+      "phoneNumber": "Numero di telefono",
+      "phoneType": "Tipo di telefono",
+      "customPhoneType": "Tipo di telefono personalizzato",
+      "customTypePlaceholder": "Seleziona o inserisci un tipo di telefono personalizzato",
+      "customTypeSearchPlaceholder": "Cerca o inserisci un tipo di telefono personalizzato...",
+      "customTypeEmpty": "Nessun tipo di telefono personalizzato corrispondente.",
+      "customTypeUseValue": "Usa \"{{value}}\""
+    },
+    "validation": {
+      "selectExactlyOneDefault": "Seleziona esattamente un numero di telefono predefinito.",
+      "phoneRow": "Telefono {{number}}",
+      "enterCompletePhoneNumber": "Inserisci un numero di telefono completo.",
+      "enterCustomPhoneType": "Inserisci un tipo di telefono personalizzato.",
+      "customTypesUnique": "Le etichette dei tipi di telefono personalizzati devono essere univoche."
+    },
+    "lastTypeUsage": {
+      "title": "Ultimo utilizzo del tipo di telefono",
+      "message": "Questo è l'ultimo utilizzo del tipo di telefono personalizzato \"{{label}}\". Eliminare la definizione del tipo o mantenerla per un uso futuro?",
+      "removeAndDelete": "Rimuovi ed elimina il tipo",
+      "removeAndKeep": "Rimuovi e mantieni il tipo"
+    }
+  },
+  "contactPortalTab": {
+    "title": "Accesso al portale",
+    "description": "Gestione dell'accesso al portale clienti per un contatto, inclusi inviti e aggiornamenti dei ruoli",
+    "loadingDescription": "Caricamento delle informazioni del portale...",
+    "information": "Le email di invito verranno inviate dal sistema email della tua organizzazione. Le risposte andranno all'indirizzo email predefinito della sede del cliente.",
+    "activeAccess": "Accesso al portale attivo",
+    "noAccess": {
+      "title": "Nessun accesso al portale",
+      "description": "Questo contatto non ha ancora accesso al portale clienti"
+    },
+    "portalAdmin": {
+      "label": "Amministratore del portale",
+      "helper": "Se abilitato, l'utente verrà creato con il ruolo di Amministratore cliente. Se disabilitato, riceverà il ruolo di Utente cliente."
+    },
+    "roles": {
+      "label": "Ruoli del portale",
+      "none": "Nessun ruolo assegnato",
+      "placeholder": "Seleziona un ruolo da aggiungere",
+      "addButton": "Aggiungi ruolo"
+    },
+    "userStatus": {
+      "label": "Stato utente",
+      "active": "L'utente è attualmente attivo",
+      "inactive": "L'utente è attualmente inattivo"
+    },
+    "lastLogin": {
+      "label": "Ultimo accesso",
+      "via": "tramite {{method}}"
+    },
+    "history": {
+      "title": "Cronologia inviti",
+      "description": "Inviti recenti al portale inviati a questo contatto",
+      "empty": "Non è ancora stato inviato alcun invito al portale a questo contatto.",
+      "sentPrefix": "Inviato:",
+      "expiresPrefix": "Scade:",
+      "usedPrefix": "Usato:",
+      "status": {
+        "pending": "In attesa",
+        "used": "Usato",
+        "expired": "Scaduto",
+        "revoked": "Revocato"
+      }
+    },
+    "actions": {
+      "sendInvitation": "Invia invito al portale",
+      "sending": "Invio...",
+      "refresh": "Aggiorna",
+      "refreshing": "Aggiornamento...",
+      "resend": "Reinvia",
+      "resending": "Reinvio...",
+      "revoke": "Revoca"
+    },
+    "toast": {
+      "successTitle": "Successo",
+      "errorTitle": "Errore",
+      "permissionDeniedTitle": "Autorizzazione negata",
+      "loadError": "Impossibile caricare le informazioni del portale",
+      "refreshHistoryError": "Impossibile aggiornare la cronologia degli inviti",
+      "sendInvitePermissionDenied": "Non hai il permesso di inviare inviti",
+      "sendInviteSuccess": "Invito al portale inviato con successo!",
+      "sendInviteFailed": "Impossibile inviare l'invito",
+      "revokeInviteSuccess": "Invito revocato con successo",
+      "revokeInviteFailed": "Impossibile revocare l'invito",
+      "resendInviteSuccess": "Invito al portale reinviato con successo!",
+      "resendInviteFailed": "Impossibile reinviare l'invito",
+      "updatePortalSettingsPermissionDenied": "Non hai il permesso di aggiornare le impostazioni del cliente",
+      "portalAdminEnabled": "Contatto contrassegnato come amministratore del portale cliente",
+      "portalAdminDisabled": "Contatto non più contrassegnato come amministratore del portale cliente",
+      "updatePortalAdminFailed": "Impossibile aggiornare lo stato",
+      "updateAdminFailed": "Impossibile aggiornare il flag amministratore",
+      "updateRolesPermissionDenied": "Non hai il permesso di aggiornare i ruoli utente",
+      "roleAdded": "Ruolo aggiunto con successo",
+      "addRoleFailed": "Impossibile aggiungere il ruolo",
+      "roleRemoved": "Ruolo rimosso con successo",
+      "removeRoleFailed": "Impossibile rimuovere il ruolo",
+      "updateStatusPermissionDenied": "Non hai il permesso di aggiornare lo stato utente",
+      "userActivated": "Utente attivato con successo",
+      "userDeactivated": "Utente disattivato con successo",
+      "updateUserStatusFailed": "Impossibile aggiornare lo stato utente"
+    }
+  },
+  "quickAddContact": {
+    "title": "Aggiungi nuovo contatto",
+    "description": "Modulo rapido per creare un contatto con campi cliente, ruolo, telefono e tag",
+    "dialog": {
+      "title": "Aggiungi nuovo contatto"
+    },
+    "errorFallback": {
+      "title": "Qualcosa è andato storto:",
+      "tryAgain": "Riprova"
+    },
+    "actions": {
+      "submit": "Aggiungi contatto"
+    },
+    "fields": {
+      "fullName": "Nome completo *",
+      "email": "Email *",
+      "clientOptional": "Cliente (facoltativo)",
+      "role": "Ruolo",
+      "rolePlaceholder": "es. Manager, Developer, ecc.",
+      "notes": "Note",
+      "notesPlaceholder": "Aggiungi eventuali note aggiuntive sul contatto..."
+    },
+    "status": {
+      "label": "Stato",
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "validation": {
+      "alertIntro": "Correggi i seguenti errori:",
+      "fullNameRequired": "Il nome completo è obbligatorio",
+      "fullNameEmpty": "Il nome completo non può essere vuoto",
+      "fullNameSpaces": "Il nome completo non può contenere solo spazi",
+      "emailRequired": "L'indirizzo email è obbligatorio",
+      "emailSpaces": "L'indirizzo email non può contenere solo spazi",
+      "roleSpaces": "Il ruolo non può contenere solo spazi",
+      "roleLength": "Il ruolo deve contenere 100 caratteri o meno",
+      "roleCharacters": "Il ruolo deve contenere lettere o numeri",
+      "notesSpaces": "Le note non possono contenere solo spazi"
+    },
+    "toasts": {
+      "warningTitle": "Avviso",
+      "tagsFailed": "{{count}} tag non sono stati creati",
+      "contactCreated": "Contatto creato",
+      "contactAdded": "{{name}} è stato aggiunto con successo."
+    },
+    "errors": {
+      "createContactTitle": "Errore durante la creazione del contatto",
+      "unexpected": "Si è verificato un errore imprevisto. Riprova.",
+      "validationTitle": "Errore di convalida",
+      "emailExistsTitle": "Email già esistente",
+      "invalidReferenceTitle": "Riferimento non valido",
+      "systemTitle": "Errore di sistema",
+      "genericTitle": "Errore",
+      "closeMessage": "Chiudi messaggio di errore",
+      "createContactHeading": "Errore durante la creazione del contatto:",
+      "validationPrefix": "Correggi quanto segue:",
+      "emailExistsPrefix": "Email già esistente:",
+      "invalidReferencePrefix": "Riferimento non valido:",
+      "systemPrefix": "Errore di sistema:"
+    }
+  },
+  "contactDetailsEdit": {
+    "title": "Modifica contatto - {{name}}",
+    "heading": "Modifica contatto: {{name}}",
+    "inactiveBadge": "inattivo",
+    "description": "Modulo modificabile del contatto usato dalla vista dettagli e dai flussi nel drawer",
+    "validation": {
+      "fullNameRequired": "Il nome completo è obbligatorio",
+      "emailRequired": "L'indirizzo email è obbligatorio",
+      "invalidEmail": "Inserisci un indirizzo email valido"
+    },
+    "errors": {
+      "validationPrefix": "Correggi quanto segue:",
+      "emailExists": "Email già esistente: esiste già nel sistema un contatto con questo indirizzo email",
+      "invalidReferencePrefix": "Riferimento non valido:",
+      "systemPrefix": "Errore di sistema:",
+      "saveFailed": "Si è verificato un errore durante il salvataggio. Riprova.",
+      "unexpected": "Si è verificato un errore imprevisto. Riprova."
+    },
+    "fields": {
+      "fullName": "Nome completo",
+      "email": "Email",
+      "role": "Ruolo",
+      "rolePlaceholder": "es. Manager, Developer, ecc.",
+      "phoneNumbers": "Numeri di telefono:",
+      "inboundTicketDestinationOverride": "Sovrascrittura destinazione ticket in ingresso:",
+      "inboundTicketDestinationHelp": "Priorità: sovrascrittura contatto -> destinazione cliente -> valore predefinito del provider.",
+      "useClientDestination": "Usa destinazione cliente",
+      "client": "Cliente:",
+      "status": "Stato:",
+      "notes": "Note:",
+      "notesPlaceholder": "Aggiungi eventuali note aggiuntive sul contatto...",
+      "tags": "Tag:"
+    },
+    "loading": {
+      "destinations": "Caricamento destinazioni..."
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    }
+  },
+  "contactDetailsView": {
+    "title": "Dettagli contatto - {{name}}",
+    "description": "Riepilogo del contatto in sola lettura con cliente associato, telefoni e metadati",
+    "actions": {
+      "goToContact": "Vai al contatto"
+    },
+    "empty": {
+      "notSet": "Non impostato",
+      "unknownClient": "Cliente sconosciuto"
+    },
+    "phoneTypes": {
+      "work": "Lavoro",
+      "mobile": "Cellulare",
+      "home": "Casa",
+      "fax": "Fax",
+      "other": "Altro"
+    },
+    "fields": {
+      "fullName": "Nome completo",
+      "email": "Email",
+      "phone": "Telefono:",
+      "defaultPhone": "Predefinito",
+      "client": "Cliente:",
+      "noClientAssigned": "Nessun cliente assegnato",
+      "role": "Ruolo",
+      "status": "Stato",
+      "createdAt": "Creato il",
+      "updatedAt": "Aggiornato il",
+      "notes": "Note:",
+      "tags": "Tag:"
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "sections": {
+      "documents": "Documenti"
+    },
+    "errors": {
+      "loadTagsSystem": "Si è verificato un errore imprevisto durante il caricamento dei tag. Riprova o contatta il supporto.",
+      "loadTagsFailed": "Impossibile caricare i tag. Riprova ad aggiornare la pagina.",
+      "unexpected": "Si è verificato un errore imprevisto. Riprova.",
+      "clientNotFound": "Cliente non trovato. Il cliente potrebbe essere stato eliminato.",
+      "loadClientSystem": "Si è verificato un errore imprevisto durante il caricamento dei dettagli del cliente. Riprova o contatta il supporto.",
+      "clientMissing": "Il cliente non esiste più nel sistema.",
+      "loadClientFailed": "Impossibile caricare i dettagli del cliente. Riprova.",
+      "updateClientFailedWithMessage": "Impossibile aggiornare il cliente: {{message}}",
+      "updateClientFailed": "Impossibile aggiornare il cliente. Riprova."
+    }
+  },
+  "clientContactsList": {
+    "title": "Contatti del cliente",
+    "description": "Elenco contatti specifico del cliente incorporato con filtri e azioni di riga",
+    "table": {
+      "name": "Nome",
+      "email": "Email",
+      "phoneNumber": "Numero di telefono",
+      "actions": "Azioni"
+    },
+    "filter": {
+      "show": "Mostra:",
+      "active": "Contatti attivi",
+      "inactive": "Contatti inattivi",
+      "all": "Tutti i contatti"
+    },
+    "actions": {
+      "openMenu": "Apri menu",
+      "quickView": "Anteprima rapida",
+      "addNewContact": "Aggiungi nuovo contatto"
+    },
+    "errors": {
+      "loadFailed": "Impossibile caricare i contatti.",
+      "loadingTitle": "Errore durante il caricamento dei contatti",
+      "retryFailed": "Impossibile caricare i contatti. Riprova."
+    }
+  },
+  "contactsLayout": {
+    "title": "Layout contatti",
+    "description": "Shell della route contatti e chrome della pagina"
+  },
+  "contactsSkeleton": {
+    "title": "Stato di caricamento contatti",
+    "description": "Segnaposto di caricamento per le superfici elenco e dettaglio dei contatti"
+  },
+  "contactAvatarUpload": {
+    "title": "Caricamento avatar contatto",
+    "description": "Affordance di caricamento avatar per le immagini profilo dei contatti"
+  },
+  "contactNotesPanel": {
+    "title": "Note e informazioni rapide",
+    "description": "Pannello note rich text con visualizzazione della nota legacy e azioni salva/riprova",
+    "legacy": {
+      "initialNote": "Nota iniziale"
+    },
+    "errors": {
+      "loadTitle": "Impossibile caricare le note",
+      "unknown": "Errore sconosciuto"
+    },
+    "lastUpdated": "Ultimo aggiornamento: {{date}}"
+  }
+}

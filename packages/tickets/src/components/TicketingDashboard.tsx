@@ -51,12 +51,18 @@ import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import { useDrawer } from '@alga-psa/ui';
 import { getClientById } from '../actions/clientLookupActions';
+import {
+  buildTicketStatusFilterOptions,
+  isTicketStatusOpenFilter,
+  TICKET_STATUS_FILTER_OPEN,
+  type TicketStatusFilterOption,
+} from '../lib/ticketStatusFilter';
 
 interface TicketingDashboardProps {
   id?: string;
   initialTickets: ITicketListItem[];
   initialBoards: IBoard[];
-  initialStatuses: SelectOption[];
+  initialStatuses: TicketStatusFilterOption[];
   initialPriorities: SelectOption[];
   initialCategories: ITicketCategory[];
   initialClients: IClient[];
@@ -169,13 +175,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
-  const [statusOptions] = useState<SelectOption[]>(initialStatuses);
+  const [rawStatusOptions] = useState<TicketStatusFilterOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
   // Filter values derived from props (single source of truth is Container's activeFilters)
   const selectedBoard = filterValues.boardId ?? null;
   const selectedClient = filterValues.clientId ?? null;
-  const selectedStatus = filterValues.statusId ?? 'open';
+  const selectedStatus = filterValues.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const selectedPriority = filterValues.priorityId ?? 'all';
   const selectedCategories = useMemo(() =>
     filterValues.categoryId ? [filterValues.categoryId] : EMPTY_STRING_ARRAY,
@@ -219,7 +225,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const isFiltered = useMemo(() => {
     return selectedBoard !== null ||
       selectedClient !== null ||
-      selectedStatus !== 'open' ||
+      selectedStatus !== TICKET_STATUS_FILTER_OPEN ||
       selectedPriority !== 'all' ||
       selectedCategories.length > 0 ||
       searchQuery !== '' ||
@@ -351,6 +357,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     };
   }, [ticketListDensityLevel]);
 
+  const statusOptions = useMemo(
+    () => buildTicketStatusFilterOptions(rawStatusOptions, selectedBoard, selectedStatus),
+    [rawStatusOptions, selectedBoard, selectedStatus]
+  );
+
   // Helper function to generate URL with current filter state
   const getCurrentFiltersQuery = useCallback(() => {
     const params = new URLSearchParams();
@@ -359,7 +370,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     // Only add non-default/non-empty values to URL
     if (f.boardId) params.set('boardId', f.boardId);
     if (f.clientId) params.set('clientId', f.clientId);
-    if (f.statusId && f.statusId !== 'open') params.set('statusId', f.statusId);
+    if (f.statusId && f.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', f.statusId);
     if (f.priorityId && f.priorityId !== 'all') params.set('priorityId', f.priorityId);
     if (f.categoryId) params.set('categoryId', f.categoryId);
     if (f.searchQuery) params.set('searchQuery', f.searchQuery);
@@ -740,7 +751,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         clientId: selectedClient ?? undefined,
         searchQuery: debouncedSearchQuery,
         boardFilterState: boardFilterState,
-        showOpenOnly: selectedStatus === 'open',
+        showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
         tags: selectedTags.length > 0 ? selectedTags : undefined,
         assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
         assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
@@ -1168,7 +1179,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     clientId: selectedClient ?? undefined,
     searchQuery: debouncedSearchQuery,
     boardFilterState: boardFilterState,
-    showOpenOnly: selectedStatus === 'open',
+    showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
     tags: selectedTags.length > 0 ? selectedTags : undefined,
     assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
     assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
@@ -1204,7 +1215,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     // Add the new ticket to the local state
     setTickets(prevTickets => {
-      const status = statusOptions.find(s => s.value === newTicket.status_id);
+      const status = rawStatusOptions.find(s => s.value === newTicket.status_id);
       const priority = priorityOptions.find(p => p.value === newTicket.priority_id);
       const board = boards.find(c => c.board_id === newTicket.board_id);
 
@@ -1257,11 +1268,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     // Close the quick add dialog
     setIsQuickAddOpen(false);
-  }, [statusOptions, priorityOptions, boards, categories, currentUser]);
+  }, [rawStatusOptions, priorityOptions, boards, categories, currentUser]);
 
   const handleBoardSelect = useCallback((boardId: string) => {
-    onFilterChange({ boardId: boardId || undefined });
-  }, [onFilterChange]);
+    const nextBoardId = boardId || undefined;
+    const nextStatusOptions = buildTicketStatusFilterOptions(rawStatusOptions, nextBoardId, selectedStatus);
+    const statusStillAvailable = nextStatusOptions.some(option => option.value === selectedStatus);
+
+    onFilterChange({
+      boardId: nextBoardId,
+      statusId: statusStillAvailable ? selectedStatus : TICKET_STATUS_FILTER_OPEN,
+      showOpenOnly: statusStillAvailable ? isTicketStatusOpenFilter(selectedStatus) : true,
+    });
+  }, [onFilterChange, rawStatusOptions, selectedStatus]);
 
   const handleCategorySelect = useCallback((newSelectedCategories: string[], newExcludedCategories: string[]) => {
     setExcludedCategories(newExcludedCategories);
@@ -1291,7 +1310,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     onFilterChange({
       boardId: undefined,
       clientId: undefined,
-      statusId: 'open',
+      statusId: TICKET_STATUS_FILTER_OPEN,
       priorityId: 'all',
       categoryId: undefined,
       searchQuery: '',
@@ -1427,7 +1446,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   data-automation-id={`${id}-status-select`}
                   options={statusOptions}
                   value={selectedStatus}
-                  onValueChange={(value) => onFilterChange({ statusId: value, showOpenOnly: value === 'open' })}
+                  onValueChange={(value) => onFilterChange({ statusId: value, showOpenOnly: isTicketStatusOpenFilter(value) })}
                   placeholder="Select Status"
                 />
                 {displaySettings?.responseStateTrackingEnabled !== false && (

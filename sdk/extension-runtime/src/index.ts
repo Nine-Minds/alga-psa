@@ -248,6 +248,76 @@ export interface UserHost {
   getUser(): Promise<UserData>;
 }
 
+export type ClientReadError = 'not-allowed' | 'invalid-input' | 'internal';
+
+export interface ClientSummary {
+  clientId: string;
+  clientName: string;
+  clientType?: 'company' | 'individual' | null;
+  isInactive: boolean;
+  defaultCurrencyCode?: string | null;
+  accountManagerId?: string | null;
+  accountManagerName?: string | null;
+  billingEmail?: string | null;
+}
+
+export interface ClientsListInput {
+  search?: string;
+  includeInactive?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ClientsListResult {
+  items: ClientSummary[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface ClientsHost {
+  list(input?: ClientsListInput): Promise<ClientsListResult>;
+  get(clientId: string): Promise<ClientSummary | null>;
+}
+
+export type ServiceItemKind = 'service' | 'product';
+export type ServiceBillingMethod = 'fixed' | 'hourly' | 'usage';
+export type ServiceReadError = 'not-allowed' | 'invalid-input' | 'internal';
+
+export interface ServiceSummary {
+  serviceId: string;
+  serviceName: string;
+  itemKind: ServiceItemKind;
+  billingMethod: ServiceBillingMethod;
+  serviceTypeId?: string | null;
+  serviceTypeName?: string | null;
+  defaultRate: number;
+  unitOfMeasure: string;
+  isActive: boolean;
+  sku?: string | null;
+}
+
+export interface ServicesListInput {
+  search?: string;
+  itemKind?: ServiceItemKind;
+  isActive?: boolean;
+  billingMethod?: ServiceBillingMethod;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ServicesListResult {
+  items: ServiceSummary[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface ServicesHost {
+  list(input?: ServicesListInput): Promise<ServicesListResult>;
+  get(serviceId: string): Promise<ServiceSummary | null>;
+}
+
 // Invoicing Host API types
 
 export interface ManualInvoiceItemInput {
@@ -302,6 +372,10 @@ export interface HostBindings {
   invoicing: InvoicingHost;
   /** User API for accessing current user information (requires cap:user.read) */
   user: UserHost;
+  /** Clients read API (requires cap:client.read) */
+  clients: ClientsHost;
+  /** Services read API (requires cap:service.read) */
+  services: ServicesHost;
 }
 
 export type Handler = (request: ExecuteRequest, host: HostBindings) => Promise<ExecuteResponse> | ExecuteResponse;
@@ -402,6 +476,22 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
         };
       },
     },
+    clients: {
+      async list() {
+        return { items: [], totalCount: 0, page: 1, pageSize: 25 };
+      },
+      async get() {
+        return null;
+      },
+    },
+    services: {
+      async list() {
+        return { items: [], totalCount: 0, page: 1, pageSize: 25 };
+      },
+      async get() {
+        return null;
+      },
+    },
   };
 
   const mergedUiProxy: UiProxyHost = {
@@ -459,6 +549,14 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
     user: {
       ...defaultBindings.user,
       ...overrides.user,
+    },
+    clients: {
+      ...defaultBindings.clients,
+      ...overrides.clients,
+    },
+    services: {
+      ...defaultBindings.services,
+      ...overrides.services,
     },
   };
 }

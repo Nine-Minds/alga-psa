@@ -42,6 +42,12 @@ import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
+import {
+  parseTicketStatusFilterValue,
+  shouldApplyOpenOnlyStatusFilter,
+  TICKET_STATUS_FILTER_ALL,
+  TICKET_STATUS_FILTER_OPEN,
+} from '../lib/ticketStatusFilter';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -448,6 +454,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       value: status.status_id,
       label: status.name || "",
       is_closed: !!status.is_closed,
+      board_id: status.board_id ?? null,
     }));
 
     const agentOptions = users.map((agent) => ({
@@ -709,6 +716,7 @@ async function buildTicketListBaseQuery(
   user: { user_id: string },
   validatedFilters: ITicketListFilters
 ): Promise<{ builder: Knex.QueryBuilder }> {
+    const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
     let baseQuery = trx('tickets as t')
       .leftJoin('tickets as mt', function() {
         this.on('t.master_ticket_id', 'mt.ticket_id')
@@ -768,7 +776,7 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.whereIn('t.board_id', boardSubquery);
     }
 
-    if (validatedFilters.showOpenOnly) {
+    if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {
       baseQuery = baseQuery.whereExists(function() {
         this.select('*')
             .from('statuses')
@@ -776,8 +784,10 @@ async function buildTicketListBaseQuery(
             .andWhere('statuses.is_closed', false)
             .andWhere('statuses.tenant', tenant);
       });
-    } else if (validatedFilters.statusId && validatedFilters.statusId !== 'all') {
-      baseQuery = baseQuery.where('t.status_id', validatedFilters.statusId);
+    } else if (parsedStatusFilter.kind === 'name') {
+      baseQuery = baseQuery.where('s.name', parsedStatusFilter.statusName);
+    } else if (parsedStatusFilter.kind === 'id') {
+      baseQuery = baseQuery.where('t.status_id', parsedStatusFilter.statusId);
     }
 
     if (validatedFilters.priorityId && validatedFilters.priorityId !== 'all') {
@@ -1472,12 +1482,15 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
 
     // Format options for dropdowns
     const statusOptions = [
-      { value: 'open', label: 'All open statuses' },
-      { value: 'all', label: 'All Statuses' },
+      { value: TICKET_STATUS_FILTER_OPEN, label: 'All open statuses' },
+      { value: TICKET_STATUS_FILTER_ALL, label: 'All Statuses' },
       ...statuses.map((status: any) => ({
         value: status.status_id,
         label: status.name || "",
-        className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined
+        className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined,
+        statusName: status.name || "",
+        boardId: status.board_id || null,
+        isClosed: Boolean(status.is_closed),
       }))
     ];
 

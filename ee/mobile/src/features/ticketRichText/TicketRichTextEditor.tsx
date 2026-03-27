@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Linking, Platform, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, Pressable, Text, View } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import {
   TicketMobileEditorBridgeClient,
@@ -148,6 +148,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
     imageAuthRef.current = imageAuth;
 
     const [ready, setReady] = useState(false);
+    const pendingFocusRef = useRef(false);
     const [state, setState] = useState<TicketMobileEditorStatePayload>({
       ...EMPTY_EDITOR_STATE,
       editable,
@@ -173,6 +174,13 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
         onReady(payload) {
           setReady(true);
           callbacksRef.current.onReadyChange?.(true);
+
+          // If the user tapped the editor while it was still loading,
+          // replay the focus command now that the bridge is ready.
+          if (pendingFocusRef.current) {
+            pendingFocusRef.current = false;
+            bridgeRef.current?.sendCommand("focus");
+          }
 
           if (isDevEnvironment() && loadStartedAtRef.current !== null) {
             console.info(
@@ -393,7 +401,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
         ) : null}
         <View
           style={{
-            minHeight: height,
+            ...(editable ? { minHeight: height } : { height }),
             borderWidth: 1,
             borderColor: theme.colors.border,
             borderRadius: 10,
@@ -415,17 +423,23 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
             onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
             javaScriptEnabled
             domStorageEnabled
-            scrollEnabled={scrollEnabledProp ?? !editable}
+            scrollEnabled={scrollEnabledProp ?? true}
             setSupportMultipleWindows={false}
             javaScriptCanOpenWindowsAutomatically={false}
+            nestedScrollEnabled={Platform.OS === "android"}
             {...(Platform.OS === "android" ? { androidLayerType: "hardware" } : {})}
             style={{
               backgroundColor: "transparent",
-              minHeight: height,
+              ...(editable ? { minHeight: height } : { height }),
             }}
           />
           {!ready ? (
-            <View
+            <Pressable
+              onPress={() => {
+                if (editable) {
+                  pendingFocusRef.current = true;
+                }
+              }}
               style={{
                 position: "absolute",
                 inset: 0,
@@ -438,7 +452,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
               <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
                 {loadingLabel}
               </Text>
-            </View>
+            </Pressable>
           ) : null}
         </View>
       </View>

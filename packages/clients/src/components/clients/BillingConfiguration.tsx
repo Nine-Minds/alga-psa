@@ -52,6 +52,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/component
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ClientBillingSchedule } from './ClientBillingSchedule';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface BillingConfigurationProps {
     client: IClient;
@@ -67,6 +68,7 @@ interface ClientContractLineWithStringDates extends Omit<IClientContractLine, 's
 }
 
 const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onSave, contacts = [] }) => {
+    const { t } = useTranslation('msp/clients');
     const [activeTab, setActiveTab] = useState('general');
     const [billingConfig, setBillingConfig] = useState({
         payment_terms: client.payment_terms || 'net_30',
@@ -254,10 +256,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 await setClientTemplateAsync(client.client_id, invoice_template_id?.trim() ? invoice_template_id : null);
             }
 
-            toast.success('Billing configuration saved successfully');
+            toast.success(t('billingConfiguration.saveSuccess', { defaultValue: 'Billing configuration saved successfully' }));
         } catch (error) {
-            setErrorMessage('Failed to save billing configuration');
-            handleError(error, 'Failed to save billing configuration');
+            const message = t('billingConfiguration.saveError', { defaultValue: 'Failed to save billing configuration' });
+            setErrorMessage(message);
+            handleError(error, message);
         } finally {
             setIsSavingBillingConfig(false);
         }
@@ -273,10 +276,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setClientContractLines(updatedContractLinesWithStringDates);
-            toast.success('Contract line updated successfully');
+            toast.success(t('billingConfiguration.contractLineUpdateSuccess', { defaultValue: 'Contract line updated successfully' }));
         } catch (error) {
-            setErrorMessage('Failed to update contract line. Please try again.');
-            handleError(error, 'Failed to update contract line');
+            const message = t('billingConfiguration.contractLineUpdateError', { defaultValue: 'Failed to update contract line. Please try again.' });
+            setErrorMessage(message);
+            handleError(error, message);
         }
     };
 
@@ -290,10 +294,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setClientContractLines(updatedContractLinesWithStringDates);
-            toast.success('Service category updated successfully');
+            toast.success(t('billingConfiguration.serviceCategoryUpdateSuccess', { defaultValue: 'Service category updated successfully' }));
         } catch (error) {
-            setErrorMessage('Failed to update service category. Please try again.');
-            handleError(error, 'Failed to update service category');
+            const message = t('billingConfiguration.serviceCategoryUpdateError', { defaultValue: 'Failed to update service category. Please try again.' });
+            setErrorMessage(message);
+            handleError(error, message);
         }
     };
 
@@ -307,10 +312,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setClientContractLines(updatedContractLinesWithStringDates);
-            toast.success('Contract line added successfully');
+            toast.success(t('billingConfiguration.contractLineAddSuccess', { defaultValue: 'Contract line added successfully' }));
         } catch (error: any) {
-            setErrorMessage(error.message || 'Failed to add contract line. Please try again.');
-            handleError(error, 'Failed to add contract line');
+            const message = error.message || t('billingConfiguration.contractLineAddError', { defaultValue: 'Failed to add contract line. Please try again.' });
+            setErrorMessage(message);
+            handleError(error, t('billingConfiguration.contractLineAddError', { defaultValue: 'Failed to add contract line' }));
         }
     };
 
@@ -330,11 +336,12 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setClientContractLines(updatedContractLinesWithStringDates);
-            toast.success('Contract line removed successfully');
+            toast.success(t('billingConfiguration.contractLineRemoveSuccess', { defaultValue: 'Contract line removed successfully' }));
         } catch (error: any) {
             // Display the actual error message from the server if available
-            setErrorMessage(error.message || 'Failed to remove contract line. Please try again.');
-            handleError(error, 'Failed to remove contract line');
+            const message = error.message || t('billingConfiguration.contractLineRemoveError', { defaultValue: 'Failed to remove contract line. Please try again.' });
+            setErrorMessage(message);
+            handleError(error, t('billingConfiguration.contractLineRemoveError', { defaultValue: 'Failed to remove contract line' }));
         } finally {
             setContractLineToDelete(null);
         }
@@ -370,11 +377,12 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 setClientContractLines(updatedContractLinesWithStringDates);
                 setEditingContractLine(null);
                 setErrorMessage(null);
-                toast.success('Contract line saved successfully');
+                toast.success(t('billingConfiguration.contractLineSaveSuccess', { defaultValue: 'Contract line saved successfully' }));
             } catch (error: any) {
                 // Display the actual error message from the server if available
-                setErrorMessage(error.message || 'Failed to save changes. Please try again.');
-                handleError(error, 'Failed to save changes');
+                const message = error.message || t('billingConfiguration.contractLineSaveError', { defaultValue: 'Failed to save changes. Please try again.' });
+                setErrorMessage(message);
+                handleError(error, t('billingConfiguration.contractLineSaveError', { defaultValue: 'Failed to save changes' }));
             }
         }
     };
@@ -383,7 +391,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         try {
             // Ensure we have custom_service_type_id
             if (!newService.custom_service_type_id) {
-                setErrorMessage('Please select a service type');
+                setErrorMessage(t('billingConfiguration.serviceTypeRequired', { defaultValue: 'Please select a service type' }));
                 return;
             }
 
@@ -416,10 +424,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
             setErrorMessage(null);
-            toast.success('Service added successfully');
+            toast.success(t('billingConfiguration.serviceAddSuccess', { defaultValue: 'Service added successfully' }));
         } catch (error) {
-            setErrorMessage('Failed to add service. Please try again.');
-            handleError(error, 'Failed to add service');
+            const message = t('billingConfiguration.serviceAddError', { defaultValue: 'Failed to add service. Please try again.' });
+            setErrorMessage(message);
+            handleError(error, t('billingConfiguration.serviceAddError', { defaultValue: 'Failed to add service' }));
         }
     };
 
@@ -429,10 +438,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             const servicesResponse = await getServicesAsync(1, 999, { item_kind: 'any' });
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
-            toast.success('Service updated successfully');
+            toast.success(t('billingConfiguration.serviceUpdateSuccess', { defaultValue: 'Service updated successfully' }));
         } catch (error) {
-            setErrorMessage('Failed to update service. Please try again.');
-            handleError(error, 'Failed to update service');
+            const message = t('billingConfiguration.serviceUpdateError', { defaultValue: 'Failed to update service. Please try again.' });
+            setErrorMessage(message);
+            handleError(error, t('billingConfiguration.serviceUpdateError', { defaultValue: 'Failed to update service' }));
         }
     };
 
@@ -442,10 +452,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             const servicesResponse = await getServicesAsync(1, 999, { item_kind: 'any' });
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
-            toast.success('Service deleted successfully');
+            toast.success(t('billingConfiguration.serviceDeleteSuccess', { defaultValue: 'Service deleted successfully' }));
         } catch (error) {
-            setErrorMessage('Failed to delete service. Please try again.');
-            handleError(error, 'Failed to delete service');
+            const message = t('billingConfiguration.serviceDeleteError', { defaultValue: 'Failed to delete service. Please try again.' });
+            setErrorMessage(message);
+            handleError(error, t('billingConfiguration.serviceDeleteError', { defaultValue: 'Failed to delete service' }));
         }
     };
 
@@ -463,11 +474,12 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             const updatedClientTaxRates = await getClientTaxRates(client.client_id);
             setClientTaxRates(updatedClientTaxRates);
             setErrorMessage(null); // Clear any previous errors
-            toast.success('Default tax rate assigned successfully');
+            toast.success(t('billingConfiguration.defaultTaxAssignedSuccess', { defaultValue: 'Default tax rate assigned successfully' }));
         } catch (error: any) {
             // Set specific error message from the action if available
-            setErrorMessage(error.message || 'Failed to assign default tax rate. Please try again.');
-            handleError(error, 'Failed to assign default tax rate');
+            const message = error.message || t('billingConfiguration.defaultTaxAssignError', { defaultValue: 'Failed to assign default tax rate. Please try again.' });
+            setErrorMessage(message);
+            handleError(error, t('billingConfiguration.defaultTaxAssignError', { defaultValue: 'Failed to assign default tax rate' }));
             // Re-throw or handle as needed if parent component needs to know
             throw error;
         }
@@ -483,10 +495,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             const updatedClientTaxRates = await getClientTaxRates(client.client_id);
             setClientTaxRates(updatedClientTaxRates);
             setErrorMessage(null); // Clear any previous errors
-            toast.success('Default tax rate changed successfully');
+            toast.success(t('billingConfiguration.defaultTaxChangedSuccess', { defaultValue: 'Default tax rate changed successfully' }));
         } catch (error: any) {
-            setErrorMessage(error.message || 'Failed to change default tax rate. Please try again.');
-            handleError(error, 'Failed to change default tax rate');
+            const message = error.message || t('billingConfiguration.defaultTaxChangeError', { defaultValue: 'Failed to change default tax rate. Please try again.' });
+            setErrorMessage(message);
+            handleError(error, t('billingConfiguration.defaultTaxChangeError', { defaultValue: 'Failed to change default tax rate' }));
             throw error; // Re-throw so the child component knows it failed
         }
     };
@@ -496,10 +509,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         try {
             const updatedTaxRates = await getTaxRatesAsync();
             setTaxRates(updatedTaxRates);
-            toast.success('Tax rate created successfully');
+            toast.success(t('billingConfiguration.taxRateCreatedSuccess', { defaultValue: 'Tax rate created successfully' }));
         } catch (error) {
-            setErrorMessage('Failed to refresh tax rates list.');
-            handleError(error, 'Failed to refresh tax rates list');
+            const message = t('billingConfiguration.taxRatesRefreshError', { defaultValue: 'Failed to refresh tax rates list.' });
+            setErrorMessage(message);
+            handleError(error, message);
         }
     };
 
@@ -509,11 +523,15 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
     // Displays a 'YYYY-MM-DD' string in a user-friendly format, treating it as UTC
     const formatDateForDisplay = (dateString: string | null): string => {
-        if (!dateString) return 'N/A';
+        if (!dateString) {
+            return t('common.states.na', { defaultValue: 'N/A' });
+        }
 
         // Parse YYYY-MM-DD string reliably, treating components as UTC date parts
         const parts = dateString.split('-');
-        if (parts.length !== 3) return 'Invalid Date Format';
+        if (parts.length !== 3) {
+            return t('billingConfiguration.invalidDateFormat', { defaultValue: 'Invalid Date Format' });
+        }
 
         try {
             // Construct date using UTC values to avoid timezone shifts during parsing
@@ -523,7 +541,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             const d = new Date(Date.UTC(year, month, day));
 
             if (isNaN(d.getTime())) {
-                return 'Invalid Date';
+                return t('billingConfiguration.invalidDate', { defaultValue: 'Invalid Date' });
             }
 
             // Format the date using toLocaleDateString, specifying UTC timezone
@@ -536,7 +554,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             });
         } catch (error) {
             console.error("Error formatting date for display:", error);
-            return 'Formatting Error';
+            return t('billingConfiguration.formattingError', { defaultValue: 'Formatting Error' });
         }
     };
 
@@ -547,7 +565,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             {errorMessage && (
                 <Dialog
                     id="billing-config-error"
-                    title="Error"
+                    title={t('billingConfiguration.errorDialogTitle', { defaultValue: 'Error' })}
                     isOpen={!!errorMessage}
                     onClose={() => setErrorMessage(null)}
                     draggable={false}
@@ -560,7 +578,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                                 onClick={() => setErrorMessage(null)}
                                 variant="secondary"
                             >
-                                Close
+                                {t('common.actions.close', { defaultValue: 'Close' })}
                             </Button>
                         </div>
                     </div>
@@ -569,10 +587,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="mb-4">
-                    <TabsTrigger value="general">General</TabsTrigger>
-                    <TabsTrigger value="plans">Contract Lines</TabsTrigger>
-                    <TabsTrigger value="taxRates">Tax Rates</TabsTrigger>
-                    <TabsTrigger value="overlaps">Contract Line Overlaps</TabsTrigger>
+                    <TabsTrigger value="general">{t('billingConfiguration.general', { defaultValue: 'General' })}</TabsTrigger>
+                    <TabsTrigger value="plans">{t('billingConfiguration.contractLines', { defaultValue: 'Contract Lines' })}</TabsTrigger>
+                    <TabsTrigger value="taxRates">{t('billingConfiguration.taxRates', { defaultValue: 'Tax Rates' })}</TabsTrigger>
+                    <TabsTrigger value="overlaps">{t('billingConfiguration.contractLineOverlaps', { defaultValue: 'Contract Line Overlaps' })}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="general">
                     <BillingConfigForm
@@ -599,7 +617,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                             variant="default"
                             disabled={isSavingBillingConfig}
                         >
-                            {isSavingBillingConfig ? 'Saving...' : 'Save Billing Configuration'}
+                            {isSavingBillingConfig
+                                ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                                : t('billingConfiguration.save', { defaultValue: 'Save Billing Configuration' })}
                         </Button>
                     </div>
                 </TabsContent>
@@ -690,8 +710,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 isOpen={!!contractLineToDelete}
                 onClose={() => setContractLineToDelete(null)}
                 onConfirm={confirmRemoveContractLine}
-                title="Remove Contract Line Assignment"
-                message="Are you sure you want to remove this contract line assignment from the client? The contract line itself will not be deleted."
+                title={t('billingConfiguration.removeAssignmentTitle', { defaultValue: 'Remove Contract Line Assignment' })}
+                message={t('billingConfiguration.removeAssignmentMessage', {
+                    defaultValue: 'Are you sure you want to remove this contract line assignment from the client? The contract line itself will not be deleted.'
+                })}
             />
 
         </form>

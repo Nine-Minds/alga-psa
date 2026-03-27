@@ -22,6 +22,7 @@ import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDra
 
 interface QuoteFormProps {
   quoteId?: string | null;
+  initialIsTemplate?: boolean;
   onCancel: () => void;
   onSaved: (quoteId: string) => void;
 }
@@ -62,10 +63,10 @@ const toDateInputValue = (value?: string | Date | null): string => {
   return typeof value === 'string' ? value.slice(0, 10) : String(value).slice(0, 10);
 };
 
-const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => {
+const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = false, onCancel, onSaved }) => {
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
   const [form, setForm] = useState<QuoteFormState>(EMPTY_FORM);
-  const [isTemplate, setIsTemplate] = useState(false);
+  const [isTemplate, setIsTemplate] = useState(initialIsTemplate);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [templates, setTemplates] = useState<IQuoteListItem[]>([]);
@@ -153,6 +154,41 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
 
   const handleChange = (field: keyof QuoteFormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleTemplateChange = async (templateId: string) => {
+    handleChange('template_id', templateId);
+
+    if (!templateId) {
+      setLineItems([]);
+      return;
+    }
+
+    try {
+      const template = await getQuote(templateId);
+      if (!template || isActionPermissionError(template)) return;
+
+      setForm((current) => ({
+        ...current,
+        template_id: templateId,
+        title: current.title || template.title || '',
+        description: current.description || template.description || '',
+        client_notes: current.client_notes || template.client_notes || '',
+        terms_and_conditions: current.terms_and_conditions || template.terms_and_conditions || '',
+        currency_code: current.currency_code || template.currency_code || 'USD',
+        po_number: current.po_number || template.po_number || '',
+      }));
+
+      if (template.quote_items?.length) {
+        setLineItems(template.quote_items.map((item) => ({
+          ...createDraftQuoteItemFromQuoteItem(item),
+          local_id: crypto.randomUUID(),
+          quote_item_id: undefined,
+        })));
+      }
+    } catch (err) {
+      console.error('Failed to load template:', err);
+    }
   };
 
   const handleSubmit = async () => {
@@ -346,16 +382,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
             </h2>
             <p className="text-sm text-muted-foreground">
               {isTemplate
-                ? 'Define reusable line items and terms. Client and dates are optional for templates.'
+                ? 'Define reusable line items, terms, and notes for this template.'
                 : 'Capture quote details, line items, and notes before saving the draft.'}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button id="quote-form-cancel" variant="outline" onClick={onCancel}>Cancel</Button>
-            <Button id="quote-form-save" onClick={() => void handleSubmit()} disabled={isSaving}>
-              {isSaving ? 'Saving...' : isTemplate ? 'Save Template' : 'Save Draft'}
-            </Button>
-          </div>
+          <Button id="quote-form-cancel" variant="outline" onClick={onCancel}>Cancel</Button>
         </div>
 
         {error && (
@@ -376,37 +407,42 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
             <TextArea value={form.description} onChange={(event) => handleChange('description', event.target.value)} rows={4} />
           </label>
 
-          <div className="flex flex-col gap-1 text-sm font-medium">
-            <label htmlFor="quote-client">Client</label>
-            <ClientPicker
-              id="quote-client"
-              clients={clients}
-              selectedClientId={form.client_id || null}
-              onSelect={(clientId) => {
-                handleChange('client_id', clientId || '');
-                if (clientId !== form.client_id) {
-                  handleChange('contact_id', '');
-                }
-              }}
-              filterState={clientFilterState}
-              onFilterStateChange={setClientFilterState}
-              clientTypeFilter={clientTypeFilter}
-              onClientTypeFilterChange={setClientTypeFilter}
-              placeholder="Select client"
-            />
-          </div>
+          {!isTemplate && (
+            <div className="flex flex-col gap-1 text-sm font-medium">
+              <label htmlFor="quote-client">Client</label>
+              <ClientPicker
+                id="quote-client"
+                clients={clients}
+                selectedClientId={form.client_id || null}
+                onSelect={(clientId) => {
+                  handleChange('client_id', clientId || '');
+                  if (clientId !== form.client_id) {
+                    handleChange('contact_id', '');
+                  }
+                }}
+                filterState={clientFilterState}
+                onFilterStateChange={setClientFilterState}
+                clientTypeFilter={clientTypeFilter}
+                onClientTypeFilterChange={setClientTypeFilter}
+                placeholder="Select client"
+              />
+            </div>
+          )}
 
-          <div className="flex flex-col gap-1 text-sm font-medium">
-            <ContactPicker
-              id="quote-contact"
-              contacts={availableContacts}
-              value={form.contact_id || ''}
-              onValueChange={(value) => handleChange('contact_id', value)}
-              clientId={form.client_id || undefined}
-              placeholder="Select contact"
-              buttonWidth="full"
-            />
-          </div>
+          {!isTemplate && (
+            <div className="flex flex-col gap-1 text-sm font-medium">
+              <label htmlFor="quote-contact">Contact</label>
+              <ContactPicker
+                id="quote-contact"
+                contacts={availableContacts}
+                value={form.contact_id || ''}
+                onValueChange={(value) => handleChange('contact_id', value)}
+                clientId={form.client_id || undefined}
+                placeholder="Select contact"
+                buttonWidth="full"
+              />
+            </div>
+          )}
 
           <div className="flex flex-col gap-1 text-sm font-medium">
             <label htmlFor="quote-currency">Currency</label>
@@ -425,7 +461,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
               <CustomSelect
                 id="quote-template"
                 value={form.template_id || undefined}
-                onValueChange={(value) => handleChange('template_id', value)}
+                onValueChange={(value) => void handleTemplateChange(value)}
                 placeholder="Start from scratch"
                 allowClear
                 options={templates.map((template) => ({
@@ -436,28 +472,34 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
             </div>
           )}
 
-          <div className="flex flex-col gap-1 text-sm font-medium">
-            <label htmlFor="quote-date">Quote Date</label>
-            <DatePicker
-              value={form.quote_date ? new Date(form.quote_date + 'T00:00:00') : undefined}
-              onChange={(date) => handleChange('quote_date', date ? date.toISOString().slice(0, 10) : '')}
-              className="w-full"
-            />
-          </div>
+          {!isTemplate && (
+            <div className="flex flex-col gap-1 text-sm font-medium">
+              <label htmlFor="quote-date">Quote Date</label>
+              <DatePicker
+                value={form.quote_date ? new Date(form.quote_date + 'T00:00:00') : undefined}
+                onChange={(date) => handleChange('quote_date', date ? date.toISOString().slice(0, 10) : '')}
+                className="w-full"
+              />
+            </div>
+          )}
 
-          <div className="flex flex-col gap-1 text-sm font-medium">
-            <label htmlFor="quote-valid-until">Valid Until</label>
-            <DatePicker
-              value={form.valid_until ? new Date(form.valid_until + 'T00:00:00') : undefined}
-              onChange={(date) => handleChange('valid_until', date ? date.toISOString().slice(0, 10) : '')}
-              className="w-full"
-            />
-          </div>
+          {!isTemplate && (
+            <div className="flex flex-col gap-1 text-sm font-medium">
+              <label htmlFor="quote-valid-until">Valid Until</label>
+              <DatePicker
+                value={form.valid_until ? new Date(form.valid_until + 'T00:00:00') : undefined}
+                onChange={(date) => handleChange('valid_until', date ? date.toISOString().slice(0, 10) : '')}
+                className="w-full"
+              />
+            </div>
+          )}
 
-          <label className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
-            PO Number
-            <Input value={form.po_number} onChange={(event) => handleChange('po_number', event.target.value)} />
-          </label>
+          {!isTemplate && (
+            <label className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
+              PO Number
+              <Input value={form.po_number} onChange={(event) => handleChange('po_number', event.target.value)} />
+            </label>
+          )}
 
           <label className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
             Client Notes
@@ -495,6 +537,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
             <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.total_amount, form.currency_code)}</div>
           </div>
         </section>
+
+        <div className="flex justify-end gap-2">
+          <Button id="quote-form-cancel-bottom" variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button id="quote-form-save" onClick={() => void handleSubmit()} disabled={isSaving}>
+            {isSaving ? 'Saving...' : isTemplate ? 'Save Template' : 'Save Quote'}
+          </Button>
+        </div>
       </Box>
     </Card>
   );

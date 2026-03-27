@@ -1,0 +1,174 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+import { collectStatus } from '../lib/status.mjs';
+
+class MockCaptureRunner {
+  constructor(responses) {
+    this.responses = responses;
+  }
+
+  async runCapture(command, args) {
+    const key = `${command} ${args.join(' ')}`;
+    const response = this.responses[key];
+    if (!response) {
+      return { ok: false, code: 1, output: 'missing mock response' };
+    }
+    if (response.ok) {
+      return { ok: true, code: 0, output: response.output ?? '' };
+    }
+    return { ok: false, code: response.code ?? 1, output: response.output ?? '' };
+  }
+}
+
+function buildEnv(releasesDir) {
+  return {
+    runtime: { assetRoot: '/tmp', releasesDir },
+    site: { siteId: 'appliance-single-node', configDir: '/tmp/config' },
+    paths: { kubeconfig: '/tmp/kubeconfig', talosconfig: '/tmp/talosconfig' },
+    nodeIp: '10.0.0.2',
+    appUrl: 'https://psa.example.com',
+  };
+}
+
+function releaseFixtureDir() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'appliance-release-fixture-'));
+  const releaseDir = path.join(root, '1.0.0');
+  fs.mkdirSync(releaseDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(releaseDir, 'release.json'),
+    JSON.stringify({
+      releaseVersion: '1.0.0',
+      app: {
+        version: '1.0.0',
+        releaseBranch: 'release/1.0.0',
+      },
+    }),
+  );
+  return root;
+}
+
+function readyCondition(status = 'True', message = '') {
+  return [{ type: 'Ready', status, message }];
+}
+
+function healthyResponses() {
+  const responses = {
+    'talosctl --talosconfig /tmp/talosconfig -n 10.0.0.2 -e 10.0.0.2 health --wait-timeout 20s': { ok: true, output: 'ok' },
+    'kubectl --kubeconfig /tmp/kubeconfig get --raw=/readyz': { ok: true, output: 'ok' },
+    'kubectl --kubeconfig /tmp/kubeconfig get nodes -o json': {
+      ok: true,
+      output: JSON.stringify({
+        items: [{ metadata: { name: 'node-1' }, status: { conditions: readyCondition('True') } }],
+      }),
+    },
+    'kubectl --kubeconfig /tmp/kubeconfig -n flux-system get gitrepositories.source.toolkit.fluxcd.io -o json': {
+      ok: true,
+      output: JSON.stringify({ items: [{ metadata: { name: 'alga-appliance' }, status: { conditions: readyCondition('True') } }] }),
+    },
+    'kubectl --kubeconfig /tmp/kubeconfig -n flux-system get kustomizations.kustomize.toolkit.fluxcd.io -o json': {
+      ok: true,
+      output: JSON.stringify({ items: [{ metadata: { name: 'alga-appliance' }, status: { conditions: readyCondition('True') } }] }),
+    },
+    'kubectl --kubeconfig /tmp/kubeconfig -n alga-system get helmreleases.helm.toolkit.fluxcd.io -o json': {
+      ok: true,
+      output: JSON.stringify({ items: [{ metadata: { name: 'alga-core' }, status: { conditions: readyCondition('True') } }] }),
+    },
+    'kubectl --kubeconfig /tmp/kubeconfig -n alga-system get configmap/appliance-release-selection -o json': {
+      ok: true,
+      output: JSON.stringify({ data: { releaseVersion: '1.0.0' } }),
+    },
+    'kubectl --kubeconfig /tmp/kubeconfig -n alga-system get configmap/appliance-values-alga-core -o json': {
+      ok: true,
+      output: JSON.stringify({ data: { 'alga-core.talos-single-node.yaml': 'appUrl: https://psa.example.com' } }),
+    },
+  };
+
+  const workloadResources = [
+    'deployment/alga-core-sebastian',
+    'statefulset/db',
+    'statefulset/redis',
+    'deployment/pgbouncer',
+    'deployment/temporal',
+    'deployment/workflow-worker',
+    'deployment/email-service',
+    'deployment/temporal-worker',
+  ];
+  for (const resource of workloadResources) {
+    responses[`kubectl --kubeconfig /tmp/kubeconfig -n msp get ${resource} -o json`] = {
+      ok: true,
+      output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 1 } }),
+    };
+  }
+  return responses;
+}
+
+test('T004: status dashboard model includes talos, cluster, flux, workloads, release, and config paths', async () => {
+  const releasesDir = releaseFixtureDir();
+  const status = await collectStatus(buildEnv(releasesDir), {
+    runner: new MockCaptureRunner(healthyResponses()),
+  });
+
+  assert.equal(status.connectivityMode, 'app-healthy');
+  assert.equal(status.topBlocker.layer, 'none');
+  assert.equal(status.host.status, 'healthy');
+  assert.equal(status.cluster.apiReachable, true);
+  assert.equal(status.flux.status, 'healthy');
+  assert.equal(status.workloads.components.length, 8);
+  assert.equal(status.release.selectedReleaseVersion, '1.0.0');
+  assert.equal(status.release.appUrl, 'https://psa.example.com');
+  assert.equal(status.configPaths.kubeconfig, '/tmp/kubeconfig');
+});
+
+test('T005: talos-only state reports Kubernetes availability as blocker', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig get --raw=/readyz'] = { ok: false, output: 'connection refused' };
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+  assert.equal(status.connectivityMode, 'talos-only');
+  assert.equal(status.topBlocker.layer, 'Kubernetes availability');
+});
+
+test('T005: cluster-down with talos unreachable reports talos blocker', async () => {
+  const responses = healthyResponses();
+  responses['talosctl --talosconfig /tmp/talosconfig -n 10.0.0.2 -e 10.0.0.2 health --wait-timeout 20s'] = {
+    ok: false,
+    output: 'dial tcp timeout',
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig get --raw=/readyz'] = { ok: false, output: 'connection refused' };
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+  assert.equal(status.connectivityMode, 'degraded');
+  assert.equal(status.topBlocker.layer, 'Talos host reachability');
+});
+
+test('T005: flux-degraded state reports Flux blocker', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n flux-system get kustomizations.kustomize.toolkit.fluxcd.io -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [{ metadata: { name: 'alga-appliance' }, status: { conditions: readyCondition('False', 'reconcile failed') } }],
+    }),
+  };
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+  assert.equal(status.topBlocker.layer, 'Flux source/reconcile failure');
+});
+
+test('T005: workload-unhealthy state reports workload blocker', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get deployment/temporal-worker -o json'] = {
+    ok: true,
+    output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
+  };
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+  assert.equal(status.workloads.status, 'unhealthy');
+  assert.equal(status.topBlocker.layer, 'workload readiness failure');
+});

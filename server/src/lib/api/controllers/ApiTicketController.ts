@@ -13,6 +13,7 @@ import {
   ticketSearchSchema,
   ticketStatsResponseSchema,
   createTicketCommentSchema,
+  updateTicketCommentSchema,
   updateTicketStatusSchema,
   updateTicketAssignmentSchema,
   createTicketFromAssetSchema
@@ -407,6 +408,79 @@ export class ApiTicketController extends ApiBaseController {
           );
 
           return createSuccessResponse(comment, 201);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Update a comment on a ticket
+   */
+  updateComment() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) tenantId = keyRecord.tenant;
+        }
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        const apiRequest = req as AuthenticatedApiRequest;
+        apiRequest.context = {
+          userId: keyRecord.user_id,
+          tenant: keyRecord.tenant,
+          user
+        };
+
+        return await runWithTenant(tenantId!, async () => {
+          const hasAccess = await hasPermission(user, 'ticket', 'update');
+          if (!hasAccess) {
+            throw new ForbiddenError('Permission denied: Cannot update ticket');
+          }
+
+          let validatedData;
+          try {
+            const body = await req.json();
+            validatedData = updateTicketCommentSchema.parse(body);
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Validation failed', error.errors);
+            }
+            throw error;
+          }
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          // Extract commentId from URL: /api/v1/tickets/{id}/comments/{commentId}
+          const url = new URL(req.url);
+          const segments = url.pathname.split('/').filter(Boolean);
+          const commentId = segments[segments.length - 1];
+
+          const comment = await this.ticketService.updateComment(
+            ticketId,
+            commentId,
+            validatedData,
+            apiRequest.context!
+          );
+
+          return createSuccessResponse(comment);
         });
       } catch (error) {
         return handleApiError(error);

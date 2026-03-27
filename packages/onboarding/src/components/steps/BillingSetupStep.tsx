@@ -25,9 +25,11 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function BillingSetupStep({ data, updateData, attemptedToProceed = false }: StepProps) {
   const { data: session } = useSession();
+  const { t } = useTranslation('msp/onboarding');
   const isServiceCreated = !!data.serviceId;
   const [showServiceTypes, setShowServiceTypes] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -113,6 +115,18 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
     label: type.name
   }));
 
+  const getBillingMethodLabel = (billingMethod: string) =>
+    t(`billingSetupStep.billingMethods.${billingMethod}`, {
+      defaultValue:
+        billingMethod === 'fixed'
+          ? 'Fixed'
+          : billingMethod === 'hourly'
+            ? 'Hourly'
+            : billingMethod === 'usage'
+              ? 'Usage'
+              : billingMethod
+    });
+
   const removeServiceType = async (typeId: string) => {
     try {
       const result = await deleteReferenceDataItem('service_types', typeId);
@@ -127,30 +141,49 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
         
         // Refresh data from server
         loadTenantServiceTypes();
-        toast.success('Service type deleted successfully');
+        toast.success(t('billingSetupStep.serviceTypes.toasts.deleted', {
+          defaultValue: 'Service type deleted successfully'
+        }));
       } else {
-        toast.error(result.error || 'Failed to delete service type');
+        toast.error(result.error || t('billingSetupStep.serviceTypes.errors.delete', {
+          defaultValue: 'Failed to delete service type'
+        }));
       }
     } catch (error) {
-      handleError(error, 'Failed to delete service type');
+      handleError(error, t('billingSetupStep.serviceTypes.errors.delete', {
+        defaultValue: 'Failed to delete service type'
+      }));
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-xl font-semibold">Create Your First Service</h2>
+        <h2 className="text-xl font-semibold">
+          {t('billingSetupStep.header.title', {
+            defaultValue: 'Create Your First Service'
+          })}
+        </h2>
         <p className="text-sm text-gray-600">
-          Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior.
+          {t('billingSetupStep.header.description', {
+            defaultValue: 'Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior.'
+          })}
         </p>
       </div>
 
       {isServiceCreated && (
         <Alert variant="success">
           <AlertDescription>
-            <p className="font-medium">Service created successfully!</p>
+            <p className="font-medium">
+              {t('billingSetupStep.created.title', {
+                defaultValue: 'Service created successfully!'
+              })}
+            </p>
             <p className="text-sm mt-1">
-              <span className="font-semibold">{data.serviceName}</span> has been added to your service catalog.
+              {t('billingSetupStep.created.description', {
+                defaultValue: '{{serviceName}} has been added to your service catalog.',
+                serviceName: data.serviceName
+              })}
             </p>
           </AlertDescription>
         </Alert>
@@ -158,22 +191,34 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="serviceName">Service Name *</Label>
+          <Label htmlFor="serviceName">
+            {t('billingSetupStep.fields.serviceName.label', {
+              defaultValue: 'Service Name *'
+            })}
+          </Label>
           <Input
             id="serviceName"
             value={data.serviceName}
             onChange={(e) => updateData({ serviceName: e.target.value })}
-            placeholder="Managed IT Services"
+            placeholder={t('billingSetupStep.fields.serviceName.placeholder', {
+              defaultValue: 'Managed IT Services'
+            })}
           />
         </div>
 
         <div>
-          <Label htmlFor="serviceDescription" className="block mb-2">Service Description</Label>
+          <Label htmlFor="serviceDescription" className="block mb-2">
+            {t('billingSetupStep.fields.serviceDescription.label', {
+              defaultValue: 'Service Description'
+            })}
+          </Label>
           <TextArea
             id="serviceDescription"
             value={data.serviceDescription}
             onChange={(e) => updateData({ serviceDescription: e.target.value })}
-            placeholder="Comprehensive IT support and management services..."
+            placeholder={t('billingSetupStep.fields.serviceDescription.placeholder', {
+              defaultValue: 'Comprehensive IT support and management services...'
+            })}
             rows={3}
             className="!max-w-none"
           />
@@ -181,9 +226,15 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
 
         <div className="space-y-2">
           <Label htmlFor="serviceTypeId">
-            Service Type *
+            {t('billingSetupStep.fields.serviceType.label', {
+              defaultValue: 'Service Type *'
+            })}
             {(!data.serviceTypeId && attemptedToProceed) && (
-              <span className="text-xs text-red-600 ml-2">(Required)</span>
+              <span className="text-xs text-red-600 ml-2">
+                {t('billingSetupStep.fields.serviceType.required', {
+                  defaultValue: '(Required)'
+                })}
+              </span>
             )}
           </Label>
           <div className="grid grid-cols-[1fr_auto_auto] gap-2">
@@ -193,7 +244,13 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
               onValueChange={(value) => updateData({ serviceTypeId: value })}
               options={serviceTypeOptions}
               disabled={isLoadingTypes || serviceTypeOptions.length === 0}
-              placeholder={serviceTypeOptions.length === 0 ? "Create or import service types" : "Select a service type"}
+              placeholder={serviceTypeOptions.length === 0
+                ? t('billingSetupStep.fields.serviceType.emptyPlaceholder', {
+                    defaultValue: 'Create or import service types'
+                  })
+                : t('billingSetupStep.fields.serviceType.placeholder', {
+                    defaultValue: 'Select a service type'
+                  })}
             />
             <CustomSelect
               id="currency-select"
@@ -210,12 +267,18 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
               className="flex items-center gap-2"
             >
               <Settings className="w-4 h-4" />
-              <span>Manage Service Types</span>
+              <span>
+                {t('billingSetupStep.serviceTypes.actions.manage', {
+                  defaultValue: 'Manage Service Types'
+                })}
+              </span>
             </Button>
           </div>
           {serviceTypeOptions.length === 0 && !isLoadingTypes && (
             <p className="text-xs text-red-600">
-              Click "Manage Service Types" to create or import service types
+              {t('billingSetupStep.fields.serviceType.emptyHelp', {
+                defaultValue: 'Click "Manage Service Types" to create or import service types'
+              })}
             </p>
           )}
         </div>
@@ -225,7 +288,14 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
           <div className="border rounded-lg p-4 space-y-4">
             <Alert variant="info" className="mb-4">
               <AlertDescription>
-                <span className="font-semibold">Note:</span> Service types are taxonomy labels for organization and filtering. Billing mode is configured separately on each service.
+                <span className="font-semibold">
+                  {t('billingSetupStep.serviceTypes.noteLabel', {
+                    defaultValue: 'Note:'
+                  })}
+                </span>{' '}
+                {t('billingSetupStep.serviceTypes.description', {
+                  defaultValue: 'Service types are taxonomy labels for organization and filtering. Billing mode is configured separately on each service.'
+                })}
               </AlertDescription>
             </Alert>
             
@@ -244,7 +314,9 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                 className="flex-1"
               >
                 <Package className="w-4 h-4 mr-2" />
-                Import from Standard
+                {t('billingSetupStep.serviceTypes.actions.import', {
+                  defaultValue: 'Import from Standard'
+                })}
               </Button>
               <Button
                 id="add-service-type-btn"
@@ -265,45 +337,67 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                 className="flex-1"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add New
+                {t('billingSetupStep.serviceTypes.actions.add', {
+                  defaultValue: 'Add New'
+                })}
               </Button>
             </div>
 
             {/* Add New Service Type Form */}
             {showAddForm && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Add New Service Type</h4>
+                <h4 className="font-medium">
+                  {t('billingSetupStep.serviceTypes.addForm.title', {
+                    defaultValue: 'Add New Service Type'
+                  })}
+                </h4>
                 
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="serviceTypeName">Name *</Label>
+                    <Label htmlFor="serviceTypeName">
+                      {t('billingSetupStep.serviceTypes.addForm.fields.name.label', {
+                        defaultValue: 'Name *'
+                      })}
+                    </Label>
                     <Input
                       id="serviceTypeName"
                       value={serviceTypeForm.name}
                       onChange={(e) => setServiceTypeForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g., Premium Support"
+                      placeholder={t('billingSetupStep.serviceTypes.addForm.fields.name.placeholder', {
+                        defaultValue: 'e.g., Premium Support'
+                      })}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="serviceTypeDescription">Description</Label>
+                    <Label htmlFor="serviceTypeDescription">
+                      {t('billingSetupStep.serviceTypes.addForm.fields.description.label', {
+                        defaultValue: 'Description'
+                      })}
+                    </Label>
                     <TextArea
                       id="serviceTypeDescription"
                       value={serviceTypeForm.description}
                       onChange={(e) => setServiceTypeForm(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Describe this service type..."
+                      placeholder={t('billingSetupStep.serviceTypes.addForm.fields.description.placeholder', {
+                        defaultValue: 'Describe this service type...'
+                      })}
                       rows={2}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="billingMethod">Billing Method *</Label>
+                    <Label htmlFor="billingMethod">
+                      {t('billingSetupStep.serviceTypes.addForm.fields.billingMethod.label', {
+                        defaultValue: 'Billing Method *'
+                      })}
+                    </Label>
                     <CustomSelect
                       id="billingMethod"
                       options={[
-                        { value: 'fixed', label: 'Fixed' },
-                        { value: 'hourly', label: 'Hourly' },
-                        { value: 'usage', label: 'Usage Based' },
+                        { value: 'fixed', label: t('billingSetupStep.billingMethods.fixed', { defaultValue: 'Fixed' }) },
+                        { value: 'hourly', label: t('billingSetupStep.billingMethods.hourly', { defaultValue: 'Hourly' }) },
+                        { value: 'usage', label: t('billingSetupStep.billingMethods.usageBased', { defaultValue: 'Usage Based' }) },
                       ]}
                       value={serviceTypeForm.billingMethod}
                       onValueChange={(value: string) => 
@@ -313,16 +407,24 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                   </div>
 
                   <div>
-                    <Label htmlFor="displayOrder">Display Order</Label>
+                    <Label htmlFor="displayOrder">
+                      {t('billingSetupStep.serviceTypes.addForm.fields.displayOrder.label', {
+                        defaultValue: 'Display Order'
+                      })}
+                    </Label>
                     <Input
                       id="displayOrder"
                       type="number"
                       value={serviceTypeForm.displayOrder}
                       onChange={(e) => setServiceTypeForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
-                      placeholder="Leave empty for auto-generate"
+                      placeholder={t('billingSetupStep.serviceTypes.addForm.fields.displayOrder.placeholder', {
+                        defaultValue: 'Leave empty for auto-generate'
+                      })}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Controls the order in which service types appear in dropdown menus throughout the platform. Lower numbers appear first.
+                      {t('billingSetupStep.serviceTypes.addForm.fields.displayOrder.help', {
+                        defaultValue: 'Controls the order in which service types appear in dropdown menus throughout the platform. Lower numbers appear first.'
+                      })}
                     </p>
                   </div>
 
@@ -344,14 +446,18 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                       });
                     }}
                   >
-                    Cancel
+                    {t('common.actions.cancel', {
+                      defaultValue: 'Cancel'
+                    })}
                   </Button>
                   <Button
                     id="save-service-type-form"
                     type="button"
                     onClick={async () => {
                       if (!serviceTypeForm.name.trim()) {
-                        toast.error('Service type name is required');
+                        toast.error(t('billingSetupStep.serviceTypes.errors.nameRequired', {
+                          defaultValue: 'Service type name is required'
+                        }));
                         return;
                       }
 
@@ -369,7 +475,9 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                         );
                         
                         if (nameExists) {
-                          toast.error('Service type with this name already exists');
+                          toast.error(t('billingSetupStep.serviceTypes.errors.duplicate', {
+                            defaultValue: 'Service type with this name already exists'
+                          }));
                           return;
                         }
                         
@@ -402,7 +510,9 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                           order_number: finalOrder
                         });
                         if (!created.success) {
-                          throw new Error(created.error || 'Failed to create service type');
+                          throw new Error(created.error || t('billingSetupStep.serviceTypes.errors.create', {
+                            defaultValue: 'Failed to create service type'
+                          }));
                         }
 
                         // Reload tenant types
@@ -418,12 +528,16 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                         });
                         setShowAddForm(false);
                       } catch (error) {
-                        handleError(error, 'Failed to create service type. Please try again.');
+                        handleError(error, t('billingSetupStep.serviceTypes.errors.createRetry', {
+                          defaultValue: 'Failed to create service type. Please try again.'
+                        }));
                       }
                     }}
                     disabled={!serviceTypeForm.name.trim()}
                   >
-                    Add Service Type
+                    {t('billingSetupStep.serviceTypes.actions.confirmAdd', {
+                      defaultValue: 'Add Service Type'
+                    })}
                   </Button>
                 </div>
               </div>
@@ -432,21 +546,40 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
             {/* Import Dialog */}
             {showImportDialog && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Import Standard Service Types</h4>
+                <h4 className="font-medium">
+                  {t('billingSetupStep.serviceTypes.import.title', {
+                    defaultValue: 'Import Standard Service Types'
+                  })}
+                </h4>
                 
                 <p className="text-sm text-gray-600">
-                  Select standard service types to import into your system:
+                  {t('billingSetupStep.serviceTypes.import.description', {
+                    defaultValue: 'Select standard service types to import into your system:'
+                  })}
                 </p>
 
                 {importResult && importResult.imported > 0 && (
               <Alert variant="success">
                 <AlertDescription>
                   <p className="font-medium">
-                    Service type{importResult.imported !== 1 ? 's' : ''} imported successfully!
+                    {importResult.imported === 1
+                      ? t('billingSetupStep.serviceTypes.import.success.titleOne', {
+                          defaultValue: 'Service type imported successfully!'
+                        })
+                      : t('billingSetupStep.serviceTypes.import.success.titleOther', {
+                          defaultValue: 'Service types imported successfully!'
+                        })}
                   </p>
                   <p className="text-sm mt-1">
-                    {importResult.imported} type{importResult.imported !== 1 ? 's' : ''} added to your catalog.
-                    {importResult.skipped > 0 && ` ${importResult.skipped} skipped.`}
+                    {t('billingSetupStep.serviceTypes.import.success.description', {
+                      defaultValue: '{{count}} type{{suffix}} added to your catalog.',
+                      count: importResult.imported,
+                      suffix: importResult.imported !== 1 ? 's' : ''
+                    })}
+                    {importResult.skipped > 0 && ` ${t('billingSetupStep.serviceTypes.import.success.skipped', {
+                      defaultValue: '{{count}} skipped.',
+                      count: importResult.skipped
+                    })}`}
                   </p>
                 </AlertDescription>
               </Alert>
@@ -473,9 +606,21 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                         />
                       </div>
                     </th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Name</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Billing Method</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Order</th>
+                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                      {t('billingSetupStep.serviceTypes.table.headers.name', {
+                        defaultValue: 'Name'
+                      })}
+                    </th>
+                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                      {t('billingSetupStep.serviceTypes.table.headers.billingMethod', {
+                        defaultValue: 'Billing Method'
+                      })}
+                    </th>
+                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                      {t('billingSetupStep.serviceTypes.table.headers.order', {
+                        defaultValue: 'Order'
+                      })}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -489,11 +634,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                       </td>
                       <td className="px-4 py-2 text-sm">{type.name}</td>
                       <td className="px-4 py-2 text-sm text-gray-600">
-                        {type.billing_method === 'fixed'
-                          ? 'Fixed'
-                          : type.billing_method === 'hourly'
-                            ? 'Hourly'
-                            : 'Usage'}
+                        {getBillingMethodLabel(type.billing_method)}
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-600">{type.display_order || 0}</td>
                     </tr>
@@ -510,7 +651,14 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                   disabled={selectedTypes.length === 0 || isImporting}
                   className="w-full"
                 >
-                  {isImporting ? 'Importing...' : `Import Selected (${selectedTypes.length})`}
+                  {isImporting
+                    ? t('billingSetupStep.serviceTypes.import.actions.importing', {
+                        defaultValue: 'Importing...'
+                      })
+                    : t('billingSetupStep.serviceTypes.import.actions.importSelected', {
+                        defaultValue: 'Import Selected ({{count}})',
+                        count: selectedTypes.length
+                      })}
                 </Button>
               </div>
             )}
@@ -518,15 +666,35 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
             {/* Current Service Types */}
             {tenantTypes.length > 0 && (
               <div className="mt-4">
-                <Label className="mb-2 block">Current Service Types</Label>
+                <Label className="mb-2 block">
+                  {t('billingSetupStep.serviceTypes.current.title', {
+                    defaultValue: 'Current Service Types'
+                  })}
+                </Label>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">Name</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Billing Method</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Order</th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Actions</th>
+                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">
+                          {t('billingSetupStep.serviceTypes.table.headers.name', {
+                            defaultValue: 'Name'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('billingSetupStep.serviceTypes.table.headers.billingMethod', {
+                            defaultValue: 'Billing Method'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('billingSetupStep.serviceTypes.table.headers.order', {
+                            defaultValue: 'Order'
+                          })}
+                        </th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                          {t('billingSetupStep.serviceTypes.table.headers.actions', {
+                            defaultValue: 'Actions'
+                          })}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -534,11 +702,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                         <tr key={type.id}>
                           <td className="px-2 py-1 text-xs">{type.name}</td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">
-                            {type.billing_method === 'fixed'
-                              ? 'Fixed'
-                              : type.billing_method === 'hourly'
-                                ? 'Hourly'
-                                : 'Usage'}
+                            {getBillingMethodLabel(type.billing_method)}
                           </td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">
                             {(type as any).order_number || (type as any).display_order || '-'}
@@ -552,7 +716,9 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                               size="sm"
                               onClick={() => removeServiceType(type.id)}
                               className="p-1 h-6 w-6"
-                              title="Remove service type"
+                              title={t('billingSetupStep.serviceTypes.current.removeTitle', {
+                                defaultValue: 'Remove service type'
+                              })}
                             >
                               <Trash2 className="h-3 w-3 text-gray-500 hover:text-red-600" />
                             </Button>
@@ -568,21 +734,29 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="serviceBillingMode">Billing Mode</Label>
+          <Label htmlFor="serviceBillingMode">
+            {t('billingSetupStep.fields.billingMode.label', {
+              defaultValue: 'Billing Mode'
+            })}
+          </Label>
           <CustomSelect
             id="serviceBillingMode"
             value={data.serviceBillingMode || 'usage'}
             onValueChange={(value) => updateData({ serviceBillingMode: value as 'fixed' | 'hourly' | 'usage' })}
             options={[
-              { value: 'fixed', label: 'Fixed' },
-              { value: 'hourly', label: 'Hourly' },
-              { value: 'usage', label: 'Usage' },
+              { value: 'fixed', label: t('billingSetupStep.billingMethods.fixed', { defaultValue: 'Fixed' }) },
+              { value: 'hourly', label: t('billingSetupStep.billingMethods.hourly', { defaultValue: 'Hourly' }) },
+              { value: 'usage', label: t('billingSetupStep.billingMethods.usage', { defaultValue: 'Usage' }) },
             ]}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="servicePrice">Default Rate</Label>
+          <Label htmlFor="servicePrice">
+            {t('billingSetupStep.fields.defaultRate.label', {
+              defaultValue: 'Default Rate'
+            })}
+          </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">
               {getCurrencySymbol(data.currencyCode || 'USD')}
@@ -591,7 +765,9 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
               id="servicePrice"
               value={data.servicePrice}
               onChange={(e) => updateData({ servicePrice: e.target.value })}
-              placeholder="150"
+              placeholder={t('billingSetupStep.fields.defaultRate.placeholder', {
+                defaultValue: '150'
+              })}
               style={{ paddingLeft: `${getCurrencySymbol(data.currencyCode || 'USD').length * 0.6 + 0.75}rem` }}
             />
           </div>
@@ -601,7 +777,14 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
       {serviceTypeOptions.length === 0 && attemptedToProceed && (
         <Alert variant="destructive">
           <AlertDescription>
-            <span className="font-semibold">Action Required:</span> Click "Manage Service Types" above to create or import at least one service type before creating a service.
+            <span className="font-semibold">
+              {t('billingSetupStep.validation.actionRequiredLabel', {
+                defaultValue: 'Action Required:'
+              })}
+            </span>{' '}
+            {t('billingSetupStep.validation.actionRequiredDescription', {
+              defaultValue: 'Click "Manage Service Types" above to create or import at least one service type before creating a service.'
+            })}
           </AlertDescription>
         </Alert>
       )}

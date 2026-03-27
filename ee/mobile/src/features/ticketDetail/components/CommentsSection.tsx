@@ -1,20 +1,24 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import EmojiPicker from "rn-emoji-keyboard";
 import type { AggregatedReaction, TicketComment } from "../../../api/tickets";
 import { createApiClient } from "../../../api";
-import { toggleCommentReaction } from "../../../api/tickets";
+import { toggleCommentReaction, updateTicketComment } from "../../../api/tickets";
 import { useAuth } from "../../../auth/AuthContext";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Avatar } from "../../../ui/components/Avatar";
 import { Badge } from "../../../ui/components/Badge";
 import { getAppConfig } from "../../../config/appConfig";
+import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import { formatDateTimeWithRelative } from "../../../ui/formatters/dateTime";
 import {
   extractPlainTextFromSerializedRichEditorContent,
   isMalformedRichEditorContent,
+  serializeRichEditorJson,
 } from "../../ticketRichText/helpers";
+import { TicketRichTextEditor } from "../../ticketRichText/TicketRichTextEditor";
 import { ExpandableComment } from "./ExpandableComment";
 
 const QUICK_EMOJIS = ['👍', '👎', '❤️', '😂', '🎉', '👀'];
@@ -30,6 +34,7 @@ export function CommentsSection({
   imageAuth,
   baseUrl,
   ticketId,
+  onCommentUpdated,
 }: {
   comments: TicketComment[];
   visibleCount: number;
@@ -41,6 +46,7 @@ export function CommentsSection({
   imageAuth?: { baseUrl: string; apiKey: string };
   baseUrl?: string | null;
   ticketId: string;
+  onCommentUpdated?: () => void;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
@@ -52,6 +58,55 @@ export function CommentsSection({
   const [reactionsOverrides, setReactionsOverrides] = useState<Record<string, AggregatedReaction[]>>({});
   const [emojiPickerCommentId, setEmojiPickerCommentId] = useState<string | null>(null);
   const [fullEmojiPickerCommentId, setFullEmojiPickerCommentId] = useState<string | null>(null);
+
+  // Expansion state — keyed by comment_id.  The toggle ref stores the
+  // ExpandableComment's toggle function; the `expanded` map is state so
+  // that flipping it re-renders this component (fixing the stale-ref bug).
+  const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
+  const toggleRef = useRef<Record<string, () => void>>({});
+
+  // Comment editing state
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const meUserId = session?.user?.id;
+
+  const startEditing = (comment: TicketComment) => {
+    setEditingCommentId(comment.comment_id ?? null);
+    setEditDraft(comment.comment_text);
+    setEditError(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingCommentId(null);
+    setEditError(null);
+  };
+
+  const saveComment = async (commentId: string) => {
+    if (!client || !session || !editDraft.trim()) return;
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      const auditHeaders = await getClientMetadataHeaders();
+      const res = await updateTicketComment(client, {
+        apiKey: session.accessToken,
+        ticketId,
+        commentId,
+        comment_text: editDraft,
+        auditHeaders,
+      });
+      if (!res.ok) {
+        setEditError(res.error.kind === "permission" ? t("comments.errors.permission") : t("comments.errors.generic"));
+        return;
+      }
+      setEditingCommentId(null);
+      onCommentUpdated?.();
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const config = getAppConfig();
   const client = useMemo(() => {
@@ -164,6 +219,8 @@ export function CommentsSection({
             const eventType = c.event_type;
             const isSystemEvent = kind === "event" || typeof eventType === "string";
             const isOptimistic = Boolean(c.optimistic);
+            const canEdit = !isSystemEvent && !isOptimistic && Boolean(meUserId && c.created_by === meUserId);
+            const isEditingThis = editingCommentId === c.comment_id;
             const commentPlainText = extractPlainTextFromSerializedRichEditorContent(c.comment_text);
             const eventText = c.event_text ?? (eventType ? `${eventType}: ${commentPlainText}` : commentPlainText);
             const badgeLabel = isSystemEvent ? t("comments.event") : isOptimistic ? t("comments.sending") : c.is_internal ? t("comments.internal") : t("comments.public");
@@ -200,8 +257,61 @@ export function CommentsSection({
                       <Badge label={c.is_internal ? t("comments.internal") : t("comments.public")} tone={c.is_internal ? "warning" : "info"} />
                     )}
                   </View>
+                  {isEditingThis ? (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+                      <Pressable
+                        onPress={cancelEditing}
+                        disabled={editSaving}
+                        accessibilityRole="button"
+                        style={{ padding: spacing.xs, opacity: editSaving ? 0.4 : 1 }}
+                      >
+                        <Feather name="x" size={18} color={colors.textSecondary} />
+                      </Pressable>
+                      <Pressable
+                        onPress={() => void saveComment(c.comment_id!)}
+                        disabled={editSaving}
+                        accessibilityRole="button"
+                        style={{ padding: spacing.xs, opacity: editSaving ? 0.4 : 1 }}
+                      >
+                        {editSaving ? (
+                          <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                          <Feather name="check" size={18} color={colors.primary} />
+                        )}
+                      </Pressable>
+                    </View>
+                  ) : canEdit ? (
+                    <Pressable
+                      onPress={() => startEditing(c)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("comments.editComment")}
+                      style={{ padding: spacing.xs }}
+                    >
+                      <Feather name="edit-2" size={16} color={colors.textSecondary} />
+                    </Pressable>
+                  ) : null}
                 </View>
-                {isSystemEvent ? (
+                {isEditingThis ? (
+                  <>
+                    <View style={{ marginTop: spacing.xs }}>
+                      <TicketRichTextEditor
+                        content={editDraft}
+                        editable={!editSaving}
+                        showToolbar
+                        height={180}
+                        loadingLabel={t("comments.loadingCommentEditor")}
+                        onContentChange={({ json }) => {
+                          setEditDraft(serializeRichEditorJson(json));
+                        }}
+                      />
+                    </View>
+                    {editError ? (
+                      <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.xs }}>
+                        {editError}
+                      </Text>
+                    ) : null}
+                  </>
+                ) : isSystemEvent ? (
                   <Text style={{ ...typography.body, color: colors.text, marginTop: 2, fontStyle: "italic" }}>
                     {eventText}
                   </Text>
@@ -220,52 +330,85 @@ export function CommentsSection({
                       typography={typography}
                       spacing={spacing}
                       t={(key: string) => t(key)}
+                      renderFooter={({ needsExpansion, expanded, toggle }) => {
+                        const cid = c.comment_id ?? "";
+                        if (needsExpansion) {
+                          toggleRef.current[cid] = () => {
+                            toggle();
+                            setExpandedMap((m) => ({ ...m, [cid]: !m[cid] }));
+                          };
+                          // Sync initial needsExpansion into state (only once)
+                          if (expandedMap[cid] === undefined && !expanded) {
+                            // Use a microtask to avoid setState-during-render warning
+                            queueMicrotask(() => setExpandedMap((m) => (m[cid] === undefined ? { ...m, [cid]: false } : m)));
+                          }
+                        } else {
+                          delete toggleRef.current[cid];
+                        }
+                        return null;
+                      }}
                     />
                   )
                 )}
-                {/* Reaction pills + add button */}
+                {/* Reactions (left) + see more (right) — two-column row */}
                 {!isSystemEvent && c.comment_id ? (
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", marginTop: spacing.xs, gap: 4 }}>
-                    {getReactions(c.comment_id).map((r) => (
+                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: spacing.xs }}>
+                    {/* Left: reaction pills + add button */}
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", flex: 1, gap: 4 }}>
+                      {getReactions(c.comment_id).map((r) => (
+                        <Pressable
+                          key={r.emoji}
+                          onPress={() => void handleToggleReaction(c.comment_id!, r.emoji)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${r.emoji} ${r.count}${r.currentUserReacted ? ", you reacted" : ""}`}
+                          style={({ pressed }) => ({
+                            flexDirection: "row",
+                            alignItems: "center",
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: r.currentUserReacted ? colors.primary : colors.border,
+                            backgroundColor: r.currentUserReacted ? `${colors.primary}18` : colors.background,
+                            opacity: pressed ? 0.7 : 1,
+                          })}
+                        >
+                          <Text style={{ fontSize: 14 }}>{r.emoji}</Text>
+                          <Text style={{ fontSize: 12, marginLeft: 3, color: r.currentUserReacted ? colors.primary : colors.textSecondary, fontWeight: r.currentUserReacted ? "600" : "400" }}>
+                            {r.count}
+                          </Text>
+                        </Pressable>
+                      ))}
                       <Pressable
-                        key={r.emoji}
-                        onPress={() => void handleToggleReaction(c.comment_id!, r.emoji)}
+                        onPress={() => setEmojiPickerCommentId(emojiPickerCommentId === c.comment_id ? null : c.comment_id!)}
                         accessibilityRole="button"
-                        accessibilityLabel={`${r.emoji} ${r.count}${r.currentUserReacted ? ", you reacted" : ""}`}
+                        accessibilityLabel="Add reaction"
                         style={({ pressed }) => ({
-                          flexDirection: "row",
-                          alignItems: "center",
                           paddingHorizontal: 8,
                           paddingVertical: 2,
                           borderRadius: 12,
                           borderWidth: 1,
-                          borderColor: r.currentUserReacted ? colors.primary : colors.border,
-                          backgroundColor: r.currentUserReacted ? `${colors.primary}18` : colors.background,
+                          borderColor: colors.border,
+                          backgroundColor: colors.background,
                           opacity: pressed ? 0.7 : 1,
                         })}
                       >
-                        <Text style={{ fontSize: 14 }}>{r.emoji}</Text>
-                        <Text style={{ fontSize: 12, marginLeft: 3, color: r.currentUserReacted ? colors.primary : colors.textSecondary, fontWeight: r.currentUserReacted ? "600" : "400" }}>
-                          {r.count}
+                        <Text style={{ fontSize: 14 }}>+</Text>
+                      </Pressable>
+                    </View>
+                    {/* Right: see more / see less */}
+                    {expandedMap[c.comment_id] !== undefined ? (
+                      <Pressable
+                        onPress={toggleRef.current[c.comment_id]}
+                        accessibilityRole="button"
+                        accessibilityLabel={expandedMap[c.comment_id] ? t("comments.seeLess") : t("comments.seeMore")}
+                        style={{ paddingHorizontal: 8, paddingVertical: 2, marginLeft: spacing.xs }}
+                      >
+                        <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+                          {expandedMap[c.comment_id] ? t("comments.seeLess") : t("comments.seeMore")}
                         </Text>
                       </Pressable>
-                    ))}
-                    <Pressable
-                      onPress={() => setEmojiPickerCommentId(emojiPickerCommentId === c.comment_id ? null : c.comment_id!)}
-                      accessibilityRole="button"
-                      accessibilityLabel="Add reaction"
-                      style={({ pressed }) => ({
-                        paddingHorizontal: 8,
-                        paddingVertical: 2,
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                        backgroundColor: colors.background,
-                        opacity: pressed ? 0.7 : 1,
-                      })}
-                    >
-                      <Text style={{ fontSize: 14 }}>+</Text>
-                    </Pressable>
+                    ) : null}
                   </View>
                 ) : null}
                 {/* Quick emoji picker */}

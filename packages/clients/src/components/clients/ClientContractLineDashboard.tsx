@@ -18,6 +18,7 @@ import {
 } from '@alga-psa/reporting/actions'; // Import actions and types
 import ChartSkeleton from '@alga-psa/ui/components/skeletons/ChartSkeleton';
 import { BucketUsageChart } from '@alga-psa/ui/components';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Dynamic imports for recharts components with type assertions
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer as any), {
@@ -38,73 +39,6 @@ interface ClientContractLineDashboardProps {
   clientId: string;
 }
 
-// Define columns for the Recent Invoices table
-const invoiceColumns: ColumnDefinition<RecentInvoice>[] = [
-  {
-    title: 'Invoice #',
-    dataIndex: 'invoice_number',
-    render: (value: string) => value || 'N/A',
-  },
-  {
-    title: 'Invoice Date',
-    dataIndex: 'invoice_date',
-    render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : 'N/A',
-  },
-  {
-    title: 'Due Date',
-    dataIndex: 'due_date',
-    render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : 'N/A',
-  },
-  {
-   title: 'Total Amount',
-   dataIndex: 'total_amount',
-   // Wrap the formatted currency in a div with text-right class
-   render: (value: number) => <div className="text-right">{formatCurrency(value)}</div>,
- },
- {
-    title: 'Status',
-    dataIndex: 'status',
-    render: (value: string) => value || 'N/A', // TODO: Add status badge rendering like in CreditReconciliation
-  },
-];
-
-
-// Define columns for the Hours by Service table
-const hoursColumns: ColumnDefinition<HoursByServiceResult>[] = [
- {
-   title: 'Service Name', // Or 'Service Type Name' if grouped by type
-   dataIndex: 'service_name', // Adjust if grouped by type
-   render: (value: string) => value || 'N/A',
- },
- {
-   title: 'Total Duration (Hours)',
-   dataIndex: 'total_duration',
-   render: (value: number) => {
-     const hours = (value / 60).toFixed(2); // Convert minutes to hours
-     return <div className="text-right">{hours}</div>;
-   },
-},
-];
-
-// Define columns for the Usage Metrics table
-const usageColumns: ColumnDefinition<UsageMetricResult>[] = [
-{
-  title: 'Service Name',
-  dataIndex: 'service_name',
-  render: (value: string) => value || 'N/A',
-},
-{
-  title: 'Total Quantity',
-  dataIndex: 'total_quantity',
-  render: (value: number) => <div className="text-right">{value}</div>, // Align right
-},
-{
-  title: 'Unit',
-  dataIndex: 'unit_of_measure',
-  render: (value: string | null) => value || 'N/A',
-},
-];
-
 // Custom Tooltip Component for Bucket Chart
 const CustomBucketTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -124,6 +58,71 @@ const CustomBucketTooltip = ({ active, payload, label }: any) => {
 
 
 const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = ({ clientId }) => {
+ const { t } = useTranslation('msp/clients');
+ const notAvailable = t('common.states.na', { defaultValue: 'N/A' });
+
+ const invoiceColumns: ColumnDefinition<RecentInvoice>[] = [
+  {
+    title: t('clientContractLineDashboard.invoiceNumber', { defaultValue: 'Invoice #' }),
+    dataIndex: 'invoice_number',
+    render: (value: string) => value || notAvailable,
+  },
+  {
+    title: t('clientContractLineDashboard.invoiceDate', { defaultValue: 'Invoice Date' }),
+    dataIndex: 'invoice_date',
+    render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : notAvailable,
+  },
+  {
+    title: t('clientContractLineDashboard.dueDate', { defaultValue: 'Due Date' }),
+    dataIndex: 'due_date',
+    render: (value: string | Date) => value ? formatDateOnly(typeof value === 'string' ? parseISO(value) : value) : notAvailable,
+  },
+  {
+   title: t('clientContractLineDashboard.totalAmount', { defaultValue: 'Total Amount' }),
+   dataIndex: 'total_amount',
+   render: (value: number) => <div className="text-right">{formatCurrency(value)}</div>,
+ },
+ {
+    title: t('clientContractLineDashboard.status', { defaultValue: 'Status' }),
+    dataIndex: 'status',
+    render: (value: string) => value || notAvailable,
+  },
+ ];
+
+ const hoursColumns: ColumnDefinition<HoursByServiceResult>[] = [
+ {
+   title: t('clientContractLineDashboard.serviceName', { defaultValue: 'Service Name' }),
+   dataIndex: 'service_name',
+   render: (value: string) => value || notAvailable,
+ },
+ {
+   title: t('clientContractLineDashboard.totalDurationHours', { defaultValue: 'Total Duration (Hours)' }),
+   dataIndex: 'total_duration',
+   render: (value: number) => {
+     const hours = (value / 60).toFixed(2);
+     return <div className="text-right">{hours}</div>;
+   },
+},
+ ];
+
+ const usageColumns: ColumnDefinition<UsageMetricResult>[] = [
+{
+  title: t('clientContractLineDashboard.serviceName', { defaultValue: 'Service Name' }),
+  dataIndex: 'service_name',
+  render: (value: string) => value || notAvailable,
+},
+{
+  title: t('clientContractLineDashboard.totalQuantity', { defaultValue: 'Total Quantity' }),
+  dataIndex: 'total_quantity',
+  render: (value: number) => <div className="text-right">{value}</div>,
+},
+{
+  title: t('clientContractLineDashboard.unit', { defaultValue: 'Unit' }),
+  dataIndex: 'unit_of_measure',
+  render: (value: string | null) => value || notAvailable,
+},
+ ];
+
  // State for Invoices
  const [loadingInvoices, setLoadingInvoices] = useState(true);
  const [invoices, setInvoices] = useState<RecentInvoice[]>([]);
@@ -273,7 +272,7 @@ useEffect(() => {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Recent Invoices</CardTitle>
+          <CardTitle>{t('clientContractLineDashboard.recentInvoices', { defaultValue: 'Recent Invoices' })}</CardTitle>
         </CardHeader>
         <CardContent>
           {loadingInvoices ? (
@@ -294,14 +293,14 @@ useEffect(() => {
               onItemsPerPageChange={handleInvoicesPageSizeChange}
             />
           ) : (
-            <Text>No recent invoices found.</Text>
+            <Text>{t('clientContractLineDashboard.noInvoices', { defaultValue: 'No recent invoices found.' })}</Text>
           )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-         <CardTitle>Hours by Service (Last 30 Days)</CardTitle>
+         <CardTitle>{t('clientContractLineDashboard.hoursByService', { defaultValue: 'Hours by Service (Last 30 Days)' })}</CardTitle>
          {/* TODO: Add Date Range Picker here */}
        </CardHeader>
        <CardContent>
@@ -322,14 +321,14 @@ useEffect(() => {
              onItemsPerPageChange={handleHoursPageSizeChange}
            />
          ) : (
-           <Text>No hours recorded in the selected period.</Text>
+           <Text>{t('clientContractLineDashboard.noHours', { defaultValue: 'No hours recorded in the selected period.' })}</Text>
          )}
         </CardContent>
       </Card>
 
       <Card>
        <CardHeader>
-         <CardTitle>Bucket Usage</CardTitle>
+         <CardTitle>{t('clientContractLineDashboard.bucketUsage', { defaultValue: 'Bucket Usage' })}</CardTitle>
        </CardHeader>
        <CardContent>
          {loadingBuckets ? (
@@ -346,7 +345,7 @@ useEffect(() => {
               <div key={`${bucket.contract_line_id}-${bucket.service_id}`} className="flex flex-col items-center text-center p-4 border rounded-lg">
                 <span className="text-sm font-medium text-gray-700 mb-2 h-10 flex items-center justify-center">{bucket.display_label}</span>
                 <div className="w-24 h-24 mb-2"> {/* Container for the chart */}
-                   <Suspense fallback={<ChartSkeleton height="96px" type="radial" title="Usage Chart" showLegend={false} />}>
+                   <Suspense fallback={<ChartSkeleton height="96px" type="radial" title={t('clientContractLineDashboard.usageChart', { defaultValue: 'Usage Chart' })} showLegend={false} />}>
                      <ResponsiveContainer width="100%" height="100%">
                        <RadialBarChart
                          cx="50%"
@@ -381,20 +380,24 @@ useEffect(() => {
                    </Suspense>
                  </div>
                  <span className="text-xs text-gray-500">
-                   {(bucket.minutes_used / 60).toFixed(2)} / {((bucket.total_minutes + bucket.rolled_over_minutes) / 60).toFixed(2)} hours used
+                   {t('clientContractLineDashboard.hoursUsedSummary', {
+                     defaultValue: '{{used}} / {{total}} hours used',
+                     used: (bucket.minutes_used / 60).toFixed(2),
+                     total: ((bucket.total_minutes + bucket.rolled_over_minutes) / 60).toFixed(2)
+                   })}
                  </span>
                </div>
              ))}
            </div>
          ) : (
-           <Text>No active bucket plans found.</Text>
+           <Text>{t('clientContractLineDashboard.noActiveBucketPlans', { defaultValue: 'No active bucket plans found.' })}</Text>
          )}
         </CardContent>
       </Card>
 
       <Card>
        <CardHeader>
-         <CardTitle>Usage Metrics (Last 30 Days)</CardTitle>
+         <CardTitle>{t('clientContractLineDashboard.title', { defaultValue: 'Usage Metrics (Last 30 Days)' })}</CardTitle>
           {/* TODO: Link this title/data to the Date Range Picker */}
        </CardHeader>
        <CardContent>
@@ -415,7 +418,7 @@ useEffect(() => {
              onItemsPerPageChange={handleUsagePageSizeChange}
            />
          ) : (
-           <Text>No usage data found in the selected period.</Text>
+           <Text>{t('clientContractLineDashboard.noUsage', { defaultValue: 'No usage data found in the selected period.' })}</Text>
          )}
        </CardContent>
       </Card>

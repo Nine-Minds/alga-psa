@@ -4,6 +4,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import type { IClient } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientCreatedDialogProps {
   isOpen: boolean;
@@ -20,18 +21,19 @@ const ClientCreatedDialog: React.FC<ClientCreatedDialogProps> = ({
   onViewClient,
   onAddAnother,
 }) => {
-  const name = client?.client_name || 'Client';
+  const { t } = useTranslation('msp/clients');
+  const name = client?.client_name || t('clientCreatedDialog.unknownClient', { defaultValue: 'Client' });
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title="Client Created" id="client-created-dialog">
+    <Dialog isOpen={isOpen} onClose={onClose} title={t('clientCreatedDialog.title', { defaultValue: 'Client Created' })} id="client-created-dialog">
       <DialogContent>
-        <p className="text-center">{`"${name}" has been created successfully.`}</p>
+        <p className="text-center">{t('clientCreatedDialog.createdMessage', { defaultValue: '"{{name}}" has been created successfully.', name })}</p>
       </DialogContent>
       <DialogFooter>
         <Button id="view-client-btn" onClick={onViewClient}>
-          View Client
+          {t('clientCreatedDialog.viewClient', { defaultValue: 'View Client' })}
         </Button>
         <Button id="add-another-client-btn" variant="secondary" onClick={onAddAnother}>
-          Add Another
+          {t('clientCreatedDialog.addAnother', { defaultValue: 'Add Another' })}
         </Button>
       </DialogFooter>
     </Dialog>

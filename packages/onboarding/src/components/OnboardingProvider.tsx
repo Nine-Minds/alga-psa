@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getTenantSettings } from '@alga-psa/tenancy/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface OnboardingProviderProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface OnboardingProviderProps {
 
 export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { data: session, status } = useSession();
+  const { t } = useTranslation('msp/onboarding');
   const router = useRouter();
   const pathname = usePathname();
   // Start with false to avoid hydration mismatch - will check onboarding status after mount
@@ -45,8 +47,8 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
       
       // Redirect to onboarding if not completed and not skipped
       if (settings && 
-          settings.hasOwnProperty('onboarding_completed') && 
-          settings.hasOwnProperty('onboarding_skipped') &&
+          Object.prototype.hasOwnProperty.call(settings, 'onboarding_completed') && 
+          Object.prototype.hasOwnProperty.call(settings, 'onboarding_skipped') &&
           !settings.onboarding_completed && 
           !settings.onboarding_skipped) {
         router.push('/msp/onboarding');
@@ -65,7 +67,11 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">
+            {t('common.states.loading', {
+              defaultValue: 'Loading...'
+            })}
+          </p>
         </div>
       </div>
     );

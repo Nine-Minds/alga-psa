@@ -4,8 +4,9 @@ use crate::models::{
     ExecuteRequest as ModelExecuteRequest, ExecuteResponse as ModelExecuteResponse, HttpPayload,
 };
 use crate::providers::{
-    CAP_CONTEXT_READ, CAP_HTTP_FETCH, CAP_INVOICE_MANUAL_CREATE, CAP_LOG_EMIT, CAP_SCHEDULER_MANAGE,
-    CAP_SECRETS_GET, CAP_STORAGE_KV, CAP_UI_PROXY, CAP_USER_READ,
+    CAP_CLIENT_READ, CAP_CONTEXT_READ, CAP_HTTP_FETCH, CAP_INVOICE_MANUAL_CREATE, CAP_LOG_EMIT,
+    CAP_SCHEDULER_MANAGE, CAP_SECRETS_GET, CAP_SERVICE_READ, CAP_STORAGE_KV, CAP_UI_PROXY,
+    CAP_USER_READ,
 };
 use anyhow::{anyhow, Context};
 use base64::Engine as _;
@@ -20,6 +21,7 @@ use wasmtime::component::{Accessor, HasSelf, Linker};
 
 use component::alga::extension::types;
 use component::alga::extension::{
+    clients::{self, ClientReadError, ClientSummary, ClientsListInput, ClientsListResult},
     context,
     http::{self, HttpError, HttpRequest, HttpResponse},
     invoicing::{self, CreateManualInvoiceInput, CreateManualInvoiceResult},
@@ -30,9 +32,12 @@ use component::alga::extension::{
     },
     secrets::{self, SecretError},
     storage::{self, StorageEntry, StorageError},
+    services::{
+        self, ServiceReadError, ServiceSummary, ServicesListInput, ServicesListResult,
+    },
     types::{
         ContextData, ExecuteRequest as WitExecuteRequest, ExecuteResponse as WitExecuteResponse,
-        HttpHeader, UserData, UserDataV2, UserError,
+        HttpHeader, ServiceBillingMethod, ServiceItemKind, UserData, UserDataV2, UserError,
     },
     ui_proxy::{self, ProxyError},
     user,
@@ -141,6 +146,20 @@ static SCHEDULER_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
 
 // Invoicing API uses the same base URL and token as storage/scheduler
 static INVOICING_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
+    std::env::var("STORAGE_API_BASE_URL")
+        .or_else(|_| std::env::var("REGISTRY_BASE_URL"))
+        .ok()
+        .map(normalize_internal_base_url)
+});
+
+static CLIENTS_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
+    std::env::var("STORAGE_API_BASE_URL")
+        .or_else(|_| std::env::var("REGISTRY_BASE_URL"))
+        .ok()
+        .map(normalize_internal_base_url)
+});
+
+static SERVICES_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
     std::env::var("STORAGE_API_BASE_URL")
         .or_else(|_| std::env::var("REGISTRY_BASE_URL"))
         .ok()
@@ -270,6 +289,28 @@ fn require_invoicing_access(
 ) -> std::result::Result<String, &'static str> {
     if !has_capability(providers, CAP_INVOICE_MANUAL_CREATE) {
         return Err("Permission denied: cap:invoice.manual.create not granted");
+    }
+    let install_id = install_id.ok_or("Permission denied: install_id missing")?;
+    Ok(install_id)
+}
+
+fn require_client_read_access(
+    providers: &HashSet<String>,
+    install_id: Option<String>,
+) -> std::result::Result<String, &'static str> {
+    if !has_capability(providers, CAP_CLIENT_READ) {
+        return Err("Permission denied: cap:client.read not granted");
+    }
+    let install_id = install_id.ok_or("Permission denied: install_id missing")?;
+    Ok(install_id)
+}
+
+fn require_service_read_access(
+    providers: &HashSet<String>,
+    install_id: Option<String>,
+) -> std::result::Result<String, &'static str> {
+    if !has_capability(providers, CAP_SERVICE_READ) {
+        return Err("Permission denied: cap:service.read not granted");
     }
     let install_id = install_id.ok_or("Permission denied: install_id missing")?;
     Ok(install_id)
@@ -1366,6 +1407,129 @@ async fn invoicing_request(
     }
 }
 
+async fn clients_request(
+    install_id: &str,
+    operation: &str,
+    mut payload: Map<String, Value>,
+) -> std::result::Result<Value, ClientReadError> {
+    let base = CLIENTS_BASE_URL.as_ref().ok_or(ClientReadError::Internal)?;
+    let token = RUNNER_STORAGE_API_TOKEN
+        .as_ref()
+        .ok_or(ClientReadError::Internal)?;
+
+    payload.insert("operation".into(), Value::String(operation.to_string()));
+
+    let url = format!(
+        "{}/api/internal/ext-clients/install/{}",
+        base.trim_end_matches('/'),
+        install_id
+    );
+
+    let response = HTTP_CLIENT
+        .post(url)
+        .header("content-type", "application/json")
+        .header("x-runner-auth", token)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|err| {
+            tracing::error!(error = %err, "clients_request transport failure");
+            ClientReadError::Internal
+        })?;
+
+    let status = response.status();
+    let text = response.text().await.unwrap_or_default();
+
+    if !status.is_success() {
+        tracing::warn!(status = status.as_u16(), body = %text, operation, "clients_request error");
+        return Err(map_client_read_status(status));
+    }
+
+    if text.trim().is_empty() {
+        Ok(Value::Null)
+    } else {
+        serde_json::from_str(&text).map_err(|err| {
+            tracing::error!(error = %err, "clients_request invalid JSON response");
+            ClientReadError::Internal
+        })
+    }
+}
+
+fn map_client_read_status(status: StatusCode) -> ClientReadError {
+    match status {
+        StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => ClientReadError::NotAllowed,
+        StatusCode::BAD_REQUEST => ClientReadError::InvalidInput,
+        _ => ClientReadError::Internal,
+    }
+}
+
+async fn services_request(
+    install_id: &str,
+    operation: &str,
+    mut payload: Map<String, Value>,
+) -> std::result::Result<Value, ServiceReadError> {
+    let base = SERVICES_BASE_URL
+        .as_ref()
+        .ok_or(ServiceReadError::Internal)?;
+    let token = RUNNER_STORAGE_API_TOKEN
+        .as_ref()
+        .ok_or(ServiceReadError::Internal)?;
+
+    payload.insert("operation".into(), Value::String(operation.to_string()));
+
+    let url = format!(
+        "{}/api/internal/ext-services/install/{}",
+        base.trim_end_matches('/'),
+        install_id
+    );
+
+    let response = HTTP_CLIENT
+        .post(url)
+        .header("content-type", "application/json")
+        .header("x-runner-auth", token)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|err| {
+            tracing::error!(error = %err, "services_request transport failure");
+            ServiceReadError::Internal
+        })?;
+
+    let status = response.status();
+    let text = response.text().await.unwrap_or_default();
+
+    if !status.is_success() {
+        tracing::warn!(status = status.as_u16(), body = %text, operation, "services_request error");
+        return Err(map_service_read_status(status));
+    }
+
+    if text.trim().is_empty() {
+        Ok(Value::Null)
+    } else {
+        serde_json::from_str(&text).map_err(|err| {
+            tracing::error!(error = %err, "services_request invalid JSON response");
+            ServiceReadError::Internal
+        })
+    }
+}
+
+fn map_service_read_status(status: StatusCode) -> ServiceReadError {
+    match status {
+        StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => ServiceReadError::NotAllowed,
+        StatusCode::BAD_REQUEST => ServiceReadError::InvalidInput,
+        _ => ServiceReadError::Internal,
+    }
+}
+
+fn build_runner_user_payload(ctx: &HostExecutionContext) -> Option<Value> {
+    ctx.user.as_ref().map(|user| {
+        Value::Object(Map::from_iter([
+            ("userId".to_string(), Value::String(user.user_id.clone())),
+            ("userType".to_string(), Value::String(user.user_type.clone())),
+        ]))
+    })
+}
+
 fn parse_create_manual_invoice_result(value: &Value) -> CreateManualInvoiceResult {
     let obj = match value.as_object() {
         Some(o) => o,
@@ -1489,6 +1653,163 @@ fn parse_endpoint_info(value: &Value) -> Option<EndpointInfo> {
         path: obj.get("path")?.as_str()?.to_string(),
         handler: obj.get("handler")?.as_str()?.to_string(),
         schedulable: obj.get("schedulable")?.as_bool()?,
+    })
+}
+
+fn parse_client_summary(value: &Value) -> Option<ClientSummary> {
+    let obj = value.as_object()?;
+    Some(ClientSummary {
+        client_id: obj.get("clientId").or(obj.get("client_id"))?.as_str()?.to_string(),
+        client_name: obj.get("clientName").or(obj.get("client_name"))?.as_str()?.to_string(),
+        client_type: obj
+            .get("clientType")
+            .or(obj.get("client_type"))
+            .and_then(|v| v.as_str().map(|s| s.to_string())),
+        is_inactive: obj
+            .get("isInactive")
+            .or(obj.get("is_inactive"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
+        default_currency_code: obj
+            .get("defaultCurrencyCode")
+            .or(obj.get("default_currency_code"))
+            .and_then(|v| v.as_str().map(|s| s.to_string())),
+        account_manager_id: obj
+            .get("accountManagerId")
+            .or(obj.get("account_manager_id"))
+            .and_then(|v| v.as_str().map(|s| s.to_string())),
+        account_manager_name: obj
+            .get("accountManagerName")
+            .or(obj.get("account_manager_name"))
+            .and_then(|v| v.as_str().map(|s| s.to_string())),
+        billing_email: obj
+            .get("billingEmail")
+            .or(obj.get("billing_email"))
+            .and_then(|v| v.as_str().map(|s| s.to_string())),
+    })
+}
+
+fn parse_clients_list_result(value: &Value) -> Option<ClientsListResult> {
+    let obj = value.as_object()?;
+    let items: Vec<ClientSummary> = obj
+        .get("items")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .map(parse_client_summary)
+        .collect::<Option<Vec<_>>>()?;
+
+    let total_count = obj
+        .get("totalCount")
+        .or(obj.get("total_count"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let page = obj.get("page").and_then(|v| v.as_u64()).unwrap_or(1);
+    let page_size = obj
+        .get("pageSize")
+        .or(obj.get("page_size"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(25);
+
+    Some(ClientsListResult {
+        items,
+        total_count: total_count as u32,
+        page: page as u32,
+        page_size: page_size as u32,
+    })
+}
+
+fn parse_service_item_kind(value: Option<&Value>) -> Option<ServiceItemKind> {
+    match value.and_then(|v| v.as_str()) {
+        Some("service") => Some(ServiceItemKind::Service),
+        Some("product") => Some(ServiceItemKind::Product),
+        _ => None,
+    }
+}
+
+fn parse_service_billing_method(value: Option<&Value>) -> Option<ServiceBillingMethod> {
+    match value.and_then(|v| v.as_str()) {
+        Some("fixed") => Some(ServiceBillingMethod::Fixed),
+        Some("hourly") => Some(ServiceBillingMethod::Hourly),
+        Some("usage") => Some(ServiceBillingMethod::Usage),
+        _ => None,
+    }
+}
+
+fn parse_service_summary(value: &Value) -> Option<ServiceSummary> {
+    let obj = value.as_object()?;
+    Some(ServiceSummary {
+        service_id: obj
+            .get("serviceId")
+            .or(obj.get("service_id"))?
+            .as_str()?
+            .to_string(),
+        service_name: obj
+            .get("serviceName")
+            .or(obj.get("service_name"))?
+            .as_str()?
+            .to_string(),
+        item_kind: parse_service_item_kind(obj.get("itemKind").or(obj.get("item_kind")))?,
+        billing_method: parse_service_billing_method(
+            obj.get("billingMethod").or(obj.get("billing_method")),
+        )?,
+        service_type_id: obj
+            .get("serviceTypeId")
+            .or(obj.get("service_type_id"))
+            .and_then(|v| v.as_str().map(|s| s.to_string())),
+        service_type_name: obj
+            .get("serviceTypeName")
+            .or(obj.get("service_type_name"))
+            .and_then(|v| v.as_str().map(|s| s.to_string())),
+        default_rate: obj
+            .get("defaultRate")
+            .or(obj.get("default_rate"))
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0),
+        unit_of_measure: obj
+            .get("unitOfMeasure")
+            .or(obj.get("unit_of_measure"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
+        is_active: obj
+            .get("isActive")
+            .or(obj.get("is_active"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true),
+        sku: obj.get("sku").and_then(|v| v.as_str().map(|s| s.to_string())),
+    })
+}
+
+fn parse_services_list_result(value: &Value) -> Option<ServicesListResult> {
+    let obj = value.as_object()?;
+    let items: Vec<ServiceSummary> = obj
+        .get("items")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .map(parse_service_summary)
+        .collect::<Option<Vec<_>>>()?;
+
+    let total_count = obj
+        .get("totalCount")
+        .or(obj.get("total_count"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let page = obj.get("page").and_then(|v| v.as_u64()).unwrap_or(1);
+    let page_size = obj
+        .get("pageSize")
+        .or(obj.get("page_size"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(25);
+
+    Some(ServicesListResult {
+        items,
+        total_count: total_count as u32,
+        page: page as u32,
+        page_size: page_size as u32,
     })
 }
 
@@ -2176,6 +2497,275 @@ impl invoicing::HostWithStore for HasSelf<HostState> {
     }
 }
 
+impl clients::HostWithStore for HasSelf<HostState> {
+    fn list_clients<T>(
+        accessor: &Accessor<T, Self>,
+        input: ClientsListInput,
+    ) -> impl std::future::Future<Output = Result<ClientsListResult, ClientReadError>> + Send {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
+        async move {
+            let install_id = require_client_read_access(&providers, install_id)
+                .map_err(|_| ClientReadError::NotAllowed)?;
+
+            let page = input.page.unwrap_or(1);
+            let page_size = input.page_size.unwrap_or(25);
+            if page < 1 || page_size < 1 || page_size > 100 {
+                return Err(ClientReadError::InvalidInput);
+            }
+
+            let tenant = ctx.tenant_id.clone().unwrap_or_default();
+            let extension = ctx.extension_id.clone().unwrap_or_default();
+
+            let mut payload = Map::new();
+            let mut filter = Map::new();
+            if let Some(search) = input.search {
+                filter.insert("search".to_string(), Value::String(search));
+            }
+            if let Some(include_inactive) = input.include_inactive {
+                filter.insert("includeInactive".to_string(), Value::Bool(include_inactive));
+            }
+            filter.insert("page".to_string(), Value::Number(serde_json::Number::from(page)));
+            filter.insert(
+                "pageSize".to_string(),
+                Value::Number(serde_json::Number::from(page_size)),
+            );
+            payload.insert("input".into(), Value::Object(filter));
+            if let Some(user) = build_runner_user_payload(&ctx) {
+                payload.insert("user".into(), user);
+            }
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                page=page,
+                page_size=page_size,
+                "clients capability list_clients start"
+            );
+
+            let response = clients_request(&install_id, "list", payload).await?;
+            let parsed = parse_clients_list_result(&response).ok_or(ClientReadError::Internal)?;
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                result_count=parsed.items.len(),
+                "clients capability list_clients completed"
+            );
+
+            Ok(parsed)
+        }
+    }
+
+    fn get_client<T>(
+        accessor: &Accessor<T, Self>,
+        client_id: String,
+    ) -> impl std::future::Future<Output = Result<Option<ClientSummary>, ClientReadError>> + Send
+    {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
+        async move {
+            let install_id = require_client_read_access(&providers, install_id)
+                .map_err(|_| ClientReadError::NotAllowed)?;
+
+            let tenant = ctx.tenant_id.clone().unwrap_or_default();
+            let extension = ctx.extension_id.clone().unwrap_or_default();
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                client_id=%client_id,
+                "clients capability get_client start"
+            );
+
+            let mut payload = Map::new();
+            payload.insert(
+                "input".into(),
+                Value::Object(Map::from_iter([(
+                    "clientId".to_string(),
+                    Value::String(client_id.clone()),
+                )])),
+            );
+            if let Some(user) = build_runner_user_payload(&ctx) {
+                payload.insert("user".into(), user);
+            }
+
+            let response = clients_request(&install_id, "get", payload).await?;
+            let item = match response.get("item") {
+                Some(value) if value.is_null() => None,
+                Some(value) => Some(parse_client_summary(value).ok_or(ClientReadError::Internal)?),
+                None => return Err(ClientReadError::Internal),
+            };
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                client_id=%client_id,
+                found=item.is_some(),
+                "clients capability get_client completed"
+            );
+
+            Ok(item)
+        }
+    }
+}
+
+impl services::HostWithStore for HasSelf<HostState> {
+    fn list_services<T>(
+        accessor: &Accessor<T, Self>,
+        input: ServicesListInput,
+    ) -> impl std::future::Future<Output = Result<ServicesListResult, ServiceReadError>> + Send {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
+        async move {
+            let install_id = require_service_read_access(&providers, install_id)
+                .map_err(|_| ServiceReadError::NotAllowed)?;
+
+            let page = input.page.unwrap_or(1);
+            let page_size = input.page_size.unwrap_or(25);
+            if page < 1 || page_size < 1 || page_size > 100 {
+                return Err(ServiceReadError::InvalidInput);
+            }
+
+            let tenant = ctx.tenant_id.clone().unwrap_or_default();
+            let extension = ctx.extension_id.clone().unwrap_or_default();
+
+            let mut payload = Map::new();
+            let mut filter = Map::new();
+            if let Some(search) = input.search {
+                filter.insert("search".to_string(), Value::String(search));
+            }
+            if let Some(item_kind) = input.item_kind {
+                let value = match item_kind {
+                    ServiceItemKind::Service => "service",
+                    ServiceItemKind::Product => "product",
+                };
+                filter.insert("itemKind".to_string(), Value::String(value.to_string()));
+            }
+            if let Some(is_active) = input.is_active {
+                filter.insert("isActive".to_string(), Value::Bool(is_active));
+            }
+            if let Some(billing_method) = input.billing_method {
+                let value = match billing_method {
+                    ServiceBillingMethod::Fixed => "fixed",
+                    ServiceBillingMethod::Hourly => "hourly",
+                    ServiceBillingMethod::Usage => "usage",
+                };
+                filter.insert("billingMethod".to_string(), Value::String(value.to_string()));
+            }
+            filter.insert("page".to_string(), Value::Number(serde_json::Number::from(page)));
+            filter.insert(
+                "pageSize".to_string(),
+                Value::Number(serde_json::Number::from(page_size)),
+            );
+            payload.insert("input".into(), Value::Object(filter));
+            if let Some(user) = build_runner_user_payload(&ctx) {
+                payload.insert("user".into(), user);
+            }
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                page=page,
+                page_size=page_size,
+                "services capability list_services start"
+            );
+
+            let response = services_request(&install_id, "list", payload).await?;
+            let parsed = parse_services_list_result(&response).ok_or(ServiceReadError::Internal)?;
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                result_count=parsed.items.len(),
+                "services capability list_services completed"
+            );
+
+            Ok(parsed)
+        }
+    }
+
+    fn get_service<T>(
+        accessor: &Accessor<T, Self>,
+        service_id: String,
+    ) -> impl std::future::Future<Output = Result<Option<ServiceSummary>, ServiceReadError>> + Send
+    {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
+        async move {
+            let install_id = require_service_read_access(&providers, install_id)
+                .map_err(|_| ServiceReadError::NotAllowed)?;
+
+            let tenant = ctx.tenant_id.clone().unwrap_or_default();
+            let extension = ctx.extension_id.clone().unwrap_or_default();
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                service_id=%service_id,
+                "services capability get_service start"
+            );
+
+            let mut payload = Map::new();
+            payload.insert(
+                "input".into(),
+                Value::Object(Map::from_iter([(
+                    "serviceId".to_string(),
+                    Value::String(service_id.clone()),
+                )])),
+            );
+            if let Some(user) = build_runner_user_payload(&ctx) {
+                payload.insert("user".into(), user);
+            }
+
+            let response = services_request(&install_id, "get", payload).await?;
+            let item = match response.get("item") {
+                Some(value) if value.is_null() => None,
+                Some(value) => Some(parse_service_summary(value).ok_or(ServiceReadError::Internal)?),
+                None => return Err(ServiceReadError::Internal),
+            };
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                service_id=%service_id,
+                found=item.is_some(),
+                "services capability get_service completed"
+            );
+
+            Ok(item)
+        }
+    }
+}
+
 impl user::HostWithStore for HasSelf<HostState> {
     fn get_user<T>(
         accessor: &Accessor<T, Self>,
@@ -2302,6 +2892,8 @@ impl user::Host for HostState {}
 impl user_v2::Host for HostState {}
 impl scheduler::Host for HostState {}
 impl invoicing::Host for HostState {}
+impl clients::Host for HostState {}
+impl services::Host for HostState {}
 
 #[cfg(test)]
 mod tests {
@@ -2344,6 +2936,75 @@ mod tests {
         let providers = HashSet::from([CAP_INVOICE_MANUAL_CREATE.to_string()]);
         let result = require_invoicing_access(&providers, None);
         assert_eq!(result.unwrap_err(), "Permission denied: install_id missing");
+    }
+
+    #[test]
+    fn client_list_parser_rejects_malformed_items() {
+        let value = serde_json::json!({
+            "items": [
+                {
+                    "clientId": "client-1",
+                    "clientName": "Acme",
+                    "isInactive": false
+                },
+                {
+                    "clientId": 42,
+                    "clientName": "Broken",
+                    "isInactive": false
+                }
+            ],
+            "totalCount": 2,
+            "page": 1,
+            "pageSize": 25
+        });
+
+        assert!(parse_clients_list_result(&value).is_none());
+    }
+
+    #[test]
+    fn service_parser_rejects_unknown_enums() {
+        let value = serde_json::json!({
+            "serviceId": "service-1",
+            "serviceName": "Monitoring",
+            "itemKind": "unsupported",
+            "billingMethod": "fixed",
+            "defaultRate": 100.0,
+            "unitOfMeasure": "month",
+            "isActive": true
+        });
+
+        assert!(parse_service_summary(&value).is_none());
+    }
+
+    #[test]
+    fn service_list_parser_rejects_malformed_items() {
+        let value = serde_json::json!({
+            "items": [
+                {
+                    "serviceId": "service-1",
+                    "serviceName": "Monitoring",
+                    "itemKind": "service",
+                    "billingMethod": "fixed",
+                    "defaultRate": 100.0,
+                    "unitOfMeasure": "month",
+                    "isActive": true
+                },
+                {
+                    "serviceId": "service-2",
+                    "serviceName": "Bad Method",
+                    "itemKind": "service",
+                    "billingMethod": "bogus",
+                    "defaultRate": 200.0,
+                    "unitOfMeasure": "month",
+                    "isActive": true
+                }
+            ],
+            "totalCount": 2,
+            "page": 1,
+            "pageSize": 25
+        });
+
+        assert!(parse_services_list_result(&value).is_none());
     }
 
     #[tokio::test]

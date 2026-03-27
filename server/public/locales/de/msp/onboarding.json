@@ -1,0 +1,856 @@
+{
+  "common": {
+    "actions": {
+      "back": "Zurück",
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "continue": "Weiter",
+      "finish": "Abschließen",
+      "invite": "Einladen",
+      "next": "Weiter",
+      "retry": "Erneut versuchen",
+      "save": "Speichern",
+      "saving": "Wird gespeichert...",
+      "skip": "Überspringen",
+      "submit": "Absenden"
+    },
+    "states": {
+      "loading": "Wird geladen...",
+      "optional": "Optional",
+      "required": "Erforderlich"
+    },
+    "no": "Nein",
+    "yes": "Ja"
+  },
+  "onboardingProvider": {
+    "title": "Onboarding-Provider",
+    "description": "Route-Ebene-Onboarding-Gate, das den Abschlussstatus des Mandanten prüft und unvollständige Mandanten in den Assistenten weiterleitet"
+  },
+  "onboardingWizard": {
+    "title": "Onboarding-Assistent",
+    "description": "Assistenten-Shell für die MSP-Mandanten-Einrichtung mit Dialog-/Vollseiten-Darstellung, Fortschritt, Validierung und Abschlussabläufen",
+    "steps": {
+      "clientInfo": "Kundeninfo",
+      "teamMembers": "Teammitglieder",
+      "addClient": "Kunden anlegen",
+      "clientContact": "Kundenkontakt",
+      "billing": "Abrechnung",
+      "ticketing": "Ticketing"
+    },
+    "errors": {
+      "saveClientInfo": "Kundeninfo konnte nicht gespeichert werden",
+      "addTeamMembers": "Teammitglieder konnten nicht hinzugefügt werden",
+      "saveClient": "Kunde konnte nicht gespeichert werden",
+      "addContact": "Kontakt konnte nicht hinzugefügt werden",
+      "setupBilling": "Abrechnung konnte nicht eingerichtet werden",
+      "unknown": "Unbekannter Fehler",
+      "validationFailed": "Validierung fehlgeschlagen",
+      "configureTicketing": "Ticketing konnte nicht konfiguriert werden",
+      "completeOnboarding": "Onboarding konnte nicht abgeschlossen werden"
+    },
+    "debug": {
+      "title": "Debug-Info:",
+      "currentStep": "Aktueller Schritt: {{stepIndex}} ({{stepName}})",
+      "isValid": "Ist gültig: {{value}}",
+      "isRequired": "Ist erforderlich: {{value}}",
+      "viewData": "Daten anzeigen"
+    },
+    "actions": {
+      "finish": "Einrichtung abschließen",
+      "saving": "Wird gespeichert...",
+      "completing": "Wird abgeschlossen..."
+    },
+    "shell": {
+      "title": "System einrichten",
+      "description": "Lassen Sie uns Ihren Arbeitsbereich konfigurieren und einsatzbereit machen."
+    }
+  },
+  "addClientStep": {
+    "title": "Schritt: Kunden anlegen",
+    "description": "Assistentenschritt zum Erstellen oder erneuten Bearbeiten des primären Kundendatensatzes während des Onboardings",
+    "validation": {
+      "email": {
+        "invalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein"
+      },
+      "website": {
+        "example": "Bitte geben Sie eine gültige Website an (z. B. example.com)",
+        "format": "Bitte geben Sie ein gültiges Website-Format ein"
+      },
+      "phone": {
+        "tooShort": "Die Telefonnummer scheint zu kurz zu sein",
+        "tooLong": "Die Telefonnummer scheint zu lang zu sein",
+        "invalidCharacters": "Die Telefonnummer enthält ungültige Zeichen"
+      }
+    },
+    "header": {
+      "title": "Ihren ersten Kunden anlegen",
+      "description": "Legen Sie Ihren ersten Kunden an, um zu beginnen. Sie können diesen Schritt überspringen und Kunden später hinzufügen."
+    },
+    "created": {
+      "title": "Kunde erfolgreich angelegt!",
+      "description": "{{clientName}} wurde zu Ihrer Kundenliste hinzugefügt."
+    },
+    "fields": {
+      "clientName": {
+        "label": "Kundenname",
+        "placeholder": "Beispiel GmbH"
+      },
+      "clientEmail": {
+        "label": "Kunden-E-Mail",
+        "placeholder": "kontakt@beispiel.de"
+      },
+      "clientPhone": {
+        "label": "Telefonnummer",
+        "placeholder": "+49 30 1234567"
+      },
+      "website": {
+        "label": "Website",
+        "placeholder": "https://example.com"
+      }
+    },
+    "common": {
+      "noteLabel": "Hinweis:",
+      "optionalLabel": "Optional:"
+    },
+    "note": {
+      "defaultTaxSettings": "Der Kunde wird mit den Standard-Steuereinstellungen ohne Steuerpflicht (0 %) angelegt. Sie können die Steuersätze später in den Kundeneinstellungen konfigurieren.",
+      "optional": "Sie können diesen Schritt überspringen und Kunden später von Ihrem Dashboard aus hinzufügen."
+    }
+  },
+  "billingSetupStep": {
+    "title": "Schritt: Abrechnung einrichten",
+    "description": "Assistentenschritt zum Definieren des initialen Dienstes, der Preisgestaltung, des Abrechnungsmodus und der Standardwerte für Vertragspositionen",
+    "serviceTypes": {
+      "toasts": {
+        "deleted": "Diensttyp erfolgreich gelöscht"
+      },
+      "errors": {
+        "delete": "Diensttyp konnte nicht gelöscht werden",
+        "nameRequired": "Der Name des Diensttyps ist erforderlich",
+        "duplicate": "Ein Diensttyp mit diesem Namen existiert bereits",
+        "create": "Diensttyp konnte nicht erstellt werden",
+        "createRetry": "Diensttyp konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
+      },
+      "actions": {
+        "manage": "Diensttypen verwalten",
+        "import": "Aus Standard importieren",
+        "add": "Neu hinzufügen",
+        "confirmAdd": "Diensttyp hinzufügen"
+      },
+      "noteLabel": "Hinweis:",
+      "description": "Diensttypen sind Taxonomie-Labels zur Organisation und Filterung. Der Abrechnungsmodus wird separat für jeden Dienst konfiguriert.",
+      "addForm": {
+        "title": "Neuen Diensttyp hinzufügen",
+        "fields": {
+          "name": {
+            "label": "Name *",
+            "placeholder": "z. B. Premium Support"
+          },
+          "description": {
+            "label": "Beschreibung",
+            "placeholder": "Beschreiben Sie diesen Diensttyp..."
+          },
+          "billingMethod": {
+            "label": "Abrechnungsmethode *"
+          },
+          "displayOrder": {
+            "label": "Anzeigereihenfolge",
+            "placeholder": "Leer lassen für automatische Vergabe",
+            "help": "Steuert die Reihenfolge, in der Diensttypen in Dropdown-Menüs auf der Plattform erscheinen. Niedrigere Zahlen erscheinen zuerst."
+          }
+        }
+      },
+      "import": {
+        "title": "Standard-Diensttypen importieren",
+        "description": "Wählen Sie Standard-Diensttypen aus, die in Ihr System importiert werden sollen:",
+        "success": {
+          "titleOne": "Diensttyp erfolgreich importiert!",
+          "titleOther": "Diensttypen erfolgreich importiert!",
+          "description": "{{count}} Typ{{suffix}} zu Ihrem Katalog hinzugefügt.",
+          "skipped": "{{count}} übersprungen."
+        },
+        "actions": {
+          "importing": "Wird importiert...",
+          "importSelected": "Auswahl importieren ({{count}})"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Name",
+          "billingMethod": "Abrechnungsmethode",
+          "order": "Reihenfolge",
+          "actions": "Aktionen"
+        }
+      },
+      "current": {
+        "title": "Aktuelle Diensttypen",
+        "removeTitle": "Diensttyp entfernen"
+      }
+    },
+    "header": {
+      "title": "Ihren ersten Dienst erstellen",
+      "description": "Fügen Sie einen Dienst hinzu und wählen Sie aus, wie er abgerechnet werden soll. Der Diensttyp identifiziert die Dienstkategorie, während der Abrechnungsmodus das Preisverhalten steuert."
+    },
+    "created": {
+      "title": "Dienst erfolgreich erstellt!",
+      "description": "{{serviceName}} wurde Ihrem Dienstkatalog hinzugefügt."
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Dienstname *",
+        "placeholder": "Managed IT Services"
+      },
+      "serviceDescription": {
+        "label": "Dienstbeschreibung",
+        "placeholder": "Umfassende IT-Support- und Management-Dienstleistungen..."
+      },
+      "serviceType": {
+        "label": "Diensttyp *",
+        "required": "(Erforderlich)",
+        "emptyPlaceholder": "Diensttypen erstellen oder importieren",
+        "placeholder": "Diensttyp auswählen",
+        "emptyHelp": "Klicken Sie auf „Diensttypen verwalten“, um Diensttypen zu erstellen oder zu importieren"
+      },
+      "billingMode": {
+        "label": "Abrechnungsmodus"
+      },
+      "defaultRate": {
+        "label": "Standardtarif",
+        "placeholder": "150"
+      }
+    },
+    "billingMethods": {
+      "fixed": "Fest",
+      "hourly": "Stündlich",
+      "usageBased": "Nutzungsbasiert",
+      "usage": "Verbrauch"
+    },
+    "validation": {
+      "actionRequiredLabel": "Aktion erforderlich:",
+      "actionRequiredDescription": "Klicken Sie oben auf „Diensttypen verwalten“, um mindestens einen Diensttyp zu erstellen oder zu importieren, bevor Sie einen Dienst anlegen."
+    }
+  },
+  "clientContactStep": {
+    "title": "Schritt: Kundenkontakt",
+    "description": "Assistentenschritt zum Erfassen der primären Kundenkontaktdaten",
+    "validation": {
+      "email": {
+        "invalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein"
+      }
+    },
+    "empty": {
+      "title": "Kundenkontakt",
+      "description": "Es wurden keine Kundendaten angegeben. Überspringen Sie diesen Schritt oder gehen Sie zurück, um zuerst einen Kunden anzulegen."
+    },
+    "header": {
+      "title": "Kontakt für {{clientName}} hinzufügen",
+      "clientFallback": "Kunde",
+      "description": "Fügen Sie eine primäre Kontaktperson für diesen Kunden hinzu."
+    },
+    "created": {
+      "title": "Kontakt erfolgreich erstellt!",
+      "description": "{{contactName}} wurde zu {{clientName}} hinzugefügt.",
+      "contactFallback": "Der Kontakt",
+      "clientFallback": "dem Kunden"
+    },
+    "fields": {
+      "contactName": {
+        "label": "Kontaktname",
+        "placeholder": "John Smith"
+      },
+      "contactEmail": {
+        "label": "Kontakt-E-Mail",
+        "placeholder": "john.smith@example.com"
+      },
+      "contactRole": {
+        "label": "Rolle/Titel",
+        "placeholder": "IT-Manager"
+      }
+    },
+    "common": {
+      "optionalLabel": "Optional:"
+    },
+    "footer": {
+      "optional": "Sie können diesen Schritt überspringen und Kontakte später im Profil des Kunden hinzufügen."
+    }
+  },
+  "clientInfoStep": {
+    "title": "Schritt: Kundeninfo",
+    "description": "Assistentenschritt zum Erfassen der Identität des MSP-Operators, Unternehmensinformationen und ersten Kundenbasisdaten",
+    "revisit": {
+      "title": "Unternehmensinformationen",
+      "description": "Überprüfen oder aktualisieren Sie Ihre Unternehmensdaten.",
+      "fields": {
+        "companyName": {
+          "label": "Firmenname",
+          "placeholder": "Acme IT Solutions"
+        }
+      },
+      "note": "Sie können diesen Assistenten jederzeit verwenden, um Ihre Arbeitsbereichseinstellungen neu zu konfigurieren."
+    },
+    "common": {
+      "noteLabel": "Hinweis:"
+    },
+    "header": {
+      "title": "Kundeninformationen",
+      "description": "Lassen Sie uns mit der Einrichtung Ihres Kundenprofils beginnen."
+    },
+    "fields": {
+      "firstName": {
+        "label": "Vorname",
+        "placeholder": "John"
+      },
+      "lastName": {
+        "label": "Nachname",
+        "placeholder": "Doe"
+      },
+      "clientName": {
+        "label": "Kundenname",
+        "placeholder": "Acme IT Solutions"
+      },
+      "email": {
+        "label": "E-Mail-Adresse",
+        "placeholder": "john@acmeit.com",
+        "help": "Diese Adresse wird für die Anmeldung in Ihrem Konto verwendet."
+      }
+    },
+    "password": {
+      "resetRequired": {
+        "title": "Passwort zurücksetzen erforderlich",
+        "description": "Sie müssen ein neues Passwort festlegen, um mit dem Einrichtungsprozess fortzufahren. Dieser Schritt kann nicht übersprungen werden."
+      },
+      "title": "Passwort festlegen",
+      "description": "Bitte legen Sie ein neues Passwort fest, um Ihr temporäres Passwort zu ersetzen.",
+      "fields": {
+        "newPassword": {
+          "label": "Neues Passwort",
+          "placeholder": "Ein starkes Passwort erstellen"
+        },
+        "confirmPassword": {
+          "label": "Passwort bestätigen",
+          "placeholder": "Passwort erneut eingeben",
+          "match": "Passwörter stimmen überein",
+          "mismatch": "Passwörter stimmen nicht überein"
+        }
+      },
+      "requirements": {
+        "title": "Passwort muss enthalten:",
+        "minLength": "Mindestens 8 Zeichen",
+        "uppercase": "Einen Großbuchstaben",
+        "lowercase": "Einen Kleinbuchstaben",
+        "number": "Eine Zahl",
+        "specialCharacter": "Ein Sonderzeichen"
+      },
+      "strength": {
+        "label": "Passwortstärke: {{strength}}",
+        "strong": "Stark",
+        "medium": "Mittel",
+        "weak": "Schwach"
+      }
+    },
+    "footer": {
+      "note": "Alle Felder auf dieser Seite sind erforderlich, um fortzufahren."
+    }
+  },
+  "teamMembersStep": {
+    "title": "Schritt: Teammitglieder",
+    "description": "Assistentenschritt zum Einladen erster Teammitglieder und Zuweisen von Onboarding-Rollen",
+    "license": {
+      "limitReached": "Lizenzlimit erreicht ({{current}}/{{limit}}). Kontaktieren Sie den Support, um Ihr Lizenzlimit zu erhöhen.",
+      "remaining": {
+        "one": "Sie können noch 1 weiteres Teammitglied hinzufügen.",
+        "other": "Sie können noch {{count}} weitere Teammitglieder hinzufügen."
+      },
+      "summary": {
+        "noLimit": "Benutzer: {{count}} (kein Limit)",
+        "limited": "Benutzer: {{current}}/{{limit}}"
+      }
+    },
+    "errors": {
+      "requiredFields": "Bitte füllen Sie alle Pflichtfelder einschließlich des Passworts aus",
+      "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+      "passwordLength": "Das Passwort muss mindestens 8 Zeichen lang sein",
+      "saveFailed": "Teammitglied konnte nicht gespeichert werden",
+      "generic": "Es ist ein Fehler aufgetreten"
+    },
+    "header": {
+      "title": "Teammitglieder einladen",
+      "description": "Fügen Sie Ihre Teammitglieder hinzu, um sie loslegen zu lassen. Sie können diesen Schritt überspringen und sie später hinzufügen."
+    },
+    "created": {
+      "titleOne": "1 Teammitglied erfolgreich erstellt!",
+      "titleOther": "{{count}} Teammitglieder erfolgreich erstellt!",
+      "users": "Erstellte Benutzer: {{users}}"
+    },
+    "member": {
+      "title": "Teammitglied {{index}}",
+      "createdBadge": "Erstellt",
+      "actions": {
+        "saving": "Wird gespeichert...",
+        "save": "Speichern"
+      }
+    },
+    "fields": {
+      "firstName": {
+        "label": "Vorname",
+        "placeholder": "Jane"
+      },
+      "lastName": {
+        "label": "Nachname",
+        "placeholder": "Smith"
+      },
+      "email": {
+        "label": "E-Mail",
+        "placeholder": "jane@client.com"
+      },
+      "role": {
+        "label": "Rolle"
+      },
+      "password": {
+        "label": "Temporäres Passwort",
+        "placeholder": "Temporäres Passwort festlegen",
+        "help": "Der Benutzer muss dieses Passwort bei der ersten Anmeldung ändern"
+      }
+    },
+    "roles": {
+      "admin": "Administrator",
+      "technician": "Techniker",
+      "manager": "Manager",
+      "user": "Benutzer"
+    },
+    "actions": {
+      "saveCurrentFirst": "Zuerst aktuelles Teammitglied speichern",
+      "addAnother": "Weiteres Teammitglied hinzufügen"
+    },
+    "unsaved": {
+      "title": "Ungespeichertes Teammitglied",
+      "description": "Bitte speichern Sie das aktuelle Teammitglied, bevor Sie ein neues hinzufügen."
+    },
+    "limitReached": {
+      "title": "Benutzerlimit erreicht",
+      "description": "Sie haben die maximale Anzahl von Benutzern für Ihren aktuellen Plan erreicht. Kontaktieren Sie den Support, um Ihr Limit zu erhöhen."
+    },
+    "optional": {
+      "label": "Optional:",
+      "description": "Sie können diesen Schritt überspringen und Teammitglieder später in den Einstellungen einladen."
+    }
+  },
+  "ticketingConfigStep": {
+    "title": "Schritt: Ticketing konfigurieren",
+    "description": "Assistentenschritt zum Konfigurieren von Boards, Status, Prioritäten, Kategorien und SLA-Standardwerten während des Onboardings",
+    "boards": {
+      "toasts": {
+        "firstDefaultSet": "Erstes Board automatisch als Standard festgelegt",
+        "deleted": "Board erfolgreich gelöscht",
+        "defaultUpdated": "Standard-Board erfolgreich aktualisiert"
+      },
+      "errors": {
+        "import": "Boards konnten nicht importiert werden",
+        "delete": "Board konnte nicht gelöscht werden.",
+        "defaultRequired": "Mindestens ein Board muss als Standard festgelegt sein",
+        "defaultUpdate": "Standard-Board konnte nicht festgelegt werden",
+        "duplicate": "Board existiert bereits",
+        "create": "Board konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
+      },
+      "delete": {
+        "fallbackEntity": "dieses Board"
+      },
+      "title": "Boards",
+      "description": "Boards helfen, Tickets nach Abteilung, Team oder Workflow-Typ zu organisieren. Wenn Kunden Tickets über das Kundenportal erstellen, werden sie automatisch dem als Standard markierten Board zugewiesen.",
+      "tip": "Klicken Sie auf den Stern in der Spalte „Standard“, um zu ändern, welches Board der Standard ist.",
+      "actions": {
+        "import": "Aus Standard importieren",
+        "add": "Neues Board hinzufügen",
+        "confirmAdd": "Board hinzufügen"
+      },
+      "addForm": {
+        "title": "Neues Board hinzufügen",
+        "fields": {
+          "name": {
+            "label": "Board-Name *",
+            "placeholder": "Board-Name eingeben"
+          },
+          "description": {
+            "label": "Beschreibung",
+            "placeholder": "Beschreibung eingeben"
+          },
+          "displayOrder": {
+            "label": "Anzeigereihenfolge",
+            "placeholder": "Leer lassen für automatische Vergabe",
+            "help": "Steuert die Reihenfolge, in der Boards in Dropdown-Menüs auf der Plattform erscheinen. Niedrigere Zahlen erscheinen zuerst."
+          },
+          "itil": {
+            "label": "Dieses Board ITIL-konform machen"
+          }
+        },
+        "configurationTitle": "Board-Konfiguration"
+      },
+      "import": {
+        "title": "Standard-Boards importieren",
+        "success": {
+          "one": "1 Board erfolgreich importiert.",
+          "other": "{{count}} Boards erfolgreich importiert."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Name",
+          "default": "Standard",
+          "order": "Reihenfolge",
+          "itil": "ITIL"
+        }
+      },
+      "current": {
+        "title": "Aktuelle Boards",
+        "defaultTitle": "Standard-Board",
+        "setDefaultTitle": "Als Standard-Board festlegen",
+        "removeTitle": "Board entfernen"
+      }
+    },
+    "categories": {
+      "import": {
+        "unknownParent": "Unbekannter Elternpunkt",
+        "title": "Standard-Kategorien importieren",
+        "success": {
+          "one": "1 Kategorie erfolgreich importiert.",
+          "other": "{{count}} Kategorien erfolgreich importiert."
+        },
+        "targetBoard": {
+          "label": "Ziel-Board *",
+          "placeholder": "Ein Board für importierte Kategorien auswählen",
+          "help": "Alle importierten Kategorien werden diesem Board zugewiesen"
+        },
+        "parentAutoSelectTitle": "Elternkategorie wird automatisch ausgewählt"
+      },
+      "errors": {
+        "missingParents": "Unterkategorien können nicht ohne ihre Elternkategorien importiert werden. Bitte wählen Sie auch: {{parents}}",
+        "duplicate": "Kategorie existiert bereits in diesem Board",
+        "create": "Kategorie konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+        "delete": "Kategorie konnte nicht gelöscht werden."
+      },
+      "delete": {
+        "fallbackEntity": "diese Kategorie"
+      },
+      "toasts": {
+        "deleted": "Kategorie erfolgreich gelöscht"
+      },
+      "title": "Kategorien",
+      "requiresBoard": "(Board erforderlich)",
+      "description": "Kategorien helfen, Tickets nach Art des Problems oder der Anfrage zu organisieren. Sie können übergeordnete Kategorien mit Unterkategorien für eine bessere Organisation erstellen. Beispiele sind technischer Support (mit Unterkategorien wie Hardware, Software, Netzwerk) oder Serviceanfragen.",
+      "actions": {
+        "import": "Aus Standard importieren",
+        "add": "Neue Kategorie hinzufügen",
+        "confirmAdd": "Kategorie hinzufügen"
+      },
+      "addForm": {
+        "title": "Neue Kategorie hinzufügen",
+        "fields": {
+          "name": {
+            "label": "Kategoriename *",
+            "placeholder": "Kategoriename eingeben"
+          },
+          "board": {
+            "label": "Ziel-Board *",
+            "placeholder": "Ein Board auswählen"
+          },
+          "parent": {
+            "label": "Elternkategorie",
+            "noneOption": "Keine (oberste Ebene)",
+            "placeholder": "Elternkategorie auswählen"
+          },
+          "displayOrder": {
+            "label": "Anzeigereihenfolge",
+            "placeholder": "Leer lassen für automatische Vergabe",
+            "help": "Steuert die Reihenfolge, in der Kategorien in Dropdown-Menüs auf der Plattform erscheinen. Niedrigere Zahlen erscheinen zuerst."
+          }
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Name",
+          "order": "Reihenfolge"
+        }
+      },
+      "current": {
+        "title": "Aktuelle Kategorien ({{count}} gesamt)",
+        "removeTitle": "Kategorie entfernen"
+      }
+    },
+    "statuses": {
+      "toasts": {
+        "firstDefaultSet": "Erster offener Status automatisch als Standard festgelegt",
+        "deleted": "Status erfolgreich gelöscht",
+        "defaultUpdated": "Standardstatus erfolgreich aktualisiert"
+      },
+      "delete": {
+        "fallbackEntity": "dieser Status"
+      },
+      "errors": {
+        "delete": "Status konnte nicht gelöscht werden.",
+        "defaultRequired": "Mindestens ein Status muss als Standard festgelegt sein",
+        "closedCannotBeDefault": "Geschlossene Status können nicht als Standard festgelegt werden",
+        "selectBoardForDefault": "Wählen oder erstellen Sie zuerst ein Board, bevor Sie Standardstatus ändern.",
+        "defaultUpdate": "Standardstatus konnte nicht festgelegt werden",
+        "duplicate": "Status existiert bereits",
+        "selectBoardForAdd": "Wählen oder erstellen Sie zuerst ein Board, bevor Sie Status hinzufügen.",
+        "create": "Status konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
+      },
+      "title": "Status",
+      "description": "Status werden pro Board konfiguriert. Wählen Sie unten ein Board aus, um den Lebenszyklus für Tickets auf diesem Board zu definieren. Der Standard-Offen-Status für das ausgewählte Board wird neu erstellten Tickets auf diesem Board automatisch zugewiesen.",
+      "tip": "Boards teilen keine Status. Wechseln Sie hier zwischen den Boards, um den Statussatz jedes Boards zu prüfen oder zu ändern.",
+      "fields": {
+        "board": {
+          "label": "Board",
+          "placeholder": "Board auswählen"
+        }
+      },
+      "noBoardWarning": "Erstellen oder importieren Sie zuerst ein Board, bevor Sie Status konfigurieren. Jedes Board benötigt einen eigenen offenen Standardstatus.",
+      "actions": {
+        "import": "Aus Standard importieren",
+        "add": "Neuen Status hinzufügen",
+        "confirmAdd": "Status hinzufügen"
+      },
+      "addForm": {
+        "title": "Neuen Status hinzufügen",
+        "fields": {
+          "name": {
+            "label": "Statusname *",
+            "placeholder": "Statusname eingeben"
+          },
+          "displayOrder": {
+            "label": "Anzeigereihenfolge",
+            "placeholder": "Leer lassen für automatische Vergabe",
+            "help": "Steuert die Reihenfolge, in der Status in Dropdown-Menüs auf der Plattform erscheinen. Niedrigere Zahlen erscheinen zuerst."
+          },
+          "state": {
+            "closedLabel": "Geschlossener Status",
+            "openLabel": "Offener Status",
+            "closedHelp": "Dieser Status zeigt an, dass das Ticket gelöst und geschlossen ist",
+            "openHelp": "Dieser Status zeigt an, dass das Ticket noch offen ist und Aufmerksamkeit benötigt"
+          }
+        }
+      },
+      "import": {
+        "title": "Standard-Status importieren",
+        "targetBoard": "Importiere in {{boardName}}.",
+        "success": {
+          "one": "1 Status erfolgreich importiert.",
+          "other": "{{count}} Status erfolgreich importiert."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Name",
+          "type": "Typ",
+          "default": "Standard",
+          "order": "Reihenfolge"
+        }
+      },
+      "types": {
+        "closed": "Geschlossen",
+        "open": "Offen"
+      },
+      "current": {
+        "title": "Aktuelle Status",
+        "titleWithBoard": "Aktuelle Status für {{boardName}}",
+        "defaultTitle": "Standardstatus",
+        "setDefaultTitle": "Als Standardstatus festlegen",
+        "removeTitle": "Status entfernen"
+      },
+      "empty": {
+        "forBoard": "{{boardName}} hat noch keine Status. Fügen Sie vor dem Abschluss des Onboardings mindestens einen offenen Standardstatus hinzu oder importieren Sie ihn.",
+        "noBoardSelected": "Wählen Sie ein Board aus, um seine Status zu konfigurieren."
+      }
+    },
+    "priorities": {
+      "errors": {
+        "duplicate": "Priorität existiert bereits",
+        "missingSession": "Benutzersitzung nicht gefunden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+        "create": "Priorität konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+        "delete": "Priorität konnte nicht gelöscht werden."
+      },
+      "delete": {
+        "fallbackEntity": "diese Priorität"
+      },
+      "toasts": {
+        "deleted": "Priorität erfolgreich gelöscht"
+      },
+      "title": "Prioritäten",
+      "description": "Prioritäten helfen dabei, die Dringlichkeit von Tickets und Service-Level-Agreements (SLAs) festzulegen. Jede Priorität hat eine Farbe zur schnellen visuellen Identifikation. Typische Prioritäten sind Kritisch (rot), Hoch (orange), Mittel (blau) und Niedrig (grün).",
+      "actions": {
+        "import": "Aus Standard importieren",
+        "add": "Neue Priorität hinzufügen",
+        "confirmAdd": "Priorität hinzufügen"
+      },
+      "addForm": {
+        "title": "Neue Priorität hinzufügen",
+        "fields": {
+          "name": {
+            "label": "Prioritätsname *",
+            "placeholder": "Prioritätsname eingeben"
+          },
+          "displayOrder": {
+            "label": "Anzeigereihenfolge",
+            "placeholder": "Leer lassen für automatische Vergabe",
+            "help": "Steuert die Reihenfolge, in der Prioritäten in Dropdown-Menüs auf der Plattform erscheinen. Niedrigere Zahlen erscheinen zuerst."
+          },
+          "color": {
+            "label": "Prioritätsfarbe",
+            "choose": "Farbe wählen"
+          }
+        }
+      },
+      "import": {
+        "title": "Standard-Prioritäten importieren",
+        "success": {
+          "one": "1 Priorität erfolgreich importiert.",
+          "other": "{{count}} Prioritäten erfolgreich importiert."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Name",
+          "color": "Farbe",
+          "order": "Reihenfolge"
+        }
+      },
+      "current": {
+        "title": "Aktuelle Prioritäten",
+        "removeTitle": "Priorität entfernen"
+      }
+    },
+    "common": {
+      "errors": {
+        "validateDeletion": "Löschen konnte nicht validiert werden. Bitte versuchen Sie es erneut."
+      },
+      "noteLabel": "Hinweis:",
+      "tipLabel": "Tipp:",
+      "actions": {
+        "importing": "Wird importiert...",
+        "importCount": "Importieren ({{count}})"
+      },
+      "table": {
+        "actions": "Aktionen"
+      }
+    },
+    "header": {
+      "title": "Ticketing-System konfigurieren",
+      "description": "Richten Sie Ihr Support-Ticketing-System ein. Importieren Sie Standardkonfigurationen oder erstellen Sie Ihre eigenen."
+    },
+    "loading": {
+      "description": "Vorhandene Konfiguration wird geladen..."
+    },
+    "numbering": {
+      "title": "Ticket-Nummerierung",
+      "description": "Konfigurieren Sie, wie Ticketnummern erzeugt werden. Jedes Ticket erhält eine eindeutige Kennung, bestehend aus einem optionalen Präfix und einer fortlaufenden Nummer mit optionaler Nullenauffüllung.",
+      "fields": {
+        "prefix": {
+          "label": "Ticket-Präfix",
+          "placeholder": "TK-",
+          "help": "Optional. Leer lassen für kein Präfix oder ein benutzerdefiniertes Präfix eingeben (z. B. „TK-“, „TICKET-“)"
+        },
+        "paddingLength": {
+          "label": "Auffülllänge",
+          "help": "Minimale Gesamtanzahl an Ziffern. Z. B. wird aus 6 für „1“ die „000001“"
+        },
+        "startNumber": {
+          "label": "Startnummer"
+        }
+      },
+      "example": "Beispiel: {{value}}"
+    },
+    "itil": {
+      "actions": {
+        "openReference": "ITIL-Kategorien und Prioritätsmatrix anzeigen"
+      },
+      "title": "ITIL-Standardsreferenz",
+      "categories": {
+        "title": "ITIL-Standardkategorien und Unterkategorien",
+        "hardware": {
+          "title": "Hardware",
+          "server": "• Server",
+          "desktopLaptop": "• Desktop/Laptop",
+          "networkEquipment": "• Netzwerkgeräte",
+          "printer": "• Drucker",
+          "storage": "• Speicher",
+          "mobileDevice": "• Mobilgerät"
+        },
+        "software": {
+          "title": "Software",
+          "operatingSystem": "• Betriebssystem",
+          "businessApplication": "• Geschäftsanwendung",
+          "database": "• Datenbank",
+          "emailCollaboration": "• E-Mail/Zusammenarbeit",
+          "securitySoftware": "• Sicherheitssoftware",
+          "customApplication": "• Benutzerdefinierte Anwendung"
+        },
+        "network": {
+          "title": "Netzwerk",
+          "connectivity": "• Konnektivität",
+          "vpn": "• VPN",
+          "wifi": "• WLAN",
+          "internetAccess": "• Internetzugang",
+          "lanWan": "• LAN/WAN",
+          "firewall": "• Firewall"
+        },
+        "security": {
+          "title": "Sicherheit",
+          "malwareVirus": "• Malware/Virus",
+          "unauthorizedAccess": "• Unbefugter Zugriff",
+          "dataBreach": "• Datenpanne",
+          "phishingSpam": "• Phishing/Spam",
+          "policyViolation": "• Richtlinienverstoß",
+          "accountLockout": "• Konto gesperrt"
+        },
+        "serviceRequest": {
+          "title": "Serviceanfrage",
+          "accessRequest": "• Zugriffsanfrage",
+          "newUserSetup": "• Neue Benutzeranlage",
+          "softwareInstallation": "• Softwareinstallation",
+          "equipmentRequest": "• Geräteanfrage",
+          "informationRequest": "• Informationsanfrage",
+          "changeRequest": "• Änderungsanfrage"
+        }
+      },
+      "matrix": {
+        "title": "ITIL-Prioritätsmatrix (Auswirkung × Dringlichkeit)",
+        "urgency": {
+          "high": "Hoch",
+          "label": "Dringlichkeit",
+          "mediumHigh": "Mittel-Hoch",
+          "medium": "Mittel",
+          "mediumLow": "Mittel-Niedrig",
+          "low": "Niedrig"
+        },
+        "impact": {
+          "high": "Hohe Auswirkung (1)",
+          "mediumHigh": "Mittel-hohe Auswirkung (2)",
+          "medium": "Mittlere Auswirkung (3)",
+          "mediumLow": "Mittel-niedrige Auswirkung (4)",
+          "low": "Niedrige Auswirkung (5)"
+        },
+        "priority": {
+          "critical": "Kritisch (1)",
+          "high": "Hoch (2)",
+          "medium": "Mittel (3)",
+          "low": "Niedrig (4)",
+          "planning": "Planung (5)"
+        },
+        "explanation": {
+          "impact": "Auswirkung: Wie viele Benutzer/Geschäftsfunktionen sind betroffen?",
+          "urgency": "Dringlichkeit: Wie schnell muss das behoben werden?",
+          "priority": "Priorität: Wird automatisch anhand der obigen Auswirkungs-×-Dringlichkeits-Matrix berechnet."
+        }
+      }
+    },
+    "supportEmail": {
+      "label": "Support-E-Mail",
+      "placeholder": "support@yourclient.com",
+      "help": "Diese E-Mail-Adresse wird zum Erstellen von Support-Tickets verwendet. E-Mails an diese Adresse erzeugen automatisch Tickets in Ihrem System."
+    },
+    "finalRequirement": {
+      "label": "Erforderlich:",
+      "description": "Bitte konfigurieren Sie mindestens ein Board und eine Priorität, um die Einrichtung abzuschließen. Importieren Sie Standardkonfigurationen, um Ihr Ticketing-System schnell einzurichten."
+    }
+  }
+}

@@ -9,6 +9,7 @@ import { AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IClientContractLine, IContractLine, IService } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getContractLinesAsync,
   getContractLineServicesAsync,
@@ -30,6 +31,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
   onEdit,
   className = ''
 }) => {
+  const { t } = useTranslation('msp/clients');
   const [planServices, setPlanServices] = useState<Record<string, IService[]>>({});
   const [serviceOverlaps, setServiceOverlaps] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
@@ -51,14 +53,6 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
         // Get all contract lines to get plan details
         const contractLines = await getContractLinesAsync();
         setAllContractLines(contractLines);
-        
-        // Create a map of contract_line_id to plan details
-        const planDetailsMap = contractLines.reduce((map, plan) => {
-          if (plan.contract_line_id) {
-            map[plan.contract_line_id] = plan;
-          }
-          return map;
-        }, {} as Record<string, IContractLine>);
         
         // Get services for each client contract line
         const servicesMap: Record<string, IService[]> = {};
@@ -99,7 +93,9 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
         setError(null);
       } catch (err) {
         console.error('Error fetching data for client service overlap matrix:', err);
-        setError('Failed to load data for client service overlap matrix');
+        setError(t('clientServiceOverlapMatrix.loadError', {
+          defaultValue: 'Failed to load data for client service overlap matrix'
+        }));
       } finally {
         setLoading(false);
       }
@@ -110,7 +106,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
     } else {
       setLoading(false);
     }
-  }, [clientContractLines, services]);
+  }, [clientContractLines, services, t]);
 
   // Get all services that are in at least one client contract line
   const servicesInPlans = React.useMemo(() => {
@@ -159,7 +155,13 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
   }, [clientContractLines, allContractLines]);
 
   if (loading) {
-    return <div className="flex justify-center items-center h-32">Loading service overlap matrix...</div>;
+    return (
+      <div className="flex justify-center items-center h-32">
+        {t('clientServiceOverlapMatrix.loading', {
+          defaultValue: 'Loading service overlap matrix...'
+        })}
+      </div>
+    );
   }
 
   if (error) {
@@ -170,40 +172,70 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
     return (
       <Card className={`p-4 ${className}`}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium">Service Overlap Matrix</h3>
+          <h3 className="text-lg font-medium">
+            {t('clientServiceOverlapMatrix.title', {
+              defaultValue: 'Service Overlap Matrix'
+            })}
+          </h3>
         </div>
         <div className="flex items-center justify-center p-6 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-100))] rounded-md">
-          <p className="text-[rgb(var(--color-text-700))]">No contract lines assigned to this client</p>
+          <p className="text-[rgb(var(--color-text-700))]">
+            {t('clientServiceOverlapMatrix.noContractLines', {
+              defaultValue: 'No contract lines assigned to this client'
+            })}
+          </p>
         </div>
       </Card>
     );
   }
 
   return (
-    <Card className={`p-4 ${className}`}>
+    <Card className={`p-4 ${className}`} data-client-id={clientId}>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">Service Overlap Matrix</h3>
+        <h3 className="text-lg font-medium">
+          {t('clientServiceOverlapMatrix.title', {
+            defaultValue: 'Service Overlap Matrix'
+          })}
+        </h3>
         <Button 
           variant="outline" 
           size="sm" 
           onClick={() => setShowAllServices(!showAllServices)}
           id="toggle-services-button"
         >
-          {showAllServices ? 'Show Overlapping Only' : 'Show All Services'}
+          {showAllServices
+            ? t('clientServiceOverlapMatrix.showOverlappingOnly', {
+                defaultValue: 'Show Overlapping Only'
+              })
+            : t('clientServiceOverlapMatrix.showAllServices', {
+                defaultValue: 'Show All Services'
+              })}
         </Button>
       </div>
       
       {Object.keys(serviceOverlaps).length === 0 ? (
         <div className="flex items-center justify-center p-6 bg-green-500/10 border border-green-500/20 rounded-md">
           <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-          <p className="text-green-600">No service overlaps detected for this client</p>
+          <p className="text-green-600">
+            {t('clientServiceOverlapMatrix.noOverlaps', {
+              defaultValue: 'No service overlaps detected for this client'
+            })}
+          </p>
         </div>
       ) : (
         <>
           <Alert variant="info" className="mb-4">
             <AlertDescription>
-              <strong>{Object.keys(serviceOverlaps).length} service(s)</strong> appear in multiple contract lines for this client.
-              This matrix shows which services are included in each line.
+              <strong>
+                {t('clientServiceOverlapMatrix.overlapCount', {
+                  defaultValue: '{{count}} service(s)',
+                  count: Object.keys(serviceOverlaps).length
+                })}
+              </strong>{' '}
+              {t('clientServiceOverlapMatrix.overlapSummary', {
+                defaultValue:
+                  'appear in multiple contract lines for this client. This matrix shows which services are included in each line.'
+              })}
             </AlertDescription>
           </Alert>
           
@@ -211,7 +243,11 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[200px]">Service</TableHead>
+                  <TableHead className="min-w-[200px]">
+                    {t('clientServiceOverlapMatrix.serviceColumn', {
+                      defaultValue: 'Service'
+                    })}
+                  </TableHead>
                   {sortedClientPlans.map(plan => (
                     <TableHead key={plan.client_contract_line_id} className="text-center min-w-[120px]">
                       <div className="flex flex-col items-center">
@@ -222,15 +258,25 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
                           onClick={() => onEdit && onEdit(plan)}
                           id={`edit-plan-${plan.client_contract_line_id}-button`}
                         >
-                          {plan.contract_line_name || 'Unnamed Plan'}
+                          {plan.contract_line_name || t('clientServiceOverlapMatrix.unnamedPlan', {
+                            defaultValue: 'Unnamed Plan'
+                          })}
                         </Button>
                         <Badge className="mt-1 text-xs">
-                          {plan.contract_line_type ? (planTypeDisplay[plan.contract_line_type] || plan.contract_line_type) : 'Unknown'}
+                          {plan.contract_line_type
+                            ? (planTypeDisplay[plan.contract_line_type] || plan.contract_line_type)
+                            : t('clientServiceOverlapMatrix.unknownType', {
+                                defaultValue: 'Unknown'
+                              })}
                         </Badge>
                       </div>
                     </TableHead>
                   ))}
-                  <TableHead className="text-center min-w-[80px]">Count</TableHead>
+                  <TableHead className="text-center min-w-[80px]">
+                    {t('clientServiceOverlapMatrix.countColumn', {
+                      defaultValue: 'Count'
+                    })}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -246,16 +292,23 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
                       className={isOverlapping ? "bg-amber-500/10" : ""}
                     >
                       <TableCell>
-                        <div className="flex items-center">
-                          <span>{service.service_name}</span>
+                          <div className="flex items-center">
+                            <span>{service.service_name}</span>
                           {isOverlapping && (
-                            <Tooltip content="This service appears in multiple contract lines">
+                            <Tooltip
+                              content={t('clientServiceOverlapMatrix.overlapTooltip', {
+                                defaultValue: 'This service appears in multiple contract lines'
+                              })}
+                            >
                               <AlertTriangle className="h-4 w-4 ml-2 text-amber-500" />
                             </Tooltip>
                           )}
                         </div>
                         <div className="text-xs text-[rgb(var(--color-text-500))]">
-                          {service.service_type_name || 'Unknown Type'} • {service.unit_of_measure}
+                          {service.service_type_name || t('clientServiceOverlapMatrix.unknownType', {
+                            defaultValue: 'Unknown Type'
+                          })}{' '}
+                          • {service.unit_of_measure}
                         </div>
                       </TableCell>
 
@@ -294,19 +347,35 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
             <div className="flex items-start">
               <Info className="h-4 w-4 mt-0.5 mr-2 text-blue-500" />
               <div className="text-sm text-[rgb(var(--color-text-700))]">
-                <p className="font-medium mb-1">Matrix Legend</p>
+                <p className="font-medium mb-1">
+                  {t('clientServiceOverlapMatrix.legendTitle', {
+                    defaultValue: 'Matrix Legend'
+                  })}
+                </p>
                 <ul className="space-y-1 text-xs">
                   <li className="flex items-center">
                     <CheckCircle className="h-3 w-3 text-green-500 mr-1" />
-                    <span>Service is included in contract line (no overlap)</span>
+                    <span>
+                      {t('clientServiceOverlapMatrix.legendNoOverlap', {
+                        defaultValue: 'Service is included in contract line (no overlap)'
+                      })}
+                    </span>
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-3 w-3 text-amber-500 mr-1" />
-                    <span>Service is included in contract line (with overlap)</span>
+                    <span>
+                      {t('clientServiceOverlapMatrix.legendWithOverlap', {
+                        defaultValue: 'Service is included in contract line (with overlap)'
+                      })}
+                    </span>
                   </li>
                   <li className="flex items-center">
                     <AlertTriangle className="h-3 w-3 text-amber-500 mr-1" />
-                    <span>Service appears in multiple contract lines</span>
+                    <span>
+                      {t('clientServiceOverlapMatrix.legendMultipleLines', {
+                        defaultValue: 'Service appears in multiple contract lines'
+                      })}
+                    </span>
                   </li>
                 </ul>
               </div>

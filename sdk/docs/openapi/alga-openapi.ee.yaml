@@ -45,6 +45,7 @@ tags:
   - name: projects
   - name: provisioning
   - name: quickbooks
+  - name: quotes
   - name: rbac
   - name: readyz
   - name: roles
@@ -9213,6 +9214,713 @@ paths:
         x-placeholder: true
       responses:
         "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: PUT v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: DELETE v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "204":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/activities:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/approve:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/convert:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/convert/preview:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/items:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/items/{itemId}:
+    put:
+      summary: PUT v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: DELETE v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "204":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/items/reorder:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/remind:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/request-changes:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/resend:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/revisions:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/send:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quotes/{id}/submit-for-approval:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - quotes
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
           description: Placeholder success response
           content:
             application/json:

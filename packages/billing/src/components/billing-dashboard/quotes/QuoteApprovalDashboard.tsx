@@ -29,10 +29,14 @@ function formatDate(value?: string | null): string {
   return new Date(value).toLocaleDateString();
 }
 
-const QuoteApprovalDashboard: React.FC = () => {
+interface QuoteApprovalDashboardProps {
+  embedded?: boolean;
+}
+
+const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedded = false }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const selectedQuoteId = searchParams?.get('quoteId');
+  const selectedQuoteId = embedded ? null : searchParams?.get('quoteId');
   const [quotes, setQuotes] = useState<IQuoteListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,19 +98,21 @@ const QuoteApprovalDashboard: React.FC = () => {
     }
   };
 
-  const columns = useMemo<ColumnDefinition<IQuoteListItem>[]>(() => ([
+  const columns: ColumnDefinition<IQuoteListItem>[] = useMemo(() => ([
     {
       title: 'Quote #',
-      dataIndex: 'display_quote_number',
+      dataIndex: 'display_quote_number' as const,
+      render: (value: string | null | undefined) => value || '—',
     },
     {
       title: 'Client',
-      dataIndex: 'client_name',
+      dataIndex: 'client_name' as const,
       render: (value: string | null | undefined) => value || '—',
     },
     {
       title: 'Title',
-      dataIndex: 'title',
+      dataIndex: 'title' as const,
+      render: (value: string | null | undefined) => value || '—',
     },
     {
       title: 'Amount',
@@ -140,77 +146,97 @@ const QuoteApprovalDashboard: React.FC = () => {
     );
   }
 
-  return (
-    <Card size="2">
-      <Box p="4" className="space-y-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Quote Approvals</h1>
-            <p className="text-sm text-muted-foreground">Review quotes waiting for manager approval before they can be sent to clients.</p>
+  const handleRowClickNavigation = (record: IQuoteListItem) => {
+    if (embedded) {
+      router.push(`/msp/billing?tab=quotes&quoteId=${record.quote_id}&mode=detail`);
+    } else {
+      router.push(`/msp/quote-approvals?quoteId=${record.quote_id}`);
+    }
+  };
+
+  const content = (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          {!embedded && <h1 className="text-2xl font-semibold text-foreground">Quote Approvals</h1>}
+          <p className="text-sm text-muted-foreground">Review quotes waiting for manager approval before they can be sent to clients.</p>
+        </div>
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="space-y-1">
+            <div className="text-sm font-medium text-foreground">Approval required before sending</div>
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={approvalRequired}
+                onCheckedChange={handleApprovalRequiredChange}
+                disabled={isSavingSettings}
+              />
+              <span className="text-sm text-muted-foreground">
+                {approvalRequired ? 'Draft quotes must be approved before sending.' : 'Draft quotes can be sent without approval.'}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="space-y-1">
-              <div className="text-sm font-medium text-foreground">Approval required before sending</div>
-              <div className="flex items-center gap-3">
-                <Switch
-                  checked={approvalRequired}
-                  onCheckedChange={handleApprovalRequiredChange}
-                  disabled={isSavingSettings}
-                />
-                <span className="text-sm text-muted-foreground">
-                  {approvalRequired ? 'Draft quotes must be approved before sending.' : 'Draft quotes can be sent without approval.'}
-                </span>
-              </div>
+          <div className="flex flex-col gap-1 text-sm font-medium text-foreground">
+            <label htmlFor="quote-approvals-status-filter">Status</label>
+            <div className="min-w-[180px]">
+              <CustomSelect
+                id="quote-approvals-status-filter"
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value as 'pending_approval' | 'approved')}
+                options={[
+                  { value: 'pending_approval', label: 'Pending Approval' },
+                  { value: 'approved', label: 'Approved' },
+                ]}
+              />
             </div>
-            <div className="flex flex-col gap-1 text-sm font-medium text-foreground">
-              <label htmlFor="quote-approvals-status-filter">Status</label>
-              <div className="min-w-[180px]">
-                <CustomSelect
-                  id="quote-approvals-status-filter"
-                  value={statusFilter}
-                  onValueChange={(value) => setStatusFilter(value as 'pending_approval' | 'approved')}
-                  options={[
-                    { value: 'pending_approval', label: 'Pending Approval' },
-                    { value: 'approved', label: 'Approved' },
-                  ]}
-                />
-              </div>
-            </div>
+          </div>
+          {!embedded && (
             <Button id="quote-approvals-back-billing" variant="outline" onClick={() => router.push('/msp/billing?tab=quotes')}>
               Back to Quotes
             </Button>
-          </div>
+          )}
         </div>
+      </div>
 
-        {error ? (
-          <Alert variant="destructive">
-            <AlertTitle>Quote Approvals</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : isLoading ? (
-          <LoadingIndicator
-            className="py-12 text-muted-foreground"
-            layout="stacked"
-            spinnerProps={{ size: 'md' }}
-            text="Loading approval queue..."
-            textClassName="text-muted-foreground"
-          />
-        ) : quotes.length === 0 ? (
-          <Alert>
-            <AlertTitle>No quotes found</AlertTitle>
-            <AlertDescription>
-              There are no quotes in the {statusFilter === 'pending_approval' ? 'pending approval' : 'approved'} queue right now.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <DataTable
-            data={quotes}
-            columns={columns}
-            pagination
-            onRowClick={(record) => router.push(`/msp/quote-approvals?quoteId=${record.quote_id}`)}
-            rowClassName={() => 'cursor-pointer'}
-          />
-        )}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Quote Approvals</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : isLoading ? (
+        <LoadingIndicator
+          className="py-12 text-muted-foreground"
+          layout="stacked"
+          spinnerProps={{ size: 'md' }}
+          text="Loading approval queue..."
+          textClassName="text-muted-foreground"
+        />
+      ) : quotes.length === 0 ? (
+        <Alert>
+          <AlertTitle>No quotes found</AlertTitle>
+          <AlertDescription>
+            There are no quotes in the {statusFilter === 'pending_approval' ? 'pending approval' : 'approved'} queue right now.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <DataTable
+          data={quotes}
+          columns={columns}
+          pagination
+          onRowClick={handleRowClickNavigation}
+          rowClassName={() => 'cursor-pointer'}
+        />
+      )}
+    </div>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <Card size="2">
+      <Box p="4">
+        {content}
       </Box>
     </Card>
   );

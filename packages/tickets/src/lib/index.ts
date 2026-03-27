@@ -18,11 +18,21 @@ export {
   TicketMobileEditorBridgeClient,
 } from './ticketMobileEditorBridge';
 export { TicketMobileEditorRuntime } from './ticketMobileEditorRuntime';
+export {
+  buildTicketStatusFilterOptions,
+  createTicketStatusNameFilterValue,
+  isTicketStatusOpenFilter,
+  parseTicketStatusFilterValue,
+  shouldApplyOpenOnlyStatusFilter,
+  TICKET_STATUS_FILTER_ALL,
+  TICKET_STATUS_FILTER_OPEN,
+} from './ticketStatusFilter';
 export type {
   CommentContactAuthor,
   CommentUserAuthor,
   ResolvedCommentAuthor,
 } from './commentAuthorResolution';
+export type { TicketStatusFilterOption } from './ticketStatusFilter';
 export type { TicketMobileEditorBridgeClientOptions } from './ticketMobileEditorBridge';
 export type {
   TicketMobileEditorCommand,

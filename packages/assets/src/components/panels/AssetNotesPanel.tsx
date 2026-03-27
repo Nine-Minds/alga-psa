@@ -5,6 +5,7 @@ import { useAssetNotes } from '@alga-psa/assets/hooks/useAssetNotes';
 import { DEFAULT_BLOCK, TextEditor } from '@alga-psa/ui/editor';
 import { Save, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AssetNotesPanelProps {
   assetId: string;
@@ -13,6 +14,7 @@ interface AssetNotesPanelProps {
 export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
   assetId
 }) => {
+  const { t } = useTranslation('msp/assets');
   const { 
     noteContent, 
     noteDocument,
@@ -40,7 +42,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
     <Card className="bg-white">
       <CardHeader className="pb-2">
         <div className="flex flex-row items-center justify-between">
-          <CardTitle>Notes & Quick Info</CardTitle>
+          <CardTitle>{t('assetNotesPanel.title', { defaultValue: 'Notes & Quick Info' })}</CardTitle>
           <Button 
             id="save-asset-note-btn"
             variant="ghost" 
@@ -54,7 +56,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
             ) : (
               <Save size={14} />
             )}
-            Save
+            {t('common.actions.save', { defaultValue: 'Save' })}
           </Button>
         </div>
       </CardHeader>
@@ -62,11 +64,15 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
         {error && (
           <div className="mb-3">
             <Alert variant="destructive">
-              <AlertTitle>Notes failed to load</AlertTitle>
+              <AlertTitle>
+                {t('assetNotesPanel.errors.loadTitle', { defaultValue: 'Notes failed to load' })}
+              </AlertTitle>
               <AlertDescription>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm">
-                    {error instanceof Error ? error.message : 'Unknown error'}
+                    {error instanceof Error
+                      ? error.message
+                      : t('assetNotesPanel.errors.unknown', { defaultValue: 'Unknown error' })}
                   </span>
                   <Button
                     id="retry-asset-notes-btn"
@@ -74,7 +80,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
                     size="sm"
                     onClick={() => void refresh()}
                   >
-                    Retry
+                    {t('common.actions.retry', { defaultValue: 'Retry' })}
                   </Button>
                 </div>
               </AlertDescription>
@@ -99,7 +105,10 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
         {lastUpdated && (
           <div className="flex justify-end mt-2">
             <span className="text-xs text-gray-500">
-              Last updated: {new Date(lastUpdated).toLocaleString()}
+              {t('assetNotesPanel.lastUpdated', {
+                defaultValue: 'Last updated: {{value}}',
+                value: new Date(lastUpdated).toLocaleString()
+              })}
             </span>
           </div>
         )}
