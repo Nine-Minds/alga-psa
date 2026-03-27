@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { ADD_ONS } from '@alga-psa/types';
 import { type NavMode } from "@/config/menuConfig";
 import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header from "./Header";
@@ -23,6 +24,7 @@ import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets';
 import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents';
 import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
 import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows';
+import { useTier } from 'server/src/context/TierContext';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -31,10 +33,12 @@ interface DefaultLayoutProps {
 
 export default function DefaultLayout({ children, initialSidebarCollapsed = false }: DefaultLayoutProps) {
   const { t } = useTranslation('msp/core');
+  const { hasAddOn } = useTier();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
+  const aiAssistantAvailable = aiAssistantEnabled && hasAddOn(ADD_ONS.AI_ASSISTANT);
 
   // Determine sidebar mode from a path prefix
   const modeForPath = (path: string): NavMode => {
@@ -191,10 +195,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   }, []);
 
   useEffect(() => {
-    if (!aiAssistantEnabled) {
+    if (!aiAssistantAvailable) {
       setRightSidebarOpen(false);
     }
-  }, [aiAssistantEnabled]);
+  }, [aiAssistantAvailable]);
 
   useEffect(() => {
     if (rightSidebarOpen) {
@@ -208,7 +212,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'l') {
-        if (!aiAssistantEnabled) {
+        if (!aiAssistantAvailable) {
           return;
         }
 
@@ -222,7 +226,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
       }
 
       if ((event.metaKey || event.ctrlKey) && event.key === 'ArrowUp') {
-        if (!aiAssistantEnabled) {
+        if (!aiAssistantAvailable) {
           return;
         }
 
@@ -275,7 +279,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [aiAssistantEnabled, requestSidebarClose, rightSidebarOpen]);
+  }, [aiAssistantAvailable, requestSidebarClose, rightSidebarOpen]);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -380,7 +384,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   };
 
   const handleOpenQuickAskInSidebar = (chatId: string) => {
-    if (!aiAssistantEnabled) {
+    if (!aiAssistantAvailable) {
       return;
     }
 
@@ -436,7 +440,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             <PlatformNotificationBanner />
             <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>
-              {aiAssistantEnabled ? (
+              {aiAssistantAvailable ? (
                 <RightSidebar
                   isOpen={rightSidebarOpen}
                   setIsOpen={setRightSidebarOpen}
@@ -460,7 +464,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                 />
               ) : null}
             </main>
-            {aiAssistantEnabled ? (
+            {aiAssistantAvailable ? (
               <QuickAskOverlay
                 isOpen={quickAskOpen}
                 onClose={handleQuickAskClose}

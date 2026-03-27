@@ -31,6 +31,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) `TierAccessError` now carries `statusCode=403`/`code='TIER_ACCESS_DENIED'` so existing API middleware can serialize tier denials without route-specific error adapters.
 - (2026-03-26) EE tests that import `server/src/lib/tier-gating/*` behave better when those shared modules avoid the `@/lib/features` alias and use local relative imports instead.
 - (2026-03-26) `npx tsc -p ee/server/tsconfig.json --noEmit` is currently blocked by `ee/server/src/components/settings/account/AccountManagement.tsx` missing display names for the newly-added tier features; that aligns with still-pending F067 rather than the RMM gating changes.
+- (2026-03-26) Some `DefaultLayout` Vitest suites currently fail during module resolution for unrelated `@alga-psa/core/context/DocumentsCrossFeatureContext` imports pulled in by package components; narrow layout validation is currently more reliable via targeted sidebar tests.
 
 ## Commands / Runbooks
 
@@ -116,6 +117,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F045 feature: Added `ADVANCED_ASSETS` tier enforcement to authenticated RMM/NinjaOne server actions plus the NinjaOne OAuth callback and webhook routes, so Solo tenants cannot connect, sync, or operate RMM-managed assets through EE handlers.
 - (2026-03-26) Completed F046 feature: Added `assertAddOnAccess(ADD_ONS.AI_ASSISTANT)` to the non-stream chat completions route so AI chat requests now return 403 unless the tenant has the AI add-on and the existing feature flag is enabled.
 - (2026-03-26) Completed F047 feature: Added tenant-scoped AI add-on enforcement for the document-assist API by introducing `assertTenantAddOnAccess(tenantId, addOn)` and using it in the sessionless document-assist route before AI generation.
+- (2026-03-26) Completed F048 feature: Threaded `hasAddOn(ADD_ONS.AI_ASSISTANT)` into `DefaultLayout` and the EE `RightSidebar` so keyboard shortcuts, Quick Ask, and sidebar rendering all shut off when the AI add-on is inactive.
 - (2026-03-26) Completed T001 test: isValidTier('solo') returns true
 - (2026-03-26) Completed T002 test: isValidTier('pro') and isValidTier('premium') still return true
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false

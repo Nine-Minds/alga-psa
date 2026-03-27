@@ -2,6 +2,8 @@
 'use client';
 
 import React, { lazy, Suspense } from 'react';
+import { ADD_ONS } from '@alga-psa/types';
+import { useTier } from 'server/src/context/TierContext';
 
 const RightSidebarContent = lazy(() => import('./RightSidebarContent'));
 
@@ -26,7 +28,9 @@ interface RightSidebarProps {
 }
 
 const RightSidebar: React.FC<RightSidebarProps> = (props) => {
-  if (!props.isOpen) {
+  const { hasAddOn } = useTier();
+
+  if (!props.isOpen || !hasAddOn(ADD_ONS.AI_ASSISTANT)) {
     return null;
   }
 

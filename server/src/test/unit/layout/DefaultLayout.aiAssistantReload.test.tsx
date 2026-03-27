@@ -50,6 +50,12 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
   isExperimentalFeatureEnabled: vi.fn(() => Promise.resolve(aiAssistantEnabled)),
 }));
 
+vi.mock('server/src/context/TierContext', () => ({
+  useTier: () => ({
+    hasAddOn: () => true,
+  }),
+}));
+
 describe('DefaultLayout AI Assistant gating (reload semantics)', () => {
   it('allows Quick Ask usage after enabling AI Assistant and reloading', async () => {
     vi.stubGlobal(

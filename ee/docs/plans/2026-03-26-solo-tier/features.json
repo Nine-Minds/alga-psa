@@ -379,7 +379,7 @@
   {
     "id": "F048",
     "description": "Gate RightSidebar AI component with hasAddOn(ADD_ONS.AI_ASSISTANT)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.3"
     ]
