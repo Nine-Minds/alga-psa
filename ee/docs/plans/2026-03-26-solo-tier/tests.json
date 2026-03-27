@@ -415,7 +415,7 @@
   {
     "id": "T051",
     "description": "CE edition: hasAddOn always returns true regardless of addOns array",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
