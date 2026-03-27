@@ -871,7 +871,7 @@
   {
     "id": "T107",
     "description": "npm run build:shared compiles with all new types/features/add-ons",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F006",

@@ -167,3 +167,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T062 test: Settings tabs remain visible and clickable even when gated
 - (2026-03-26) Completed T063 test: Settings Integrations tab shows normal content for Pro tier
 - (2026-03-26) Completed T064 test: Settings sidebar items are never filtered by tier (all visible)
+- (2026-03-26) Completed T107 test: npm run build:shared compiles with all new types/features/add-ons
