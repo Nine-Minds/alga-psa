@@ -214,7 +214,7 @@
   {
     "id": "T026",
     "description": "tierHasFeature('pro', MOBILE_ACCESS) returns true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F014"
