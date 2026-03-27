@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Add ADVANCED_ASSETS to TIER_FEATURES enum with min tier 'pro'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.4"
     ]
