@@ -580,7 +580,7 @@
   {
     "id": "F073",
     "description": "Update upgradeTierAction() to support Solo -> Pro",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.4"
     ]

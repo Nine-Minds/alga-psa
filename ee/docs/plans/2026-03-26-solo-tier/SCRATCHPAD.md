@@ -215,3 +215,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F070 feature: Surface a `Downgrade to Solo` confirmation path for Pro tenants when `licenseInfo.active_licenses === 1`, matching the Stripe-side one-user validation
 - (2026-03-26) Completed F071 feature: Add a dedicated `AI Assistant` account-management card with embedded checkout start flow so add-on purchasing is separate from tier upgrades and available on any tier
 - (2026-03-26) Completed F072 feature: Render the active AI Assistant state with an `Active` badge, usage copy, and a cancel confirmation flow when the tenant already has the add-on
+- (2026-03-26) Completed F073 feature: `upgradeTierAction()` already accepted `'pro'`, and the Solo account page now drives it through the shared upgrade preview/confirm flow for Solo -> Pro upgrades
