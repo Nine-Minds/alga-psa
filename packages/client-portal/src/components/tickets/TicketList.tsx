@@ -33,6 +33,13 @@ import { ClientAddTicket } from './ClientAddTicket';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import {
+  buildTicketStatusFilterOptions,
+  TICKET_STATUS_FILTER_ALL,
+  TICKET_STATUS_FILTER_CLOSED,
+  TICKET_STATUS_FILTER_OPEN,
+  type TicketStatusFilterOption,
+} from '@alga-psa/tickets/lib';
 
 const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -57,11 +64,11 @@ export function TicketList() {
   const [pageSize, setPageSize] = useState(10);
   const [sortField, setSortField] = useState<string>('entered_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [statusOptions, setStatusOptions] = useState<SelectOption[]>([]);
+  const [rawStatusOptions, setRawStatusOptions] = useState<TicketStatusFilterOption[]>([]);
   const [boardStatusOptions, setBoardStatusOptions] = useState<Record<string, SelectOption[]>>({});
   const [priorityOptions, setPriorityOptions] = useState<{ value: string; label: string }[]>([]);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>(TICKET_STATUS_FILTER_ALL);
   const [selectedResponseStatus, setSelectedResponseStatus] = useState<'all' | 'awaiting_client' | 'awaiting_internal' | 'none'>('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -159,16 +166,16 @@ export function TicketList() {
           getTicketCategories()
         ]);
 
-        setStatusOptions([
-          { value: 'all', label: t('filters.allStatuses') },
-          { value: 'open', label: t('filters.allOpen') },
-          { value: 'closed', label: t('filters.allClosed') },
-          ...statuses.map((status: IStatus): SelectOption => ({
+        setRawStatusOptions(
+          statuses.map((status: IStatus): TicketStatusFilterOption => ({
             value: status.status_id!,
             label: status.name ?? "",
-            className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined
+            className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined,
+            statusName: status.name ?? '',
+            boardId: status.board_id ?? null,
+            isClosed: Boolean(status.is_closed),
           }))
-        ]);
+        );
 
         setPriorityOptions([
           { value: 'all', label: t('filters.allPriorities') },
@@ -239,6 +246,21 @@ export function TicketList() {
       active = false;
     };
   }, [tickets]);
+
+  const statusOptions = useMemo<SelectOption[]>(() => {
+    const groupedOptions = buildTicketStatusFilterOptions(rawStatusOptions, undefined, selectedStatus)
+      .filter((option) =>
+        option.value !== TICKET_STATUS_FILTER_ALL &&
+        option.value !== TICKET_STATUS_FILTER_OPEN
+      );
+
+    return [
+      { value: TICKET_STATUS_FILTER_ALL, label: t('filters.allStatuses') },
+      { value: TICKET_STATUS_FILTER_OPEN, label: t('filters.allOpen') },
+      { value: TICKET_STATUS_FILTER_CLOSED, label: t('filters.allClosed') },
+      ...groupedOptions,
+    ];
+  }, [rawStatusOptions, selectedStatus, t]);
 
   const loadTickets = useCallback(async () => {
     setLoading(true);
@@ -350,7 +372,7 @@ export function TicketList() {
     if (!ticketToUpdateStatus) return;
 
     const { ticketId, newStatus } = ticketToUpdateStatus;
-    const newStatusLabel = statusOptions.find(s => s.value === newStatus)?.label || 'Unknown Status';
+    const newStatusLabel = rawStatusOptions.find(s => s.value === newStatus)?.label || 'Unknown Status';
 
     try {
       await updateTicketStatus(ticketId, newStatus);
@@ -364,7 +386,7 @@ export function TicketList() {
     } finally {
       setTicketToUpdateStatus(null);
     }
-  }, [ticketToUpdateStatus, selectedStatus, loadTickets, statusOptions]); 
+  }, [ticketToUpdateStatus, loadTickets, rawStatusOptions]);
 
   const handleCategorySelect = useCallback((categoryIds: string[], excludedIds: string[]) => {
     setSelectedCategories(categoryIds);
@@ -379,7 +401,7 @@ export function TicketList() {
   };
 
   const isFiltered = useMemo(() => {
-    return selectedStatus !== 'all' ||
+    return selectedStatus !== TICKET_STATUS_FILTER_ALL ||
       selectedResponseStatus !== 'all' ||
       selectedPriority !== 'all' ||
       selectedCategories.length > 0 ||
@@ -388,7 +410,7 @@ export function TicketList() {
   }, [selectedStatus, selectedResponseStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery]);
 
   const handleResetFilters = useCallback(() => {
-    setSelectedStatus('all');
+    setSelectedStatus(TICKET_STATUS_FILTER_ALL);
     setSelectedResponseStatus('all');
     setSelectedPriority('all');
     setSelectedCategories([]);
@@ -765,7 +787,7 @@ export function TicketList() {
         onClose={() => setTicketToUpdateStatus(null)}
         onConfirm={handleStatusChange}
         title="Update Ticket Status"
-        message={`Are you sure you want to change the status from "${ticketToUpdateStatus?.currentStatus}" to "${statusOptions.find(s => s.value === ticketToUpdateStatus?.newStatus)?.label}"?`}
+        message={`Are you sure you want to change the status from "${ticketToUpdateStatus?.currentStatus}" to "${rawStatusOptions.find(s => s.value === ticketToUpdateStatus?.newStatus)?.label}"?`}
         confirmLabel="Update"
         cancelLabel="Cancel"
       />

@@ -2,6 +2,7 @@ import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 
 export const TICKET_STATUS_FILTER_OPEN = '__status_filter__:open';
 export const TICKET_STATUS_FILTER_ALL = '__status_filter__:all';
+export const TICKET_STATUS_FILTER_CLOSED = '__status_filter__:closed';
 const TICKET_STATUS_NAME_PREFIX = '__status_name__:';
 
 export interface TicketStatusFilterOption extends SelectOption {
@@ -13,11 +14,16 @@ export interface TicketStatusFilterOption extends SelectOption {
 type ParsedTicketStatusFilter =
   | { kind: 'open' }
   | { kind: 'all' }
+  | { kind: 'closed' }
   | { kind: 'name'; statusName: string }
   | { kind: 'id'; statusId: string };
 
 export function isTicketStatusOpenFilter(statusId?: string | null): boolean {
   return statusId === TICKET_STATUS_FILTER_OPEN;
+}
+
+export function isTicketStatusClosedFilter(statusId?: string | null): boolean {
+  return statusId === TICKET_STATUS_FILTER_CLOSED;
 }
 
 export function shouldApplyOpenOnlyStatusFilter(
@@ -40,6 +46,10 @@ export function parseTicketStatusFilterValue(statusId?: string | null): ParsedTi
     return { kind: 'all' };
   }
 
+  if (statusId === TICKET_STATUS_FILTER_CLOSED) {
+    return { kind: 'closed' };
+  }
+
   if (statusId.startsWith(TICKET_STATUS_NAME_PREFIX)) {
     return {
       kind: 'name',
@@ -60,7 +70,8 @@ export function buildTicketStatusFilterOptions(
   for (const option of statusOptions) {
     if (
       option.value === TICKET_STATUS_FILTER_OPEN ||
-      option.value === TICKET_STATUS_FILTER_ALL
+      option.value === TICKET_STATUS_FILTER_ALL ||
+      option.value === TICKET_STATUS_FILTER_CLOSED
     ) {
       continue;
     }
