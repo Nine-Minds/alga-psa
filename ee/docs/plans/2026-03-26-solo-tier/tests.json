@@ -751,7 +751,7 @@
   {
     "id": "T092",
     "description": "addUser action returns correct error message for Solo limit",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]

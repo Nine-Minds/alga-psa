@@ -247,3 +247,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T089 test: Stripe webhook inserts tenant_addons row when AI subscription activates
 - (2026-03-26) Completed T090 test: Stripe webhook deactivates tenant_addons row when AI subscription is cancelled
 - (2026-03-26) Completed T091 test: addUser action rejects when plan='solo' and used >= 1 internal users
+- (2026-03-26) Completed T092 test: addUser action returns correct error message for Solo limit
