@@ -1,5 +1,4 @@
 import { Context } from '@temporalio/activity';
-import type { Knex } from 'knex';
 
 import type { DomainVerificationResult, DnsRecord, DnsLookupResult } from '@alga-psa/types';
 import { ManagedDomainService as ManagedDomainServiceExport } from '@alga-psa/integrations/email/domains/entry';
@@ -23,7 +22,8 @@ interface ManagedDomainServiceLike {
 }
 
 interface ManagedDomainServiceCtor {
-  forTenant: (options: { tenantId: string; knex: Knex }) => ManagedDomainServiceLike;
+  // Use `any` for knex to avoid type conflicts from duplicate knex installations
+  forTenant: (options: { tenantId: string; knex: any }) => ManagedDomainServiceLike;
 }
 
 const ManagedDomainServiceCtor = ManagedDomainServiceExport as ManagedDomainServiceCtor | undefined;
