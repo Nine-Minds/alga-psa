@@ -391,7 +391,7 @@
   {
     "id": "T048",
     "description": "TierContext provides addOns array from session/DB",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
