@@ -83,7 +83,7 @@
   {
     "id": "T011",
     "description": "tierAtLeast('pro', 'premium') returns false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
