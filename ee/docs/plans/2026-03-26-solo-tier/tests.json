@@ -263,7 +263,7 @@
   {
     "id": "T032",
     "description": "TIER_FEATURE_MAP['premium'] contains all 11 features (8 pro + 3 premium)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]

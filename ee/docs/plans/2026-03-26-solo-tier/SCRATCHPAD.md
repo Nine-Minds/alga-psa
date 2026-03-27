@@ -134,3 +134,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T029 test: tierHasFeature('premium', ENTRA_SYNC) returns true
 - (2026-03-26) Completed T030 test: TIER_FEATURE_MAP['solo'] is empty array (no features at solo level)
 - (2026-03-26) Completed T031 test: TIER_FEATURE_MAP['pro'] contains all 8 pro-minimum features
+- (2026-03-26) Completed T032 test: TIER_FEATURE_MAP['premium'] contains all 11 features (8 pro + 3 premium)
