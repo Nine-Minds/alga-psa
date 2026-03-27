@@ -103,3 +103,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F038 feature: Render FeatureUpgradeNotice instead of content when tab's requiredFeature is gated
 - (2026-03-26) Completed F039 feature: Gated settings tabs remain visible and clickable (not hidden)
 - (2026-03-26) Completed F040 feature: Settings sidebar items remain visible regardless of tier (no requiredFeature filtering in settings mode)
+- (2026-03-26) Completed T001 test: isValidTier('solo') returns true
