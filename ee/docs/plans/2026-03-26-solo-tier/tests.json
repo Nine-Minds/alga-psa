@@ -662,7 +662,7 @@
   {
     "id": "T081",
     "description": "upgradeTier Solo->Pro adds per-user line item to subscription",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]

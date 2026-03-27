@@ -236,3 +236,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T078 test: Pro checkout still creates session with two line items (base + per-user)
 - (2026-03-26) Completed T079 test: handleCheckoutCompleted sets licensed_user_count=1 for Solo tier
 - (2026-03-26) Completed T080 test: handleSubscriptionUpdated sets licensed_user_count=1 for Solo tier
+- (2026-03-26) Completed T081 test: upgradeTier Solo->Pro adds per-user line item to subscription
