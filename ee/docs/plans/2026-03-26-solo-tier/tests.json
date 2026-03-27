@@ -847,7 +847,7 @@
   {
     "id": "T104",
     "description": "AI add-on card appears for Solo tier (not just Pro/Premium)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]
