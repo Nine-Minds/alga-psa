@@ -269,3 +269,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T112 test: Solo->Pro trial grants access to all Pro tier features during trial period
 - (2026-03-26) Completed T113 test: Solo->Pro trial reverts to Solo when trial expires without conversion
 - (2026-03-26) Completed T114 test: 'Try Pro free' CTA shown for established Solo customers in AccountManagement
+- (2026-03-26) Completed T115 test: 'Try Pro free' CTA hidden when Solo customer is still in their trial

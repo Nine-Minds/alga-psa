@@ -937,7 +937,7 @@
   {
     "id": "T115",
     "description": "'Try Pro free' CTA hidden when Solo customer is still in their trial",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ]
