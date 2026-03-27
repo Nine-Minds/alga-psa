@@ -596,7 +596,7 @@
   {
     "id": "F075",
     "description": "Solo checkout includes 7-day trial period (trialDays=7)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.2"
     ]

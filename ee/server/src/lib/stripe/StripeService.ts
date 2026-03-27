@@ -612,6 +612,7 @@ export class StripeService {
     logger.info(`[StripeService] Update or create subscription for tenant ${tenantId}, quantity: ${quantity}`);
 
     const knex = await getConnection(tenantId);
+    const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
 
     // Get or import customer
     const customer = await this.getOrImportCustomer(tenantId);
@@ -720,7 +721,6 @@ export class StripeService {
         // Build phase items — include base fee item if this is a multi-item subscription
         // Resolve price IDs based on the subscription's actual pricing level to preserve
         // early adopters pricing. Falls back to standard tier pricing if not on early adopters.
-        const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
         const tenantTierPrices = this.getSubscriptionPriceIds(existingSubscription)
           || (tenantRecord?.plan ? this.getTierPriceIds(tenantRecord.plan) : null);
 
@@ -790,7 +790,12 @@ export class StripeService {
     logger.info(`[StripeService] No existing subscription found, creating checkout session`);
     return {
       type: 'checkout',
-      ...(await this.createLicenseCheckoutSession(tenantId, quantity)),
+      ...(await this.createLicenseCheckoutSession(
+        tenantId,
+        quantity,
+        'month',
+        tenantRecord?.plan === 'solo' ? 7 : undefined,
+      )),
     };
   }
 

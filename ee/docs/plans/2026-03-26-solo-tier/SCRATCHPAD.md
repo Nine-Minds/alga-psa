@@ -217,3 +217,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F072 feature: Render the active AI Assistant state with an `Active` badge, usage copy, and a cancel confirmation flow when the tenant already has the add-on
 - (2026-03-26) Completed F073 feature: `upgradeTierAction()` already accepted `'pro'`, and the Solo account page now drives it through the shared upgrade preview/confirm flow for Solo -> Pro upgrades
 - (2026-03-26) Completed F074 feature: Add `downgradeTierAction()` as the EE server-action wrapper over Stripe's Pro -> Solo downgrade path, preserving the active-user-count validation from `StripeService.downgradeTier()`
+- (2026-03-26) Completed F075 feature: New Solo subscription checkouts now pass `trialDays=7` into `createLicenseCheckoutSession()` when no active subscription exists, so only first-time Solo purchases get the free trial by default
