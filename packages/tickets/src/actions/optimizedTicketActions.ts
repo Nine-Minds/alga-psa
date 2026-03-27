@@ -454,6 +454,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       value: status.status_id,
       label: status.name || "",
       is_closed: !!status.is_closed,
+      board_id: status.board_id ?? null,
     }));
 
     const agentOptions = users.map((agent) => ({
