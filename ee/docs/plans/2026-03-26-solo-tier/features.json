@@ -588,7 +588,7 @@
   {
     "id": "F074",
     "description": "Add downgradeTierAction() with user count validation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.5"
     ]
