@@ -101,3 +101,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F036 feature: Tag Extensions settings tab with TIER_FEATURES.EXTENSIONS
 - (2026-03-26) Completed F037 feature: Tag Email settings tab with TIER_FEATURES.MANAGED_EMAIL
 - (2026-03-26) Completed F038 feature: Render FeatureUpgradeNotice instead of content when tab's requiredFeature is gated
+- (2026-03-26) Completed F039 feature: Gated settings tabs remain visible and clickable (not hidden)
