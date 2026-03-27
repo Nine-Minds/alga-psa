@@ -678,7 +678,7 @@
   {
     "id": "T083",
     "description": "downgradeTier Pro->Solo succeeds when active user count = 1",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057",
       "F058"
