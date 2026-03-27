@@ -40,6 +40,14 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Feature display names for the tier features list
 const FEATURE_DISPLAY_NAMES: Record<TIER_FEATURES, string> = {
+  [TIER_FEATURES.INTEGRATIONS]: 'Integrations — connect calendar, Teams, Entra, and other external services',
+  [TIER_FEATURES.EXTENSIONS]: 'Extensions — install and manage marketplace extensions for your workspace',
+  [TIER_FEATURES.MANAGED_EMAIL]: 'Managed Email — configure hosted email delivery from Alga PSA',
+  [TIER_FEATURES.SSO]: 'Single Sign-On — configure SSO and OAuth identity providers for your team',
+  [TIER_FEATURES.ADVANCED_ASSETS]: 'Advanced Assets — unlock RMM-linked asset discovery and richer asset controls',
+  [TIER_FEATURES.CLIENT_PORTAL_ADMIN]: 'Client Portal Admin — manage advanced client portal branding and administration',
+  [TIER_FEATURES.WORKFLOW_DESIGNER]: 'Workflow Designer — build and maintain custom workflow automations',
+  [TIER_FEATURES.MOBILE_ACCESS]: 'Mobile Access — sign in from the Alga PSA mobile app',
   [TIER_FEATURES.ENTRA_SYNC]: 'Microsoft Entra Sync — auto-discover tenants and sync contacts from Entra ID',
   [TIER_FEATURES.CIPP]: 'CIPP Integration — connect your CIPP instance for multi-tenant Entra management',
   [TIER_FEATURES.TEAMS_INTEGRATION]: 'Microsoft Teams — meetings integration and Teams bot for ticket notifications',
