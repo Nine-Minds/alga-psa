@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "Create assertAddOnAccess(addOn) that throws if tenant lacks the add-on",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1b.2"
     ]

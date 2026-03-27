@@ -85,3 +85,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F019 feature: resolveTier() returns 'pro' for null/invalid input (unchanged behavior, Solo is opt-in)
 - (2026-03-26) Completed F020 feature: isValidTier('solo') returns true
 - (2026-03-26) Completed F021 feature: Create getActiveAddOns(tenantId) service querying tenant_addons for non-expired add-ons
+- (2026-03-26) Completed F022 feature: Create assertAddOnAccess(addOn) that throws if tenant lacks the add-on
