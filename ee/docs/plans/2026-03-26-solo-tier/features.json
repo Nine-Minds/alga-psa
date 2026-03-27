@@ -403,7 +403,7 @@
   {
     "id": "F051",
     "description": "Add 'alga-psa-solo': 'solo' to stripeTierMapping",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.1"
     ]

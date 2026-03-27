@@ -8,6 +8,7 @@ describe('stripeTierMapping', () => {
     });
 
     it('T049: maps future products: alga-psa-pro→pro, alga-psa-premium→premium', () => {
+      expect(STRIPE_PRODUCT_TIER_MAP['alga-psa-solo']).toBe('solo');
       expect(STRIPE_PRODUCT_TIER_MAP['alga-psa-pro']).toBe('pro');
       expect(STRIPE_PRODUCT_TIER_MAP['alga-psa-premium']).toBe('premium');
     });

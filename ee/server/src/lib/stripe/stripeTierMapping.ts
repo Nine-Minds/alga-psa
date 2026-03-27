@@ -20,6 +20,7 @@ export const STRIPE_PRODUCT_TIER_MAP: Record<string, TenantTier> = {
   'alga-psa-early-adopters': 'pro',
 
   // Future products (pre-mapped for when they're created in Stripe)
+  'alga-psa-solo': 'solo',
   'alga-psa-pro': 'pro',
   'alga-psa-premium': 'premium',
 } as const;
