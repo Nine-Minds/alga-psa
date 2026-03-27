@@ -49,7 +49,7 @@ export function MspDocumentsCrossFeatureProvider({ children }: { children: React
   );
 
   const renderDocumentStorageCard = useCallback(
-    (props: Record<string, unknown>) => <DocumentStorageCard {...(props as any)} />,
+    ({ key, ...props }: Record<string, unknown>) => <DocumentStorageCard key={key as string} {...(props as any)} />,
     []
   );
 

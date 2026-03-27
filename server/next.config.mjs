@@ -27,6 +27,12 @@ try {
 // Determine if this is an EE build
 const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
+// When USE_PREBUILT is set (Docker/CI), resolve pre-built packages from dist/ instead of src/.
+// Local dev always uses src/ — no extra build step required.
+const usePrebuilt = truthyEnv(process.env.USE_PREBUILT);
+const prebuiltDir = (pkg) => usePrebuilt ? `../packages/${pkg}/dist` : `../packages/${pkg}/src`;
+const prebuiltDirAbs = (pkg) => path.join(__dirname, usePrebuilt ? `../packages/${pkg}/dist` : `../packages/${pkg}/src`);
+
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
@@ -477,16 +483,16 @@ const nextConfig = {
       '@img/sharp-wasm32/versions': path.join(__dirname, 'src/empty/shims/empty.ts'),
       '@alga-psa/auth': path.join(__dirname, '../packages/auth/src'),
       '@alga-psa/ui': path.join(__dirname, '../packages/ui/src'),
-      // Source-resolved packages for local development
-      '@alga-psa/clients': path.join(__dirname, '../packages/clients/src'),
-      '@alga-psa/types': path.join(__dirname, '../packages/types/src'),
-      '@alga-psa/core': path.join(__dirname, '../packages/core/src'),
-      '@alga-psa/validation': path.join(__dirname, '../packages/validation/src'),
-      '@alga-psa/formatting': path.join(__dirname, '../packages/formatting/src'),
-      '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/src'),
-      '@alga-psa/sla': path.join(__dirname, '../packages/sla/src'),
-      '@alga-psa/assets': path.join(__dirname, '../packages/assets/src'),
-      '@alga-psa/tags': path.join(__dirname, '../packages/tags/src'),
+      // Pre-built packages: src/ for local dev, dist/ for production (USE_PREBUILT=true)
+      '@alga-psa/clients': prebuiltDirAbs('clients'),
+      '@alga-psa/types': prebuiltDirAbs('types'),
+      '@alga-psa/core': prebuiltDirAbs('core'),
+      '@alga-psa/validation': prebuiltDirAbs('validation'),
+      '@alga-psa/formatting': prebuiltDirAbs('formatting'),
+      '@alga-psa/event-schemas': prebuiltDirAbs('event-schemas'),
+      '@alga-psa/sla': prebuiltDirAbs('sla'),
+      '@alga-psa/assets': prebuiltDirAbs('assets'),
+      '@alga-psa/tags': prebuiltDirAbs('tags'),
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
       '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),

@@ -54,6 +54,7 @@ jobs:
           EDITION: ee
           NEXT_PUBLIC_EDITION: enterprise
           NODE_OPTIONS: '--max-old-space-size=8192'
+          USE_PREBUILT: 'true'
         run: npx nx build server --output-style=static
 
       - name: "Guard: legacy workflows shims removed"

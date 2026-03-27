@@ -38,6 +38,7 @@ RUN npm install --workspace=shared
 
 # Build all upstream packages (shared + pre-built) via Nx (handles dependency ordering)
 RUN npx nx build-deps server
+ENV USE_PREBUILT="true"
 
 # Copy EE files and build enterprise edition
 COPY scripts/ ./scripts/
