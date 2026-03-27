@@ -743,7 +743,7 @@
   {
     "id": "T091",
     "description": "addUser action rejects when plan='solo' and used >= 1 internal users",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
