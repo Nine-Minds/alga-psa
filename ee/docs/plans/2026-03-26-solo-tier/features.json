@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "Derive TIER_FEATURE_MAP from FEATURE_MINIMUM_TIER + TIER_RANK",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.6"
     ]
