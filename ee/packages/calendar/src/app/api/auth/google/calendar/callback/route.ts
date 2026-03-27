@@ -5,10 +5,10 @@ import { CalendarProviderService } from '@alga-psa/ee-calendar/lib/services/cale
 import { GoogleCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter';
 import { consumeCalendarOAuthState } from '../../../../../../lib/utils/calendar/oauthStateStore';
 import { decodeCalendarState } from '../../../../../../lib/utils/calendar/oauthHelpers';
-import { TIER_FEATURES, type CalendarProviderConfig } from '@alga-psa/types';
+import { TIER_FEATURES, FEATURE_MINIMUM_TIER, TIER_LABELS, resolveTier, tierHasFeature, type CalendarProviderConfig } from '@alga-psa/types';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import axios from 'axios';
 import { resolveCalendarRedirectUri } from '../../../../../../lib/utils/calendar/redirectUri';
-import { TierAccessError, assertTenantTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 export const dynamic = 'force-dynamic';
 
@@ -169,20 +169,25 @@ export async function GET(request: NextRequest) {
 
     const stateData = storedState;
 
-    try {
-      await assertTenantTierAccess(stateData.tenant, TIER_FEATURES.INTEGRATIONS);
-    } catch (error) {
-      if (error instanceof TierAccessError) {
+    // Tier gate: EE calendar requires INTEGRATIONS feature
+    {
+      const knex = await getAdminConnection();
+      const tenantRecord = await knex('tenants')
+        .where({ tenant: stateData.tenant })
+        .select('plan')
+        .first();
+      const { tier } = resolveTier(tenantRecord?.plan);
+      if (!tierHasFeature(tier, TIER_FEATURES.INTEGRATIONS)) {
+        const requiredLabel = TIER_LABELS[FEATURE_MINIMUM_TIER[TIER_FEATURES.INTEGRATIONS] as keyof typeof TIER_LABELS];
         return respondWithPostMessage({
           type: 'oauth-callback',
           provider: 'google',
           resource: 'calendar',
           success: false,
           error: 'tier_access_denied',
-          errorDescription: error.message,
+          errorDescription: `This feature requires the ${requiredLabel} plan or higher.`,
         });
       }
-      throw error;
     }
 
     // Get OAuth client credentials

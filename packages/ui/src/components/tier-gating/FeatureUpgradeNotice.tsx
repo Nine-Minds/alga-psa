@@ -26,22 +26,22 @@ export function FeatureUpgradeNotice({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
-      <div className="rounded-full bg-gray-100 p-4 mb-6">
-        <Lock className="w-8 h-8 text-gray-400" />
+      <div className="rounded-full bg-muted p-4 mb-6">
+        <Lock className="w-8 h-8 text-muted-foreground" />
       </div>
 
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">
+      <h2 className="text-xl font-semibold mb-2">
         {featureName} requires {tierLabel}
       </h2>
 
-      <p className="text-gray-600 max-w-md mb-6">
+      <p className="text-muted-foreground max-w-md mb-6">
         {description ||
           `Upgrade to the ${tierLabel} tier to unlock ${featureName} and more powerful features.`}
       </p>
 
       <Link
         href="/msp/account"
-        className="inline-flex items-center justify-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
+        className="inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg transition-colors"
       >
         View Plans
       </Link>

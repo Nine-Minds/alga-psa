@@ -6,9 +6,8 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import { TIER_FEATURES, type TenantEmailSettings } from '@alga-psa/types';
+import type { TenantEmailSettings } from '@alga-psa/types';
 import { TenantEmailService } from '@alga-psa/email';
-import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
   defaultFromDomain?: string | null;
@@ -33,8 +32,6 @@ export const getEmailSettings = withAuth(async (
   _user,
   { tenant }
 ): Promise<TenantEmailSettings | null> => {
-  await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
-
   const { knex } = await createTenantKnex();
 
   try {
@@ -96,8 +93,6 @@ export const updateEmailSettings = withAuth(async (
   { tenant },
   updates: EmailSettingsUpdateInput
 ): Promise<TenantEmailSettings> => {
-  await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
-
   const { knex } = await createTenantKnex();
 
   try {

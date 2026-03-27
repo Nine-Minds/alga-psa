@@ -7,7 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
-import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield, ArrowRightLeft, Clock } from 'lucide-react';
+import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield, ArrowRightLeft, Clock, Zap, Star } from 'lucide-react';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -75,6 +75,7 @@ export default function AccountManagement() {
     isMisconfigured,
     isSolo,
     isPro,
+    isPremium,
     hasAddOn,
     refreshTier,
     isTrialing,
@@ -638,7 +639,8 @@ export default function AccountManagement() {
   const monthlyTotal = licenseInfo?.total_licenses !== null
     ? ((licenseInfo?.total_licenses || 0) * (licenseInfo?.price_per_license || 0))
     : 0;
-  const canDowngradeToSolo = isPro && tierUpgradeFlowEnabled && (licenseInfo?.active_licenses ?? Number.POSITIVE_INFINITY) === 1;
+  const canDowngradeToSolo = isPro && tierUpgradeFlowEnabled;
+  const hasExtraUsersForDowngrade = (licenseInfo?.active_licenses ?? 0) > 1;
   const hasAiAssistant = hasAddOn(ADD_ONS.AI_ASSISTANT);
   const canStartSoloProTrial = isSolo && tierUpgradeFlowEnabled && subscriptionStatus === 'active' && !isSoloProTrial;
   const displayedTierFeatures = isSoloProTrial ? TIER_FEATURE_MAP.pro : TIER_FEATURE_MAP[tier];
@@ -933,8 +935,8 @@ export default function AccountManagement() {
               </div>
 
               {isSolo && (
-                <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                  <p className="text-sm text-blue-900">
+                <div className="mb-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3">
+                  <p className="text-sm text-blue-900 dark:text-blue-200">
                     Your Solo plan includes core PSA features. Upgrade to Pro for integrations, mobile access, and more.
                   </p>
                 </div>
@@ -968,19 +970,51 @@ export default function AccountManagement() {
                 )}
               </div>
 
-              {/* Upgrade to Pro */}
+              {/* Upgrade options for Solo */}
               {isSolo && tierUpgradeFlowEnabled && !isSoloProTrial && (
-                <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <h4 className="font-semibold">Upgrade to Pro</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Unlock integrations, managed email, workflow design, mobile access, and support for a growing team.
-                      </p>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  {/* Pro card */}
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex flex-col">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Zap className="h-5 w-5 text-primary" />
+                      <h4 className="font-semibold text-lg">Pro</h4>
                     </div>
-                    <Button id="upgrade-to-pro-btn" onClick={() => handleUpgradeClick('pro')} disabled={upgrading || loadingPreview}>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Everything in Solo, plus team collaboration and powerful integrations.
+                    </p>
+                    <ul className="space-y-1.5 text-sm mb-4 flex-1">
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Multi-user with per-seat licensing</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Calendar sync (Google &amp; Microsoft)</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Extensions marketplace</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>SSO &amp; managed email domains</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>RMM / NinjaOne integration</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Visual workflow designer</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Mobile app access</span></li>
+                    </ul>
+                    <Button id="upgrade-to-pro-btn" onClick={() => handleUpgradeClick('pro')} disabled={upgrading || loadingPreview} className="w-full">
                       <Rocket className="mr-2 h-4 w-4" />
-                      {loadingPreview ? 'Loading...' : 'Upgrade'}
+                      {loadingPreview ? 'Loading...' : 'Upgrade to Pro'}
+                    </Button>
+                  </div>
+
+                  {/* Premium card */}
+                  <div className="rounded-lg border border-amber-300/50 dark:border-amber-700/50 bg-amber-50/50 dark:bg-amber-900/10 p-4 flex flex-col">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Star className="h-5 w-5 text-amber-500" />
+                      <h4 className="font-semibold text-lg">Premium</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Everything in Pro, plus enterprise integrations for larger teams.
+                    </p>
+                    <ul className="space-y-1.5 text-sm mb-4 flex-1">
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>All Pro features included</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>Microsoft Entra Sync</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>CIPP multi-tenant management</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>Microsoft Teams integration</span></li>
+                    </ul>
+                    <Button id="upgrade-to-premium-btn" variant="outline" onClick={() => handleUpgradeClick('premium')} disabled={upgrading || loadingPreview} className="w-full">
+                      <Star className="mr-2 h-4 w-4" />
+                      {loadingPreview ? 'Loading...' : 'Upgrade to Premium'}
                     </Button>
                   </div>
                 </div>
@@ -1002,34 +1036,95 @@ export default function AccountManagement() {
                 </div>
               )}
 
-              {/* Upgrade to Premium */}
+              {/* Upgrade to Premium (shown for Pro users) */}
               {isPro && tierUpgradeFlowEnabled && (
-                <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
-                  <div className="flex items-center justify-between">
+                <div className="mt-4 rounded-lg border border-amber-300/50 dark:border-amber-700/50 bg-amber-50/50 dark:bg-amber-900/10 p-4">
+                  <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h4 className="font-semibold">Upgrade to Premium</h4>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Star className="h-5 w-5 text-amber-500" />
+                        <h4 className="font-semibold">Upgrade to Premium</h4>
+                      </div>
                       <p className="text-sm text-muted-foreground">
-                        Unlock the visual Invoice Designer and upcoming premium features.
+                        Add Microsoft Entra Sync, CIPP multi-tenant management, and Teams integration.
                       </p>
                     </div>
                     <Button id="upgrade-to-premium-btn" onClick={() => handleUpgradeClick('premium')} disabled={upgrading || loadingPreview}>
-                      <Rocket className="mr-2 h-4 w-4" />
+                      <Star className="mr-2 h-4 w-4" />
                       {loadingPreview ? 'Loading...' : 'Upgrade'}
                     </Button>
                   </div>
                 </div>
               )}
 
-              {canDowngradeToSolo && (
-                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+              {/* Downgrade options */}
+              {isPremium && tierUpgradeFlowEnabled && (
+                <div className="mt-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 space-y-3">
+                  <h4 className="font-semibold">Change Plan</h4>
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium">Downgrade to Pro</p>
+                      <p className="text-sm text-muted-foreground">
+                        Keep multi-user, integrations, and extensions. Lose Entra Sync, CIPP, and Teams.
+                      </p>
+                    </div>
+                    <Button
+                      id="downgrade-to-pro-btn"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUpgradeClick('pro')}
+                      disabled={upgrading || loadingPreview}
+                    >
+                      {loadingPreview ? 'Loading...' : 'Switch to Pro'}
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 pt-2 border-t border-amber-200 dark:border-amber-800">
+                    <div>
+                      <p className="text-sm font-medium">Downgrade to Solo</p>
+                      {hasExtraUsersForDowngrade ? (
+                        <p className="text-sm text-muted-foreground">
+                          Solo is limited to 1 user. You currently have {licenseInfo?.active_licenses} active users — remove extra users first.
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Switch to the flat-rate single-user plan with core PSA features only.
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      id="downgrade-to-solo-btn"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowDowngradeConfirm(true)}
+                      disabled={downgrading || hasExtraUsersForDowngrade}
+                    >
+                      {downgrading ? 'Downgrading...' : 'Switch to Solo'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {canDowngradeToSolo && !isPremium && (
+                <div className="mt-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <h4 className="font-semibold">Downgrade to Solo</h4>
-                      <p className="text-sm text-muted-foreground">
-                        You currently have one active user, so you can move to Solo and keep core PSA features at the flat-rate single-user tier.
-                      </p>
+                      {hasExtraUsersForDowngrade ? (
+                        <p className="text-sm text-muted-foreground">
+                          Solo is limited to 1 user. You currently have {licenseInfo?.active_licenses} active users — remove extra users before downgrading.
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Switch to the flat-rate single-user plan and keep core PSA features.
+                        </p>
+                      )}
                     </div>
-                    <Button id="downgrade-to-solo-btn" variant="outline" onClick={() => setShowDowngradeConfirm(true)} disabled={downgrading}>
+                    <Button
+                      id="downgrade-to-solo-btn"
+                      variant="outline"
+                      onClick={() => setShowDowngradeConfirm(true)}
+                      disabled={downgrading || hasExtraUsersForDowngrade}
+                    >
                       {downgrading ? 'Downgrading...' : 'Downgrade'}
                     </Button>
                   </div>
@@ -1093,7 +1188,7 @@ export default function AccountManagement() {
         )}
       </Card>
 
-      <Card>
+      {tierUpgradeFlowEnabled && (<Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -1110,7 +1205,7 @@ export default function AccountManagement() {
             AI Assistant is a separate paid add-on for Solo, Pro, and Premium tenants.
           </p>
           {hasAiAssistant ? (
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+            <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h4 className="font-semibold">AI Assistant (active)</h4>
@@ -1148,7 +1243,7 @@ export default function AccountManagement() {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>)}
 
       {/* Scheduled License Changes Alert */}
       {scheduledChanges && (
@@ -1184,21 +1279,38 @@ export default function AccountManagement() {
         </Alert>
       )}
 
-      {/* Primary Actions */}
-      <div className="flex space-x-2">
-        <Button id="buy-more-licenses-btn" onClick={handleBuyMoreLicenses}>
-          <Rocket className="mr-2 h-4 w-4" />
-          Add Licenses
-        </Button>
-        <Button
-          id="reduce-licenses-btn"
-          variant="outline"
-          onClick={handleReduceLicenses}
-        >
-          <MinusCircle className="mr-2 h-4 w-4" />
-          Remove Licenses
-        </Button>
-      </div>
+      {/* Primary Actions — Solo users can only upgrade, not manage licenses */}
+      {isSolo ? (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h4 className="font-semibold">Need more users?</h4>
+              <p className="text-sm text-muted-foreground">
+                Solo is a single-user plan. Upgrade to Pro to add team members and manage licenses.
+              </p>
+            </div>
+            <Button id="upgrade-to-pro-licenses-btn" onClick={() => handleUpgradeClick('pro')} disabled={upgrading || loadingPreview}>
+              <Rocket className="mr-2 h-4 w-4" />
+              {loadingPreview ? 'Loading...' : 'Upgrade to Pro'}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex space-x-2">
+          <Button id="buy-more-licenses-btn" onClick={handleBuyMoreLicenses}>
+            <Rocket className="mr-2 h-4 w-4" />
+            Add Licenses
+          </Button>
+          <Button
+            id="reduce-licenses-btn"
+            variant="outline"
+            onClick={handleReduceLicenses}
+          >
+            <MinusCircle className="mr-2 h-4 w-4" />
+            Remove Licenses
+          </Button>
+        </div>
+      )}
 
       {/* Collapsible License Details Section */}
       <Card>
@@ -1617,10 +1729,12 @@ export default function AccountManagement() {
               </p>
 
               <div className="rounded-lg border p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Current monthly total</span>
-                  <span>${upgradePreview.currentMonthly?.toFixed(2)}</span>
-                </div>
+                {(upgradePreview.currentMonthly ?? 0) > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Current monthly total</span>
+                    <span>${upgradePreview.currentMonthly?.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{TIER_LABELS[upgradeTargetTier]} base fee</span>
                   <span>${upgradePreview.newBasePrice?.toFixed(2)}/mo</span>
@@ -1636,15 +1750,17 @@ export default function AccountManagement() {
               </div>
 
               {upgradePreview.prorationAmount !== undefined && upgradePreview.prorationAmount > 0 && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <p className="text-sm text-amber-800">
+                <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
                     A prorated charge of <strong>${upgradePreview.prorationAmount.toFixed(2)}</strong> will be billed now for the remainder of the current billing period.
                   </p>
                 </div>
               )}
 
               <p className="text-sm text-muted-foreground">
-                Your existing subscription will be updated and your payment method will be charged. This change takes effect immediately.
+                {(upgradePreview.currentMonthly ?? 0) > 0
+                  ? 'Your existing subscription will be updated and your payment method will be charged. This change takes effect immediately.'
+                  : 'A new subscription will be created. This change takes effect immediately.'}
               </p>
             </div>
           ) : (

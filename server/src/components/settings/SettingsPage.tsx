@@ -253,7 +253,6 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       id: 'email',
       label: "Email",
       icon: Mail,
-      requiredFeature: TIER_FEATURES.MANAGED_EMAIL,
       content: (
         <Card>
           <CardHeader>

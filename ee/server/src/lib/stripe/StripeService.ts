@@ -23,6 +23,16 @@ import { tierFromStripeProduct } from './stripeTierMapping';
 
 const SOLO_PRO_TRIAL_DAYS = 30;
 
+/**
+ * Stripe embedded checkout requires an https return URL.
+ * In local dev NEXTAUTH_URL is typically http://localhost:3000,
+ * so we force the scheme to https for Stripe while keeping the rest of the URL intact.
+ */
+function getStripeReturnBaseUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://localhost:3000';
+  return raw.replace(/^http:\/\//, 'https://');
+}
+
 // Stripe configuration with secret provider support
 async function getStripeConfig() {
   const secretProvider = await getSecretProviderInstance();
@@ -855,7 +865,7 @@ export class StripeService {
           billing_interval: interval,
         },
       },
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/msp/licenses/purchase/success?session_id={CHECKOUT_SESSION_ID}`,
+      return_url: `${getStripeReturnBaseUrl()}/msp/licenses/purchase/success?session_id={CHECKOUT_SESSION_ID}`,
       metadata: {
         tenant_id: tenantId,
         license_quantity: quantity.toString(),
@@ -1914,18 +1924,25 @@ export class StripeService {
       // Calculate current monthly from existing subscription
       let currentMonthly = 0;
       if (existingSubscription) {
-        const currentPrice = await knex<StripePrice>('stripe_prices')
-          .where({ stripe_price_id: existingSubscription.stripe_price_id })
-          .first();
-        const currentUserAmount = (currentPrice?.unit_amount || 0) / 100;
-
         if (existingSubscription.stripe_base_price_id) {
           const currentBasePrice = await knex<StripePrice>('stripe_prices')
             .where({ stripe_price_id: existingSubscription.stripe_base_price_id })
             .first();
-          currentMonthly = ((currentBasePrice?.unit_amount || 0) / 100) + (currentUserAmount * userCount);
+          currentMonthly = ((currentBasePrice?.unit_amount || 0) / 100);
+
+          // Only add per-user cost if the user price is different from the base price (Solo has no per-user price)
+          if (existingSubscription.stripe_price_id !== existingSubscription.stripe_base_price_id) {
+            const currentUserPrice = await knex<StripePrice>('stripe_prices')
+              .where({ stripe_price_id: existingSubscription.stripe_price_id })
+              .first();
+            currentMonthly += ((currentUserPrice?.unit_amount || 0) / 100) * userCount;
+          }
         } else {
-          currentMonthly = currentUserAmount * userCount;
+          // Legacy single-price mode: price_id is the per-user price
+          const currentPrice = await knex<StripePrice>('stripe_prices')
+            .where({ stripe_price_id: existingSubscription.stripe_price_id })
+            .first();
+          currentMonthly = ((currentPrice?.unit_amount || 0) / 100) * userCount;
         }
       }
 
@@ -2141,17 +2158,25 @@ export class StripeService {
 
       // Calculate current total
       let currentTotal = 0;
-      const currentUserPrice = await knex<StripePrice>('stripe_prices')
-        .where({ stripe_price_id: existingSubscription.stripe_price_id })
-        .first();
-      const currentUserAmount = (currentUserPrice?.unit_amount || 0) / 100;
       if (existingSubscription.stripe_base_price_id) {
         const currentBasePrice = await knex<StripePrice>('stripe_prices')
           .where({ stripe_price_id: existingSubscription.stripe_base_price_id })
           .first();
-        currentTotal = ((currentBasePrice?.unit_amount || 0) / 100) + (currentUserAmount * userCount);
+        currentTotal = ((currentBasePrice?.unit_amount || 0) / 100);
+
+        // Only add per-user cost if the user price is different from the base price (Solo has no per-user price)
+        if (existingSubscription.stripe_price_id !== existingSubscription.stripe_base_price_id) {
+          const currentUserPrice = await knex<StripePrice>('stripe_prices')
+            .where({ stripe_price_id: existingSubscription.stripe_price_id })
+            .first();
+          currentTotal += ((currentUserPrice?.unit_amount || 0) / 100) * userCount;
+        }
       } else {
-        currentTotal = currentUserAmount * userCount;
+        // Legacy single-price mode
+        const currentPrice = await knex<StripePrice>('stripe_prices')
+          .where({ stripe_price_id: existingSubscription.stripe_price_id })
+          .first();
+        currentTotal = ((currentPrice?.unit_amount || 0) / 100) * userCount;
       }
 
       // Calculate savings: compare equivalent monthly costs
@@ -2617,7 +2642,7 @@ export class StripeService {
             billing_interval: interval,
           },
         },
-        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/msp/settings/account?session_id={CHECKOUT_SESSION_ID}`,
+        return_url: `${getStripeReturnBaseUrl()}/msp/settings/account?session_id={CHECKOUT_SESSION_ID}`,
         metadata: {
           tenant_id: tenantId,
           addon_key: addOn,

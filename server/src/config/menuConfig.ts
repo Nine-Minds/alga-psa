@@ -166,13 +166,7 @@ export const navigationSections: NavigationSection[] = [
         icon: Rocket,
         subItems: [
           { name: 'Control Panel', translationKey: 'nav.controlPanel', icon: Gauge, href: '/msp/workflow-control' },
-          {
-            name: 'Workflow Editor',
-            translationKey: 'nav.workflowEditor',
-            icon: ListTree,
-            href: '/msp/workflow-editor',
-            requiredFeature: TIER_FEATURES.WORKFLOW_DESIGNER,
-          },
+          { name: 'Workflow Editor', translationKey: 'nav.workflowEditor', icon: ListTree, href: '/msp/workflow-editor' },
         ]
       },
       {
