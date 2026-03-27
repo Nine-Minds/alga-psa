@@ -1,0 +1,692 @@
+[
+  {
+    "id": "T001",
+    "description": "isValidTier('solo') returns true",
+    "implemented": false,
+    "featureIds": ["F001", "F020"]
+  },
+  {
+    "id": "T002",
+    "description": "isValidTier('pro') and isValidTier('premium') still return true",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T003",
+    "description": "isValidTier('invalid') returns false",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T004",
+    "description": "TENANT_TIERS contains ['solo', 'pro', 'premium'] in order",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T005",
+    "description": "TIER_LABELS.solo equals 'Solo'",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T006",
+    "description": "TIER_RANK maps solo=0, pro=1, premium=2",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T007",
+    "description": "tierAtLeast('solo', 'solo') returns true",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T008",
+    "description": "tierAtLeast('solo', 'pro') returns false",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T009",
+    "description": "tierAtLeast('pro', 'solo') returns true",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T010",
+    "description": "tierAtLeast('premium', 'pro') returns true",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T011",
+    "description": "tierAtLeast('pro', 'premium') returns false",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T012",
+    "description": "resolveTier('solo') returns { tier: 'solo', isMisconfigured: false }",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T013",
+    "description": "resolveTier(null) defaults to { tier: 'pro', isMisconfigured: false }",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T014",
+    "description": "resolveTier('invalid') defaults to pro with isMisconfigured: true",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T015",
+    "description": "tierHasFeature('solo', INTEGRATIONS) returns false",
+    "implemented": false,
+    "featureIds": ["F006", "F014"]
+  },
+  {
+    "id": "T016",
+    "description": "tierHasFeature('pro', INTEGRATIONS) returns true",
+    "implemented": false,
+    "featureIds": ["F006", "F014"]
+  },
+  {
+    "id": "T017",
+    "description": "tierHasFeature('premium', INTEGRATIONS) returns true",
+    "implemented": false,
+    "featureIds": ["F006", "F014"]
+  },
+  {
+    "id": "T018",
+    "description": "tierHasFeature('solo', EXTENSIONS) returns false",
+    "implemented": false,
+    "featureIds": ["F007", "F014"]
+  },
+  {
+    "id": "T019",
+    "description": "tierHasFeature('pro', EXTENSIONS) returns true",
+    "implemented": false,
+    "featureIds": ["F007", "F014"]
+  },
+  {
+    "id": "T020",
+    "description": "tierHasFeature('solo', MANAGED_EMAIL) returns false",
+    "implemented": false,
+    "featureIds": ["F008", "F014"]
+  },
+  {
+    "id": "T021",
+    "description": "tierHasFeature('solo', SSO) returns false",
+    "implemented": false,
+    "featureIds": ["F009", "F014"]
+  },
+  {
+    "id": "T022",
+    "description": "tierHasFeature('solo', ADVANCED_ASSETS) returns false",
+    "implemented": false,
+    "featureIds": ["F010", "F014"]
+  },
+  {
+    "id": "T023",
+    "description": "tierHasFeature('solo', CLIENT_PORTAL_ADMIN) returns false",
+    "implemented": false,
+    "featureIds": ["F011", "F014"]
+  },
+  {
+    "id": "T024",
+    "description": "tierHasFeature('solo', WORKFLOW_DESIGNER) returns false",
+    "implemented": false,
+    "featureIds": ["F012", "F014"]
+  },
+  {
+    "id": "T025",
+    "description": "tierHasFeature('solo', MOBILE_ACCESS) returns false",
+    "implemented": false,
+    "featureIds": ["F013", "F014"]
+  },
+  {
+    "id": "T026",
+    "description": "tierHasFeature('pro', MOBILE_ACCESS) returns true",
+    "implemented": false,
+    "featureIds": ["F013", "F014"]
+  },
+  {
+    "id": "T027",
+    "description": "tierHasFeature('solo', ENTRA_SYNC) returns false (premium feature)",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T028",
+    "description": "tierHasFeature('pro', ENTRA_SYNC) returns false (premium feature)",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T029",
+    "description": "tierHasFeature('premium', ENTRA_SYNC) returns true",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T030",
+    "description": "TIER_FEATURE_MAP['solo'] is empty array (no features at solo level)",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T031",
+    "description": "TIER_FEATURE_MAP['pro'] contains all 8 pro-minimum features",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T032",
+    "description": "TIER_FEATURE_MAP['premium'] contains all 11 features (8 pro + 3 premium)",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T033",
+    "description": "ADD_ONS.AI_ASSISTANT equals 'ai_assistant'",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T034",
+    "description": "ADD_ON_LABELS[AI_ASSISTANT] equals 'AI Assistant'",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T035",
+    "description": "tenantHasAddOn(['ai_assistant'], ADD_ONS.AI_ASSISTANT) returns true",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T036",
+    "description": "tenantHasAddOn([], ADD_ONS.AI_ASSISTANT) returns false",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T037",
+    "description": "getActiveAddOns returns only non-expired add-ons from tenant_addons table",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T038",
+    "description": "getActiveAddOns returns empty array when no add-ons exist for tenant",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T039",
+    "description": "getActiveAddOns excludes expired add-ons (expires_at < now)",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T040",
+    "description": "assertAddOnAccess throws when tenant lacks the requested add-on",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T041",
+    "description": "assertAddOnAccess passes when tenant has the requested add-on",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T042",
+    "description": "assertAddOnAccess bypasses check in CE edition (never throws)",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T043",
+    "description": "assertAddOnAccess works for Solo tier with AI add-on active",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T044",
+    "description": "assertAddOnAccess works for Pro tier with AI add-on active",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T045",
+    "description": "assertAddOnAccess works for Premium tier with AI add-on active",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T046",
+    "description": "TierContext provides isSolo=true when tier is solo",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T047",
+    "description": "TierContext provides isSolo=false when tier is pro",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T048",
+    "description": "TierContext provides addOns array from session/DB",
+    "implemented": false,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T049",
+    "description": "TierContext hasAddOn returns true when add-on is in addOns array",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T050",
+    "description": "TierContext hasAddOn returns false when add-on is not in addOns array",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T051",
+    "description": "CE edition: hasAddOn always returns true regardless of addOns array",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T052",
+    "description": "CE edition: hasFeature always returns true regardless of tier",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T053",
+    "description": "MenuItem interface accepts optional requiredFeature field",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T054",
+    "description": "Sidebar hides Extensions item for Solo tier",
+    "implemented": false,
+    "featureIds": ["F030", "F032"]
+  },
+  {
+    "id": "T055",
+    "description": "Sidebar hides Workflow Editor subitem for Solo tier",
+    "implemented": false,
+    "featureIds": ["F031", "F033"]
+  },
+  {
+    "id": "T056",
+    "description": "Sidebar shows Extensions item for Pro tier",
+    "implemented": false,
+    "featureIds": ["F030", "F032"]
+  },
+  {
+    "id": "T057",
+    "description": "Sidebar shows all items for Premium tier",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T058",
+    "description": "Sidebar items without requiredFeature are always shown",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T059",
+    "description": "Settings Integrations tab shows FeatureUpgradeNotice for Solo tier",
+    "implemented": false,
+    "featureIds": ["F035", "F038"]
+  },
+  {
+    "id": "T060",
+    "description": "Settings Extensions tab shows FeatureUpgradeNotice for Solo tier",
+    "implemented": false,
+    "featureIds": ["F036", "F038"]
+  },
+  {
+    "id": "T061",
+    "description": "Settings Email tab shows FeatureUpgradeNotice for Solo tier",
+    "implemented": false,
+    "featureIds": ["F037", "F038"]
+  },
+  {
+    "id": "T062",
+    "description": "Settings tabs remain visible and clickable even when gated",
+    "implemented": false,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T063",
+    "description": "Settings Integrations tab shows normal content for Pro tier",
+    "implemented": false,
+    "featureIds": ["F035", "F038"]
+  },
+  {
+    "id": "T064",
+    "description": "Settings sidebar items are never filtered by tier (all visible)",
+    "implemented": false,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T065",
+    "description": "assertTierAccess(INTEGRATIONS) throws for Solo tenant",
+    "implemented": false,
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T066",
+    "description": "assertTierAccess(INTEGRATIONS) passes for Pro tenant",
+    "implemented": false,
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T067",
+    "description": "assertTierAccess(EXTENSIONS) throws for Solo tenant",
+    "implemented": false,
+    "featureIds": ["F042"]
+  },
+  {
+    "id": "T068",
+    "description": "assertAddOnAccess(AI_ASSISTANT) throws for tenant without AI add-on",
+    "implemented": false,
+    "featureIds": ["F046"]
+  },
+  {
+    "id": "T069",
+    "description": "assertAddOnAccess(AI_ASSISTANT) passes for Solo tenant with AI add-on",
+    "implemented": false,
+    "featureIds": ["F046"]
+  },
+  {
+    "id": "T070",
+    "description": "exchangeOttForSession rejects Solo tenant with 403 status",
+    "implemented": false,
+    "featureIds": ["F049"]
+  },
+  {
+    "id": "T071",
+    "description": "exchangeOttForSession 403 response includes upgrade message",
+    "implemented": false,
+    "featureIds": ["F050"]
+  },
+  {
+    "id": "T072",
+    "description": "exchangeOttForSession succeeds for Pro tenant",
+    "implemented": false,
+    "featureIds": ["F049"]
+  },
+  {
+    "id": "T073",
+    "description": "exchangeOttForSession succeeds for Premium tenant",
+    "implemented": false,
+    "featureIds": ["F049"]
+  },
+  {
+    "id": "T074",
+    "description": "stripeTierMapping maps 'alga-psa-solo' to 'solo'",
+    "implemented": false,
+    "featureIds": ["F051"]
+  },
+  {
+    "id": "T075",
+    "description": "getTierPriceIds('solo') returns basePriceId with userPriceId: null",
+    "implemented": false,
+    "featureIds": ["F052"]
+  },
+  {
+    "id": "T076",
+    "description": "getTierPriceIds('pro') still returns both basePriceId and userPriceId",
+    "implemented": false,
+    "featureIds": ["F052"]
+  },
+  {
+    "id": "T077",
+    "description": "Solo checkout creates session with single line item (base price only)",
+    "implemented": false,
+    "featureIds": ["F053"]
+  },
+  {
+    "id": "T078",
+    "description": "Pro checkout still creates session with two line items (base + per-user)",
+    "implemented": false,
+    "featureIds": ["F053"]
+  },
+  {
+    "id": "T079",
+    "description": "handleCheckoutCompleted sets licensed_user_count=1 for Solo tier",
+    "implemented": false,
+    "featureIds": ["F054"]
+  },
+  {
+    "id": "T080",
+    "description": "handleSubscriptionUpdated sets licensed_user_count=1 for Solo tier",
+    "implemented": false,
+    "featureIds": ["F055"]
+  },
+  {
+    "id": "T081",
+    "description": "upgradeTier Solo->Pro adds per-user line item to subscription",
+    "implemented": false,
+    "featureIds": ["F056"]
+  },
+  {
+    "id": "T082",
+    "description": "upgradeTier Solo->Pro swaps base price from Solo to Pro",
+    "implemented": false,
+    "featureIds": ["F056"]
+  },
+  {
+    "id": "T083",
+    "description": "downgradeTier Pro->Solo succeeds when active user count = 1",
+    "implemented": false,
+    "featureIds": ["F057", "F058"]
+  },
+  {
+    "id": "T084",
+    "description": "downgradeTier Pro->Solo fails when active user count > 1",
+    "implemented": false,
+    "featureIds": ["F057"]
+  },
+  {
+    "id": "T085",
+    "description": "downgradeTier Pro->Solo removes per-user line item",
+    "implemented": false,
+    "featureIds": ["F058"]
+  },
+  {
+    "id": "T086",
+    "description": "downgradeTier Pro->Solo swaps base price from Pro to Solo",
+    "implemented": false,
+    "featureIds": ["F058"]
+  },
+  {
+    "id": "T087",
+    "description": "purchaseAddOn(AI_ASSISTANT) creates checkout for AI add-on subscription item",
+    "implemented": false,
+    "featureIds": ["F059"]
+  },
+  {
+    "id": "T088",
+    "description": "cancelAddOn(AI_ASSISTANT) removes AI line item from subscription",
+    "implemented": false,
+    "featureIds": ["F060"]
+  },
+  {
+    "id": "T089",
+    "description": "Stripe webhook inserts tenant_addons row when AI subscription activates",
+    "implemented": false,
+    "featureIds": ["F061"]
+  },
+  {
+    "id": "T090",
+    "description": "Stripe webhook deactivates tenant_addons row when AI subscription is cancelled",
+    "implemented": false,
+    "featureIds": ["F062"]
+  },
+  {
+    "id": "T091",
+    "description": "addUser action rejects when plan='solo' and used >= 1 internal users",
+    "implemented": false,
+    "featureIds": ["F064"]
+  },
+  {
+    "id": "T092",
+    "description": "addUser action returns correct error message for Solo limit",
+    "implemented": false,
+    "featureIds": ["F065"]
+  },
+  {
+    "id": "T093",
+    "description": "addUser action allows adding first user on Solo plan",
+    "implemented": false,
+    "featureIds": ["F064"]
+  },
+  {
+    "id": "T094",
+    "description": "addUser action allows adding users on Pro plan without Solo limit",
+    "implemented": false,
+    "featureIds": ["F064"]
+  },
+  {
+    "id": "T095",
+    "description": "Add User button is disabled when isSolo in user management UI",
+    "implemented": false,
+    "featureIds": ["F066"]
+  },
+  {
+    "id": "T096",
+    "description": "Add User button shows upgrade CTA when disabled for Solo",
+    "implemented": false,
+    "featureIds": ["F066"]
+  },
+  {
+    "id": "T097",
+    "description": "FEATURE_DISPLAY_NAMES has entries for all 8 new tier features",
+    "implemented": false,
+    "featureIds": ["F067"]
+  },
+  {
+    "id": "T098",
+    "description": "AccountManagement shows Solo-specific messaging for solo tier",
+    "implemented": false,
+    "featureIds": ["F068"]
+  },
+  {
+    "id": "T099",
+    "description": "AccountManagement shows 'Upgrade to Pro' card for Solo tenants",
+    "implemented": false,
+    "featureIds": ["F069"]
+  },
+  {
+    "id": "T100",
+    "description": "AccountManagement shows 'Downgrade to Solo' for Pro tenants with 1 user",
+    "implemented": false,
+    "featureIds": ["F070"]
+  },
+  {
+    "id": "T101",
+    "description": "AccountManagement hides 'Downgrade to Solo' for Pro tenants with 2+ users",
+    "implemented": false,
+    "featureIds": ["F070"]
+  },
+  {
+    "id": "T102",
+    "description": "AccountManagement shows 'Add AI Assistant' card when add-on not active",
+    "implemented": false,
+    "featureIds": ["F071"]
+  },
+  {
+    "id": "T103",
+    "description": "AccountManagement shows 'AI Assistant (active)' when add-on is active",
+    "implemented": false,
+    "featureIds": ["F072"]
+  },
+  {
+    "id": "T104",
+    "description": "AI add-on card appears for Solo tier (not just Pro/Premium)",
+    "implemented": false,
+    "featureIds": ["F071"]
+  },
+  {
+    "id": "T105",
+    "description": "upgradeTierAction supports Solo -> Pro flow",
+    "implemented": false,
+    "featureIds": ["F073"]
+  },
+  {
+    "id": "T106",
+    "description": "downgradeTierAction validates user count before downgrading",
+    "implemented": false,
+    "featureIds": ["F074"]
+  },
+  {
+    "id": "T107",
+    "description": "npm run build:shared compiles with all new types/features/add-ons",
+    "implemented": false,
+    "featureIds": ["F001", "F006", "F016"]
+  },
+  {
+    "id": "T108",
+    "description": "Solo checkout session includes trialDays=7",
+    "implemented": false,
+    "featureIds": ["F075"]
+  },
+  {
+    "id": "T109",
+    "description": "Pro checkout does not include trial unless explicitly requested",
+    "implemented": false,
+    "featureIds": ["F075"]
+  },
+  {
+    "id": "T110",
+    "description": "Solo->Pro trial activates for established Solo customer (subscriptionStatus='active', past trial)",
+    "implemented": false,
+    "featureIds": ["F076"]
+  },
+  {
+    "id": "T111",
+    "description": "Solo->Pro trial blocked when Solo customer is still in their 7-day trial (subscriptionStatus='trialing')",
+    "implemented": false,
+    "featureIds": ["F077"]
+  },
+  {
+    "id": "T112",
+    "description": "Solo->Pro trial grants access to all Pro tier features during trial period",
+    "implemented": false,
+    "featureIds": ["F076"]
+  },
+  {
+    "id": "T113",
+    "description": "Solo->Pro trial reverts to Solo when trial expires without conversion",
+    "implemented": false,
+    "featureIds": ["F078"]
+  },
+  {
+    "id": "T114",
+    "description": "'Try Pro free' CTA shown for established Solo customers in AccountManagement",
+    "implemented": false,
+    "featureIds": ["F079"]
+  },
+  {
+    "id": "T115",
+    "description": "'Try Pro free' CTA hidden when Solo customer is still in their trial",
+    "implemented": false,
+    "featureIds": ["F079"]
+  }
+]
