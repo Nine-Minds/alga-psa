@@ -371,7 +371,7 @@
   {
     "id": "F047",
     "description": "Add assertAddOnAccess(ADD_ONS.AI_ASSISTANT) to document-assist route",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.2"
     ]

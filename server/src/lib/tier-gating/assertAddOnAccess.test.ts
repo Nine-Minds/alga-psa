@@ -10,7 +10,7 @@ vi.mock('@alga-psa/auth', () => ({
   getSession: (...args: unknown[]) => getSession(...args),
 }));
 
-vi.mock('@/lib/features', () => ({
+vi.mock('../features', () => ({
   get isEnterprise() {
     return enterpriseState.value;
   },
@@ -20,7 +20,7 @@ vi.mock('./getActiveAddOns', () => ({
   getActiveAddOns: (...args: unknown[]) => getActiveAddOns(...args),
 }));
 
-const { AddOnAccessError, assertAddOnAccess } = await import('./assertAddOnAccess');
+const { AddOnAccessError, assertAddOnAccess, assertTenantAddOnAccess } = await import('./assertAddOnAccess');
 
 describe('assertAddOnAccess', () => {
   beforeEach(() => {
@@ -62,5 +62,17 @@ describe('assertAddOnAccess', () => {
     await expect(assertAddOnAccess(ADD_ONS.AI_ASSISTANT)).resolves.toBeUndefined();
     expect(getSession).not.toHaveBeenCalled();
     expect(getActiveAddOns).not.toHaveBeenCalled();
+  });
+
+  it('throws for tenant-scoped access when the add-on is inactive', async () => {
+    getActiveAddOns.mockResolvedValue([]);
+
+    await expect(assertTenantAddOnAccess('tenant-123', ADD_ONS.AI_ASSISTANT)).rejects.toThrow(AddOnAccessError);
+  });
+
+  it('passes for tenant-scoped access when the add-on is active', async () => {
+    getActiveAddOns.mockResolvedValue([ADD_ONS.AI_ASSISTANT]);
+
+    await expect(assertTenantAddOnAccess('tenant-123', ADD_ONS.AI_ASSISTANT)).resolves.toBeUndefined();
   });
 });

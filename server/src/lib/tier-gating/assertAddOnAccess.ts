@@ -27,3 +27,12 @@ export async function assertAddOnAccess(addOn: AddOnKey): Promise<void> {
     throw new AddOnAccessError(addOn);
   }
 }
+
+export async function assertTenantAddOnAccess(tenantId: string, addOn: AddOnKey): Promise<void> {
+  if (!isEnterprise) return;
+
+  const addOns = await getActiveAddOns(tenantId);
+  if (!tenantHasAddOn(addOns, addOn)) {
+    throw new AddOnAccessError(addOn);
+  }
+}

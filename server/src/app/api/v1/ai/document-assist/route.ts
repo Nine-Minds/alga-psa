@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { getExperimentalFeaturesForTenant } from '@alga-psa/tenancy/actions';
+import { ADD_ONS } from '@alga-psa/types';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { AddOnAccessError, assertTenantAddOnAccess } from '@/lib/tier-gating/assertAddOnAccess';
 
 const isEnterpriseEdition =
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -85,6 +87,19 @@ export async function POST(req: NextRequest) {
       JSON.stringify({ error: 'Missing required fields: instruction, tenantId' }),
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     );
+  }
+
+  try {
+    await assertTenantAddOnAccess(tenantId, ADD_ONS.AI_ASSISTANT);
+  } catch (error) {
+    if (error instanceof AddOnAccessError) {
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    throw error;
   }
 
   // Gate 3: Defense-in-depth feature flag check (lightweight DB query, no auth needed)
