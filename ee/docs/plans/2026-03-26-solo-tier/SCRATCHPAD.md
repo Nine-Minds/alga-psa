@@ -66,3 +66,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - Solo->Pro trial duration: 15 or 30 days? (Awaiting final decision)
 - (2026-03-26) Completed F001 feature: Add 'solo' to TENANT_TIERS array so it becomes ['solo', 'pro', 'premium']
 - (2026-03-26) Completed F002 feature: Update TenantTier type to include 'solo'
+- (2026-03-26) Completed F003 feature: Add TIER_LABELS entry: solo -> 'Solo'

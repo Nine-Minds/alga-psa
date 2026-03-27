@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "Add TIER_LABELS entry: solo -> 'Solo'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.1"
     ]
