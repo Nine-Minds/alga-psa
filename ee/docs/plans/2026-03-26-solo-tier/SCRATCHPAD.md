@@ -87,3 +87,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F021 feature: Create getActiveAddOns(tenantId) service querying tenant_addons for non-expired add-ons
 - (2026-03-26) Completed F022 feature: Create assertAddOnAccess(addOn) that throws if tenant lacks the add-on
 - (2026-03-26) Completed F023 feature: assertAddOnAccess bypasses check in CE edition (all add-ons unlocked)
+- (2026-03-26) Completed F025 feature: Add isSolo boolean to TierContextValue (tier === 'solo')

@@ -195,7 +195,7 @@
   {
     "id": "F025",
     "description": "Add isSolo boolean to TierContextValue (tier === 'solo')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.1"
     ]
