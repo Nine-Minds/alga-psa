@@ -28,6 +28,7 @@ function createUpgradeKnex(state: {
   priceRecords: Record<string, Record<string, any>>;
   subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
   tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
+  activeUserCount?: number;
 }) {
   const knex = ((table: string) => {
     if (table === 'stripe_subscriptions') {
@@ -63,6 +64,16 @@ function createUpgradeKnex(state: {
             state.tenantUpdates.push({ criteria, values });
             return 1;
           },
+        }),
+      };
+    }
+
+    if (table === 'users') {
+      return {
+        where: (_criteria: Record<string, any>) => ({
+          count: (_column: string) => ({
+            first: async () => ({ count: String(state.activeUserCount ?? 1) }),
+          }),
         }),
       };
     }
@@ -203,6 +214,7 @@ describe('StripeService tier pricing', () => {
         },
         subscriptionUpdates,
         tenantUpdates,
+        activeUserCount: 1,
       }),
     );
 
@@ -250,5 +262,118 @@ describe('StripeService tier pricing', () => {
         plan: 'pro',
       }),
     );
+  });
+
+  it('downgrades Pro subscriptions to a single Solo flat-rate item when only one user is active', async () => {
+    const service = createService({});
+    const subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+    const tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+
+    getConnectionMock.mockResolvedValue(
+      createUpgradeKnex({
+        existingSubscription: {
+          tenant: 'tenant-pro',
+          stripe_subscription_id: 'sub_db_2',
+          stripe_subscription_external_id: 'sub_ext_2',
+          stripe_subscription_item_id: 'si_pro_user',
+          stripe_customer_id: 'cust_db_2',
+          stripe_price_id: 'price_record_pro_user',
+          status: 'active',
+          quantity: 1,
+          stripe_base_item_id: 'si_pro_base',
+          stripe_base_price_id: 'price_record_pro_base',
+          billing_interval: 'month',
+        },
+        priceRecords: {
+          price_solo_month: { stripe_price_id: 'price_record_solo' },
+        },
+        subscriptionUpdates,
+        tenantUpdates,
+        activeUserCount: 1,
+      }),
+    );
+
+    service.getOrImportCustomer = vi.fn().mockResolvedValue({
+      stripe_customer_id: 'cust_db_2',
+      stripe_customer_external_id: 'cus_ext_2',
+    });
+    service.initPromise = Promise.resolve();
+    service.stripe.subscriptions = {
+      update: vi.fn().mockResolvedValue({
+        items: {
+          data: [
+            { id: 'si_solo_flat', quantity: 1, price: { id: 'price_solo_month' } },
+          ],
+        },
+      }),
+    };
+
+    const result = await service.downgradeTier('tenant-pro', 'month');
+
+    expect(result).toEqual({ success: true });
+    expect(service.stripe.subscriptions.update).toHaveBeenCalledWith(
+      'sub_ext_2',
+      expect.objectContaining({
+        items: [
+          { id: 'si_pro_user', deleted: true },
+          { id: 'si_pro_base', deleted: true },
+          { price: 'price_solo_month', quantity: 1 },
+        ],
+      }),
+    );
+    expect(subscriptionUpdates[0]?.values).toEqual(
+      expect.objectContaining({
+        stripe_subscription_item_id: 'si_solo_flat',
+        stripe_price_id: 'price_record_solo',
+        stripe_base_item_id: null,
+        stripe_base_price_id: null,
+        quantity: 1,
+      }),
+    );
+    expect(tenantUpdates[0]?.values).toEqual(
+      expect.objectContaining({
+        plan: 'solo',
+        licensed_user_count: 1,
+      }),
+    );
+  });
+
+  it('blocks Pro to Solo downgrade when more than one active user remains', async () => {
+    const service = createService({});
+
+    getConnectionMock.mockResolvedValue(
+      createUpgradeKnex({
+        existingSubscription: {
+          tenant: 'tenant-pro',
+          stripe_subscription_id: 'sub_db_3',
+          stripe_subscription_external_id: 'sub_ext_3',
+          stripe_subscription_item_id: 'si_pro_user',
+          stripe_customer_id: 'cust_db_3',
+          stripe_price_id: 'price_record_pro_user',
+          status: 'active',
+          quantity: 3,
+          stripe_base_item_id: 'si_pro_base',
+          stripe_base_price_id: 'price_record_pro_base',
+          billing_interval: 'month',
+        },
+        priceRecords: {},
+        subscriptionUpdates: [],
+        tenantUpdates: [],
+        activeUserCount: 2,
+      }),
+    );
+
+    service.initPromise = Promise.resolve();
+    service.stripe.subscriptions = {
+      update: vi.fn(),
+    };
+
+    const result = await service.downgradeTier('tenant-pro', 'month');
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Solo downgrade requires exactly 1 active internal user',
+    });
+    expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
   });
 });

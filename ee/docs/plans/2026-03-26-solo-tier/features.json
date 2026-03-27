@@ -451,7 +451,7 @@
   {
     "id": "F057",
     "description": "New downgradeTier() validates active user count = 1 before proceeding",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.5"
     ]

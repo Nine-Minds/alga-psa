@@ -1464,6 +1464,20 @@ export class StripeService {
     return userItem?.quantity || 1;
   }
 
+  private async getActiveInternalUserCount(tenantId: string): Promise<number> {
+    const knex = await getConnection(tenantId);
+    const result = await knex('users')
+      .where({
+        tenant: tenantId,
+        user_type: 'internal',
+        is_inactive: false,
+      })
+      .count('user_id as count')
+      .first();
+
+    return parseInt((result?.count as string | undefined) || '0', 10);
+  }
+
   /**
    * Upgrade a tenant's subscription to a new tier.
    *
@@ -1604,6 +1618,109 @@ export class StripeService {
       return {
         success: false,
         error: error.message || 'Failed to upgrade subscription',
+      };
+    }
+  }
+
+  async downgradeTier(
+    tenantId: string,
+    interval: 'month' | 'year' = 'month'
+  ): Promise<{ success: boolean; error?: string }> {
+    await this.ensureInitialized();
+    logger.info(`[StripeService] Downgrading tenant ${tenantId} to solo (${interval})`);
+
+    const activeUserCount = await this.getActiveInternalUserCount(tenantId);
+    if (activeUserCount > 1) {
+      return {
+        success: false,
+        error: 'Solo downgrade requires exactly 1 active internal user',
+      };
+    }
+
+    const tierPrices = this.getTierPriceIds('solo', interval);
+    if (!tierPrices) {
+      return { success: false, error: 'Pricing not configured for solo tier' };
+    }
+
+    const knex = await getConnection(tenantId);
+    const customer = await this.getOrImportCustomer(tenantId);
+
+    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+      .where({
+        tenant: tenantId,
+        stripe_customer_id: customer.stripe_customer_id,
+        status: 'active',
+      })
+      .first();
+
+    if (!existingSubscription) {
+      return { success: false, error: 'No active subscription found' };
+    }
+
+    const itemUpdates: Stripe.SubscriptionUpdateParams.Item[] = [];
+
+    if (existingSubscription.stripe_subscription_item_id) {
+      itemUpdates.push({
+        id: existingSubscription.stripe_subscription_item_id,
+        deleted: true,
+      });
+    }
+
+    if (existingSubscription.stripe_base_item_id) {
+      itemUpdates.push({
+        id: existingSubscription.stripe_base_item_id,
+        deleted: true,
+      });
+    }
+
+    itemUpdates.push({ price: tierPrices.basePriceId, quantity: 1 });
+
+    try {
+      const updatedSubscription = await this.stripe.subscriptions.update(
+        existingSubscription.stripe_subscription_external_id,
+        {
+          items: itemUpdates,
+          proration_behavior: 'always_invoice',
+          payment_behavior: 'error_if_incomplete',
+          metadata: { tenant_id: tenantId },
+        }
+      );
+
+      const soloItem = updatedSubscription.items.data.find(
+        item => item.price.id === tierPrices.basePriceId
+      ) || updatedSubscription.items.data[0];
+
+      const soloPriceRecord = await knex<StripePrice>('stripe_prices')
+        .where({ tenant: tenantId, stripe_price_external_id: tierPrices.basePriceId })
+        .first();
+
+      await knex<StripeSubscription>('stripe_subscriptions')
+        .where({ stripe_subscription_id: existingSubscription.stripe_subscription_id })
+        .update({
+          stripe_subscription_item_id: soloItem?.id || null,
+          stripe_price_id: soloPriceRecord?.stripe_price_id || existingSubscription.stripe_price_id,
+          stripe_base_item_id: null,
+          stripe_base_price_id: null,
+          billing_interval: interval,
+          quantity: 1,
+          updated_at: knex.fn.now(),
+        });
+
+      await knex('tenants')
+        .where({ tenant: tenantId })
+        .update({
+          plan: 'solo',
+          licensed_user_count: 1,
+          updated_at: knex.fn.now(),
+        });
+
+      logger.info(`[StripeService] Downgraded tenant ${tenantId} to solo`);
+      return { success: true };
+    } catch (error: any) {
+      logger.error(`[StripeService] Failed to downgrade tenant ${tenantId}:`, error);
+      return {
+        success: false,
+        error: error.message || 'Failed to downgrade subscription',
       };
     }
   }

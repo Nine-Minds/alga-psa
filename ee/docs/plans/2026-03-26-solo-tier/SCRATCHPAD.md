@@ -130,6 +130,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F054 feature: Made Stripe checkout-completed webhook handling explicitly derive `licensed_user_count = 1` for Solo subscriptions instead of relying on the base-price item quantity by coincidence.
 - (2026-03-26) Completed F055 feature: Reused the Solo license-count normalization in `customer.subscription.updated` handling so renewals and later subscription updates keep `licensed_user_count = 1` for Solo tenants.
 - (2026-03-26) Completed F056 feature: Verified `upgradeTier()` now handles Solo -> Pro in place by deleting the Solo flat-rate item, adding Pro base + per-user items, and updating the stored Stripe item ids and tenant plan.
+- (2026-03-26) Completed F057 feature: Added `downgradeTier()` with a hard validation that Solo downgrades are only allowed when exactly one active internal user remains.
 - (2026-03-26) Completed T001 test: isValidTier('solo') returns true
 - (2026-03-26) Completed T002 test: isValidTier('pro') and isValidTier('premium') still return true
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false
