@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "Create getActiveAddOns(tenantId) service querying tenant_addons for non-expired add-ons",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1b.1"
     ]

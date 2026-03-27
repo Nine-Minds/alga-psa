@@ -84,3 +84,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F018 feature: Add ADD_ON_DESCRIPTIONS with marketing-friendly description for AI_ASSISTANT
 - (2026-03-26) Completed F019 feature: resolveTier() returns 'pro' for null/invalid input (unchanged behavior, Solo is opt-in)
 - (2026-03-26) Completed F020 feature: isValidTier('solo') returns true
+- (2026-03-26) Completed F021 feature: Create getActiveAddOns(tenantId) service querying tenant_addons for non-expired add-ons
