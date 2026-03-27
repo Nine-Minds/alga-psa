@@ -124,7 +124,7 @@
   {
     "id": "T016",
     "description": "tierHasFeature('pro', INTEGRATIONS) returns true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F014"
