@@ -133,7 +133,7 @@
   {
     "id": "T017",
     "description": "tierHasFeature('premium', INTEGRATIONS) returns true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F014"

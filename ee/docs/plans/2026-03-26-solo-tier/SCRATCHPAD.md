@@ -119,3 +119,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T014 test: resolveTier('invalid') defaults to pro with isMisconfigured: true
 - (2026-03-26) Completed T015 test: tierHasFeature('solo', INTEGRATIONS) returns false
 - (2026-03-26) Completed T016 test: tierHasFeature('pro', INTEGRATIONS) returns true
+- (2026-03-26) Completed T017 test: tierHasFeature('premium', INTEGRATIONS) returns true
