@@ -223,7 +223,7 @@
   {
     "id": "T027",
     "description": "tierHasFeature('solo', ENTRA_SYNC) returns false (premium feature)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
