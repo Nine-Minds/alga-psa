@@ -245,3 +245,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T087 test: purchaseAddOn(AI_ASSISTANT) creates checkout for AI add-on subscription item
 - (2026-03-26) Completed T088 test: cancelAddOn(AI_ASSISTANT) removes AI line item from subscription
 - (2026-03-26) Completed T089 test: Stripe webhook inserts tenant_addons row when AI subscription activates
+- (2026-03-26) Completed T090 test: Stripe webhook deactivates tenant_addons row when AI subscription is cancelled
