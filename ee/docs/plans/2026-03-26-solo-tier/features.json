@@ -187,7 +187,7 @@
   {
     "id": "F024",
     "description": "Add STRIPE_AI_ADDON_PRICE_ID and STRIPE_AI_ADDON_ANNUAL_PRICE_ID env vars to Stripe config",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1b.3"
     ]

@@ -58,6 +58,8 @@ async function getStripeConfig() {
   const proUserAnnualPriceId = process.env.STRIPE_PRO_USER_ANNUAL_PRICE_ID || null;
   const premiumBaseAnnualPriceId = process.env.STRIPE_PREMIUM_BASE_ANNUAL_PRICE_ID || null;
   const premiumUserAnnualPriceId = process.env.STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID || null;
+  const aiAddOnPriceId = process.env.STRIPE_AI_ADDON_PRICE_ID || null;
+  const aiAddOnAnnualPriceId = process.env.STRIPE_AI_ADDON_ANNUAL_PRICE_ID || null;
 
   // Early adopters prices (grandfathered customers migrated from preview)
   const earlyAdoptersBasePriceId = process.env.STRIPE_EARLY_ADOPTERS_BASE_PRICE_ID || null;
@@ -96,6 +98,8 @@ async function getStripeConfig() {
     proUserAnnualPriceId,
     premiumBaseAnnualPriceId,
     premiumUserAnnualPriceId,
+    aiAddOnPriceId,
+    aiAddOnAnnualPriceId,
     earlyAdoptersBasePriceId,
     earlyAdoptersUserPriceId,
     earlyAdoptersBaseAnnualPriceId,
