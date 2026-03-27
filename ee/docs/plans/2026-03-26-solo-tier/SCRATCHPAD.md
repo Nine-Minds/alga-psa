@@ -139,3 +139,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T034 test: ADD_ON_LABELS[AI_ASSISTANT] equals 'AI Assistant'
 - (2026-03-26) Completed T035 test: tenantHasAddOn(['ai_assistant'], ADD_ONS.AI_ASSISTANT) returns true
 - (2026-03-26) Completed T036 test: tenantHasAddOn([], ADD_ONS.AI_ASSISTANT) returns false
+- (2026-03-26) Completed T037 test: getActiveAddOns returns only non-expired add-ons from tenant_addons table

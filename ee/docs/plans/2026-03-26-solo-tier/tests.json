@@ -303,7 +303,7 @@
   {
     "id": "T037",
     "description": "getActiveAddOns returns only non-expired add-ons from tenant_addons table",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
