@@ -15,6 +15,7 @@ import type {
   IProjectTaskDependency,
   IProjectTicketLink,
   IProjectTicketLinkWithDetails,
+  ITicketLinkedTask,
   ITag,
   ITaskChecklistItem,
   ITaskType,
@@ -633,6 +634,23 @@ export const getTaskTicketLinksAction = withAuth(async (
         });
     } catch (error) {
         console.error('Error getting task ticket links:', error);
+        throw error;
+    }
+});
+
+export const getLinkedTasksForTicketAction = withAuth(async (
+    user,
+    { tenant },
+    ticketId: string
+): Promise<ITicketLinkedTask[]> => {
+    try {
+        const {knex: db} = await createTenantKnex();
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'read', trx);
+            return await ProjectTaskModel.getLinkedTasksForTicket(trx, tenant, ticketId);
+        });
+    } catch (error) {
+        console.error('Error getting linked tasks for ticket:', error);
         throw error;
     }
 });
