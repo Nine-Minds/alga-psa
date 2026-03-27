@@ -161,3 +161,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T056 test: Sidebar shows Extensions item for Pro tier
 - (2026-03-26) Completed T057 test: Sidebar shows all items for Premium tier
 - (2026-03-26) Completed T058 test: Sidebar items without requiredFeature are always shown
+- (2026-03-26) Completed T059 test: Settings Integrations tab shows FeatureUpgradeNotice for Solo tier
