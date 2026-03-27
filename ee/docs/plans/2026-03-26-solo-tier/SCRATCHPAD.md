@@ -136,3 +136,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T031 test: TIER_FEATURE_MAP['pro'] contains all 8 pro-minimum features
 - (2026-03-26) Completed T032 test: TIER_FEATURE_MAP['premium'] contains all 11 features (8 pro + 3 premium)
 - (2026-03-26) Completed T033 test: ADD_ONS.AI_ASSISTANT equals 'ai_assistant'
+- (2026-03-26) Completed T034 test: ADD_ON_LABELS[AI_ASSISTANT] equals 'AI Assistant'
