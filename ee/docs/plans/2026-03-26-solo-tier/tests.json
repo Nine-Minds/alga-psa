@@ -327,7 +327,7 @@
   {
     "id": "T040",
     "description": "assertAddOnAccess throws when tenant lacks the requested add-on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
