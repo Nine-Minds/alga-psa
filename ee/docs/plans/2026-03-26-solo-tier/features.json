@@ -572,7 +572,7 @@
   {
     "id": "F072",
     "description": "Show 'AI Assistant (active)' status when add-on is active with cancel option",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.5"
     ]
