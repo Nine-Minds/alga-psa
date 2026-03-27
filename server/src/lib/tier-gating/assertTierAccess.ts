@@ -3,11 +3,13 @@
 import {
   type TIER_FEATURES,
   FEATURE_MINIMUM_TIER,
+  type TenantTier,
   resolveTier,
   tierHasFeature,
   TIER_LABELS,
 } from '@alga-psa/types';
 import { getSession } from '@alga-psa/auth';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { isEnterprise } from '@/lib/features';
 
 export class TierAccessError extends Error {
@@ -43,6 +45,27 @@ export async function assertTierAccess(feature: TIER_FEATURES): Promise<void> {
   const session = await getSession();
   const plan = session?.user?.plan;
   const { tier } = resolveTier(plan);
+
+  if (!tierHasFeature(tier, feature)) {
+    const requiredTier = FEATURE_MINIMUM_TIER[feature];
+    throw new TierAccessError(feature, requiredTier, tier);
+  }
+}
+
+async function getTenantTier(tenantId: string): Promise<TenantTier> {
+  const knex = await getAdminConnection();
+  const tenantRecord = await knex('tenants')
+    .where({ tenant: tenantId })
+    .select('plan')
+    .first();
+
+  return resolveTier(tenantRecord?.plan).tier;
+}
+
+export async function assertTenantTierAccess(tenantId: string, feature: TIER_FEATURES): Promise<void> {
+  if (!isEnterprise) return;
+
+  const tier = await getTenantTier(tenantId);
 
   if (!tierHasFeature(tier, feature)) {
     const requiredTier = FEATURE_MINIMUM_TIER[feature];

@@ -52,6 +52,40 @@ describe('assertTierAccess', () => {
       await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).resolves.toBeUndefined();
     });
 
+    it('throws TierAccessError for solo tenant accessing INTEGRATIONS', async () => {
+      vi.mocked(getSession).mockResolvedValue({
+        user: { plan: 'solo' },
+      } as any);
+
+      await expect(assertTierAccess(TIER_FEATURES.INTEGRATIONS)).rejects.toThrow(TierAccessError);
+      await expect(assertTierAccess(TIER_FEATURES.INTEGRATIONS)).rejects.toMatchObject({
+        feature: TIER_FEATURES.INTEGRATIONS,
+        requiredTier: 'pro',
+        currentTier: 'solo',
+      });
+    });
+
+    it('does not throw for pro tenant accessing INTEGRATIONS', async () => {
+      vi.mocked(getSession).mockResolvedValue({
+        user: { plan: 'pro' },
+      } as any);
+
+      await expect(assertTierAccess(TIER_FEATURES.INTEGRATIONS)).resolves.toBeUndefined();
+    });
+
+    it('throws TierAccessError for solo tenant accessing EXTENSIONS', async () => {
+      vi.mocked(getSession).mockResolvedValue({
+        user: { plan: 'solo' },
+      } as any);
+
+      await expect(assertTierAccess(TIER_FEATURES.EXTENSIONS)).rejects.toThrow(TierAccessError);
+      await expect(assertTierAccess(TIER_FEATURES.EXTENSIONS)).rejects.toMatchObject({
+        feature: TIER_FEATURES.EXTENSIONS,
+        requiredTier: 'pro',
+        currentTier: 'solo',
+      });
+    });
+
     it('throws for NULL plan tenant (misconfigured → pro)', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: null },

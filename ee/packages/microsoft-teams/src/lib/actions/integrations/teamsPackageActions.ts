@@ -2,8 +2,10 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import { getTeamsAvailability } from '../../teams/teamsAvailability';
+import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import {
   buildTeamsPersonalTabDeepLink,
   TEAMS_PERSONAL_TAB_ENTITY_ID,
@@ -402,6 +404,8 @@ export const getTeamsAppPackageStatus = withAuth(async (
   user,
   { tenant }
 ): Promise<TeamsAppPackageStatusResponse> => {
+  await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
+
   const availability = await getTeamsAvailability({
     tenantId: tenant,
     userId: (user as any)?.user_id,

@@ -6,11 +6,12 @@ import { MicrosoftCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/cal
 import { resolveMicrosoftConsumerProfileConfig } from '../../../../../../lib/microsoftConsumerProfileResolution';
 import { consumeCalendarOAuthState } from '../../../../../../lib/utils/calendar/oauthStateStore';
 import { decodeCalendarState } from '../../../../../../lib/utils/calendar/oauthHelpers';
-import type { CalendarProviderConfig } from '@alga-psa/types';
+import { TIER_FEATURES, type CalendarProviderConfig } from '@alga-psa/types';
 import { getWebhookBaseUrl } from '../../../../../../lib/utils/email/webhookHelpers';
 import axios from 'axios';
 import { randomBytes } from 'crypto';
 import { resolveCalendarRedirectUri } from '../../../../../../lib/utils/calendar/redirectUri';
+import { TierAccessError, assertTenantTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 export const dynamic = 'force-dynamic';
 
@@ -208,6 +209,25 @@ export async function GET(request: NextRequest) {
     }
 
     const stateData = storedState;
+
+    try {
+      await assertTenantTierAccess(stateData.tenant, TIER_FEATURES.INTEGRATIONS);
+    } catch (error) {
+      if (error instanceof TierAccessError) {
+        if (isPopup) {
+          return respondWithPostMessage({
+            type: 'oauth-callback',
+            provider: 'microsoft',
+            resource: 'calendar',
+            success: false,
+            error: 'tier_access_denied',
+            errorDescription: error.message,
+          });
+        }
+        return redirectToSettings(false, error.message);
+      }
+      throw error;
+    }
 
     // Get OAuth client credentials
     const secretProvider = await getSecretProviderInstance();

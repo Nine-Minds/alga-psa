@@ -27,11 +27,13 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Mobile auth: `exchangeOttForSession()` validates OTT + rate limiting but has zero tier checks. Solo users could currently auth to mobile.
 - (2026-03-26) `getTierPriceIds()` returns `{ basePriceId: string; userPriceId: string }` — return type needs updating to allow `userPriceId: null` for Solo.
 - (2026-03-26) Upgrade flow gated behind `'tier-upgrade-flow'` feature flag in AccountManagement.
+- (2026-03-26) Root `package.json` does not define `npm run test:unit`; focused validation currently uses package-local `vitest` commands (for example from `server/`).
 
 ## Commands / Runbooks
 
 - Build shared packages: `npm run build:shared`
 - Run unit tests: `npm run test:unit`
+- Run focused server unit tests from `server/`: `npx vitest run src/lib/tier-gating/assertTierAccess.test.ts`
 - Test Solo locally: Set tenant plan to 'solo' in DB: `UPDATE tenants SET plan = 'solo' WHERE tenant = '<id>'`
 - Test AI add-on: Insert into tenant_addons: `INSERT INTO tenant_addons (tenant, addon_key, activated_at) VALUES ('<id>', 'ai_assistant', NOW())`
 
@@ -103,6 +105,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F038 feature: Render FeatureUpgradeNotice instead of content when tab's requiredFeature is gated
 - (2026-03-26) Completed F039 feature: Gated settings tabs remain visible and clickable (not hidden)
 - (2026-03-26) Completed F040 feature: Settings sidebar items remain visible regardless of tier (no requiredFeature filtering in settings mode)
+- (2026-03-26) Completed F041 feature: Added `INTEGRATIONS` tier enforcement to shared Entra API guard, Teams package status flow, and calendar OAuth callbacks; introduced tenant-aware tier lookup for callback routes that run without an authenticated web session.
 - (2026-03-26) Completed T001 test: isValidTier('solo') returns true
 - (2026-03-26) Completed T002 test: isValidTier('pro') and isValidTier('premium') still return true
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false

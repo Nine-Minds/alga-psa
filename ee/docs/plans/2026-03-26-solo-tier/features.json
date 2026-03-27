@@ -323,7 +323,7 @@
   {
     "id": "F041",
     "description": "Add assertTierAccess(TIER_FEATURES.INTEGRATIONS) to calendar/entra/teams EE route handlers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.1"
     ]

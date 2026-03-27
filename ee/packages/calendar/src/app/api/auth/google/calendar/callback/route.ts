@@ -5,9 +5,10 @@ import { CalendarProviderService } from '@alga-psa/ee-calendar/lib/services/cale
 import { GoogleCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter';
 import { consumeCalendarOAuthState } from '../../../../../../lib/utils/calendar/oauthStateStore';
 import { decodeCalendarState } from '../../../../../../lib/utils/calendar/oauthHelpers';
-import type { CalendarProviderConfig } from '@alga-psa/types';
+import { TIER_FEATURES, type CalendarProviderConfig } from '@alga-psa/types';
 import axios from 'axios';
 import { resolveCalendarRedirectUri } from '../../../../../../lib/utils/calendar/redirectUri';
+import { TierAccessError, assertTenantTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 export const dynamic = 'force-dynamic';
 
@@ -167,6 +168,22 @@ export async function GET(request: NextRequest) {
     }
 
     const stateData = storedState;
+
+    try {
+      await assertTenantTierAccess(stateData.tenant, TIER_FEATURES.INTEGRATIONS);
+    } catch (error) {
+      if (error instanceof TierAccessError) {
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'google',
+          resource: 'calendar',
+          success: false,
+          error: 'tier_access_denied',
+          errorDescription: error.message,
+        });
+      }
+      throw error;
+    }
 
     // Get OAuth client credentials
     const secretProvider = await getSecretProviderInstance();
