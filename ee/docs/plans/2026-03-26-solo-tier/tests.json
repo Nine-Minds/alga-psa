@@ -231,7 +231,7 @@
   {
     "id": "T028",
     "description": "tierHasFeature('pro', ENTRA_SYNC) returns false (premium feature)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
