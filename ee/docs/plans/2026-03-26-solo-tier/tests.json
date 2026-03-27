@@ -439,7 +439,7 @@
   {
     "id": "T054",
     "description": "Sidebar hides Extensions item for Solo tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F032"

@@ -156,3 +156,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T051 test: CE edition: hasAddOn always returns true regardless of addOns array
 - (2026-03-26) Completed T052 test: CE edition: hasFeature always returns true regardless of tier
 - (2026-03-26) Completed T053 test: MenuItem interface accepts optional requiredFeature field
+- (2026-03-26) Completed T054 test: Sidebar hides Extensions item for Solo tier
