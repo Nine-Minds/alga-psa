@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "Update TenantTier type to include 'solo'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.1"
     ]
