@@ -359,7 +359,7 @@
   {
     "id": "T044",
     "description": "assertAddOnAccess works for Pro tier with AI add-on active",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
