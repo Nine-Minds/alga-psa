@@ -271,7 +271,7 @@
   {
     "id": "T033",
     "description": "ADD_ONS.AI_ASSISTANT equals 'ai_assistant'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
