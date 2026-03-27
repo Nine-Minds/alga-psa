@@ -831,7 +831,7 @@
   {
     "id": "T102",
     "description": "AccountManagement shows 'Add AI Assistant' card when add-on not active",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]
