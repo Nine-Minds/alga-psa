@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "Add MANAGED_EMAIL to TIER_FEATURES enum with min tier 'pro'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.4"
     ]

@@ -71,3 +71,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F005 feature: Add tierAtLeast(tier, minimum) helper using TIER_RANK comparison
 - (2026-03-26) Completed F006 feature: Add INTEGRATIONS to TIER_FEATURES enum with min tier 'pro'
 - (2026-03-26) Completed F007 feature: Add EXTENSIONS to TIER_FEATURES enum with min tier 'pro'
+- (2026-03-26) Completed F008 feature: Add MANAGED_EMAIL to TIER_FEATURES enum with min tier 'pro'
