@@ -517,7 +517,7 @@
   {
     "id": "T063",
     "description": "Settings Integrations tab shows normal content for Pro tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F038"
