@@ -59,6 +59,8 @@ export type CatalogPickerItem = Pick<
   default_rate: number;
   /** Rate from service_prices for the requested currency (null when no currency-specific price exists). */
   currency_rate?: number | null;
+  /** True when the service has at least one row in service_prices (i.e. uses multi-currency pricing). */
+  has_currency_prices?: boolean;
 };
 
 export const searchServiceCatalogForPicker = withAuth(async (
@@ -123,7 +125,10 @@ export const searchServiceCatalogForPicker = withAuth(async (
             .andOn('sp.tenant', 'sc.tenant')
             .andOn('sp.currency_code', trx.raw('?', [options.currency_code]));
         })
-        .select(trx.raw('CAST(sp.rate AS FLOAT) as currency_rate'));
+        .select(trx.raw('CAST(sp.rate AS FLOAT) as currency_rate'))
+        .select(trx.raw(
+          '(EXISTS (SELECT 1 FROM service_prices sp2 WHERE sp2.service_id = sc.service_id AND sp2.tenant = sc.tenant)) as has_currency_prices'
+        ));
     }
 
     const rows = await query

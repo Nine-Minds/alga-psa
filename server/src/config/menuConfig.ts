@@ -302,6 +302,7 @@ export const billingNavigationSections: NavigationSection[] = [
     translationKey: 'nav.billing.sections.quotes',
     items: [
       { name: 'Quotes', translationKey: 'nav.billing.quotes', icon: FileText, href: '/msp/billing?tab=quotes' },
+      { name: 'Quote Templates', translationKey: 'nav.billing.quoteBusinessTemplates', icon: FileText, href: '/msp/billing?tab=quote-business-templates' },
       { name: 'Quote Layouts', translationKey: 'nav.billing.quoteLayouts', icon: LayoutTemplate, href: '/msp/billing?tab=quote-templates' },
     ]
   },
