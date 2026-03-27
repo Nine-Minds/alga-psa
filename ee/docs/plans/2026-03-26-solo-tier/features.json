@@ -516,7 +516,7 @@
   {
     "id": "F065",
     "description": "Return error 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.' on block",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R7.1"
     ]
