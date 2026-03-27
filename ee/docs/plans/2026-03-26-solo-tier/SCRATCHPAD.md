@@ -68,3 +68,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F002 feature: Update TenantTier type to include 'solo'
 - (2026-03-26) Completed F003 feature: Add TIER_LABELS entry: solo -> 'Solo'
 - (2026-03-26) Completed F004 feature: Add TIER_RANK record: { solo: 0, pro: 1, premium: 2 }
+- (2026-03-26) Completed F005 feature: Add tierAtLeast(tier, minimum) helper using TIER_RANK comparison

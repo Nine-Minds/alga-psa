@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "Add tierAtLeast(tier, minimum) helper using TIER_RANK comparison",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.3"
     ]
