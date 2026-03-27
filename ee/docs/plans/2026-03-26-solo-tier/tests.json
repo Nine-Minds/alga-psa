@@ -881,7 +881,7 @@
   {
     "id": "T108",
     "description": "Solo checkout session includes trialDays=7",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]

@@ -262,3 +262,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T104 test: AI add-on card appears for Solo tier (not just Pro/Premium)
 - (2026-03-26) Completed T105 test: upgradeTierAction supports Solo -> Pro flow
 - (2026-03-26) Completed T106 test: downgradeTierAction validates user count before downgrading
+- (2026-03-26) Completed T108 test: Solo checkout session includes trialDays=7
