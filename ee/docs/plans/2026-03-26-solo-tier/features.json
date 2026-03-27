@@ -178,7 +178,7 @@
   {
     "id": "F023",
     "description": "assertAddOnAccess bypasses check in CE edition (all add-ons unlocked)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1b.2",
       "R2.3"
