@@ -116,3 +116,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T011 test: tierAtLeast('pro', 'premium') returns false
 - (2026-03-26) Completed T012 test: resolveTier('solo') returns { tier: 'solo', isMisconfigured: false }
 - (2026-03-26) Completed T013 test: resolveTier(null) defaults to { tier: 'pro', isMisconfigured: false }
+- (2026-03-26) Completed T014 test: resolveTier('invalid') defaults to pro with isMisconfigured: true

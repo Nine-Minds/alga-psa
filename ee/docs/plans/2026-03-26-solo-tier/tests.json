@@ -107,7 +107,7 @@
   {
     "id": "T014",
     "description": "resolveTier('invalid') defaults to pro with isMisconfigured: true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
