@@ -112,3 +112,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T007 test: tierAtLeast('solo', 'solo') returns true
 - (2026-03-26) Completed T008 test: tierAtLeast('solo', 'pro') returns false
 - (2026-03-26) Completed T009 test: tierAtLeast('pro', 'solo') returns true
+- (2026-03-26) Completed T010 test: tierAtLeast('premium', 'pro') returns true
