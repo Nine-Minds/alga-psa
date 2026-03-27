@@ -823,7 +823,7 @@
   {
     "id": "T101",
     "description": "AccountManagement hides 'Downgrade to Solo' for Pro tenants with 2+ users",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]

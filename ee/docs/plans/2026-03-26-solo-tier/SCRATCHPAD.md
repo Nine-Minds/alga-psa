@@ -256,3 +256,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T098 test: AccountManagement shows Solo-specific messaging for solo tier
 - (2026-03-26) Completed T099 test: AccountManagement shows 'Upgrade to Pro' card for Solo tenants
 - (2026-03-26) Completed T100 test: AccountManagement shows 'Downgrade to Solo' for Pro tenants with 1 user
+- (2026-03-26) Completed T101 test: AccountManagement hides 'Downgrade to Solo' for Pro tenants with 2+ users
