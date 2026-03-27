@@ -711,7 +711,7 @@
   {
     "id": "T087",
     "description": "purchaseAddOn(AI_ASSISTANT) creates checkout for AI add-on subscription item",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
