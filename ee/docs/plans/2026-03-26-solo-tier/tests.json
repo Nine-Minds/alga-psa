@@ -630,7 +630,7 @@
   {
     "id": "T077",
     "description": "Solo checkout creates session with single line item (base price only)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
