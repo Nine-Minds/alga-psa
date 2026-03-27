@@ -897,7 +897,7 @@
   {
     "id": "T110",
     "description": "Solo->Pro trial activates for established Solo customer (subscriptionStatus='active', past trial)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]

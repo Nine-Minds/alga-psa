@@ -264,3 +264,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T106 test: downgradeTierAction validates user count before downgrading
 - (2026-03-26) Completed T108 test: Solo checkout session includes trialDays=7
 - (2026-03-26) Completed T109 test: Pro checkout does not include trial unless explicitly requested
+- (2026-03-26) Completed T110 test: Solo->Pro trial activates for established Solo customer (subscriptionStatus='active', past trial)
