@@ -459,7 +459,7 @@
   {
     "id": "F058",
     "description": "downgradeTier() removes per-user item and swaps base price to Solo",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.5"
     ]
