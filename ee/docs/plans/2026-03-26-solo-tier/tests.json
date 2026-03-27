@@ -247,7 +247,7 @@
   {
     "id": "T030",
     "description": "TIER_FEATURE_MAP['solo'] is empty array (no features at solo level)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]

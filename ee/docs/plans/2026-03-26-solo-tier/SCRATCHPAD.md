@@ -132,3 +132,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T027 test: tierHasFeature('solo', ENTRA_SYNC) returns false (premium feature)
 - (2026-03-26) Completed T028 test: tierHasFeature('pro', ENTRA_SYNC) returns false (premium feature)
 - (2026-03-26) Completed T029 test: tierHasFeature('premium', ENTRA_SYNC) returns true
+- (2026-03-26) Completed T030 test: TIER_FEATURE_MAP['solo'] is empty array (no features at solo level)
