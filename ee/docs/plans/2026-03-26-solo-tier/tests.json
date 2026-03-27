@@ -534,7 +534,7 @@
   {
     "id": "T065",
     "description": "assertTierAccess(INTEGRATIONS) throws for Solo tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
