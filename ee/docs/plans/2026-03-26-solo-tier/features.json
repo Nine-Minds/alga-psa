@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "Add TIER_RANK record: { solo: 0, pro: 1, premium: 2 }",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.2"
     ]
