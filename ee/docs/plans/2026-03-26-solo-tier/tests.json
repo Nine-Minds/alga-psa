@@ -239,7 +239,7 @@
   {
     "id": "T029",
     "description": "tierHasFeature('premium', ENTRA_SYNC) returns true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]

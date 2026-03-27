@@ -131,3 +131,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T026 test: tierHasFeature('pro', MOBILE_ACCESS) returns true
 - (2026-03-26) Completed T027 test: tierHasFeature('solo', ENTRA_SYNC) returns false (premium feature)
 - (2026-03-26) Completed T028 test: tierHasFeature('pro', ENTRA_SYNC) returns false (premium feature)
+- (2026-03-26) Completed T029 test: tierHasFeature('premium', ENTRA_SYNC) returns true
