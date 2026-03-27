@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "Add CLIENT_PORTAL_ADMIN to TIER_FEATURES enum with min tier 'pro'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.4"
     ]
