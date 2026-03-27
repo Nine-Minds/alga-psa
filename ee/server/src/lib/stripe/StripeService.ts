@@ -21,6 +21,8 @@ import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowC
 import { ADD_ONS, type AddOnKey, type TenantTier } from '@alga-psa/types';
 import { tierFromStripeProduct } from './stripeTierMapping';
 
+const SOLO_PRO_TRIAL_DAYS = 30;
+
 // Stripe configuration with secret provider support
 async function getStripeConfig() {
   const secretProvider = await getSecretProviderInstance();
@@ -2175,6 +2177,94 @@ export class StripeService {
     } catch (error: any) {
       logger.error(`[StripeService] Failed to get interval switch preview:`, error);
       return { success: false, error: error.message || 'Failed to get pricing preview' };
+    }
+  }
+
+  /**
+   * Start a Pro feature trial for an established Solo customer.
+   *
+   * Billing remains on Solo during the trial. Feature access is granted by
+   * metadata checks that treat the tenant as effectively Pro until the end date.
+   */
+  async startSoloProTrial(
+    tenantId: string,
+    durationDays: number = SOLO_PRO_TRIAL_DAYS
+  ): Promise<{ success: boolean; error?: string; trialEnd?: string }> {
+    await this.ensureInitialized();
+    logger.info(`[StripeService] Starting Solo -> Pro trial for tenant ${tenantId}`);
+
+    const knex = await getConnection(tenantId);
+    const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
+    if (!tenantRecord) {
+      return { success: false, error: 'Tenant not found' };
+    }
+    if (tenantRecord.plan !== 'solo') {
+      return { success: false, error: 'Only Solo tenants can start a Pro trial' };
+    }
+
+    const customer = await this.getOrImportCustomer(tenantId);
+    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+      .where({
+        tenant: tenantId,
+        stripe_customer_id: customer.stripe_customer_id,
+      })
+      .whereIn('status', ['active', 'trialing'])
+      .first();
+
+    if (!existingSubscription) {
+      return { success: false, error: 'No active or trialing subscription found' };
+    }
+
+    if (existingSubscription.status === 'trialing') {
+      return { success: false, error: 'Cannot start a Pro trial while your Solo trial is still active' };
+    }
+
+    const existingMetadata = existingSubscription.metadata || {};
+    const existingTrialEnd = existingMetadata.solo_pro_trial_end
+      ? new Date(existingMetadata.solo_pro_trial_end)
+      : null;
+    if (
+      existingMetadata.solo_pro_trial === 'true'
+      && existingTrialEnd
+      && existingTrialEnd.getTime() > Date.now()
+    ) {
+      return { success: false, error: 'A Pro trial is already active' };
+    }
+
+    const trialStart = new Date().toISOString();
+    const trialEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+
+    try {
+      await this.stripe.subscriptions.update(
+        existingSubscription.stripe_subscription_external_id,
+        {
+          metadata: {
+            tenant_id: tenantId,
+            ...existingMetadata,
+            solo_pro_trial: 'true',
+            solo_pro_trial_started: trialStart,
+            solo_pro_trial_end: trialEnd,
+          },
+        }
+      );
+
+      await knex<StripeSubscription>('stripe_subscriptions')
+        .where({ stripe_subscription_id: existingSubscription.stripe_subscription_id })
+        .update({
+          metadata: {
+            ...existingMetadata,
+            solo_pro_trial: 'true',
+            solo_pro_trial_started: trialStart,
+            solo_pro_trial_end: trialEnd,
+          },
+          updated_at: knex.fn.now(),
+        });
+
+      logger.info(`[StripeService] Started Solo -> Pro trial for tenant ${tenantId}, ends ${trialEnd}`);
+      return { success: true, trialEnd };
+    } catch (error: any) {
+      logger.error(`[StripeService] Failed to start Solo -> Pro trial for tenant ${tenantId}:`, error);
+      return { success: false, error: error.message || 'Failed to start Pro trial' };
     }
   }
 

@@ -604,7 +604,7 @@
   {
     "id": "F076",
     "description": "Solo->Pro trial: activate Pro features for established Solo customers (past 7-day trial)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.8"
     ]

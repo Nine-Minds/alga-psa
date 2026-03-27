@@ -30,6 +30,7 @@ import {
   getIntervalSwitchPreviewAction,
   sendPremiumTrialRequestAction,
   startSelfServicePremiumTrialAction,
+  startSoloProTrialAction,
   confirmPremiumTrialAction,
   revertPremiumTrialAction,
 } from 'ee/server/src/lib/actions/license-actions';
@@ -69,7 +70,27 @@ export default function AccountManagement() {
   const [showReduceModal, setShowReduceModal] = useState(false);
   const [showCancellationFeedback, setShowCancellationFeedback] = useState(false);
   const [scheduledChanges, setScheduledChanges] = useState<IScheduledLicenseChange | null>(null);
-  const { tier, isMisconfigured, isSolo, isPro, hasAddOn, refreshTier, isTrialing, trialDaysLeft, trialEndDate, isPaymentFailed, subscriptionStatus, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate } = useTier();
+  const {
+    tier,
+    isMisconfigured,
+    isSolo,
+    isPro,
+    hasAddOn,
+    refreshTier,
+    isTrialing,
+    trialDaysLeft,
+    trialEndDate,
+    isSoloProTrial,
+    soloProTrialEndDate,
+    soloProTrialDaysLeft,
+    isPaymentFailed,
+    subscriptionStatus,
+    isPremiumTrial,
+    premiumTrialEndDate,
+    premiumTrialDaysLeft,
+    isPremiumTrialConfirmed,
+    premiumTrialEffectiveDate
+  } = useTier();
   const upgradeFlowFlag = useFeatureFlag('tier-upgrade-flow');
   const tierUpgradeFlowEnabled = typeof upgradeFlowFlag === 'boolean'
     ? upgradeFlowFlag
@@ -364,6 +385,8 @@ export default function AccountManagement() {
   // Self-service Premium trial state (for paying Pro users)
   const [startingSelfServiceTrial, setStartingSelfServiceTrial] = useState(false);
   const [showTrialConfirm, setShowTrialConfirm] = useState(false);
+  const [startingSoloProTrial, setStartingSoloProTrial] = useState(false);
+  const [showSoloProTrialConfirm, setShowSoloProTrialConfirm] = useState(false);
 
   // Premium trial confirmation state (for users already on a Premium trial)
   const [confirmingPremium, setConfirmingPremium] = useState(false);
@@ -422,6 +445,26 @@ export default function AccountManagement() {
       toast.error('Failed to start Premium trial');
     } finally {
       setStartingSelfServiceTrial(false);
+    }
+  };
+
+  const handleStartSoloProTrial = async () => {
+    setStartingSoloProTrial(true);
+    try {
+      const result = await startSoloProTrialAction();
+      if (result.success) {
+        const trialEndLabel = result.trialEnd ? new Date(result.trialEnd).toLocaleDateString() : 'the end of your trial';
+        toast.success(`Pro trial started! Pro features are unlocked until ${trialEndLabel} while you stay on Solo billing.`);
+        setShowSoloProTrialConfirm(false);
+        await refreshTier();
+      } else {
+        toast.error(result.error || 'Failed to start Pro trial');
+      }
+    } catch (error) {
+      console.error('Error starting Solo -> Pro trial:', error);
+      toast.error('Failed to start Pro trial');
+    } finally {
+      setStartingSoloProTrial(false);
     }
   };
 
@@ -597,6 +640,8 @@ export default function AccountManagement() {
     : 0;
   const canDowngradeToSolo = isPro && tierUpgradeFlowEnabled && (licenseInfo?.active_licenses ?? Number.POSITIVE_INFINITY) === 1;
   const hasAiAssistant = hasAddOn(ADD_ONS.AI_ASSISTANT);
+  const canStartSoloProTrial = isSolo && tierUpgradeFlowEnabled && subscriptionStatus === 'active' && !isSoloProTrial;
+  const displayedTierFeatures = isSoloProTrial ? TIER_FEATURE_MAP.pro : TIER_FEATURE_MAP[tier];
 
   return (
     <div className="space-y-6">
@@ -757,6 +802,52 @@ export default function AccountManagement() {
         </Card>
       )}
 
+      {isSoloProTrial && soloProTrialEndDate && (
+        <Card className="border-blue-200 dark:border-blue-800">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Clock className="h-5 w-5 text-blue-600" />
+                <CardTitle>Pro Trial</CardTitle>
+              </div>
+              <Badge variant={soloProTrialDaysLeft <= 3 ? 'error' : 'default'}>
+                {soloProTrialDaysLeft} {soloProTrialDaysLeft === 1 ? 'day' : 'days'} remaining
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Trial active</span>
+                <span>Trial ends {new Date(soloProTrialEndDate).toLocaleDateString()}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    soloProTrialDaysLeft <= 3 ? 'bg-red-500' : 'bg-blue-500'
+                  }`}
+                  style={{ width: `${Math.max(5, 100 - (soloProTrialDaysLeft / 30) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-lg border p-3 bg-muted/50 space-y-3">
+              <div>
+                <p className="text-sm font-medium">Pro features are active</p>
+                <p className="text-sm text-muted-foreground">
+                  You&apos;re still billed on Solo during this trial. Upgrade to paid Pro before {new Date(soloProTrialEndDate).toLocaleDateString()} to keep Pro access after the trial expires.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button id="convert-solo-trial-to-pro-btn" size="sm" onClick={() => handleUpgradeClick('pro')} disabled={upgrading || loadingPreview}>
+                  {loadingPreview ? 'Loading pricing...' : 'Switch to Paid Pro'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stripe Trial Status Card (7-day Pro trial etc.) */}
       {isTrialing && trialEndDate && !isPremiumTrial && (
         <Card className="border-blue-200 dark:border-blue-800">
@@ -861,14 +952,14 @@ export default function AccountManagement() {
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Features included in your tier:</Label>
                 <ul className="grid grid-cols-2 gap-2">
-                  {TIER_FEATURE_MAP[tier].map((feature) => (
+                  {displayedTierFeatures.map((feature) => (
                     <li key={feature} className="flex items-center space-x-2 text-sm">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <span>{FEATURE_DISPLAY_NAMES[feature]}</span>
                     </li>
                   ))}
                 </ul>
-                {TIER_FEATURE_MAP[tier].length === 0 && (
+                {displayedTierFeatures.length === 0 && (
                   <p className="text-sm text-muted-foreground">
                     {isSolo
                       ? 'Core PSA tools are active on Solo. Upgrade to Pro to unlock integrations, managed email, workflow design, and mobile access.'
@@ -878,7 +969,7 @@ export default function AccountManagement() {
               </div>
 
               {/* Upgrade to Pro */}
-              {isSolo && tierUpgradeFlowEnabled && (
+              {isSolo && tierUpgradeFlowEnabled && !isSoloProTrial && (
                 <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
@@ -892,6 +983,22 @@ export default function AccountManagement() {
                       {loadingPreview ? 'Loading...' : 'Upgrade'}
                     </Button>
                   </div>
+                </div>
+              )}
+
+              {canStartSoloProTrial && (
+                <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+                  <h4 className="font-semibold mb-1">Try Pro free</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Explore Pro features for 30 days while staying on your current Solo billing. When the trial ends, you&apos;ll return to Solo unless you upgrade.
+                  </p>
+                  <Button
+                    id="start-solo-pro-trial-btn"
+                    size="sm"
+                    onClick={() => setShowSoloProTrialConfirm(true)}
+                  >
+                    Try Pro free
+                  </Button>
                 </div>
               )}
 
@@ -1610,6 +1717,42 @@ export default function AccountManagement() {
                 During the trial you&apos;ll have full access to Premium features while continuing to pay your current Pro price.
                 Before the trial ends, you&apos;ll see the exact Premium pricing and can choose to confirm the switch.
                 If you don&apos;t confirm, you&apos;ll automatically go back to Pro — no surprise charges.
+              </p>
+            </div>
+          </div>
+        }
+      />
+
+      <ConfirmationDialog
+        id="start-solo-pro-trial-confirm"
+        isOpen={showSoloProTrialConfirm}
+        onClose={() => setShowSoloProTrialConfirm(false)}
+        onConfirm={handleStartSoloProTrial}
+        title="Start 30-Day Pro Trial"
+        confirmLabel={startingSoloProTrial ? 'Starting...' : 'Start Pro Trial'}
+        isConfirming={startingSoloProTrial}
+        message={
+          <div className="space-y-4">
+            <p>You are about to start a <strong>30-day free trial</strong> of Pro features.</p>
+
+            <div className="rounded-lg border p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Trial period</span>
+                <span>30 days</span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t">
+                <span className="text-muted-foreground">Billing during trial</span>
+                <span>No change — stays at Solo pricing</span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t">
+                <span className="text-muted-foreground">After trial ends</span>
+                <span>Returns to Solo unless you upgrade</span>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-3">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                Pro-only features unlock immediately. This trial is only available after your initial Solo trial has ended.
               </p>
             </div>
           </div>

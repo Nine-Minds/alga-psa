@@ -47,11 +47,19 @@ export async function assertTierAccess(feature: TIER_FEATURES): Promise<void> {
   const session = await getSession();
   const plan = session?.user?.plan;
   const { tier } = resolveTier(plan);
+  const effectiveTier = tier === 'solo' && hasActiveSoloProTrial(session?.user?.solo_pro_trial_end)
+    ? 'pro'
+    : tier;
 
-  if (!tierHasFeature(tier, feature)) {
+  if (!tierHasFeature(effectiveTier, feature)) {
     const requiredTier = FEATURE_MINIMUM_TIER[feature];
-    throw new TierAccessError(feature, requiredTier, tier);
+    throw new TierAccessError(feature, requiredTier, effectiveTier);
   }
+}
+
+function hasActiveSoloProTrial(value?: string | null): boolean {
+  if (!value) return false;
+  return new Date(value).getTime() > Date.now();
 }
 
 async function getTenantTier(tenantId: string): Promise<TenantTier> {
@@ -61,7 +69,23 @@ async function getTenantTier(tenantId: string): Promise<TenantTier> {
     .select('plan')
     .first();
 
-  return resolveTier(tenantRecord?.plan).tier;
+  const resolvedTier = resolveTier(tenantRecord?.plan).tier;
+  if (resolvedTier !== 'solo') {
+    return resolvedTier;
+  }
+
+  const subscription = await knex('stripe_subscriptions')
+    .where({ tenant: tenantId })
+    .whereIn('status', ['active', 'trialing', 'past_due', 'unpaid'])
+    .orderByRaw("CASE WHEN status = 'trialing' THEN 0 WHEN status = 'active' THEN 1 ELSE 2 END")
+    .select('metadata')
+    .first();
+
+  if (subscription?.metadata?.solo_pro_trial === 'true' && hasActiveSoloProTrial(subscription.metadata.solo_pro_trial_end)) {
+    return 'pro';
+  }
+
+  return resolvedTier;
 }
 
 export async function assertTenantTierAccess(tenantId: string, feature: TIER_FEATURES): Promise<void> {

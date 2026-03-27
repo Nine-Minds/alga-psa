@@ -43,6 +43,7 @@ declare module 'next-auth' {
       addons?: string[];
       trial_end?: string | null;
       subscription_status?: string | null;
+      solo_pro_trial_end?: string | null;
       premium_trial_end?: string | null;
       premium_trial_confirmed?: boolean;
       premium_trial_effective_date?: string | null;
@@ -65,6 +66,7 @@ declare module 'next-auth' {
     addons?: string[];
     trial_end?: string | null;
     subscription_status?: string | null;
+    solo_pro_trial_end?: string | null;
     premium_trial_end?: string | null;
     premium_trial_confirmed?: boolean;
     premium_trial_effective_date?: string | null;

@@ -1421,6 +1421,37 @@ export async function startSelfServicePremiumTrialAction(): Promise<{ success: b
 }
 
 /**
+ * Self-service Pro trial for established Solo customers.
+ * Solo trial customers are blocked to prevent stacking free trials.
+ */
+export async function startSoloProTrialAction(): Promise<{ success: boolean; error?: string; trialEnd?: string }> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage the subscription' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.startSoloProTrial(session.user.tenant);
+  } catch (error) {
+    logger.error('[startSoloProTrialAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to start Pro trial',
+    };
+  }
+}
+
+/**
  * Confirm conversion to Premium after a 30-day trial.
  * The user has seen the pricing and explicitly agrees to switch.
  * This swaps Stripe subscription items from Pro to Premium prices.

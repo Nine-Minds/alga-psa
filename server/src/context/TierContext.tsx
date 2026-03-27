@@ -38,6 +38,12 @@ interface TierContextValue {
   trialDaysLeft: number;
   /** ISO date string of when trial ends (null if not trialing) */
   trialEndDate: string | null;
+  /** True if a Solo tenant has an active Pro feature trial */
+  isSoloProTrial: boolean;
+  /** ISO date string of when the Solo -> Pro trial ends */
+  soloProTrialEndDate: string | null;
+  /** Number of days remaining in the Solo -> Pro trial */
+  soloProTrialDaysLeft: number;
 
   // Premium trial state (30-day trial where Pro prices stay, Premium features unlocked)
   /** True if tenant is on a Premium trial (still paying Pro prices) */
@@ -85,6 +91,12 @@ export function TierProvider({ children }: TierProviderProps) {
     () => ((session?.user?.addons ?? []) as AddOnKey[]),
     [session?.user?.addons]
   );
+  const soloProTrialEndDate = session?.user?.solo_pro_trial_end ?? null;
+  const isSoloProTrial = useMemo(() => {
+    if (!isSolo || !soloProTrialEndDate) return false;
+    return new Date(soloProTrialEndDate).getTime() > Date.now();
+  }, [isSolo, soloProTrialEndDate]);
+  const effectiveTier = isSoloProTrial ? 'pro' : tier;
 
   // CE edition: all compiled-in features are unlocked, no tier restrictions
   const isCommunityEdition = process.env.NEXT_PUBLIC_EDITION !== 'enterprise';
@@ -93,9 +105,9 @@ export function TierProvider({ children }: TierProviderProps) {
   const hasFeature = useCallback(
     (feature: TIER_FEATURES): boolean => {
       if (isCommunityEdition) return true;
-      return tierHasFeature(tier, feature);
+      return tierHasFeature(effectiveTier, feature);
     },
-    [tier, isCommunityEdition]
+    [effectiveTier, isCommunityEdition]
   );
 
   const hasAddOn = useCallback(
@@ -124,6 +136,14 @@ export function TierProvider({ children }: TierProviderProps) {
     const diffMs = end.getTime() - now.getTime();
     return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }, [isTrialing, trialEndDate]);
+
+  const soloProTrialDaysLeft = useMemo(() => {
+    if (!isSoloProTrial || !soloProTrialEndDate) return 0;
+    const now = new Date();
+    const end = new Date(soloProTrialEndDate);
+    const diffMs = end.getTime() - now.getTime();
+    return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  }, [isSoloProTrial, soloProTrialEndDate]);
 
   // Premium trial state (30-day trial: Pro prices on Stripe, Premium features via DB)
   const premiumTrialEndDate = session?.user?.premium_trial_end ?? null;
@@ -155,6 +175,9 @@ export function TierProvider({ children }: TierProviderProps) {
       isTrialing,
       trialDaysLeft,
       trialEndDate,
+      isSoloProTrial,
+      soloProTrialEndDate,
+      soloProTrialDaysLeft,
       isPremiumTrial,
       premiumTrialEndDate,
       premiumTrialDaysLeft,
@@ -163,7 +186,7 @@ export function TierProvider({ children }: TierProviderProps) {
       subscriptionStatus,
       isPaymentFailed,
     }),
-    [tier, isMisconfigured, isSolo, isPro, isPremium, addOns, hasFeature, hasAddOn, refreshTier, isLoading, isTrialing, trialDaysLeft, trialEndDate, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate, subscriptionStatus, isPaymentFailed]
+    [tier, isMisconfigured, isSolo, isPro, isPremium, addOns, hasFeature, hasAddOn, refreshTier, isLoading, isTrialing, trialDaysLeft, trialEndDate, isSoloProTrial, soloProTrialEndDate, soloProTrialDaysLeft, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate, subscriptionStatus, isPaymentFailed]
   );
 
   return <TierContext.Provider value={value}>{children}</TierContext.Provider>;
