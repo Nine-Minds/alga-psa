@@ -719,7 +719,7 @@
   {
     "id": "T088",
     "description": "cancelAddOn(AI_ASSISTANT) removes AI line item from subscription",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
