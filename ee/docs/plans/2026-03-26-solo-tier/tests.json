@@ -19,7 +19,7 @@
   {
     "id": "T003",
     "description": "isValidTier('invalid') returns false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]
