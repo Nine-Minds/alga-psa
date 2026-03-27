@@ -205,7 +205,7 @@
   {
     "id": "T025",
     "description": "tierHasFeature('solo', MOBILE_ACCESS) returns false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F014"

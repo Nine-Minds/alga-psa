@@ -127,3 +127,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T022 test: tierHasFeature('solo', ADVANCED_ASSETS) returns false
 - (2026-03-26) Completed T023 test: tierHasFeature('solo', CLIENT_PORTAL_ADMIN) returns false
 - (2026-03-26) Completed T024 test: tierHasFeature('solo', WORKFLOW_DESIGNER) returns false
+- (2026-03-26) Completed T025 test: tierHasFeature('solo', MOBILE_ACCESS) returns false
