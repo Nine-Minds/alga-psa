@@ -431,7 +431,7 @@
   {
     "id": "T053",
     "description": "MenuItem interface accepts optional requiredFeature field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
