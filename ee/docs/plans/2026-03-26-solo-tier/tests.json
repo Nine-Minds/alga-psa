@@ -399,7 +399,7 @@
   {
     "id": "T049",
     "description": "TierContext hasAddOn returns true when add-on is in addOns array",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
