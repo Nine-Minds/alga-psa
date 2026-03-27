@@ -251,3 +251,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T093 test: addUser action allows adding first user on Solo plan
 - (2026-03-26) Completed T094 test: addUser action allows adding users on Pro plan without Solo limit
 - (2026-03-26) Completed T095 test: Add User button is disabled when isSolo in user management UI
+- (2026-03-26) Completed T096 test: Add User button shows upgrade CTA when disabled for Solo

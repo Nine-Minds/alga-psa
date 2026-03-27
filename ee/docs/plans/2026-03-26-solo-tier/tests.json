@@ -783,7 +783,7 @@
   {
     "id": "T096",
     "description": "Add User button shows upgrade CTA when disabled for Solo",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
