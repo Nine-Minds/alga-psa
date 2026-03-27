@@ -526,7 +526,7 @@
   {
     "id": "T064",
     "description": "Settings sidebar items are never filtered by tier (all visible)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]

@@ -166,3 +166,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T061 test: Settings Email tab shows FeatureUpgradeNotice for Solo tier
 - (2026-03-26) Completed T062 test: Settings tabs remain visible and clickable even when gated
 - (2026-03-26) Completed T063 test: Settings Integrations tab shows normal content for Pro tier
+- (2026-03-26) Completed T064 test: Settings sidebar items are never filtered by tier (all visible)
