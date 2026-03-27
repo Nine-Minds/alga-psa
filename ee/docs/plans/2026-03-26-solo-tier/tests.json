@@ -606,7 +606,7 @@
   {
     "id": "T074",
     "description": "stripeTierMapping maps 'alga-psa-solo' to 'solo'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
