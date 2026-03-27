@@ -43,7 +43,7 @@
   {
     "id": "T006",
     "description": "TIER_RANK maps solo=0, pro=1, premium=2",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]

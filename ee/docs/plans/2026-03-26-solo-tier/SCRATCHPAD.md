@@ -108,3 +108,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false
 - (2026-03-26) Completed T004 test: TENANT_TIERS contains ['solo', 'pro', 'premium'] in order
 - (2026-03-26) Completed T005 test: TIER_LABELS.solo equals 'Solo'
+- (2026-03-26) Completed T006 test: TIER_RANK maps solo=0, pro=1, premium=2
