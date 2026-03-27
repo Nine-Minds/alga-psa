@@ -223,3 +223,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F077 feature: Block Solo -> Pro trial stacking by rejecting `stripe_subscriptions.status === 'trialing'` in `startSoloProTrial()` and hiding the CTA unless `subscriptionStatus === 'active'`
 - (2026-03-26) Completed F078 feature: Keep the tenant's persisted plan as `solo` during the Pro trial and only elevate to an effective Pro tier while `solo_pro_trial_end` is still in the future, so expiry automatically reverts feature access back to Solo if the user never converts
 - (2026-03-26) Completed F079 feature: Add a `Try Pro free` CTA plus confirmation dialog to Account Management for established Solo customers, and hide it during the initial Solo trial or once a Pro trial is already active
+- (2026-03-26) Completed T068 test: assertAddOnAccess(AI_ASSISTANT) throws for tenant without AI add-on
