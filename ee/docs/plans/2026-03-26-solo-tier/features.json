@@ -620,7 +620,7 @@
   {
     "id": "F078",
     "description": "Solo->Pro trial reverts to Solo at trial end if not converted to paid Pro",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.8"
     ]
