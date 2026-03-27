@@ -491,7 +491,7 @@
   {
     "id": "F062",
     "description": "Stripe webhook deactivates tenant_addons row when AI subscription item is removed/cancelled",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.7"
     ]
