@@ -646,7 +646,7 @@
   {
     "id": "T079",
     "description": "handleCheckoutCompleted sets licensed_user_count=1 for Solo tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
