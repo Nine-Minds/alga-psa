@@ -35,7 +35,7 @@
   {
     "id": "T005",
     "description": "TIER_LABELS.solo equals 'Solo'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
