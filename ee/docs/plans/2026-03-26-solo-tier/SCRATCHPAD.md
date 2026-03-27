@@ -76,3 +76,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F010 feature: Add ADVANCED_ASSETS to TIER_FEATURES enum with min tier 'pro'
 - (2026-03-26) Completed F011 feature: Add CLIENT_PORTAL_ADMIN to TIER_FEATURES enum with min tier 'pro'
 - (2026-03-26) Completed F012 feature: Add WORKFLOW_DESIGNER to TIER_FEATURES enum with min tier 'pro'
+- (2026-03-26) Completed F013 feature: Add MOBILE_ACCESS to TIER_FEATURES enum with min tier 'pro'
