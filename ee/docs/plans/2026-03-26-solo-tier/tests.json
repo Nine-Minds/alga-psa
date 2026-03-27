@@ -27,7 +27,7 @@
   {
     "id": "T004",
     "description": "TENANT_TIERS contains ['solo', 'pro', 'premium'] in order",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]
