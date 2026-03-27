@@ -102,6 +102,46 @@ function createAddOnKnex(addOnRecord?: Record<string, any>) {
   }) as any;
 }
 
+function createTenantAddOnMutationKnex(state: {
+  inserted?: Record<string, any>;
+  merged?: Record<string, any>;
+  updated?: Record<string, any>;
+  where?: Record<string, any>;
+}) {
+  const knex = ((table: string) => {
+    if (table !== 'tenant_addons') {
+      throw new Error(`Unexpected table ${table}`);
+    }
+
+    return {
+      insert: (values: Record<string, any>) => {
+        state.inserted = values;
+        return {
+          onConflict: (_keys: string[]) => ({
+            merge: (mergeValues: Record<string, any>) => {
+              state.merged = mergeValues;
+              return 1;
+            },
+          }),
+        };
+      },
+      where: (criteria: Record<string, any>) => ({
+        update: (values: Record<string, any>) => {
+          state.where = criteria;
+          state.updated = values;
+          return 1;
+        },
+      }),
+    };
+  }) as any;
+
+  knex.fn = {
+    now: () => new Date('2026-03-26T00:00:00.000Z'),
+  };
+
+  return knex;
+}
+
 function createService(planByTenant: Record<string, string>) {
   const service = new StripeService() as any;
 
@@ -433,5 +473,81 @@ describe('StripeService tier pricing', () => {
 
     expect(result).toEqual({ success: true });
     expect(service.stripe.subscriptions.cancel).toHaveBeenCalledWith('sub_addon_1', { prorate: true });
+  });
+
+  it('activates the AI add-on from subscription.updated webhook metadata', async () => {
+    const service = createService({});
+    const state: {
+      inserted?: Record<string, any>;
+      merged?: Record<string, any>;
+    } = {};
+
+    await service.handleSubscriptionUpdated(
+      {
+        data: {
+          object: {
+            id: 'sub_addon_2',
+            status: 'active',
+            metadata: { addon_key: 'ai_assistant' },
+            items: {
+              data: [{ id: 'si_addon_2', price: { id: 'price_ai_addon' } }],
+            },
+          },
+        },
+      },
+      'tenant-ai',
+      createTenantAddOnMutationKnex(state),
+    );
+
+    expect(state.inserted).toEqual(
+      expect.objectContaining({
+        tenant: 'tenant-ai',
+        addon_key: 'ai_assistant',
+      }),
+    );
+    expect(state.merged).toEqual(
+      expect.objectContaining({
+        expires_at: null,
+        metadata: expect.objectContaining({
+          stripe_subscription_external_id: 'sub_addon_2',
+          stripe_subscription_item_id: 'si_addon_2',
+        }),
+      }),
+    );
+  });
+
+  it('deactivates the AI add-on from subscription.deleted webhook metadata', async () => {
+    const service = createService({});
+    const state: {
+      updated?: Record<string, any>;
+      where?: Record<string, any>;
+    } = {};
+
+    await service.handleSubscriptionDeleted(
+      {
+        data: {
+          object: {
+            id: 'sub_addon_2',
+            status: 'canceled',
+            metadata: { addon_key: 'ai_assistant' },
+          },
+        },
+      },
+      'tenant-ai',
+      createTenantAddOnMutationKnex(state),
+    );
+
+    expect(state.where).toEqual({
+      tenant: 'tenant-ai',
+      addon_key: 'ai_assistant',
+    });
+    expect(state.updated).toEqual(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          stripe_subscription_external_id: 'sub_addon_2',
+          status: 'canceled',
+        }),
+      }),
+    );
   });
 });

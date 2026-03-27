@@ -483,7 +483,7 @@
   {
     "id": "F061",
     "description": "Stripe webhook inserts tenant_addons row when AI subscription item is activated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.7"
     ]

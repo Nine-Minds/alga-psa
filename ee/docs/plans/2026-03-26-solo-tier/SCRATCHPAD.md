@@ -134,6 +134,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F058 feature: Implemented the Pro -> Solo Stripe mutation to remove the existing per-user/base items, add the Solo flat-rate item, and rewrite the stored subscription pointers back to single-item mode.
 - (2026-03-26) Completed F059 feature: Added `purchaseAddOn()` for `AI_ASSISTANT`, creating an embedded Stripe checkout session with add-on metadata so AI billing can run separately from tier subscription changes.
 - (2026-03-26) Completed F060 feature: Added `cancelAddOn()` for `AI_ASSISTANT`, cancelling the stored add-on Stripe subscription referenced from `tenant_addons` metadata instead of touching the core license subscription.
+- (2026-03-26) Completed F061 feature: Added add-on-aware Stripe webhook handling that activates `tenant_addons` rows for AI subscriptions instead of importing them as license subscriptions.
 - (2026-03-26) Completed T001 test: isValidTier('solo') returns true
 - (2026-03-26) Completed T002 test: isValidTier('pro') and isValidTier('premium') still return true
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false
