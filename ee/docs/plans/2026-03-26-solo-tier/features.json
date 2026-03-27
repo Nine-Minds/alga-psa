@@ -259,7 +259,7 @@
   {
     "id": "F033",
     "description": "Sidebar filtering applies recursively to subItems",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.3"
     ]

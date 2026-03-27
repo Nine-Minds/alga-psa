@@ -95,3 +95,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F030 feature: Annotate Extensions menu item with requiredFeature: TIER_FEATURES.EXTENSIONS
 - (2026-03-26) Completed F031 feature: Annotate Workflow Editor subitem with requiredFeature: TIER_FEATURES.WORKFLOW_DESIGNER
 - (2026-03-26) Completed F032 feature: SidebarWithFeatureFlags filters out menu items where requiredFeature is set and tier lacks it
+- (2026-03-26) Completed F033 feature: Sidebar filtering applies recursively to subItems
