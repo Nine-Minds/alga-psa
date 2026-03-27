@@ -103,15 +103,15 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="clientName">
+          <Label htmlFor="tenantName">
             {t('clientInfoStep.revisit.fields.companyName.label', {
               defaultValue: 'Company Name'
             })} <span className="text-red-500">*</span>
           </Label>
           <Input
-            id="clientName"
-            value={data.clientName}
-            onChange={(e) => updateData({ clientName: e.target.value })}
+            id="tenantName"
+            value={data.tenantName}
+            onChange={(e) => updateData({ tenantName: e.target.value })}
             placeholder={t('clientInfoStep.revisit.fields.companyName.placeholder', {
               defaultValue: 'Acme IT Solutions'
             })}
@@ -188,16 +188,16 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="clientName">
-          {t('clientInfoStep.fields.clientName.label', {
-            defaultValue: 'Client Name'
+        <Label htmlFor="tenantName">
+          {t('clientInfoStep.fields.tenantName.label', {
+            defaultValue: 'Company Name'
           })} <span className="text-red-500">*</span>
         </Label>
         <Input
-          id="clientName"
-          value={data.clientName}
-          onChange={(e) => updateData({ clientName: e.target.value })}
-          placeholder={t('clientInfoStep.fields.clientName.placeholder', {
+          id="tenantName"
+          value={data.tenantName}
+          onChange={(e) => updateData({ tenantName: e.target.value })}
+          placeholder={t('clientInfoStep.fields.tenantName.placeholder', {
             defaultValue: 'Acme IT Solutions'
           })}
           required

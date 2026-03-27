@@ -52,10 +52,10 @@ export default function OnboardingPage() {
       } else {
         // For returning users, just prefill company name from tenant data
         const initialDataResult = await getOnboardingInitialData();
-        if (initialDataResult.success && initialDataResult.data?.clientName) {
+        if (initialDataResult.success && initialDataResult.data?.tenantName) {
           data = {
             ...data,
-            clientName: initialDataResult.data.clientName
+            tenantName: initialDataResult.data.tenantName
           };
         }
       }
