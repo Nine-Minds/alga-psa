@@ -295,7 +295,7 @@
   {
     "id": "T036",
     "description": "tenantHasAddOn([], ADD_ONS.AI_ASSISTANT) returns false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
