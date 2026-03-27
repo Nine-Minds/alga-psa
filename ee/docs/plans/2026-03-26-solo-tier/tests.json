@@ -383,7 +383,7 @@
   {
     "id": "T047",
     "description": "TierContext provides isSolo=false when tier is pro",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
