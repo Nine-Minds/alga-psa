@@ -474,7 +474,7 @@
   {
     "id": "T058",
     "description": "Sidebar items without requiredFeature are always shown",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
