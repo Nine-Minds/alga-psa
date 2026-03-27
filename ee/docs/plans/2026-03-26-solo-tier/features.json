@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "Add ADD_ON_LABELS record with AI_ASSISTANT -> 'AI Assistant'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.7"
     ]

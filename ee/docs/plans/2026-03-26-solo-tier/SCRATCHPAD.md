@@ -80,3 +80,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F014 feature: Rewrite tierHasFeature() to use TIER_RANK comparison instead of map lookup
 - (2026-03-26) Completed F015 feature: Derive TIER_FEATURE_MAP from FEATURE_MINIMUM_TIER + TIER_RANK
 - (2026-03-26) Completed F016 feature: Add AI_ASSISTANT to ADD_ONS enum
+- (2026-03-26) Completed F017 feature: Add ADD_ON_LABELS record with AI_ASSISTANT -> 'AI Assistant'
