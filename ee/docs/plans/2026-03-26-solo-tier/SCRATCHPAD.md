@@ -97,3 +97,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F032 feature: SidebarWithFeatureFlags filters out menu items where requiredFeature is set and tier lacks it
 - (2026-03-26) Completed F033 feature: Sidebar filtering applies recursively to subItems
 - (2026-03-26) Completed F034 feature: Add requiredFeature?: TIER_FEATURES to TabContent type in SettingsPage
+- (2026-03-26) Completed F035 feature: Tag Integrations settings tab with TIER_FEATURES.INTEGRATIONS
