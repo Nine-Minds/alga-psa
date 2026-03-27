@@ -9,7 +9,7 @@ export async function getTenantForCurrentRequest(fallbackTenant?: string): Promi
   }
 
   try {
-    const { auth } = await import('../app/api/auth/[...nextauth]/edge-auth');
+    const { auth } = await import('../app/api/auth/[...nextauth]/edge-auth.js');
     const session = await auth();
     const sessionTenant = (session?.user as any)?.tenant;
     if (sessionTenant) {
