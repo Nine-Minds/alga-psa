@@ -574,7 +574,7 @@
   {
     "id": "T070",
     "description": "exchangeOttForSession rejects Solo tenant with 403 status",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]

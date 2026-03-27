@@ -225,3 +225,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F079 feature: Add a `Try Pro free` CTA plus confirmation dialog to Account Management for established Solo customers, and hide it during the initial Solo trial or once a Pro trial is already active
 - (2026-03-26) Completed T068 test: assertAddOnAccess(AI_ASSISTANT) throws for tenant without AI add-on
 - (2026-03-26) Completed T069 test: assertAddOnAccess(AI_ASSISTANT) passes for Solo tenant with AI add-on
+- (2026-03-26) Completed T070 test: exchangeOttForSession rejects Solo tenant with 403 status
