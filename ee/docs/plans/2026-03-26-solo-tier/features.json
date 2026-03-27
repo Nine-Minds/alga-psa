@@ -508,7 +508,7 @@
   {
     "id": "F064",
     "description": "Block addUser action when plan is 'solo' and used >= 1 internal users",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R7.1"
     ]
