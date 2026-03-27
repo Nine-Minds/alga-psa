@@ -160,7 +160,7 @@
   {
     "id": "T020",
     "description": "tierHasFeature('solo', MANAGED_EMAIL) returns false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F014"

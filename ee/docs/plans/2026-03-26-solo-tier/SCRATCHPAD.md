@@ -122,3 +122,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T017 test: tierHasFeature('premium', INTEGRATIONS) returns true
 - (2026-03-26) Completed T018 test: tierHasFeature('solo', EXTENSIONS) returns false
 - (2026-03-26) Completed T019 test: tierHasFeature('pro', EXTENSIONS) returns true
+- (2026-03-26) Completed T020 test: tierHasFeature('solo', MANAGED_EMAIL) returns false
