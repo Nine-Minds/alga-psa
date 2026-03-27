@@ -299,7 +299,7 @@
   {
     "id": "F038",
     "description": "Render FeatureUpgradeNotice instead of content when tab's requiredFeature is gated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R4.3"
     ]
