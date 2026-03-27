@@ -3,11 +3,13 @@
 import { randomBytes, createHmac } from "node:crypto";
 import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { authenticateUser } from "@alga-psa/auth/actions/auth";
+import { TIER_FEATURES } from "@alga-psa/types";
 import { verifyAuthenticator } from "server/src/utils/authenticator/authenticator";
 import logger from "@alga-psa/core/logger";
 import { getNextAuthSecret } from "server/src/lib/auth/sessionCookies";
 import { cookies } from "next/headers.js";
 import { ensureSsoSettingsPermission } from "@ee/lib/actions/auth/ssoPermissions";
+import { assertTierAccess } from "server/src/lib/tier-gating/assertTierAccess";
 
 interface AuthorizeSsoLinkingInput {
   password: string;
@@ -74,6 +76,8 @@ async function persistLinkStateCookie(payload: { userId: string; nonce: string; 
 export async function authorizeSsoLinkingAction(
   input: AuthorizeSsoLinkingInput
 ): Promise<AuthorizeSsoLinkingResult> {
+  await assertTierAccess(TIER_FEATURES.SSO);
+
   const session = await auth();
 
   if (!session?.user?.email || !session.user.id) {

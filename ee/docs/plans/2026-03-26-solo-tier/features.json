@@ -347,7 +347,7 @@
   {
     "id": "F044",
     "description": "Add assertTierAccess(TIER_FEATURES.SSO) to SSO/OAuth EE handlers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.1"
     ]

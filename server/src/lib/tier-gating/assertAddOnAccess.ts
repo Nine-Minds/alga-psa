@@ -1,6 +1,6 @@
 import { type AddOnKey, ADD_ON_LABELS, tenantHasAddOn } from '@alga-psa/types';
 import { getSession } from '@alga-psa/auth';
-import { isEnterprise } from '@/lib/features';
+import { isEnterprise } from '../features';
 import { getActiveAddOns } from './getActiveAddOns';
 
 export class AddOnAccessError extends Error {

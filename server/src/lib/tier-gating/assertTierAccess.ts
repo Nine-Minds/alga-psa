@@ -10,7 +10,7 @@ import {
 } from '@alga-psa/types';
 import { getSession } from '@alga-psa/auth';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { isEnterprise } from '@/lib/features';
+import { isEnterprise } from '../features';
 
 export class TierAccessError extends Error {
   public readonly feature: TIER_FEATURES;

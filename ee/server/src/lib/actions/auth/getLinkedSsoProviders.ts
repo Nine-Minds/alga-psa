@@ -3,7 +3,9 @@
 import { getAdminConnection } from "@alga-psa/db/admin";
 import { getTenantIdBySlug } from "@alga-psa/db";
 import logger from "@alga-psa/core/logger";
+import { TIER_FEATURES } from "@alga-psa/types";
 import { ensureSsoSettingsPermission } from "@ee/lib/actions/auth/ssoPermissions";
+import { assertTenantTierAccess } from "server/src/lib/tier-gating/assertTierAccess";
 
 interface GetLinkedSsoProvidersInput {
   email: string;
@@ -57,6 +59,8 @@ export async function getLinkedSsoProvidersAction(
     if (!userRecord) {
       return { success: true, providers: [], twoFactorEnabled: false };
     }
+
+    await assertTenantTierAccess(userRecord.tenant, TIER_FEATURES.SSO);
 
     const links = await knex('user_auth_accounts')
       .select('provider')
