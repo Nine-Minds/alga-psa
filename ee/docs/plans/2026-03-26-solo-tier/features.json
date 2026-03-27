@@ -203,7 +203,7 @@
   {
     "id": "F026",
     "description": "Add addOns array to TierContextValue populated from session/DB",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.2"
     ]
