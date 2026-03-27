@@ -475,7 +475,7 @@
   {
     "id": "F060",
     "description": "cancelAddOn(AI_ASSISTANT) removes AI line item from subscription",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.6"
     ]
