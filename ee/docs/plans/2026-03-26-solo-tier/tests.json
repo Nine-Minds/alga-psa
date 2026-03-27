@@ -500,7 +500,7 @@
   {
     "id": "T061",
     "description": "Settings Email tab shows FeatureUpgradeNotice for Solo tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037",
       "F038"
