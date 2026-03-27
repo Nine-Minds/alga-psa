@@ -265,3 +265,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed T108 test: Solo checkout session includes trialDays=7
 - (2026-03-26) Completed T109 test: Pro checkout does not include trial unless explicitly requested
 - (2026-03-26) Completed T110 test: Solo->Pro trial activates for established Solo customer (subscriptionStatus='active', past trial)
+- (2026-03-26) Completed T111 test: Solo->Pro trial blocked when Solo customer is still in their 7-day trial (subscriptionStatus='trialing')

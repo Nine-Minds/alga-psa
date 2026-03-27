@@ -905,7 +905,7 @@
   {
     "id": "T111",
     "description": "Solo->Pro trial blocked when Solo customer is still in their 7-day trial (subscriptionStatus='trialing')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077"
     ]
