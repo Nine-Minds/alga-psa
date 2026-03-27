@@ -598,7 +598,7 @@
   {
     "id": "T073",
     "description": "exchangeOttForSession succeeds for Premium tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
