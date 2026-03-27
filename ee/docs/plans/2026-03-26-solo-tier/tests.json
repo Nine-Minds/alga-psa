@@ -151,7 +151,7 @@
   {
     "id": "T019",
     "description": "tierHasFeature('pro', EXTENSIONS) returns true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F014"
