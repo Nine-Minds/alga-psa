@@ -443,7 +443,7 @@
   {
     "id": "F056",
     "description": "upgradeTier() supports Solo -> Pro: adds per-user line item, swaps base price",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.4"
     ]

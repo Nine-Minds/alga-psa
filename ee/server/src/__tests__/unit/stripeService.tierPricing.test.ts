@@ -23,6 +23,60 @@ function createTenantKnex(planByTenant: Record<string, string>) {
   }) as any;
 }
 
+function createUpgradeKnex(state: {
+  existingSubscription: Record<string, any>;
+  priceRecords: Record<string, Record<string, any>>;
+  subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
+  tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
+}) {
+  const knex = ((table: string) => {
+    if (table === 'stripe_subscriptions') {
+      return {
+        where: (criteria: Record<string, any>) => ({
+          first: async () => (
+            criteria.tenant === state.existingSubscription.tenant &&
+            criteria.stripe_customer_id === state.existingSubscription.stripe_customer_id &&
+            criteria.status === state.existingSubscription.status
+          )
+            ? state.existingSubscription
+            : null,
+          update: async (values: Record<string, any>) => {
+            state.subscriptionUpdates.push({ criteria, values });
+            return 1;
+          },
+        }),
+      };
+    }
+
+    if (table === 'stripe_prices') {
+      return {
+        where: (criteria: Record<string, any>) => ({
+          first: async () => state.priceRecords[criteria.stripe_price_external_id] ?? null,
+        }),
+      };
+    }
+
+    if (table === 'tenants') {
+      return {
+        where: (criteria: Record<string, any>) => ({
+          update: async (values: Record<string, any>) => {
+            state.tenantUpdates.push({ criteria, values });
+            return 1;
+          },
+        }),
+      };
+    }
+
+    throw new Error(`Unexpected table ${table}`);
+  }) as any;
+
+  knex.fn = {
+    now: () => new Date('2026-03-26T00:00:00.000Z'),
+  };
+
+  return knex;
+}
+
 function createService(planByTenant: Record<string, string>) {
   const service = new StripeService() as any;
 
@@ -119,6 +173,81 @@ describe('StripeService tier pricing', () => {
           { price: 'price_pro_base', quantity: 1 },
           { price: 'price_pro_user', quantity: 4 },
         ],
+      }),
+    );
+  });
+
+  it('upgrades Solo subscriptions to Pro base plus per-user pricing', async () => {
+    const service = createService({});
+    const subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+    const tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
+
+    getConnectionMock.mockResolvedValue(
+      createUpgradeKnex({
+        existingSubscription: {
+          tenant: 'tenant-solo',
+          stripe_subscription_id: 'sub_db_1',
+          stripe_subscription_external_id: 'sub_ext_1',
+          stripe_subscription_item_id: 'si_solo_flat',
+          stripe_customer_id: 'cust_db_1',
+          stripe_price_id: 'price_record_solo',
+          status: 'active',
+          quantity: 1,
+          stripe_base_item_id: null,
+          stripe_base_price_id: null,
+          billing_interval: 'month',
+        },
+        priceRecords: {
+          price_pro_user: { stripe_price_id: 'price_record_pro_user' },
+          price_pro_base: { stripe_price_id: 'price_record_pro_base' },
+        },
+        subscriptionUpdates,
+        tenantUpdates,
+      }),
+    );
+
+    service.getOrImportCustomer = vi.fn().mockResolvedValue({
+      stripe_customer_id: 'cust_db_1',
+      stripe_customer_external_id: 'cus_ext_1',
+    });
+    service.initPromise = Promise.resolve();
+    service.stripe.subscriptions = {
+      update: vi.fn().mockResolvedValue({
+        items: {
+          data: [
+            { id: 'si_pro_user', quantity: 1, price: { id: 'price_pro_user' } },
+            { id: 'si_pro_base', quantity: 1, price: { id: 'price_pro_base' } },
+          ],
+        },
+      }),
+      list: vi.fn().mockResolvedValue({
+        data: [{ id: 'sub_ext_1' }],
+      }),
+    };
+
+    const result = await service.upgradeTier('tenant-solo', 'pro', 'month');
+
+    expect(result).toEqual({ success: true });
+    expect(service.stripe.subscriptions.update).toHaveBeenCalledWith(
+      'sub_ext_1',
+      expect.objectContaining({
+        items: [
+          { id: 'si_solo_flat', deleted: true },
+          { price: 'price_pro_base', quantity: 1 },
+          { price: 'price_pro_user', quantity: 1 },
+        ],
+      }),
+    );
+    expect(subscriptionUpdates[0]?.values).toEqual(
+      expect.objectContaining({
+        stripe_subscription_item_id: 'si_pro_user',
+        stripe_base_item_id: 'si_pro_base',
+        stripe_base_price_id: 'price_record_pro_base',
+      }),
+    );
+    expect(tenantUpdates[0]?.values).toEqual(
+      expect.objectContaining({
+        plan: 'pro',
       }),
     );
   });

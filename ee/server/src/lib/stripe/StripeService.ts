@@ -1507,7 +1507,8 @@ export class StripeService {
     // Remove all existing items, add the target tier's items
     const itemUpdates: Stripe.SubscriptionUpdateParams.Item[] = [];
 
-    // Remove existing per-user item
+    // Remove the currently tracked primary item. For Solo this is the flat-rate base item;
+    // for legacy and multi-item subscriptions this is the per-user item.
     if (existingSubscription.stripe_subscription_item_id) {
       itemUpdates.push({
         id: existingSubscription.stripe_subscription_item_id,
