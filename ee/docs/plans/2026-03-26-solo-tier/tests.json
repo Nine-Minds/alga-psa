@@ -115,7 +115,7 @@
   {
     "id": "T015",
     "description": "tierHasFeature('solo', INTEGRATIONS) returns false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F014"
