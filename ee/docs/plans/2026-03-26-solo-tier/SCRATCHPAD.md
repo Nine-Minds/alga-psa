@@ -90,3 +90,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F025 feature: Add isSolo boolean to TierContextValue (tier === 'solo')
 - (2026-03-26) Completed F026 feature: Add addOns array to TierContextValue populated from session/DB
 - (2026-03-26) Completed F027 feature: Add hasAddOn(addOn) helper to TierContextValue
+- (2026-03-26) Completed F028 feature: CE edition bypasses add-on checks (hasAddOn returns true for all)

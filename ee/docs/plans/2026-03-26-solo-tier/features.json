@@ -219,7 +219,7 @@
   {
     "id": "F028",
     "description": "CE edition bypasses add-on checks (hasAddOn returns true for all)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.3"
     ]
