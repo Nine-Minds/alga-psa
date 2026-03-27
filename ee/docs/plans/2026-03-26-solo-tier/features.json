@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "Add EXTENSIONS to TIER_FEATURES enum with min tier 'pro'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.4"
     ]
