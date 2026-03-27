@@ -767,7 +767,7 @@
   {
     "id": "T094",
     "description": "addUser action allows adding users on Pro plan without Solo limit",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
