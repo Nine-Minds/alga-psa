@@ -331,7 +331,7 @@
   {
     "id": "F042",
     "description": "Add assertTierAccess(TIER_FEATURES.EXTENSIONS) to extension install/uninstall EE route handlers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.1"
     ]

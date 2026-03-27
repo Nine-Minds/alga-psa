@@ -16,6 +16,8 @@ export class TierAccessError extends Error {
   public readonly feature: TIER_FEATURES;
   public readonly requiredTier: string;
   public readonly currentTier: string;
+  public readonly statusCode = 403;
+  public readonly code = 'TIER_ACCESS_DENIED';
 
   constructor(feature: TIER_FEATURES, requiredTier: string, currentTier: string) {
     const requiredLabel = TIER_LABELS[requiredTier as keyof typeof TIER_LABELS] || requiredTier;
