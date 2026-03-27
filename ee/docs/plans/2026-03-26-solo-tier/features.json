@@ -355,7 +355,7 @@
   {
     "id": "F045",
     "description": "Add assertTierAccess(TIER_FEATURES.ADVANCED_ASSETS) to RMM EE handlers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.1"
     ]

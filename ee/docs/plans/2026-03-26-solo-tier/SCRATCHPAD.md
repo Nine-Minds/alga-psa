@@ -30,6 +30,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Root `package.json` does not define `npm run test:unit`; focused validation currently uses package-local `vitest` commands (for example from `server/`).
 - (2026-03-26) `TierAccessError` now carries `statusCode=403`/`code='TIER_ACCESS_DENIED'` so existing API middleware can serialize tier denials without route-specific error adapters.
 - (2026-03-26) EE tests that import `server/src/lib/tier-gating/*` behave better when those shared modules avoid the `@/lib/features` alias and use local relative imports instead.
+- (2026-03-26) `npx tsc -p ee/server/tsconfig.json --noEmit` is currently blocked by `ee/server/src/components/settings/account/AccountManagement.tsx` missing display names for the newly-added tier features; that aligns with still-pending F067 rather than the RMM gating changes.
 
 ## Commands / Runbooks
 
@@ -112,6 +113,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-26) Completed F042 feature: Added `EXTENSIONS` tier enforcement to EE extension install/uninstall API routes so Solo tenants receive a structured 403 instead of reaching the registry actions.
 - (2026-03-26) Completed F043 feature: Added `MANAGED_EMAIL` tier enforcement to the managed-email server actions (`get/updateEmailSettings`, `getEmailProviders`, and EE managed-domain actions) so Solo tenants cannot bypass the gated Email settings tab.
 - (2026-03-26) Completed F044 feature: Added `SSO` tier enforcement to EE SSO/OAuth actions by guarding the shared SSO permission helper, SSO preferences/account-link actions, provider-option loading, and tenant-scoped linked-provider lookups.
+- (2026-03-26) Completed F045 feature: Added `ADVANCED_ASSETS` tier enforcement to authenticated RMM/NinjaOne server actions plus the NinjaOne OAuth callback and webhook routes, so Solo tenants cannot connect, sync, or operate RMM-managed assets through EE handlers.
 - (2026-03-26) Completed T001 test: isValidTier('solo') returns true
 - (2026-03-26) Completed T002 test: isValidTier('pro') and isValidTier('premium') still return true
 - (2026-03-26) Completed T003 test: isValidTier('invalid') returns false
