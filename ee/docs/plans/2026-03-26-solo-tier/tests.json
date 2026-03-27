@@ -791,7 +791,7 @@
   {
     "id": "T097",
     "description": "FEATURE_DISPLAY_NAMES has entries for all 8 new tier features",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
