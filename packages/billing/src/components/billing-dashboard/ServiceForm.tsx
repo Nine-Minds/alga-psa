@@ -9,7 +9,7 @@ import { getActiveTaxRegions, getTaxRates } from '@alga-psa/billing/actions/taxS
 import { ITaxRate, ITaxRegion } from '@alga-psa/types';
 import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export const ServiceForm: React.FC = () => {
   const [serviceName, setServiceName] = useState('')
@@ -100,6 +100,10 @@ export const ServiceForm: React.FC = () => {
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;
+      }
+      if (isActionMessageError(result)) {
+        setError(getErrorMessage(result))
+        return
       }
       setError(null)
       // Clear form fields after successful submission

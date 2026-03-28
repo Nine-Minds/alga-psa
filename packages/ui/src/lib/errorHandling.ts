@@ -14,14 +14,36 @@ export interface ActionPermissionError {
 }
 
 /**
+ * Represents a user-safe error returned from a server action.
+ * Use this for expected business-rule failures that should reach the client intact.
+ */
+export interface ActionMessageError {
+  readonly actionError: string;
+}
+
+/**
  * Type guard: checks if a server action result is a permission error.
  */
 export function isActionPermissionError(value: unknown): value is ActionPermissionError {
+  const candidate = value as Record<string, unknown>;
   return (
     typeof value === 'object' &&
     value !== null &&
     'permissionError' in value &&
-    typeof (value as any).permissionError === 'string'
+    typeof candidate.permissionError === 'string'
+  );
+}
+
+/**
+ * Type guard: checks if a server action result is a user-safe action error.
+ */
+export function isActionMessageError(value: unknown): value is ActionMessageError {
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'actionError' in value &&
+    typeof candidate.actionError === 'string'
   );
 }
 
@@ -31,6 +53,13 @@ export function isActionPermissionError(value: unknown): value is ActionPermissi
  */
 export function permissionError(message: string): ActionPermissionError {
   return { permissionError: message };
+}
+
+/**
+ * Creates a user-safe error return value for server actions.
+ */
+export function actionError(message: string): ActionMessageError {
+  return { actionError: message };
 }
 
 // --- Error detection utilities ---
@@ -58,6 +87,9 @@ export function isPermissionError(error: unknown): boolean {
 export function getErrorMessage(error: unknown): string {
   if (isActionPermissionError(error)) {
     return error.permissionError;
+  }
+  if (isActionMessageError(error)) {
+    return error.actionError;
   }
   if (error instanceof Error) {
     return error.message;
