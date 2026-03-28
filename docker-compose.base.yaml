@@ -66,6 +66,7 @@ x-environment: &shared-environment
   # Required by edge-auth (read from env, not Docker secret file)
   NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
   NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+  AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-false}
 
   # ---- DEPLOY INFO  ----
   PROJECT_NAME: ${PROJECT_NAME}
