@@ -23,6 +23,7 @@ const getEdgeAuth = (): ReturnType<typeof NextAuth> => {
   }
 
   cachedEdgeAuth = NextAuth({
+    trustHost: true,
     session: {
       strategy: 'jwt',
       maxAge: EDGE_SESSION_MAX_AGE,
