@@ -10,8 +10,8 @@ import { validateArray } from '@alga-psa/validation';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { permissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 
 
@@ -342,6 +342,21 @@ export const getServiceById = withAuth(async (user, { tenant }, serviceId: strin
 // Define a type for the input data
 export type CreateServiceInput = Omit<IService, 'service_id' | 'tenant'>;
 
+function normalizeCreateServiceError(serviceData: CreateServiceInput, error: unknown): ActionMessageError | null {
+    const typedError = error as { code?: string; constraint?: string };
+
+    if (
+        typedError?.code === '23505' &&
+        serviceData.item_kind === 'product' &&
+        serviceData.sku?.trim() &&
+        typedError.constraint?.includes('service_catalog_product_sku_unique')
+    ) {
+        return actionError(`A product with SKU "${serviceData.sku.trim()}" already exists. Use a different SKU or edit the existing product.`);
+    }
+
+    return null;
+}
+
 
 function safeRevalidate(path: string): void {
     try {
@@ -355,7 +370,7 @@ export const createService = withAuth(async (
     user,
     { tenant },
     serviceData: CreateServiceInput
-): Promise<IService | ActionPermissionError> => {
+): Promise<IService | ActionPermissionError | ActionMessageError> => {
     const canCreate = await hasPermission(user, 'service', 'create');
     if (!canCreate) {
       return permissionError('Permission denied: Cannot create services/products');
@@ -409,6 +424,10 @@ export const createService = withAuth(async (
         });
     } catch (error) {
         console.error('[serviceActions] Error creating service:', error);
+        const normalizedError = normalizeCreateServiceError(serviceData, error);
+        if (normalizedError) {
+            return normalizedError;
+        }
         throw error; // Re-throw the error
     }
 });
