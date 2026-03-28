@@ -33,6 +33,7 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import OrgChart from './org-chart/OrgChart';
 import { QuickAddContact } from '@alga-psa/clients/components';
+import { useTier } from '@/context/TierContext';
 
 const UserManagement = (): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
@@ -77,6 +78,9 @@ const UserManagement = (): React.JSX.Element => {
   const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false);
   const [userView, setUserView] = useState<'list' | 'org'>('list');
   const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+  const { isSolo } = useTier();
+  const soloMspUserLimitReached = portalType === 'msp' && isSolo && (licenseUsage?.used ?? 0) >= 1;
+  const soloMspLimitMessage = 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.';
 
   const extractErrorMessage = (error: unknown): string => {
     if (typeof error === 'string') {
@@ -834,6 +838,37 @@ const fetchContacts = async (): Promise<void> => {
     </div>
   );
 
+  const renderCreateUserActions = () => (
+    <div className="flex items-center gap-3">
+      {portalType === 'client' && (
+        <Button
+          id="copy-client-portal-link-button"
+          variant="outline"
+          onClick={handleCopyPortalLink}
+          disabled={isCopyingPortalLink}
+        >
+          {isCopyingPortalLink ? t('users.actions.copying') : t('users.actions.copyPortalLink')}
+        </Button>
+      )}
+      {!showNewUserForm && (
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            id={`create-new-${portalType}-user-btn`}
+            onClick={() => setShowNewUserForm(true)}
+            disabled={portalType === 'msp' && soloMspUserLimitReached}
+          >
+            {portalType === 'msp' ? t('users.actions.createNewUser') : t('users.actions.createNewClientUser')}
+          </Button>
+          {portalType === 'msp' && soloMspUserLimitReached && (
+            <span className="text-sm text-muted-foreground">
+              {soloMspLimitMessage}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -899,16 +934,7 @@ const fetchContacts = async (): Promise<void> => {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                {!showNewUserForm && (
-                  <Button
-                    id={`create-new-${portalType}-user-btn`}
-                    onClick={() => setShowNewUserForm(true)}
-                  >
-                    {t('users.actions.createNewUser')}
-                  </Button>
-                )}
-              </div>
+              {renderCreateUserActions()}
             </div>
             {showNewUserForm && renderNewUserForm()}
             <Tabs value={userView} onValueChange={(v) => setUserView(v as 'list' | 'org')}>
@@ -998,26 +1024,7 @@ const fetchContacts = async (): Promise<void> => {
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-3">
-                {portalType === 'client' && (
-                  <Button
-                    id="copy-client-portal-link-button"
-                    variant="outline"
-                    onClick={handleCopyPortalLink}
-                    disabled={isCopyingPortalLink}
-                  >
-                    {isCopyingPortalLink ? t('users.actions.copying') : t('users.actions.copyPortalLink')}
-                  </Button>
-                )}
-                {!showNewUserForm && (
-                  <Button
-                    id={`create-new-${portalType}-user-btn`}
-                    onClick={() => setShowNewUserForm(true)}
-                  >
-                    {portalType === 'msp' ? t('users.actions.createNewUser') : t('users.actions.createNewClientUser')}
-                  </Button>
-                )}
-              </div>
+              {renderCreateUserActions()}
             </div>
             {showNewUserForm && renderNewUserForm()}
             {loading ? (

@@ -2,6 +2,7 @@
 
 import { getLicenseUsage, type LicenseUsage } from '../license/get-license-usage';
 import { getSession } from '@alga-psa/auth';
+import type { AddOnKey } from '@alga-psa/types';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { getStripeService } from '../stripe/StripeService';
 import { getConnection } from '@/lib/db/db';
@@ -1095,6 +1096,127 @@ export async function upgradeTierAction(
 }
 
 /**
+ * Downgrade the tenant's subscription to Solo.
+ * Validates active user count in the Stripe service before changing pricing.
+ */
+export async function downgradeTierAction(
+  interval: 'month' | 'year' = 'month'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to change the subscription plan' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.downgradeTier(session.user.tenant, interval);
+  } catch (error) {
+    logger.error('[downgradeTierAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to downgrade plan',
+    };
+  }
+}
+
+/**
+ * Create an embedded Stripe checkout session for an add-on purchase.
+ */
+export async function purchaseAddOnAction(
+  addOn: AddOnKey,
+  interval: 'month' | 'year' = 'month'
+): Promise<{
+  success: boolean;
+  data?: {
+    clientSecret: string;
+    sessionId: string;
+    publishableKey: string;
+  };
+  error?: string;
+}> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage add-ons' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    const result = await stripeService.purchaseAddOn(session.user.tenant, addOn, interval);
+    if (!result.success || !result.clientSecret || !result.sessionId) {
+      return { success: false, error: result.error || 'Failed to create add-on checkout session' };
+    }
+
+    return {
+      success: true,
+      data: {
+        clientSecret: result.clientSecret,
+        sessionId: result.sessionId,
+        publishableKey: await stripeService.getPublishableKey(),
+      },
+    };
+  } catch (error) {
+    logger.error('[purchaseAddOnAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to purchase add-on',
+    };
+  }
+}
+
+/**
+ * Cancel an active add-on subscription for the current tenant.
+ */
+export async function cancelAddOnAction(
+  addOn: AddOnKey
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage add-ons' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.cancelAddOn(session.user.tenant, addOn);
+  } catch (error) {
+    logger.error('[cancelAddOnAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to cancel add-on',
+    };
+  }
+}
+
+/**
  * Get a preview of what upgrading to a new tier will cost.
  * Used by the UI to show a confirmation dialog before charging.
  */
@@ -1294,6 +1416,37 @@ export async function startSelfServicePremiumTrialAction(): Promise<{ success: b
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to start Premium trial',
+    };
+  }
+}
+
+/**
+ * Self-service Pro trial for established Solo customers.
+ * Solo trial customers are blocked to prevent stacking free trials.
+ */
+export async function startSoloProTrialAction(): Promise<{ success: boolean; error?: string; trialEnd?: string }> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage the subscription' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.startSoloProTrial(session.user.tenant);
+  } catch (error) {
+    logger.error('[startSoloProTrialAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to start Pro trial',
     };
   }
 }

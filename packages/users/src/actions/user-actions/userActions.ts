@@ -27,6 +27,8 @@ type AddUserResult =
   | { success: true; user: IUser }
   | { success: false; error: string };
 
+const SOLO_USER_LIMIT_MESSAGE = 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.';
+
 const ADD_USER_VALIDATION_ERRORS = new Set([
   'Role is required',
   'Invalid role',
@@ -34,6 +36,7 @@ const ADD_USER_VALIDATION_ERRORS = new Set([
   'Cannot assign client portal role to MSP user',
   'A user with this email address already exists',
   "You've reached your MSP user licence limit.",
+  SOLO_USER_LIMIT_MESSAGE,
 ]);
 
 const getErrorMessage = (error: unknown): string =>
@@ -123,7 +126,7 @@ export const addUser = withAuth(async (
       if (userData.userType !== 'client') {
         const tenantRow = await trx('tenants')
           .where({ tenant })
-          .first('licensed_user_count');
+          .first('licensed_user_count', 'plan');
 
         if (!tenantRow) {
           throw new Error(`Tenant not found: ${tenant}`);
@@ -139,6 +142,11 @@ export const addUser = withAuth(async (
 
         const used = parseInt(usedResult[0].count as string, 10);
         const limit = tenantRow.licensed_user_count as number | null;
+        const plan = tenantRow.plan as string | null | undefined;
+
+        if (plan === 'solo' && used >= 1) {
+          return { success: false, error: SOLO_USER_LIMIT_MESSAGE };
+        }
 
         if (limit !== null && used >= limit) {
           return { success: false, error: "You've reached your MSP user licence limit." };

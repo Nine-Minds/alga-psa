@@ -1,13 +1,15 @@
 import crypto from 'crypto';
 import { z } from 'zod';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { getConnection } from '../db/db';
 import { ApiKeyService } from '@alga-psa/auth';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../db';
 
-import { UnauthorizedError } from '../api/middleware/apiMiddleware';
+import { ForbiddenError, UnauthorizedError } from '../api/middleware/apiMiddleware';
 import { auditLog } from '../logging/auditLog';
 import { enforceMobileOttExchangeLimit, enforceMobileRefreshLimit } from '../security/mobileAuthRateLimiting';
+import { TierAccessError, assertTenantTierAccess } from '../tier-gating/assertTierAccess';
 
 let connectionFactory = getConnection;
 
@@ -259,6 +261,8 @@ export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSch
     }
   }
 
+  await assertMobileAccess(tenantId);
+
   const accessExpiresAt = new Date(Date.now() + config.accessTtlSec * 1000);
   const refreshExpiresAt = new Date(Date.now() + config.refreshTtlSec * 1000);
 
@@ -315,6 +319,18 @@ export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSch
     // Best-effort cleanup: don't leave an active API key if refresh token creation fails.
     await ApiKeyService.deactivateApiKey(apiKeyRecord.api_key_id, tenantId).catch(() => {});
     throw e;
+  }
+}
+
+async function assertMobileAccess(tenantId: string): Promise<void> {
+  try {
+    await assertTenantTierAccess(tenantId, TIER_FEATURES.MOBILE_ACCESS);
+  } catch (error) {
+    if (error instanceof TierAccessError) {
+      throw new ForbiddenError('Mobile app access requires Pro or higher');
+    }
+
+    throw error;
   }
 }
 

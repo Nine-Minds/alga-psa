@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { installExtensionForCurrentTenantV2 } from '@ee/lib/actions/extRegistryV2Actions';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { withApiKeyAuth } from '@/lib/api/middleware/apiAuthMiddleware';
 import {
   ApiRequest,
@@ -10,6 +11,7 @@ import {
   withPermission,
   withValidation,
 } from '@/lib/api/middleware/apiMiddleware';
+import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 const installRequestSchema = z.object({
   registryId: z.string().min(1, 'registryId is required'),
@@ -20,6 +22,8 @@ type InstallRequestBody = z.infer<typeof installRequestSchema>;
 
 const installHandler = withPermission('extension', 'write')(
   withValidation(installRequestSchema)(async (req: ApiRequest, body: InstallRequestBody) => {
+    await assertTierAccess(TIER_FEATURES.EXTENSIONS);
+
     const result = await installExtensionForCurrentTenantV2({ registryId: body.registryId!, version: body.version! });
 
     return createSuccessResponse(

@@ -128,6 +128,7 @@ describe('menuConfig i18n metadata', () => {
     expect(billingNavigationSections.map((section) => section.translationKey)).toEqual([
       'nav.billing.sections.contracts',
       'nav.billing.sections.invoicing',
+      'nav.billing.sections.quotes',
       'nav.billing.sections.pricing',
       'nav.billing.sections.trackingReports',
     ]);
@@ -142,6 +143,8 @@ describe('menuConfig i18n metadata', () => {
       'nav.billing.invoiceLayouts',
       'nav.billing.billingCycles',
       'nav.billing.servicePeriods',
+      'nav.billing.quotes',
+      'nav.billing.quoteLayouts',
       'nav.billing.serviceCatalog',
       'nav.billing.products',
       'nav.billing.taxRates',

@@ -10,20 +10,28 @@
  */
 
 import { createTenantKnex } from '@/lib/db';
+import { TIER_FEATURES } from '@alga-psa/types';
 import {
   RmmCachedData,
   RmmStorageInfo,
   RmmProvider,
   RmmAgentStatus,
 } from '@/interfaces/asset.interfaces';
+import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { syncSingleDeviceByAssetId } from '../../integrations/ninjaone/sync/syncEngine';
 import { createNinjaOneClient } from '../../integrations/ninjaone/ninjaOneClient';
+
+async function assertAdvancedAssetsAccess(): Promise<void> {
+  await assertTierAccess(TIER_FEATURES.ADVANCED_ASSETS);
+}
 
 /**
  * Get cached RMM data for an asset
  * Returns data from the database (populated during sync) for instant page load
  */
 export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | null> {
+  await assertAdvancedAssetsAccess();
+
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
@@ -156,6 +164,8 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
  * Triggers a single-device sync and returns updated cached data
  */
 export async function refreshAssetRmmData(assetId: string): Promise<RmmCachedData | null> {
+  await assertAdvancedAssetsAccess();
+
   const { tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
@@ -181,6 +191,8 @@ export async function getAssetRemoteControlUrl(
   assetId: string,
   connectionType: 'splashtop' | 'teamviewer' | 'vnc' | 'rdp' | 'shell' = 'splashtop'
 ): Promise<string | null> {
+  await assertAdvancedAssetsAccess();
+
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
@@ -223,6 +235,8 @@ export async function getAssetRemoteControlUrl(
  * Trigger a reboot on an RMM-managed device
  */
 export async function triggerRmmReboot(assetId: string): Promise<{ success: boolean; message: string }> {
+  await assertAdvancedAssetsAccess();
+
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
@@ -269,6 +283,8 @@ export async function triggerRmmScript(
   assetId: string,
   scriptId: string
 ): Promise<{ success: boolean; jobId?: string; message: string }> {
+  await assertAdvancedAssetsAccess();
+
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');

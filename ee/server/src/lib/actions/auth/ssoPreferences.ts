@@ -2,10 +2,12 @@
 
 import { getTenantSettings, updateTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
 import { withAuth, hasPermission } from "@alga-psa/auth";
+import { TIER_FEATURES } from "@alga-psa/types";
 import { createTenantKnex } from "@/lib/db";
 import { listOAuthAccountLinksForUser } from "@ee/lib/auth/oauthAccountLinks";
 import User from "@alga-psa/db/models/user";
 import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
+import { assertTierAccess } from "server/src/lib/tier-gating/assertTierAccess";
 
 export interface SsoPreferences {
   autoLinkInternal: boolean;
@@ -21,6 +23,7 @@ function normalizePreferences(raw?: any): SsoPreferences {
 }
 
 export async function getSsoPreferencesAction(): Promise<SsoPreferences> {
+  await assertTierAccess(TIER_FEATURES.SSO);
   const settings = await getTenantSettings();
   const rawSettings = typeof settings?.settings === "string" ? safeParse(settings.settings) : settings?.settings;
   return normalizePreferences(rawSettings);
@@ -88,6 +91,8 @@ export interface GetLinkedSsoAccountsResult {
 
 export async function getLinkedSsoAccountsAction(): Promise<GetLinkedSsoAccountsResult> {
   try {
+    await assertTierAccess(TIER_FEATURES.SSO);
+
     const session = await auth();
     if (!session?.user?.email || !session.user.id) {
       return { success: false, error: "Authentication required" };
