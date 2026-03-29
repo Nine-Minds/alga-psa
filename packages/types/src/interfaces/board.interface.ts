@@ -43,4 +43,7 @@ export interface IBoard extends TenantEntity {
 
   // SLA policy assignment (board-level SLA)
   sla_policy_id?: string | null;
+
+  // Controls live timer + tracked intervals visibility in ticket details
+  enable_live_ticket_timer?: boolean;
 }

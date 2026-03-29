@@ -37,7 +37,7 @@ import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHand
 import { useDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser } from "@alga-psa/user-composition/actions";
-import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
+import { findBoardById } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
@@ -84,6 +84,7 @@ import {
     resolveCommentReferencedImageDocuments,
     type CommentImageDocumentReference,
 } from '../../lib/commentImageDocuments';
+import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 
 interface PendingCommentDelete {
     commentId: string;
@@ -251,6 +252,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             .map(({ value, label }) => ({ value, label }));
     }, [statusOptions, ticket.board_id]);
     const [board, setBoard] = useState<any>(initialBoard);
+    const isLiveTicketTimerEnabled = useMemo(() => isBoardLiveTicketTimerEnabled(board), [board]);
     const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
@@ -287,6 +289,34 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     useEffect(() => {
         setBundle(initialBundle);
     }, [initialBundle]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadBoard = async () => {
+            if (!ticket.board_id) {
+                if (!cancelled) {
+                    setBoard(null);
+                }
+                return;
+            }
+
+            try {
+                const fetchedBoard = await findBoardById(ticket.board_id);
+                if (!cancelled) {
+                    setBoard(fetchedBoard ?? null);
+                }
+            } catch (error) {
+                console.error('Failed to refresh board metadata:', error);
+            }
+        };
+
+        loadBoard();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [ticket.board_id]);
 
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
@@ -520,6 +550,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (autoStartedRef.current) return;
             if (!initialTicket.ticket_id || !userId) return;
             if (isTracking) return;
+            if (!isLiveTicketTimerEnabled) return;
             console.log('[TicketDetails] auto-start attempt');
             try {
                 const started = await startTrackingRef.current(false);
@@ -534,9 +565,28 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         auto();
         // only attempt once when ids are ready and not already tracking
-    }, [initialTicket.ticket_id, userId, isTracking]);
+    }, [initialTicket.ticket_id, userId, isTracking, isLiveTicketTimerEnabled]);
 
     // New screens start from zero; no seeding from existing intervals
+
+    useEffect(() => {
+        const disableLiveTimerInView = async () => {
+            if (isLiveTicketTimerEnabled) {
+                return;
+            }
+
+            try {
+                await stopTracking();
+            } catch {
+                // Ignore stop errors while enforcing board policy.
+            }
+
+            setIsRunning(false);
+            setElapsedTime(0);
+        };
+
+        disableLiveTimerInView();
+    }, [isLiveTicketTimerEnabled, stopTracking]);
 
     // Poll lock state periodically to update UI lock indicator
     useEffect(() => {
@@ -2165,6 +2215,7 @@ const handleClose = () => {
                                     renderIntervalManagement={renderIntervalManagement}
                                     onRemoveTeamAssignment={handleRemoveTeamAssignment}
                                     onAssignTeam={handleAssignTeam}
+                                    isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
                                 />
                         </Suspense>
                         
