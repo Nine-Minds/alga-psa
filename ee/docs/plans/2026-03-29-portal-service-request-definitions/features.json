@@ -457,7 +457,7 @@
   {
     "id": "F053",
     "description": "Admins can preview the portal-facing service card before publishing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -465,7 +465,7 @@
   {
     "id": "F054",
     "description": "Admins can preview the rendered request form before publishing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -492,7 +492,7 @@
   {
     "id": "F057",
     "description": "Template instantiation creates a normal editable draft that is detached from the template source after creation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Summary",
       "Users and Primary Flows"
@@ -501,7 +501,7 @@
   {
     "id": "F058",
     "description": "CE starter templates are presented as optional shortcuts rather than a required setup path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Summary",
       "UX / UI Notes"
@@ -947,7 +947,7 @@
   {
     "id": "F108",
     "description": "Templates may prefill a linked service and ticket-mapping defaults while remaining fully editable before publish",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"

@@ -102,7 +102,7 @@
   {
     "id": "T009",
     "description": "Templates: instantiating a starter template produces a detached editable draft rather than a live reference to the template source",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F057",

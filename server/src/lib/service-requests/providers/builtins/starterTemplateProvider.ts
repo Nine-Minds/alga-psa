@@ -23,7 +23,10 @@ const starterTemplates: ServiceRequestTemplateDefinition[] = [
       },
       providers: {
         executionProvider: 'ticket-only',
-        executionConfig: {},
+        executionConfig: {
+          titleTemplate: 'New Hire Setup: {{employee_name}}',
+          includeFormResponsesInDescription: true,
+        },
         formBehaviorProvider: 'basic',
         formBehaviorConfig: {},
         visibilityProvider: 'all-authenticated-client-users',

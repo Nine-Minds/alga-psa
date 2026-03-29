@@ -167,3 +167,13 @@ Working memory for the portal service request definitions effort. This is the pl
 
 - (2026-03-29) Run draft-save/publish-validation integration test:
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestDraftPublishValidation.integration.test.ts`
+- (2026-03-29) Added pre-publish preview UX in [ServiceRequestDefinitionEditorPage.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/ServiceRequestDefinitionEditorPage.tsx):
+  - `Service Card Preview` section for portal-facing card metadata (F053)
+  - `Rendered Form Preview` section for schema field presentation before publish (F054)
+- (2026-03-29) Updated built-in template defaults in [starterTemplateProvider.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/providers/builtins/starterTemplateProvider.ts) to prefill ticket-mapping style execution config defaults.
+- (2026-03-29) Added integration test [serviceRequestTemplateInstantiation.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestTemplateInstantiation.integration.test.ts) verifying template-instantiated drafts are detached/editable and that template usage remains an optional shortcut path (blank create still works).
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run template-instantiation integrity integration test:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestTemplateInstantiation.integration.test.ts`

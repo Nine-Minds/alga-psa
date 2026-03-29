@@ -54,6 +54,13 @@ function FieldRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function renderFieldPreview(field: any): string {
+  const label = typeof field?.label === 'string' ? field.label : field?.key ?? 'Untitled field';
+  const type = typeof field?.type === 'string' ? field.type : 'unknown';
+  const required = field?.required ? 'required' : 'optional';
+  return `${label} (${type}, ${required})`;
+}
+
 export default function ServiceRequestDefinitionEditorPage() {
   const params = useParams();
   const definitionId = String(params?.definitionId ?? '');
@@ -143,6 +150,22 @@ export default function ServiceRequestDefinitionEditorPage() {
         <FieldRow label="Sort Order" value={String(data.basics.sortOrder)} />
       </Card>
 
+      <Card id="service-request-editor-service-preview" className="p-4 space-y-3">
+        <h2 className="text-lg font-semibold">Service Card Preview</h2>
+        <div className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
+          <div className="text-xs uppercase tracking-wide text-[rgb(var(--color-text-500))] mb-1">
+            {data.basics.icon ? `Icon: ${data.basics.icon}` : 'No icon selected'}
+          </div>
+          <div className="text-lg font-semibold">{data.basics.name}</div>
+          <div className="text-sm text-[rgb(var(--color-text-700))] mt-1">
+            {data.basics.description ?? 'No description provided'}
+          </div>
+          <div className="text-xs text-[rgb(var(--color-text-500))] mt-2">
+            {data.basics.categoryName ?? data.basics.categoryId ?? 'Uncategorized'}
+          </div>
+        </div>
+      </Card>
+
       <Card id="service-request-editor-linkage" className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">Linkage</h2>
         <FieldRow label="Linked Service" value={data.linkage.linkedServiceName ?? data.linkage.linkedServiceId ?? '-'} />
@@ -150,6 +173,19 @@ export default function ServiceRequestDefinitionEditorPage() {
 
       <Card id="service-request-editor-form" className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">Form</h2>
+        <div className="rounded border p-3 bg-[rgb(var(--color-background-100))]">
+          <div className="text-sm font-medium mb-2">Rendered Form Preview</div>
+          <ul className="space-y-1 text-sm">
+            {Array.isArray((data.form.schema as any)?.fields) &&
+            (data.form.schema as any).fields.length > 0 ? (
+              (data.form.schema as any).fields.map((field: any, index: number) => (
+                <li key={`${field?.key ?? 'field'}-${index}`}>{renderFieldPreview(field)}</li>
+              ))
+            ) : (
+              <li>No fields configured.</li>
+            )}
+          </ul>
+        </div>
         <pre className="text-xs bg-[rgb(var(--color-background-100))] p-3 rounded overflow-auto">
           {JSON.stringify(data.form.schema, null, 2)}
         </pre>
