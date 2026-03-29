@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB-backed integration: creating a draft definition, publishing version 1, and inserting a submission succeeds with the new core tables and tenant scoping",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F022",

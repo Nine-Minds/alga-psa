@@ -118,7 +118,7 @@
   {
     "id": "F014",
     "description": "Migration creates a tenant-owned `service_request_definitions` table for mutable draft definitions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]
@@ -126,7 +126,7 @@
   {
     "id": "F015",
     "description": "Definitions store portal-facing metadata including name, description, icon, and sort order",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"
@@ -135,7 +135,7 @@
   {
     "id": "F016",
     "description": "Definitions store an optional category reference used for portal grouping",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"
@@ -144,7 +144,7 @@
   {
     "id": "F017",
     "description": "Definitions store an optional `linked_service_id` reference to `service_catalog`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -153,7 +153,7 @@
   {
     "id": "F018",
     "description": "Definitions store provider keys for execution, form behavior, and visibility",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]
@@ -161,7 +161,7 @@
   {
     "id": "F019",
     "description": "Definitions store provider config blobs for execution, form behavior, and visibility",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]
@@ -169,7 +169,7 @@
   {
     "id": "F020",
     "description": "Definitions track draft, published, and archived lifecycle state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
@@ -177,7 +177,7 @@
   {
     "id": "F021",
     "description": "Definitions track created-by, updated-by, and publish-related audit timestamps needed for normal product behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
@@ -185,7 +185,7 @@
   {
     "id": "F022",
     "description": "Migration creates an immutable `service_request_definition_versions` table",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]
@@ -245,7 +245,7 @@
   {
     "id": "F029",
     "description": "Migration creates a tenant-owned `service_request_submissions` table for durable intake records",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]
@@ -253,7 +253,7 @@
   {
     "id": "F030",
     "description": "Submissions store the definition id and version id used when the request was submitted",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -262,7 +262,7 @@
   {
     "id": "F031",
     "description": "Submissions store tenant, client, contact, and requester user ownership fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Data / API / Integrations"
@@ -271,7 +271,7 @@
   {
     "id": "F032",
     "description": "Submissions store the normalized submitted payload captured from the published definition snapshot",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -280,7 +280,7 @@
   {
     "id": "F033",
     "description": "Submissions store execution status and a concise execution error summary when downstream startup fails",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Observability"
@@ -289,7 +289,7 @@
   {
     "id": "F034",
     "description": "Submissions store `created_ticket_id` when a ticket-backed provider succeeds",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -298,7 +298,7 @@
   {
     "id": "F035",
     "description": "Submissions store `workflow_execution_id` or equivalent workflow reference when a workflow-backed provider succeeds",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -307,7 +307,7 @@
   {
     "id": "F036",
     "description": "Submissions store created and updated timestamps for request-history presentation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Users and Primary Flows"
@@ -316,7 +316,7 @@
   {
     "id": "F037",
     "description": "Migration creates a `service_request_submission_attachments` table or equivalent attachment linkage structure",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]
@@ -324,7 +324,7 @@
   {
     "id": "F038",
     "description": "Attachment rows link a submission to persisted file or document storage references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Requirements > Functional Requirements"

@@ -75,3 +75,15 @@ Working memory for the portal service request definitions effort. This is the pl
 
 - (2026-03-29) Run targeted service-request provider registry unit tests:
   - `cd server && npx vitest run src/test/unit/service-requests/providerRegistry.unit.test.ts`
+- (2026-03-29) Added migration [20260329150000_create_service_request_domain_tables.cjs](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/migrations/20260329150000_create_service_request_domain_tables.cjs) to create:
+  - `service_request_definitions`
+  - `service_request_definition_versions`
+  - `service_request_submissions`
+  - `service_request_submission_attachments`
+- (2026-03-29) Definitions/submissions schema follows existing tenant-composite key pattern (`tenant` + entity id) and includes provider-key/config columns to preserve CE/EE extensibility without EE-specific table forks.
+- (2026-03-29) Added DB-backed integration test [serviceRequestDomainTables.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestDomainTables.integration.test.ts) covering draft insert, published v1 insert, durable submission insert, and tenant-scoped reads (T001).
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run service request domain table integration test:
+  - `cd server && npx vitest run src/test/integration/serviceRequestDomainTables.integration.test.ts`
