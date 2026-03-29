@@ -105,3 +105,9 @@ Working memory for the portal service request definitions effort. This is the pl
 
 - (2026-03-29) Run service request lifecycle integration tests:
   - `cd server && npx vitest run src/test/integration/serviceRequestLifecycle.integration.test.ts`
+- (2026-03-29) Added EE registry test [enterpriseProviderRegistrations.unit.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/unit/service-requests/enterpriseProviderRegistrations.unit.test.ts) validating enterprise provider pack includes workflow execution and advanced behavior registrations (T005).
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run enterprise provider registration unit test:
+  - `cd server && npx vitest run src/test/unit/service-requests/enterpriseProviderRegistrations.unit.test.ts`

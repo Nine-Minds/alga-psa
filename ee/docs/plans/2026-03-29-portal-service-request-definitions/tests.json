@@ -53,7 +53,7 @@
   {
     "id": "T005",
     "description": "Registry boot: EE startup adds workflow, advanced form, and advanced visibility providers through the enterprise entrypoint without changing CE persistence shape",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006",
