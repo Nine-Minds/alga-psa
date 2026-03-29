@@ -11,7 +11,11 @@ import {
   listServiceRequestTemplateOptions,
   unarchiveServiceRequestDefinitionFromManagement,
   getServiceRequestDefinitionEditorData,
+  publishServiceRequestDefinitionWithValidation,
+  saveServiceRequestDefinitionDraft,
+  validateServiceRequestDefinitionForPublish,
   type ServiceRequestDefinitionManagementRow,
+  type ServiceRequestPublishValidationResult,
   type ServiceRequestTemplateOption,
   type ServiceRequestDefinitionEditorData,
 } from '../../../lib/service-requests';
@@ -85,6 +89,44 @@ export const duplicateServiceRequestDefinitionAction = withAuth(async (
     tenant,
     sourceDefinitionId: definitionId,
     createdBy: getActorId(user),
+  });
+});
+
+export const saveServiceRequestDefinitionDraftAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string
+): Promise<ServiceRequestDefinitionManagementRow> => {
+  const { knex } = await createTenantKnex();
+  return saveServiceRequestDefinitionDraft({
+    knex,
+    tenant,
+    definitionId,
+    updates: {},
+    updatedBy: getActorId(user),
+  });
+});
+
+export const validateServiceRequestDefinitionForPublishAction = withAuth(async (
+  _user,
+  { tenant },
+  definitionId: string
+): Promise<ServiceRequestPublishValidationResult> => {
+  const { knex } = await createTenantKnex();
+  return validateServiceRequestDefinitionForPublish(knex, tenant, definitionId);
+});
+
+export const publishServiceRequestDefinitionAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string
+) => {
+  const { knex } = await createTenantKnex();
+  return publishServiceRequestDefinitionWithValidation({
+    knex,
+    tenant,
+    definitionId,
+    publishedBy: getActorId(user),
   });
 });
 

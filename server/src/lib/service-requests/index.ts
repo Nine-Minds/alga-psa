@@ -1,5 +1,6 @@
 export * from './domain';
 export * from './definitionPublishing';
+export * from './definitionValidation';
 export * from './definitionLifecycle';
 export * from './definitionManagement';
 export * from './definitionEditor';

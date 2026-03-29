@@ -154,3 +154,16 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestDefinitionEditor.integration.test.ts`
 - (2026-03-29) Run definition management integration test:
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestDefinitionManagement.integration.test.ts`
+- (2026-03-29) Added publish-validation host seam [definitionValidation.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/definitionValidation.ts) with CE checks for:
+  - required definition name
+  - registered execution/form-behavior/visibility provider keys
+  - provider config validation via provider contracts
+  - linked-service existence (block when missing, warn when inactive)
+- (2026-03-29) Added guarded publish path [publishServiceRequestDefinitionWithValidation](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/definitionValidation.ts) and exposed action hooks in [msp/service-requests/actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/actions.ts).
+- (2026-03-29) Added draft-save helper [saveServiceRequestDefinitionDraft](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/definitionManagement.ts) and wired `Save Draft` / `Publish` controls plus validation feedback in [ServiceRequestDefinitionEditorPage.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/ServiceRequestDefinitionEditorPage.tsx).
+- (2026-03-29) Added integration coverage [serviceRequestDraftPublishValidation.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestDraftPublishValidation.integration.test.ts) for T008: incomplete draft save succeeds while publish fails with validation errors.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run draft-save/publish-validation integration test:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestDraftPublishValidation.integration.test.ts`

@@ -448,7 +448,7 @@
   {
     "id": "F052",
     "description": "Admins can save an incomplete draft without making it visible in the portal",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"
@@ -474,7 +474,7 @@
   {
     "id": "F055",
     "description": "Publishing validates the full definition and blocks publication when required configuration is missing or invalid",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Acceptance Criteria (Definition of Done)"

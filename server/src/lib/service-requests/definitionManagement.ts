@@ -63,6 +63,31 @@ interface DuplicateDefinitionInput {
   createdBy?: string | null;
 }
 
+interface SaveDraftDefinitionInput {
+  knex: Knex;
+  tenant: string;
+  definitionId: string;
+  updatedBy?: string | null;
+  updates: Partial<
+    Pick<
+      ServiceRequestDefinitionSourceRow,
+      | 'name'
+      | 'description'
+      | 'icon'
+      | 'category_id'
+      | 'sort_order'
+      | 'linked_service_id'
+      | 'form_schema'
+      | 'execution_provider'
+      | 'execution_config'
+      | 'form_behavior_provider'
+      | 'form_behavior_config'
+      | 'visibility_provider'
+      | 'visibility_config'
+    >
+  >;
+}
+
 export async function listServiceRequestDefinitionsForManagement(
   knex: Knex,
   tenant: string
@@ -234,6 +259,32 @@ export async function duplicateServiceRequestDefinition({
     .returning('*')) as ServiceRequestDefinitionManagementRow[];
 
   return created;
+}
+
+export async function saveServiceRequestDefinitionDraft({
+  knex,
+  tenant,
+  definitionId,
+  updatedBy = null,
+  updates,
+}: SaveDraftDefinitionInput): Promise<ServiceRequestDefinitionManagementRow> {
+  const [saved] = (await knex('service_request_definitions')
+    .where({ tenant, definition_id: definitionId })
+    .update({
+      ...updates,
+      lifecycle_state: 'draft',
+      published_by: null,
+      published_at: null,
+      updated_by: updatedBy,
+      updated_at: knex.fn.now(),
+    })
+    .returning('*')) as ServiceRequestDefinitionManagementRow[];
+
+  if (!saved) {
+    throw new Error('Service request definition not found');
+  }
+
+  return saved;
 }
 
 export async function archiveServiceRequestDefinitionFromManagement(

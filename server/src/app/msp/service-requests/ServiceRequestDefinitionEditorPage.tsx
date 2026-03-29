@@ -2,8 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getServiceRequestDefinitionEditorDataAction } from './actions';
+import {
+  getServiceRequestDefinitionEditorDataAction,
+  publishServiceRequestDefinitionAction,
+  saveServiceRequestDefinitionDraftAction,
+  validateServiceRequestDefinitionForPublishAction,
+} from './actions';
 import { Card } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { toast } from 'react-hot-toast';
 
 interface EditorData {
   definitionId: string;
@@ -52,12 +59,19 @@ export default function ServiceRequestDefinitionEditorPage() {
   const definitionId = String(params?.definitionId ?? '');
   const [data, setData] = useState<EditorData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
     const load = async () => {
       try {
         const result = await getServiceRequestDefinitionEditorDataAction(definitionId);
         setData(result as EditorData | null);
+        if (result) {
+          const validation = await validateServiceRequestDefinitionForPublishAction(definitionId);
+          setValidationErrors(validation.errors ?? []);
+        } else {
+          setValidationErrors([]);
+        }
       } finally {
         setLoading(false);
       }
@@ -83,6 +97,41 @@ export default function ServiceRequestDefinitionEditorPage() {
         <p className="text-sm text-[rgb(var(--color-text-600))]">
           Definition ID: {data.definitionId} · Current state: {data.lifecycleState}
         </p>
+        <div className="mt-3 flex gap-2">
+          <Button
+            id="service-request-editor-save-draft"
+            variant="outline"
+            onClick={async () => {
+              try {
+                await saveServiceRequestDefinitionDraftAction(data.definitionId);
+                toast.success('Draft saved');
+              } catch (error) {
+                console.error('Failed to save draft', error);
+                toast.error('Failed to save draft');
+              }
+            }}
+          >
+            Save Draft
+          </Button>
+          <Button
+            id="service-request-editor-publish"
+            onClick={async () => {
+              try {
+                await publishServiceRequestDefinitionAction(data.definitionId);
+                toast.success('Definition published');
+                const refreshed = await getServiceRequestDefinitionEditorDataAction(data.definitionId);
+                setData(refreshed as EditorData | null);
+                const validation = await validateServiceRequestDefinitionForPublishAction(data.definitionId);
+                setValidationErrors(validation.errors ?? []);
+              } catch (error) {
+                console.error('Failed to publish definition', error);
+                toast.error(error instanceof Error ? error.message : 'Failed to publish definition');
+              }
+            }}
+          >
+            Publish
+          </Button>
+        </div>
       </div>
 
       <Card id="service-request-editor-basics" className="p-4 space-y-3">
@@ -126,6 +175,20 @@ export default function ServiceRequestDefinitionEditorPage() {
           value={data.publish.publishedAt ? new Date(data.publish.publishedAt).toLocaleString() : '-'}
         />
         <FieldRow label="Draft Updated At" value={new Date(data.publish.draftUpdatedAt).toLocaleString()} />
+        {validationErrors.length > 0 ? (
+          <div className="rounded border border-[rgb(var(--color-danger-400))] bg-[rgb(var(--color-danger-100))] p-3 text-sm">
+            <div className="font-semibold mb-1">Publish Validation</div>
+            <ul className="list-disc pl-5">
+              {validationErrors.map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="rounded border border-[rgb(var(--color-success-300))] bg-[rgb(var(--color-success-100))] p-3 text-sm">
+            Publish validation passed.
+          </div>
+        )}
       </Card>
     </div>
   );

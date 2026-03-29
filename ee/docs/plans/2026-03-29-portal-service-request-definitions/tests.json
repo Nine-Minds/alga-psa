@@ -93,7 +93,7 @@
   {
     "id": "T008",
     "description": "Admin workflow: saving a partial draft succeeds but publishing blocks when required configuration is missing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052",
       "F055"
