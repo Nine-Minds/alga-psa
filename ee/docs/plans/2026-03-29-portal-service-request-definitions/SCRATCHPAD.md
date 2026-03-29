@@ -309,3 +309,20 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Added submit action in [request-services/[definitionId]/actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/[definitionId]/actions.ts):
+  - parses form payload from published schema fields
+  - supports file-upload linkage via `{fieldKey}__fileId` input convention
+  - persists submission via `submitPortalServiceRequest(...)`
+  - redirects back with `?submitted=<submissionId>` on success or `?error=<message>` on failure
+- (2026-03-29) Updated [request-services/[definitionId]/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/[definitionId]/page.tsx) to include:
+  - schema-driven form inputs for CE field types
+  - confirmation state rendering stable request ID from `searchParams.submitted`
+  - error state rendering from `searchParams.error`
+- (2026-03-29) Extended [serviceRequestSubmissionAttachments.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts) with T023/F089/F090 coverage for durable pending submission + stable request id return.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run submission flow integration tests:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`

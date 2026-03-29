@@ -265,4 +265,81 @@ describe('service request submission attachments', () => {
       resetServiceRequestProviderRegistry();
     }
   });
+
+  it('T023: successful submit returns stable request id and persists durable submission in pending state', async () => {
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+    const requesterUserId = uuidv4();
+    const clientId = uuidv4();
+    const contactId = uuidv4();
+
+    await db('tenants').insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+
+    await db('service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'Laptop Setup Request',
+      form_schema: { fields: [] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+      lifecycle_state: 'published',
+    });
+
+    await db('service_request_definition_versions').insert({
+      tenant,
+      version_id: versionId,
+      definition_id: definitionId,
+      version_number: 1,
+      name: 'Laptop Setup Request',
+      form_schema_snapshot: {
+        fields: [{ key: 'employee_name', type: 'short-text', label: 'Employee Name', required: true }],
+      },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant,
+      definitionId,
+      requesterUserId,
+      clientId,
+      contactId,
+      payload: {
+        employee_name: 'Dana Rivera',
+      },
+    });
+
+    expect(result.submissionId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
+
+    const submission = await db('service_request_submissions')
+      .where({ tenant, submission_id: result.submissionId })
+      .first();
+    expect(submission).toBeDefined();
+    expect(submission).toMatchObject({
+      definition_id: definitionId,
+      definition_version_id: versionId,
+      request_name: 'Laptop Setup Request',
+      execution_status: 'pending',
+    });
+    expect(submission.submitted_payload).toEqual({
+      employee_name: 'Dana Rivera',
+    });
+    expect(submission.created_at).toBeTruthy();
+  });
 });

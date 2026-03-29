@@ -777,7 +777,7 @@
   {
     "id": "F089",
     "description": "Submitting a request persists a durable submission row before provider execution begins",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -786,7 +786,7 @@
   {
     "id": "F090",
     "description": "Successful submission shows a confirmation state containing a stable request identifier",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes"

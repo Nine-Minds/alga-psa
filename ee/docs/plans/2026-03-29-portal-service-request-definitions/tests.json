@@ -246,7 +246,7 @@
   {
     "id": "T023",
     "description": "Submission flow: the system writes a durable submission before provider execution and returns a stable request id on success",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089",
       "F090"
