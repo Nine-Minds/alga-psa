@@ -143,3 +143,14 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestDefinitionManagement.integration.test.ts src/test/integration/serviceRequestHistoryIntegrity.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Added editor data helper [definitionEditor.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/definitionEditor.ts) that assembles section-ready data for basics/linkage/form/execution/publish and includes latest published-version metadata for draft-vs-published comparisons.
+- (2026-03-29) Added definition editor route [msp/service-requests/[definitionId]/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/[definitionId]/page.tsx) and UI [ServiceRequestDefinitionEditorPage.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/ServiceRequestDefinitionEditorPage.tsx) with explicit Basics, Linkage, Form, Execution, and Publish sections.
+- (2026-03-29) Updated management list names in [ServiceRequestsManagementPage.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/ServiceRequestsManagementPage.tsx) to link into the new editor route.
+- (2026-03-29) Added integration coverage [serviceRequestDefinitionEditor.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestDefinitionEditor.integration.test.ts) for T007 editor section payload + published-context behavior.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run definition editor integration test:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestDefinitionEditor.integration.test.ts`
+- (2026-03-29) Run definition management integration test:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestDefinitionManagement.integration.test.ts`

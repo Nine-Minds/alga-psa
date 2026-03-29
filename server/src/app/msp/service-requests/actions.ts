@@ -10,8 +10,10 @@ import {
   listServiceRequestDefinitionsForManagement,
   listServiceRequestTemplateOptions,
   unarchiveServiceRequestDefinitionFromManagement,
+  getServiceRequestDefinitionEditorData,
   type ServiceRequestDefinitionManagementRow,
   type ServiceRequestTemplateOption,
+  type ServiceRequestDefinitionEditorData,
 } from '../../../lib/service-requests';
 
 function getActorId(user: unknown): string | null {
@@ -31,6 +33,15 @@ export const listServiceRequestTemplatesAction = withAuth(async (): Promise<
   ServiceRequestTemplateOption[]
 > => {
   return listServiceRequestTemplateOptions();
+});
+
+export const getServiceRequestDefinitionEditorDataAction = withAuth(async (
+  _user,
+  { tenant },
+  definitionId: string
+): Promise<ServiceRequestDefinitionEditorData | null> => {
+  const { knex } = await createTenantKnex();
+  return getServiceRequestDefinitionEditorData(knex, tenant, definitionId);
 });
 
 export const createBlankServiceRequestDefinitionAction = withAuth(async (

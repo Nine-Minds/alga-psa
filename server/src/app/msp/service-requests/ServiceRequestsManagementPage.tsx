@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
@@ -87,6 +88,14 @@ export default function ServiceRequestsManagementPage() {
       {
         title: 'Name',
         dataIndex: 'name',
+        render: (value, row) => (
+          <Link
+            href={`/msp/service-requests/${row.definition_id}`}
+            className="text-blue-600 hover:underline"
+          >
+            {value as string}
+          </Link>
+        ),
       },
       {
         title: 'Description',

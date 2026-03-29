@@ -403,7 +403,7 @@
   {
     "id": "F047",
     "description": "The editor has a basics section for name, description, icon, category, and sort order",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -412,7 +412,7 @@
   {
     "id": "F048",
     "description": "The editor has a linkage section for optional service-catalog association",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -421,7 +421,7 @@
   {
     "id": "F049",
     "description": "The editor has a form-authoring section for the request form",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -430,7 +430,7 @@
   {
     "id": "F050",
     "description": "The editor has an execution section driven by the selected execution provider",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -439,7 +439,7 @@
   {
     "id": "F051",
     "description": "The editor has a publish section that distinguishes current draft state from the last published version",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"

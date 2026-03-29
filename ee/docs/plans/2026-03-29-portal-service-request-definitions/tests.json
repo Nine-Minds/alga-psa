@@ -81,7 +81,7 @@
   {
     "id": "T007",
     "description": "Admin UI: editor exposes basics, linkage, form, execution, and publish sections with current draft versus published state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047",
       "F048",
