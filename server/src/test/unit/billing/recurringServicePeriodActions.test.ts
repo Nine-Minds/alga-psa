@@ -12,11 +12,25 @@ function normalizeColumn(column: string): string {
   return column.replace(/^.*\./, '').replace(/\s+as\s+.*$/i, '').trim();
 }
 
-function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
-  let resultRows = [...rows];
+function createQueryBuilder(
+  tableName: string,
+  rowsByTable: Record<string, Row[]>,
+  raw: (sql: string) => string,
+) {
+  let resultRows = [...(rowsByTable[tableName] ?? [])];
+  let firstRowOnly = false;
+
+  const applyEqualityFilter = (column: string, expected: any) => {
+    resultRows = resultRows.filter((row) => row[normalizeColumn(column)] === expected);
+  };
 
   const builder: any = {
-    where: vi.fn((columnOrCriteria: string | Record<string, any>, operatorOrValue?: any) => {
+    where: vi.fn((columnOrCriteria: string | Record<string, any> | ((builder: any) => unknown), operatorOrValue?: any, value?: any) => {
+      if (typeof columnOrCriteria === 'function') {
+        columnOrCriteria(builder);
+        return builder;
+      }
+
       if (typeof columnOrCriteria === 'object') {
         resultRows = resultRows.filter((row) =>
           Object.entries(columnOrCriteria).every(([column, expected]) =>
@@ -26,9 +40,20 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
         return builder;
       }
 
-      resultRows = resultRows.filter(
-        (row) => row[normalizeColumn(columnOrCriteria)] === operatorOrValue,
-      );
+      const operator = value === undefined ? '=' : operatorOrValue;
+      const expectedValue = value === undefined ? operatorOrValue : value;
+      if (operator === '=') {
+        applyEqualityFilter(columnOrCriteria, expectedValue);
+        return builder;
+      }
+
+      return builder;
+    }),
+    andWhere: vi.fn((...args: any[]) => builder.where(...args)),
+    orWhere: vi.fn(() => builder),
+    whereNull: vi.fn((column: string) => {
+      const normalizedColumn = normalizeColumn(column);
+      resultRows = resultRows.filter((row) => row[normalizedColumn] == null);
       return builder;
     }),
     whereIn: vi.fn((column: string, expectedValues: any[]) => {
@@ -53,12 +78,27 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
     groupBy: vi.fn(() => builder),
     max: vi.fn(() => builder),
     limit: vi.fn(() => builder),
-    first: vi.fn(async () => resultRows[0]),
+    first: vi.fn(() => {
+      firstRowOnly = true;
+      return builder;
+    }),
     join: vi.fn(() => builder),
     leftJoin: vi.fn(() => builder),
+    update: vi.fn(async (patch: Record<string, unknown>) => {
+      for (const row of resultRows) {
+        Object.assign(row, patch);
+      }
+      return resultRows.length;
+    }),
+    insert: vi.fn(async (rowsToInsert: Row[] | Row) => {
+      const normalizedRows = Array.isArray(rowsToInsert) ? rowsToInsert : [rowsToInsert];
+      rowsByTable[tableName] = [...(rowsByTable[tableName] ?? []), ...normalizedRows];
+      resultRows = [...rowsByTable[tableName]];
+      return normalizedRows.length;
+    }),
     raw,
-    then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
-      Promise.resolve(resultRows).then(resolve, reject),
+    then: (resolve: (value: Row[] | Row | undefined) => unknown, reject?: (reason: unknown) => unknown) =>
+      Promise.resolve(firstRowOnly ? resultRows[0] : resultRows).then(resolve, reject),
   };
 
   return builder;
@@ -74,7 +114,7 @@ const mocks = vi.hoisted(() => {
       throw new Error(`relation "${normalizedTableName}" does not exist`);
     }
 
-    return createQueryBuilder(rowsByTable[normalizedTableName] ?? [], raw);
+    return createQueryBuilder(normalizedTableName, rowsByTable, raw);
   }) as any;
   knex.raw = raw;
 
@@ -116,6 +156,7 @@ const {
   listRecurringServicePeriodScheduleSummaries,
   previewRecurringServicePeriodInvoiceLinkageRepair,
   previewRecurringServicePeriodRegeneration,
+  repairMissingRecurringServicePeriods,
 } = await import('../../../../../packages/billing/src/actions/recurringServicePeriodActions');
 
 describe('recurring service period actions', () => {
@@ -165,8 +206,25 @@ describe('recurring service period actions', () => {
         contract_name: 'Acme Managed Services',
         contract_line_id: 'line-1',
         contract_line_name: 'Managed Router',
+        contract_line_type: 'fixed',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'arrears',
+        assignment_start_date: '2025-01-01',
+        assignment_end_date: null,
+        is_system_managed_default: false,
       },
     ];
+    mocks.rowsByTable.clients = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        billing_cycle: 'monthly',
+      },
+    ];
+    mocks.rowsByTable.client_billing_settings = [];
+    mocks.rowsByTable.client_billing_cycles = [];
+    mocks.rowsByTable.invoices = [];
   });
 
   it('T076: service-period view actions require billing.recurring_service_periods.view', async () => {
@@ -338,6 +396,83 @@ describe('recurring service period actions', () => {
         totalRows: 1,
         generatedRows: 1,
       },
+    });
+  });
+
+  it('T304: zero-row schedule management loads a repairable state instead of crashing when the live obligation still exists', async () => {
+    mocks.rowsByTable.recurring_service_periods = [];
+
+    const result = await getRecurringServicePeriodManagementView(
+      'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+    );
+
+    expect(result).toEqual({
+      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      obligationId: 'line-1',
+      obligationType: 'client_contract_line',
+      cadenceOwner: 'client',
+      duePosition: 'arrears',
+      chargeFamily: 'fixed',
+      clientId: 'client-1',
+      clientName: 'Acme Corp',
+      contractId: 'contract-1',
+      contractName: 'Acme Managed Services',
+      contractLineId: 'line-1',
+      contractLineName: 'Managed Router',
+      status: 'repair_required',
+      summary: {
+        totalRows: 0,
+        exceptionRows: 0,
+        generatedRows: 0,
+        editedRows: 0,
+        skippedRows: 0,
+        lockedRows: 0,
+        billedRows: 0,
+        supersededRows: 0,
+        archivedRows: 0,
+      },
+      rows: [],
+    });
+  });
+
+  it('T306: repairing a missing client-cadence schedule accepts date-only assignment boundaries and materializes future rows', async () => {
+    mocks.rowsByTable.recurring_service_periods = [];
+    mocks.rowsByTable.contract_lines = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        client_name: 'Acme Corp',
+        contract_id: 'contract-1',
+        contract_name: 'Acme Managed Services',
+        contract_line_id: 'line-1',
+        contract_line_name: 'Managed Router',
+        contract_line_type: 'fixed',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        assignment_start_date: '2026-03-01',
+        assignment_end_date: null,
+        is_system_managed_default: false,
+      },
+    ];
+
+    const result = await repairMissingRecurringServicePeriods(
+      'schedule:tenant-1:client_contract_line:line-1:client:advance',
+    );
+
+    expect(result).toMatchObject({
+      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+      backfilledRows: expect.any(Number),
+      realignedRows: 0,
+      supersededRows: 0,
+    });
+    expect((result as any).backfilledRows).toBeGreaterThan(0);
+    expect(mocks.rowsByTable.recurring_service_periods).not.toEqual([]);
+    expect(mocks.rowsByTable.recurring_service_periods[0]).toMatchObject({
+      schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+      service_period_start: expect.stringMatching(/^2026-\d{2}-\d{2}$/),
+      provenance_kind: 'generated',
+      reason_code: 'backfill_materialization',
     });
   });
 

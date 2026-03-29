@@ -6,7 +6,9 @@ import {
   getRecurringServicePeriodManagementView,
   listRecurringServicePeriodScheduleSummaries,
   previewRecurringServicePeriodRegeneration,
+  repairMissingRecurringServicePeriods,
   type PreviewRecurringServicePeriodRegenerationInput,
+  type RepairRecurringServicePeriodMaterializationResult,
   type RecurringServicePeriodScheduleSummary,
   type RecurringServicePeriodManagementView,
 } from '@alga-psa/billing/actions/recurringServicePeriodActions';
@@ -16,6 +18,7 @@ type ManagementViewResult = RecurringServicePeriodManagementView | ActionPermiss
 type RegenerationPreviewResult =
   | Awaited<ReturnType<typeof previewRecurringServicePeriodRegeneration>>
   | null;
+type RepairResult = RepairRecurringServicePeriodMaterializationResult | null;
 
 function isPermissionError(value: unknown): value is ActionPermissionError {
   return Boolean(
@@ -51,8 +54,13 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
   const [candidateRecordsJson, setCandidateRecordsJson] = useState('[]');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [regenerationPreview, setRegenerationPreview] = useState<RegenerationPreviewResult>(null);
+  const [repairLoading, setRepairLoading] = useState(false);
+  const [repairResult, setRepairResult] = useState<RepairResult>(null);
 
-  const loadView = async (targetScheduleKey: string) => {
+  const loadView = async (
+    targetScheduleKey: string,
+    options: { clearRepairResult?: boolean } = {},
+  ) => {
     const normalized = targetScheduleKey.trim();
     if (!normalized) {
       setError('Enter a schedule key to inspect recurring service periods.');
@@ -63,6 +71,9 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
     setLoading(true);
     setError(null);
     setRegenerationPreview(null);
+    if (options.clearRepairResult !== false) {
+      setRepairResult(null);
+    }
 
     try {
       const result: ManagementViewResult = await getRecurringServicePeriodManagementView(normalized);
@@ -129,7 +140,7 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
   };
 
   const handlePreviewRegeneration = async () => {
-    if (!view) {
+    if (!view || view.status !== 'ready') {
       return;
     }
 
@@ -164,6 +175,34 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
       );
     } finally {
       setPreviewLoading(false);
+    }
+  };
+
+  const handleRepairMissingRows = async () => {
+    if (!view || view.status !== 'repair_required') {
+      return;
+    }
+
+    setRepairLoading(true);
+    setError(null);
+
+    try {
+      const result = await repairMissingRecurringServicePeriods(view.scheduleKey);
+      if (isPermissionError(result)) {
+        setError(result.permissionError);
+        return;
+      }
+
+      setRepairResult(result);
+      await loadView(view.scheduleKey, { clearRepairResult: false });
+    } catch (repairError) {
+      setError(
+        repairError instanceof Error
+          ? repairError.message
+          : 'Failed to repair recurring service-period materialization.',
+      );
+    } finally {
+      setRepairLoading(false);
     }
   };
 
@@ -250,122 +289,166 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-4">
-            <div className="rounded-lg border p-4">
-              <div className="text-sm text-muted-foreground">Generated</div>
-              <div className="text-2xl font-semibold">{view.summary.generatedRows}</div>
-            </div>
-            <div className="rounded-lg border p-4">
-              <div className="text-sm text-muted-foreground">Edited</div>
-              <div className="text-2xl font-semibold">{view.summary.editedRows}</div>
-            </div>
-            <div className="rounded-lg border p-4">
-              <div className="text-sm text-muted-foreground">Billed</div>
-              <div className="text-2xl font-semibold">{view.summary.billedRows}</div>
-            </div>
-            <div className="rounded-lg border p-4">
-              <div className="text-sm text-muted-foreground">Exceptions</div>
-              <div className="text-2xl font-semibold">{view.summary.exceptionRows}</div>
-            </div>
-          </div>
-
-          <div className="rounded-lg border overflow-hidden">
-            <table className="w-full text-sm" data-testid="recurring-service-periods-table">
-              <thead className="bg-muted/40 text-left">
-                <tr>
-                  <th className="px-4 py-3 font-medium">State</th>
-                  <th className="px-4 py-3 font-medium">Service Period</th>
-                  <th className="px-4 py-3 font-medium">Invoice Window</th>
-                  <th className="px-4 py-3 font-medium">Revision</th>
-                  <th className="px-4 py-3 font-medium">Reason</th>
-                  <th className="px-4 py-3 font-medium">Allowed Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {view.rows.map((row) => (
-                  <tr key={row.record.recordId} className="border-t align-top">
-                    <td className="px-4 py-3">
-                      <div className="font-medium">{row.displayState.label}</div>
-                      <div className="text-xs text-muted-foreground">{row.displayState.detail}</div>
-                    </td>
-                    <td className="px-4 py-3">{formatRange(row.record.servicePeriod.start, row.record.servicePeriod.end)}</td>
-                    <td className="px-4 py-3">{formatRange(row.record.invoiceWindow.start, row.record.invoiceWindow.end)}</td>
-                    <td className="px-4 py-3">r{row.record.revision}</td>
-                    <td className="px-4 py-3">{row.displayState.reasonLabel ?? 'Generated from source cadence'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {allowedGovernanceActions(row).map((action) => (
-                          <span
-                            key={`${row.record.recordId}:${action}`}
-                            className="rounded-full border px-2 py-0.5 text-xs"
-                          >
-                            {action}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="rounded-lg border p-4 space-y-3">
-            <div>
-              <h3 className="text-lg font-semibold">Regeneration Preview</h3>
-              <p className="text-sm text-muted-foreground">
-                Paste candidate records JSON to preview how preserved edited or billed rows would conflict with
-                regenerated future candidates for this schedule.
-              </p>
-            </div>
-            <label className="block text-sm font-medium">
-              Candidate Records JSON
-              <textarea
-                className="mt-1 min-h-40 w-full rounded-md border px-3 py-2 font-mono text-xs"
-                value={candidateRecordsJson}
-                onChange={(event) => setCandidateRecordsJson(event.target.value)}
-              />
-            </label>
-            <button
-              type="button"
-              className="rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
-              onClick={() => {
-                startTransition(() => {
-                  void handlePreviewRegeneration();
-                });
-              }}
-              disabled={previewLoading}
+          {repairResult ? (
+            <div
+              className="rounded-lg border border-success/30 bg-success/5 p-4 space-y-2"
+              data-testid="repair-result"
             >
-              {previewLoading ? 'Previewing…' : 'Preview Regeneration'}
-            </button>
-
-            {regenerationPreview && !isPermissionError(regenerationPreview) ? (
-              <div className="space-y-2" data-testid="regeneration-preview">
-                <div className="text-sm">
-                  Conflicts: <span className="font-semibold">{regenerationPreview.conflicts.length}</span>
-                </div>
-                {regenerationPreview.conflicts.length > 0 ? (
-                  <ul className="space-y-2 text-sm">
-                    {regenerationPreview.conflicts.map((conflict) => (
-                      <li
-                        key={`${conflict.recordId}:${conflict.kind}`}
-                        className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2"
-                      >
-                        <div className="font-medium">
-                          {conflict.kind.replaceAll('_', ' ')}: {conflict.recordId}
-                        </div>
-                        <div className="text-muted-foreground">{conflict.reason}</div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="rounded-md border border-success/30 bg-success/5 px-3 py-2 text-sm">
-                    No regeneration conflicts were detected for the supplied candidates.
-                  </div>
-                )}
+              <div className="text-sm font-medium">Repair completed</div>
+              <div className="text-sm text-muted-foreground">
+                Backfilled {repairResult.backfilledRows} rows, realigned {repairResult.realignedRows}, skipped{' '}
+                {repairResult.skippedHistoricalCandidates} historical candidates, and left{' '}
+                {repairResult.activeRows} active rows on this schedule.
               </div>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
+
+          {view.status === 'repair_required' ? (
+            <div
+              className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3"
+              data-testid="recurring-service-period-repair-state"
+            >
+              <div>
+                <h3 className="text-lg font-semibold">Missing persisted service periods</h3>
+                <p className="text-sm text-muted-foreground">
+                  This recurring schedule exists in live billing metadata but has no persisted service-period rows.
+                  Repair will materialize future rows only, preserve billed history boundaries, and stamp the new
+                  records with backfill provenance.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                onClick={() => {
+                  startTransition(() => {
+                    void handleRepairMissingRows();
+                  });
+                }}
+                disabled={repairLoading}
+              >
+                {repairLoading ? 'Repairing…' : 'Repair Missing Service Periods'}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-3 md:grid-cols-4">
+                <div className="rounded-lg border p-4">
+                  <div className="text-sm text-muted-foreground">Generated</div>
+                  <div className="text-2xl font-semibold">{view.summary.generatedRows}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-sm text-muted-foreground">Edited</div>
+                  <div className="text-2xl font-semibold">{view.summary.editedRows}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-sm text-muted-foreground">Billed</div>
+                  <div className="text-2xl font-semibold">{view.summary.billedRows}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-sm text-muted-foreground">Exceptions</div>
+                  <div className="text-2xl font-semibold">{view.summary.exceptionRows}</div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border overflow-hidden">
+                <table className="w-full text-sm" data-testid="recurring-service-periods-table">
+                  <thead className="bg-muted/40 text-left">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">State</th>
+                      <th className="px-4 py-3 font-medium">Service Period</th>
+                      <th className="px-4 py-3 font-medium">Invoice Window</th>
+                      <th className="px-4 py-3 font-medium">Revision</th>
+                      <th className="px-4 py-3 font-medium">Reason</th>
+                      <th className="px-4 py-3 font-medium">Allowed Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {view.rows.map((row) => (
+                      <tr key={row.record.recordId} className="border-t align-top">
+                        <td className="px-4 py-3">
+                          <div className="font-medium">{row.displayState.label}</div>
+                          <div className="text-xs text-muted-foreground">{row.displayState.detail}</div>
+                        </td>
+                        <td className="px-4 py-3">{formatRange(row.record.servicePeriod.start, row.record.servicePeriod.end)}</td>
+                        <td className="px-4 py-3">{formatRange(row.record.invoiceWindow.start, row.record.invoiceWindow.end)}</td>
+                        <td className="px-4 py-3">r{row.record.revision}</td>
+                        <td className="px-4 py-3">{row.displayState.reasonLabel ?? 'Generated from source cadence'}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {allowedGovernanceActions(row).map((action) => (
+                              <span
+                                key={`${row.record.recordId}:${action}`}
+                                className="rounded-full border px-2 py-0.5 text-xs"
+                              >
+                                {action}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-3">
+                <div>
+                  <h3 className="text-lg font-semibold">Regeneration Preview</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Paste candidate records JSON to preview how preserved edited or billed rows would conflict with
+                    regenerated future candidates for this schedule.
+                  </p>
+                </div>
+                <label className="block text-sm font-medium">
+                  Candidate Records JSON
+                  <textarea
+                    className="mt-1 min-h-40 w-full rounded-md border px-3 py-2 font-mono text-xs"
+                    value={candidateRecordsJson}
+                    onChange={(event) => setCandidateRecordsJson(event.target.value)}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
+                  onClick={() => {
+                    startTransition(() => {
+                      void handlePreviewRegeneration();
+                    });
+                  }}
+                  disabled={previewLoading}
+                >
+                  {previewLoading ? 'Previewing…' : 'Preview Regeneration'}
+                </button>
+
+                {regenerationPreview && !isPermissionError(regenerationPreview) ? (
+                  <div className="space-y-2" data-testid="regeneration-preview">
+                    <div className="text-sm">
+                      Conflicts: <span className="font-semibold">{regenerationPreview.conflicts.length}</span>
+                    </div>
+                    {regenerationPreview.conflicts.length > 0 ? (
+                      <ul className="space-y-2 text-sm">
+                        {regenerationPreview.conflicts.map((conflict) => (
+                          <li
+                            key={`${conflict.recordId}:${conflict.kind}`}
+                            className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2"
+                          >
+                            <div className="font-medium">
+                              {conflict.kind.replaceAll('_', ' ')}: {conflict.recordId}
+                            </div>
+                            <div className="text-muted-foreground">{conflict.reason}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="rounded-md border border-success/30 bg-success/5 px-3 py-2 text-sm">
+                        No regeneration conflicts were detected for the supplied candidates.
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </>
+          )}
         </>
       ) : null}
     </div>

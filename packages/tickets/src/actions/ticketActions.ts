@@ -726,6 +726,15 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         };
       }
 
+      // Keep the ticket row's denormalized close flag aligned with the selected status.
+      if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
+        const nextIsClosed = !!newStatus?.is_closed;
+        await trx('tickets')
+          .where({ ticket_id: id, tenant: tenant })
+          .update({ is_closed: nextIsClosed });
+        updatedTicket.is_closed = nextIsClosed;
+      }
+
       // Record closed_at / closed_by when transitioning to/from closed status
       if (newStatus?.is_closed && !oldStatus?.is_closed) {
         await trx('tickets')
