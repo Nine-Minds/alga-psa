@@ -6,11 +6,19 @@ export default async function RequestServicesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Request Services</h1>
-        <p className="text-sm text-[rgb(var(--color-text-600))]">
-          Browse published services and submit structured requests.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold">Request Services</h1>
+          <p className="text-sm text-[rgb(var(--color-text-600))]">
+            Browse published services and submit structured requests.
+          </p>
+        </div>
+        <Link
+          href="/client-portal/request-services/my-requests"
+          className="text-sm text-[rgb(var(--color-primary-600))] hover:underline"
+        >
+          My Requests
+        </Link>
       </div>
 
       {groups.length === 0 ? (

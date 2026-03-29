@@ -255,7 +255,7 @@
   {
     "id": "T024",
     "description": "Portal history: My Requests lists only the authenticated user's client-owned submissions and request detail renders their submitted answers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091",
       "F092",

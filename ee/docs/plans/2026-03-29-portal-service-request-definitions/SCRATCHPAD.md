@@ -326,3 +326,24 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Extended client-submission history host in [submissionHistory.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/submissionHistory.ts):
+  - `listClientServiceRequestSubmissions(...)` for client-scoped history list rows
+  - `getClientServiceRequestSubmissionDetail(...)` for client-scoped detail with immutable `form_schema_snapshot`
+- (2026-03-29) Added client-portal My Requests action surface [my-requests/actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/my-requests/actions.ts) using authenticated client resolution and client-scoped history helpers.
+- (2026-03-29) Added My Requests pages:
+  - list view: [my-requests/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/my-requests/page.tsx)
+  - detail view: [my-requests/[submissionId]/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/my-requests/[submissionId]/page.tsx)
+- (2026-03-29) Updated request-services catalog header in [request-services/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/page.tsx) with `My Requests` shortcut navigation.
+- (2026-03-29) Added integration coverage [serviceRequestPortalHistory.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestPortalHistory.integration.test.ts) for T024/F091/F092/F093/F094/F096:
+  - list endpoint returns only same-client submissions
+  - detail endpoint returns submitted payload + field presentation snapshot for same-client submissions
+  - detail lookup returns null for cross-client submissions
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run portal history integration tests:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestPortalHistory.integration.test.ts`
+- (2026-03-29) Run submission flow/history integration tests together:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestPortalHistory.integration.test.ts src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`

@@ -795,7 +795,7 @@
   {
     "id": "F091",
     "description": "Portal users can view a My Requests list scoped to their client ownership",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"
@@ -804,7 +804,7 @@
   {
     "id": "F092",
     "description": "The My Requests list shows request name, submission time, and current submission status",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -813,7 +813,7 @@
   {
     "id": "F093",
     "description": "Portal users can open a request-detail page for one of their own submissions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"
@@ -822,7 +822,7 @@
   {
     "id": "F094",
     "description": "Submission details render the submitted answers using the field presentation from the version snapshot",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -840,7 +840,7 @@
   {
     "id": "F096",
     "description": "Portal users cannot list or open submissions that belong to a different client/contact context",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Requirements > Functional Requirements"
