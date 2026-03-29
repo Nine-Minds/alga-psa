@@ -272,3 +272,17 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestPortalDetailDefaults.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Added portal submission host helper [submissionService.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/submissionService.ts) to support file-upload submission payloads:
+  - validates required fields against the immutable published schema snapshot
+  - enforces required `file-upload` presence via attachment `fieldKey` matching
+  - persists durable `service_request_submissions` rows in `pending` state before any downstream execution starts
+  - persists `service_request_submission_attachments` linkage rows with file metadata (`file_id`, name/type/size)
+- (2026-03-29) Exported submission APIs from [service-requests/index.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/index.ts) for client-portal submit wiring.
+- (2026-03-29) Added integration coverage [serviceRequestSubmissionAttachments.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts) for T020/F086: required file-upload submissions persist both submission and attachment linkage records on success.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run submission attachment integration test:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`

@@ -215,7 +215,7 @@
   {
     "id": "T020",
     "description": "Portal submit: a request containing a required file upload persists both the submission and attachment references on success",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066",
       "F086",

@@ -750,7 +750,7 @@
   {
     "id": "F086",
     "description": "Portal users can provide file uploads for definitions that include file-upload fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Security / Permissions"
