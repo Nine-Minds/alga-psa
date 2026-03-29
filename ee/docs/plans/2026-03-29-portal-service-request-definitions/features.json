@@ -1,0 +1,1064 @@
+[
+  {
+    "id": "F001",
+    "description": "CE owns a new service-request host package or feature slice that defines the core domain types and public interfaces for portal service requests",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "CE defines a `ServiceRequestExecutionProvider` interface for pluggable submission execution behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "CE defines a `ServiceRequestFormBehaviorProvider` interface for pluggable form behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "CE defines a `ServiceRequestVisibilityProvider` interface for pluggable visibility evaluation",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "CE defines a `ServiceRequestTemplateProvider` interface for starter template registration",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "CE optionally defines a `ServiceRequestAdminExtensionProvider` interface for provider-specific authoring panels",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "CE ships a built-in `ticket-only` execution provider",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "CE ships a built-in `basic` form-behavior provider",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "CE ships a built-in `all-authenticated-client-users` visibility provider",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "CE ships at least one starter template pack that creates normal editable service request drafts",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Service-request entrypoints resolve providers by key through registries instead of hard-coded enterprise branching",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Non-functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "EE can register additional providers through a single enterprise entrypoint without changing CE table shapes",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "The feature remains coherent and buildable in CE when EE provider registrations are absent",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Migration creates a tenant-owned `service_request_definitions` table for mutable draft definitions",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Definitions store portal-facing metadata including name, description, icon, and sort order",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Definitions store an optional category reference used for portal grouping",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Definitions store an optional `linked_service_id` reference to `service_catalog`",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Definitions store provider keys for execution, form behavior, and visibility",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Definitions store provider config blobs for execution, form behavior, and visibility",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Definitions track draft, published, and archived lifecycle state",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Definitions track created-by, updated-by, and publish-related audit timestamps needed for normal product behavior",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Migration creates an immutable `service_request_definition_versions` table",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Published versions snapshot portal metadata from the source definition",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Published versions snapshot form schema and field presentation from the source definition",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Published versions snapshot provider keys and provider config from the source definition",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Version numbers increment monotonically per definition as new publishes occur",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Publishing records the user and timestamp responsible for a given version",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Definitions can create a new mutable draft based on the currently published version without mutating historical versions",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Migration creates a tenant-owned `service_request_submissions` table for durable intake records",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Submissions store the definition id and version id used when the request was submitted",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Submissions store tenant, client, contact, and requester user ownership fields",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Submissions store the normalized submitted payload captured from the published definition snapshot",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Submissions store execution status and a concise execution error summary when downstream startup fails",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Submissions store `created_ticket_id` when a ticket-backed provider succeeds",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Submissions store `workflow_execution_id` or equivalent workflow reference when a workflow-backed provider succeeds",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Submissions store created and updated timestamps for request-history presentation",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Migration creates a `service_request_submission_attachments` table or equivalent attachment linkage structure",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Attachment rows link a submission to persisted file or document storage references",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Archiving a definition preserves its versions and historical submissions",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Historical submissions remain readable even when linked service-catalog or category records later change names",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "MSP admins can navigate to a new Service Requests management area",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "The Service Requests list shows draft, published, and archived definitions",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "The Service Requests list supports creating a blank definition",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "The Service Requests list supports creating a definition from a template",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Admins can duplicate an existing definition into a new draft",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Admins can archive and unarchive definitions from the management surface",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "The editor has a basics section for name, description, icon, category, and sort order",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "The editor has a linkage section for optional service-catalog association",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "The editor has a form-authoring section for the request form",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "The editor has an execution section driven by the selected execution provider",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "The editor has a publish section that distinguishes current draft state from the last published version",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Admins can save an incomplete draft without making it visible in the portal",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Admins can preview the portal-facing service card before publishing",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Admins can preview the rendered request form before publishing",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Publishing validates the full definition and blocks publication when required configuration is missing or invalid",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Publishing creates a new immutable version rather than editing the prior published state in place",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Template instantiation creates a normal editable draft that is detached from the template source after creation",
+    "implemented": false,
+    "prdRefs": [
+      "Summary",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "CE starter templates are presented as optional shortcuts rather than a required setup path",
+    "implemented": false,
+    "prdRefs": [
+      "Summary",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Admins can view submissions scoped to a specific definition from the management experience",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Admins can open a submission detail view showing requester identity, submitted values, and downstream execution references",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "The CE basic form builder supports a short-text field type",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "The CE basic form builder supports a long-text field type",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "The CE basic form builder supports a dropdown/select field type",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "The CE basic form builder supports a checkbox field type",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "The CE basic form builder supports a date field type",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "The CE basic form builder supports a file-upload field type",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Field configuration supports label and help text for each field",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Field configuration supports marking fields as required",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Field configuration supports static default values for supported field types",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Select fields support admin-authored option lists",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Admins can add new fields to the form builder",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Admins can remove fields from the form builder",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Admins can reorder fields in the form builder",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Generated field keys remain stable across reorder and presentation-only edits",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Publish validation rejects duplicate or invalid field keys in the basic builder",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "The basic builder stores a neutral schema representation on the draft definition",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "The published version stores the immutable form snapshot derived from the draft definition",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "The portal client shows a first-class `Request Services` navigation item",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "The Request Services landing page shows only published definitions",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "The Request Services landing page groups definitions by category when categories are configured",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "The Request Services landing page evaluates visibility rules before listing a definition to a portal user",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Service cards display icon, title, and short description from the published definition",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Opening a service card navigates to a request detail page for the published definition",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "The request detail page renders the form from the immutable published version snapshot rather than from the mutable draft",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Static default values are applied when the portal request form first renders",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Portal users can provide file uploads for definitions that include file-upload fields",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Submit-time validation enforces required-field rules against the published version snapshot",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Submit-time validation rejects direct portal submissions to definitions that are not currently visible to the requesting user",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "Submitting a request persists a durable submission row before provider execution begins",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Successful submission shows a confirmation state containing a stable request identifier",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Portal users can view a My Requests list scoped to their client ownership",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "The My Requests list shows request name, submission time, and current submission status",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "Portal users can open a request-detail page for one of their own submissions",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Submission details render the submitted answers using the field presentation from the version snapshot",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "Submission details show uploaded attachment references when the submission included file uploads",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "Portal users cannot list or open submissions that belong to a different client/contact context",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "The `ticket-only` execution provider is selectable in the editor without requiring any EE code",
+    "implemented": false,
+    "prdRefs": [
+      "Summary",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "The `ticket-only` provider lets admins configure default ticket routing values needed by the existing portal ticket creation path",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "The `ticket-only` provider maps request payload values into ticket title and ticket description/notes content",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "The `ticket-only` provider uses the existing client-portal contact/client resolution model instead of inventing a parallel access model",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "The `ticket-only` provider writes the created ticket id back onto the submission when ticket creation succeeds",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "The `ticket-only` provider marks the submission with execution failure while keeping the submission persisted when ticket creation fails",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Confirmation and request-history views expose a linked ticket reference when a ticket-backed submission succeeds",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Definitions can be published successfully without any linked service-catalog item",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "The linked-service picker reuses existing service-catalog search patterns rather than introducing a second catalog-search model",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "The editor shows the selected linked-service record clearly enough for admins to confirm what commercial service is associated",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "Publish validation rejects linked-service references that no longer resolve to a valid service-catalog row",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "Templates may prefill a linked service and ticket-mapping defaults while remaining fully editable before publish",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "EE registers a `workflow-only` execution provider through the enterprise provider entrypoint",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "EE registers a `ticket-plus-workflow` execution provider through the enterprise provider entrypoint",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Workflow-backed provider configuration lets admins choose the workflow to run for a definition",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Workflow-backed provider configuration lets admins map request submission data into workflow inputs",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "The `ticket-plus-workflow` provider can pass the created ticket id into workflow inputs alongside the submitted request data",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "Successful workflow-backed execution writes the resulting workflow reference back onto the submission record",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "Workflow startup failures leave the submission persisted and marked with execution failure",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "Portal request-history views can surface workflow references when the selected provider creates them",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "EE registers an advanced form-behavior provider through the enterprise provider entrypoint",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "The advanced form-behavior provider supports conditional show/hide rules for fields",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "The advanced form-behavior provider supports requester, client, or context-aware default values",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "Publish validation rejects invalid conditional-logic configuration in advanced form mode",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions",
+      "Requirements > Functional Requirements"
+    ]
+  }
+]

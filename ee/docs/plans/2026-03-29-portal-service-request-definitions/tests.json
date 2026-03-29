@@ -1,0 +1,493 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed integration: creating a draft definition, publishing version 1, and inserting a submission succeeds with the new core tables and tenant scoping",
+    "implemented": false,
+    "featureIds": [
+      "F014",
+      "F022",
+      "F029",
+      "F030",
+      "F031",
+      "F032"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed integration: publishing a new version snapshots form and provider config immutably so version 1 remains unchanged after draft edits and republish",
+    "implemented": false,
+    "featureIds": [
+      "F023",
+      "F024",
+      "F025",
+      "F026",
+      "F028",
+      "F077"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed integration: archiving a definition preserves versions and historical submissions while removing the definition from new portal discovery",
+    "implemented": false,
+    "featureIds": [
+      "F020",
+      "F039",
+      "F079"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Registry boot: CE-only startup registers exactly the built-in ticket, basic-form, and basic-visibility providers and still loads the feature cleanly",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004",
+      "F007",
+      "F008",
+      "F009",
+      "F011",
+      "F013"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Registry boot: EE startup adds workflow, advanced form, and advanced visibility providers through the enterprise entrypoint without changing CE persistence shape",
+    "implemented": false,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F012",
+      "F018",
+      "F019",
+      "F109",
+      "F110",
+      "F117"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Admin UI: list page supports create blank, create from template, duplicate, archive, and unarchive flows",
+    "implemented": false,
+    "featureIds": [
+      "F041",
+      "F042",
+      "F043",
+      "F044",
+      "F045",
+      "F046"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Admin UI: editor exposes basics, linkage, form, execution, and publish sections with current draft versus published state",
+    "implemented": false,
+    "featureIds": [
+      "F047",
+      "F048",
+      "F049",
+      "F050",
+      "F051"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Admin workflow: saving a partial draft succeeds but publishing blocks when required configuration is missing",
+    "implemented": false,
+    "featureIds": [
+      "F052",
+      "F055"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Templates: instantiating a starter template produces a detached editable draft rather than a live reference to the template source",
+    "implemented": false,
+    "featureIds": [
+      "F010",
+      "F057",
+      "F058",
+      "F108"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Linked service picker: admins can search the existing service catalog and select a linked service from the editor",
+    "implemented": false,
+    "featureIds": [
+      "F017",
+      "F048",
+      "F105",
+      "F106"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Publish validation: definitions with a missing linked service are rejected while definitions with no linked service at all can still publish",
+    "implemented": false,
+    "featureIds": [
+      "F104",
+      "F107"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Basic builder: short text, long text, checkbox, and date fields can be authored and serialized into the neutral draft schema",
+    "implemented": false,
+    "featureIds": [
+      "F061",
+      "F062",
+      "F064",
+      "F065",
+      "F076"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Basic builder: select fields preserve option lists and static defaults through preview and publish",
+    "implemented": false,
+    "featureIds": [
+      "F063",
+      "F069",
+      "F070",
+      "F076",
+      "F077"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Basic builder: add, remove, and reorder operations keep stable field keys when presentation-only properties change",
+    "implemented": false,
+    "featureIds": [
+      "F071",
+      "F072",
+      "F073",
+      "F074"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Publish validation: duplicate or invalid field keys are rejected before a definition can be published",
+    "implemented": false,
+    "featureIds": [
+      "F075",
+      "F055"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Portal layout: a first-class Request Services navigation item appears in the authenticated client portal",
+    "implemented": false,
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Portal catalog: only published definitions that pass visibility evaluation appear in the Request Services landing page and category grouping is applied when present",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F079",
+      "F080",
+      "F081",
+      "F082"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Portal detail: opening a service request renders the published version snapshot rather than the current mutable draft",
+    "implemented": false,
+    "featureIds": [
+      "F083",
+      "F084"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Portal detail: static default values are applied on first render for supported fields",
+    "implemented": false,
+    "featureIds": [
+      "F069",
+      "F085"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Portal submit: a request containing a required file upload persists both the submission and attachment references on success",
+    "implemented": false,
+    "featureIds": [
+      "F066",
+      "F086",
+      "F037",
+      "F038",
+      "F089"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Portal submit: required-field validation blocks submission against the published snapshot",
+    "implemented": false,
+    "featureIds": [
+      "F068",
+      "F087"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Authorization: direct submit to a hidden or unauthorized definition is rejected even if the user bypasses catalog listing",
+    "implemented": false,
+    "featureIds": [
+      "F081",
+      "F088",
+      "F096"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Submission flow: the system writes a durable submission before provider execution and returns a stable request id on success",
+    "implemented": false,
+    "featureIds": [
+      "F089",
+      "F090"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Portal history: My Requests lists only the authenticated user's client-owned submissions and request detail renders their submitted answers",
+    "implemented": false,
+    "featureIds": [
+      "F091",
+      "F092",
+      "F093",
+      "F094",
+      "F096"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Portal history: attachment references appear in request detail when the submission included uploaded files",
+    "implemented": false,
+    "featureIds": [
+      "F095"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Ticket-only provider: submitting a request creates a ticket using configured defaults and mapped request data",
+    "implemented": false,
+    "featureIds": [
+      "F097",
+      "F098",
+      "F099",
+      "F100",
+      "F101"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Ticket-only provider failure: ticket creation errors leave the submission persisted with a failure status and error summary",
+    "implemented": false,
+    "featureIds": [
+      "F102",
+      "F033"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Ticket-backed UX: confirmation and history surfaces show the linked ticket reference after successful ticket creation",
+    "implemented": false,
+    "featureIds": [
+      "F034",
+      "F103"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Catalog-link flexibility: a definition with no linked service still publishes, renders, and submits successfully through the ticket-only path",
+    "implemented": false,
+    "featureIds": [
+      "F104"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Admin submissions: MSP can list submissions for a definition and open a detail view that includes payload plus downstream references",
+    "implemented": false,
+    "featureIds": [
+      "F059",
+      "F060"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Workflow provider registry: EE startup makes workflow-only and ticket-plus-workflow execution modes available in the editor",
+    "implemented": false,
+    "featureIds": [
+      "F109",
+      "F110",
+      "F111"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Workflow-only provider: submitting a request starts the configured workflow and stores its execution reference on the submission",
+    "implemented": false,
+    "featureIds": [
+      "F111",
+      "F112",
+      "F114"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Ticket-plus-workflow provider: the workflow input mapping receives both submission data and the created ticket id",
+    "implemented": false,
+    "featureIds": [
+      "F110",
+      "F112",
+      "F113"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Workflow provider failure: workflow startup errors keep the submission persisted and mark execution failure",
+    "implemented": false,
+    "featureIds": [
+      "F115",
+      "F033"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Workflow-backed UX: request-history views expose workflow references when the selected provider creates them",
+    "implemented": false,
+    "featureIds": [
+      "F035",
+      "F116"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Advanced form behavior: conditional show/hide rules affect rendered fields in the portal request form",
+    "implemented": false,
+    "featureIds": [
+      "F117",
+      "F118"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Advanced form behavior: required validation respects conditional visibility so hidden required fields do not block submit",
+    "implemented": false,
+    "featureIds": [
+      "F118",
+      "F120"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Advanced defaults: requester/client/context-aware default values resolve into the portal form before submission",
+    "implemented": false,
+    "featureIds": [
+      "F119"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Advanced visibility: unauthorized client users do not see restricted definitions and cannot submit them directly",
+    "implemented": false,
+    "featureIds": [
+      "F004",
+      "F009",
+      "F081",
+      "F088"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Enterprise authoring: provider-specific EE config panels only render when the corresponding providers are registered",
+    "implemented": false,
+    "featureIds": [
+      "F006",
+      "F012",
+      "F109",
+      "F117"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "CE authoring: workflow and advanced-form options are absent when EE registrations are not present",
+    "implemented": false,
+    "featureIds": [
+      "F013",
+      "F109",
+      "F117"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Client ownership: list, detail, submit, and attachment access all enforce the same authenticated client scoping rules",
+    "implemented": false,
+    "featureIds": [
+      "F031",
+      "F088",
+      "F091",
+      "F096"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Attachment authorization: a portal user cannot fetch or view submission attachments that belong to another client context",
+    "implemented": false,
+    "featureIds": [
+      "F038",
+      "F095",
+      "F096"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "History integrity: renaming linked services or categories after submission does not corrupt historical submission rendering",
+    "implemented": false,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Version integrity: after publishing version 2, a version 1 submission still renders according to version 1 field presentation and values",
+    "implemented": false,
+    "featureIds": [
+      "F024",
+      "F028",
+      "F094"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Republish flow: admins can create a draft from a published definition, change it, and publish version 2 without deleting version 1",
+    "implemented": false,
+    "featureIds": [
+      "F026",
+      "F028",
+      "F056"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Compatibility sanity: existing client portal ticket creation remains functional after the service-request feature is introduced",
+    "implemented": false,
+    "featureIds": [
+      "F100"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Compatibility sanity: existing appointment-request flows remain functional after the service-request feature is introduced",
+    "implemented": false,
+    "featureIds": [
+      "F013"
+    ]
+  }
+]
