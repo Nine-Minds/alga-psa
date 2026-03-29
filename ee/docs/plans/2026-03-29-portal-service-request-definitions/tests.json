@@ -133,7 +133,7 @@
   {
     "id": "T012",
     "description": "Basic builder: short text, long text, checkbox, and date fields can be authored and serialized into the neutral draft schema",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061",
       "F062",
@@ -145,7 +145,7 @@
   {
     "id": "T013",
     "description": "Basic builder: select fields preserve option lists and static defaults through preview and publish",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063",
       "F069",
@@ -157,7 +157,7 @@
   {
     "id": "T014",
     "description": "Basic builder: add, remove, and reorder operations keep stable field keys when presentation-only properties change",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071",
       "F072",
@@ -168,7 +168,7 @@
   {
     "id": "T015",
     "description": "Publish validation: duplicate or invalid field keys are rejected before a definition can be published",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075",
       "F055"

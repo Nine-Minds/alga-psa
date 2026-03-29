@@ -528,7 +528,7 @@
   {
     "id": "F061",
     "description": "The CE basic form builder supports a short-text field type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"
@@ -537,7 +537,7 @@
   {
     "id": "F062",
     "description": "The CE basic form builder supports a long-text field type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"
@@ -546,7 +546,7 @@
   {
     "id": "F063",
     "description": "The CE basic form builder supports a dropdown/select field type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"
@@ -555,7 +555,7 @@
   {
     "id": "F064",
     "description": "The CE basic form builder supports a checkbox field type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"
@@ -564,7 +564,7 @@
   {
     "id": "F065",
     "description": "The CE basic form builder supports a date field type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"
@@ -573,7 +573,7 @@
   {
     "id": "F066",
     "description": "The CE basic form builder supports a file-upload field type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"
@@ -582,7 +582,7 @@
   {
     "id": "F067",
     "description": "Field configuration supports label and help text for each field",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"
@@ -591,7 +591,7 @@
   {
     "id": "F068",
     "description": "Field configuration supports marking fields as required",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
@@ -599,7 +599,7 @@
   {
     "id": "F069",
     "description": "Field configuration supports static default values for supported field types",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
@@ -607,7 +607,7 @@
   {
     "id": "F070",
     "description": "Select fields support admin-authored option lists",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
@@ -615,7 +615,7 @@
   {
     "id": "F071",
     "description": "Admins can add new fields to the form builder",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Users and Primary Flows"
@@ -624,7 +624,7 @@
   {
     "id": "F072",
     "description": "Admins can remove fields from the form builder",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Users and Primary Flows"
@@ -633,7 +633,7 @@
   {
     "id": "F073",
     "description": "Admins can reorder fields in the form builder",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Users and Primary Flows"
@@ -642,7 +642,7 @@
   {
     "id": "F074",
     "description": "Generated field keys remain stable across reorder and presentation-only edits",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Requirements > Functional Requirements"
@@ -651,7 +651,7 @@
   {
     "id": "F075",
     "description": "Publish validation rejects duplicate or invalid field keys in the basic builder",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Security / Permissions"
@@ -660,7 +660,7 @@
   {
     "id": "F076",
     "description": "The basic builder stores a neutral schema representation on the draft definition",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Requirements > Functional Requirements"

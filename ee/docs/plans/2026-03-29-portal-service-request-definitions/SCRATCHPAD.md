@@ -205,3 +205,22 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestLinkedServicePublishValidation.integration.test.ts src/test/integration/serviceRequestAdminSubmissions.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Added CE basic form-builder host module [basicFormBuilder.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/basicFormBuilder.ts) covering:
+  - supported field types: `short-text`, `long-text`, `select`, `checkbox`, `date`, `file-upload`
+  - field configuration shape: key, label, help text, required flag, static default value, and select option lists
+  - draft authoring operations: add, update, remove, reorder, and replace schema
+  - stable key generation for newly-added fields and key preservation across reorder/presentation edits
+- (2026-03-29) Integrated basic form schema validation into publish validation in [definitionValidation.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/definitionValidation.ts), including duplicate/invalid key detection and type-specific default/option validation.
+- (2026-03-29) Exported basic form builder APIs through [service-requests/index.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/index.ts) for CE host usage.
+- (2026-03-29) Added integration suite [serviceRequestBasicFormBuilder.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestBasicFormBuilder.integration.test.ts) covering:
+  - T012: short/long/checkbox/date authoring + draft serialization
+  - T013: select options/default preservation through publish snapshot
+  - T014: add/remove/reorder + stable key behavior under presentation-only updates
+  - T015: publish validation rejection for duplicate/invalid field keys
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run basic form builder integration tests:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestBasicFormBuilder.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`

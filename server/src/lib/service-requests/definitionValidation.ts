@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { publishServiceRequestDefinition, type ServiceRequestDefinitionVersionRecord } from './definitionPublishing';
+import { validateBasicFormSchema } from './basicFormBuilder';
 import {
   getServiceRequestExecutionProvider,
   getServiceRequestFormBehaviorProvider,
@@ -15,6 +16,7 @@ export interface ServiceRequestPublishValidationResult {
 interface ServiceRequestDefinitionForValidation {
   name: string;
   linked_service_id: string | null;
+  form_schema: Record<string, unknown>;
   execution_provider: string;
   execution_config: Record<string, unknown>;
   form_behavior_provider: string;
@@ -45,6 +47,11 @@ export async function validateServiceRequestDefinitionForPublish(
 
   if (!definition.name?.trim()) {
     errors.push('Name is required');
+  }
+
+  const formValidation = validateBasicFormSchema(definition.form_schema ?? {});
+  if (!formValidation.isValid) {
+    errors.push(...formValidation.errors.map((error) => `Form: ${error}`));
   }
 
   if (definition.linked_service_id) {

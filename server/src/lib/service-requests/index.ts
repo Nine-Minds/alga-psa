@@ -4,6 +4,7 @@ export * from './definitionValidation';
 export * from './definitionLifecycle';
 export * from './definitionManagement';
 export * from './definitionEditor';
+export * from './basicFormBuilder';
 export * from './submissionHistory';
 export * from './providers/contracts';
 export * from './providers/registry';
