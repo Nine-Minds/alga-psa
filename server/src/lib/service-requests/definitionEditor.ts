@@ -1,5 +1,8 @@
 import type { Knex } from 'knex';
-import { listServiceRequestExecutionProviders } from './providers/registry';
+import {
+  listServiceRequestExecutionProviders,
+  listServiceRequestFormBehaviorProviders,
+} from './providers/registry';
 
 export interface ServiceRequestDefinitionEditorData {
   definitionId: string;
@@ -31,6 +34,12 @@ export interface ServiceRequestDefinitionEditorData {
       displayName: string;
       executionMode: string;
     }>;
+    availableFormBehaviorProviders: Array<{
+      key: string;
+      displayName: string;
+    }>;
+    showWorkflowExecutionConfigPanel: boolean;
+    showAdvancedFormBehaviorConfigPanel: boolean;
   };
   publish: {
     publishedVersionNumber: number | null;
@@ -77,6 +86,10 @@ export async function getServiceRequestDefinitionEditorData(
     displayName: provider.displayName,
     executionMode: provider.executionMode,
   }));
+  const availableFormBehaviorProviders = listServiceRequestFormBehaviorProviders().map((provider) => ({
+    key: provider.key,
+    displayName: provider.displayName,
+  }));
 
   const definition = (await knex('service_request_definitions')
     .where({ tenant, definition_id: definitionId })
@@ -106,6 +119,14 @@ export async function getServiceRequestDefinitionEditorData(
       .first<ServiceRequestPublishedVersionRow>(),
   ]);
 
+  const workflowProviderKeys = new Set(['workflow-only', 'ticket-plus-workflow']);
+  const availableExecutionProviderKeys = new Set(
+    availableExecutionProviders.map((provider) => provider.key)
+  );
+  const availableFormBehaviorProviderKeys = new Set(
+    availableFormBehaviorProviders.map((provider) => provider.key)
+  );
+
   return {
     definitionId: definition.definition_id,
     lifecycleState: definition.lifecycle_state,
@@ -134,6 +155,13 @@ export async function getServiceRequestDefinitionEditorData(
       visibilityProvider: definition.visibility_provider,
       visibilityConfig: definition.visibility_config,
       availableExecutionProviders,
+      availableFormBehaviorProviders,
+      showWorkflowExecutionConfigPanel:
+        workflowProviderKeys.has(definition.execution_provider) &&
+        availableExecutionProviderKeys.has(definition.execution_provider),
+      showAdvancedFormBehaviorConfigPanel:
+        definition.form_behavior_provider === 'advanced' &&
+        availableFormBehaviorProviderKeys.has('advanced'),
     },
     publish: {
       publishedVersionNumber: latestPublishedVersion?.version_number ?? null,

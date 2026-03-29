@@ -48,6 +48,12 @@ interface EditorData {
       displayName: string;
       executionMode: string;
     }>;
+    availableFormBehaviorProviders: Array<{
+      key: string;
+      displayName: string;
+    }>;
+    showWorkflowExecutionConfigPanel: boolean;
+    showAdvancedFormBehaviorConfigPanel: boolean;
   };
   publish: {
     publishedVersionNumber: number | null;
@@ -107,9 +113,7 @@ export default function ServiceRequestDefinitionEditorPage() {
   const [workflowIdInput, setWorkflowIdInput] = useState('');
   const [workflowInputMappingText, setWorkflowInputMappingText] = useState('{}');
 
-  const isWorkflowBackedExecution =
-    data?.execution.executionProvider === 'workflow-only' ||
-    data?.execution.executionProvider === 'ticket-plus-workflow';
+  const isWorkflowBackedExecution = data?.execution.showWorkflowExecutionConfigPanel === true;
 
   useEffect(() => {
     const load = async () => {
@@ -443,6 +447,15 @@ export default function ServiceRequestDefinitionEditorPage() {
               >
                 Save Workflow Settings
               </Button>
+            </div>
+          </div>
+        )}
+        {data.execution.showAdvancedFormBehaviorConfigPanel && (
+          <div className="rounded border p-3 bg-[rgb(var(--color-background-100))] text-sm text-[rgb(var(--color-text-700))]">
+            <div className="font-semibold mb-1">Advanced Form Behavior</div>
+            <div>
+              Conditional visibility and context-aware defaults are enabled via the registered
+              enterprise form-behavior provider.
             </div>
           </div>
         )}

@@ -407,7 +407,7 @@
   {
     "id": "T040",
     "description": "Enterprise authoring: provider-specific EE config panels only render when the corresponding providers are registered",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F012",
@@ -418,7 +418,7 @@
   {
     "id": "T041",
     "description": "CE authoring: workflow and advanced-form options are absent when EE registrations are not present",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F109",
@@ -428,7 +428,7 @@
   {
     "id": "T042",
     "description": "Client ownership: list, detail, submit, and attachment access all enforce the same authenticated client scoping rules",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031",
       "F088",
@@ -439,7 +439,7 @@
   {
     "id": "T043",
     "description": "Attachment authorization: a portal user cannot fetch or view submission attachments that belong to another client context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F095",
@@ -457,7 +457,7 @@
   {
     "id": "T045",
     "description": "Version integrity: after publishing version 2, a version 1 submission still renders according to version 1 field presentation and values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F028",
@@ -477,7 +477,7 @@
   {
     "id": "T047",
     "description": "Compatibility sanity: existing client portal ticket creation remains functional after the service-request feature is introduced",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F100"
     ]
@@ -485,7 +485,7 @@
   {
     "id": "T048",
     "description": "Compatibility sanity: existing appointment-request flows remain functional after the service-request feature is introduced",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]

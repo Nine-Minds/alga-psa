@@ -465,3 +465,29 @@ Working memory for the portal service request definitions effort. This is the pl
 
 - (2026-03-29) Run advanced visibility integration test:
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestAdvancedVisibility.integration.test.ts`
+- (2026-03-29) Added enterprise authoring panel gating data in [definitionEditor.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/definitionEditor.ts):
+  - `availableFormBehaviorProviders`
+  - `showWorkflowExecutionConfigPanel`
+  - `showAdvancedFormBehaviorConfigPanel`
+- (2026-03-29) Updated [ServiceRequestDefinitionEditorPage.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/ServiceRequestDefinitionEditorPage.tsx) to render workflow config and advanced form-behavior config panels only when their providers are registered (T040/T041).
+- (2026-03-29) Added integration coverage [serviceRequestEnterpriseAuthoringPanels.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestEnterpriseAuthoringPanels.integration.test.ts) for:
+  - T040: EE registrations expose workflow/advanced authoring panels and options.
+  - T041: CE-only provider registry hides workflow/advanced panels and options.
+- (2026-03-29) Added integration coverage [serviceRequestClientOwnership.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestClientOwnership.integration.test.ts) for T042/T043:
+  - client ownership enforced consistently for submit/list/detail/attachment visibility
+  - cross-client access remains denied for submission detail and linked attachments
+- (2026-03-29) Added integration coverage [serviceRequestVersionIntegrity.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestVersionIntegrity.integration.test.ts) for T045:
+  - a version-1 submission continues rendering with version-1 field labels/schema after version-2 publish.
+- (2026-03-29) Compatibility sanity (T047): validated existing client portal ticket board/status validation flow by running [client-tickets.boardStatusValidation.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts) after mock alignment for `withOptionalAuth`.
+- (2026-03-29) Compatibility sanity (T048): validated appointment flow behavior by running targeted integration scenario in [appointmentAvailability.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/appointmentAvailability.integration.test.ts) (`should exclude slots with existing appointments (conflicts)`).
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run enterprise authoring panel visibility tests:
+  - `cd server && npx vitest run src/test/integration/serviceRequestEnterpriseAuthoringPanels.integration.test.ts src/test/integration/serviceRequestWorkflowProviderEditorOptions.integration.test.ts`
+- (2026-03-29) Run client ownership/version integrity tests:
+  - `cd server && npx vitest run src/test/integration/serviceRequestClientOwnership.integration.test.ts src/test/integration/serviceRequestVersionIntegrity.integration.test.ts`
+- (2026-03-29) Run client portal ticket compatibility sanity test:
+  - `cd packages/client-portal && npx vitest run src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts`
+- (2026-03-29) Run appointment compatibility sanity test:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/appointmentAvailability.integration.test.ts -t "should exclude slots with existing appointments (conflicts)"`
