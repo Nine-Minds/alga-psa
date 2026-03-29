@@ -1,6 +1,7 @@
 export * from './domain';
 export * from './definitionPublishing';
 export * from './definitionLifecycle';
+export * from './definitionManagement';
 export * from './submissionHistory';
 export * from './providers/contracts';
 export * from './providers/registry';

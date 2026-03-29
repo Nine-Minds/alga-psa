@@ -351,7 +351,7 @@
   {
     "id": "F041",
     "description": "MSP admins can navigate to a new Service Requests management area",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes"
@@ -360,7 +360,7 @@
   {
     "id": "F042",
     "description": "The Service Requests list shows draft, published, and archived definitions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes"
@@ -369,7 +369,7 @@
   {
     "id": "F043",
     "description": "The Service Requests list supports creating a blank definition",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows"
     ]
@@ -377,7 +377,7 @@
   {
     "id": "F044",
     "description": "The Service Requests list supports creating a definition from a template",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows"
     ]
@@ -385,7 +385,7 @@
   {
     "id": "F045",
     "description": "Admins can duplicate an existing definition into a new draft",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"
@@ -394,7 +394,7 @@
   {
     "id": "F046",
     "description": "Admins can archive and unarchive definitions from the management surface",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"

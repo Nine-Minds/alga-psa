@@ -68,7 +68,7 @@
   {
     "id": "T006",
     "description": "Admin UI: list page supports create blank, create from template, duplicate, archive, and unarchive flows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041",
       "F042",

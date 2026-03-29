@@ -127,3 +127,19 @@ Working memory for the portal service request definitions effort. This is the pl
 - (2026-03-29) Notes:
   - Avoid parallel execution of service-request integration tests in this repo because shared DB bootstrap (`test_database`) can conflict.
   - Ensure `server/coverage/.tmp` exists before `vitest run` in this environment to avoid coverage temp-file ENOENT failures.
+- (2026-03-29) Added admin definition-management service helpers in [definitionManagement.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/definitionManagement.ts) for:
+  - list definitions across draft/published/archived lifecycle states
+  - create blank draft definitions
+  - instantiate draft definitions from registered template providers
+  - duplicate an existing definition into a new draft copy
+  - archive/unarchive from management workflows
+- (2026-03-29) Added MSP admin management surface at [msp/service-requests/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/page.tsx) with interactive list UI in [ServiceRequestsManagementPage.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/ServiceRequestsManagementPage.tsx) and server actions in [actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/actions.ts).
+- (2026-03-29) Added sidebar navigation entry in [menuConfig.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/config/menuConfig.ts) for `/msp/service-requests` (`Service Requests`) to satisfy admin discoverability.
+- (2026-03-29) Added integration test [serviceRequestDefinitionManagement.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestDefinitionManagement.integration.test.ts) validating T006 create blank/from-template, duplicate, archive, and unarchive flows end-to-end against the DB.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run service request definition-management + history-integrity integration tests:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestDefinitionManagement.integration.test.ts src/test/integration/serviceRequestHistoryIntegrity.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
