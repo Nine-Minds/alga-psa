@@ -723,7 +723,7 @@
   {
     "id": "F083",
     "description": "Opening a service card navigates to a request detail page for the published definition",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes"
@@ -732,7 +732,7 @@
   {
     "id": "F084",
     "description": "The request detail page renders the form from the immutable published version snapshot rather than from the mutable draft",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"

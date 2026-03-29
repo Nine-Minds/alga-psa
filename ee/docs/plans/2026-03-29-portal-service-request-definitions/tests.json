@@ -197,7 +197,7 @@
   {
     "id": "T018",
     "description": "Portal detail: opening a service request renders the published version snapshot rather than the current mutable draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083",
       "F084"

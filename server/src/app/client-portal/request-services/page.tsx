@@ -1,4 +1,5 @@
 import { listRequestServiceCatalogGroupsAction } from './actions';
+import Link from 'next/link';
 
 export default async function RequestServicesPage() {
   const groups = await listRequestServiceCatalogGroupsAction();
@@ -23,9 +24,10 @@ export default async function RequestServicesPage() {
               <h2 className="text-lg font-semibold">{group.category}</h2>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {group.items.map((item) => (
-                  <article
+                  <Link
                     key={item.definitionId}
                     id={`request-service-card-${item.definitionId}`}
+                    href={`/client-portal/request-services/${item.definitionId}`}
                     className="rounded border p-4 bg-[rgb(var(--color-background-100))]"
                   >
                     <div className="text-xs uppercase tracking-wide text-[rgb(var(--color-text-500))] mb-1">
@@ -35,7 +37,7 @@ export default async function RequestServicesPage() {
                     <p className="text-sm text-[rgb(var(--color-text-700))] mt-1">
                       {item.description ?? 'No description provided'}
                     </p>
-                  </article>
+                  </Link>
                 ))}
               </div>
             </section>

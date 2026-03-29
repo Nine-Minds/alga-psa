@@ -7,6 +7,7 @@ export * from './definitionEditor';
 export * from './basicFormBuilder';
 export * from './submissionHistory';
 export * from './portalCatalog';
+export * from './portalDetail';
 export * from './providers/contracts';
 export * from './providers/registry';
 export * from './providers/registerEnterpriseProviders';

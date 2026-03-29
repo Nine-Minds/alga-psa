@@ -250,3 +250,14 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestPortalCatalog.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Added portal detail helper [portalDetail.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/portalDetail.ts) to resolve visible, published definition details from immutable version snapshots (`service_request_definition_versions`) rather than mutable draft schema.
+- (2026-03-29) Added authenticated detail action [request-services/[definitionId]/actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/[definitionId]/actions.ts) with client-scope resolution and visibility enforcement.
+- (2026-03-29) Added portal detail page [request-services/[definitionId]/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/[definitionId]/page.tsx) and updated catalog cards in [request-services/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/page.tsx) to navigate into it.
+- (2026-03-29) Added integration coverage [serviceRequestPortalDetail.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestPortalDetail.integration.test.ts) for T018/F083/F084: detail reads published version snapshot even when definition draft/form data diverges.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run portal request-service detail integration test:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestPortalDetail.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
