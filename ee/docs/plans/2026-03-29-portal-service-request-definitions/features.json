@@ -768,7 +768,7 @@
   {
     "id": "F088",
     "description": "Submit-time validation rejects direct portal submissions to definitions that are not currently visible to the requesting user",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Requirements > Functional Requirements"

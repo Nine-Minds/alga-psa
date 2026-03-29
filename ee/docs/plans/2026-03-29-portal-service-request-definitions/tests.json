@@ -236,7 +236,7 @@
   {
     "id": "T022",
     "description": "Authorization: direct submit to a hidden or unauthorized definition is rejected even if the user bypasses catalog listing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081",
       "F088",

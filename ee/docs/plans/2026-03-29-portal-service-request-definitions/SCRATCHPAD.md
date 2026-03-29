@@ -297,3 +297,15 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Extended [serviceRequestSubmissionAttachments.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts) with T022/F088 authorization coverage:
+  - registered a test-only deny-all visibility provider via the CE provider registry
+  - verified direct submit attempts to a published-but-hidden definition are rejected (`Service request is not visible or not published`)
+  - verified no submission row is persisted on unauthorized direct-submit attempts
+  - used `try/finally` to reset provider registry state to CE built-ins after test execution
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run submission authorization integration tests:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`

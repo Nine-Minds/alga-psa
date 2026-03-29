@@ -3,6 +3,10 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { submitPortalServiceRequest } from '../../lib/service-requests/submissionService';
+import {
+  registerServiceRequestProviders,
+  resetServiceRequestProviderRegistry,
+} from '../../lib/service-requests/providers/registry';
 
 describe('service request submission attachments', () => {
   let db: Knex;
@@ -177,5 +181,88 @@ describe('service request submission attachments', () => {
 
     const submissions = await db('service_request_submissions').where({ tenant, definition_id: definitionId });
     expect(submissions).toHaveLength(0);
+  });
+
+  it('T022: direct submit to an unauthorized definition is rejected even when bypassing catalog listing', async () => {
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+    const requesterUserId = uuidv4();
+    const clientId = uuidv4();
+    const contactId = uuidv4();
+    const denyProviderKey = `deny-all-${uuidv4()}`;
+
+    registerServiceRequestProviders({
+      executionProviders: [],
+      formBehaviorProviders: [],
+      visibilityProviders: [
+        {
+          key: denyProviderKey,
+          displayName: 'Deny all',
+          validateConfig: () => ({ isValid: true }),
+          canAccessDefinition: async () => false,
+        },
+      ],
+      templateProviders: [],
+      adminExtensionProviders: [],
+    });
+
+    try {
+      await db('tenants').insert({
+        tenant,
+        client_name: `Tenant ${tenant.slice(0, 8)}`,
+        email: `tenant-${tenant.slice(0, 8)}@example.com`,
+      });
+
+      await db('service_request_definitions').insert({
+        tenant,
+        definition_id: definitionId,
+        name: 'Restricted Request',
+        form_schema: { fields: [] },
+        execution_provider: 'ticket-only',
+        execution_config: {},
+        form_behavior_provider: 'basic',
+        form_behavior_config: {},
+        visibility_provider: denyProviderKey,
+        visibility_config: {},
+        lifecycle_state: 'published',
+      });
+
+      await db('service_request_definition_versions').insert({
+        tenant,
+        version_id: versionId,
+        definition_id: definitionId,
+        version_number: 1,
+        name: 'Restricted Request',
+        form_schema_snapshot: {
+          fields: [{ key: 'justification', type: 'long-text', label: 'Justification', required: false }],
+        },
+        execution_provider: 'ticket-only',
+        execution_config: {},
+        form_behavior_provider: 'basic',
+        form_behavior_config: {},
+        visibility_provider: denyProviderKey,
+        visibility_config: {},
+      });
+
+      await expect(
+        submitPortalServiceRequest({
+          knex: db,
+          tenant,
+          definitionId,
+          requesterUserId,
+          clientId,
+          contactId,
+          payload: {
+            justification: 'Attempting direct submit',
+          },
+        })
+      ).rejects.toThrow('Service request is not visible or not published');
+
+      const submissions = await db('service_request_submissions').where({ tenant, definition_id: definitionId });
+      expect(submissions).toHaveLength(0);
+    } finally {
+      resetServiceRequestProviderRegistry();
+    }
   });
 });
