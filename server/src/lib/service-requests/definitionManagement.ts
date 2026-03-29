@@ -77,6 +77,7 @@ interface SaveDraftDefinitionInput {
       | 'category_id'
       | 'sort_order'
       | 'linked_service_id'
+      | 'linked_service_name_snapshot'
       | 'form_schema'
       | 'execution_provider'
       | 'execution_config'
@@ -86,6 +87,12 @@ interface SaveDraftDefinitionInput {
       | 'visibility_config'
     >
   >;
+}
+
+export interface LinkableServiceOption {
+  service_id: string;
+  service_name: string;
+  description: string | null;
 }
 
 export async function listServiceRequestDefinitionsForManagement(
@@ -285,6 +292,68 @@ export async function saveServiceRequestDefinitionDraft({
   }
 
   return saved;
+}
+
+export async function searchServiceCatalogForLinking(
+  knex: Knex,
+  tenant: string,
+  query: string,
+  limit: number = 20
+): Promise<LinkableServiceOption[]> {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  return (await knex('service_catalog')
+    .where({ tenant })
+    .andWhereILike('service_name', `%${trimmed}%`)
+    .orderBy('service_name', 'asc')
+    .limit(limit)
+    .select('service_id', 'service_name', 'description')) as LinkableServiceOption[];
+}
+
+export async function setLinkedServiceForServiceRequestDefinitionDraft(input: {
+  knex: Knex;
+  tenant: string;
+  definitionId: string;
+  linkedServiceId: string | null;
+  updatedBy?: string | null;
+}): Promise<ServiceRequestDefinitionManagementRow> {
+  const { knex, tenant, definitionId, linkedServiceId, updatedBy = null } = input;
+
+  if (!linkedServiceId) {
+    return saveServiceRequestDefinitionDraft({
+      knex,
+      tenant,
+      definitionId,
+      updatedBy,
+      updates: {
+        linked_service_id: null,
+        linked_service_name_snapshot: null,
+      },
+    });
+  }
+
+  const service = await knex('service_catalog')
+    .where({ tenant, service_id: linkedServiceId })
+    .select('service_name')
+    .first<{ service_name: string }>();
+
+  if (!service) {
+    throw new Error('Linked service not found');
+  }
+
+  return saveServiceRequestDefinitionDraft({
+    knex,
+    tenant,
+    definitionId,
+    updatedBy,
+    updates: {
+      linked_service_id: linkedServiceId,
+      linked_service_name_snapshot: service.service_name,
+    },
+  });
 }
 
 export async function archiveServiceRequestDefinitionFromManagement(

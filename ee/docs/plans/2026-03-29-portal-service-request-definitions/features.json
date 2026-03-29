@@ -920,7 +920,7 @@
   {
     "id": "F105",
     "description": "The linked-service picker reuses existing service-catalog search patterns rather than introducing a second catalog-search model",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Requirements > Functional Requirements"
@@ -929,7 +929,7 @@
   {
     "id": "F106",
     "description": "The editor shows the selected linked-service record clearly enough for admins to confirm what commercial service is associated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"

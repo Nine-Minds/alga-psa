@@ -177,3 +177,13 @@ Working memory for the portal service request definitions effort. This is the pl
 
 - (2026-03-29) Run template-instantiation integrity integration test:
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestTemplateInstantiation.integration.test.ts`
+- (2026-03-29) Added linked-service picker backend helpers in [definitionManagement.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/definitionManagement.ts):
+  - `searchServiceCatalogForLinking(...)`
+  - `setLinkedServiceForServiceRequestDefinitionDraft(...)`
+- (2026-03-29) Added linkage picker actions in [msp/service-requests/actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/actions.ts) and linked-service search/select/clear UX in [ServiceRequestDefinitionEditorPage.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/ServiceRequestDefinitionEditorPage.tsx).
+- (2026-03-29) Added integration coverage [serviceRequestLinkedServicePicker.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestLinkedServicePicker.integration.test.ts) for T010 linked-service search and selection behavior.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run linked-service picker integration test:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestLinkedServicePicker.integration.test.ts`

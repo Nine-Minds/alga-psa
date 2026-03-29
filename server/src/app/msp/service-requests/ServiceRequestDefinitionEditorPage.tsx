@@ -6,6 +6,8 @@ import {
   getServiceRequestDefinitionEditorDataAction,
   publishServiceRequestDefinitionAction,
   saveServiceRequestDefinitionDraftAction,
+  searchLinkedServicesForDefinitionAction,
+  setLinkedServiceForDefinitionAction,
   validateServiceRequestDefinitionForPublishAction,
 } from './actions';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -67,6 +69,10 @@ export default function ServiceRequestDefinitionEditorPage() {
   const [data, setData] = useState<EditorData | null>(null);
   const [loading, setLoading] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [linkedServiceQuery, setLinkedServiceQuery] = useState('');
+  const [linkedServiceResults, setLinkedServiceResults] = useState<
+    Array<{ service_id: string; service_name: string; description: string | null }>
+  >([]);
 
   useEffect(() => {
     const load = async () => {
@@ -169,6 +175,66 @@ export default function ServiceRequestDefinitionEditorPage() {
       <Card id="service-request-editor-linkage" className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">Linkage</h2>
         <FieldRow label="Linked Service" value={data.linkage.linkedServiceName ?? data.linkage.linkedServiceId ?? '-'} />
+        <div className="flex gap-2">
+          <input
+            id="service-request-linked-service-search"
+            className="border rounded px-3 py-2 text-sm flex-1"
+            placeholder="Search service catalog"
+            value={linkedServiceQuery}
+            onChange={(event) => setLinkedServiceQuery(event.target.value)}
+          />
+          <Button
+            id="service-request-linked-service-search-button"
+            variant="outline"
+            onClick={async () => {
+              const results = await searchLinkedServicesForDefinitionAction(linkedServiceQuery);
+              setLinkedServiceResults(results);
+            }}
+          >
+            Search
+          </Button>
+          <Button
+            id="service-request-linked-service-clear"
+            variant="outline"
+            onClick={async () => {
+              await setLinkedServiceForDefinitionAction(data.definitionId, null);
+              const refreshed = await getServiceRequestDefinitionEditorDataAction(data.definitionId);
+              setData(refreshed as EditorData | null);
+              toast.success('Linked service cleared');
+            }}
+          >
+            Clear
+          </Button>
+        </div>
+        {linkedServiceResults.length > 0 && (
+          <ul className="space-y-2 text-sm">
+            {linkedServiceResults.map((result) => (
+              <li
+                key={result.service_id}
+                className="flex items-center justify-between border rounded p-2"
+              >
+                <div>
+                  <div className="font-medium">{result.service_name}</div>
+                  <div className="text-xs text-[rgb(var(--color-text-600))]">
+                    {result.description ?? 'No description'}
+                  </div>
+                </div>
+                <Button
+                  id={`service-request-linked-service-select-${result.service_id}`}
+                  variant="outline"
+                  onClick={async () => {
+                    await setLinkedServiceForDefinitionAction(data.definitionId, result.service_id);
+                    const refreshed = await getServiceRequestDefinitionEditorDataAction(data.definitionId);
+                    setData(refreshed as EditorData | null);
+                    toast.success(`Linked ${result.service_name}`);
+                  }}
+                >
+                  Select
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <Card id="service-request-editor-form" className="p-4 space-y-3">

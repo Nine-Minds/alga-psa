@@ -113,7 +113,7 @@
   {
     "id": "T010",
     "description": "Linked service picker: admins can search the existing service catalog and select a linked service from the editor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F048",
