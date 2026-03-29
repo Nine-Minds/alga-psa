@@ -3,6 +3,7 @@ import { getServiceRequestVisibilityProvider } from './providers/registry';
 import type { ServiceRequestDefinitionShape } from './domain';
 import type { ServiceRequestPortalCatalogContext } from './portalCatalog';
 import { resolveStaticDefaultValues } from './basicFormBuilder';
+import { getServiceRequestFormBehaviorProvider } from './providers/registry';
 
 interface PublishedDefinitionRow {
   tenant: string;
@@ -26,6 +27,8 @@ interface DefinitionVersionRow {
   form_schema_snapshot: Record<string, unknown>;
   execution_provider: string;
   execution_config: Record<string, unknown> | null;
+  form_behavior_provider: string;
+  form_behavior_config: Record<string, unknown> | null;
 }
 
 export interface ServiceRequestPortalDefinitionDetail {
@@ -37,8 +40,11 @@ export interface ServiceRequestPortalDefinitionDetail {
   icon: string | null;
   formSchema: Record<string, unknown>;
   initialValues: Record<string, string | boolean | null>;
+  visibleFieldKeys: string[];
   executionProvider: string;
   executionConfig: Record<string, unknown>;
+  formBehaviorProvider: string;
+  formBehaviorConfig: Record<string, unknown>;
 }
 
 export async function getVisiblePublishedServiceRequestDefinitionDetail(
@@ -114,12 +120,56 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
       'icon',
       'form_schema_snapshot',
       'execution_provider',
-      'execution_config'
+      'execution_config',
+      'form_behavior_provider',
+      'form_behavior_config'
     )) as DefinitionVersionRow | undefined;
 
   if (!latestVersion) {
     return null;
   }
+
+  const formBehaviorProvider = getServiceRequestFormBehaviorProvider(
+    latestVersion.form_behavior_provider
+  );
+  if (!formBehaviorProvider) {
+    return null;
+  }
+
+  const staticInitialValues = resolveStaticDefaultValues(latestVersion.form_schema_snapshot);
+  const dynamicInitialValues = formBehaviorProvider.resolveInitialValues
+    ? await formBehaviorProvider.resolveInitialValues(
+        {
+          tenant: context.tenant,
+          requesterUserId: context.requesterUserId,
+          clientId: context.clientId,
+          contactId: context.contactId ?? null,
+        },
+        latestVersion.form_behavior_config ?? {}
+      )
+    : {};
+  const resolvedInitialValues = {
+    ...staticInitialValues,
+    ...dynamicInitialValues,
+  } as Record<string, string | boolean | null>;
+
+  const visibleFieldKeys = formBehaviorProvider.resolveVisibleFieldKeys
+    ? await formBehaviorProvider.resolveVisibleFieldKeys(
+        {
+          tenant: context.tenant,
+          requesterUserId: context.requesterUserId,
+          clientId: context.clientId,
+          contactId: context.contactId ?? null,
+        },
+        latestVersion.form_schema_snapshot,
+        resolvedInitialValues,
+        latestVersion.form_behavior_config ?? {}
+      )
+    : Array.isArray((latestVersion.form_schema_snapshot as any)?.fields)
+      ? ((latestVersion.form_schema_snapshot as any).fields as any[])
+          .map((field) => (typeof field?.key === 'string' ? field.key : null))
+          .filter((fieldKey): fieldKey is string => !!fieldKey)
+      : [];
 
   return {
     definitionId,
@@ -129,8 +179,11 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
     description: latestVersion.description,
     icon: latestVersion.icon,
     formSchema: latestVersion.form_schema_snapshot,
-    initialValues: resolveStaticDefaultValues(latestVersion.form_schema_snapshot),
+    initialValues: resolvedInitialValues,
+    visibleFieldKeys,
     executionProvider: latestVersion.execution_provider,
     executionConfig: latestVersion.execution_config ?? {},
+    formBehaviorProvider: latestVersion.form_behavior_provider,
+    formBehaviorConfig: latestVersion.form_behavior_config ?? {},
   };
 }

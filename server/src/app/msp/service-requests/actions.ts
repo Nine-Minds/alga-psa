@@ -132,6 +132,24 @@ export const updateServiceRequestExecutionProviderAction = withAuth(async (
   });
 });
 
+export const updateServiceRequestExecutionConfigAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  executionConfig: Record<string, unknown>
+): Promise<ServiceRequestDefinitionManagementRow> => {
+  const { knex } = await createTenantKnex();
+  return saveServiceRequestDefinitionDraft({
+    knex,
+    tenant,
+    definitionId,
+    updates: {
+      execution_config: executionConfig,
+    },
+    updatedBy: getActorId(user),
+  });
+});
+
 export const validateServiceRequestDefinitionForPublishAction = withAuth(async (
   _user,
   { tenant },

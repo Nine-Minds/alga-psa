@@ -974,7 +974,7 @@
   {
     "id": "F111",
     "description": "Workflow-backed provider configuration lets admins choose the workflow to run for a definition",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Users and Primary Flows"
@@ -983,7 +983,7 @@
   {
     "id": "F112",
     "description": "Workflow-backed provider configuration lets admins map request submission data into workflow inputs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -992,7 +992,7 @@
   {
     "id": "F113",
     "description": "The `ticket-plus-workflow` provider can pass the created ticket id into workflow inputs alongside the submitted request data",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -1001,7 +1001,7 @@
   {
     "id": "F114",
     "description": "Successful workflow-backed execution writes the resulting workflow reference back onto the submission record",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -1010,7 +1010,7 @@
   {
     "id": "F115",
     "description": "Workflow startup failures leave the submission persisted and marked with execution failure",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Observability"
@@ -1019,7 +1019,7 @@
   {
     "id": "F116",
     "description": "Portal request-history views can surface workflow references when the selected provider creates them",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"
@@ -1037,7 +1037,7 @@
   {
     "id": "F118",
     "description": "The advanced form-behavior provider supports conditional show/hide rules for fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"
@@ -1046,7 +1046,7 @@
   {
     "id": "F119",
     "description": "The advanced form-behavior provider supports requester, client, or context-aware default values",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Users and Primary Flows"
@@ -1055,7 +1055,7 @@
   {
     "id": "F120",
     "description": "Publish validation rejects invalid conditional-logic configuration in advanced form mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Requirements > Functional Requirements"

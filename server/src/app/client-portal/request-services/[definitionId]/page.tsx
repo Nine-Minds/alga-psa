@@ -34,6 +34,13 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
   const fields = Array.isArray((detail.formSchema as any)?.fields)
     ? ((detail.formSchema as any).fields as any[])
     : [];
+  const visibleFieldKeySet = new Set(detail.visibleFieldKeys ?? []);
+  const visibleFields = fields.filter(
+    (field: any, index: number) =>
+      visibleFieldKeySet.has(
+        typeof field?.key === 'string' ? field.key : `field_${index}`
+      )
+  );
 
   return (
     <div className="space-y-4">
@@ -70,11 +77,11 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
 
       <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
         <h2 className="text-base font-semibold mb-2">Request Form</h2>
-        {fields.length === 0 ? (
+        {visibleFields.length === 0 ? (
           <p className="text-sm text-[rgb(var(--color-text-600))]">No fields configured.</p>
         ) : (
           <form action={submitAction} className="space-y-4">
-            {fields.map((field: any, index: number) => {
+            {visibleFields.map((field: any, index: number) => {
               const key = typeof field?.key === 'string' ? field.key : `field_${index}`;
               const label = typeof field?.label === 'string' ? field.label : key;
               const helpText = typeof field?.helpText === 'string' ? field.helpText : null;

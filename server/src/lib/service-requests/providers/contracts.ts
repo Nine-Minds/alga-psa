@@ -54,6 +54,12 @@ export interface ServiceRequestFormBehaviorProvider {
     context: ServiceRequestFormBehaviorContext,
     config: Record<string, unknown>
   ): Promise<Record<string, unknown>>;
+  resolveVisibleFieldKeys?(
+    context: ServiceRequestFormBehaviorContext,
+    formSchema: Record<string, unknown>,
+    values: Record<string, unknown>,
+    config: Record<string, unknown>
+  ): Promise<string[]>;
 }
 
 export interface ServiceRequestVisibilityContext {

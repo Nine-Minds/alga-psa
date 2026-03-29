@@ -332,7 +332,7 @@
   {
     "id": "T032",
     "description": "Workflow-only provider: submitting a request starts the configured workflow and stores its execution reference on the submission",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F111",
       "F112",
@@ -342,7 +342,7 @@
   {
     "id": "T033",
     "description": "Ticket-plus-workflow provider: the workflow input mapping receives both submission data and the created ticket id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F110",
       "F112",
@@ -352,7 +352,7 @@
   {
     "id": "T034",
     "description": "Workflow provider failure: workflow startup errors keep the submission persisted and mark execution failure",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F115",
       "F033"
@@ -361,7 +361,7 @@
   {
     "id": "T035",
     "description": "Workflow-backed UX: request-history views expose workflow references when the selected provider creates them",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F116"
@@ -370,7 +370,7 @@
   {
     "id": "T036",
     "description": "Advanced form behavior: conditional show/hide rules affect rendered fields in the portal request form",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F117",
       "F118"
@@ -379,7 +379,7 @@
   {
     "id": "T037",
     "description": "Advanced form behavior: required validation respects conditional visibility so hidden required fields do not block submit",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F118",
       "F120"
@@ -388,7 +388,7 @@
   {
     "id": "T038",
     "description": "Advanced defaults: requester/client/context-aware default values resolve into the portal form before submission",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F119"
     ]
@@ -396,7 +396,7 @@
   {
     "id": "T039",
     "description": "Advanced visibility: unauthorized client users do not see restricted definitions and cannot submit them directly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F009",

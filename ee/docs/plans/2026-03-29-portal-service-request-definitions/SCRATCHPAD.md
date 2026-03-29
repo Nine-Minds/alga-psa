@@ -413,3 +413,55 @@ Working memory for the portal service request definitions effort. This is the pl
   - `cd server && npx vitest run src/test/integration/serviceRequestDefinitionEditor.integration.test.ts src/test/integration/serviceRequestWorkflowProviderEditorOptions.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Extended MSP execution authoring actions in [actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/actions.ts) with `updateServiceRequestExecutionConfigAction(...)` so workflow-backed provider config can be saved on drafts as `execution_config` without CE/EE table branching.
+- (2026-03-29) Updated execution section UX in [ServiceRequestDefinitionEditorPage.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/ServiceRequestDefinitionEditorPage.tsx) to support workflow-backed provider configuration:
+  - `workflowId` input (admin chooses workflow to run)
+  - JSON `inputMapping` editor (maps payload/ticket fields into workflow inputs)
+  - save action wiring with draft refresh and publish-validation refresh
+- (2026-03-29) Added integration suite [serviceRequestWorkflowExecution.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestWorkflowExecution.integration.test.ts) covering:
+  - T032 / F111 / F112 / F114: `workflow-only` execution succeeds when configured and writes workflow reference
+  - T033 / F113: `ticket-plus-workflow` path writes ticket + workflow refs with ticket-linked workflow reference shape
+  - T034 / F115: workflow startup failure preserves durable submission with failed execution state and error summary
+  - T035 / F116: client/admin request-history detail surfaces workflow references for workflow-backed submissions
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run workflow execution integration coverage:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestWorkflowExecution.integration.test.ts src/test/integration/serviceRequestWorkflowProviderEditorOptions.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Extended form-behavior provider contract in [contracts.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/providers/contracts.ts) with optional `resolveVisibleFieldKeys(...)` so advanced providers can drive conditional field visibility consistently for portal render and submit validation.
+- (2026-03-29) Updated portal detail resolver in [portalDetail.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/portalDetail.ts) to:
+  - resolve dynamic context-aware defaults via form-behavior providers (`resolveInitialValues`)
+  - resolve provider-driven `visibleFieldKeys` for first render
+  - return form-behavior provider metadata/config alongside execution metadata for downstream submit handling
+- (2026-03-29) Updated submit validation flow in [submissionService.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/submissionService.ts) to honor provider-resolved visibility keys so hidden required fields do not block submit.
+- (2026-03-29) Updated portal detail UI in [request-services/[definitionId]/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/[definitionId]/page.tsx) to render only `visibleFieldKeys` from the resolved definition detail.
+- (2026-03-29) Expanded EE advanced form provider in [ee/server/src/lib/service-requests/providers.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/ee/server/src/lib/service-requests/providers.ts):
+  - added conditional visibility rule model (`visibilityRules`) with operators (`equals`, `not-equals`, `is-true`, `is-false`, `has-value`, `is-empty`)
+  - added config validation errors for malformed conditional-logic config (publish-time blocking via host validation)
+  - added visibility evaluation + context-source support (`context.requesterUserId`, `context.clientId`, `context.contactId`, payload field refs)
+  - retained/extended context-aware default templating via `contextDefaults`
+- (2026-03-29) Added integration suite [serviceRequestAdvancedFormBehavior.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestAdvancedFormBehavior.integration.test.ts) covering:
+  - T036 / F118: conditional show/hide affects portal visible fields
+  - T037 / F118 / F120: hidden required fields do not block submit and invalid conditional config fails publish validation
+  - T038 / F119: requester/client context defaults resolve into portal initial values
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run advanced form behavior + related portal/submission integration tests:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestAdvancedFormBehavior.integration.test.ts src/test/integration/serviceRequestPortalDetail.integration.test.ts src/test/integration/serviceRequestPortalDetailDefaults.integration.test.ts src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
+- (2026-03-29) Run targeted TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+  - `cd ee/server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Upgraded EE advanced visibility provider behavior in [ee/server/src/lib/service-requests/providers.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/ee/server/src/lib/service-requests/providers.ts):
+  - config validation for `allowAll`, `allowedClientIds`, and `allowedRequesterUserIds`
+  - runtime access checks that deny catalog/detail/submit access when client/requester is not in allowed lists
+- (2026-03-29) Added integration test [serviceRequestAdvancedVisibility.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestAdvancedVisibility.integration.test.ts) for T039:
+  - restricted definitions are hidden from catalog for unauthorized clients
+  - direct submit attempts by unauthorized clients are rejected and persist no submission rows
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run advanced visibility integration test:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestAdvancedVisibility.integration.test.ts`

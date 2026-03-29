@@ -1,6 +1,9 @@
 import type { Knex } from 'knex';
 import { getVisiblePublishedServiceRequestDefinitionDetail } from './portalDetail';
-import { getServiceRequestExecutionProvider } from './providers/registry';
+import {
+  getServiceRequestExecutionProvider,
+  getServiceRequestFormBehaviorProvider,
+} from './providers/registry';
 
 export interface ServiceRequestSubmissionAttachmentInput {
   fieldKey: string;
@@ -42,15 +45,22 @@ export function validateSubmissionAgainstPublishedSchema(input: {
   formSchema: Record<string, unknown>;
   payload: Record<string, unknown>;
   attachments?: ServiceRequestSubmissionAttachmentInput[];
+  visibleFieldKeys?: string[];
 }): string[] {
   const fields = Array.isArray((input.formSchema as any)?.fields)
     ? ((input.formSchema as any).fields as any[])
     : [];
   const attachmentList = input.attachments ?? [];
+  const visibleFieldKeySet = input.visibleFieldKeys
+    ? new Set(input.visibleFieldKeys)
+    : null;
   const errors: string[] = [];
 
   for (const field of fields) {
     if (!field?.required || typeof field?.key !== 'string') {
+      continue;
+    }
+    if (visibleFieldKeySet && !visibleFieldKeySet.has(field.key)) {
       continue;
     }
 
@@ -103,6 +113,29 @@ export async function submitPortalServiceRequest(
     formSchema: definitionDetail.formSchema,
     payload,
     attachments,
+    visibleFieldKeys: await (async () => {
+      const formBehaviorProvider = getServiceRequestFormBehaviorProvider(
+        definitionDetail.formBehaviorProvider
+      );
+      if (!formBehaviorProvider?.resolveVisibleFieldKeys) {
+        return definitionDetail.visibleFieldKeys;
+      }
+      const mergedValues: Record<string, unknown> = {
+        ...definitionDetail.initialValues,
+        ...payload,
+      };
+      return formBehaviorProvider.resolveVisibleFieldKeys(
+        {
+          tenant,
+          requesterUserId,
+          clientId,
+          contactId,
+        },
+        definitionDetail.formSchema,
+        mergedValues,
+        definitionDetail.formBehaviorConfig
+      );
+    })(),
   });
   if (validationErrors.length > 0) {
     throw new Error(`Submission validation failed: ${validationErrors.join('; ')}`);

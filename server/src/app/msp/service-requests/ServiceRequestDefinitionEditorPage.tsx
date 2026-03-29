@@ -9,6 +9,7 @@ import {
   publishServiceRequestDefinitionAction,
   saveServiceRequestDefinitionDraftAction,
   searchLinkedServicesForDefinitionAction,
+  updateServiceRequestExecutionConfigAction,
   setLinkedServiceForDefinitionAction,
   updateServiceRequestExecutionProviderAction,
   validateServiceRequestDefinitionForPublishAction,
@@ -103,6 +104,12 @@ export default function ServiceRequestDefinitionEditorPage() {
   const [submissions, setSubmissions] = useState<DefinitionSubmissionRow[]>([]);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [selectedSubmissionDetail, setSelectedSubmissionDetail] = useState<DefinitionSubmissionDetail | null>(null);
+  const [workflowIdInput, setWorkflowIdInput] = useState('');
+  const [workflowInputMappingText, setWorkflowInputMappingText] = useState('{}');
+
+  const isWorkflowBackedExecution =
+    data?.execution.executionProvider === 'workflow-only' ||
+    data?.execution.executionProvider === 'ticket-plus-workflow';
 
   useEffect(() => {
     const load = async () => {
@@ -135,6 +142,25 @@ export default function ServiceRequestDefinitionEditorPage() {
       load();
     }
   }, [definitionId, selectedSubmissionId]);
+
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+
+    const executionConfig = data.execution.executionConfig ?? {};
+    const workflowId =
+      typeof executionConfig.workflowId === 'string' ? executionConfig.workflowId : '';
+    const inputMapping =
+      executionConfig.inputMapping &&
+      typeof executionConfig.inputMapping === 'object' &&
+      !Array.isArray(executionConfig.inputMapping)
+        ? executionConfig.inputMapping
+        : {};
+
+    setWorkflowIdInput(workflowId);
+    setWorkflowInputMappingText(JSON.stringify(inputMapping, null, 2));
+  }, [data]);
 
   if (loading) {
     return <div className="p-6 text-sm text-[rgb(var(--color-text-600))]">Loading definition editor…</div>;
@@ -337,6 +363,89 @@ export default function ServiceRequestDefinitionEditorPage() {
             </select>
           </div>
         </div>
+        {isWorkflowBackedExecution && (
+          <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
+            <h3 className="text-sm font-semibold">Workflow Configuration</h3>
+            <div className="grid gap-2">
+              <label
+                htmlFor="service-request-workflow-id-input"
+                className="text-sm font-medium text-[rgb(var(--color-text-700))]"
+              >
+                Workflow ID
+              </label>
+              <input
+                id="service-request-workflow-id-input"
+                className="border rounded px-3 py-2 text-sm"
+                placeholder="workflow-id"
+                value={workflowIdInput}
+                onChange={(event) => setWorkflowIdInput(event.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <label
+                htmlFor="service-request-workflow-input-mapping"
+                className="text-sm font-medium text-[rgb(var(--color-text-700))]"
+              >
+                Workflow Input Mapping (JSON object)
+              </label>
+              <textarea
+                id="service-request-workflow-input-mapping"
+                className="border rounded px-3 py-2 text-sm font-mono min-h-[140px]"
+                value={workflowInputMappingText}
+                onChange={(event) => setWorkflowInputMappingText(event.target.value)}
+              />
+              <p className="text-xs text-[rgb(var(--color-text-600))]">
+                Example: &#123;&quot;requestedBy&quot;:&quot;payload.request_title&quot;,&quot;ticketReference&quot;:&quot;ticketId&quot;&#125;
+              </p>
+            </div>
+            <div>
+              <Button
+                id="service-request-workflow-config-save"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const parsedInputMapping = workflowInputMappingText.trim()
+                      ? JSON.parse(workflowInputMappingText)
+                      : {};
+                    if (
+                      !parsedInputMapping ||
+                      typeof parsedInputMapping !== 'object' ||
+                      Array.isArray(parsedInputMapping)
+                    ) {
+                      toast.error('Workflow input mapping must be a JSON object');
+                      return;
+                    }
+
+                    const nextExecutionConfig: Record<string, unknown> = {
+                      ...data.execution.executionConfig,
+                      workflowId: workflowIdInput.trim(),
+                      inputMapping: parsedInputMapping as Record<string, string>,
+                    };
+
+                    await updateServiceRequestExecutionConfigAction(
+                      data.definitionId,
+                      nextExecutionConfig
+                    );
+                    const refreshed = await getServiceRequestDefinitionEditorDataAction(
+                      data.definitionId
+                    );
+                    setData(refreshed as EditorData | null);
+                    const validation = await validateServiceRequestDefinitionForPublishAction(
+                      data.definitionId
+                    );
+                    setValidationErrors(validation.errors ?? []);
+                    toast.success('Workflow configuration updated');
+                  } catch (error) {
+                    console.error('Failed to update workflow configuration', error);
+                    toast.error('Invalid workflow configuration JSON');
+                  }
+                }}
+              >
+                Save Workflow Settings
+              </Button>
+            </div>
+          </div>
+        )}
         <FieldRow label="Execution Provider" value={data.execution.executionProvider} />
         <FieldRow label="Execution Config" value={JSON.stringify(data.execution.executionConfig)} />
         <FieldRow label="Form Behavior Provider" value={data.execution.formBehaviorProvider} />
