@@ -858,7 +858,7 @@
   {
     "id": "F098",
     "description": "The `ticket-only` provider lets admins configure default ticket routing values needed by the existing portal ticket creation path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -867,7 +867,7 @@
   {
     "id": "F099",
     "description": "The `ticket-only` provider maps request payload values into ticket title and ticket description/notes content",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -876,7 +876,7 @@
   {
     "id": "F100",
     "description": "The `ticket-only` provider uses the existing client-portal contact/client resolution model instead of inventing a parallel access model",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -885,7 +885,7 @@
   {
     "id": "F101",
     "description": "The `ticket-only` provider writes the created ticket id back onto the submission when ticket creation succeeds",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -894,7 +894,7 @@
   {
     "id": "F102",
     "description": "The `ticket-only` provider marks the submission with execution failure while keeping the submission persisted when ticket creation fails",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Observability"
@@ -903,7 +903,7 @@
   {
     "id": "F103",
     "description": "Confirmation and request-history views expose a linked ticket reference when a ticket-backed submission succeeds",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"

@@ -10,6 +10,7 @@ interface RequestServiceDetailPageProps {
   }>;
   searchParams?: Promise<{
     submitted?: string;
+    ticketId?: string;
     error?: string;
   }>;
 }
@@ -25,6 +26,8 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
 
   const submittedRequestId =
     typeof resolvedSearchParams?.submitted === 'string' ? resolvedSearchParams.submitted : null;
+  const submittedTicketId =
+    typeof resolvedSearchParams?.ticketId === 'string' ? resolvedSearchParams.ticketId : null;
   const submitError =
     typeof resolvedSearchParams?.error === 'string' ? resolvedSearchParams.error : null;
   const submitAction = submitRequestServiceDefinitionAction.bind(null, definitionId);
@@ -50,6 +53,11 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
           <p className="text-sm text-green-700">
             Request ID: <span className="font-mono">{submittedRequestId}</span>
           </p>
+          {submittedTicketId && (
+            <p className="text-sm text-green-700">
+              Ticket ID: <span className="font-mono">{submittedTicketId}</span>
+            </p>
+          )}
         </section>
       )}
 

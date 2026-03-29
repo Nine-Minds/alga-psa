@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { getVisiblePublishedServiceRequestDefinitionDetail } from './portalDetail';
+import { getServiceRequestExecutionProvider } from './providers/registry';
 
 export interface ServiceRequestSubmissionAttachmentInput {
   fieldKey: string;
@@ -22,6 +23,9 @@ export interface SubmitPortalServiceRequestInput {
 
 export interface SubmitPortalServiceRequestResult {
   submissionId: string;
+  executionStatus: 'pending' | 'succeeded' | 'failed';
+  createdTicketId?: string;
+  workflowExecutionId?: string;
 }
 
 function isMissingRequiredValue(value: unknown): boolean {
@@ -104,7 +108,7 @@ export async function submitPortalServiceRequest(
     throw new Error(`Submission validation failed: ${validationErrors.join('; ')}`);
   }
 
-  return knex.transaction(async (trx) => {
+  const submissionId = await knex.transaction(async (trx) => {
     const [submissionRow] = await trx('service_request_submissions')
       .insert({
         tenant,
@@ -137,6 +141,83 @@ export async function submitPortalServiceRequest(
       );
     }
 
-    return { submissionId };
+    return submissionId;
   });
+
+  const executionProvider = getServiceRequestExecutionProvider(definitionDetail.executionProvider);
+  if (!executionProvider) {
+    const errorSummary = `Execution provider "${definitionDetail.executionProvider}" is not registered.`;
+    await knex('service_request_submissions')
+      .where({ tenant, submission_id: submissionId })
+      .update({
+        execution_status: 'failed',
+        execution_error_summary: errorSummary,
+        updated_at: knex.fn.now(),
+      });
+    return {
+      submissionId,
+      executionStatus: 'failed',
+    };
+  }
+
+  try {
+    const executionResult = await executionProvider.execute({
+      knex,
+      tenant,
+      definitionId: definitionDetail.definitionId,
+      definitionVersionId: definitionDetail.versionId,
+      submissionId,
+      requesterUserId,
+      clientId,
+      contactId,
+      payload,
+      config: definitionDetail.executionConfig,
+    });
+
+    if (executionResult.status === 'succeeded') {
+      await knex('service_request_submissions')
+        .where({ tenant, submission_id: submissionId })
+        .update({
+          execution_status: 'succeeded',
+          created_ticket_id: executionResult.createdTicketId ?? null,
+          workflow_execution_id: executionResult.workflowExecutionId ?? null,
+          execution_error_summary: null,
+          updated_at: knex.fn.now(),
+        });
+
+      return {
+        submissionId,
+        executionStatus: 'succeeded',
+        createdTicketId: executionResult.createdTicketId,
+        workflowExecutionId: executionResult.workflowExecutionId,
+      };
+    }
+
+    await knex('service_request_submissions')
+      .where({ tenant, submission_id: submissionId })
+      .update({
+        execution_status: 'failed',
+        execution_error_summary: executionResult.errorSummary ?? 'Execution failed.',
+        updated_at: knex.fn.now(),
+      });
+    return {
+      submissionId,
+      executionStatus: 'failed',
+      createdTicketId: executionResult.createdTicketId,
+      workflowExecutionId: executionResult.workflowExecutionId,
+    };
+  } catch (error) {
+    const errorSummary = error instanceof Error ? error.message : 'Execution failed.';
+    await knex('service_request_submissions')
+      .where({ tenant, submission_id: submissionId })
+      .update({
+        execution_status: 'failed',
+        execution_error_summary: errorSummary,
+        updated_at: knex.fn.now(),
+      });
+    return {
+      submissionId,
+      executionStatus: 'failed',
+    };
+  }
 }

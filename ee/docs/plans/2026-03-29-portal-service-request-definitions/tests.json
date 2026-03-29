@@ -275,7 +275,7 @@
   {
     "id": "T026",
     "description": "Ticket-only provider: submitting a request creates a ticket using configured defaults and mapped request data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F097",
       "F098",
@@ -287,7 +287,7 @@
   {
     "id": "T027",
     "description": "Ticket-only provider failure: ticket creation errors leave the submission persisted with a failure status and error summary",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F102",
       "F033"
@@ -296,7 +296,7 @@
   {
     "id": "T028",
     "description": "Ticket-backed UX: confirmation and history surfaces show the linked ticket reference after successful ticket creation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F103"
@@ -305,7 +305,7 @@
   {
     "id": "T029",
     "description": "Catalog-link flexibility: a definition with no linked service still publishes, renders, and submits successfully through the ticket-only path",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F104"
     ]

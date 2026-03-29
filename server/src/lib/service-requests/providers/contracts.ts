@@ -3,6 +3,7 @@ import type {
   ServiceRequestExecutionMode,
   ServiceRequestPortalMetadata,
 } from '../domain';
+import type { Knex } from 'knex';
 
 export interface ServiceRequestProviderValidationResult {
   isValid: boolean;
@@ -11,6 +12,7 @@ export interface ServiceRequestProviderValidationResult {
 }
 
 export interface ServiceRequestExecutionContext {
+  knex: Knex;
   tenant: string;
   definitionId: string;
   definitionVersionId: string;

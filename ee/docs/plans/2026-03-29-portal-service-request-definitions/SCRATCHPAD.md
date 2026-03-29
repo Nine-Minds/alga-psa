@@ -360,3 +360,27 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestPortalHistory.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Implemented ticket-backed execution inside CE `ticket-only` provider in [ticketOnlyExecutionProvider.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/providers/builtins/ticketOnlyExecutionProvider.ts):
+  - resolves board/status/priority from execution config with CE fallbacks
+  - maps request payload to ticket title + structured description text
+  - creates tickets through shared [TicketModel](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/shared/models/ticketModel.ts) (`createTicketWithRetry`)
+  - returns `createdTicketId` on success or failure summary on error
+- (2026-03-29) Updated provider execution context contract in [contracts.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/providers/contracts.ts) to include `knex`, and wired it through [submissionService.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/submissionService.ts).
+- (2026-03-29) Gotcha: provider execution must use the caller-scoped knex handle rather than opening a fresh tenant connection; using `createTenantKnex` in this path caused integration execution failures in test/runtime contexts without request tenant context.
+- (2026-03-29) Updated request detail and submit flow for ticket references:
+  - [portalDetail.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/portalDetail.ts) now exposes execution provider/config from the published version
+  - [submissionService.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/submissionService.ts) now executes provider after durable insert and writes terminal status + downstream refs (`created_ticket_id`, `workflow_execution_id`) back to submission rows
+  - [request-services/[definitionId]/actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/[definitionId]/actions.ts) now includes `ticketId` in success redirect params
+  - [request-services/[definitionId]/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/[definitionId]/page.tsx) now renders linked ticket reference in confirmation state when present
+- (2026-03-29) Added integration coverage [serviceRequestTicketExecution.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestTicketExecution.integration.test.ts) for:
+  - T026/F098/F099/F100/F101: successful ticket-only execution with configured defaults + payload mapping + ticket linkage
+  - T027/F102: failure state persists durable submission with `execution_status=failed` and error summary
+  - T028/F103: submission detail exposes linked ticket reference after successful execution
+  - T029/F104: linked service remains optional for publish/submit success in ticket-only path
+- (2026-03-29) Run ticket execution + submission integration tests:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestTicketExecution.integration.test.ts src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`

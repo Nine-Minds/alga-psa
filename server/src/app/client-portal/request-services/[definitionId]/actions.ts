@@ -108,7 +108,12 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         payload,
         attachments,
       });
-      redirect(`/client-portal/request-services/${definitionId}?submitted=${encodeURIComponent(result.submissionId)}`);
+      const search = new URLSearchParams();
+      search.set('submitted', result.submissionId);
+      if (result.createdTicketId) {
+        search.set('ticketId', result.createdTicketId);
+      }
+      redirect(`/client-portal/request-services/${definitionId}?${search.toString()}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'submit_failed';
       redirect(`/client-portal/request-services/${definitionId}?error=${encodeURIComponent(message)}`);

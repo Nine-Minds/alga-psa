@@ -24,6 +24,8 @@ interface DefinitionVersionRow {
   description: string | null;
   icon: string | null;
   form_schema_snapshot: Record<string, unknown>;
+  execution_provider: string;
+  execution_config: Record<string, unknown> | null;
 }
 
 export interface ServiceRequestPortalDefinitionDetail {
@@ -35,6 +37,8 @@ export interface ServiceRequestPortalDefinitionDetail {
   icon: string | null;
   formSchema: Record<string, unknown>;
   initialValues: Record<string, string | boolean | null>;
+  executionProvider: string;
+  executionConfig: Record<string, unknown>;
 }
 
 export async function getVisiblePublishedServiceRequestDefinitionDetail(
@@ -108,7 +112,9 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
       'name',
       'description',
       'icon',
-      'form_schema_snapshot'
+      'form_schema_snapshot',
+      'execution_provider',
+      'execution_config'
     )) as DefinitionVersionRow | undefined;
 
   if (!latestVersion) {
@@ -124,5 +130,7 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
     icon: latestVersion.icon,
     formSchema: latestVersion.form_schema_snapshot,
     initialValues: resolveStaticDefaultValues(latestVersion.form_schema_snapshot),
+    executionProvider: latestVersion.execution_provider,
+    executionConfig: latestVersion.execution_config ?? {},
   };
 }

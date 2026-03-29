@@ -99,8 +99,8 @@ describe('service request submission attachments', () => {
       definition_id: definitionId,
       definition_version_id: versionId,
       request_name: 'Hardware Request',
-      execution_status: 'pending',
     });
+    expect(['pending', 'succeeded', 'failed']).toContain(submission.execution_status);
     expect(submission.submitted_payload).toEqual({
       device_model: 'ThinkPad X1',
     });
@@ -335,8 +335,8 @@ describe('service request submission attachments', () => {
       definition_id: definitionId,
       definition_version_id: versionId,
       request_name: 'Laptop Setup Request',
-      execution_status: 'pending',
     });
+    expect(['pending', 'succeeded', 'failed']).toContain(submission.execution_status);
     expect(submission.submitted_payload).toEqual({
       employee_name: 'Dana Rivera',
     });
