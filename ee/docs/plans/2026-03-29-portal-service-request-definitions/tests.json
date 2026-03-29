@@ -206,7 +206,7 @@
   {
     "id": "T019",
     "description": "Portal detail: static default values are applied on first render for supported fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069",
       "F085"

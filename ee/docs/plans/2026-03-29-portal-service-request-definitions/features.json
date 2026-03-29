@@ -741,7 +741,7 @@
   {
     "id": "F085",
     "description": "Static default values are applied when the portal request form first renders",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Users and Primary Flows"

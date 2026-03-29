@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { getServiceRequestVisibilityProvider } from './providers/registry';
 import type { ServiceRequestDefinitionShape } from './domain';
 import type { ServiceRequestPortalCatalogContext } from './portalCatalog';
+import { resolveStaticDefaultValues } from './basicFormBuilder';
 
 interface PublishedDefinitionRow {
   tenant: string;
@@ -33,6 +34,7 @@ export interface ServiceRequestPortalDefinitionDetail {
   description: string | null;
   icon: string | null;
   formSchema: Record<string, unknown>;
+  initialValues: Record<string, string | boolean | null>;
 }
 
 export async function getVisiblePublishedServiceRequestDefinitionDetail(
@@ -121,5 +123,6 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
     description: latestVersion.description,
     icon: latestVersion.icon,
     formSchema: latestVersion.form_schema_snapshot,
+    initialValues: resolveStaticDefaultValues(latestVersion.form_schema_snapshot),
   };
 }

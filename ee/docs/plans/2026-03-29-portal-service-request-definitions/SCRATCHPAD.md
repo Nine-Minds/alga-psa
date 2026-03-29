@@ -261,3 +261,14 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestPortalDetail.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Added static-default resolver [resolveStaticDefaultValues](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/basicFormBuilder.ts) for supported field types (`short-text`, `long-text`, `select`, `checkbox`, `date`; excludes `file-upload`).
+- (2026-03-29) Extended portal detail model in [portalDetail.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/portalDetail.ts) to include `initialValues` derived from published form snapshots.
+- (2026-03-29) Updated [request-services/[definitionId]/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/[definitionId]/page.tsx) to render resolved initial values for first-form render context.
+- (2026-03-29) Added integration coverage [serviceRequestPortalDetailDefaults.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestPortalDetailDefaults.integration.test.ts) for T019/F085.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run portal detail defaults integration test:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestPortalDetailDefaults.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`

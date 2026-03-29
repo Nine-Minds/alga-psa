@@ -123,6 +123,40 @@ export interface BasicFormSchemaValidationResult {
   errors: string[];
 }
 
+export function resolveStaticDefaultValues(
+  schema: unknown
+): Record<string, string | boolean | null> {
+  const normalized = normalizeBasicFormSchema(schema);
+  const initialValues: Record<string, string | boolean | null> = {};
+
+  for (const field of normalized.fields) {
+    if (field.defaultValue === undefined) {
+      continue;
+    }
+
+    if (field.type === 'file-upload') {
+      continue;
+    }
+
+    if (
+      field.type === 'checkbox' &&
+      (typeof field.defaultValue === 'boolean' || field.defaultValue === null)
+    ) {
+      initialValues[field.key] = field.defaultValue;
+      continue;
+    }
+
+    if (
+      field.type !== 'checkbox' &&
+      (typeof field.defaultValue === 'string' || field.defaultValue === null)
+    ) {
+      initialValues[field.key] = field.defaultValue;
+    }
+  }
+
+  return initialValues;
+}
+
 export function validateBasicFormSchema(schema: unknown): BasicFormSchemaValidationResult {
   const normalized = normalizeBasicFormSchema(schema);
   const errors: string[] = [];
