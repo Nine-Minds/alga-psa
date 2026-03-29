@@ -491,3 +491,19 @@ Working memory for the portal service request definitions effort. This is the pl
   - `cd packages/client-portal && npx vitest run src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts`
 - (2026-03-29) Run appointment compatibility sanity test:
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/appointmentAvailability.integration.test.ts -t "should exclude slots with existing appointments (conflicts)"`
+- (2026-03-29) Implemented MSP editor form-authoring action surface in [actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/actions.ts):
+  - `addServiceRequestFormFieldAction(...)`
+  - `updateServiceRequestFormFieldAction(...)`
+  - `removeServiceRequestFormFieldAction(...)`
+  - `reorderServiceRequestFormFieldsAction(...)`
+  - all actions use existing `service` permission checks and write through CE basic-form helpers.
+- (2026-03-29) Upgraded MSP editor UX in [ServiceRequestDefinitionEditorPage.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/ServiceRequestDefinitionEditorPage.tsx):
+  - Added `Author Fields` controls for add/remove/reorder/update field metadata/defaults/options (F049/F071/F072/F073).
+  - Replaced textual form preview with rendered input controls mirroring portal field behaviors (disabled preview render) (F054).
+  - Added `ticket-only` routing configuration panel for `boardId`, `statusId`, `priorityId`, `categoryId`, `subcategoryId`, `assignedToUserId`, `titleFieldKey`, and `descriptionPrefix` plus save path through execution-config action (F098).
+- (2026-03-29) Added action-wiring unit coverage in [serviceRequestEditorFormActions.unit.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/unit/serviceRequestEditorFormActions.unit.test.ts) for form-authoring actions and ticket-routing execution-config persistence.
+- (2026-03-29) Validation runbook for remaining unchecked feature work:
+  - `cd server && npx vitest run src/test/unit/serviceRequestEditorFormActions.unit.test.ts src/test/unit/serviceRequestManagementActions.permissions.test.ts`
+  - `cd server && mkdir -p coverage/.tmp && npx vitest run --maxWorkers=1 src/test/integration/serviceRequestDefinitionEditor.integration.test.ts src/test/integration/serviceRequestBasicFormBuilder.integration.test.ts src/test/integration/serviceRequestTicketExecution.integration.test.ts`
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Gotcha: avoid running multiple `vitest` invocations in parallel in this repo when coverage is enabled; concurrent runs can race on `server/coverage/.tmp/coverage-*.json` and fail with ENOENT.

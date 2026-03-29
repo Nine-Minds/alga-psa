@@ -3,12 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
+  addServiceRequestFormFieldAction,
   getServiceRequestDefinitionSubmissionDetailAction,
   getServiceRequestDefinitionEditorDataAction,
   listServiceRequestDefinitionSubmissionsAction,
   publishServiceRequestDefinitionAction,
+  removeServiceRequestFormFieldAction,
+  reorderServiceRequestFormFieldsAction,
   saveServiceRequestDefinitionDraftAction,
   searchLinkedServicesForDefinitionAction,
+  updateServiceRequestFormFieldAction,
   updateServiceRequestExecutionConfigAction,
   setLinkedServiceForDefinitionAction,
   updateServiceRequestExecutionProviderAction,
@@ -90,11 +94,62 @@ function FieldRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function renderFieldPreview(field: any): string {
-  const label = typeof field?.label === 'string' ? field.label : field?.key ?? 'Untitled field';
-  const type = typeof field?.type === 'string' ? field.type : 'unknown';
-  const required = field?.required ? 'required' : 'optional';
-  return `${label} (${type}, ${required})`;
+interface FormFieldOption {
+  label: string;
+  value: string;
+}
+
+interface FormField {
+  key: string;
+  type: 'short-text' | 'long-text' | 'select' | 'checkbox' | 'date' | 'file-upload';
+  label: string;
+  helpText?: string | null;
+  required?: boolean;
+  defaultValue?: string | boolean | null;
+  options?: FormFieldOption[];
+}
+
+const FORM_FIELD_TYPES: Array<FormField['type']> = [
+  'short-text',
+  'long-text',
+  'select',
+  'checkbox',
+  'date',
+  'file-upload',
+];
+
+function getSchemaFields(schema: Record<string, unknown>): FormField[] {
+  if (!Array.isArray((schema as any)?.fields)) {
+    return [];
+  }
+  return (schema as any).fields.filter((field: unknown) => field && typeof field === 'object');
+}
+
+function parseSelectOptionsText(optionsText: string): FormFieldOption[] {
+  return optionsText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const separatorIndex = line.indexOf(':');
+      if (separatorIndex <= 0 || separatorIndex >= line.length - 1) {
+        return null;
+      }
+      const value = line.slice(0, separatorIndex).trim();
+      const label = line.slice(separatorIndex + 1).trim();
+      if (!value || !label) {
+        return null;
+      }
+      return { value, label };
+    })
+    .filter((option): option is FormFieldOption => option !== null);
+}
+
+function formatSelectOptionsText(options: FormFieldOption[] | undefined): string {
+  if (!Array.isArray(options) || options.length === 0) {
+    return '';
+  }
+  return options.map((option) => `${option.value}:${option.label}`).join('\n');
 }
 
 export default function ServiceRequestDefinitionEditorPage() {
@@ -112,8 +167,43 @@ export default function ServiceRequestDefinitionEditorPage() {
   const [selectedSubmissionDetail, setSelectedSubmissionDetail] = useState<DefinitionSubmissionDetail | null>(null);
   const [workflowIdInput, setWorkflowIdInput] = useState('');
   const [workflowInputMappingText, setWorkflowInputMappingText] = useState('{}');
+  const [ticketRoutingConfigInput, setTicketRoutingConfigInput] = useState({
+    boardId: '',
+    statusId: '',
+    priorityId: '',
+    categoryId: '',
+    subcategoryId: '',
+    assignedToUserId: '',
+    titleFieldKey: '',
+    descriptionPrefix: '',
+  });
+  const [newFieldType, setNewFieldType] = useState<FormField['type']>('short-text');
 
   const isWorkflowBackedExecution = data?.execution.showWorkflowExecutionConfigPanel === true;
+  const isTicketOnlyExecution = data?.execution.executionProvider === 'ticket-only';
+
+  const reloadDefinitionEditorState = async (
+    targetDefinitionId: string,
+    includeSubmissionDetail: boolean = false
+  ) => {
+    const refreshed = await getServiceRequestDefinitionEditorDataAction(targetDefinitionId);
+    setData(refreshed as EditorData | null);
+    const validation = await validateServiceRequestDefinitionForPublishAction(targetDefinitionId);
+    setValidationErrors(validation.errors ?? []);
+
+    if (refreshed) {
+      const definitionSubmissions = await listServiceRequestDefinitionSubmissionsAction(targetDefinitionId);
+      setSubmissions(definitionSubmissions as DefinitionSubmissionRow[]);
+
+      if (includeSubmissionDetail && selectedSubmissionId) {
+        const detail = await getServiceRequestDefinitionSubmissionDetailAction(
+          targetDefinitionId,
+          selectedSubmissionId
+        );
+        setSelectedSubmissionDetail(detail as DefinitionSubmissionDetail | null);
+      }
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -166,6 +256,27 @@ export default function ServiceRequestDefinitionEditorPage() {
     setWorkflowInputMappingText(JSON.stringify(inputMapping, null, 2));
   }, [data]);
 
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+
+    const config = data.execution.executionConfig ?? {};
+    const resolveConfigString = (key: string): string =>
+      typeof config[key] === 'string' ? (config[key] as string) : '';
+
+    setTicketRoutingConfigInput({
+      boardId: resolveConfigString('boardId'),
+      statusId: resolveConfigString('statusId'),
+      priorityId: resolveConfigString('priorityId'),
+      categoryId: resolveConfigString('categoryId'),
+      subcategoryId: resolveConfigString('subcategoryId'),
+      assignedToUserId: resolveConfigString('assignedToUserId'),
+      titleFieldKey: resolveConfigString('titleFieldKey'),
+      descriptionPrefix: resolveConfigString('descriptionPrefix'),
+    });
+  }, [data]);
+
   if (loading) {
     return <div className="p-6 text-sm text-[rgb(var(--color-text-600))]">Loading definition editor…</div>;
   }
@@ -203,10 +314,7 @@ export default function ServiceRequestDefinitionEditorPage() {
               try {
                 await publishServiceRequestDefinitionAction(data.definitionId);
                 toast.success('Definition published');
-                const refreshed = await getServiceRequestDefinitionEditorDataAction(data.definitionId);
-                setData(refreshed as EditorData | null);
-                const validation = await validateServiceRequestDefinitionForPublishAction(data.definitionId);
-                setValidationErrors(validation.errors ?? []);
+                await reloadDefinitionEditorState(data.definitionId, true);
               } catch (error) {
                 console.error('Failed to publish definition', error);
                 toast.error(error instanceof Error ? error.message : 'Failed to publish definition');
@@ -269,8 +377,7 @@ export default function ServiceRequestDefinitionEditorPage() {
             variant="outline"
             onClick={async () => {
               await setLinkedServiceForDefinitionAction(data.definitionId, null);
-              const refreshed = await getServiceRequestDefinitionEditorDataAction(data.definitionId);
-              setData(refreshed as EditorData | null);
+              await reloadDefinitionEditorState(data.definitionId);
               toast.success('Linked service cleared');
             }}
           >
@@ -295,8 +402,7 @@ export default function ServiceRequestDefinitionEditorPage() {
                   variant="outline"
                   onClick={async () => {
                     await setLinkedServiceForDefinitionAction(data.definitionId, result.service_id);
-                    const refreshed = await getServiceRequestDefinitionEditorDataAction(data.definitionId);
-                    setData(refreshed as EditorData | null);
+                    await reloadDefinitionEditorState(data.definitionId);
                     toast.success(`Linked ${result.service_name}`);
                   }}
                 >
@@ -310,18 +416,328 @@ export default function ServiceRequestDefinitionEditorPage() {
 
       <Card id="service-request-editor-form" className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">Form</h2>
+        <div className="rounded border p-3 bg-[rgb(var(--color-background-100))] space-y-3">
+          <div className="text-sm font-semibold">Author Fields</div>
+          <div className="flex items-center gap-2">
+            <select
+              id="service-request-form-new-field-type"
+              className="border rounded px-3 py-2 text-sm"
+              value={newFieldType}
+              onChange={(event) => setNewFieldType(event.target.value as FormField['type'])}
+            >
+              {FORM_FIELD_TYPES.map((fieldType) => (
+                <option key={fieldType} value={fieldType}>
+                  {fieldType}
+                </option>
+              ))}
+            </select>
+            <Button
+              id="service-request-form-add-field"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  await addServiceRequestFormFieldAction(data.definitionId, newFieldType);
+                  await reloadDefinitionEditorState(data.definitionId);
+                  toast.success('Field added');
+                } catch (error) {
+                  console.error('Failed to add form field', error);
+                  toast.error('Failed to add form field');
+                }
+              }}
+            >
+              Add Field
+            </Button>
+          </div>
+          <div className="space-y-3">
+            {getSchemaFields(data.form.schema).length === 0 ? (
+              <div className="text-sm text-[rgb(var(--color-text-600))]">No fields configured.</div>
+            ) : (
+              getSchemaFields(data.form.schema).map((field, index, allFields) => {
+                const key = field.key ?? `field_${index}`;
+                const optionsText = formatSelectOptionsText(field.options);
+                return (
+                  <div key={`${key}-${index}`} className="rounded border bg-white p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-sm font-medium">
+                        {field.type} · <span className="font-mono">{key}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          id={`service-request-form-move-up-${key}`}
+                          variant="outline"
+                          onClick={async () => {
+                            const nextKeys = allFields.map((candidate) => candidate.key);
+                            const currentIndex = nextKeys.indexOf(key);
+                            if (currentIndex <= 0) {
+                              return;
+                            }
+                            [nextKeys[currentIndex - 1], nextKeys[currentIndex]] = [
+                              nextKeys[currentIndex],
+                              nextKeys[currentIndex - 1],
+                            ];
+                            await reorderServiceRequestFormFieldsAction(data.definitionId, nextKeys);
+                            await reloadDefinitionEditorState(data.definitionId);
+                          }}
+                        >
+                          Move Up
+                        </Button>
+                        <Button
+                          id={`service-request-form-move-down-${key}`}
+                          variant="outline"
+                          onClick={async () => {
+                            const nextKeys = allFields.map((candidate) => candidate.key);
+                            const currentIndex = nextKeys.indexOf(key);
+                            if (currentIndex < 0 || currentIndex >= nextKeys.length - 1) {
+                              return;
+                            }
+                            [nextKeys[currentIndex], nextKeys[currentIndex + 1]] = [
+                              nextKeys[currentIndex + 1],
+                              nextKeys[currentIndex],
+                            ];
+                            await reorderServiceRequestFormFieldsAction(data.definitionId, nextKeys);
+                            await reloadDefinitionEditorState(data.definitionId);
+                          }}
+                        >
+                          Move Down
+                        </Button>
+                        <Button
+                          id={`service-request-form-remove-field-${key}`}
+                          variant="outline"
+                          onClick={async () => {
+                            await removeServiceRequestFormFieldAction(data.definitionId, key);
+                            await reloadDefinitionEditorState(data.definitionId);
+                            toast.success('Field removed');
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                      <label className="grid gap-1 text-sm">
+                        <span className="font-medium">Label</span>
+                        <input
+                          defaultValue={field.label ?? key}
+                          className="border rounded px-2 py-1"
+                          onBlur={async (event) => {
+                            await updateServiceRequestFormFieldAction(data.definitionId, key, {
+                              label: event.target.value.trim() || key,
+                            });
+                            await reloadDefinitionEditorState(data.definitionId);
+                          }}
+                        />
+                      </label>
+                      <label className="grid gap-1 text-sm">
+                        <span className="font-medium">Help Text</span>
+                        <input
+                          defaultValue={field.helpText ?? ''}
+                          className="border rounded px-2 py-1"
+                          onBlur={async (event) => {
+                            const value = event.target.value.trim();
+                            await updateServiceRequestFormFieldAction(data.definitionId, key, {
+                              helpText: value.length > 0 ? value : null,
+                            });
+                            await reloadDefinitionEditorState(data.definitionId);
+                          }}
+                        />
+                      </label>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          defaultChecked={Boolean(field.required)}
+                          onChange={async (event) => {
+                            await updateServiceRequestFormFieldAction(data.definitionId, key, {
+                              required: event.target.checked,
+                            });
+                            await reloadDefinitionEditorState(data.definitionId);
+                          }}
+                        />
+                        <span>Required</span>
+                      </label>
+                      {field.type !== 'file-upload' && (
+                        <label className="grid gap-1 text-sm">
+                          <span className="font-medium">Default Value</span>
+                          {field.type === 'checkbox' ? (
+                            <select
+                              defaultValue={
+                                typeof field.defaultValue === 'boolean'
+                                  ? String(field.defaultValue)
+                                  : ''
+                              }
+                              className="border rounded px-2 py-1"
+                              onChange={async (event) => {
+                                const value = event.target.value;
+                                await updateServiceRequestFormFieldAction(data.definitionId, key, {
+                                  defaultValue:
+                                    value === ''
+                                      ? null
+                                      : value === 'true',
+                                });
+                                await reloadDefinitionEditorState(data.definitionId);
+                              }}
+                            >
+                              <option value="">No default</option>
+                              <option value="true">Checked</option>
+                              <option value="false">Unchecked</option>
+                            </select>
+                          ) : (
+                            <input
+                              defaultValue={
+                                typeof field.defaultValue === 'string' ? field.defaultValue : ''
+                              }
+                              className="border rounded px-2 py-1"
+                              onBlur={async (event) => {
+                                const value = event.target.value.trim();
+                                await updateServiceRequestFormFieldAction(data.definitionId, key, {
+                                  defaultValue: value.length > 0 ? value : null,
+                                });
+                                await reloadDefinitionEditorState(data.definitionId);
+                              }}
+                            />
+                          )}
+                        </label>
+                      )}
+                    </div>
+                    {field.type === 'select' && (
+                      <label className="grid gap-1 text-sm">
+                        <span className="font-medium">Options (one per line: value:label)</span>
+                        <textarea
+                          className="border rounded px-2 py-1 font-mono min-h-[84px]"
+                          defaultValue={optionsText}
+                          onBlur={async (event) => {
+                            await updateServiceRequestFormFieldAction(data.definitionId, key, {
+                              options: parseSelectOptionsText(event.target.value),
+                            });
+                            await reloadDefinitionEditorState(data.definitionId);
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
         <div className="rounded border p-3 bg-[rgb(var(--color-background-100))]">
           <div className="text-sm font-medium mb-2">Rendered Form Preview</div>
-          <ul className="space-y-1 text-sm">
-            {Array.isArray((data.form.schema as any)?.fields) &&
-            (data.form.schema as any).fields.length > 0 ? (
-              (data.form.schema as any).fields.map((field: any, index: number) => (
-                <li key={`${field?.key ?? 'field'}-${index}`}>{renderFieldPreview(field)}</li>
-              ))
-            ) : (
+          {getSchemaFields(data.form.schema).length > 0 ? (
+            <form className="space-y-3">
+              {getSchemaFields(data.form.schema).map((field, index) => {
+                const key = field.key ?? `field_${index}`;
+                const label = field.label ?? key;
+                const helpText = field.helpText ?? null;
+                const required = Boolean(field.required);
+                const defaultStringValue =
+                  typeof field.defaultValue === 'string' ? field.defaultValue : '';
+                const defaultBooleanValue =
+                  typeof field.defaultValue === 'boolean' ? field.defaultValue : false;
+
+                if (field.type === 'long-text') {
+                  return (
+                    <label key={key} className="block space-y-1">
+                      <span className="text-sm font-medium">
+                        {label}
+                        {required ? ' *' : ''}
+                      </span>
+                      <textarea
+                        disabled
+                        rows={4}
+                        defaultValue={defaultStringValue}
+                        className="w-full rounded border p-2 text-sm bg-gray-50"
+                      />
+                      {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
+                    </label>
+                  );
+                }
+
+                if (field.type === 'select') {
+                  return (
+                    <label key={key} className="block space-y-1">
+                      <span className="text-sm font-medium">
+                        {label}
+                        {required ? ' *' : ''}
+                      </span>
+                      <select
+                        disabled
+                        defaultValue={defaultStringValue}
+                        className="w-full rounded border p-2 text-sm bg-gray-50"
+                      >
+                        <option value="">Select an option</option>
+                        {(field.options ?? []).map((option, optionIndex) => (
+                          <option key={`${key}-option-${optionIndex}`} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
+                    </label>
+                  );
+                }
+
+                if (field.type === 'checkbox') {
+                  return (
+                    <label key={key} className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        disabled
+                        defaultChecked={defaultBooleanValue}
+                        className="mt-1"
+                      />
+                      <span className="text-sm">
+                        <span className="font-medium">
+                          {label}
+                          {required ? ' *' : ''}
+                        </span>
+                        {helpText && (
+                          <span className="block text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                }
+
+                if (field.type === 'file-upload') {
+                  return (
+                    <label key={key} className="block space-y-1">
+                      <span className="text-sm font-medium">
+                        {label}
+                        {required ? ' *' : ''}
+                      </span>
+                      <input
+                        disabled
+                        type="file"
+                        className="w-full rounded border p-2 text-sm bg-gray-50"
+                      />
+                      {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
+                    </label>
+                  );
+                }
+
+                return (
+                  <label key={key} className="block space-y-1">
+                    <span className="text-sm font-medium">
+                      {label}
+                      {required ? ' *' : ''}
+                    </span>
+                    <input
+                      disabled
+                      type={field.type === 'date' ? 'date' : 'text'}
+                      defaultValue={defaultStringValue}
+                      className="w-full rounded border p-2 text-sm bg-gray-50"
+                    />
+                    {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
+                  </label>
+                );
+              })}
+            </form>
+          ) : (
+            <ul className="space-y-1 text-sm">
               <li>No fields configured.</li>
-            )}
-          </ul>
+            </ul>
+          )}
         </div>
         <pre className="text-xs bg-[rgb(var(--color-background-100))] p-3 rounded overflow-auto">
           {JSON.stringify(data.form.schema, null, 2)}
@@ -348,10 +764,7 @@ export default function ServiceRequestDefinitionEditorPage() {
                     data.definitionId,
                     event.target.value
                   );
-                  const refreshed = await getServiceRequestDefinitionEditorDataAction(
-                    data.definitionId
-                  );
-                  setData(refreshed as EditorData | null);
+                  await reloadDefinitionEditorState(data.definitionId);
                   toast.success('Execution provider updated');
                 } catch (error) {
                   console.error('Failed to update execution provider', error);
@@ -367,6 +780,151 @@ export default function ServiceRequestDefinitionEditorPage() {
             </select>
           </div>
         </div>
+        {isTicketOnlyExecution && (
+          <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
+            <h3 className="text-sm font-semibold">Ticket Routing Configuration</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium">Board ID</span>
+                <input
+                  id="service-request-ticket-board-id"
+                  className="border rounded px-3 py-2 text-sm"
+                  value={ticketRoutingConfigInput.boardId}
+                  onChange={(event) =>
+                    setTicketRoutingConfigInput((previous) => ({
+                      ...previous,
+                      boardId: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium">Status ID</span>
+                <input
+                  id="service-request-ticket-status-id"
+                  className="border rounded px-3 py-2 text-sm"
+                  value={ticketRoutingConfigInput.statusId}
+                  onChange={(event) =>
+                    setTicketRoutingConfigInput((previous) => ({
+                      ...previous,
+                      statusId: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium">Priority ID</span>
+                <input
+                  id="service-request-ticket-priority-id"
+                  className="border rounded px-3 py-2 text-sm"
+                  value={ticketRoutingConfigInput.priorityId}
+                  onChange={(event) =>
+                    setTicketRoutingConfigInput((previous) => ({
+                      ...previous,
+                      priorityId: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium">Category ID</span>
+                <input
+                  id="service-request-ticket-category-id"
+                  className="border rounded px-3 py-2 text-sm"
+                  value={ticketRoutingConfigInput.categoryId}
+                  onChange={(event) =>
+                    setTicketRoutingConfigInput((previous) => ({
+                      ...previous,
+                      categoryId: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium">Subcategory ID</span>
+                <input
+                  id="service-request-ticket-subcategory-id"
+                  className="border rounded px-3 py-2 text-sm"
+                  value={ticketRoutingConfigInput.subcategoryId}
+                  onChange={(event) =>
+                    setTicketRoutingConfigInput((previous) => ({
+                      ...previous,
+                      subcategoryId: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium">Assigned User ID</span>
+                <input
+                  id="service-request-ticket-assigned-user-id"
+                  className="border rounded px-3 py-2 text-sm"
+                  value={ticketRoutingConfigInput.assignedToUserId}
+                  onChange={(event) =>
+                    setTicketRoutingConfigInput((previous) => ({
+                      ...previous,
+                      assignedToUserId: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium">Title Field Key</span>
+                <input
+                  id="service-request-ticket-title-field-key"
+                  className="border rounded px-3 py-2 text-sm"
+                  value={ticketRoutingConfigInput.titleFieldKey}
+                  onChange={(event) =>
+                    setTicketRoutingConfigInput((previous) => ({
+                      ...previous,
+                      titleFieldKey: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label className="grid gap-1 text-sm md:col-span-2">
+                <span className="font-medium">Description Prefix</span>
+                <textarea
+                  id="service-request-ticket-description-prefix"
+                  className="border rounded px-3 py-2 text-sm min-h-[72px]"
+                  value={ticketRoutingConfigInput.descriptionPrefix}
+                  onChange={(event) =>
+                    setTicketRoutingConfigInput((previous) => ({
+                      ...previous,
+                      descriptionPrefix: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+            </div>
+            <div>
+              <Button
+                id="service-request-ticket-config-save"
+                variant="outline"
+                onClick={async () => {
+                  const nextExecutionConfig = Object.entries(ticketRoutingConfigInput).reduce<
+                    Record<string, unknown>
+                  >((result, [key, value]) => {
+                    const trimmedValue = value.trim();
+                    if (trimmedValue.length > 0) {
+                      result[key] = trimmedValue;
+                    }
+                    return result;
+                  }, {});
+
+                  await updateServiceRequestExecutionConfigAction(
+                    data.definitionId,
+                    nextExecutionConfig
+                  );
+                  await reloadDefinitionEditorState(data.definitionId);
+                  toast.success('Ticket routing configuration updated');
+                }}
+              >
+                Save Ticket Routing
+              </Button>
+            </div>
+          </div>
+        )}
         {isWorkflowBackedExecution && (
           <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
             <h3 className="text-sm font-semibold">Workflow Configuration</h3>
@@ -430,14 +988,7 @@ export default function ServiceRequestDefinitionEditorPage() {
                       data.definitionId,
                       nextExecutionConfig
                     );
-                    const refreshed = await getServiceRequestDefinitionEditorDataAction(
-                      data.definitionId
-                    );
-                    setData(refreshed as EditorData | null);
-                    const validation = await validateServiceRequestDefinitionForPublishAction(
-                      data.definitionId
-                    );
-                    setValidationErrors(validation.errors ?? []);
+                    await reloadDefinitionEditorState(data.definitionId);
                     toast.success('Workflow configuration updated');
                   } catch (error) {
                     console.error('Failed to update workflow configuration', error);

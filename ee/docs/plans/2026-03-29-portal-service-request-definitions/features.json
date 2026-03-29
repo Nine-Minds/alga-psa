@@ -352,6 +352,7 @@
     "id": "F041",
     "description": "MSP admins can navigate to a new Service Requests management area",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes"
@@ -361,6 +362,7 @@
     "id": "F042",
     "description": "The Service Requests list shows draft, published, and archived definitions",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes"
@@ -370,6 +372,7 @@
     "id": "F043",
     "description": "The Service Requests list supports creating a blank definition",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Users and Primary Flows"
     ]
@@ -378,6 +381,7 @@
     "id": "F044",
     "description": "The Service Requests list supports creating a definition from a template",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Users and Primary Flows"
     ]
@@ -386,6 +390,7 @@
     "id": "F045",
     "description": "Admins can duplicate an existing definition into a new draft",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"
@@ -395,6 +400,7 @@
     "id": "F046",
     "description": "Admins can archive and unarchive definitions from the management surface",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"
@@ -404,6 +410,7 @@
     "id": "F047",
     "description": "The editor has a basics section for name, description, icon, category, and sort order",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -413,6 +420,7 @@
     "id": "F048",
     "description": "The editor has a linkage section for optional service-catalog association",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -422,6 +430,7 @@
     "id": "F049",
     "description": "The editor has a form-authoring section for the request form",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -431,6 +440,7 @@
     "id": "F050",
     "description": "The editor has an execution section driven by the selected execution provider",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -440,6 +450,7 @@
     "id": "F051",
     "description": "The editor has a publish section that distinguishes current draft state from the last published version",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -449,6 +460,7 @@
     "id": "F052",
     "description": "Admins can save an incomplete draft without making it visible in the portal",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"
@@ -458,6 +470,7 @@
     "id": "F053",
     "description": "Admins can preview the portal-facing service card before publishing",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -466,6 +479,7 @@
     "id": "F054",
     "description": "Admins can preview the rendered request form before publishing",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -475,6 +489,7 @@
     "id": "F055",
     "description": "Publishing validates the full definition and blocks publication when required configuration is missing or invalid",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -511,6 +526,7 @@
     "id": "F059",
     "description": "Admins can view submissions scoped to a specific definition from the management experience",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"
@@ -520,6 +536,7 @@
     "id": "F060",
     "description": "Admins can open a submission detail view showing requester identity, submitted values, and downstream execution references",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"
@@ -616,6 +633,7 @@
     "id": "F071",
     "description": "Admins can add new fields to the form builder",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Users and Primary Flows"
@@ -625,6 +643,7 @@
     "id": "F072",
     "description": "Admins can remove fields from the form builder",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Users and Primary Flows"
@@ -634,6 +653,7 @@
     "id": "F073",
     "description": "Admins can reorder fields in the form builder",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Users and Primary Flows"
@@ -850,6 +870,7 @@
     "id": "F097",
     "description": "The `ticket-only` execution provider is selectable in the editor without requiring any EE code",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Summary",
       "Requirements > Functional Requirements"
@@ -859,6 +880,7 @@
     "id": "F098",
     "description": "The `ticket-only` provider lets admins configure default ticket routing values needed by the existing portal ticket creation path",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -921,6 +943,7 @@
     "id": "F105",
     "description": "The linked-service picker reuses existing service-catalog search patterns rather than introducing a second catalog-search model",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Requirements > Functional Requirements"
@@ -930,6 +953,7 @@
     "id": "F106",
     "description": "The editor shows the selected linked-service record clearly enough for admins to confirm what commercial service is associated",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -975,6 +999,7 @@
     "id": "F111",
     "description": "Workflow-backed provider configuration lets admins choose the workflow to run for a definition",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Users and Primary Flows"
@@ -984,6 +1009,7 @@
     "id": "F112",
     "description": "Workflow-backed provider configuration lets admins map request submission data into workflow inputs",
     "implemented": true,
+    "reviewed": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
