@@ -8,6 +8,7 @@ import BoardsSettings from './BoardsSettings';
 
 const getAllBoardsMock = vi.fn();
 const createBoardMock = vi.fn();
+const updateBoardMock = vi.fn();
 const getBoardTicketStatusesMock = vi.fn();
 const getAllPrioritiesMock = vi.fn();
 const getAllUsersMock = vi.fn();
@@ -18,7 +19,7 @@ vi.mock('@alga-psa/tickets/actions', () => ({
   getAllBoards: (...args: unknown[]) => getAllBoardsMock(...args),
   createBoard: (...args: unknown[]) => createBoardMock(...args),
   getBoardTicketStatuses: (...args: unknown[]) => getBoardTicketStatusesMock(...args),
-  updateBoard: vi.fn(),
+  updateBoard: (...args: unknown[]) => updateBoardMock(...args),
   deleteBoard: vi.fn(),
 }));
 
@@ -241,6 +242,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     ]);
     createBoardMock.mockResolvedValue({ board_id: 'board-new' });
+    updateBoardMock.mockResolvedValue({ board_id: 'board-source' });
     getBoardTicketStatusesMock.mockResolvedValue([]);
     getAllPrioritiesMock.mockResolvedValue([]);
     getAllUsersMock.mockResolvedValue([]);
@@ -399,6 +401,68 @@ describe('BoardsSettings ticket status copy flow', () => {
             expect.objectContaining({ name: 'Queued', is_closed: false, is_default: true, order_number: 10 }),
             expect.objectContaining({ name: 'Done', is_closed: false, is_default: false, order_number: 20 }),
           ],
+        })
+      );
+    });
+  });
+
+  it('T002: renders the live ticket timer toggle for create/edit and persists it in save payloads', async () => {
+    getBoardTicketStatusesMock.mockResolvedValue([
+      {
+        status_id: 'status-open',
+        name: 'Support Open',
+        is_closed: false,
+        is_default: true,
+        order_number: 10,
+      },
+    ]);
+
+    render(<BoardsSettings />);
+
+    await waitFor(() => {
+      expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+
+    fireEvent.click(screen.getByTestId('add-board-button'));
+    expect(screen.getByText('Enable live ticket timer')).toBeInTheDocument();
+    expect(screen.getByTestId('enable_live_ticket_timer')).toBeChecked();
+    fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
+      target: { value: 'Timer Policy Board' },
+    });
+    fireEvent.change(screen.getByTestId('copy-ticket-statuses-select'), {
+      target: { value: 'board-source' },
+    });
+    await waitFor(() => {
+      expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+    });
+
+    fireEvent.click(screen.getByTestId('save-board-button'));
+
+    await waitFor(() => {
+      expect(createBoardMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enable_live_ticket_timer: true,
+        })
+      );
+    });
+
+    fireEvent.click(screen.getAllByText('ticketing.boards.actions.edit')[0]);
+
+    await waitFor(() => {
+      expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+    });
+
+    expect(screen.getByTestId('enable_live_ticket_timer')).toBeChecked();
+    fireEvent.click(screen.getByTestId('enable_live_ticket_timer'));
+    expect(screen.getByTestId('enable_live_ticket_timer')).not.toBeChecked();
+
+    fireEvent.click(screen.getByTestId('save-board-button'));
+
+    await waitFor(() => {
+      expect(updateBoardMock).toHaveBeenCalledWith(
+        'board-source',
+        expect.objectContaining({
+          enable_live_ticket_timer: false,
         })
       );
     });

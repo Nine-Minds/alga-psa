@@ -394,6 +394,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           tenant: tenant
         })
         .first() : null;
+    if (board && (board.enable_live_ticket_timer === null || board.enable_live_ticket_timer === undefined)) {
+      board.enable_live_ticket_timer = true;
+    }
 
     // Process user data for userMap, including avatar URLs
     const usersWithAvatars = await Promise.all(users.map(async (user: any) => {

@@ -19,6 +19,7 @@ export const boardResponseSchema = z.object({
   display_itil_impact: z.boolean().nullable(),
   display_itil_urgency: z.boolean().nullable(),
   default_assigned_to: uuidSchema.nullable(),
+  enable_live_ticket_timer: z.boolean().nullable(),
   tenant: uuidSchema
 });
 
