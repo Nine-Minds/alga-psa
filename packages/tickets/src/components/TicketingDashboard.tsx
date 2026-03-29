@@ -103,6 +103,17 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 
 const TICKET_LIST_DENSITY_STORAGE_KEY = 'ticket_list_density_level';
 const EMPTY_STRING_ARRAY: string[] = [];
+const TICKET_LIST_DENSITY_PRESETS = [0, 25, 50, 75, 100] as const;
+
+type TicketListDensityPreset = (typeof TICKET_LIST_DENSITY_PRESETS)[number];
+
+const normalizeTicketListDensityLevel = (value: number): TicketListDensityPreset => {
+  const clamped = Math.min(100, Math.max(0, value));
+
+  return TICKET_LIST_DENSITY_PRESETS.reduce((closest, preset) => {
+    return Math.abs(preset - clamped) < Math.abs(closest - clamped) ? preset : closest;
+  }, TICKET_LIST_DENSITY_PRESETS[0]);
+};
 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
@@ -207,7 +218,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const selectedResponseState = (filterValues.responseState ?? 'all') as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   const selectedSlaStatus = filterValues.slaStatusFilter ?? 'all';
   const bundleView = (filterValues.bundleView ?? 'bundled') as 'bundled' | 'individual';
-  const [ticketListDensityLevel, setTicketListDensityLevel] = useState<number>(50);
+  const [ticketListDensityLevel, setTicketListDensityLevel] = useState<TicketListDensityPreset>(50);
 
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -319,7 +330,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (typeof window === 'undefined') return;
     const stored = Number(window.localStorage.getItem(TICKET_LIST_DENSITY_STORAGE_KEY));
     if (Number.isFinite(stored) && stored >= 0 && stored <= 100) {
-      setTicketListDensityLevel(stored);
+      setTicketListDensityLevel(normalizeTicketListDensityLevel(stored));
     }
   }, []);
 
@@ -328,31 +339,50 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     window.localStorage.setItem(TICKET_LIST_DENSITY_STORAGE_KEY, String(ticketListDensityLevel));
   }, [ticketListDensityLevel]);
 
+  const handleTicketListDensityChange = useCallback((value: number) => {
+    setTicketListDensityLevel(normalizeTicketListDensityLevel(value));
+  }, []);
+
   const densityClasses = useMemo(() => {
-    if (ticketListDensityLevel <= 15) {
-      return {
+    const densityPresetClasses: Record<TicketListDensityPreset, {
+      filterPadding: string;
+      filterGap: string;
+      bodyPadding: string;
+      tableRowDensity: string;
+    }> = {
+      0: {
+        filterPadding: 'p-3',
+        filterGap: 'gap-2',
+        bodyPadding: 'p-3',
+        tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px]',
+      },
+      25: {
         filterPadding: 'p-4',
-        filterGap: 'gap-4',
+        filterGap: 'gap-3',
         bodyPadding: 'p-4',
         tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[13px]',
-      };
-    }
-
-    if (ticketListDensityLevel >= 85) {
-      return {
-        filterPadding: 'p-6',
+      },
+      50: {
+        filterPadding: 'p-5',
         filterGap: 'gap-4',
+        bodyPadding: 'p-5',
+        tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[14px]',
+      },
+      75: {
+        filterPadding: 'p-6',
+        filterGap: 'gap-5',
         bodyPadding: 'p-7',
-        tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px]',
-      };
-    }
-
-    return {
-      filterPadding: 'p-6',
-      filterGap: 'gap-4',
-      bodyPadding: 'p-6',
-      tableRowDensity: '',
+        tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[15px]',
+      },
+      100: {
+        filterPadding: 'p-8',
+        filterGap: 'gap-6',
+        bodyPadding: 'p-9',
+        tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[16px]',
+      },
     };
+
+    return densityPresetClasses[ticketListDensityLevel];
   }, [ticketListDensityLevel]);
 
   const statusOptions = useMemo(
@@ -1610,8 +1640,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   <ViewDensityControl
                     idPrefix={`${id}-list-density`}
                     value={ticketListDensityLevel}
-                    onChange={setTicketListDensityLevel}
-                    step={50}
+                    onChange={handleTicketListDensityChange}
+                    step={25}
                     compactLabel="Compact"
                     spaciousLabel="Spacious"
                     decreaseTitle="Decrease ticket list spacing"
