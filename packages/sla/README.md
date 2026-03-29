@@ -140,4 +140,4 @@ cd packages/sla && npm run typecheck
 
 - [SLA Feature Documentation](../../docs/features/sla.md)
 - [SLA Architecture](../../docs/architecture/sla.md)
-- [Temporal Workflow PRD](../../docs/plans/2026-02-03-sla-temporal-workflow-architecture/PRD.md)
+- [Temporal Workflow PRD](../../ee/docs/plans/2026-02-03-sla-temporal-workflow-architecture/PRD.md)
