@@ -47,8 +47,7 @@ vi.mock(
       getDocumentByTicketId: vi.fn().mockResolvedValue([]),
       deleteDocument: vi.fn().mockResolvedValue(undefined),
     }),
-  }),
-  { virtual: true }
+  })
 );
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
