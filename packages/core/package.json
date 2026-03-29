@@ -49,6 +49,10 @@
     "./lib/scheduleEntryRegistry": {
       "import": "./src/lib/scheduleEntryRegistry.ts",
       "types": "./src/lib/scheduleEntryRegistry.ts"
+    },
+    "./context/DocumentsCrossFeatureContext": {
+      "import": "./src/context/DocumentsCrossFeatureContext.ts",
+      "types": "./src/context/DocumentsCrossFeatureContext.ts"
     }
   },
   "scripts": {

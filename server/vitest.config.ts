@@ -59,6 +59,7 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/events$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/events/index.ts') },
       { find: /^@alga-psa\/core\/encryption$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/encryption.ts') },
       { find: /^@alga-psa\/core\/i18n\/config$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/i18n/config.ts') },
+      { find: /^@alga-psa\/core\/context\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/context/$1') },
 
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../packages/db/src/index.ts') },
       { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },

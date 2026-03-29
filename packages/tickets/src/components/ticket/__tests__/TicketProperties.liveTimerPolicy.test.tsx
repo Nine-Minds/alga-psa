@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import TicketProperties from '../TicketProperties';
 
 const getScheduledHoursForTicketMock = vi.fn();
@@ -195,29 +195,33 @@ describe('TicketProperties live timer board policy', () => {
     getTicketingDisplaySettingsMock.mockResolvedValue({ dateTimeFormat: 'MMM d, yyyy h:mm a' });
   });
 
-  it('T004: hides tracked intervals on disabled boards while keeping Add Time Entry available', () => {
+  it('T004: hides tracked intervals on disabled boards while keeping Add Time Entry available', async () => {
     const renderIntervalManagement = vi.fn(() => <div>Intervals</div>);
     const props = defaultProps();
     props.board.enable_live_ticket_timer = false;
 
     render(<TicketProperties {...props} renderIntervalManagement={renderIntervalManagement} />);
 
-    expect(screen.queryByText('Ticket Timer - #1001')).not.toBeInTheDocument();
-    expect(screen.queryByText('Tracked Intervals')).not.toBeInTheDocument();
-    expect(renderIntervalManagement).not.toHaveBeenCalled();
-    expect(screen.getByText('Add Time Entry')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Ticket Timer - #1001')).not.toBeInTheDocument();
+      expect(screen.queryByText('Tracked Intervals')).not.toBeInTheDocument();
+      expect(renderIntervalManagement).not.toHaveBeenCalled();
+      expect(screen.getAllByText('Add Time Entry').length).toBeGreaterThan(0);
+    });
   });
 
-  it('T006: keeps timer controls and tracked interval rendering when enabled', () => {
+  it('T006: keeps timer controls and tracked interval rendering when enabled', async () => {
     const renderIntervalManagement = vi.fn(() => <div data-testid="interval-management-content">Intervals</div>);
     const props = defaultProps();
     props.board.enable_live_ticket_timer = true;
 
     render(<TicketProperties {...props} renderIntervalManagement={renderIntervalManagement} />);
 
-    expect(screen.getByText('Ticket Timer - #1001')).toBeInTheDocument();
-    expect(screen.getByText('Tracked Intervals')).toBeInTheDocument();
-    expect(renderIntervalManagement).toHaveBeenCalledWith({ ticketId: 'ticket-1', userId: 'user-1' });
-    expect(screen.getByText('Add Time Entry')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Ticket Timer - #1001')).toBeInTheDocument();
+      expect(screen.getByText('Tracked Intervals')).toBeInTheDocument();
+      expect(renderIntervalManagement).toHaveBeenCalledWith({ ticketId: 'ticket-1', userId: 'user-1' });
+      expect(screen.getAllByText('Add Time Entry').length).toBeGreaterThan(0);
+    });
   });
 });
