@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ITimeEntry, ITimeSheetView, IUser, IUserWithRoles } from '@alga-psa/types';
@@ -23,6 +23,7 @@ interface TimeSheetClientProps {
 export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUser, isManager, canReopenForEdits }: TimeSheetClientProps) {
   const { t } = useTranslation('msp/time-entry');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
   const [subjectUser, setSubjectUser] = useState<IUser | null>(null);
   const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
@@ -100,6 +101,15 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
   };
 
   const handleBack = () => {
+    const subjectUserIdForBack = searchParams?.get('subjectUserId') ?? (
+      timeSheet.user_id !== currentUser.user_id ? timeSheet.user_id : null
+    );
+
+    if (subjectUserIdForBack && subjectUserIdForBack !== currentUser.user_id) {
+      router.push(`/msp/time-entry?subjectUserId=${encodeURIComponent(subjectUserIdForBack)}`);
+      return;
+    }
+
     router.push('/msp/time-entry');
   };
 
