@@ -10,6 +10,7 @@ vi.mock('server/src/lib/utils/getSecret', () => ({
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
+  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
   getSecretProviderInstance: vi.fn(async () => ({
     getAppSecret: async () => '',
   })),
@@ -478,6 +479,7 @@ describe('Ticket bundling integration', () => {
 
     const closedMaster = await db('tickets').where({ tenant: tenantId, ticket_id: masterId }).first();
     expect(closedMaster?.status_id).toBe(statusClosedId);
+    expect(closedMaster?.is_closed).toBe(true);
 
     const replyContent = JSON.stringify([
       {
@@ -499,6 +501,7 @@ describe('Ticket bundling integration', () => {
     const reopenedMaster = await db('tickets').where({ tenant: tenantId, ticket_id: masterId }).first();
     expect(reopenedMaster?.status_id).toBe(statusOpenId);
     expect(reopenedMaster?.closed_at).toBeNull();
+    expect(reopenedMaster?.is_closed).toBe(false);
   });
 
   it('surfaces inbound child public replies on the master as aggregated view-only items', async () => {
