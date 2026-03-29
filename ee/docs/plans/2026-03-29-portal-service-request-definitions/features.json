@@ -236,7 +236,7 @@
   {
     "id": "F028",
     "description": "Definitions can create a new mutable draft based on the currently published version without mutating historical versions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Users and Primary Flows"
@@ -333,7 +333,7 @@
   {
     "id": "F039",
     "description": "Archiving a definition preserves its versions and historical submissions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Rollout / Migration"
@@ -687,7 +687,7 @@
   {
     "id": "F079",
     "description": "The Request Services landing page shows only published definitions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Security / Permissions"

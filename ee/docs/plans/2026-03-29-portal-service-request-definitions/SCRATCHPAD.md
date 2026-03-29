@@ -94,3 +94,14 @@ Working memory for the portal service request definitions effort. This is the pl
 
 - (2026-03-29) Run service request publish/versioning integration test:
   - `cd server && npx vitest run src/test/integration/serviceRequestPublishing.integration.test.ts`
+- (2026-03-29) Added lifecycle helpers in [definitionLifecycle.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/definitionLifecycle.ts):
+  - archive definition (`lifecycle_state = archived`)
+  - unarchive to draft
+  - list published definitions only (portal discovery seam)
+  - create mutable draft from latest published version snapshot
+- (2026-03-29) Added integration coverage in [serviceRequestLifecycle.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestLifecycle.integration.test.ts) for archive preservation/discovery filtering (T003) and draft-from-published republish preserving prior version rows (T046).
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run service request lifecycle integration tests:
+  - `cd server && npx vitest run src/test/integration/serviceRequestLifecycle.integration.test.ts`

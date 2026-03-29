@@ -28,7 +28,7 @@
   {
     "id": "T003",
     "description": "DB-backed integration: archiving a definition preserves versions and historical submissions while removing the definition from new portal discovery",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F039",
@@ -467,7 +467,7 @@
   {
     "id": "T046",
     "description": "Republish flow: admins can create a draft from a published definition, change it, and publish version 2 without deleting version 1",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F028",
