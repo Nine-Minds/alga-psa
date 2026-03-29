@@ -7,8 +7,10 @@ export interface ServiceRequestDefinitionListItem {
   description: string | null;
   icon: string | null;
   category_id: string | null;
+  category_name_snapshot: string | null;
   sort_order: number;
   linked_service_id: string | null;
+  linked_service_name_snapshot: string | null;
   lifecycle_state: 'draft' | 'published' | 'archived';
 }
 
@@ -52,8 +54,10 @@ export async function listPublishedServiceRequestDefinitions(
       'description',
       'icon',
       'category_id',
+      'category_name_snapshot',
       'sort_order',
       'linked_service_id',
+      'linked_service_name_snapshot',
       'lifecycle_state'
     )) as ServiceRequestDefinitionListItem[];
 }
@@ -78,8 +82,10 @@ export async function createDraftFromLatestPublishedVersion(
     description: latestVersion.description,
     icon: latestVersion.icon,
     category_id: latestVersion.category_id,
+    category_name_snapshot: latestVersion.category_name_snapshot,
     sort_order: latestVersion.sort_order,
     linked_service_id: latestVersion.linked_service_id,
+    linked_service_name_snapshot: latestVersion.linked_service_name_snapshot,
     form_schema: latestVersion.form_schema_snapshot,
     execution_provider: latestVersion.execution_provider,
     execution_config: latestVersion.execution_config,

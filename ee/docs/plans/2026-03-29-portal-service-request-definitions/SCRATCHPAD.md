@@ -111,3 +111,19 @@ Working memory for the portal service request definitions effort. This is the pl
 
 - (2026-03-29) Run enterprise provider registration unit test:
   - `cd server && npx vitest run src/test/unit/service-requests/enterpriseProviderRegistrations.unit.test.ts`
+- (2026-03-29) Implemented historical-readability snapshots for linked taxonomy/service display names in [20260329150000_create_service_request_domain_tables.cjs](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/migrations/20260329150000_create_service_request_domain_tables.cjs):
+  - `service_request_definitions.category_name_snapshot`
+  - `service_request_definitions.linked_service_name_snapshot`
+  - `service_request_definition_versions.category_name_snapshot`
+  - `service_request_definition_versions.linked_service_name_snapshot`
+- (2026-03-29) Updated publish-time snapshotting in [definitionPublishing.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/definitionPublishing.ts) to resolve `service_categories.category_name` and `service_catalog.service_name` and persist those immutable display names on the published version.
+- (2026-03-29) Added history-detail read seam [submissionHistory.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/submissionHistory.ts) and exported it via [index.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/index.ts) so submission rendering can use version snapshots rather than live catalog/category joins.
+- (2026-03-29) Added DB-backed integrity test [serviceRequestHistoryIntegrity.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestHistoryIntegrity.integration.test.ts) validating `T044` / `F040`: renaming linked service/category after submission does not change historical rendered values.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run history-integrity integration test:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestHistoryIntegrity.integration.test.ts`
+- (2026-03-29) Notes:
+  - Avoid parallel execution of service-request integration tests in this repo because shared DB bootstrap (`test_database`) can conflict.
+  - Ensure `server/coverage/.tmp` exists before `vitest run` in this environment to avoid coverage temp-file ENOENT failures.

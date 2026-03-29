@@ -10,8 +10,10 @@ exports.up = async function up(knex) {
     table.text('description').nullable();
     table.text('icon').nullable();
     table.uuid('category_id').nullable();
+    table.text('category_name_snapshot').nullable();
     table.integer('sort_order').notNullable().defaultTo(0);
     table.uuid('linked_service_id').nullable();
+    table.text('linked_service_name_snapshot').nullable();
 
     table.jsonb('form_schema').notNullable().defaultTo(knex.raw("'{}'::jsonb"));
 
@@ -67,8 +69,10 @@ exports.up = async function up(knex) {
     table.text('description').nullable();
     table.text('icon').nullable();
     table.uuid('category_id').nullable();
+    table.text('category_name_snapshot').nullable();
     table.integer('sort_order').notNullable().defaultTo(0);
     table.uuid('linked_service_id').nullable();
+    table.text('linked_service_name_snapshot').nullable();
 
     table.jsonb('form_schema_snapshot').notNullable();
 

@@ -342,7 +342,7 @@
   {
     "id": "F040",
     "description": "Historical submissions remain readable even when linked service-catalog or category records later change names",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"

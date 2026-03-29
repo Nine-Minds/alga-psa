@@ -449,7 +449,7 @@
   {
     "id": "T044",
     "description": "History integrity: renaming linked services or categories after submission does not corrupt historical submission rendering",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
