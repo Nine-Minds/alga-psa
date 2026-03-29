@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
+  getServiceRequestDefinitionSubmissionDetailAction,
   getServiceRequestDefinitionEditorDataAction,
+  listServiceRequestDefinitionSubmissionsAction,
   publishServiceRequestDefinitionAction,
   saveServiceRequestDefinitionDraftAction,
   searchLinkedServicesForDefinitionAction,
@@ -47,6 +49,25 @@ interface EditorData {
   };
 }
 
+interface DefinitionSubmissionRow {
+  submission_id: string;
+  request_name: string;
+  requester_user_id: string | null;
+  client_id: string;
+  contact_id: string | null;
+  execution_status: 'pending' | 'succeeded' | 'failed';
+  created_ticket_id: string | null;
+  workflow_execution_id: string | null;
+  submitted_at: string | Date;
+}
+
+interface DefinitionSubmissionDetail extends DefinitionSubmissionRow {
+  definition_id: string;
+  definition_version_id: string;
+  submitted_payload: Record<string, unknown>;
+  execution_error_summary: string | null;
+}
+
 function FieldRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid grid-cols-[180px_1fr] gap-3 text-sm">
@@ -73,6 +94,9 @@ export default function ServiceRequestDefinitionEditorPage() {
   const [linkedServiceResults, setLinkedServiceResults] = useState<
     Array<{ service_id: string; service_name: string; description: string | null }>
   >([]);
+  const [submissions, setSubmissions] = useState<DefinitionSubmissionRow[]>([]);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [selectedSubmissionDetail, setSelectedSubmissionDetail] = useState<DefinitionSubmissionDetail | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -80,10 +104,21 @@ export default function ServiceRequestDefinitionEditorPage() {
         const result = await getServiceRequestDefinitionEditorDataAction(definitionId);
         setData(result as EditorData | null);
         if (result) {
+          const definitionSubmissions = await listServiceRequestDefinitionSubmissionsAction(definitionId);
+          setSubmissions(definitionSubmissions as DefinitionSubmissionRow[]);
+          if (selectedSubmissionId) {
+            const detail = await getServiceRequestDefinitionSubmissionDetailAction(
+              definitionId,
+              selectedSubmissionId
+            );
+            setSelectedSubmissionDetail(detail as DefinitionSubmissionDetail | null);
+          }
           const validation = await validateServiceRequestDefinitionForPublishAction(definitionId);
           setValidationErrors(validation.errors ?? []);
         } else {
           setValidationErrors([]);
+          setSubmissions([]);
+          setSelectedSubmissionDetail(null);
         }
       } finally {
         setLoading(false);
@@ -93,7 +128,7 @@ export default function ServiceRequestDefinitionEditorPage() {
     if (definitionId) {
       load();
     }
-  }, [definitionId]);
+  }, [definitionId, selectedSubmissionId]);
 
   if (loading) {
     return <div className="p-6 text-sm text-[rgb(var(--color-text-600))]">Loading definition editor…</div>;
@@ -289,6 +324,61 @@ export default function ServiceRequestDefinitionEditorPage() {
         ) : (
           <div className="rounded border border-[rgb(var(--color-success-300))] bg-[rgb(var(--color-success-100))] p-3 text-sm">
             Publish validation passed.
+          </div>
+        )}
+      </Card>
+
+      <Card id="service-request-editor-submissions" className="p-4 space-y-3">
+        <h2 className="text-lg font-semibold">Submissions</h2>
+        {submissions.length === 0 ? (
+          <div className="text-sm text-[rgb(var(--color-text-600))]">No submissions yet for this definition.</div>
+        ) : (
+          <div className="space-y-2">
+            {submissions.map((submission) => (
+              <div
+                key={submission.submission_id}
+                className="border rounded p-3 flex items-center justify-between gap-3"
+              >
+                <div className="text-sm">
+                  <div className="font-medium">{submission.request_name}</div>
+                  <div className="text-[rgb(var(--color-text-600))]">
+                    {new Date(submission.submitted_at).toLocaleString()} · {submission.execution_status}
+                  </div>
+                </div>
+                <Button
+                  id={`service-request-submission-detail-${submission.submission_id}`}
+                  variant="outline"
+                  onClick={async () => {
+                    const detail = await getServiceRequestDefinitionSubmissionDetailAction(
+                      definitionId,
+                      submission.submission_id
+                    );
+                    setSelectedSubmissionId(submission.submission_id);
+                    setSelectedSubmissionDetail(detail as DefinitionSubmissionDetail | null);
+                  }}
+                >
+                  View Detail
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        {selectedSubmissionDetail && (
+          <div className="rounded border p-3 bg-[rgb(var(--color-background-100))] space-y-2">
+            <div className="text-sm font-semibold">Submission Detail</div>
+            <FieldRow label="Submission ID" value={selectedSubmissionDetail.submission_id} />
+            <FieldRow label="Requester User" value={selectedSubmissionDetail.requester_user_id ?? '-'} />
+            <FieldRow label="Client" value={selectedSubmissionDetail.client_id} />
+            <FieldRow label="Contact" value={selectedSubmissionDetail.contact_id ?? '-'} />
+            <FieldRow label="Ticket Reference" value={selectedSubmissionDetail.created_ticket_id ?? '-'} />
+            <FieldRow label="Workflow Reference" value={selectedSubmissionDetail.workflow_execution_id ?? '-'} />
+            <FieldRow
+              label="Execution Error"
+              value={selectedSubmissionDetail.execution_error_summary ?? '-'}
+            />
+            <pre className="text-xs bg-white p-2 rounded overflow-auto">
+              {JSON.stringify(selectedSubmissionDetail.submitted_payload, null, 2)}
+            </pre>
           </div>
         )}
       </Card>

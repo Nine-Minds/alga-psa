@@ -510,7 +510,7 @@
   {
     "id": "F059",
     "description": "Admins can view submissions scoped to a specific definition from the management experience",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"
@@ -519,7 +519,7 @@
   {
     "id": "F060",
     "description": "Admins can open a submission detail view showing requester identity, submitted values, and downstream execution references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"
@@ -912,7 +912,7 @@
   {
     "id": "F104",
     "description": "Definitions can be published successfully without any linked service-catalog item",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
@@ -938,7 +938,7 @@
   {
     "id": "F107",
     "description": "Publish validation rejects linked-service references that no longer resolve to a valid service-catalog row",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Requirements > Functional Requirements"

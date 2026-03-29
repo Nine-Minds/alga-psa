@@ -15,8 +15,12 @@ import {
   saveServiceRequestDefinitionDraft,
   searchServiceCatalogForLinking,
   setLinkedServiceForServiceRequestDefinitionDraft,
+  listServiceRequestSubmissionsForDefinition,
+  getServiceRequestSubmissionDetailForDefinition,
   validateServiceRequestDefinitionForPublish,
   type LinkableServiceOption,
+  type ServiceRequestAdminDefinitionSubmissionDetail,
+  type ServiceRequestAdminDefinitionSubmissionRow,
   type ServiceRequestDefinitionManagementRow,
   type ServiceRequestPublishValidationResult,
   type ServiceRequestTemplateOption,
@@ -156,6 +160,25 @@ export const setLinkedServiceForDefinitionAction = withAuth(async (
     linkedServiceId,
     updatedBy: getActorId(user),
   });
+});
+
+export const listServiceRequestDefinitionSubmissionsAction = withAuth(async (
+  _user,
+  { tenant },
+  definitionId: string
+): Promise<ServiceRequestAdminDefinitionSubmissionRow[]> => {
+  const { knex } = await createTenantKnex();
+  return listServiceRequestSubmissionsForDefinition(knex, tenant, definitionId);
+});
+
+export const getServiceRequestDefinitionSubmissionDetailAction = withAuth(async (
+  _user,
+  { tenant },
+  definitionId: string,
+  submissionId: string
+): Promise<ServiceRequestAdminDefinitionSubmissionDetail | null> => {
+  const { knex } = await createTenantKnex();
+  return getServiceRequestSubmissionDetailForDefinition(knex, tenant, definitionId, submissionId);
 });
 
 export const archiveServiceRequestDefinitionAction = withAuth(async (

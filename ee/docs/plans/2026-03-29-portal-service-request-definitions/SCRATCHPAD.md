@@ -187,3 +187,21 @@ Working memory for the portal service request definitions effort. This is the pl
 
 - (2026-03-29) Run linked-service picker integration test:
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestLinkedServicePicker.integration.test.ts`
+- (2026-03-29) Added linked-service publish validation integration coverage in [serviceRequestLinkedServicePublishValidation.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestLinkedServicePublishValidation.integration.test.ts) for T011/F104/F107:
+  - publish succeeds when `linked_service_id` is `null`
+  - publish fails with `Linked service no longer exists` when a stale linked-service reference is present
+  - Note: stale-reference scenario is simulated by dropping the FK in the isolated integration test DB and updating the row to an invalid id.
+- (2026-03-29) Added admin submission review helpers in [submissionHistory.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/submissionHistory.ts):
+  - `listServiceRequestSubmissionsForDefinition(...)`
+  - `getServiceRequestSubmissionDetailForDefinition(...)`
+- (2026-03-29) Added MSP editor action surface for definition-scoped submissions in [actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/actions.ts) and wired UI in [ServiceRequestDefinitionEditorPage.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/ServiceRequestDefinitionEditorPage.tsx):
+  - Submissions list by definition
+  - Submission detail panel with requester/client/contact identity ids, submitted payload, and downstream ticket/workflow references
+- (2026-03-29) Added integration coverage [serviceRequestAdminSubmissions.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestAdminSubmissions.integration.test.ts) for T030/F059/F060 definition-scoped submission list/detail behavior and downstream-reference rendering seams.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run linked-service publish validation + admin submissions integration tests:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestLinkedServicePublishValidation.integration.test.ts src/test/integration/serviceRequestAdminSubmissions.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`

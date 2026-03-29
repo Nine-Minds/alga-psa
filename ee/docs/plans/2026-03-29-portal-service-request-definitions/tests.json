@@ -124,7 +124,7 @@
   {
     "id": "T011",
     "description": "Publish validation: definitions with a missing linked service are rejected while definitions with no linked service at all can still publish",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F104",
       "F107"
@@ -313,7 +313,7 @@
   {
     "id": "T030",
     "description": "Admin submissions: MSP can list submissions for a definition and open a detail view that includes payload plus downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059",
       "F060"

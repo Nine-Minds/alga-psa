@@ -18,6 +18,83 @@ export interface ServiceRequestSubmissionHistoryDetail {
   linked_service_name_snapshot: string | null;
 }
 
+export interface ServiceRequestAdminDefinitionSubmissionRow {
+  submission_id: string;
+  request_name: string;
+  requester_user_id: string | null;
+  client_id: string;
+  contact_id: string | null;
+  execution_status: 'pending' | 'succeeded' | 'failed';
+  created_ticket_id: string | null;
+  workflow_execution_id: string | null;
+  submitted_at: Date;
+}
+
+export interface ServiceRequestAdminDefinitionSubmissionDetail
+  extends ServiceRequestAdminDefinitionSubmissionRow {
+  definition_id: string;
+  definition_version_id: string;
+  submitted_payload: Record<string, unknown>;
+  execution_error_summary: string | null;
+}
+
+export async function listServiceRequestSubmissionsForDefinition(
+  knex: Knex,
+  tenant: string,
+  definitionId: string
+): Promise<ServiceRequestAdminDefinitionSubmissionRow[]> {
+  const rows = await knex('service_request_submissions')
+    .where({
+      tenant,
+      definition_id: definitionId,
+    })
+    .orderBy('created_at', 'desc')
+    .select(
+      'submission_id',
+      'request_name',
+      'requester_user_id',
+      'client_id',
+      'contact_id',
+      'execution_status',
+      'created_ticket_id',
+      'workflow_execution_id',
+      'created_at as submitted_at'
+    );
+
+  return rows as ServiceRequestAdminDefinitionSubmissionRow[];
+}
+
+export async function getServiceRequestSubmissionDetailForDefinition(
+  knex: Knex,
+  tenant: string,
+  definitionId: string,
+  submissionId: string
+): Promise<ServiceRequestAdminDefinitionSubmissionDetail | null> {
+  const row = await knex('service_request_submissions')
+    .where({
+      tenant,
+      definition_id: definitionId,
+      submission_id: submissionId,
+    })
+    .first(
+      'submission_id',
+      'request_name',
+      'requester_user_id',
+      'client_id',
+      'contact_id',
+      'definition_id',
+      'definition_version_id',
+      'submitted_payload',
+      'execution_status',
+      'execution_error_summary',
+      'created_ticket_id',
+      'workflow_execution_id',
+      'created_at as submitted_at'
+    );
+
+  return (row as ServiceRequestAdminDefinitionSubmissionDetail | undefined) ?? null;
+}
+
 export async function getServiceRequestSubmissionHistoryDetail(
   knex: Knex,
   tenant: string,
