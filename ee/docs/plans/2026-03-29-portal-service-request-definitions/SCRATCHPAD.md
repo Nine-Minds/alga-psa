@@ -234,3 +234,19 @@ Working memory for the portal service request definitions effort. This is the pl
 
 - (2026-03-29) Run Request Services nav contract test:
   - `cd packages/client-portal && npx vitest run src/components/layout/ClientPortalLayout.requestServicesNav.contract.test.ts`
+- (2026-03-29) Added portal catalog host helper [portalCatalog.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/portalCatalog.ts):
+  - lists only `published` definitions for a tenant
+  - resolves visibility via provider registry (`visibility_provider` + `visibility_config`)
+  - returns card metadata (icon/title/description) and groups cards by category (`Other Services` fallback)
+- (2026-03-29) Added authenticated client-portal action [request-services/actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/actions.ts):
+  - resolves authenticated client scope via `getAuthenticatedClientId`
+  - returns grouped visible request-service catalog items for the current client user context
+- (2026-03-29) Replaced request-services placeholder page with grouped card catalog rendering in [request-services/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/page.tsx).
+- (2026-03-29) Added integration coverage [serviceRequestPortalCatalog.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestPortalCatalog.integration.test.ts) for T017/F080/F081/F082, including provider-driven visibility filtering and category grouping.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run portal request-services catalog integration test:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestPortalCatalog.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`

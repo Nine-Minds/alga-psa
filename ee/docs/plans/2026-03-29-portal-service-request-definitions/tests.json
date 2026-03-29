@@ -185,7 +185,7 @@
   {
     "id": "T017",
     "description": "Portal catalog: only published definitions that pass visibility evaluation appear in the Request Services landing page and category grouping is applied when present",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F079",

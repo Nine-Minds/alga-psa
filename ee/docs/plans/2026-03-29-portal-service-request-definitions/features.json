@@ -696,7 +696,7 @@
   {
     "id": "F080",
     "description": "The Request Services landing page groups definitions by category when categories are configured",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -705,7 +705,7 @@
   {
     "id": "F081",
     "description": "The Request Services landing page evaluates visibility rules before listing a definition to a portal user",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Requirements > Functional Requirements"
@@ -714,7 +714,7 @@
   {
     "id": "F082",
     "description": "Service cards display icon, title, and short description from the published definition",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
