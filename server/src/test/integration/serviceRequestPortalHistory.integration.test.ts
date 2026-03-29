@@ -120,4 +120,82 @@ describe('service request portal history', () => {
     const forbiddenDetail = await getClientServiceRequestSubmissionDetail(db, tenant, clientA, submissionB);
     expect(forbiddenDetail).toBeNull();
   });
+
+  it('T025: submission detail includes attachment references when uploaded files were linked', async () => {
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+    const submissionId = uuidv4();
+    const clientId = uuidv4();
+    const attachmentFileId = uuidv4();
+
+    await db('tenants').insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+
+    await db('service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'Hardware Request',
+      form_schema: { fields: [] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+      lifecycle_state: 'published',
+    });
+
+    await db('service_request_definition_versions').insert({
+      tenant,
+      version_id: versionId,
+      definition_id: definitionId,
+      version_number: 1,
+      name: 'Hardware Request',
+      form_schema_snapshot: {
+        fields: [{ key: 'purchase_quote', label: 'Purchase Quote', type: 'file-upload', required: true }],
+      },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+    });
+
+    await db('service_request_submissions').insert({
+      tenant,
+      submission_id: submissionId,
+      definition_id: definitionId,
+      definition_version_id: versionId,
+      requester_user_id: uuidv4(),
+      client_id: clientId,
+      contact_id: uuidv4(),
+      request_name: 'Hardware Request',
+      submitted_payload: {},
+      execution_status: 'pending',
+    });
+
+    await db('service_request_submission_attachments').insert({
+      tenant,
+      submission_id: submissionId,
+      file_id: attachmentFileId,
+      file_name: 'quote.pdf',
+      mime_type: 'application/pdf',
+      file_size: 1024,
+    });
+
+    const detail = await getClientServiceRequestSubmissionDetail(db, tenant, clientId, submissionId);
+    expect(detail).toBeTruthy();
+    expect(detail?.attachments).toEqual([
+      expect.objectContaining({
+        file_id: attachmentFileId,
+        file_name: 'quote.pdf',
+        mime_type: 'application/pdf',
+      }),
+    ]);
+  });
 });

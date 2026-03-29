@@ -267,7 +267,7 @@
   {
     "id": "T025",
     "description": "Portal history: attachment references appear in request detail when the submission included uploaded files",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F095"
     ]

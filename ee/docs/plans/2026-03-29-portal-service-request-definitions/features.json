@@ -831,7 +831,7 @@
   {
     "id": "F095",
     "description": "Submission details show uploaded attachment references when the submission included file uploads",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Security / Permissions"

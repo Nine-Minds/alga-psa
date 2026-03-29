@@ -37,6 +37,16 @@ export interface ServiceRequestClientSubmissionDetail {
   workflow_execution_id: string | null;
   submitted_at: Date;
   form_schema_snapshot: Record<string, unknown>;
+  attachments: ServiceRequestSubmissionAttachmentDetail[];
+}
+
+export interface ServiceRequestSubmissionAttachmentDetail {
+  submission_attachment_id: string;
+  file_id: string;
+  file_name: string | null;
+  mime_type: string | null;
+  file_size: string | null;
+  created_at: Date;
 }
 
 export interface ServiceRequestAdminDefinitionSubmissionRow {
@@ -203,5 +213,27 @@ export async function getClientServiceRequestSubmissionDetail(
       'version.form_schema_snapshot'
     );
 
-  return (row as ServiceRequestClientSubmissionDetail | undefined) ?? null;
+  if (!row) {
+    return null;
+  }
+
+  const attachments = await knex('service_request_submission_attachments')
+    .where({
+      tenant,
+      submission_id: submissionId,
+    })
+    .orderBy('created_at', 'asc')
+    .select(
+      'submission_attachment_id',
+      'file_id',
+      'file_name',
+      'mime_type',
+      'file_size',
+      'created_at'
+    );
+
+  return {
+    ...(row as Omit<ServiceRequestClientSubmissionDetail, 'attachments'>),
+    attachments: attachments as ServiceRequestSubmissionAttachmentDetail[],
+  };
 }

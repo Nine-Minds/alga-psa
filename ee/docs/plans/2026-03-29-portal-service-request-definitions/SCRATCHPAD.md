@@ -347,3 +347,16 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestPortalHistory.integration.test.ts src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Extended client submission detail with attachment references in [submissionHistory.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/submissionHistory.ts):
+  - `getClientServiceRequestSubmissionDetail(...)` now loads `service_request_submission_attachments` rows ordered by `created_at`
+  - includes attachment metadata (`submission_attachment_id`, `file_id`, `file_name`, `mime_type`, `file_size`, `created_at`) in the detail model
+- (2026-03-29) Updated [my-requests/[submissionId]/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/my-requests/[submissionId]/page.tsx) to render an Attachments section in portal request detail.
+- (2026-03-29) Extended [serviceRequestPortalHistory.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestPortalHistory.integration.test.ts) with T025/F095 coverage for attachment references in history detail.
+- (2026-03-29) Gotcha: attachment PK column is `submission_attachment_id` (not `attachment_id`) in migration [20260329150000_create_service_request_domain_tables.cjs](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/migrations/20260329150000_create_service_request_domain_tables.cjs); detail query/select must use the exact column name.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run portal history tests including attachment detail:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestPortalHistory.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`

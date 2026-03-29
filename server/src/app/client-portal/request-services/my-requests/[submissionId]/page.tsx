@@ -84,6 +84,25 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
           </dl>
         )}
       </section>
+
+      <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
+        <h2 className="text-base font-semibold mb-2">Attachments</h2>
+        {submission.attachments.length === 0 ? (
+          <p className="text-sm text-[rgb(var(--color-text-600))]">No attachments included.</p>
+        ) : (
+          <ul className="space-y-2">
+            {submission.attachments.map((attachment) => (
+              <li key={attachment.submission_attachment_id} className="rounded border bg-white p-2">
+                <p className="text-sm font-medium">{attachment.file_name ?? attachment.file_id}</p>
+                <p className="text-xs text-[rgb(var(--color-text-600))]">File ID: {attachment.file_id}</p>
+                {attachment.mime_type && (
+                  <p className="text-xs text-[rgb(var(--color-text-600))]">Type: {attachment.mime_type}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
