@@ -384,3 +384,32 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestTicketExecution.integration.test.ts src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Discovery: the MSP management/editor surfaces and many backend flows were already implemented in-tree but not reflected in `features.json` / `tests.json`.
+- (2026-03-29) Validated stale checklist coverage with targeted integration tests:
+  - `cd server && npx vitest run src/test/integration/serviceRequestDefinitionManagement.integration.test.ts`
+  - `cd server && npx vitest run --maxWorkers=1 src/test/integration/serviceRequestDefinitionEditor.integration.test.ts src/test/integration/serviceRequestDraftPublishValidation.integration.test.ts src/test/integration/serviceRequestTemplateInstantiation.integration.test.ts src/test/integration/serviceRequestLinkedServicePicker.integration.test.ts src/test/integration/serviceRequestLinkedServicePublishValidation.integration.test.ts src/test/integration/serviceRequestBasicFormBuilder.integration.test.ts src/test/integration/serviceRequestAdminSubmissions.integration.test.ts src/test/integration/serviceRequestHistoryIntegrity.integration.test.ts src/test/integration/serviceRequestPortalDetail.integration.test.ts src/test/integration/serviceRequestPortalDetailDefaults.integration.test.ts`
+  - `cd server && npx vitest run src/test/integration/serviceRequestPortalCatalog.integration.test.ts`
+- (2026-03-29) Updated checklist artifacts to mark implemented items that are covered by existing code/tests for:
+  - MSP definition management and editor sections (create/duplicate/archive/unarchive, basics/linkage/form/execution/publish)
+  - publish validation and template-instantiation behavior
+  - linked service picker/search and linked-service publish validation
+  - CE basic form builder field types, defaults, key stability, and field-key validation
+  - portal catalog/detail/default-value behavior and admin submission history/detail
+  - historical rendering integrity from version snapshots after category/service renames (F040/T044)
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Added editor-execution provider options sourced from registry in [definitionEditor.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/definitionEditor.ts):
+  - `execution.availableExecutionProviders[]` now includes provider key/displayName/executionMode for CE and any registered EE providers.
+- (2026-03-29) Added editor action [updateServiceRequestExecutionProviderAction](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/actions.ts) and wired selection UI in [ServiceRequestDefinitionEditorPage.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/msp/service-requests/ServiceRequestDefinitionEditorPage.tsx) so admins can choose execution providers (including CE `ticket-only`) without EE dependencies.
+- (2026-03-29) Added integration coverage [serviceRequestWorkflowProviderEditorOptions.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestWorkflowProviderEditorOptions.integration.test.ts) for T031:
+  - registers EE provider pack directly in test
+  - verifies editor option surface includes `workflow-only` and `ticket-plus-workflow` in addition to `ticket-only`
+- (2026-03-29) Run workflow provider editor option tests:
+  - `cd server && npx vitest run src/test/integration/serviceRequestWorkflowProviderEditorOptions.integration.test.ts`
+  - `cd server && npx vitest run src/test/integration/serviceRequestDefinitionEditor.integration.test.ts src/test/integration/serviceRequestWorkflowProviderEditorOptions.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`

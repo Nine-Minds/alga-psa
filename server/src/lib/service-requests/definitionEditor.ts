@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { listServiceRequestExecutionProviders } from './providers/registry';
 
 export interface ServiceRequestDefinitionEditorData {
   definitionId: string;
@@ -25,6 +26,11 @@ export interface ServiceRequestDefinitionEditorData {
     formBehaviorConfig: Record<string, unknown>;
     visibilityProvider: string;
     visibilityConfig: Record<string, unknown>;
+    availableExecutionProviders: Array<{
+      key: string;
+      displayName: string;
+      executionMode: string;
+    }>;
   };
   publish: {
     publishedVersionNumber: number | null;
@@ -66,6 +72,12 @@ export async function getServiceRequestDefinitionEditorData(
   tenant: string,
   definitionId: string
 ): Promise<ServiceRequestDefinitionEditorData | null> {
+  const availableExecutionProviders = listServiceRequestExecutionProviders().map((provider) => ({
+    key: provider.key,
+    displayName: provider.displayName,
+    executionMode: provider.executionMode,
+  }));
+
   const definition = (await knex('service_request_definitions')
     .where({ tenant, definition_id: definitionId })
     .first()) as ServiceRequestDefinitionEditorRow | undefined;
@@ -121,6 +133,7 @@ export async function getServiceRequestDefinitionEditorData(
       formBehaviorConfig: definition.form_behavior_config,
       visibilityProvider: definition.visibility_provider,
       visibilityConfig: definition.visibility_config,
+      availableExecutionProviders,
     },
     publish: {
       publishedVersionNumber: latestPublishedVersion?.version_number ?? null,

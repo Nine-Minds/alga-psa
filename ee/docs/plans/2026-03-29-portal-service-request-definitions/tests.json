@@ -322,7 +322,7 @@
   {
     "id": "T031",
     "description": "Workflow provider registry: EE startup makes workflow-only and ticket-plus-workflow execution modes available in the editor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109",
       "F110",

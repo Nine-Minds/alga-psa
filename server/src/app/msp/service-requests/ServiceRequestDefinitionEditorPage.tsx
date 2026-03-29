@@ -10,6 +10,7 @@ import {
   saveServiceRequestDefinitionDraftAction,
   searchLinkedServicesForDefinitionAction,
   setLinkedServiceForDefinitionAction,
+  updateServiceRequestExecutionProviderAction,
   validateServiceRequestDefinitionForPublishAction,
 } from './actions';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -41,6 +42,11 @@ interface EditorData {
     formBehaviorConfig: Record<string, unknown>;
     visibilityProvider: string;
     visibilityConfig: Record<string, unknown>;
+    availableExecutionProviders: Array<{
+      key: string;
+      displayName: string;
+      executionMode: string;
+    }>;
   };
   publish: {
     publishedVersionNumber: number | null;
@@ -294,6 +300,43 @@ export default function ServiceRequestDefinitionEditorPage() {
 
       <Card id="service-request-editor-execution" className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">Execution</h2>
+        <div className="grid gap-2">
+          <label
+            htmlFor="service-request-execution-provider-select"
+            className="text-sm font-medium text-[rgb(var(--color-text-700))]"
+          >
+            Execution Provider
+          </label>
+          <div className="flex items-center gap-2">
+            <select
+              id="service-request-execution-provider-select"
+              className="border rounded px-3 py-2 text-sm"
+              value={data.execution.executionProvider}
+              onChange={async (event) => {
+                try {
+                  await updateServiceRequestExecutionProviderAction(
+                    data.definitionId,
+                    event.target.value
+                  );
+                  const refreshed = await getServiceRequestDefinitionEditorDataAction(
+                    data.definitionId
+                  );
+                  setData(refreshed as EditorData | null);
+                  toast.success('Execution provider updated');
+                } catch (error) {
+                  console.error('Failed to update execution provider', error);
+                  toast.error('Failed to update execution provider');
+                }
+              }}
+            >
+              {data.execution.availableExecutionProviders.map((provider) => (
+                <option key={provider.key} value={provider.key}>
+                  {provider.displayName} ({provider.executionMode})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         <FieldRow label="Execution Provider" value={data.execution.executionProvider} />
         <FieldRow label="Execution Config" value={JSON.stringify(data.execution.executionConfig)} />
         <FieldRow label="Form Behavior Provider" value={data.execution.formBehaviorProvider} />

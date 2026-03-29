@@ -849,7 +849,7 @@
   {
     "id": "F097",
     "description": "The `ticket-only` execution provider is selectable in the editor without requiring any EE code",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Summary",
       "Requirements > Functional Requirements"
@@ -956,7 +956,7 @@
   {
     "id": "F109",
     "description": "EE registers a `workflow-only` execution provider through the enterprise provider entrypoint",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -965,7 +965,7 @@
   {
     "id": "F110",
     "description": "EE registers a `ticket-plus-workflow` execution provider through the enterprise provider entrypoint",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -1028,7 +1028,7 @@
   {
     "id": "F117",
     "description": "EE registers an advanced form-behavior provider through the enterprise provider entrypoint",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
