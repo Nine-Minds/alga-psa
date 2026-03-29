@@ -87,3 +87,10 @@ Working memory for the portal service request definitions effort. This is the pl
 
 - (2026-03-29) Run service request domain table integration test:
   - `cd server && npx vitest run src/test/integration/serviceRequestDomainTables.integration.test.ts`
+- (2026-03-29) Added publish helper [definitionPublishing.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/lib/service-requests/definitionPublishing.ts) that snapshots draft definition metadata/form/provider config into immutable `service_request_definition_versions` rows and increments `version_number` per definition.
+- (2026-03-29) Added DB-backed integration test [serviceRequestPublishing.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestPublishing.integration.test.ts) validating immutable v1 snapshots after draft edits and republish to v2 (T002).
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run service request publish/versioning integration test:
+  - `cd server && npx vitest run src/test/integration/serviceRequestPublishing.integration.test.ts`

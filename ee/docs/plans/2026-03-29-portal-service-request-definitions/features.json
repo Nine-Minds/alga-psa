@@ -193,7 +193,7 @@
   {
     "id": "F023",
     "description": "Published versions snapshot portal metadata from the source definition",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -202,7 +202,7 @@
   {
     "id": "F024",
     "description": "Published versions snapshot form schema and field presentation from the source definition",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -211,7 +211,7 @@
   {
     "id": "F025",
     "description": "Published versions snapshot provider keys and provider config from the source definition",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]
@@ -219,7 +219,7 @@
   {
     "id": "F026",
     "description": "Version numbers increment monotonically per definition as new publishes occur",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -228,7 +228,7 @@
   {
     "id": "F027",
     "description": "Publishing records the user and timestamp responsible for a given version",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
@@ -483,7 +483,7 @@
   {
     "id": "F056",
     "description": "Publishing creates a new immutable version rather than editing the prior published state in place",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"
@@ -669,7 +669,7 @@
   {
     "id": "F077",
     "description": "The published version stores the immutable form snapshot derived from the draft definition",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Requirements > Functional Requirements"

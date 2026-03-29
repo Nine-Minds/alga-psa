@@ -15,7 +15,7 @@
   {
     "id": "T002",
     "description": "DB-backed integration: publishing a new version snapshots form and provider config immutably so version 1 remains unchanged after draft edits and republish",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F024",
