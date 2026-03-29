@@ -224,3 +224,13 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestBasicFormBuilder.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Added client-portal top-level navigation item in [ClientPortalLayout.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/packages/client-portal/src/components/layout/ClientPortalLayout.tsx):
+  - link target: `/client-portal/request-services`
+  - label key: `nav.requestServices` with fallback `Request Services`
+- (2026-03-29) Added route scaffold [server/src/app/client-portal/request-services/page.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/app/client-portal/request-services/page.tsx) so the new nav destination is functional during incremental rollout.
+- (2026-03-29) Added contract test [ClientPortalLayout.requestServicesNav.contract.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/packages/client-portal/src/components/layout/ClientPortalLayout.requestServicesNav.contract.test.ts) for T016.
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run Request Services nav contract test:
+  - `cd packages/client-portal && npx vitest run src/components/layout/ClientPortalLayout.requestServicesNav.contract.test.ts`

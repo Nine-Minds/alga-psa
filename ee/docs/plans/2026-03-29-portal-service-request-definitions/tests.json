@@ -177,7 +177,7 @@
   {
     "id": "T016",
     "description": "Portal layout: a first-class Request Services navigation item appears in the authenticated client portal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
