@@ -113,4 +113,69 @@ describe('service request submission attachments', () => {
       },
     ]);
   });
+
+  it('T021: required-field validation blocks submission against the published snapshot', async () => {
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+    const requesterUserId = uuidv4();
+    const clientId = uuidv4();
+    const contactId = uuidv4();
+
+    await db('tenants').insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+
+    await db('service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'Access Request (Draft Diverged)',
+      form_schema: {
+        fields: [{ key: 'ignored_draft_field', type: 'short-text', required: false }],
+      },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+      lifecycle_state: 'published',
+    });
+
+    await db('service_request_definition_versions').insert({
+      tenant,
+      version_id: versionId,
+      definition_id: definitionId,
+      version_number: 1,
+      name: 'Access Request',
+      form_schema_snapshot: {
+        fields: [
+          { key: 'access_target', type: 'short-text', label: 'Access Target', required: true },
+        ],
+      },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+    });
+
+    await expect(
+      submitPortalServiceRequest({
+        knex: db,
+        tenant,
+        definitionId,
+        requesterUserId,
+        clientId,
+        contactId,
+        payload: {},
+      })
+    ).rejects.toThrow('Required field missing: "access_target"');
+
+    const submissions = await db('service_request_submissions').where({ tenant, definition_id: definitionId });
+    expect(submissions).toHaveLength(0);
+  });
 });

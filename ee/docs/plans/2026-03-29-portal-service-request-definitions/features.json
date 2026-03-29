@@ -759,7 +759,7 @@
   {
     "id": "F087",
     "description": "Submit-time validation enforces required-field rules against the published version snapshot",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Security / Permissions"

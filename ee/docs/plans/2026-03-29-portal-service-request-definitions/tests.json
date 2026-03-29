@@ -227,7 +227,7 @@
   {
     "id": "T021",
     "description": "Portal submit: required-field validation blocks submission against the published snapshot",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068",
       "F087"

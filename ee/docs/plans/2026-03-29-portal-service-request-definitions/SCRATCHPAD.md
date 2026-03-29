@@ -286,3 +286,14 @@ Working memory for the portal service request definitions effort. This is the pl
   - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
 - (2026-03-29) Run targeted server TypeScript compile validation:
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-29) Extended [serviceRequestSubmissionAttachments.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/premade-form-for-services/server/src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts) with T021/F087 coverage:
+  - submit attempts missing required non-file fields fail against the published version snapshot
+  - validation remains snapshot-driven even when mutable draft schema diverges from the published schema
+  - failed validation does not persist a submission row
+
+## Commands / Runbooks (continued)
+
+- (2026-03-29) Run submission attachment + required-field validation integration tests:
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run src/test/integration/serviceRequestSubmissionAttachments.integration.test.ts`
+- (2026-03-29) Run targeted server TypeScript compile validation:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
