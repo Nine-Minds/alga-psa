@@ -1,7 +1,8 @@
 import { Editor, Extension, Node, mergeAttributes, type AnyExtension, type Content } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
 import StarterKit from '@tiptap/starter-kit';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
+import type { EditorView } from '@tiptap/pm/view';
 import { convertBlockContentToHTML } from '../../../formatting/src/blocknoteUtils';
 import type {
   TicketMobileEditorCommand,
@@ -704,7 +705,7 @@ export class TicketMobileEditorRuntime {
             key: MENTION_PLUGIN_KEY,
             state: {
               init: (): MentionQueryState => null,
-              apply(_tr, _prev, _oldState, newState): MentionQueryState {
+              apply(_tr: Transaction, _prev: MentionQueryState, _oldState: EditorState, newState: EditorState): MentionQueryState {
                 const { selection } = newState;
                 if (!selection.empty) {
                   return null;
@@ -729,7 +730,7 @@ export class TicketMobileEditorRuntime {
             },
             view() {
               return {
-                update(view) {
+                update(view: EditorView) {
                   const state = MENTION_PLUGIN_KEY.getState(view.state) as MentionQueryState;
                   runtime.emitMentionQuery(state);
                 },

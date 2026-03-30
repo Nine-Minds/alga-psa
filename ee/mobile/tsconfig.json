@@ -16,6 +16,12 @@
       "@tiptap/starter-kit": [
         "./node_modules/@tiptap/starter-kit"
       ],
+      "@tiptap/pm/state": [
+        "./node_modules/@tiptap/pm/dist/state/index.d.ts"
+      ],
+      "@tiptap/pm/view": [
+        "./node_modules/@tiptap/pm/dist/view/index.d.ts"
+      ],
       "zod": [
         "./node_modules/zod"
       ]
