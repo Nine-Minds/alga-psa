@@ -196,6 +196,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_tasks', 'workflow_form_definitions',
   'workflow_task_definitions',
 
+  // Service request runtime and published snapshots
+  'service_request_submission_attachments', 'service_request_submissions',
+  'service_request_definition_versions', 'service_request_definitions',
+
   // === LEVEL 3: Mid-level entities ===
   // Document-related leaf tables (must come before documents)
   'document_share_access_log', 'document_share_links',

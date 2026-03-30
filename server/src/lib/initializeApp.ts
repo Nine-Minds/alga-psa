@@ -276,6 +276,14 @@ export async function initializeApp() {
         logger.error('Failed to register Enterprise SSO provider implementations:', error);
       }
 
+      // Register enterprise provider extensions for service requests.
+      try {
+        const { registerEnterpriseServiceRequestProviders } = await import('./service-requests');
+        await registerEnterpriseServiceRequestProviders();
+      } catch (error) {
+        logger.error('Failed to register Enterprise service request providers:', error);
+      }
+
       // Initialize extensions
        try {
          const { initializeExtensions } = await import('@alga-psa/product-extension-initialization');
