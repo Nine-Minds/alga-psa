@@ -194,6 +194,49 @@ exports.up = async function up(knex) {
   `);
   } // end if !hasTable('service_request_submission_attachments')
 
+  // Repair: if the table was created in a prior partial run with ON DELETE SET NULL,
+  // replace those FKs with ON DELETE RESTRICT (Citus requires this).
+  if (await knex.schema.hasTable('service_request_definitions')) {
+    const setNullFks = await knex.raw(`
+      SELECT con.conname
+      FROM pg_constraint con
+      JOIN pg_class rel ON rel.oid = con.conrelid
+      WHERE rel.relname = 'service_request_definitions'
+        AND con.contype = 'f'
+        AND con.confdeltype = 'n'  -- 'n' = SET NULL
+    `);
+    for (const row of (setNullFks.rows || [])) {
+      const fkName = row.conname;
+
+      // Read the referenced table and columns so we can re-create the FK
+      const fkMeta = await knex.raw(`
+        SELECT
+          ref.relname  AS ref_table,
+          array_agg(a1.attname ORDER BY u.i) AS fk_cols,
+          array_agg(a2.attname ORDER BY u.i) AS ref_cols
+        FROM pg_constraint con
+        JOIN pg_class ref ON ref.oid = con.confrelid
+        CROSS JOIN LATERAL unnest(con.conkey, con.confkey) WITH ORDINALITY AS u(fk_attnum, ref_attnum, i)
+        JOIN pg_attribute a1 ON a1.attrelid = con.conrelid AND a1.attnum = u.fk_attnum
+        JOIN pg_attribute a2 ON a2.attrelid = con.confrelid AND a2.attnum = u.ref_attnum
+        WHERE con.conname = '${fkName}'
+        GROUP BY ref.relname
+      `);
+
+      if (fkMeta.rows?.length) {
+        const { ref_table, fk_cols, ref_cols } = fkMeta.rows[0];
+        await knex.raw(`ALTER TABLE service_request_definitions DROP CONSTRAINT "${fkName}"`);
+        await knex.raw(`
+          ALTER TABLE service_request_definitions
+          ADD CONSTRAINT "${fkName}"
+          FOREIGN KEY (${fk_cols.map(c => `"${c}"`).join(', ')})
+          REFERENCES "${ref_table}" (${ref_cols.map(c => `"${c}"`).join(', ')})
+          ON DELETE RESTRICT
+        `);
+      }
+    }
+  }
+
   const citusFn = await knex.raw(`
     SELECT EXISTS (
       SELECT 1 FROM pg_proc
