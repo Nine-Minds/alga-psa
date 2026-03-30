@@ -555,6 +555,10 @@ export default function ServiceRequestDefinitionEditorPage() {
   };
 
   const saveTicketRoutingConfig = async () => {
+    if (!data) {
+      return;
+    }
+
     const selectedCategoryId = ticketRoutingSelectedCategories[0] ?? '';
     const selectedCategory = ticketRoutingCategories.find(
       (category) => category.category_id === selectedCategoryId

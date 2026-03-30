@@ -1,6 +1,6 @@
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
-import { FileText } from 'lucide-react';
+import { FileText, type LucideIcon } from 'lucide-react';
 
 interface ServiceRequestIconProps {
   iconName?: string | null;
@@ -19,12 +19,13 @@ export function ServiceRequestIcon({
   iconName,
   className = 'h-4 w-4',
 }: ServiceRequestIconProps) {
+  const iconExports = LucideIcons as unknown as Record<string, LucideIcon>;
   const normalizedName =
     typeof iconName === 'string' && iconName.trim().length > 0
       ? toLucideExportName(iconName.trim())
       : '';
   const IconComponent =
-    (normalizedName && (LucideIcons as Record<string, React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>>)[normalizedName]) ||
+    (normalizedName && iconExports[normalizedName]) ||
     FileText;
 
   return <IconComponent className={className} aria-hidden={true} />;
