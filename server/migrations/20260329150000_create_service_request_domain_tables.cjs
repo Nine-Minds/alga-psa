@@ -224,13 +224,17 @@ exports.up = async function up(knex) {
       `);
 
       if (fkMeta.rows?.length) {
-        const { ref_table, fk_cols, ref_cols } = fkMeta.rows[0];
+        const { ref_table } = fkMeta.rows[0];
+        // pg returns array_agg as a pg array string "{a,b}" — parse to JS array
+        const parsePgArray = (v) => Array.isArray(v) ? v : String(v).replace(/^\{|\}$/g, '').split(',');
+        const fkCols = parsePgArray(fkMeta.rows[0].fk_cols);
+        const refCols = parsePgArray(fkMeta.rows[0].ref_cols);
         await knex.raw(`ALTER TABLE service_request_definitions DROP CONSTRAINT "${fkName}"`);
         await knex.raw(`
           ALTER TABLE service_request_definitions
           ADD CONSTRAINT "${fkName}"
-          FOREIGN KEY (${fk_cols.map(c => `"${c}"`).join(', ')})
-          REFERENCES "${ref_table}" (${ref_cols.map(c => `"${c}"`).join(', ')})
+          FOREIGN KEY (${fkCols.map(c => `"${c}"`).join(', ')})
+          REFERENCES "${ref_table}" (${refCols.map(c => `"${c}"`).join(', ')})
           ON DELETE RESTRICT
         `);
       }
