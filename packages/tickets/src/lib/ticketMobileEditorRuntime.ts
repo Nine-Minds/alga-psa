@@ -1,10 +1,13 @@
-import { Editor, type AnyExtension, type Content } from '@tiptap/core';
+import { Editor, Extension, Node, mergeAttributes, type AnyExtension, type Content } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
 import StarterKit from '@tiptap/starter-kit';
+import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
+import type { EditorView } from '@tiptap/pm/view';
 import { convertBlockContentToHTML } from '../../../formatting/src/blocknoteUtils';
 import type {
   TicketMobileEditorCommand,
   TicketMobileEditorInitPayload,
+  TicketMobileEditorMentionPayload,
   TicketMobileEditorNativeToWebMessage,
   TicketMobileEditorRequest,
   TicketMobileEditorWebToNativeMessage,
@@ -28,6 +31,60 @@ const blockStateTypes = new Set([
   'blockquote',
   'code_block',
 ]);
+
+const MobileMentionNode = Node.create({
+  name: 'mention',
+  group: 'inline',
+  inline: true,
+  selectable: false,
+  atom: true,
+
+  addAttributes() {
+    return {
+      userId: { default: '' },
+      username: { default: '' },
+      displayName: { default: 'Unknown' },
+    };
+  },
+
+  parseHTML() {
+    return [{
+      tag: 'span[data-mention]',
+      getAttrs(node) {
+        const el = node as HTMLElement;
+        return {
+          userId: el.getAttribute('data-user-id') || '',
+          username: el.getAttribute('data-username') || '',
+          displayName: el.textContent?.replace(/^@/, '') || 'Unknown',
+        };
+      },
+    }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    const { userId, username, displayName } = HTMLAttributes;
+    const displayText = username ? `@${username}` : `@${displayName}`;
+    return [
+      'span',
+      mergeAttributes({
+        'data-mention': '',
+        'data-user-id': userId,
+        'data-username': username,
+        class: 'mention-badge',
+      }),
+      displayText,
+    ];
+  },
+});
+
+const MENTION_PLUGIN_KEY = new PluginKey('mobileMentionSuggestion');
+
+type MentionQueryState = {
+  active: boolean;
+  query: string;
+  from: number;
+  to: number;
+} | null;
 
 type TimerId = ReturnType<typeof setTimeout>;
 
@@ -64,6 +121,8 @@ export class TicketMobileEditorRuntime {
   private resizeObserver: ResizeObserver | null = null;
 
   private pendingImageRewrites = new Set<string>();
+
+  private lastMentionQuery: string | null = null;
 
   constructor(options: TicketMobileEditorRuntimeOptions) {
     const timerHost = globalThis as typeof globalThis & {
@@ -141,6 +200,8 @@ export class TicketMobileEditorRuntime {
             inline: false,
             allowBase64: false,
           }) as AnyExtension,
+          MobileMentionNode,
+          this.createMentionSuggestionExtension(),
         ],
         content: initialContent,
         editorProps: {
@@ -259,6 +320,29 @@ export class TicketMobileEditorRuntime {
         return this.runEditableCommand(editor, (currentEditor) =>
           currentEditor.chain().focus().redo().run()
         );
+      case 'insert-mention': {
+        if (!this.isValidMentionPayload(value)) {
+          this.emitError('invalid-command', 'insert-mention requires a mention payload');
+          return false;
+        }
+        return this.runEditableCommand(editor, (currentEditor) =>
+          currentEditor.chain()
+            .focus()
+            .deleteRange({ from: value.from, to: value.to })
+            .insertContent([
+              {
+                type: 'mention',
+                attrs: {
+                  userId: value.userId,
+                  username: value.username,
+                  displayName: value.displayName,
+                },
+              },
+              { type: 'text', text: ' ' },
+            ])
+            .run()
+        );
+      }
       default:
         this.emitError('unknown-command', `Unsupported editor command: ${String(command)}`);
         return false;
@@ -607,5 +691,78 @@ export class TicketMobileEditorRuntime {
   private stopResizeObserver(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
+  }
+
+  // --- Mention suggestion support ---
+
+  private createMentionSuggestionExtension(): AnyExtension {
+    const runtime = this;
+    return Extension.create({
+      name: 'mobileMentionSuggestion',
+      addProseMirrorPlugins() {
+        return [
+          new Plugin({
+            key: MENTION_PLUGIN_KEY,
+            state: {
+              init: (): MentionQueryState => null,
+              apply(_tr: Transaction, _prev: MentionQueryState, _oldState: EditorState, newState: EditorState): MentionQueryState {
+                const { selection } = newState;
+                if (!selection.empty) {
+                  return null;
+                }
+
+                const pos = selection.$head;
+                const textBefore = pos.parent.textBetween(0, pos.parentOffset, undefined, '\ufffc');
+                const match = textBefore.match(/(?:^|\s)@([a-zA-Z0-9_ ]{0,30})$/);
+                if (!match) {
+                  return null;
+                }
+
+                const query = match[1];
+                const matchStart = match[0].startsWith(' ') ? match.index! + 1 : match.index!;
+                return {
+                  active: true,
+                  query,
+                  from: pos.start() + matchStart,
+                  to: pos.start() + pos.parentOffset,
+                };
+              },
+            },
+            view() {
+              return {
+                update(view: EditorView) {
+                  const state = MENTION_PLUGIN_KEY.getState(view.state) as MentionQueryState;
+                  runtime.emitMentionQuery(state);
+                },
+              };
+            },
+          }),
+        ];
+      },
+    }) as AnyExtension;
+  }
+
+  private emitMentionQuery(state: MentionQueryState): void {
+    const serialized = state ? JSON.stringify(state) : null;
+    if (serialized === this.lastMentionQuery) {
+      return;
+    }
+    this.lastMentionQuery = serialized;
+    this.emitMessage({
+      type: 'mention-query',
+      payload: state ?? { active: false, query: '', from: 0, to: 0 },
+    });
+  }
+
+  private isValidMentionPayload(value: unknown): value is TicketMobileEditorMentionPayload {
+    if (!value || typeof value !== 'object') {
+      return false;
+    }
+    const v = value as Record<string, unknown>;
+    return typeof v.userId === 'string'
+      && typeof v.username === 'string'
+      && typeof v.displayName === 'string'
+      && typeof v.from === 'number'
+      && typeof v.to === 'number';
   }
 }

@@ -27,8 +27,6 @@ export function CommentsSection({
   comments,
   visibleCount,
   onLoadMore,
-  onJumpToLatest,
-  onJumpToTop,
   error,
   onLinkPress,
   imageAuth,
@@ -39,8 +37,6 @@ export function CommentsSection({
   comments: TicketComment[];
   visibleCount: number;
   onLoadMore: () => void;
-  onJumpToLatest: () => void;
-  onJumpToTop: () => void;
   error: string | null;
   onLinkPress?: (url: string) => void;
   imageAuth?: { baseUrl: string; apiKey: string };
@@ -51,8 +47,15 @@ export function CommentsSection({
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
   const { session } = useAuth();
-  const startIndex = Math.max(0, comments.length - visibleCount);
-  const visible = comments.slice(startIndex);
+  // Sort order: "newest" shows latest first, "oldest" shows oldest first (API default)
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+
+  const sorted = useMemo(
+    () => sortOrder === "newest" ? [...comments].reverse() : comments,
+    [comments, sortOrder],
+  );
+  const visible = sorted.slice(0, visibleCount);
+  const remainingCount = Math.max(0, sorted.length - visibleCount);
 
   // Local reactions state (initialized from comment data, updated optimistically)
   const [reactionsOverrides, setReactionsOverrides] = useState<Record<string, AggregatedReaction[]>>({});
@@ -64,6 +67,9 @@ export function CommentsSection({
   // that flipping it re-renders this component (fixing the stale-ref bug).
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   const toggleRef = useRef<Record<string, () => void>>({});
+
+  // Collapse state
+  const [collapsed, setCollapsed] = useState(false);
 
   // Comment editing state
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -176,41 +182,52 @@ export function CommentsSection({
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.textSecondary }}>
-          {t("comments.label")}
-        </Text>
-        {comments.length > 0 ? (
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            {comments.length >= 30 ? (
-              <>
-                <Pressable
-                  onPress={onJumpToTop}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("comments.jumpToTop")}
-                  style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-                >
-                  <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>{t("comments.top")}</Text>
-                </Pressable>
-                <View style={{ width: spacing.md }} />
-              </>
-            ) : null}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+          <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.textSecondary }}>
+            {t("comments.label")}
+          </Text>
+          {comments.length > 0 ? (
+            <Badge label={String(comments.length)} tone="neutral" />
+          ) : null}
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+          {!collapsed && comments.length > 1 ? (
             <Pressable
-              onPress={onJumpToLatest}
+              onPress={() => setSortOrder((v) => v === "newest" ? "oldest" : "newest")}
               accessibilityRole="button"
-              accessibilityLabel={t("comments.jumpToLatest")}
-              style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+              accessibilityLabel={sortOrder === "newest" ? t("comments.sortOldest") : t("comments.sortNewest")}
+              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.85 : 1 })}
             >
-              <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>{t("comments.latest")}</Text>
+              <View style={{ alignItems: "center", justifyContent: "center", height: 16 }}>
+                <Feather name="arrow-up" size={10} color={colors.primary} style={{ marginBottom: -3 }} />
+                <Feather name="arrow-down" size={10} color={colors.primary} style={{ marginTop: -3 }} />
+              </View>
+              <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+                {sortOrder === "newest" ? t("comments.newest") : t("comments.oldest")}
+              </Text>
             </Pressable>
-          </View>
-        ) : null}
+          ) : null}
+          {comments.length > 0 ? (
+            <Pressable
+              onPress={() => setCollapsed((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={collapsed ? t("comments.expand") : t("comments.collapse")}
+              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.85 : 1 })}
+            >
+              <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+                {collapsed ? t("comments.expand") : t("comments.collapse")}
+              </Text>
+              <Feather name={collapsed ? "chevron-down" : "chevron-up"} size={14} color={colors.primary} />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
 
       {error ? (
         <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.danger }}>{error}</Text>
       ) : null}
 
-      {comments.length === 0 ? (
+      {collapsed ? null : comments.length === 0 ? (
         <Text style={{ ...typography.body, marginTop: spacing.sm, color: colors.textSecondary }}>{t("comments.noComments")}</Text>
       ) : (
         <View style={{ marginTop: spacing.sm }}>
@@ -442,7 +459,7 @@ export function CommentsSection({
             );
           })}
 
-          {startIndex > 0 ? (
+          {remainingCount > 0 ? (
             <View style={{ marginTop: spacing.md }}>
               <Pressable
                 onPress={onLoadMore}
@@ -451,7 +468,7 @@ export function CommentsSection({
                 style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
               >
                 <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
-                  {t("comments.loadMore", { count: startIndex })}
+                  {t("comments.loadMore", { count: remainingCount })}
                 </Text>
               </Pressable>
             </View>

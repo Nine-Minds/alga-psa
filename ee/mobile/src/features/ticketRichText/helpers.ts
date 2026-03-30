@@ -49,6 +49,16 @@ function extractBlockText(block: unknown): string {
         return "";
       }
 
+      if ((item as { type?: unknown }).type === "mention") {
+        const props = (item as { props?: Record<string, unknown> }).props;
+        if (props) {
+          const username = typeof props.username === "string" ? props.username : "";
+          const displayName = typeof props.displayName === "string" ? props.displayName : "";
+          return username ? `@${username}` : `@${displayName}`;
+        }
+        return "";
+      }
+
       if ((item as { type?: unknown }).type === "link") {
         const linkedContent = (item as { content?: unknown }).content;
         if (!Array.isArray(linkedContent)) {
@@ -82,6 +92,13 @@ function extractProseMirrorText(node: unknown): string {
 
   if (record.type === "text" && typeof record.text === "string") {
     return record.text;
+  }
+
+  if (record.type === "mention") {
+    const attrs = (node as { attrs?: Record<string, unknown> }).attrs;
+    const username = typeof attrs?.username === "string" ? attrs.username : "";
+    const displayName = typeof attrs?.displayName === "string" ? attrs.displayName : "";
+    return username ? `@${username}` : `@${displayName}`;
   }
 
   if (record.type === "hardBreak") {

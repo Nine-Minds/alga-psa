@@ -7,6 +7,7 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
+import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
@@ -22,6 +23,7 @@ import {
   UpdateTicketData,
   TicketFilterData,
   CreateTicketCommentData,
+  CreateTicketMaterialData,
   UpdateTicketCommentData,
   TicketSearchData,
   CreateTicketFromAssetData
@@ -30,8 +32,10 @@ import { ListOptions } from '../controllers/types';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
 import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketRichRender';
-import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
+import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
+import { StorageService } from '@alga-psa/storage/StorageService';
+import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
 
 const TICKET_MOBILE_LIST_FIELDS = [
@@ -332,11 +336,17 @@ export class TicketService extends BaseService<ITicket> {
       return null;
     }
 
-    const documents = await this.getTicketDocuments(id, context);
+    const [documents, contactAvatarUrl, clientLogoUrl] = await Promise.all([
+      this.getTicketDocuments(id, context),
+      ticket.contact_name_id ? getContactAvatarUrl(ticket.contact_name_id, context.tenant) : Promise.resolve(null),
+      ticket.client_id ? getClientLogoUrl(ticket.client_id, context.tenant) : Promise.resolve(null),
+    ]);
 
     return {
       ...this.withDescriptionHtml(ticket as ITicketWithDetails),
-      documents
+      documents,
+      contact_avatar_url: contactAvatarUrl,
+      client_logo_url: clientLogoUrl,
     } as ITicketWithDetails;
   }
 
@@ -375,6 +385,277 @@ export class TicketService extends BaseService<ITicket> {
       .orderBy('d.updated_at', 'desc');
 
     return documents as IDocument[];
+  }
+
+  async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext): Promise<IDocument> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const existingTicket = await knex('tickets')
+      .select('ticket_id')
+      .where({ ticket_id: ticketId, tenant: context.tenant })
+      .first();
+
+    if (!existingTicket) {
+      throw new NotFoundError('Ticket not found');
+    }
+
+    if (!file) {
+      throw new ValidationError('File is required', [
+        { path: ['file'], message: 'file is required' },
+      ]);
+    }
+
+    const mimeType = file.type || 'application/octet-stream';
+    await StorageService.validateFileUpload(context.tenant, mimeType, file.size);
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const uploadResult = await StorageService.uploadFile(context.tenant, buffer, file.name, {
+      mime_type: mimeType,
+      uploaded_by_id: context.userId,
+    });
+
+    const folderRecord = await knex('document_folders')
+      .where({
+        tenant: context.tenant,
+        entity_id: ticketId,
+        entity_type: 'ticket',
+        folder_path: '/Tickets/Attachments',
+      })
+      .select('folder_path')
+      .first();
+
+    const typeResult = await this.getDocumentTypeIdForMime(knex, context.tenant, mimeType);
+    const documentId = uuidv4();
+    const document: IDocument = {
+      document_id: documentId,
+      document_name: file.name,
+      type_id: typeResult.isShared ? null : typeResult.typeId,
+      shared_type_id: typeResult.isShared ? typeResult.typeId : undefined,
+      user_id: context.userId,
+      order_number: 0,
+      created_by: context.userId,
+      tenant: context.tenant,
+      file_id: uploadResult.file_id,
+      storage_path: uploadResult.storage_path,
+      mime_type: mimeType,
+      file_size: file.size,
+      folder_path: folderRecord?.folder_path,
+    };
+
+    await withTransaction(knex, async (trx) => {
+      await trx('documents').insert(document);
+      await trx('document_associations').insert({
+        association_id: uuidv4(),
+        document_id: documentId,
+        entity_id: ticketId,
+        entity_type: 'ticket',
+        tenant: context.tenant,
+      });
+    });
+
+    const createdDocument = await this.getDocumentById(documentId, context);
+    if (!createdDocument) {
+      throw new Error('Uploaded document could not be loaded');
+    }
+
+    return createdDocument;
+  }
+
+  async getTicketMaterials(ticketId: string, context: ServiceContext): Promise<ITicketMaterial[]> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const materials = await knex('ticket_materials as tm')
+      .leftJoin('service_catalog as sc', function () {
+        this.on('tm.service_id', '=', 'sc.service_id')
+          .andOn('tm.tenant', '=', 'sc.tenant');
+      })
+      .where({
+        'tm.ticket_id': ticketId,
+        'tm.tenant': context.tenant,
+      })
+      .select('tm.*', 'sc.service_name as service_name', 'sc.sku as sku')
+      .orderBy('tm.created_at', 'desc');
+
+    return materials as ITicketMaterial[];
+  }
+
+  async addTicketMaterial(
+    ticketId: string,
+    data: CreateTicketMaterialData,
+    context: ServiceContext,
+  ): Promise<ITicketMaterial> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const quantity = Math.floor(Number(data.quantity));
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      throw new ValidationError('Validation failed', [
+        { path: ['quantity'], message: 'quantity must be greater than 0' },
+      ]);
+    }
+
+    const rate = Math.round(Number(data.rate));
+    if (!Number.isFinite(rate) || rate < 0) {
+      throw new ValidationError('Validation failed', [
+        { path: ['rate'], message: 'rate must be 0 or greater' },
+      ]);
+    }
+
+    const ticket = await knex('tickets')
+      .where({ ticket_id: ticketId, tenant: context.tenant })
+      .select('ticket_id', 'client_id')
+      .first();
+
+    if (!ticket) {
+      throw new NotFoundError('Ticket not found');
+    }
+
+    if (!ticket.client_id) {
+      throw new ValidationError('Validation failed', [
+        { path: ['ticket_id'], message: 'ticket must be associated with a client' },
+      ]);
+    }
+
+    const product = await knex('service_catalog')
+      .where({
+        tenant: context.tenant,
+        service_id: data.service_id,
+        item_kind: 'product',
+      })
+      .select('service_id')
+      .first();
+
+    if (!product) {
+      throw new ValidationError('Validation failed', [
+        { path: ['service_id'], message: 'service_id must reference an existing product' },
+      ]);
+    }
+
+    const [createdMaterial] = await knex('ticket_materials')
+      .insert({
+        tenant: context.tenant,
+        ticket_id: ticketId,
+        client_id: ticket.client_id,
+        service_id: data.service_id,
+        quantity,
+        rate,
+        currency_code: data.currency_code,
+        description: data.description ?? null,
+        is_billed: false,
+      })
+      .returning('ticket_material_id');
+
+    const material = await this.getTicketMaterialById(
+      createdMaterial.ticket_material_id,
+      context,
+    );
+
+    if (!material) {
+      throw new Error('Created material could not be loaded');
+    }
+
+    return material;
+  }
+
+  private async getDocumentById(documentId: string, context: ServiceContext): Promise<IDocument | null> {
+    const { knex } = await this.getKnex();
+
+    const document = await knex('documents as d')
+      .leftJoin('users as u', function () {
+        this.on('d.created_by', '=', 'u.user_id')
+          .andOn('d.tenant', '=', 'u.tenant');
+      })
+      .leftJoin('document_types as dt', function () {
+        this.on('d.type_id', '=', 'dt.type_id')
+          .andOn('d.tenant', '=', 'dt.tenant');
+      })
+      .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
+      .where({
+        'd.document_id': documentId,
+        'd.tenant': context.tenant,
+      })
+      .select(
+        'd.*',
+        knex.raw("CONCAT(u.first_name, ' ', u.last_name) as created_by_full_name"),
+        knex.raw('COALESCE(dt.type_name, sdt.type_name) as type_name'),
+        knex.raw('COALESCE(dt.icon, sdt.icon) as type_icon')
+      )
+      .first();
+
+    return (document as IDocument | undefined) ?? null;
+  }
+
+  private async getTicketMaterialById(
+    ticketMaterialId: string,
+    context: ServiceContext,
+  ): Promise<ITicketMaterial | null> {
+    const { knex } = await this.getKnex();
+
+    const material = await knex('ticket_materials as tm')
+      .leftJoin('service_catalog as sc', function () {
+        this.on('tm.service_id', '=', 'sc.service_id')
+          .andOn('tm.tenant', '=', 'sc.tenant');
+      })
+      .where({
+        'tm.ticket_material_id': ticketMaterialId,
+        'tm.tenant': context.tenant,
+      })
+      .select('tm.*', 'sc.service_name as service_name', 'sc.sku as sku')
+      .first();
+
+    return (material as ITicketMaterial | undefined) ?? null;
+  }
+
+  private async getDocumentTypeIdForMime(
+    knex: Knex,
+    tenant: string,
+    mimeType: string,
+  ): Promise<{ typeId: string; isShared: boolean }> {
+    const tenantType = await knex('document_types')
+      .where({ tenant, type_name: mimeType })
+      .first();
+
+    if (tenantType) {
+      return { typeId: tenantType.type_id, isShared: false };
+    }
+
+    const sharedType = await knex('shared_document_types')
+      .where({ type_name: mimeType })
+      .first();
+
+    if (sharedType) {
+      return { typeId: sharedType.type_id, isShared: true };
+    }
+
+    const generalType = `${mimeType.split('/')[0]}/*`;
+
+    const generalTenantType = await knex('document_types')
+      .where({ tenant, type_name: generalType })
+      .first();
+
+    if (generalTenantType) {
+      return { typeId: generalTenantType.type_id, isShared: false };
+    }
+
+    const generalSharedType = await knex('shared_document_types')
+      .where({ type_name: generalType })
+      .first();
+
+    if (generalSharedType) {
+      return { typeId: generalSharedType.type_id, isShared: true };
+    }
+
+    const unknownType = await knex('shared_document_types')
+      .where({ type_name: 'application/octet-stream' })
+      .first();
+
+    if (!unknownType) {
+      throw new Error('Unknown document type not found in shared document types');
+    }
+
+    return { typeId: unknownType.type_id, isShared: true };
   }
 
   private assertValidTicketId(id: string): void {

@@ -7,12 +7,15 @@ import { useTheme } from "../ui/ThemeContext";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
+import { listUsers, getUserDisplayName } from "../api/users";
+import type { MentionSuggestionItem } from "../features/ticketRichText/MentionSuggestionList";
 import { ErrorState, LoadingState } from "../ui/states";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useToast } from "../ui/toast/ToastProvider";
 import { Badge } from "../ui/components/Badge";
+import { Avatar } from "../ui/components/Avatar";
 import { formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import type { TicketRichTextQaScenario } from "../qa/ticketRichTextQa";
 
@@ -52,6 +55,8 @@ export { extractDescription } from "../features/ticketDetail/utils";
 import { CommentComposer } from "../features/ticketDetail/components/CommentComposer";
 import { CommentsSection } from "../features/ticketDetail/components/CommentsSection";
 import { DescriptionSection } from "../features/ticketDetail/components/DescriptionSection";
+import { DocumentsSection } from "../features/ticketDetail/components/DocumentsSection";
+import { MaterialsSection } from "../features/ticketDetail/components/MaterialsSection";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -108,6 +113,57 @@ export function TicketDetailBody({
     return { baseUrl: config.baseUrl, apiKey: session.accessToken };
   }, [config, session]);
 
+  const mentionUsersCache = useRef<MentionSuggestionItem[]>([]);
+
+  const handleMentionSearch = useCallback(async (query: string, signal: AbortSignal): Promise<MentionSuggestionItem[]> => {
+    if (!client || !session) return [];
+    const results: MentionSuggestionItem[] = [];
+    if (!query || "everyone".includes(query.toLowerCase())) {
+      results.push({ user_id: "@everyone", username: "everyone", display_name: "Everyone", avatar_url: null });
+    }
+
+    // Fetch all internal users on first empty query, then filter client-side
+    // for subsequent typed queries. This avoids issues where the server search
+    // endpoint may not match partial names the same way.
+    if (!query) {
+      const res = await listUsers(client, { apiKey: session.accessToken, limit: 50, signal });
+      if (res.ok) {
+        const mapped = res.data.data.map((u) => ({
+          user_id: u.user_id,
+          username: u.username,
+          display_name: getUserDisplayName(u),
+          avatar_url: u.avatarUrl,
+        }));
+        mentionUsersCache.current = mapped;
+        results.push(...mapped);
+      }
+    } else {
+      const lowerQuery = query.toLowerCase();
+      // Client-side filter from cached users
+      const filtered = mentionUsersCache.current.filter((u) =>
+        u.display_name.toLowerCase().includes(lowerQuery)
+        || u.username.toLowerCase().includes(lowerQuery)
+      );
+      if (filtered.length > 0) {
+        results.push(...filtered);
+      } else {
+        // Fall back to server search if cache has no matches
+        const res = await listUsers(client, { apiKey: session.accessToken, search: query, limit: 10, signal });
+        if (res.ok) {
+          for (const u of res.data.data) {
+            results.push({
+              user_id: u.user_id,
+              username: u.username,
+              display_name: getUserDisplayName(u),
+              avatar_url: u.avatarUrl,
+            });
+          }
+        }
+      }
+    }
+    return results;
+  }, [client, session]);
+
   const deps = { client, session, ticketId, showToast, t };
 
   // --- Hooks ---
@@ -147,14 +203,22 @@ export function TicketDetailBody({
     }
   }, [ticket?.ticket_number, navigation]);
 
-  // --- Scroll helpers ---
-  const scrollToLatest = useCallback(() => {
-    scrollRef.current?.scrollToEnd({ animated: true });
-  }, []);
+  const [composerCollapsed, setComposerCollapsed] = useState(false);
 
-  const scrollToTop = useCallback(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
-  }, []);
+  const renderEntityValue = useCallback((name: string | null | undefined, imageUri: string | null | undefined, accessibilityLabel: string) => (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+      <Avatar
+        name={name ?? undefined}
+        imageUri={imageUri ?? undefined}
+        authToken={session?.accessToken}
+        size="sm"
+        accessibilityLabel={accessibilityLabel}
+      />
+      <Text style={{ ...typography.body, color: colors.text, flexShrink: 1 }}>
+        {stringOrDash(name)}
+      </Text>
+    </View>
+  ), [colors.text, session?.accessToken, spacing.sm, typography.body]);
 
   // --- Guard returns ---
   if (!config.ok) {
@@ -396,7 +460,14 @@ export function TicketDetailBody({
         )}
 
         <View style={{ marginTop: spacing.lg }}>
-          <KeyValue label={t("detail.contact")} value={stringOrDash(ticket.contact_name)}>
+          <KeyValue
+            label={t("detail.contact")}
+            value={renderEntityValue(
+              ticket.contact_name,
+              typeof ticket.contact_avatar_url === "string" ? ticket.contact_avatar_url : null,
+              t("detail.contact"),
+            )}
+          >
             {ticket.contact_phone ? (
               <Pressable
                 onPress={() => void Linking.openURL(`tel:${ticket.contact_phone}`)}
@@ -423,7 +494,14 @@ export function TicketDetailBody({
             ) : null}
           </KeyValue>
           <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.client")} value={stringOrDash(ticket.client_name)}>
+          <KeyValue
+            label={t("detail.client")}
+            value={renderEntityValue(
+              ticket.client_name,
+              typeof ticket.client_logo_url === "string" ? ticket.client_logo_url : null,
+              t("detail.client"),
+            )}
+          >
             {ticket.client_phone ? (
               <Pressable
                 onPress={() => void Linking.openURL(`tel:${ticket.client_phone}`)}
@@ -479,6 +557,9 @@ export function TicketDetailBody({
             onStartEditing={descEditor.startDescriptionEditing}
             onCancelEditing={descEditor.cancelDescriptionEditing}
             onSave={() => void descEditor.saveDescription()}
+            onMentionSearch={handleMentionSearch}
+            mentionBaseUrl={config.ok ? config.baseUrl : null}
+            mentionAuthToken={session?.accessToken}
             onDraftChange={(nextContent, nextPlainText) => {
               descEditor.setDescriptionDraft(nextContent);
               descEditor.setDescriptionPlainText(nextPlainText);
@@ -489,8 +570,6 @@ export function TicketDetailBody({
             comments={comments}
             visibleCount={commentDraftHook.commentsVisibleCount}
             onLoadMore={() => commentDraftHook.setCommentsVisibleCount((c) => c + 20)}
-            onJumpToLatest={scrollToLatest}
-            onJumpToTop={scrollToTop}
             error={commentsError}
             onLinkPress={qaHook.handleRichTextLinkPress}
             imageAuth={imageAuth}
@@ -513,6 +592,24 @@ export function TicketDetailBody({
               commentDraftHook.setCommentDraft(nextContent);
               commentDraftHook.setCommentDraftPlainText(nextPlainText);
             }}
+            collapsed={composerCollapsed}
+            onToggleCollapse={() => setComposerCollapsed((v) => !v)}
+            onMentionSearch={handleMentionSearch}
+            mentionBaseUrl={config.ok ? config.baseUrl : null}
+            mentionAuthToken={session?.accessToken}
+          />
+          <View style={{ height: spacing.sm }} />
+          <DocumentsSection
+            client={client}
+            apiKey={session.accessToken}
+            ticketId={ticketId}
+            baseUrl={config.ok ? config.baseUrl : null}
+          />
+          <View style={{ height: spacing.sm }} />
+          <MaterialsSection
+            client={client}
+            apiKey={session.accessToken}
+            ticketId={ticketId}
           />
           <View style={{ height: spacing.sm }} />
           <KeyValue label={t("detail.created")} value={formatDateTimeWithRelative(ticket.entered_at)} />

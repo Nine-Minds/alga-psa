@@ -180,10 +180,14 @@
     "richComment": "Rich comment",
     "commentSent": "Comment sent",
     "commentNotSent": "Comment not sent",
-    "top": "Top",
-    "latest": "Latest",
-    "jumpToTop": "Jump to top",
-    "jumpToLatest": "Jump to latest comment",
+    "newest": "Newest",
+    "oldest": "Oldest",
+    "sortNewest": "Sort newest first",
+    "sortOldest": "Sort oldest first",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "collapseComposer": "Collapse comment editor",
+    "expandComposer": "Expand comment editor",
     "seeMore": "See more",
     "seeLess": "See less",
     "loadMore": "Load more ({{count}} remaining)",
@@ -198,6 +202,49 @@
       "validation": "Comment was rejected by the server.",
       "generic": "Unable to send comment. Please try again.",
       "loadFailed": "Unable to load comments."
+    }
+  },
+  "documents": {
+    "title": "Documents",
+    "attach": "Attach",
+    "camera": "Camera",
+    "file": "File",
+    "uploading": "Uploading attachment…",
+    "empty": "No documents attached.",
+    "unknownType": "Unknown type",
+    "errors": {
+      "load": "Unable to load documents.",
+      "upload": "Unable to upload the document. Please try again.",
+      "open": "Unable to open this document right now.",
+      "cameraPermission": "Camera access is required to attach a photo."
+    }
+  },
+  "materials": {
+    "title": "Materials",
+    "addProduct": "Add Product",
+    "pickerTitle": "Select product",
+    "searchProducts": "Search products…",
+    "noProducts": "No products found.",
+    "configureTitle": "Add material",
+    "quantityLabel": "Quantity",
+    "currencyLabel": "Currency",
+    "rateLabel": "Rate",
+    "totalLabel": "Total",
+    "notesLabel": "Notes",
+    "notesPlaceholder": "Optional notes…",
+    "saveMaterial": "Add material",
+    "saving": "Saving…",
+    "empty": "No materials added.",
+    "billed": "Billed",
+    "unbilled": "Unbilled",
+    "unknownProduct": "Unknown product",
+    "quantityRate": "Qty {{quantity}} • Rate {{rate}}",
+    "errors": {
+      "load": "Unable to load materials.",
+      "products": "Unable to load products.",
+      "add": "Unable to add the material. Please try again.",
+      "quantity": "Enter a quantity of at least 1.",
+      "rate": "Enter a valid rate."
     }
   },
   "statusPicker": {

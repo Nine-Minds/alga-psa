@@ -21,6 +21,7 @@ const ticketMobileEditorCommandSchema = z.enum([
   'toggle-ordered-list',
   'undo',
   'redo',
+  'insert-mention',
 ]);
 
 const ticketMobileEditorRequestSchema = z.enum(['get-html', 'get-json']);
@@ -124,6 +125,15 @@ const webToNativeMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('image-request'),
     payload: z.object({
       src: z.string().min(1),
+    }),
+  }),
+  z.object({
+    type: z.literal('mention-query'),
+    payload: z.object({
+      active: z.boolean(),
+      query: z.string(),
+      from: z.number(),
+      to: z.number(),
     }),
   }),
 ]);

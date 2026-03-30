@@ -105,6 +105,14 @@ vi.mock("../ui/components/PrimaryButton", () => ({
     React.createElement("MockPrimaryButton", props, props.children as React.ReactNode),
 }));
 
+vi.mock("../features/ticketDetail/components/DocumentsSection", () => ({
+  DocumentsSection: (props: Record<string, unknown>) => React.createElement("MockDocumentsSection", props),
+}));
+
+vi.mock("../features/ticketDetail/components/MaterialsSection", () => ({
+  MaterialsSection: (props: Record<string, unknown>) => React.createElement("MockMaterialsSection", props),
+}));
+
 vi.mock("../features/ticketRichText/TicketRichTextEditor", () => ({
   TicketRichTextEditor: (props: Record<string, unknown>) =>
     React.createElement("MockRichTextEditor", props),
@@ -242,8 +250,6 @@ describe("TicketDetailScreen rich text sections", () => {
         ],
         visibleCount: 20,
         onLoadMore: () => undefined,
-        onJumpToLatest: () => undefined,
-        onJumpToTop: () => undefined,
         error: null,
         onLinkPress: (url: string) => {
           void Linking.openURL(url);
@@ -272,8 +278,6 @@ describe("TicketDetailScreen rich text sections", () => {
         ],
         visibleCount: 20,
         onLoadMore: () => undefined,
-        onJumpToLatest: () => undefined,
-        onJumpToTop: () => undefined,
         error: null,
         onLinkPress,
         ticketId: "test-ticket-1",
@@ -302,8 +306,6 @@ describe("TicketDetailScreen rich text sections", () => {
         ],
         visibleCount: 20,
         onLoadMore: () => undefined,
-        onJumpToLatest: () => undefined,
-        onJumpToTop: () => undefined,
         error: null,
         ticketId: "test-ticket-1",
       }),
@@ -328,8 +330,6 @@ describe("TicketDetailScreen rich text sections", () => {
         ],
         visibleCount: 20,
         onLoadMore: () => undefined,
-        onJumpToLatest: () => undefined,
-        onJumpToTop: () => undefined,
         error: null,
         ticketId: "test-ticket-1",
       }),
@@ -381,8 +381,6 @@ describe("TicketDetailScreen rich text sections", () => {
         ],
         visibleCount: 20,
         onLoadMore: () => undefined,
-        onJumpToLatest: () => undefined,
-        onJumpToTop: () => undefined,
         error: null,
         ticketId: "test-ticket-1",
       }),
