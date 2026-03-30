@@ -555,6 +555,11 @@ export class TicketService extends BaseService<ITicket> {
           .where({ status_id: currentTicket.status_id, tenant: context.tenant })
           .first();
 
+        // Keep the ticket row's denormalized close flag aligned with the selected status.
+        await trx('tickets')
+          .where({ ticket_id: id, tenant: context.tenant })
+          .update({ is_closed: !!newStatus?.is_closed });
+
         // Record closed_at / closed_by when transitioning to/from closed status
         if (newStatus?.is_closed && !oldStatus?.is_closed) {
           await trx('tickets')

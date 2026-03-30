@@ -394,6 +394,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           tenant: tenant
         })
         .first() : null;
+    if (board && (board.enable_live_ticket_timer === null || board.enable_live_ticket_timer === undefined)) {
+      board.enable_live_ticket_timer = true;
+    }
 
     // Process user data for userMap, including avatar URLs
     const usersWithAvatars = await Promise.all(users.map(async (user: any) => {
@@ -1853,6 +1856,15 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
         old: currentTicket.subcategory_id,
         new: updateData.subcategory_id
       };
+    }
+
+    // Keep the ticket row's denormalized close flag aligned with the selected status.
+    if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
+      const nextIsClosed = !!newStatus?.is_closed;
+      await trx('tickets')
+        .where({ ticket_id: id, tenant: tenant })
+        .update({ is_closed: nextIsClosed });
+      updatedTicket.is_closed = nextIsClosed;
     }
 
     // Record closed_at / closed_by when transitioning to/from closed status
