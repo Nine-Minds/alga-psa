@@ -24,12 +24,18 @@ export type AddTicketMaterialInput = {
   description?: string | null;
 };
 
+export type ProductPrice = {
+  price_id: string;
+  currency_code: string;
+  rate: number;
+};
+
 export type ProductListItem = {
   service_id: string;
   service_name: string;
   sku?: string | null;
   default_rate?: number | null;
-  currency_code?: string | null;
+  prices?: ProductPrice[] | null;
 };
 
 export function getTicketMaterials(

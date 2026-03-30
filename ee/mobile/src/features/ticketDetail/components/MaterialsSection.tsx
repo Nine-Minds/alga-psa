@@ -66,9 +66,23 @@ export function MaterialsSection({
   const [productError, setProductError] = useState<string | null>(null);
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductListItem | null>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>("USD");
   const [quantityInput, setQuantityInput] = useState("1");
   const [rateInput, setRateInput] = useState("0.00");
+  const [descriptionInput, setDescriptionInput] = useState("");
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
+
+  const computedTotal = useMemo(() => {
+    const qty = parseQuantity(quantityInput);
+    const rate = parseRateInput(rateInput);
+    if (!qty || qty < 1 || rate === null || rate < 0) return null;
+    return formatCurrencyMinorUnits(qty * rate, selectedCurrency);
+  }, [quantityInput, rateInput, selectedCurrency]);
+
+  const availableCurrencies = useMemo(() => {
+    if (!selectedProduct?.prices?.length) return [];
+    return selectedProduct.prices.map((p) => p.currency_code);
+  }, [selectedProduct]);
 
   const loadMaterials = useCallback(async () => {
     if (!client || !apiKey) return;
@@ -103,11 +117,19 @@ export function MaterialsSection({
   }, [apiKey, client, t]);
 
   const productItems = useMemo<EntityPickerItem[]>(
-    () => products.map((product) => ({
-      id: product.service_id,
-      label: product.service_name,
-      subtitle: product.sku ?? null,
-    })),
+    () => products.map((product) => {
+      const priceHints = product.prices?.length
+        ? product.prices.map((p) => `${p.currency_code} ${formatCurrencyMinorUnits(p.rate, p.currency_code)}`).join(" · ")
+        : product.default_rate != null
+          ? formatCurrencyMinorUnits(product.default_rate, "USD")
+          : null;
+      const parts = [product.sku, priceHints].filter(Boolean);
+      return {
+        id: product.service_id,
+        label: product.service_name,
+        subtitle: parts.length > 0 ? parts.join(" — ") : null,
+      };
+    }),
     [products],
   );
 
@@ -119,8 +141,10 @@ export function MaterialsSection({
   const closeMaterialModal = useCallback(() => {
     setMaterialModalOpen(false);
     setSelectedProduct(null);
+    setSelectedCurrency("USD");
     setQuantityInput("1");
     setRateInput("0.00");
+    setDescriptionInput("");
   }, []);
 
   const handleSelectProduct = useCallback((productId: string) => {
@@ -128,12 +152,31 @@ export function MaterialsSection({
     if (!product) return;
     setSelectedProduct(product);
     setQuantityInput("1");
-    setRateInput(formatRateInput(product.default_rate));
+    setDescriptionInput("");
+
+    // Pick the first available price, fall back to legacy default_rate
+    const firstPrice = product.prices?.[0];
+    if (firstPrice) {
+      setSelectedCurrency(firstPrice.currency_code);
+      setRateInput(formatRateInput(firstPrice.rate));
+    } else {
+      setSelectedCurrency("USD");
+      setRateInput(formatRateInput(product.default_rate));
+    }
+
     setMaterialModalOpen(true);
     setProductPickerOpen(false);
     setProductError(null);
     setError(null);
   }, [products]);
+
+  const handleCurrencyChange = useCallback((currencyCode: string) => {
+    setSelectedCurrency(currencyCode);
+    const price = selectedProduct?.prices?.find((p) => p.currency_code === currencyCode);
+    if (price) {
+      setRateInput(formatRateInput(price.rate));
+    }
+  }, [selectedProduct]);
 
   const handleAddMaterial = useCallback(async () => {
     if (!client || !apiKey || !selectedProduct) return;
@@ -160,7 +203,8 @@ export function MaterialsSection({
         service_id: selectedProduct.service_id,
         quantity,
         rate,
-        currency_code: selectedProduct.currency_code ?? "USD",
+        currency_code: selectedCurrency,
+        description: descriptionInput.trim() || null,
       },
     });
 
@@ -177,9 +221,11 @@ export function MaterialsSection({
     apiKey,
     client,
     closeMaterialModal,
+    descriptionInput,
     loadMaterials,
     quantityInput,
     rateInput,
+    selectedCurrency,
     selectedProduct,
     t,
     ticketId,
@@ -317,9 +363,44 @@ export function MaterialsSection({
             />
           </View>
 
+          {availableCurrencies.length > 1 ? (
+            <View style={{ marginTop: spacing.lg }}>
+              <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+                {t("materials.currencyLabel")}
+              </Text>
+              <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm, flexWrap: "wrap" }}>
+                {availableCurrencies.map((code) => (
+                  <Pressable
+                    key={code}
+                    onPress={() => handleCurrencyChange(code)}
+                    accessibilityRole="button"
+                    accessibilityLabel={code}
+                    accessibilityState={{ selected: code === selectedCurrency }}
+                    style={{
+                      paddingVertical: spacing.sm,
+                      paddingHorizontal: spacing.md,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: code === selectedCurrency ? colors.primary : colors.border,
+                      backgroundColor: code === selectedCurrency ? colors.primary : colors.card,
+                    }}
+                  >
+                    <Text style={{
+                      ...typography.body,
+                      fontWeight: "600",
+                      color: code === selectedCurrency ? colors.textInverse ?? "#fff" : colors.text,
+                    }}>
+                      {code}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
           <View style={{ marginTop: spacing.lg }}>
             <Text style={{ ...typography.caption, color: colors.textSecondary }}>
-              {t("materials.rateLabel")}
+              {t("materials.rateLabel")} ({selectedCurrency})
             </Text>
             <TextInput
               value={rateInput}
@@ -337,6 +418,46 @@ export function MaterialsSection({
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
                 backgroundColor: colors.card,
+              }}
+            />
+          </View>
+
+          {computedTotal ? (
+            <View style={{ marginTop: spacing.lg, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+                {t("materials.totalLabel")}
+              </Text>
+              <Text style={{ ...typography.body, color: colors.text, fontWeight: "600" }}>
+                {computedTotal}
+              </Text>
+            </View>
+          ) : null}
+
+          <View style={{ marginTop: spacing.lg }}>
+            <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+              {t("materials.notesLabel")}
+            </Text>
+            <TextInput
+              value={descriptionInput}
+              onChangeText={setDescriptionInput}
+              accessibilityLabel={t("materials.notesLabel")}
+              placeholder={t("materials.notesPlaceholder")}
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              numberOfLines={3}
+              editable={!submitting}
+              style={{
+                ...typography.body,
+                marginTop: spacing.sm,
+                color: colors.text,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 10,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                backgroundColor: colors.card,
+                minHeight: 80,
+                textAlignVertical: "top",
               }}
             />
           </View>

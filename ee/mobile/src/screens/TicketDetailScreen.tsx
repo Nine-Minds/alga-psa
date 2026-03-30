@@ -8,7 +8,7 @@ import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { ErrorState, LoadingState } from "../ui/states";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useToast } from "../ui/toast/ToastProvider";
@@ -150,14 +150,22 @@ export function TicketDetailBody({
     }
   }, [ticket?.ticket_number, navigation]);
 
-  // --- Scroll helpers ---
-  const scrollToLatest = useCallback(() => {
-    scrollRef.current?.scrollToEnd({ animated: true });
-  }, []);
+  const [composerCollapsed, setComposerCollapsed] = useState(false);
 
-  const scrollToTop = useCallback(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
-  }, []);
+  const renderEntityValue = useCallback((name: string | null | undefined, imageUri: string | null | undefined, accessibilityLabel: string) => (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+      <Avatar
+        name={name ?? undefined}
+        imageUri={imageUri ?? undefined}
+        authToken={session?.accessToken}
+        size="sm"
+        accessibilityLabel={accessibilityLabel}
+      />
+      <Text style={{ ...typography.body, color: colors.text, flexShrink: 1 }}>
+        {stringOrDash(name)}
+      </Text>
+    </View>
+  ), [colors.text, session?.accessToken, spacing.sm, typography.body]);
 
   // --- Guard returns ---
   if (!config.ok) {
@@ -186,20 +194,6 @@ export function TicketDetailBody({
   const meUserId = session.user?.id;
   const isWatching = meUserId ? getWatcherUserIds(ticket).includes(meUserId) : false;
   const isAssignedToMe = Boolean(meUserId && ticket.assigned_to && ticket.assigned_to === meUserId);
-  const renderEntityValue = useCallback((name: string | null | undefined, imageUri: string | null | undefined, accessibilityLabel: string) => (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-      <Avatar
-        name={name ?? undefined}
-        imageUri={imageUri ?? undefined}
-        authToken={session.accessToken}
-        size="sm"
-        accessibilityLabel={accessibilityLabel}
-      />
-      <Text style={{ ...typography.body, color: colors.text, flexShrink: 1 }}>
-        {stringOrDash(name)}
-      </Text>
-    </View>
-  ), [colors.text, session.accessToken, spacing.sm, typography.body]);
 
   // --- Render ---
   return (
@@ -516,25 +510,10 @@ export function TicketDetailBody({
             }}
           />
           <View style={{ height: spacing.sm }} />
-          <DocumentsSection
-            client={client}
-            apiKey={session.accessToken}
-            ticketId={ticketId}
-            baseUrl={config.ok ? config.baseUrl : null}
-          />
-          <View style={{ height: spacing.sm }} />
-          <MaterialsSection
-            client={client}
-            apiKey={session.accessToken}
-            ticketId={ticketId}
-          />
-          <View style={{ height: spacing.sm }} />
           <CommentsSection
             comments={comments}
             visibleCount={commentDraftHook.commentsVisibleCount}
             onLoadMore={() => commentDraftHook.setCommentsVisibleCount((c) => c + 20)}
-            onJumpToLatest={scrollToLatest}
-            onJumpToTop={scrollToTop}
             error={commentsError}
             onLinkPress={qaHook.handleRichTextLinkPress}
             imageAuth={imageAuth}
@@ -557,6 +536,21 @@ export function TicketDetailBody({
               commentDraftHook.setCommentDraft(nextContent);
               commentDraftHook.setCommentDraftPlainText(nextPlainText);
             }}
+            collapsed={composerCollapsed}
+            onToggleCollapse={() => setComposerCollapsed((v) => !v)}
+          />
+          <View style={{ height: spacing.sm }} />
+          <DocumentsSection
+            client={client}
+            apiKey={session.accessToken}
+            ticketId={ticketId}
+            baseUrl={config.ok ? config.baseUrl : null}
+          />
+          <View style={{ height: spacing.sm }} />
+          <MaterialsSection
+            client={client}
+            apiKey={session.accessToken}
+            ticketId={ticketId}
           />
           <View style={{ height: spacing.sm }} />
           <KeyValue label={t("detail.created")} value={formatDateTimeWithRelative(ticket.entered_at)} />
