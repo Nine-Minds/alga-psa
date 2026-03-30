@@ -63,11 +63,6 @@ function getLastInjectedMessage(): Record<string, unknown> {
   return JSON.parse(rawEnvelope) as Record<string, unknown>;
 }
 
-function findMentionSuggestionList(renderer: ReactTestRenderer) {
-  return renderer.root.findAll(
-    (node) => (node.type as string) === "MentionSuggestionList",
-  );
-}
 
 describe("TicketRichTextEditor mention support", () => {
   afterEach(() => {
@@ -93,7 +88,7 @@ describe("TicketRichTextEditor mention support", () => {
       { user_id: "u-1", username: "alice", display_name: "Alice", avatar_url: null },
     ]);
 
-    const { renderer } = renderEditor({ onMentionSearch: searchFn });
+    renderEditor({ onMentionSearch: searchFn });
     emitLoadEnd();
 
     await act(async () => {
