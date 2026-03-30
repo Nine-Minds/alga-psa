@@ -62,7 +62,7 @@ export function OnboardingWizard({
     // MSP Company Info
     firstName: '',
     lastName: '',
-    companyName: '',
+    tenantName: '',
     email: '',
     newPassword: '',
     confirmPassword: '',
@@ -142,7 +142,7 @@ export function OnboardingWizard({
           const clientResult = await saveClientInfo({
             firstName: wizardData.firstName,
             lastName: wizardData.lastName,
-            clientName: wizardData.clientName,
+            tenantName: wizardData.tenantName,
             email: wizardData.email,
             newPassword: wizardData.newPassword
           });
@@ -375,16 +375,16 @@ export function OnboardingWizard({
   };
 
   const isFirstStepValid = () => {
-    const { firstName, lastName, clientName, email, newPassword, confirmPassword } = wizardData;
+    const { firstName, lastName, tenantName, email, newPassword, confirmPassword } = wizardData;
 
     // For returning users, only validate company name
     if (isRevisit) {
-      return !!clientName;
+      return !!tenantName;
     }
 
     // For first-time users, validate all fields including password
     // Basic field validation
-    if (!firstName || !lastName || !clientName || !email || !newPassword || !confirmPassword) {
+    if (!firstName || !lastName || !tenantName || !email || !newPassword || !confirmPassword) {
       return false;
     }
 

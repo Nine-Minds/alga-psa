@@ -1,8 +1,8 @@
 export interface WizardData {
-  // Client Info
+  // Tenant Info
   firstName: string;
   lastName: string;
-  companyName: string;
+  tenantName: string;
   email: string;
   newPassword?: string;
   confirmPassword?: string;

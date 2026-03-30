@@ -88,7 +88,7 @@ export async function getAvailableTimeSlots(
     let minNoticeHours = 24; // default
 
     if (serviceSettings) {
-      const maxAdvanceDays = serviceSettings.advance_booking_days ?? 30;
+      const maxAdvanceDays = serviceSettings.advance_booking_days ?? 90;
       const maxDate = new Date();
       maxDate.setDate(maxDate.getDate() + maxAdvanceDays);
 

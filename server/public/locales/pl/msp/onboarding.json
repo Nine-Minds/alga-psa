@@ -304,8 +304,8 @@
         "label": "Nazwisko",
         "placeholder": "Kowalski"
       },
-      "clientName": {
-        "label": "Nazwa klienta",
+      "companyName": {
+        "label": "Nazwa firmy",
         "placeholder": "Acme IT Solutions"
       },
       "email": {
