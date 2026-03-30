@@ -304,8 +304,8 @@
         "label": "Achternaam",
         "placeholder": "Jansen"
       },
-      "clientName": {
-        "label": "Klantnaam",
+      "companyName": {
+        "label": "Bedrijfsnaam",
         "placeholder": "Acme IT Solutions"
       },
       "email": {

@@ -21,7 +21,7 @@ export interface OnboardingActionResult {
 export interface ClientInfoData {
   firstName: string;
   lastName: string;
-  clientName: string;
+  tenantName: string;
   email: string;
   newPassword?: string;
 }
@@ -126,9 +126,9 @@ export const saveClientInfo = withAuth(async (
       // Save progress to tenant settings
       // IMPORTANT: Do NOT save user-specific fields (firstName, lastName, email) to tenant-wide storage
       // These fields are specific to the current user and should not be shared across users in the tenant
-      // Only save tenant-level data like clientName
+      // Only save tenant-level data like tenantName
       const progressData: any = {
-        clientName: data.clientName
+        tenantName: data.tenantName
       };
 
       await saveTenantOnboardingProgress(progressData);
@@ -1122,7 +1122,7 @@ export const getOnboardingInitialData = withAuth(async (
         firstName: currentUser.first_name || '',
         lastName: currentUser.last_name || '',
         email: currentUser.email || '',
-        clientName: client?.client_name || tenant // Use tenant name as fallback
+        tenantName: client?.client_name || tenant // Use tenant name as fallback
       }
     };
   } catch (error) {

@@ -304,8 +304,8 @@
         "label": "Nachname",
         "placeholder": "Doe"
       },
-      "clientName": {
-        "label": "Kundenname",
+      "companyName": {
+        "label": "Firmenname",
         "placeholder": "Acme IT Solutions"
       },
       "email": {
