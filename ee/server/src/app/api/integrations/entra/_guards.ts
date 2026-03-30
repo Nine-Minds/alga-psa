@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
+import { TierAccessError, assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 type EntraGuardPermission = 'read' | 'update';
 
@@ -39,6 +41,21 @@ export async function requireEntraUiFlagEnabled(
       },
       { status: 403 }
     );
+  }
+
+  try {
+    await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
+  } catch (error) {
+    if (error instanceof TierAccessError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        { status: 403 }
+      );
+    }
+    throw error;
   }
 
   const enabled = await featureFlags.isEnabled('entra-integration-ui', {

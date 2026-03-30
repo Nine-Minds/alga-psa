@@ -19,7 +19,6 @@ import { configureGmailProvider, type ConfigureGmailProviderResult } from './con
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
-
 function throwPermissionError(action: string): never {
   throw new Error(`Permission denied: ${action}`);
 }

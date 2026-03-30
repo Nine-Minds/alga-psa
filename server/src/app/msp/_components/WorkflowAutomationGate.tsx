@@ -11,6 +11,9 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { DynamicWorkflowComponent } from '@alga-psa/workflows/components/WorkflowComponentLoader';
 import type { WorkflowProps } from '@alga-psa/workflows/components/WorkflowComponentLoader';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
+import { TIER_FEATURES } from '@alga-psa/types';
+import { useTier } from 'server/src/context/TierContext';
+import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 
 interface WorkflowAutomationGateProps {
   workflowProps: WorkflowProps;
@@ -19,6 +22,7 @@ interface WorkflowAutomationGateProps {
 export default function WorkflowAutomationGate({ workflowProps }: WorkflowAutomationGateProps) {
   const router = useRouter();
   const { status } = useSession();
+  const { hasFeature } = useTier();
   const [workflowAutomationEnabled, setWorkflowAutomationEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -57,6 +61,17 @@ export default function WorkflowAutomationGate({ workflowProps }: WorkflowAutoma
     return (
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator layout="stacked" text="Loading workflow automation..." spinnerProps={{ size: 'md' }} />
+      </div>
+    );
+  }
+
+  if (!hasFeature(TIER_FEATURES.WORKFLOW_DESIGNER)) {
+    return (
+      <div className="h-full p-6">
+        <FeatureUpgradeNotice
+          featureName="Workflow Automation"
+          requiredTier="pro"
+        />
       </div>
     );
   }

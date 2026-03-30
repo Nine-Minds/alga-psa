@@ -140,6 +140,7 @@ const BoardsSettings: React.FC = () => {
     default_priority_id: '',
     manager_user_id: '',
     sla_policy_id: '',
+    enable_live_ticket_timer: true,
     status_seed_mode: 'copy_existing' as TicketStatusSeedMode,
     copy_ticket_statuses_from_board_id: '',
     ticket_statuses: [] as ManagedTicketStatus[],
@@ -334,6 +335,7 @@ const BoardsSettings: React.FC = () => {
       default_priority_id: board.default_priority_id || '',
       manager_user_id: board.manager_user_id || '',
       sla_policy_id: board.sla_policy_id || '',
+      enable_live_ticket_timer: board.enable_live_ticket_timer ?? true,
       ticket_statuses: [],
     });
     setShowAddEditDialog(true);
@@ -525,6 +527,7 @@ const BoardsSettings: React.FC = () => {
           default_priority_id: formData.default_priority_id || null,
           manager_user_id: formData.manager_user_id || null,
           sla_policy_id: formData.sla_policy_id || null,
+          enable_live_ticket_timer: formData.enable_live_ticket_timer,
           ticket_statuses: normalizedTicketStatuses,
         });
         toast.success(t('ticketing.boards.messages.success.updated'));
@@ -541,6 +544,7 @@ const BoardsSettings: React.FC = () => {
           default_priority_id: formData.default_priority_id || null,
           manager_user_id: formData.manager_user_id || null,
           sla_policy_id: formData.sla_policy_id || null,
+          enable_live_ticket_timer: formData.enable_live_ticket_timer,
           copy_ticket_statuses_from_board_id: formData.status_seed_mode === 'copy_existing'
             ? (formData.copy_ticket_statuses_from_board_id || null)
             : null,
@@ -612,7 +616,8 @@ const BoardsSettings: React.FC = () => {
             display_order: displayOrder,
             is_inactive: board.is_inactive || false,
             category_type: 'itil',
-            priority_type: 'itil'
+            priority_type: 'itil',
+            enable_live_ticket_timer: true,
           });
 
           allResults.imported.push({
@@ -1262,11 +1267,25 @@ const BoardsSettings: React.FC = () => {
               </div>
             )}
 
-            {/* ITIL Configuration - Only show for new boards */}
-            {!editingBoard && (
-              <div className="border-t pt-4 space-y-4">
-                <h4 className="font-medium text-gray-800">{t('ticketing.boards.fields.boardConfiguration')}</h4>
+            <div className="border-t pt-4 space-y-4">
+              <h4 className="font-medium text-gray-800">{t('ticketing.boards.fields.boardConfiguration')}</h4>
 
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="enable_live_ticket_timer">Enable live ticket timer</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available.
+                  </p>
+                </div>
+                <Switch
+                  id="enable_live_ticket_timer"
+                  checked={formData.enable_live_ticket_timer}
+                  onCheckedChange={(checked) => setFormData({ ...formData, enable_live_ticket_timer: checked })}
+                />
+              </div>
+
+              {/* ITIL Configuration - Only show for new boards */}
+              {!editingBoard && (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="is_itil_compliant">{t('ticketing.boards.fields.itilCompliant')}</Label>
@@ -1285,9 +1304,8 @@ const BoardsSettings: React.FC = () => {
                     onCheckedChange={(checked) => setFormData({ ...formData, is_itil_compliant: checked })}
                   />
                 </div>
-
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </DialogContent>
         <DialogFooter>

@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import logger from '@alga-psa/core/logger';
+import { TIER_FEATURES } from '@alga-psa/types';
 import {
   handleNinjaOneWebhook,
   verifyWebhookSignature,
@@ -14,6 +15,7 @@ import {
 } from '../../../../lib/integrations/ninjaone/webhooks/webhookHandler';
 import { verifyWebhookRequest, getWebhookAuthHeaderName } from '../../../../lib/integrations/ninjaone/webhooks/webhookRegistration';
 import { NinjaOneWebhookPayload } from '../../../../interfaces/ninjaone.interfaces';
+import { assertTenantTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 // Disable body parsing - we need the raw body for signature verification
 export const runtime = 'nodejs';
@@ -69,6 +71,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // The organization might not be mapped yet
       return NextResponse.json(
         { success: true, processed: false, reason: 'Organization not mapped' },
+        { status: 200 }
+      );
+    }
+
+    try {
+      await assertTenantTierAccess(context.tenantId, TIER_FEATURES.ADVANCED_ASSETS);
+    } catch {
+      logger.info('[NinjaOne Webhook] Ignoring webhook for tenant without advanced asset access', {
+        organizationId: payload.organizationId,
+        tenantId: context.tenantId,
+      });
+      return NextResponse.json(
+        { success: true, processed: false, reason: 'Tier access denied' },
         { status: 200 }
       );
     }

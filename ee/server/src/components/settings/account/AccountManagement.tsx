@@ -7,7 +7,10 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
-import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield, ArrowRightLeft, Clock } from 'lucide-react';
+import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield, ArrowRightLeft, Clock, Zap, Star } from 'lucide-react';
+import { loadStripe, type Stripe } from '@stripe/stripe-js';
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
 import {
   getLicenseUsageAction,
   getLicensePricingAction,
@@ -19,11 +22,15 @@ import {
   getScheduledLicenseChangesAction,
   sendCancellationFeedbackAction,
   upgradeTierAction,
+  purchaseAddOnAction,
+  cancelAddOnAction,
   getUpgradePreviewAction,
+  downgradeTierAction,
   switchBillingIntervalAction,
   getIntervalSwitchPreviewAction,
   sendPremiumTrialRequestAction,
   startSelfServicePremiumTrialAction,
+  startSoloProTrialAction,
   confirmPremiumTrialAction,
   revertPremiumTrialAction,
 } from 'ee/server/src/lib/actions/license-actions';
@@ -35,11 +42,19 @@ import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
 import { signOut } from 'next-auth/react';
 import { useTier } from 'server/src/context/TierContext';
-import { TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES } from '@alga-psa/types';
+import { ADD_ONS, ADD_ON_LABELS, ADD_ON_DESCRIPTIONS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Feature display names for the tier features list
 const FEATURE_DISPLAY_NAMES: Record<TIER_FEATURES, string> = {
+  [TIER_FEATURES.INTEGRATIONS]: 'Integrations — connect calendar, Teams, Entra, and other external services',
+  [TIER_FEATURES.EXTENSIONS]: 'Extensions — install and manage marketplace extensions for your workspace',
+  [TIER_FEATURES.MANAGED_EMAIL]: 'Managed Email — configure hosted email delivery from Alga PSA',
+  [TIER_FEATURES.SSO]: 'Single Sign-On — configure SSO and OAuth identity providers for your team',
+  [TIER_FEATURES.ADVANCED_ASSETS]: 'Advanced Assets — unlock RMM-linked asset discovery and richer asset controls',
+  [TIER_FEATURES.CLIENT_PORTAL_ADMIN]: 'Client Portal Admin — manage advanced client portal branding and administration',
+  [TIER_FEATURES.WORKFLOW_DESIGNER]: 'Workflow Designer — build and maintain custom workflow automations',
+  [TIER_FEATURES.MOBILE_ACCESS]: 'Mobile Access — sign in from the Alga PSA mobile app',
   [TIER_FEATURES.ENTRA_SYNC]: 'Microsoft Entra Sync — auto-discover tenants and sync contacts from Entra ID',
   [TIER_FEATURES.CIPP]: 'CIPP Integration — connect your CIPP instance for multi-tenant Entra management',
   [TIER_FEATURES.TEAMS_INTEGRATION]: 'Microsoft Teams — meetings integration and Teams bot for ticket notifications',
@@ -55,9 +70,32 @@ export default function AccountManagement() {
   const [showReduceModal, setShowReduceModal] = useState(false);
   const [showCancellationFeedback, setShowCancellationFeedback] = useState(false);
   const [scheduledChanges, setScheduledChanges] = useState<IScheduledLicenseChange | null>(null);
-  const { tier, isMisconfigured, isPro, refreshTier, isTrialing, trialDaysLeft, trialEndDate, isPaymentFailed, subscriptionStatus, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate } = useTier();
+  const {
+    tier,
+    isMisconfigured,
+    isSolo,
+    isPro,
+    isPremium,
+    hasAddOn,
+    refreshTier,
+    isTrialing,
+    trialDaysLeft,
+    trialEndDate,
+    isSoloProTrial,
+    soloProTrialEndDate,
+    soloProTrialDaysLeft,
+    isPaymentFailed,
+    subscriptionStatus,
+    isPremiumTrial,
+    premiumTrialEndDate,
+    premiumTrialDaysLeft,
+    isPremiumTrialConfirmed,
+    premiumTrialEffectiveDate
+  } = useTier();
   const upgradeFlowFlag = useFeatureFlag('tier-upgrade-flow');
-  const showUpgradeFlow = isPro && (typeof upgradeFlowFlag === 'boolean' ? upgradeFlowFlag : upgradeFlowFlag?.enabled ?? false);
+  const tierUpgradeFlowEnabled = typeof upgradeFlowFlag === 'boolean'
+    ? upgradeFlowFlag
+    : upgradeFlowFlag?.enabled ?? false;
 
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState({
@@ -255,6 +293,7 @@ export default function AccountManagement() {
 
   const [upgrading, setUpgrading] = useState(false);
   const [showUpgradeConfirm, setShowUpgradeConfirm] = useState(false);
+  const [upgradeTargetTier, setUpgradeTargetTier] = useState<'pro' | 'premium'>('premium');
   const [upgradePreview, setUpgradePreview] = useState<{
     currentMonthly?: number;
     newMonthly?: number;
@@ -265,6 +304,14 @@ export default function AccountManagement() {
     prorationAmount?: number;
   } | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [showDowngradeConfirm, setShowDowngradeConfirm] = useState(false);
+  const [downgrading, setDowngrading] = useState(false);
+  const [showAiCheckout, setShowAiCheckout] = useState(false);
+  const [aiCheckoutClientSecret, setAiCheckoutClientSecret] = useState<string | null>(null);
+  const [aiStripePromise, setAiStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [purchasingAi, setPurchasingAi] = useState(false);
+  const [showCancelAiConfirm, setShowCancelAiConfirm] = useState(false);
+  const [cancelingAi, setCancelingAi] = useState(false);
 
   // Billing interval switch state
   const [showIntervalSwitch, setShowIntervalSwitch] = useState(false);
@@ -339,6 +386,8 @@ export default function AccountManagement() {
   // Self-service Premium trial state (for paying Pro users)
   const [startingSelfServiceTrial, setStartingSelfServiceTrial] = useState(false);
   const [showTrialConfirm, setShowTrialConfirm] = useState(false);
+  const [startingSoloProTrial, setStartingSoloProTrial] = useState(false);
+  const [showSoloProTrialConfirm, setShowSoloProTrialConfirm] = useState(false);
 
   // Premium trial confirmation state (for users already on a Premium trial)
   const [confirmingPremium, setConfirmingPremium] = useState(false);
@@ -400,6 +449,26 @@ export default function AccountManagement() {
     }
   };
 
+  const handleStartSoloProTrial = async () => {
+    setStartingSoloProTrial(true);
+    try {
+      const result = await startSoloProTrialAction();
+      if (result.success) {
+        const trialEndLabel = result.trialEnd ? new Date(result.trialEnd).toLocaleDateString() : 'the end of your trial';
+        toast.success(`Pro trial started! Pro features are unlocked until ${trialEndLabel} while you stay on Solo billing.`);
+        setShowSoloProTrialConfirm(false);
+        await refreshTier();
+      } else {
+        toast.error(result.error || 'Failed to start Pro trial');
+      }
+    } catch (error) {
+      console.error('Error starting Solo -> Pro trial:', error);
+      toast.error('Failed to start Pro trial');
+    } finally {
+      setStartingSoloProTrial(false);
+    }
+  };
+
   const handleConfirmPremiumClick = async () => {
     setLoadingConfirmPreview(true);
     try {
@@ -458,7 +527,7 @@ export default function AccountManagement() {
     }
   };
 
-  const handleUpgradeClick = async () => {
+  const handleUpgradeClick = async (targetTier: 'pro' | 'premium') => {
     if (!canManageAccount) {
       toast.error('You do not have permission to manage the subscription');
       return;
@@ -466,11 +535,12 @@ export default function AccountManagement() {
 
     setLoadingPreview(true);
     try {
-      const preview = await getUpgradePreviewAction('premium');
+      const preview = await getUpgradePreviewAction(targetTier);
       if (!preview.success) {
         toast.error(preview.error || 'Failed to get upgrade pricing');
         return;
       }
+      setUpgradeTargetTier(targetTier);
       setUpgradePreview(preview);
       setShowUpgradeConfirm(true);
     } catch (error) {
@@ -484,9 +554,9 @@ export default function AccountManagement() {
   const handleConfirmUpgrade = async () => {
     setUpgrading(true);
     try {
-      const result = await upgradeTierAction('premium');
+      const result = await upgradeTierAction(upgradeTargetTier);
       if (result.success) {
-        toast.success('Upgraded to Premium! Refreshing your session...');
+        toast.success(`Upgraded to ${TIER_LABELS[upgradeTargetTier]}! Refreshing your session...`);
         setShowUpgradeConfirm(false);
         await refreshTier();
       } else {
@@ -497,6 +567,64 @@ export default function AccountManagement() {
       toast.error('Failed to upgrade plan');
     } finally {
       setUpgrading(false);
+    }
+  };
+
+  const handleConfirmDowngrade = async () => {
+    setDowngrading(true);
+    try {
+      const result = await downgradeTierAction('month');
+      if (result.success) {
+        toast.success('Downgraded to Solo! Refreshing your session...');
+        setShowDowngradeConfirm(false);
+        await refreshTier();
+      } else {
+        toast.error(result.error || 'Failed to downgrade plan');
+      }
+    } catch (error) {
+      console.error('Error downgrading plan:', error);
+      toast.error('Failed to downgrade plan');
+    } finally {
+      setDowngrading(false);
+    }
+  };
+  const handlePurchaseAiAssistant = async () => {
+    setPurchasingAi(true);
+    try {
+      const result = await purchaseAddOnAction(ADD_ONS.AI_ASSISTANT);
+      if (!result.success || !result.data) {
+        toast.error(result.error || 'Failed to start AI Assistant checkout');
+        return;
+      }
+
+      const stripe = await loadStripe(result.data.publishableKey);
+      setAiStripePromise(Promise.resolve(stripe));
+      setAiCheckoutClientSecret(result.data.clientSecret);
+      setShowAiCheckout(true);
+    } catch (error) {
+      console.error('Error purchasing AI Assistant:', error);
+      toast.error('Failed to start AI Assistant checkout');
+    } finally {
+      setPurchasingAi(false);
+    }
+  };
+
+  const handleCancelAiAssistant = async () => {
+    setCancelingAi(true);
+    try {
+      const result = await cancelAddOnAction(ADD_ONS.AI_ASSISTANT);
+      if (result.success) {
+        toast.success('AI Assistant will be removed from your subscription.');
+        setShowCancelAiConfirm(false);
+        await refreshTier();
+      } else {
+        toast.error(result.error || 'Failed to cancel AI Assistant');
+      }
+    } catch (error) {
+      console.error('Error cancelling AI Assistant:', error);
+      toast.error('Failed to cancel AI Assistant');
+    } finally {
+      setCancelingAi(false);
     }
   };
 
@@ -511,6 +639,11 @@ export default function AccountManagement() {
   const monthlyTotal = licenseInfo?.total_licenses !== null
     ? ((licenseInfo?.total_licenses || 0) * (licenseInfo?.price_per_license || 0))
     : 0;
+  const canDowngradeToSolo = isPro && tierUpgradeFlowEnabled;
+  const hasExtraUsersForDowngrade = (licenseInfo?.active_licenses ?? 0) > 1;
+  const hasAiAssistant = hasAddOn(ADD_ONS.AI_ASSISTANT);
+  const canStartSoloProTrial = isSolo && tierUpgradeFlowEnabled && subscriptionStatus === 'active' && !isSoloProTrial;
+  const displayedTierFeatures = isSoloProTrial ? TIER_FEATURE_MAP.pro : TIER_FEATURE_MAP[tier];
 
   return (
     <div className="space-y-6">
@@ -671,6 +804,52 @@ export default function AccountManagement() {
         </Card>
       )}
 
+      {isSoloProTrial && soloProTrialEndDate && (
+        <Card className="border-blue-200 dark:border-blue-800">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Clock className="h-5 w-5 text-blue-600" />
+                <CardTitle>Pro Trial</CardTitle>
+              </div>
+              <Badge variant={soloProTrialDaysLeft <= 3 ? 'error' : 'default'}>
+                {soloProTrialDaysLeft} {soloProTrialDaysLeft === 1 ? 'day' : 'days'} remaining
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Trial active</span>
+                <span>Trial ends {new Date(soloProTrialEndDate).toLocaleDateString()}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    soloProTrialDaysLeft <= 3 ? 'bg-red-500' : 'bg-blue-500'
+                  }`}
+                  style={{ width: `${Math.max(5, 100 - (soloProTrialDaysLeft / 30) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-lg border p-3 bg-muted/50 space-y-3">
+              <div>
+                <p className="text-sm font-medium">Pro features are active</p>
+                <p className="text-sm text-muted-foreground">
+                  You&apos;re still billed on Solo during this trial. Upgrade to paid Pro before {new Date(soloProTrialEndDate).toLocaleDateString()} to keep Pro access after the trial expires.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button id="convert-solo-trial-to-pro-btn" size="sm" onClick={() => handleUpgradeClick('pro')} disabled={upgrading || loadingPreview}>
+                  {loadingPreview ? 'Loading pricing...' : 'Switch to Paid Pro'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stripe Trial Status Card (7-day Pro trial etc.) */}
       {isTrialing && trialEndDate && !isPremiumTrial && (
         <Card className="border-blue-200 dark:border-blue-800">
@@ -755,6 +934,14 @@ export default function AccountManagement() {
                 </Badge>
               </div>
 
+              {isSolo && (
+                <div className="mb-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3">
+                  <p className="text-sm text-blue-900 dark:text-blue-200">
+                    Your Solo plan includes core PSA features. Upgrade to Pro for integrations, mobile access, and more.
+                  </p>
+                </div>
+              )}
+
               {isMisconfigured && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>
@@ -767,33 +954,178 @@ export default function AccountManagement() {
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Features included in your tier:</Label>
                 <ul className="grid grid-cols-2 gap-2">
-                  {TIER_FEATURE_MAP[tier].map((feature) => (
+                  {displayedTierFeatures.map((feature) => (
                     <li key={feature} className="flex items-center space-x-2 text-sm">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <span>{FEATURE_DISPLAY_NAMES[feature]}</span>
                     </li>
                   ))}
                 </ul>
-                {TIER_FEATURE_MAP[tier].length === 0 && (
+                {displayedTierFeatures.length === 0 && (
                   <p className="text-sm text-muted-foreground">
-                    Your Pro plan includes all standard features.
+                    {isSolo
+                      ? 'Core PSA tools are active on Solo. Upgrade to Pro to unlock integrations, managed email, workflow design, and mobile access.'
+                      : 'Your Pro plan includes all standard features.'}
                   </p>
                 )}
               </div>
 
-              {/* Upgrade to Premium */}
-              {showUpgradeFlow && (
-                <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
-                  <div className="flex items-center justify-between">
+              {/* Upgrade options for Solo */}
+              {isSolo && tierUpgradeFlowEnabled && !isSoloProTrial && (
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  {/* Pro card */}
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex flex-col">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Zap className="h-5 w-5 text-primary" />
+                      <h4 className="font-semibold text-lg">Pro</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Everything in Solo, plus team collaboration and powerful integrations.
+                    </p>
+                    <ul className="space-y-1.5 text-sm mb-4 flex-1">
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Multi-user with per-seat licensing</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Calendar sync (Google &amp; Microsoft)</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Extensions marketplace</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>SSO &amp; managed email domains</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>RMM / NinjaOne integration</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Visual workflow designer</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Mobile app access</span></li>
+                    </ul>
+                    <Button id="upgrade-to-pro-btn" onClick={() => handleUpgradeClick('pro')} disabled={upgrading || loadingPreview} className="w-full">
+                      <Rocket className="mr-2 h-4 w-4" />
+                      {loadingPreview ? 'Loading...' : 'Upgrade to Pro'}
+                    </Button>
+                  </div>
+
+                  {/* Premium card */}
+                  <div className="rounded-lg border border-amber-300/50 dark:border-amber-700/50 bg-amber-50/50 dark:bg-amber-900/10 p-4 flex flex-col">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Star className="h-5 w-5 text-amber-500" />
+                      <h4 className="font-semibold text-lg">Premium</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Everything in Pro, plus enterprise integrations for larger teams.
+                    </p>
+                    <ul className="space-y-1.5 text-sm mb-4 flex-1">
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>All Pro features included</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>Microsoft Entra Sync</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>CIPP multi-tenant management</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>Microsoft Teams integration</span></li>
+                    </ul>
+                    <Button id="upgrade-to-premium-btn" variant="outline" onClick={() => handleUpgradeClick('premium')} disabled={upgrading || loadingPreview} className="w-full">
+                      <Star className="mr-2 h-4 w-4" />
+                      {loadingPreview ? 'Loading...' : 'Upgrade to Premium'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {canStartSoloProTrial && (
+                <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+                  <h4 className="font-semibold mb-1">Try Pro free</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Explore Pro features for 30 days while staying on your current Solo billing. When the trial ends, you&apos;ll return to Solo unless you upgrade.
+                  </p>
+                  <Button
+                    id="start-solo-pro-trial-btn"
+                    size="sm"
+                    onClick={() => setShowSoloProTrialConfirm(true)}
+                  >
+                    Try Pro free
+                  </Button>
+                </div>
+              )}
+
+              {/* Upgrade to Premium (shown for Pro users) */}
+              {isPro && tierUpgradeFlowEnabled && (
+                <div className="mt-4 rounded-lg border border-amber-300/50 dark:border-amber-700/50 bg-amber-50/50 dark:bg-amber-900/10 p-4">
+                  <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h4 className="font-semibold">Upgrade to Premium</h4>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Star className="h-5 w-5 text-amber-500" />
+                        <h4 className="font-semibold">Upgrade to Premium</h4>
+                      </div>
                       <p className="text-sm text-muted-foreground">
-                        Unlock the visual Invoice Designer and upcoming premium features.
+                        Add Microsoft Entra Sync, CIPP multi-tenant management, and Teams integration.
                       </p>
                     </div>
-                    <Button id="upgrade-to-premium-btn" onClick={handleUpgradeClick} disabled={upgrading || loadingPreview}>
-                      <Rocket className="mr-2 h-4 w-4" />
+                    <Button id="upgrade-to-premium-btn" onClick={() => handleUpgradeClick('premium')} disabled={upgrading || loadingPreview}>
+                      <Star className="mr-2 h-4 w-4" />
                       {loadingPreview ? 'Loading...' : 'Upgrade'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Downgrade options */}
+              {isPremium && tierUpgradeFlowEnabled && (
+                <div className="mt-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 space-y-3">
+                  <h4 className="font-semibold">Change Plan</h4>
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium">Downgrade to Pro</p>
+                      <p className="text-sm text-muted-foreground">
+                        Keep multi-user, integrations, and extensions. Lose Entra Sync, CIPP, and Teams.
+                      </p>
+                    </div>
+                    <Button
+                      id="downgrade-to-pro-btn"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUpgradeClick('pro')}
+                      disabled={upgrading || loadingPreview}
+                    >
+                      {loadingPreview ? 'Loading...' : 'Switch to Pro'}
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 pt-2 border-t border-amber-200 dark:border-amber-800">
+                    <div>
+                      <p className="text-sm font-medium">Downgrade to Solo</p>
+                      {hasExtraUsersForDowngrade ? (
+                        <p className="text-sm text-muted-foreground">
+                          Solo is limited to 1 user. You currently have {licenseInfo?.active_licenses} active users — remove extra users first.
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Switch to the flat-rate single-user plan with core PSA features only.
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      id="downgrade-to-solo-btn"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowDowngradeConfirm(true)}
+                      disabled={downgrading || hasExtraUsersForDowngrade}
+                    >
+                      {downgrading ? 'Downgrading...' : 'Switch to Solo'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {canDowngradeToSolo && !isPremium && (
+                <div className="mt-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h4 className="font-semibold">Downgrade to Solo</h4>
+                      {hasExtraUsersForDowngrade ? (
+                        <p className="text-sm text-muted-foreground">
+                          Solo is limited to 1 user. You currently have {licenseInfo?.active_licenses} active users — remove extra users before downgrading.
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Switch to the flat-rate single-user plan and keep core PSA features.
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      id="downgrade-to-solo-btn"
+                      variant="outline"
+                      onClick={() => setShowDowngradeConfirm(true)}
+                      disabled={downgrading || hasExtraUsersForDowngrade}
+                    >
+                      {downgrading ? 'Downgrading...' : 'Downgrade'}
                     </Button>
                   </div>
                 </div>
@@ -856,6 +1188,63 @@ export default function AccountManagement() {
         )}
       </Card>
 
+      {tierUpgradeFlowEnabled && (<Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle>{ADD_ON_LABELS[ADD_ONS.AI_ASSISTANT]}</CardTitle>
+              <CardDescription>{ADD_ON_DESCRIPTIONS[ADD_ONS.AI_ASSISTANT]}</CardDescription>
+            </div>
+            <Badge variant={hasAiAssistant ? 'success' : 'default-muted'}>
+              {hasAiAssistant ? 'Active' : 'Available'}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            AI Assistant is a separate paid add-on for Solo, Pro, and Premium tenants.
+          </p>
+          {hasAiAssistant ? (
+            <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h4 className="font-semibold">AI Assistant (active)</h4>
+                  <p className="text-sm text-muted-foreground">
+                    AI chat, document assistance, and other AI-powered workflows are currently enabled for this tenant.
+                  </p>
+                </div>
+                <Button
+                  id="cancel-ai-assistant-btn"
+                  variant="outline"
+                  onClick={() => setShowCancelAiConfirm(true)}
+                  disabled={cancelingAi}
+                >
+                  {cancelingAi ? 'Cancelling...' : 'Cancel AI Assistant'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h4 className="font-semibold">Add AI Assistant</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Start a separate AI subscription without changing your core PSA tier.
+                  </p>
+                </div>
+                <Button
+                  id="purchase-ai-assistant-btn"
+                  onClick={handlePurchaseAiAssistant}
+                  disabled={purchasingAi}
+                >
+                  {purchasingAi ? 'Starting checkout...' : 'Add AI Assistant'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>)}
+
       {/* Scheduled License Changes Alert */}
       {scheduledChanges && (
         <Alert variant="info">
@@ -890,21 +1279,38 @@ export default function AccountManagement() {
         </Alert>
       )}
 
-      {/* Primary Actions */}
-      <div className="flex space-x-2">
-        <Button id="buy-more-licenses-btn" onClick={handleBuyMoreLicenses}>
-          <Rocket className="mr-2 h-4 w-4" />
-          Add Licenses
-        </Button>
-        <Button
-          id="reduce-licenses-btn"
-          variant="outline"
-          onClick={handleReduceLicenses}
-        >
-          <MinusCircle className="mr-2 h-4 w-4" />
-          Remove Licenses
-        </Button>
-      </div>
+      {/* Primary Actions — Solo users can only upgrade, not manage licenses */}
+      {isSolo ? (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h4 className="font-semibold">Need more users?</h4>
+              <p className="text-sm text-muted-foreground">
+                Solo is a single-user plan. Upgrade to Pro to add team members and manage licenses.
+              </p>
+            </div>
+            <Button id="upgrade-to-pro-licenses-btn" onClick={() => handleUpgradeClick('pro')} disabled={upgrading || loadingPreview}>
+              <Rocket className="mr-2 h-4 w-4" />
+              {loadingPreview ? 'Loading...' : 'Upgrade to Pro'}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex space-x-2">
+          <Button id="buy-more-licenses-btn" onClick={handleBuyMoreLicenses}>
+            <Rocket className="mr-2 h-4 w-4" />
+            Add Licenses
+          </Button>
+          <Button
+            id="reduce-licenses-btn"
+            variant="outline"
+            onClick={handleReduceLicenses}
+          >
+            <MinusCircle className="mr-2 h-4 w-4" />
+            Remove Licenses
+          </Button>
+        </div>
+      )}
 
       {/* Collapsible License Details Section */}
       <Card>
@@ -1203,6 +1609,28 @@ export default function AccountManagement() {
         onLogout={handleLogout}
       />
 
+      <Dialog
+        isOpen={showAiCheckout}
+        onClose={() => {
+          setShowAiCheckout(false);
+          setAiCheckoutClientSecret(null);
+        }}
+        title="Add AI Assistant"
+      >
+        {aiCheckoutClientSecret && aiStripePromise ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Complete your AI Assistant purchase below. This add-on is billed separately from your main tier subscription.
+            </p>
+            <EmbeddedCheckoutProvider stripe={aiStripePromise} options={{ clientSecret: aiCheckoutClientSecret }}>
+              <EmbeddedCheckout />
+            </EmbeddedCheckoutProvider>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Preparing checkout...</p>
+        )}
+      </Dialog>
+
       {/* Billing Interval Switch Dialog */}
       <ConfirmationDialog
         id="switch-interval-confirm"
@@ -1268,25 +1696,47 @@ export default function AccountManagement() {
       />
 
       <ConfirmationDialog
+        id="cancel-ai-assistant-confirm"
+        isOpen={showCancelAiConfirm}
+        onClose={() => setShowCancelAiConfirm(false)}
+        onConfirm={handleCancelAiAssistant}
+        title="Cancel AI Assistant"
+        confirmLabel={cancelingAi ? 'Cancelling...' : 'Confirm Cancel'}
+        isConfirming={cancelingAi}
+        message={
+          <div className="space-y-3">
+            <p>You are about to cancel the <strong>AI Assistant</strong> add-on.</p>
+            <p className="text-sm text-muted-foreground">
+              AI chat, document assistance, and other add-on-only AI features will be disabled once the add-on is removed from your subscription.
+            </p>
+          </div>
+        }
+      />
+
+      <ConfirmationDialog
         id="upgrade-tier-confirm"
         isOpen={showUpgradeConfirm}
         onClose={() => setShowUpgradeConfirm(false)}
         onConfirm={handleConfirmUpgrade}
-        title="Upgrade to Premium"
+        title={`Upgrade to ${TIER_LABELS[upgradeTargetTier]}`}
         confirmLabel={upgrading ? 'Upgrading...' : 'Confirm Upgrade'}
         isConfirming={upgrading}
         message={
           upgradePreview ? (
             <div className="space-y-4">
-              <p>You are about to upgrade to the <strong>Premium</strong> plan.</p>
+              <p>
+                You are about to upgrade to the <strong>{TIER_LABELS[upgradeTargetTier]}</strong> plan.
+              </p>
 
               <div className="rounded-lg border p-4 space-y-2">
+                {(upgradePreview.currentMonthly ?? 0) > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Current monthly total</span>
+                    <span>${upgradePreview.currentMonthly?.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Current monthly total</span>
-                  <span>${upgradePreview.currentMonthly?.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Premium base fee</span>
+                  <span className="text-muted-foreground">{TIER_LABELS[upgradeTargetTier]} base fee</span>
                   <span>${upgradePreview.newBasePrice?.toFixed(2)}/mo</span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -1300,20 +1750,54 @@ export default function AccountManagement() {
               </div>
 
               {upgradePreview.prorationAmount !== undefined && upgradePreview.prorationAmount > 0 && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <p className="text-sm text-amber-800">
+                <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
                     A prorated charge of <strong>${upgradePreview.prorationAmount.toFixed(2)}</strong> will be billed now for the remainder of the current billing period.
                   </p>
                 </div>
               )}
 
               <p className="text-sm text-muted-foreground">
-                Your existing subscription will be updated and your payment method will be charged. This change takes effect immediately.
+                {(upgradePreview.currentMonthly ?? 0) > 0
+                  ? 'Your existing subscription will be updated and your payment method will be charged. This change takes effect immediately.'
+                  : 'A new subscription will be created. This change takes effect immediately.'}
               </p>
             </div>
           ) : (
             'Loading pricing details...'
           )
+        }
+      />
+
+      <ConfirmationDialog
+        id="downgrade-tier-confirm"
+        isOpen={showDowngradeConfirm}
+        onClose={() => setShowDowngradeConfirm(false)}
+        onConfirm={handleConfirmDowngrade}
+        title="Downgrade to Solo"
+        confirmLabel={downgrading ? 'Downgrading...' : 'Confirm Downgrade'}
+        isConfirming={downgrading}
+        message={
+          <div className="space-y-4">
+            <p>You are about to downgrade to the <strong>Solo</strong> plan.</p>
+            <div className="rounded-lg border p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Current active users</span>
+                <span>{licenseInfo?.active_licenses ?? 0}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Target tier</span>
+                <span>Solo</span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t">
+                <span className="text-muted-foreground">What changes</span>
+                <span>Flat-rate billing, 1-user limit</span>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Integrations, managed email, workflow design, and mobile access will no longer be available after the downgrade.
+            </p>
+          </div>
         }
       />
 
@@ -1349,6 +1833,42 @@ export default function AccountManagement() {
                 During the trial you&apos;ll have full access to Premium features while continuing to pay your current Pro price.
                 Before the trial ends, you&apos;ll see the exact Premium pricing and can choose to confirm the switch.
                 If you don&apos;t confirm, you&apos;ll automatically go back to Pro — no surprise charges.
+              </p>
+            </div>
+          </div>
+        }
+      />
+
+      <ConfirmationDialog
+        id="start-solo-pro-trial-confirm"
+        isOpen={showSoloProTrialConfirm}
+        onClose={() => setShowSoloProTrialConfirm(false)}
+        onConfirm={handleStartSoloProTrial}
+        title="Start 30-Day Pro Trial"
+        confirmLabel={startingSoloProTrial ? 'Starting...' : 'Start Pro Trial'}
+        isConfirming={startingSoloProTrial}
+        message={
+          <div className="space-y-4">
+            <p>You are about to start a <strong>30-day free trial</strong> of Pro features.</p>
+
+            <div className="rounded-lg border p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Trial period</span>
+                <span>30 days</span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t">
+                <span className="text-muted-foreground">Billing during trial</span>
+                <span>No change — stays at Solo pricing</span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t">
+                <span className="text-muted-foreground">After trial ends</span>
+                <span>Returns to Solo unless you upgrade</span>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-3">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                Pro-only features unlock immediately. This trial is only available after your initial Solo trial has ended.
               </p>
             </div>
           </div>

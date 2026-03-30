@@ -1,6 +1,7 @@
 // server/src/config/menuConfig.ts
 
 import type { ElementType } from 'react';
+import { TIER_FEATURES } from '@alga-psa/types';
 import {
   AtSign,
   BarChart3,
@@ -58,6 +59,7 @@ export interface MenuItem {
   translationKey?: string;
   href?: string;
   subItems?: MenuItem[];
+  requiredFeature?: TIER_FEATURES;
   underConstruction?: boolean;
 }
 
@@ -180,7 +182,8 @@ export const navigationSections: NavigationSection[] = [
         name: 'Extensions',
         translationKey: 'nav.extensions',
         icon: Puzzle,
-        href: '/msp/extensions'
+        href: '/msp/extensions',
+        requiredFeature: TIER_FEATURES.EXTENSIONS,
       }
     ]
   }

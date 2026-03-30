@@ -28,6 +28,17 @@ export interface UpdateBoardInput extends Partial<Omit<IBoard, 'tenant'>> {
   ticket_statuses?: BoardTicketStatusInput[];
 }
 
+function normalizeBoardLiveTimerSetting<T extends Record<string, any>>(board: T): T {
+  if (!board || board.enable_live_ticket_timer !== null && board.enable_live_ticket_timer !== undefined) {
+    return board;
+  }
+
+  return {
+    ...board,
+    enable_live_ticket_timer: true,
+  };
+}
+
 function stripStatusIdsForNewBoard(
   statuses: BoardTicketStatusInput[]
 ): BoardTicketStatusInput[] {
@@ -85,7 +96,7 @@ export const findBoardById = withAuth(async (_user, { tenant }, id: string): Pro
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const board = await Board.get(trx, tenant, id);
-      return board;
+      return board ? normalizeBoardLiveTimerSetting(board) : board;
     });
   } catch (error) {
     console.error(error);
@@ -102,7 +113,7 @@ export const getAllBoards = withAuth(async (_user, { tenant }, includeAll: boole
         .where(includeAll ? {} : { is_inactive: false })
         .orderBy('display_order', 'asc')
         .orderBy('board_name', 'asc');
-      return boards;
+      return boards.map(normalizeBoardLiveTimerSetting);
     });
   } catch (error) {
     console.error('Failed to fetch boards:', error);
@@ -191,6 +202,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
           default_priority_id: defaultPriorityId,
           manager_user_id: boardData.manager_user_id || null,
           sla_policy_id: boardData.sla_policy_id || null,
+          enable_live_ticket_timer: boardData.enable_live_ticket_timer ?? true,
           tenant
         })
         .returning('*');
@@ -223,7 +235,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
         );
       }
 
-      return newBoard;
+      return normalizeBoardLiveTimerSetting(newBoard);
     });
   } catch (error) {
     console.error('Error creating new board:', error);
@@ -503,6 +515,9 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
       if ('sla_policy_id' in sanitizedData) {
         sanitizedData.sla_policy_id = sanitizedData.sla_policy_id || null;
       }
+      if ('enable_live_ticket_timer' in sanitizedData) {
+        sanitizedData.enable_live_ticket_timer = sanitizedData.enable_live_ticket_timer ?? true;
+      }
 
       const { ticket_statuses: ticketStatuses, ...boardUpdateData } = sanitizedData;
 
@@ -543,7 +558,7 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         );
       }
 
-      return updatedBoard;
+      return normalizeBoardLiveTimerSetting(updatedBoard);
     });
   } catch (error) {
     console.error('Error updating board:', error);

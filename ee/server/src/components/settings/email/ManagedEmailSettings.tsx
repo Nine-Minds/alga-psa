@@ -14,7 +14,9 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Globe, Send, Inbox, Mail, Eye, EyeOff } from 'lucide-react';
+import { Globe, Send, Inbox, Mail, Eye, EyeOff, Lock } from 'lucide-react';
+import { TIER_FEATURES } from '@alga-psa/types';
+import { useTier } from 'server/src/context/TierContext';
 import {
   getManagedEmailDomains,
   requestManagedEmailDomain,
@@ -82,6 +84,8 @@ function extractEmailDomain(value?: string | null): string | null {
 }
 
 export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
+  const { hasFeature } = useTier();
+  const canUseManagedEmail = hasFeature(TIER_FEATURES.MANAGED_EMAIL);
   const [domains, setDomains] = useState<ManagedDomainStatus[]>([]);
   const [loadingDomains, setLoadingDomains] = useState(true);
   const [activeTab, setActiveTab] = useState<'inbound' | 'outbound'>('outbound');
@@ -134,7 +138,9 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
 
       if (settings) {
         setEmailSettings(settings);
-        setOutboundProvider(settings.emailProvider === 'smtp' ? 'smtp' : 'resend');
+        setOutboundProvider(
+          !canUseManagedEmail ? 'smtp' : settings.emailProvider === 'smtp' ? 'smtp' : 'resend'
+        );
       }
 
       const providers = providerResult?.providers || [];
@@ -501,26 +507,42 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <CustomSelect
-              id="outbound-provider-select"
-              value={outboundProvider}
-              disabled={loadingOutbound}
-              onValueChange={(val: string) => handleProviderSwitch(val as OutboundProvider)}
-              options={[
-                { value: 'resend', label: 'Nine Minds Managed' },
-                { value: 'smtp', label: 'SMTP' }
-              ]}
-              placeholder="Select outbound provider"
-            />
-            <p className="text-sm text-muted-foreground mt-2">
-              {outboundProvider === 'resend'
-                ? 'Emails are sent through Nine Minds managed infrastructure. Add and verify a custom domain below.'
-                : 'Emails are sent through your own SMTP server.'}
-            </p>
+            {canUseManagedEmail ? (
+              <>
+                <CustomSelect
+                  id="outbound-provider-select"
+                  value={outboundProvider}
+                  disabled={loadingOutbound}
+                  onValueChange={(val: string) => handleProviderSwitch(val as OutboundProvider)}
+                  options={[
+                    { value: 'resend', label: 'Nine Minds Managed' },
+                    { value: 'smtp', label: 'SMTP' }
+                  ]}
+                  placeholder="Select outbound provider"
+                />
+                <p className="text-sm text-muted-foreground mt-2">
+                  {outboundProvider === 'resend'
+                    ? 'Emails are sent through Nine Minds managed infrastructure. Add and verify a custom domain below.'
+                    : 'Emails are sent through your own SMTP server.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-medium">SMTP</span>
+                </div>
+                <div className="rounded-lg border border-border bg-muted/30 p-3 flex items-start gap-3">
+                  <Lock className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <p className="text-sm text-muted-foreground">
+                    Managed email domains are available on the Pro plan. Upgrade to use Nine Minds managed outbound infrastructure with custom domains.
+                  </p>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {outboundProvider === 'resend' && (
+        {outboundProvider === 'resend' && canUseManagedEmail && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

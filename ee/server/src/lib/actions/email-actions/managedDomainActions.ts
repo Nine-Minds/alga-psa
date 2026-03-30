@@ -6,12 +6,13 @@
 
 import { createTenantKnex } from '@/lib/db';
 import type { Knex } from 'knex';
-import type { DnsRecord, DnsLookupResult } from '@alga-psa/types';
+import { TIER_FEATURES, type DnsRecord, type DnsLookupResult } from '@alga-psa/types';
 import { enqueueManagedEmailDomainWorkflow } from '@ee/lib/email-domains/workflowClient';
 import { isValidDomain } from '@ee/lib/email-domains/domainValidation';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { observabilityLogger } from '@/lib/observability/logging';
 import type { IUser } from 'server/src/interfaces/auth.interfaces';
+import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 const DEFAULT_REGION = process.env.RESEND_DEFAULT_REGION || 'us-east-1';
 const EMAIL_SETTINGS_RESOURCE = 'ticket_settings';
@@ -135,6 +136,8 @@ async function checkEmailDomainPermission(
 }
 
 export const getManagedEmailDomains = withAuth(async (user, { tenant }): Promise<ManagedDomainStatus[]> => {
+  await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
+
   const { knex } = await createTenantKnex();
   await checkEmailDomainPermission(user, 'read', knex);
   const tenantColumn = await getEmailDomainTenantColumn(knex);
@@ -171,6 +174,8 @@ export const getManagedEmailDomains = withAuth(async (user, { tenant }): Promise
 });
 
 export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string) => {
+  await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
+
   const { knex } = await createTenantKnex();
   await checkEmailDomainPermission(user, 'create', knex);
   const tenantColumn = await getEmailDomainTenantColumn(knex);
@@ -250,6 +255,8 @@ export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domai
 });
 
 export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string) => {
+  await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
+
   const { knex } = await createTenantKnex();
   await checkEmailDomainPermission(user, 'update', knex);
   const tenantColumn = await getEmailDomainTenantColumn(knex);
@@ -296,6 +303,8 @@ export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domai
 });
 
 export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string) => {
+  await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
+
   const { knex } = await createTenantKnex();
   await checkEmailDomainPermission(user, 'delete', knex);
   const tenantColumn = await getEmailDomainTenantColumn(knex);

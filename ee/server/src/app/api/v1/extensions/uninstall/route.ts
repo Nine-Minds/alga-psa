@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { uninstallExtensionV2 } from '@ee/lib/actions/extRegistryV2Actions';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { withApiKeyAuth } from '@/lib/api/middleware/apiAuthMiddleware';
 import {
   ApiRequest,
@@ -10,6 +11,7 @@ import {
   withPermission,
   withValidation,
 } from '@/lib/api/middleware/apiMiddleware';
+import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 const uninstallRequestSchema = z.object({
   registryId: z.string().min(1, 'registryId is required'),
@@ -19,6 +21,8 @@ type UninstallRequestBody = z.infer<typeof uninstallRequestSchema>;
 
 const uninstallHandler = withPermission('extension', 'write')(
   withValidation(uninstallRequestSchema)(async (req: ApiRequest, body: UninstallRequestBody) => {
+    await assertTierAccess(TIER_FEATURES.EXTENSIONS);
+
     const result = await uninstallExtensionV2(body.registryId);
 
     return createSuccessResponse(

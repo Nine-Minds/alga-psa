@@ -1,0 +1,95 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a persisted board-level boolean for live ticket timer enablement with enabled semantics by default.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Extend the shared board interface to expose the live ticket timer field to client and server code.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Add the live ticket timer toggle to BoardsSettings create and edit flows in the Board Configuration section.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Persist the live ticket timer field through board create and board update actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Load board settings with enabled fallback semantics for existing boards that do not yet have an explicit live timer value.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Ensure ticket details board payloads include the live ticket timer field anywhere initialBoard or refreshed board metadata is populated.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Gate live timer controls in TicketDetails based on the current board's live ticket timer setting.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Skip ticket live-timer auto-start behavior when the current board disables live timing.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Hide tracked interval rendering in TicketProperties when the current board disables live ticket timing.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Keep manual Add Time Entry access available when the board disables live ticket timing.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Re-evaluate the live ticket timer rule immediately after a ticket board change save succeeds and stop the active timer in the current view if the destination board disables it.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  }
+]

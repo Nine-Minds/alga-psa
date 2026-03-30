@@ -7,9 +7,45 @@ import {
   bottomMenuItems,
   menuItems as legacyMenuItems,
   navigationSections as originalSections,
+  type MenuItem,
   type NavigationSection,
 } from '@/config/menuConfig';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import { useTier } from '@/context/TierContext';
+
+export function filterMenuItemsByFeatureAccess(
+  items: readonly MenuItem[],
+  hasFeature: (feature: NonNullable<MenuItem['requiredFeature']>) => boolean
+): MenuItem[] {
+  return items.reduce<MenuItem[]>((visibleItems, item) => {
+    if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
+      return visibleItems;
+    }
+
+    const filteredSubItems = item.subItems
+      ? filterMenuItemsByFeatureAccess(item.subItems, hasFeature)
+      : undefined;
+
+    visibleItems.push({
+      ...item,
+      subItems: filteredSubItems,
+    });
+
+    return visibleItems;
+  }, []);
+}
+
+export function filterNavigationSectionsByFeatureAccess(
+  sections: readonly NavigationSection[],
+  hasFeature: (feature: NonNullable<MenuItem['requiredFeature']>) => boolean
+): NavigationSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: filterMenuItemsByFeatureAccess(section.items, hasFeature),
+    }))
+    .filter((section) => section.items.length > 0);
+}
 
 type SidebarWithFeatureFlagsProps = React.ComponentProps<typeof Sidebar>;
 
@@ -19,6 +55,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
   const { enabled: knowledgeBaseEnabled } = useFeatureFlag('knowledge-base', { defaultValue: false });
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const { hasFeature } = useTier();
 
   useEffect(() => {
     if (!useNavigationSections) return;
@@ -58,7 +95,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       ? originalSections
       : [{ title: '', items: legacyMenuItems } satisfies NavigationSection];
 
-    return baseSections.map((section) => ({
+    const filteredSections = baseSections.map((section) => ({
       ...section,
       items: section.items.map((item) => {
         if (item.name === 'Workflows') {
@@ -84,7 +121,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
         return item;
       })
     }));
-  }, [canWorkflowAdmin, useNavigationSections, knowledgeBaseEnabled]);
+
+    return filterNavigationSectionsByFeatureAccess(filteredSections, hasFeature);
+  }, [canWorkflowAdmin, useNavigationSections, knowledgeBaseEnabled, hasFeature]);
 
   return (
     <Sidebar

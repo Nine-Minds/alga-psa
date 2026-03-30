@@ -80,6 +80,12 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
   isExperimentalFeatureEnabled: vi.fn().mockResolvedValue(false),
 }));
 
+vi.mock('server/src/context/TierContext', () => ({
+  useTier: () => ({
+    hasAddOn: () => true,
+  }),
+}));
+
 describe('DefaultLayout sidebar chat shortcut gating', () => {
   afterEach(() => {
     cleanup();

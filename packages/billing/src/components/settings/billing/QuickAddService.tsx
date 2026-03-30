@@ -17,7 +17,7 @@ import { ITaxRate } from '@alga-psa/types'; // Removed ITaxRegion
 import { getServiceCategories } from '@alga-psa/billing/actions'
 import { IService, IServiceCategory, IServiceType } from '@alga-psa/types' // Added IServiceType
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider'
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling'
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling'
 
 interface QuickAddServiceProps {
   onServiceAdded: () => void;
@@ -256,6 +256,10 @@ console.log('[QuickAddService] Service created successfully:', createdService);
 
 if (isActionPermissionError(createdService)) {
   handleError(createdService.permissionError);
+  return;
+}
+if (isActionMessageError(createdService)) {
+  setError(getErrorMessage(createdService));
   return;
 }
 
