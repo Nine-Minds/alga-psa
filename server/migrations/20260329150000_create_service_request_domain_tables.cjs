@@ -35,8 +35,8 @@ exports.up = async function up(knex) {
 
     table.primary(['tenant', 'definition_id']);
     table.foreign('tenant').references('tenants.tenant').onDelete('CASCADE');
-    table.foreign(['tenant', 'category_id']).references(['tenant', 'category_id']).inTable('service_categories').onDelete('SET NULL');
-    table.foreign(['tenant', 'linked_service_id']).references(['tenant', 'service_id']).inTable('service_catalog').onDelete('SET NULL');
+    table.foreign(['tenant', 'category_id']).references(['tenant', 'category_id']).inTable('service_categories').onDelete('RESTRICT');
+    table.foreign(['tenant', 'linked_service_id']).references(['tenant', 'service_id']).inTable('service_catalog').onDelete('RESTRICT');
   });
 
   await knex.schema.raw(`

@@ -87,6 +87,11 @@ export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryI
       throw new Error('Cannot delete category that is in use by tickets');
     }
 
+    // Clear category_id from service_request_definitions (replaces ON DELETE SET NULL)
+    await trx('service_request_definitions')
+      .where({ tenant, category_id: categoryId })
+      .update({ category_id: null, category_name_snapshot: null });
+
     await trx('service_categories')
       .where({
         tenant,
