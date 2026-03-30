@@ -177,6 +177,31 @@ async function createPublishedDefinition(args: {
   });
 }
 
+async function createItilPriority(
+  tenant: string,
+  requesterUserId: string,
+  priorityName: string,
+  priorityLevel: number,
+  orderNumber: number
+): Promise<string> {
+  const priorityId = uuidv4();
+  await db('priorities').insert({
+    tenant,
+    priority_id: priorityId,
+    priority_name: priorityName,
+    ...(hasColumn(priorityColumns, 'item_type') ? { item_type: 'ticket' } : {}),
+    ...(hasColumn(priorityColumns, 'order_number') ? { order_number: orderNumber } : {}),
+    ...(hasColumn(priorityColumns, 'color') ? { color: '#EF4444' } : {}),
+    ...(hasColumn(priorityColumns, 'is_from_itil_standard') ? { is_from_itil_standard: true } : {}),
+    ...(hasColumn(priorityColumns, 'itil_priority_level') ? { itil_priority_level: priorityLevel } : {}),
+    ...(hasColumn(priorityColumns, 'created_by') ? { created_by: requesterUserId } : {}),
+    ...(hasColumn(priorityColumns, 'updated_by') ? { updated_by: requesterUserId } : {}),
+    ...(hasColumn(priorityColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
+    ...(hasColumn(priorityColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
+  });
+  return priorityId;
+}
+
 describe('service request ticket-only execution', () => {
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
@@ -357,5 +382,104 @@ describe('service request ticket-only execution', () => {
 
     expect(result.executionStatus).toBe('succeeded');
     expect(result.createdTicketId).toBeTruthy();
+  });
+
+  it('T030: ticket-only execution maps ITIL impact and urgency to the created ticket priority', async () => {
+    const fixture = await createTicketFixture();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+
+    const itilPriorityId = await createItilPriority(
+      fixture.tenant,
+      fixture.requesterUserId,
+      'P1 - Critical',
+      1,
+      1
+    );
+
+    await db('boards')
+      .where({ tenant: fixture.tenant, board_id: fixture.boardId })
+      .update({ priority_type: 'itil' });
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId,
+      executionConfig: {
+        boardId: fixture.boardId,
+        statusId: fixture.statusId,
+        priorityId: fixture.priorityId,
+        itilImpact: 1,
+        itilUrgency: 1,
+        titleFieldKey: 'request_title',
+      },
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: {
+        request_title: 'Emergency Access',
+      },
+    });
+
+    expect(result.executionStatus).toBe('succeeded');
+    expect(result.createdTicketId).toBeTruthy();
+
+    const createdTicket = await db('tickets')
+      .where({ tenant: fixture.tenant, ticket_id: result.createdTicketId })
+      .first();
+    expect(createdTicket).toBeTruthy();
+    expect(createdTicket.priority_id).toBe(itilPriorityId);
+    expect(createdTicket.itil_impact).toBe(1);
+    expect(createdTicket.itil_urgency).toBe(1);
+  });
+
+  it('T031: ticket-only execution honors starter-template title and description defaults', async () => {
+    const fixture = await createTicketFixture();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId,
+      executionConfig: {
+        boardId: fixture.boardId,
+        statusId: fixture.statusId,
+        priorityId: fixture.priorityId,
+        titleTemplate: 'New Hire Setup: {{request_title}}',
+        descriptionPrefix: 'Starter Template Request',
+        includeFormResponsesInDescription: false,
+      },
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: {
+        request_title: 'Laptop Provisioning',
+        notes: 'Ship before Monday',
+      },
+    });
+
+    expect(result.executionStatus).toBe('succeeded');
+    expect(result.createdTicketId).toBeTruthy();
+
+    const createdTicket = await db('tickets')
+      .where({ tenant: fixture.tenant, ticket_id: result.createdTicketId })
+      .first();
+    expect(createdTicket).toBeTruthy();
+    expect(createdTicket.title).toBe('New Hire Setup: Laptop Provisioning');
+    const ticketDescription = (createdTicket.attributes as { description?: string } | null)?.description;
+    expect(ticketDescription).toBe('Starter Template Request');
+    expect(ticketDescription).not.toContain('request_title: Laptop Provisioning');
+    expect(ticketDescription).not.toContain('notes: Ship before Monday');
   });
 });

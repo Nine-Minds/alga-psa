@@ -10,9 +10,64 @@ import {
 
 describe('service request submission attachments', () => {
   let db: Knex;
+  let tenantColumns: Record<string, unknown>;
+  let userColumns: Record<string, unknown>;
+
+  function hasColumn(columns: Record<string, unknown>, columnName: string): boolean {
+    return Object.prototype.hasOwnProperty.call(columns, columnName);
+  }
+
+  async function insertTenant(tenant: string): Promise<void> {
+    await db('tenants').insert({
+      tenant,
+      ...(hasColumn(tenantColumns, 'company_name')
+        ? { company_name: `Tenant ${tenant.slice(0, 8)}` }
+        : { client_name: `Tenant ${tenant.slice(0, 8)}` }),
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+      ...(hasColumn(tenantColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
+      ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
+    });
+  }
+
+  async function insertUser(tenant: string, userId: string): Promise<void> {
+    await db('users').insert({
+      tenant,
+      user_id: userId,
+      username: `requester-${userId.slice(0, 8)}`,
+      hashed_password: 'not-used',
+      ...(hasColumn(userColumns, 'role') ? { role: 'admin' } : {}),
+      ...(hasColumn(userColumns, 'email') ? { email: `requester-${userId.slice(0, 8)}@example.com` } : {}),
+      ...(hasColumn(userColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
+      ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
+    });
+  }
+
+  async function insertExternalFile(params: {
+    tenant: string;
+    fileId: string;
+    uploadedById: string;
+    fileName?: string;
+    mimeType?: string;
+    fileSize?: number;
+  }): Promise<void> {
+    await db('external_files').insert({
+      tenant: params.tenant,
+      file_id: params.fileId,
+      file_name: params.fileName ?? 'attachment.bin',
+      original_name: params.fileName ?? 'attachment.bin',
+      mime_type: params.mimeType ?? 'application/octet-stream',
+      file_size: params.fileSize ?? 1024,
+      storage_path: `service-requests/${params.fileId}`,
+      uploaded_by_id: params.uploadedById,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+  }
 
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
+    tenantColumns = await db('tenants').columnInfo();
+    userColumns = await db('users').columnInfo();
   });
 
   afterAll(async () => {
@@ -30,11 +85,8 @@ describe('service request submission attachments', () => {
     const contactId = uuidv4();
     const attachmentFileId = uuidv4();
 
-    await db('tenants').insert({
-      tenant,
-      client_name: `Tenant ${tenant.slice(0, 8)}`,
-      email: `tenant-${tenant.slice(0, 8)}@example.com`,
-    });
+    await insertTenant(tenant);
+    await insertUser(tenant, requesterUserId);
 
     await db('service_request_definitions').insert({
       tenant,
@@ -68,6 +120,15 @@ describe('service request submission attachments', () => {
       form_behavior_config: {},
       visibility_provider: 'all-authenticated-client-users',
       visibility_config: {},
+    });
+
+    await insertExternalFile({
+      tenant,
+      fileId: attachmentFileId,
+      uploadedById: requesterUserId,
+      fileName: 'quote.pdf',
+      mimeType: 'application/pdf',
+      fileSize: 2048,
     });
 
     const result = await submitPortalServiceRequest({
@@ -107,15 +168,87 @@ describe('service request submission attachments', () => {
 
     const attachmentRows = await db('service_request_submission_attachments')
       .where({ tenant, submission_id: result.submissionId })
-      .select('file_id', 'file_name', 'mime_type', 'file_size');
+      .select('field_key', 'file_id', 'file_name', 'mime_type', 'file_size');
     expect(attachmentRows).toEqual([
       {
+        field_key: 'purchase_quote',
         file_id: attachmentFileId,
         file_name: 'quote.pdf',
         mime_type: 'application/pdf',
         file_size: '2048',
       },
     ]);
+  });
+
+  it('rejects attachments that do not exist in tenant file storage', async () => {
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+    const requesterUserId = uuidv4();
+    const clientId = uuidv4();
+    const contactId = uuidv4();
+
+    await insertTenant(tenant);
+
+    await db('service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'Hardware Request',
+      form_schema: { fields: [] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+      lifecycle_state: 'published',
+    });
+
+    await db('service_request_definition_versions').insert({
+      tenant,
+      version_id: versionId,
+      definition_id: definitionId,
+      version_number: 1,
+      name: 'Hardware Request',
+      form_schema_snapshot: {
+        fields: [
+          { key: 'device_model', type: 'short-text', label: 'Device Model', required: true },
+          { key: 'purchase_quote', type: 'file-upload', label: 'Purchase Quote', required: true },
+        ],
+      },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+    });
+
+    await expect(
+      submitPortalServiceRequest({
+        knex: db,
+        tenant,
+        definitionId,
+        requesterUserId,
+        clientId,
+        contactId,
+        payload: {
+          device_model: 'ThinkPad X1',
+        },
+        attachments: [
+          {
+            fieldKey: 'purchase_quote',
+            fileId: uuidv4(),
+            fileName: 'quote.pdf',
+            mimeType: 'application/pdf',
+            fileSize: 2048,
+          },
+        ],
+      })
+    ).rejects.toThrow('Submission attachments reference unknown files');
+
+    const submissions = await db('service_request_submissions').where({ tenant, definition_id: definitionId });
+    expect(submissions).toHaveLength(0);
   });
 
   it('T021: required-field validation blocks submission against the published snapshot', async () => {
@@ -208,11 +341,7 @@ describe('service request submission attachments', () => {
     });
 
     try {
-      await db('tenants').insert({
-        tenant,
-        client_name: `Tenant ${tenant.slice(0, 8)}`,
-        email: `tenant-${tenant.slice(0, 8)}@example.com`,
-      });
+      await insertTenant(tenant);
 
       await db('service_request_definitions').insert({
         tenant,
@@ -274,11 +403,7 @@ describe('service request submission attachments', () => {
     const clientId = uuidv4();
     const contactId = uuidv4();
 
-    await db('tenants').insert({
-      tenant,
-      client_name: `Tenant ${tenant.slice(0, 8)}`,
-      email: `tenant-${tenant.slice(0, 8)}@example.com`,
-    });
+    await insertTenant(tenant);
 
     await db('service_request_definitions').insert({
       tenant,

@@ -30,6 +30,7 @@ const DEFAULT_BOOLEAN_FLAGS: Record<string, boolean> = {
   'enable_client_client_dual_write': true,
   'msp-i18n-enabled': false,
   'quoting-enabled': false,
+  'service-requests': false,
 };
 
 const DEFAULT_VARIANT_FLAGS: Record<string, string> = {

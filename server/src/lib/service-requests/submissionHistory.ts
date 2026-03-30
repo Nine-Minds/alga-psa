@@ -42,6 +42,7 @@ export interface ServiceRequestClientSubmissionDetail {
 
 export interface ServiceRequestSubmissionAttachmentDetail {
   submission_attachment_id: string;
+  field_key: string | null;
   file_id: string;
   file_name: string | null;
   mime_type: string | null;
@@ -225,6 +226,7 @@ export async function getClientServiceRequestSubmissionDetail(
     .orderBy('created_at', 'asc')
     .select(
       'submission_attachment_id',
+      'field_key',
       'file_id',
       'file_name',
       'mime_type',

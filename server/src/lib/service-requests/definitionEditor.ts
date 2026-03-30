@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import {
   listServiceRequestExecutionProviders,
   listServiceRequestFormBehaviorProviders,
+  listServiceRequestVisibilityProviders,
 } from './providers/registry';
 
 export interface ServiceRequestDefinitionEditorData {
@@ -14,6 +15,10 @@ export interface ServiceRequestDefinitionEditorData {
     categoryId: string | null;
     categoryName: string | null;
     sortOrder: number;
+    availableCategories: Array<{
+      categoryId: string;
+      categoryName: string;
+    }>;
   };
   linkage: {
     linkedServiceId: string | null;
@@ -35,6 +40,10 @@ export interface ServiceRequestDefinitionEditorData {
       executionMode: string;
     }>;
     availableFormBehaviorProviders: Array<{
+      key: string;
+      displayName: string;
+    }>;
+    availableVisibilityProviders: Array<{
       key: string;
       displayName: string;
     }>;
@@ -76,6 +85,11 @@ interface ServiceRequestPublishedVersionRow {
   published_by: string | null;
 }
 
+interface ServiceRequestCategoryRow {
+  category_id: string;
+  category_name: string;
+}
+
 export async function getServiceRequestDefinitionEditorData(
   knex: Knex,
   tenant: string,
@@ -90,6 +104,10 @@ export async function getServiceRequestDefinitionEditorData(
     key: provider.key,
     displayName: provider.displayName,
   }));
+  const availableVisibilityProviders = listServiceRequestVisibilityProviders().map((provider) => ({
+    key: provider.key,
+    displayName: provider.displayName,
+  }));
 
   const definition = (await knex('service_request_definitions')
     .where({ tenant, definition_id: definitionId })
@@ -99,7 +117,11 @@ export async function getServiceRequestDefinitionEditorData(
     return null;
   }
 
-  const [categoryRow, serviceRow, latestPublishedVersion] = await Promise.all([
+  const [availableCategories, categoryRow, serviceRow, latestPublishedVersion] = await Promise.all([
+    knex('service_categories')
+      .where({ tenant })
+      .orderBy('category_name', 'asc')
+      .select('category_id', 'category_name') as Promise<ServiceRequestCategoryRow[]>,
     definition.category_id
       ? knex('service_categories')
           .where({ tenant, category_id: definition.category_id })
@@ -138,6 +160,10 @@ export async function getServiceRequestDefinitionEditorData(
       categoryName:
         categoryRow?.category_name ?? definition.category_name_snapshot ?? null,
       sortOrder: definition.sort_order,
+      availableCategories: availableCategories.map((category) => ({
+        categoryId: category.category_id,
+        categoryName: category.category_name,
+      })),
     },
     linkage: {
       linkedServiceId: definition.linked_service_id,
@@ -156,6 +182,7 @@ export async function getServiceRequestDefinitionEditorData(
       visibilityConfig: definition.visibility_config,
       availableExecutionProviders,
       availableFormBehaviorProviders,
+      availableVisibilityProviders,
       showWorkflowExecutionConfigPanel:
         workflowProviderKeys.has(definition.execution_provider) &&
         availableExecutionProviderKeys.has(definition.execution_provider),

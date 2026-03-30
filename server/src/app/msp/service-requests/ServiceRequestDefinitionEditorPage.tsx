@@ -1,26 +1,44 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   addServiceRequestFormFieldAction,
   getServiceRequestDefinitionSubmissionDetailAction,
   getServiceRequestDefinitionEditorDataAction,
+  getServiceRequestTicketRoutingBoardDataAction,
+  getServiceRequestTicketRoutingReferenceDataAction,
   listServiceRequestDefinitionSubmissionsAction,
   publishServiceRequestDefinitionAction,
   removeServiceRequestFormFieldAction,
   reorderServiceRequestFormFieldsAction,
   saveServiceRequestDefinitionDraftAction,
   searchLinkedServicesForDefinitionAction,
+  updateServiceRequestBasicsAction,
+  updateServiceRequestFormBehaviorConfigAction,
+  updateServiceRequestFormBehaviorProviderAction,
   updateServiceRequestFormFieldAction,
   updateServiceRequestExecutionConfigAction,
   setLinkedServiceForDefinitionAction,
   updateServiceRequestExecutionProviderAction,
+  updateServiceRequestVisibilityConfigAction,
+  updateServiceRequestVisibilityProviderAction,
   validateServiceRequestDefinitionForPublishAction,
 } from './actions';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { toast } from 'react-hot-toast';
+import { ServiceRequestCard } from '../../client-portal/request-services/ServiceRequestCard';
+import { ServiceRequestIconPicker } from './ServiceRequestIconPicker';
+import { SERVICE_REQUEST_ICON_OPTIONS } from '../../../lib/service-requests/iconCatalog';
+import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { CategoryPicker } from '@alga-psa/tickets/components';
+import { calculateItilPriority, ItilLabels } from '@alga-psa/tickets/lib/itilUtils';
+import type { IBoard, IPriority, ITicketCategory, ITicketStatus, IUser } from '@alga-psa/types';
 
 interface EditorData {
   definitionId: string;
@@ -32,6 +50,10 @@ interface EditorData {
     categoryId: string | null;
     categoryName: string | null;
     sortOrder: number;
+    availableCategories: Array<{
+      categoryId: string;
+      categoryName: string;
+    }>;
   };
   linkage: {
     linkedServiceId: string | null;
@@ -53,6 +75,10 @@ interface EditorData {
       executionMode: string;
     }>;
     availableFormBehaviorProviders: Array<{
+      key: string;
+      displayName: string;
+    }>;
+    availableVisibilityProviders: Array<{
       key: string;
       displayName: string;
     }>;
@@ -109,6 +135,13 @@ interface FormField {
   options?: FormFieldOption[];
 }
 
+interface TicketRoutingBoardConfig {
+  category_type: 'custom' | 'itil';
+  priority_type: 'custom' | 'itil';
+  display_itil_impact?: boolean;
+  display_itil_urgency?: boolean;
+}
+
 const FORM_FIELD_TYPES: Array<FormField['type']> = [
   'short-text',
   'long-text',
@@ -152,6 +185,70 @@ function formatSelectOptionsText(options: FormFieldOption[] | undefined): string
   return options.map((option) => `${option.value}:${option.label}`).join('\n');
 }
 
+function getSelectedIconLabel(iconValue: string): string {
+  const match = SERVICE_REQUEST_ICON_OPTIONS.find((option) => option.value === iconValue);
+  return match?.label ?? 'No icon selected';
+}
+
+function getDefaultStatus(statuses: ITicketStatus[]): ITicketStatus | null {
+  const openStatuses = statuses.filter((status) => !status.is_closed);
+
+  return (
+    openStatuses.find((status) => Boolean((status as ITicketStatus & { is_default?: boolean }).is_default)) ||
+    openStatuses[0] ||
+    statuses.find((status) => Boolean((status as ITicketStatus & { is_default?: boolean }).is_default)) ||
+    statuses[0] ||
+    null
+  );
+}
+
+function getDefaultPriorityId(
+  priorities: IPriority[],
+  priorityType?: 'custom' | 'itil'
+): string {
+  if (priorities.length === 0) {
+    return '';
+  }
+
+  if (priorityType === 'itil') {
+    const itilPriorities = priorities.filter((priority) => priority.is_from_itil_standard);
+    const mediumPriority = itilPriorities.find((priority) => priority.itil_priority_level === 3);
+    return mediumPriority?.priority_id ?? itilPriorities[0]?.priority_id ?? priorities[0]?.priority_id ?? '';
+  }
+
+  const customPriorities = priorities.filter((priority) => !priority.is_from_itil_standard);
+  return customPriorities[0]?.priority_id ?? priorities[0]?.priority_id ?? '';
+}
+
+function deriveSelectedRoutingCategories(config: {
+  categoryId: string;
+  subcategoryId: string;
+}): string[] {
+  if (config.subcategoryId) {
+    return [config.subcategoryId];
+  }
+  if (config.categoryId) {
+    return [config.categoryId];
+  }
+  return [];
+}
+
+const ITIL_IMPACT_OPTIONS: SelectOption[] = [
+  { value: '1', label: '1 - High (Critical business function affected)' },
+  { value: '2', label: '2 - Medium-High (Important function affected)' },
+  { value: '3', label: '3 - Medium (Minor function affected)' },
+  { value: '4', label: '4 - Medium-Low (Minimal impact)' },
+  { value: '5', label: '5 - Low (No business impact)' },
+];
+
+const ITIL_URGENCY_OPTIONS: SelectOption[] = [
+  { value: '1', label: '1 - High (Work cannot continue)' },
+  { value: '2', label: '2 - Medium-High (Work severely impaired)' },
+  { value: '3', label: '3 - Medium (Work continues with limitations)' },
+  { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
+  { value: '5', label: '5 - Low (Work continues normally)' },
+];
+
 export default function ServiceRequestDefinitionEditorPage() {
   const params = useParams();
   const definitionId = String(params?.definitionId ?? '');
@@ -167,6 +264,19 @@ export default function ServiceRequestDefinitionEditorPage() {
   const [selectedSubmissionDetail, setSelectedSubmissionDetail] = useState<DefinitionSubmissionDetail | null>(null);
   const [workflowIdInput, setWorkflowIdInput] = useState('');
   const [workflowInputMappingText, setWorkflowInputMappingText] = useState('{}');
+  const [basicsInput, setBasicsInput] = useState({
+    name: '',
+    description: '',
+    icon: '',
+    categoryId: '',
+    sortOrder: '0',
+  });
+  const [formBehaviorProviderInput, setFormBehaviorProviderInput] = useState('basic');
+  const [formBehaviorConfigText, setFormBehaviorConfigText] = useState('{}');
+  const [visibilityProviderInput, setVisibilityProviderInput] = useState(
+    'all-authenticated-client-users'
+  );
+  const [visibilityConfigText, setVisibilityConfigText] = useState('{}');
   const [ticketRoutingConfigInput, setTicketRoutingConfigInput] = useState({
     boardId: '',
     statusId: '',
@@ -174,13 +284,86 @@ export default function ServiceRequestDefinitionEditorPage() {
     categoryId: '',
     subcategoryId: '',
     assignedToUserId: '',
+    itilImpact: '',
+    itilUrgency: '',
     titleFieldKey: '',
     descriptionPrefix: '',
   });
+  const [ticketRoutingBoards, setTicketRoutingBoards] = useState<IBoard[]>([]);
+  const [ticketRoutingPriorities, setTicketRoutingPriorities] = useState<IPriority[]>([]);
+  const [ticketRoutingUsers, setTicketRoutingUsers] = useState<IUser[]>([]);
+  const [ticketRoutingStatuses, setTicketRoutingStatuses] = useState<ITicketStatus[]>([]);
+  const [ticketRoutingCategories, setTicketRoutingCategories] = useState<ITicketCategory[]>([]);
+  const [ticketRoutingBoardConfig, setTicketRoutingBoardConfig] = useState<TicketRoutingBoardConfig | null>(null);
+  const [ticketRoutingBoardFilterState, setTicketRoutingBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [ticketRoutingSelectedCategories, setTicketRoutingSelectedCategories] = useState<string[]>([]);
+  const [ticketRoutingLoading, setTicketRoutingLoading] = useState(false);
   const [newFieldType, setNewFieldType] = useState<FormField['type']>('short-text');
 
   const isWorkflowBackedExecution = data?.execution.showWorkflowExecutionConfigPanel === true;
   const isTicketOnlyExecution = data?.execution.executionProvider === 'ticket-only';
+  const hasLivePublishedVersion = Boolean(data?.publish.publishedVersionNumber);
+  const draftLifecycleLabel =
+    data?.lifecycleState === 'draft' && hasLivePublishedVersion ? 'draft changes' : data?.lifecycleState;
+  const calculatedItilPriority = useMemo(() => {
+    const impact = Number.parseInt(ticketRoutingConfigInput.itilImpact, 10);
+    const urgency = Number.parseInt(ticketRoutingConfigInput.itilUrgency, 10);
+    if (!Number.isInteger(impact) || !Number.isInteger(urgency)) {
+      return null;
+    }
+
+    try {
+      return calculateItilPriority(impact, urgency);
+    } catch {
+      return null;
+    }
+  }, [ticketRoutingConfigInput.itilImpact, ticketRoutingConfigInput.itilUrgency]);
+  const ticketStatusOptions = useMemo<SelectOption[]>(
+    () =>
+      ticketRoutingStatuses.map((status) => ({
+        value: status.status_id,
+        label: status.name,
+      })),
+    [ticketRoutingStatuses]
+  );
+  const ticketPriorityOptions = useMemo(
+    () =>
+      ticketRoutingPriorities.map((priority) => ({
+        value: priority.priority_id,
+        label: priority.priority_name,
+        color: priority.color ?? undefined,
+        is_from_itil_standard: priority.is_from_itil_standard ?? undefined,
+        itil_priority_level: priority.itil_priority_level ?? undefined,
+      })),
+    [ticketRoutingPriorities]
+  );
+
+  const loadTicketRoutingReferenceData = async (boardId?: string) => {
+    const referenceData = await getServiceRequestTicketRoutingReferenceDataAction();
+    setTicketRoutingBoards(referenceData.boards as IBoard[]);
+    setTicketRoutingPriorities(referenceData.priorities as IPriority[]);
+    setTicketRoutingUsers(referenceData.users as IUser[]);
+
+    const nextBoardId = boardId?.trim() ?? '';
+    if (nextBoardId.length === 0) {
+      setTicketRoutingStatuses([]);
+      setTicketRoutingCategories([]);
+      setTicketRoutingBoardConfig(null);
+      return;
+    }
+
+    setTicketRoutingLoading(true);
+    try {
+      const boardData = await getServiceRequestTicketRoutingBoardDataAction(nextBoardId);
+      setTicketRoutingStatuses(boardData.statuses as ITicketStatus[]);
+      setTicketRoutingCategories(boardData.categories as ITicketCategory[]);
+      setTicketRoutingBoardConfig(
+        (boardData.boardConfig as TicketRoutingBoardConfig | null) ?? null
+      );
+    } finally {
+      setTicketRoutingLoading(false);
+    }
+  };
 
   const reloadDefinitionEditorState = async (
     targetDefinitionId: string,
@@ -242,6 +425,20 @@ export default function ServiceRequestDefinitionEditorPage() {
       return;
     }
 
+    setBasicsInput({
+      name: data.basics.name ?? '',
+      description: data.basics.description ?? '',
+      icon: data.basics.icon ?? '',
+      categoryId: data.basics.categoryId ?? '',
+      sortOrder: String(data.basics.sortOrder ?? 0),
+    });
+  }, [data]);
+
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+
     const executionConfig = data.execution.executionConfig ?? {};
     const workflowId =
       typeof executionConfig.workflowId === 'string' ? executionConfig.workflowId : '';
@@ -264,6 +461,10 @@ export default function ServiceRequestDefinitionEditorPage() {
     const config = data.execution.executionConfig ?? {};
     const resolveConfigString = (key: string): string =>
       typeof config[key] === 'string' ? (config[key] as string) : '';
+    const resolveConfigNumberString = (key: string): string => {
+      const value = config[key];
+      return typeof value === 'number' ? String(value) : resolveConfigString(key);
+    };
 
     setTicketRoutingConfigInput({
       boardId: resolveConfigString('boardId'),
@@ -272,10 +473,133 @@ export default function ServiceRequestDefinitionEditorPage() {
       categoryId: resolveConfigString('categoryId'),
       subcategoryId: resolveConfigString('subcategoryId'),
       assignedToUserId: resolveConfigString('assignedToUserId'),
+      itilImpact: resolveConfigNumberString('itilImpact'),
+      itilUrgency: resolveConfigNumberString('itilUrgency'),
       titleFieldKey: resolveConfigString('titleFieldKey'),
       descriptionPrefix: resolveConfigString('descriptionPrefix'),
     });
+    setTicketRoutingSelectedCategories(
+      deriveSelectedRoutingCategories({
+        categoryId: resolveConfigString('categoryId'),
+        subcategoryId: resolveConfigString('subcategoryId'),
+      })
+    );
+    void loadTicketRoutingReferenceData(resolveConfigString('boardId'));
   }, [data]);
+
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+
+    setFormBehaviorProviderInput(data.execution.formBehaviorProvider);
+    setFormBehaviorConfigText(
+      JSON.stringify(data.execution.formBehaviorConfig ?? {}, null, 2)
+    );
+    setVisibilityProviderInput(data.execution.visibilityProvider);
+    setVisibilityConfigText(
+      JSON.stringify(data.execution.visibilityConfig ?? {}, null, 2)
+    );
+  }, [data]);
+
+  const handleTicketRoutingBoardChange = async (nextBoardId: string) => {
+    setTicketRoutingConfigInput((previous) => ({
+      ...previous,
+      boardId: nextBoardId,
+      statusId: '',
+      categoryId: '',
+      subcategoryId: '',
+      priorityId: '',
+      itilImpact: '',
+      itilUrgency: '',
+      assignedToUserId: previous.assignedToUserId,
+    }));
+    setTicketRoutingSelectedCategories([]);
+
+    if (!nextBoardId) {
+      setTicketRoutingStatuses([]);
+      setTicketRoutingCategories([]);
+      setTicketRoutingBoardConfig(null);
+      return;
+    }
+
+    setTicketRoutingLoading(true);
+    try {
+      const boardData = await getServiceRequestTicketRoutingBoardDataAction(nextBoardId);
+      const nextStatuses = boardData.statuses as ITicketStatus[];
+      const nextBoardConfig = (boardData.boardConfig as TicketRoutingBoardConfig | null) ?? null;
+      setTicketRoutingStatuses(nextStatuses);
+      setTicketRoutingCategories(boardData.categories as ITicketCategory[]);
+      setTicketRoutingBoardConfig(nextBoardConfig);
+
+      const defaultStatusId = getDefaultStatus(nextStatuses)?.status_id ?? '';
+      const defaultPriorityId = getDefaultPriorityId(
+        ticketRoutingPriorities,
+        nextBoardConfig?.priority_type
+      );
+      const boardDefaultAssignee =
+        ticketRoutingBoards.find((board) => board.board_id === nextBoardId)?.default_assigned_to ?? '';
+
+      setTicketRoutingConfigInput((previous) => ({
+        ...previous,
+        boardId: nextBoardId,
+        statusId: defaultStatusId,
+        priorityId: defaultPriorityId,
+        assignedToUserId: previous.assignedToUserId || boardDefaultAssignee || '',
+        itilImpact: nextBoardConfig?.priority_type === 'itil' ? '3' : '',
+        itilUrgency: nextBoardConfig?.priority_type === 'itil' ? '3' : '',
+      }));
+    } finally {
+      setTicketRoutingLoading(false);
+    }
+  };
+
+  const saveTicketRoutingConfig = async () => {
+    const selectedCategoryId = ticketRoutingSelectedCategories[0] ?? '';
+    const selectedCategory = ticketRoutingCategories.find(
+      (category) => category.category_id === selectedCategoryId
+    );
+
+    const nextExecutionConfig: Record<string, unknown> = {};
+    const addStringConfig = (key: string, value: string) => {
+      const trimmedValue = value.trim();
+      if (trimmedValue.length > 0) {
+        nextExecutionConfig[key] = trimmedValue;
+      }
+    };
+
+    addStringConfig('boardId', ticketRoutingConfigInput.boardId);
+    addStringConfig('statusId', ticketRoutingConfigInput.statusId);
+    addStringConfig('priorityId', ticketRoutingConfigInput.priorityId);
+    addStringConfig('assignedToUserId', ticketRoutingConfigInput.assignedToUserId);
+    addStringConfig('titleFieldKey', ticketRoutingConfigInput.titleFieldKey);
+    addStringConfig('descriptionPrefix', ticketRoutingConfigInput.descriptionPrefix);
+
+    if (selectedCategory) {
+      if (selectedCategory.parent_category) {
+        nextExecutionConfig.categoryId = selectedCategory.parent_category;
+        nextExecutionConfig.subcategoryId = selectedCategory.category_id;
+      } else {
+        nextExecutionConfig.categoryId = selectedCategory.category_id;
+      }
+    }
+
+    const boardPriorityType = ticketRoutingBoardConfig?.priority_type;
+    if (boardPriorityType === 'itil') {
+      const impact = Number.parseInt(ticketRoutingConfigInput.itilImpact, 10);
+      const urgency = Number.parseInt(ticketRoutingConfigInput.itilUrgency, 10);
+      if (Number.isInteger(impact)) {
+        nextExecutionConfig.itilImpact = impact;
+      }
+      if (Number.isInteger(urgency)) {
+        nextExecutionConfig.itilUrgency = urgency;
+      }
+    }
+
+    await updateServiceRequestExecutionConfigAction(data.definitionId, nextExecutionConfig);
+    await reloadDefinitionEditorState(data.definitionId);
+    toast.success('Ticket routing configuration updated');
+  };
 
   if (loading) {
     return <div className="p-6 text-sm text-[rgb(var(--color-text-600))]">Loading definition editor…</div>;
@@ -290,7 +614,7 @@ export default function ServiceRequestDefinitionEditorPage() {
       <div>
         <h1 className="text-2xl font-semibold">{data.basics.name}</h1>
         <p className="text-sm text-[rgb(var(--color-text-600))]">
-          Definition ID: {data.definitionId} · Current state: {data.lifecycleState}
+          Definition ID: {data.definitionId} · Current state: {draftLifecycleLabel}
         </p>
         <div className="mt-3 flex gap-2">
           <Button
@@ -306,7 +630,7 @@ export default function ServiceRequestDefinitionEditorPage() {
               }
             }}
           >
-            Save Draft
+            {data.lifecycleState === 'published' ? 'Create Draft' : 'Save Draft'}
           </Button>
           <Button
             id="service-request-editor-publish"
@@ -328,27 +652,130 @@ export default function ServiceRequestDefinitionEditorPage() {
 
       <Card id="service-request-editor-basics" className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">Basics</h2>
-        <FieldRow label="Name" value={data.basics.name} />
-        <FieldRow label="Description" value={data.basics.description ?? '-'} />
-        <FieldRow label="Icon" value={data.basics.icon ?? '-'} />
-        <FieldRow label="Category" value={data.basics.categoryName ?? data.basics.categoryId ?? '-'} />
-        <FieldRow label="Sort Order" value={String(data.basics.sortOrder)} />
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Name</span>
+            <input
+              id="service-request-basics-name"
+              className="border rounded px-3 py-2 text-sm"
+              value={basicsInput.name}
+              onChange={(event) =>
+                setBasicsInput((previous) => ({
+                  ...previous,
+                  name: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <label className="grid gap-1 text-sm md:col-span-2">
+            <span className="font-medium">Icon</span>
+            <ServiceRequestIconPicker
+              selectedIcon={basicsInput.icon}
+              onChange={(icon) =>
+                setBasicsInput((previous) => ({
+                  ...previous,
+                  icon,
+                }))
+              }
+            />
+            <span
+              id="service-request-basics-icon"
+              className="text-xs text-[rgb(var(--color-text-600))]"
+            >
+              Selected: {getSelectedIconLabel(basicsInput.icon)}
+            </span>
+          </label>
+          <label className="grid gap-1 text-sm md:col-span-2">
+            <span className="font-medium">Description</span>
+            <textarea
+              id="service-request-basics-description"
+              className="border rounded px-3 py-2 text-sm min-h-[96px]"
+              value={basicsInput.description}
+              onChange={(event) =>
+                setBasicsInput((previous) => ({
+                  ...previous,
+                  description: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Category</span>
+            <select
+              id="service-request-basics-category"
+              className="border rounded px-3 py-2 text-sm"
+              value={basicsInput.categoryId}
+              onChange={(event) =>
+                setBasicsInput((previous) => ({
+                  ...previous,
+                  categoryId: event.target.value,
+                }))
+              }
+            >
+              <option value="">Uncategorized</option>
+              {data.basics.availableCategories.map((category) => (
+                <option key={category.categoryId} value={category.categoryId}>
+                  {category.categoryName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Sort Order</span>
+            <input
+              id="service-request-basics-sort-order"
+              className="border rounded px-3 py-2 text-sm"
+              type="number"
+              value={basicsInput.sortOrder}
+              onChange={(event) =>
+                setBasicsInput((previous) => ({
+                  ...previous,
+                  sortOrder: event.target.value,
+                }))
+              }
+            />
+          </label>
+        </div>
+        <div>
+          <Button
+            id="service-request-basics-save"
+            variant="outline"
+            onClick={async () => {
+              try {
+                await updateServiceRequestBasicsAction(data.definitionId, {
+                  name: basicsInput.name,
+                  description:
+                    basicsInput.description.trim().length > 0
+                      ? basicsInput.description.trim()
+                      : null,
+                  icon: basicsInput.icon.trim().length > 0 ? basicsInput.icon.trim() : null,
+                  categoryId:
+                    basicsInput.categoryId.trim().length > 0
+                      ? basicsInput.categoryId
+                      : null,
+                  sortOrder: Number.parseInt(basicsInput.sortOrder, 10) || 0,
+                });
+                await reloadDefinitionEditorState(data.definitionId);
+                toast.success('Basics updated');
+              } catch (error) {
+                console.error('Failed to update basics', error);
+                toast.error('Failed to update basics');
+              }
+            }}
+          >
+            Save Basics
+          </Button>
+        </div>
       </Card>
 
       <Card id="service-request-editor-service-preview" className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">Service Card Preview</h2>
-        <div className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
-          <div className="text-xs uppercase tracking-wide text-[rgb(var(--color-text-500))] mb-1">
-            {data.basics.icon ? `Icon: ${data.basics.icon}` : 'No icon selected'}
-          </div>
-          <div className="text-lg font-semibold">{data.basics.name}</div>
-          <div className="text-sm text-[rgb(var(--color-text-700))] mt-1">
-            {data.basics.description ?? 'No description provided'}
-          </div>
-          <div className="text-xs text-[rgb(var(--color-text-500))] mt-2">
-            {data.basics.categoryName ?? data.basics.categoryId ?? 'Uncategorized'}
-          </div>
-        </div>
+        <ServiceRequestCard
+          title={data.basics.name}
+          description={data.basics.description}
+          icon={data.basics.icon}
+          categoryLabel={data.basics.categoryName ?? data.basics.categoryId ?? 'Uncategorized'}
+        />
       </Card>
 
       <Card id="service-request-editor-linkage" className="p-4 space-y-3">
@@ -780,94 +1207,218 @@ export default function ServiceRequestDefinitionEditorPage() {
             </select>
           </div>
         </div>
+        <div className="grid gap-2">
+          <label
+            htmlFor="service-request-form-behavior-provider-select"
+            className="text-sm font-medium text-[rgb(var(--color-text-700))]"
+          >
+            Form Behavior Provider
+          </label>
+          <div className="flex items-center gap-2">
+            <select
+              id="service-request-form-behavior-provider-select"
+              className="border rounded px-3 py-2 text-sm"
+              value={formBehaviorProviderInput}
+              onChange={async (event) => {
+                try {
+                  setFormBehaviorProviderInput(event.target.value);
+                  await updateServiceRequestFormBehaviorProviderAction(
+                    data.definitionId,
+                    event.target.value
+                  );
+                  await reloadDefinitionEditorState(data.definitionId);
+                  toast.success('Form behavior provider updated');
+                } catch (error) {
+                  console.error('Failed to update form behavior provider', error);
+                  toast.error('Failed to update form behavior provider');
+                }
+              }}
+            >
+              {data.execution.availableFormBehaviorProviders.map((provider) => (
+                <option key={provider.key} value={provider.key}>
+                  {provider.displayName}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="grid gap-2">
+          <label
+            htmlFor="service-request-visibility-provider-select"
+            className="text-sm font-medium text-[rgb(var(--color-text-700))]"
+          >
+            Visibility Provider
+          </label>
+          <div className="flex items-center gap-2">
+            <select
+              id="service-request-visibility-provider-select"
+              className="border rounded px-3 py-2 text-sm"
+              value={visibilityProviderInput}
+              onChange={async (event) => {
+                try {
+                  setVisibilityProviderInput(event.target.value);
+                  await updateServiceRequestVisibilityProviderAction(
+                    data.definitionId,
+                    event.target.value
+                  );
+                  await reloadDefinitionEditorState(data.definitionId);
+                  toast.success('Visibility provider updated');
+                } catch (error) {
+                  console.error('Failed to update visibility provider', error);
+                  toast.error('Failed to update visibility provider');
+                }
+              }}
+            >
+              {data.execution.availableVisibilityProviders.map((provider) => (
+                <option key={provider.key} value={provider.key}>
+                  {provider.displayName}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         {isTicketOnlyExecution && (
           <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
             <h3 className="text-sm font-semibold">Ticket Routing Configuration</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <label className="grid gap-1 text-sm">
-                <span className="font-medium">Board ID</span>
-                <input
+              <div className="grid gap-1 text-sm md:col-span-2">
+                <span className="font-medium">Board</span>
+                <BoardPicker
                   id="service-request-ticket-board-id"
-                  className="border rounded px-3 py-2 text-sm"
-                  value={ticketRoutingConfigInput.boardId}
-                  onChange={(event) =>
-                    setTicketRoutingConfigInput((previous) => ({
-                      ...previous,
-                      boardId: event.target.value,
-                    }))
-                  }
+                  boards={ticketRoutingBoards}
+                  onSelect={(boardId) => void handleTicketRoutingBoardChange(boardId)}
+                  selectedBoardId={ticketRoutingConfigInput.boardId || null}
+                  filterState={ticketRoutingBoardFilterState}
+                  onFilterStateChange={setTicketRoutingBoardFilterState}
+                  placeholder="Select Board"
                 />
-              </label>
-              <label className="grid gap-1 text-sm">
-                <span className="font-medium">Status ID</span>
-                <input
+              </div>
+              <div className="grid gap-1 text-sm">
+                <span className="font-medium">Status</span>
+                <CustomSelect
                   id="service-request-ticket-status-id"
-                  className="border rounded px-3 py-2 text-sm"
                   value={ticketRoutingConfigInput.statusId}
-                  onChange={(event) =>
+                  onValueChange={(value) =>
                     setTicketRoutingConfigInput((previous) => ({
                       ...previous,
-                      statusId: event.target.value,
+                      statusId: value,
                     }))
                   }
+                  options={ticketStatusOptions}
+                  placeholder="Select Status"
+                  disabled={!ticketRoutingConfigInput.boardId || ticketRoutingLoading}
                 />
-              </label>
-              <label className="grid gap-1 text-sm">
-                <span className="font-medium">Priority ID</span>
-                <input
-                  id="service-request-ticket-priority-id"
-                  className="border rounded px-3 py-2 text-sm"
-                  value={ticketRoutingConfigInput.priorityId}
-                  onChange={(event) =>
-                    setTicketRoutingConfigInput((previous) => ({
-                      ...previous,
-                      priorityId: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label className="grid gap-1 text-sm">
-                <span className="font-medium">Category ID</span>
-                <input
-                  id="service-request-ticket-category-id"
-                  className="border rounded px-3 py-2 text-sm"
-                  value={ticketRoutingConfigInput.categoryId}
-                  onChange={(event) =>
-                    setTicketRoutingConfigInput((previous) => ({
-                      ...previous,
-                      categoryId: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label className="grid gap-1 text-sm">
-                <span className="font-medium">Subcategory ID</span>
-                <input
-                  id="service-request-ticket-subcategory-id"
-                  className="border rounded px-3 py-2 text-sm"
-                  value={ticketRoutingConfigInput.subcategoryId}
-                  onChange={(event) =>
-                    setTicketRoutingConfigInput((previous) => ({
-                      ...previous,
-                      subcategoryId: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label className="grid gap-1 text-sm">
-                <span className="font-medium">Assigned User ID</span>
-                <input
+              </div>
+              <div className="grid gap-1 text-sm">
+                <span className="font-medium">Assigned User</span>
+                <UserPicker
                   id="service-request-ticket-assigned-user-id"
-                  className="border rounded px-3 py-2 text-sm"
                   value={ticketRoutingConfigInput.assignedToUserId}
-                  onChange={(event) =>
+                  onValueChange={(value) =>
                     setTicketRoutingConfigInput((previous) => ({
                       ...previous,
-                      assignedToUserId: event.target.value,
+                      assignedToUserId: value,
                     }))
                   }
+                  users={ticketRoutingUsers}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  placeholder="Not assigned"
+                  userTypeFilter="internal"
+                  buttonWidth="full"
                 />
-              </label>
+              </div>
+              {ticketRoutingConfigInput.boardId && (
+                <div className="grid gap-1 text-sm md:col-span-2">
+                  <span className="font-medium">Category</span>
+                  <CategoryPicker
+                    id="service-request-ticket-category-id"
+                    categories={ticketRoutingCategories}
+                    selectedCategories={ticketRoutingSelectedCategories}
+                    onSelect={(categoryIds) => {
+                      setTicketRoutingSelectedCategories(categoryIds);
+                      const selectedCategory = ticketRoutingCategories.find(
+                        (category) => category.category_id === categoryIds[0]
+                      );
+                      setTicketRoutingConfigInput((previous) => ({
+                        ...previous,
+                        categoryId: selectedCategory?.parent_category ?? selectedCategory?.category_id ?? '',
+                        subcategoryId:
+                          selectedCategory?.parent_category ? selectedCategory.category_id : '',
+                      }));
+                    }}
+                    placeholder="Select category"
+                    multiSelect={false}
+                    allowEmpty={true}
+                    showReset={true}
+                  />
+                </div>
+              )}
+              {ticketRoutingBoardConfig?.priority_type === 'custom' && (
+                <div className="grid gap-1 text-sm">
+                  <span className="font-medium">Priority</span>
+                  <PrioritySelect
+                    id="service-request-ticket-priority-id"
+                    value={ticketRoutingConfigInput.priorityId || null}
+                    onValueChange={(value) =>
+                      setTicketRoutingConfigInput((previous) => ({
+                        ...previous,
+                        priorityId: value,
+                      }))
+                    }
+                    options={ticketPriorityOptions}
+                    placeholder="Select Priority"
+                    disabled={!ticketRoutingConfigInput.boardId}
+                  />
+                </div>
+              )}
+              {ticketRoutingBoardConfig?.priority_type === 'itil' && (
+                <>
+                  <div className="grid gap-1 text-sm">
+                    <span className="font-medium">Impact</span>
+                    <CustomSelect
+                      id="service-request-ticket-itil-impact"
+                      value={ticketRoutingConfigInput.itilImpact}
+                      onValueChange={(value) =>
+                        setTicketRoutingConfigInput((previous) => ({
+                          ...previous,
+                          itilImpact: value,
+                        }))
+                      }
+                      options={ITIL_IMPACT_OPTIONS}
+                      placeholder="Select Impact"
+                    />
+                  </div>
+                  <div className="grid gap-1 text-sm">
+                    <span className="font-medium">Urgency</span>
+                    <CustomSelect
+                      id="service-request-ticket-itil-urgency"
+                      value={ticketRoutingConfigInput.itilUrgency}
+                      onValueChange={(value) =>
+                        setTicketRoutingConfigInput((previous) => ({
+                          ...previous,
+                          itilUrgency: value,
+                        }))
+                      }
+                      options={ITIL_URGENCY_OPTIONS}
+                      placeholder="Select Urgency"
+                    />
+                  </div>
+                  <div className="grid gap-1 text-sm md:col-span-2">
+                    <span className="font-medium">Priority (Calculated)</span>
+                    <div className="rounded border px-3 py-2 text-sm bg-[rgb(var(--color-background-50))]">
+                      {calculatedItilPriority ? (
+                        <span>
+                          {ItilLabels.priority[calculatedItilPriority]} (Impact {ticketRoutingConfigInput.itilImpact} x Urgency {ticketRoutingConfigInput.itilUrgency})
+                        </span>
+                      ) : (
+                        <span className="text-[rgb(var(--color-text-600))]">
+                          Select impact and urgency
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
               <label className="grid gap-1 text-sm">
                 <span className="font-medium">Title Field Key</span>
                 <input
@@ -901,24 +1452,7 @@ export default function ServiceRequestDefinitionEditorPage() {
               <Button
                 id="service-request-ticket-config-save"
                 variant="outline"
-                onClick={async () => {
-                  const nextExecutionConfig = Object.entries(ticketRoutingConfigInput).reduce<
-                    Record<string, unknown>
-                  >((result, [key, value]) => {
-                    const trimmedValue = value.trim();
-                    if (trimmedValue.length > 0) {
-                      result[key] = trimmedValue;
-                    }
-                    return result;
-                  }, {});
-
-                  await updateServiceRequestExecutionConfigAction(
-                    data.definitionId,
-                    nextExecutionConfig
-                  );
-                  await reloadDefinitionEditorState(data.definitionId);
-                  toast.success('Ticket routing configuration updated');
-                }}
+                onClick={() => void saveTicketRoutingConfig()}
               >
                 Save Ticket Routing
               </Button>
@@ -1002,14 +1536,87 @@ export default function ServiceRequestDefinitionEditorPage() {
           </div>
         )}
         {data.execution.showAdvancedFormBehaviorConfigPanel && (
-          <div className="rounded border p-3 bg-[rgb(var(--color-background-100))] text-sm text-[rgb(var(--color-text-700))]">
-            <div className="font-semibold mb-1">Advanced Form Behavior</div>
+          <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
+            <div className="text-sm font-semibold">Advanced Form Behavior</div>
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">Form Behavior Config (JSON object)</span>
+              <textarea
+                id="service-request-form-behavior-config"
+                className="border rounded px-3 py-2 text-sm font-mono min-h-[140px]"
+                value={formBehaviorConfigText}
+                onChange={(event) => setFormBehaviorConfigText(event.target.value)}
+              />
+            </label>
             <div>
-              Conditional visibility and context-aware defaults are enabled via the registered
-              enterprise form-behavior provider.
+              <Button
+                id="service-request-form-behavior-config-save"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const parsed = formBehaviorConfigText.trim()
+                      ? JSON.parse(formBehaviorConfigText)
+                      : {};
+                    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                      toast.error('Form behavior config must be a JSON object');
+                      return;
+                    }
+                    await updateServiceRequestFormBehaviorConfigAction(
+                      data.definitionId,
+                      parsed as Record<string, unknown>
+                    );
+                    await reloadDefinitionEditorState(data.definitionId);
+                    toast.success('Form behavior config updated');
+                  } catch (error) {
+                    console.error('Failed to update form behavior config', error);
+                    toast.error('Invalid form behavior JSON');
+                  }
+                }}
+              >
+                Save Form Behavior Config
+              </Button>
             </div>
           </div>
         )}
+        <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
+          <div className="text-sm font-semibold">Visibility Configuration</div>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Visibility Config (JSON object)</span>
+            <textarea
+              id="service-request-visibility-config"
+              className="border rounded px-3 py-2 text-sm font-mono min-h-[140px]"
+              value={visibilityConfigText}
+              onChange={(event) => setVisibilityConfigText(event.target.value)}
+            />
+          </label>
+          <div>
+            <Button
+              id="service-request-visibility-config-save"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const parsed = visibilityConfigText.trim()
+                    ? JSON.parse(visibilityConfigText)
+                    : {};
+                  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                    toast.error('Visibility config must be a JSON object');
+                    return;
+                  }
+                  await updateServiceRequestVisibilityConfigAction(
+                    data.definitionId,
+                    parsed as Record<string, unknown>
+                  );
+                  await reloadDefinitionEditorState(data.definitionId);
+                  toast.success('Visibility config updated');
+                } catch (error) {
+                  console.error('Failed to update visibility config', error);
+                  toast.error('Invalid visibility JSON');
+                }
+              }}
+            >
+              Save Visibility Config
+            </Button>
+          </div>
+        </div>
         <FieldRow label="Execution Provider" value={data.execution.executionProvider} />
         <FieldRow label="Execution Config" value={JSON.stringify(data.execution.executionConfig)} />
         <FieldRow label="Form Behavior Provider" value={data.execution.formBehaviorProvider} />
@@ -1018,7 +1625,7 @@ export default function ServiceRequestDefinitionEditorPage() {
 
       <Card id="service-request-editor-publish" className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">Publish</h2>
-        <FieldRow label="Current Draft State" value={data.lifecycleState} />
+        <FieldRow label="Current Draft State" value={draftLifecycleLabel ?? '-'} />
         <FieldRow
           label="Last Published Version"
           value={data.publish.publishedVersionNumber ? `v${data.publish.publishedVersionNumber}` : 'Never published'}

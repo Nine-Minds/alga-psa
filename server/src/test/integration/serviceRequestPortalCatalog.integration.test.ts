@@ -52,6 +52,9 @@ describe('service request portal catalog', () => {
     const hiddenPublishedId = uuidv4();
     const draftId = uuidv4();
     const uncategorizedId = uuidv4();
+    const visibleVersionId = uuidv4();
+    const hiddenVersionId = uuidv4();
+    const uncategorizedVersionId = uuidv4();
 
     await db('tenants').insert({
       tenant,
@@ -127,6 +130,63 @@ describe('service request portal catalog', () => {
         visibility_provider: 'all-authenticated-client-users',
         visibility_config: {},
         lifecycle_state: 'published',
+      },
+    ]);
+
+    await db('service_request_definition_versions').insert([
+      {
+        tenant,
+        version_id: visibleVersionId,
+        definition_id: visiblePublishedId,
+        version_number: 1,
+        name: 'New Hire Setup',
+        description: 'Provision standard onboarding access.',
+        icon: 'user-plus',
+        category_name_snapshot: 'Onboarding',
+        sort_order: 1,
+        form_schema_snapshot: { fields: [] },
+        execution_provider: 'ticket-only',
+        execution_config: {},
+        form_behavior_provider: 'basic',
+        form_behavior_config: {},
+        visibility_provider: 'test-visibility',
+        visibility_config: { allow: true },
+      },
+      {
+        tenant,
+        version_id: hiddenVersionId,
+        definition_id: hiddenPublishedId,
+        version_number: 1,
+        name: 'Executive Access',
+        description: 'Restricted request.',
+        icon: 'shield',
+        category_name_snapshot: 'Onboarding',
+        sort_order: 2,
+        form_schema_snapshot: { fields: [] },
+        execution_provider: 'ticket-only',
+        execution_config: {},
+        form_behavior_provider: 'basic',
+        form_behavior_config: {},
+        visibility_provider: 'test-visibility',
+        visibility_config: { allow: false },
+      },
+      {
+        tenant,
+        version_id: uncategorizedVersionId,
+        definition_id: uncategorizedId,
+        version_number: 1,
+        name: 'General IT Help',
+        description: 'Submit a general request.',
+        icon: 'life-buoy',
+        category_name_snapshot: null,
+        sort_order: 10,
+        form_schema_snapshot: { fields: [] },
+        execution_provider: 'ticket-only',
+        execution_config: {},
+        form_behavior_provider: 'basic',
+        form_behavior_config: {},
+        visibility_provider: 'all-authenticated-client-users',
+        visibility_config: {},
       },
     ]);
 

@@ -141,6 +141,19 @@ export async function submitPortalServiceRequest(
     throw new Error(`Submission validation failed: ${validationErrors.join('; ')}`);
   }
 
+  if (attachments.length > 0) {
+    const attachmentFileIds = [...new Set(attachments.map((attachment) => attachment.fileId))];
+    const existingFileRows = await knex('external_files')
+      .where({ tenant, is_deleted: false })
+      .whereIn('file_id', attachmentFileIds)
+      .select('file_id');
+    const existingFileIds = new Set(existingFileRows.map((row) => row.file_id as string));
+    const missingFileIds = attachmentFileIds.filter((fileId) => !existingFileIds.has(fileId));
+    if (missingFileIds.length > 0) {
+      throw new Error(`Submission attachments reference unknown files: ${missingFileIds.join(', ')}`);
+    }
+  }
+
   const submissionId = await knex.transaction(async (trx) => {
     const [submissionRow] = await trx('service_request_submissions')
       .insert({
@@ -163,6 +176,7 @@ export async function submitPortalServiceRequest(
         attachments.map((attachment) => ({
           tenant,
           submission_id: submissionId,
+          field_key: attachment.fieldKey,
           file_id: attachment.fileId,
           file_name: attachment.fileName ?? null,
           mime_type: attachment.mimeType ?? null,

@@ -5,9 +5,11 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getAuthenticatedClientId } from '@alga-psa/client-portal/lib/clientAuth';
 import { redirect } from 'next/navigation';
+import { StorageService } from '../../../../lib/storage/StorageService';
 import {
   getVisiblePublishedServiceRequestDefinitionDetail,
   submitPortalServiceRequest,
+  validateSubmissionAgainstPublishedSchema,
   type ServiceRequestPortalDefinitionDetail,
 } from '../../../../lib/service-requests';
 
@@ -68,7 +70,10 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
       ? ((detail.formSchema as any).fields as any[])
       : [];
     const payload: Record<string, unknown> = {};
-    const attachments: { fieldKey: string; fileId: string }[] = [];
+    const pendingUploads: Array<{
+      fieldKey: string;
+      file: File;
+    }> = [];
 
     for (const field of fields) {
       if (!field || typeof field.key !== 'string') {
@@ -76,11 +81,11 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
       }
 
       if (field.type === 'file-upload') {
-        const fileIdValue = formData.get(`${field.key}__fileId`);
-        if (typeof fileIdValue === 'string' && fileIdValue.trim().length > 0) {
-          attachments.push({
+        const fileValue = formData.get(field.key);
+        if (typeof File !== 'undefined' && fileValue instanceof File && fileValue.size > 0) {
+          pendingUploads.push({
             fieldKey: field.key,
-            fileId: fileIdValue.trim(),
+            file: fileValue,
           });
         }
         continue;
@@ -97,8 +102,57 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
       }
     }
 
+    const validationErrors = validateSubmissionAgainstPublishedSchema({
+      formSchema: detail.formSchema,
+      payload,
+      attachments: pendingUploads.map((upload) => ({
+        fieldKey: upload.fieldKey,
+        fileId: `pending:${upload.file.name}`,
+      })),
+      visibleFieldKeys: detail.visibleFieldKeys,
+    });
+    if (validationErrors.length > 0) {
+      redirect(
+        `/client-portal/request-services/${definitionId}?error=${encodeURIComponent(
+          `Submission validation failed: ${validationErrors.join('; ')}`
+        )}`
+      );
+    }
+
+    const uploadedFileIds: string[] = [];
+
+    let result:
+      | Awaited<ReturnType<typeof submitPortalServiceRequest>>
+      | null = null;
+
     try {
-      const result = await submitPortalServiceRequest({
+      const attachments: {
+        fieldKey: string;
+        fileId: string;
+        fileName: string;
+        mimeType: string;
+        fileSize: number;
+      }[] = [];
+
+      for (const upload of pendingUploads) {
+        const mimeType = upload.file.type || 'application/octet-stream';
+        await StorageService.validateFileUpload(tenant, mimeType, upload.file.size);
+        const buffer = Buffer.from(await upload.file.arrayBuffer());
+        const fileRecord = await StorageService.uploadFile(tenant, buffer, upload.file.name, {
+          mime_type: mimeType,
+          uploaded_by_id: currentUser.user_id,
+        });
+        uploadedFileIds.push(fileRecord.file_id);
+        attachments.push({
+          fieldKey: upload.fieldKey,
+          fileId: fileRecord.file_id,
+          fileName: upload.file.name,
+          mimeType,
+          fileSize: upload.file.size,
+        });
+      }
+
+      result = await submitPortalServiceRequest({
         knex: trx,
         tenant,
         definitionId,
@@ -108,15 +162,21 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         payload,
         attachments,
       });
-      const search = new URLSearchParams();
-      search.set('submitted', result.submissionId);
-      if (result.createdTicketId) {
-        search.set('ticketId', result.createdTicketId);
-      }
-      redirect(`/client-portal/request-services/${definitionId}?${search.toString()}`);
     } catch (error) {
+      await Promise.allSettled(
+        uploadedFileIds.map((fileId) =>
+          StorageService.deleteFile(fileId, currentUser.user_id)
+        )
+      );
       const message = error instanceof Error ? error.message : 'submit_failed';
       redirect(`/client-portal/request-services/${definitionId}?error=${encodeURIComponent(message)}`);
     }
+
+    const search = new URLSearchParams();
+    search.set('submitted', result!.submissionId);
+    if (result?.createdTicketId) {
+      search.set('ticketId', result.createdTicketId);
+    }
+    redirect(`/client-portal/request-services/${definitionId}?${search.toString()}`);
   });
 });

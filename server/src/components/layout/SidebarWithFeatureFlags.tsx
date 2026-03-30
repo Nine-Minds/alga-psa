@@ -54,6 +54,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
   const { enabled: knowledgeBaseEnabled } = useFeatureFlag('knowledge-base', { defaultValue: false });
+  const { enabled: serviceRequestsEnabled } = useFeatureFlag('service-requests', { defaultValue: false });
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const { hasFeature } = useTier();
 
@@ -118,12 +119,16 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
           return { ...item, subItems: filteredSubItems };
         }
 
+        if (item.href === '/msp/service-requests' && !serviceRequestsEnabled) {
+          return null;
+        }
+
         return item;
-      })
+      }).filter((item): item is MenuItem => item !== null)
     }));
 
     return filterNavigationSectionsByFeatureAccess(filteredSections, hasFeature);
-  }, [canWorkflowAdmin, useNavigationSections, knowledgeBaseEnabled, hasFeature]);
+  }, [canWorkflowAdmin, useNavigationSections, knowledgeBaseEnabled, serviceRequestsEnabled, hasFeature]);
 
   return (
     <Sidebar

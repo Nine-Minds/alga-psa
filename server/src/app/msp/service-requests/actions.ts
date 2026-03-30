@@ -2,6 +2,9 @@
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
+import { getAllBoards, getAllPriorities, getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
+import { getTicketCategoriesByBoard } from '@alga-psa/tickets/actions';
 import {
   addBasicFormFieldToDefinitionDraft,
   archiveServiceRequestDefinitionFromManagement,
@@ -31,6 +34,7 @@ import {
   type ServiceRequestTemplateOption,
   type ServiceRequestDefinitionEditorData,
 } from '../../../lib/service-requests';
+import type { IBoard, IPriority, ITicketCategory, ITicketStatus, IUser } from '@alga-psa/types';
 
 type AuthUser = Parameters<Parameters<typeof withAuth>[0]>[0];
 
@@ -87,6 +91,70 @@ export const getServiceRequestDefinitionEditorDataAction = withAuth(async (
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'read', knex);
   return getServiceRequestDefinitionEditorData(knex, tenant, definitionId);
+});
+
+export interface ServiceRequestTicketRoutingReferenceData {
+  boards: IBoard[];
+  priorities: IPriority[];
+  users: IUser[];
+}
+
+export interface ServiceRequestTicketRoutingBoardData {
+  statuses: ITicketStatus[];
+  categories: ITicketCategory[];
+  boardConfig: {
+    category_type: 'custom' | 'itil';
+    priority_type: 'custom' | 'itil';
+    display_itil_impact?: boolean;
+    display_itil_urgency?: boolean;
+  } | null;
+}
+
+export const getServiceRequestTicketRoutingReferenceDataAction = withAuth(async (
+  user
+): Promise<ServiceRequestTicketRoutingReferenceData> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'read', knex);
+
+  const [boards, priorities, users] = await Promise.all([
+    getAllBoards(true),
+    getAllPriorities('ticket'),
+    getAllUsersBasic(false, 'internal'),
+  ]);
+
+  return {
+    boards,
+    priorities,
+    users,
+  };
+});
+
+export const getServiceRequestTicketRoutingBoardDataAction = withAuth(async (
+  user,
+  _ctx,
+  boardId: string
+): Promise<ServiceRequestTicketRoutingBoardData> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'read', knex);
+
+  if (!boardId || boardId.trim().length === 0) {
+    return {
+      statuses: [],
+      categories: [],
+      boardConfig: null,
+    };
+  }
+
+  const [statuses, boardCategoryData] = await Promise.all([
+    getTicketStatuses(boardId),
+    getTicketCategoriesByBoard(boardId),
+  ]);
+
+  return {
+    statuses,
+    categories: boardCategoryData.categories,
+    boardConfig: boardCategoryData.boardConfig,
+  };
 });
 
 export const createBlankServiceRequestDefinitionAction = withAuth(async (
@@ -190,6 +258,35 @@ export const updateServiceRequestExecutionConfigAction = withAuth(async (
   });
 });
 
+export const updateServiceRequestBasicsAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  basics: {
+    name: string;
+    description: string | null;
+    icon: string | null;
+    categoryId: string | null;
+    sortOrder: number;
+  }
+): Promise<ServiceRequestDefinitionManagementRow> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  return saveServiceRequestDefinitionDraft({
+    knex,
+    tenant,
+    definitionId,
+    updates: {
+      name: basics.name.trim(),
+      description: basics.description,
+      icon: basics.icon,
+      category_id: basics.categoryId,
+      sort_order: basics.sortOrder,
+    },
+    updatedBy: getActorId(user),
+  });
+});
+
 export const addServiceRequestFormFieldAction = withAuth(async (
   user,
   { tenant },
@@ -267,6 +364,82 @@ export const reorderServiceRequestFormFieldsAction = withAuth(async (
     tenant,
     definitionId,
     orderedFieldKeys,
+    updatedBy: getActorId(user),
+  });
+});
+
+export const updateServiceRequestFormBehaviorProviderAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  formBehaviorProvider: string
+): Promise<ServiceRequestDefinitionManagementRow> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  return saveServiceRequestDefinitionDraft({
+    knex,
+    tenant,
+    definitionId,
+    updates: {
+      form_behavior_provider: formBehaviorProvider,
+    },
+    updatedBy: getActorId(user),
+  });
+});
+
+export const updateServiceRequestFormBehaviorConfigAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  formBehaviorConfig: Record<string, unknown>
+): Promise<ServiceRequestDefinitionManagementRow> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  return saveServiceRequestDefinitionDraft({
+    knex,
+    tenant,
+    definitionId,
+    updates: {
+      form_behavior_config: formBehaviorConfig,
+    },
+    updatedBy: getActorId(user),
+  });
+});
+
+export const updateServiceRequestVisibilityProviderAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  visibilityProvider: string
+): Promise<ServiceRequestDefinitionManagementRow> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  return saveServiceRequestDefinitionDraft({
+    knex,
+    tenant,
+    definitionId,
+    updates: {
+      visibility_provider: visibilityProvider,
+    },
+    updatedBy: getActorId(user),
+  });
+});
+
+export const updateServiceRequestVisibilityConfigAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  visibilityConfig: Record<string, unknown>
+): Promise<ServiceRequestDefinitionManagementRow> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  return saveServiceRequestDefinitionDraft({
+    knex,
+    tenant,
+    definitionId,
+    updates: {
+      visibility_config: visibilityConfig,
+    },
     updatedBy: getActorId(user),
   });
 });

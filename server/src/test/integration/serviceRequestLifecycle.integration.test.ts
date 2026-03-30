@@ -3,11 +3,13 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { publishServiceRequestDefinition } from '../../lib/service-requests/definitionPublishing';
+import { saveServiceRequestDefinitionDraft } from '../../lib/service-requests/definitionManagement';
 import {
   archiveServiceRequestDefinition,
   createDraftFromLatestPublishedVersion,
   listPublishedServiceRequestDefinitions,
 } from '../../lib/service-requests/definitionLifecycle';
+import { getVisiblePublishedServiceRequestDefinitionDetail } from '../../lib/service-requests/portalDetail';
 
 describe('service request definition lifecycle', () => {
   let db: Knex;
@@ -136,5 +138,74 @@ describe('service request definition lifecycle', () => {
         execution_config: { boardId: 'hardware-priority' },
       },
     ]);
+  });
+
+  it('saving a published definition creates draft changes while the published version remains live', async () => {
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+    const requesterUserId = uuidv4();
+    const clientId = uuidv4();
+
+    await db('tenants').insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+
+    await db('service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'Account Access',
+      description: 'Published description',
+      form_schema: {
+        fields: [{ key: 'requested_access', type: 'short-text', label: 'Requested Access' }],
+      },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+      lifecycle_state: 'draft',
+    });
+
+    const published = await publishServiceRequestDefinition({
+      knex: db,
+      tenant,
+      definitionId,
+    });
+
+    const savedDraft = await saveServiceRequestDefinitionDraft({
+      knex: db,
+      tenant,
+      definitionId,
+      updates: {
+        name: 'Account Access (Draft Changes)',
+        description: 'Draft-only description',
+      },
+    });
+
+    expect(savedDraft.lifecycle_state).toBe('draft');
+    expect(savedDraft.name).toBe('Account Access (Draft Changes)');
+    expect(savedDraft.published_at).toBeTruthy();
+
+    const liveDefinitions = await listPublishedServiceRequestDefinitions(db, tenant);
+    expect(liveDefinitions.map((definition) => definition.definition_id)).toContain(definitionId);
+
+    const detail = await getVisiblePublishedServiceRequestDefinitionDetail(
+      db,
+      {
+        tenant,
+        requesterUserId,
+        clientId,
+        contactId: null,
+      },
+      definitionId
+    );
+
+    expect(detail).not.toBeNull();
+    expect(detail?.versionId).toBe(published.version_id);
+    expect(detail?.title).toBe('Account Access');
+    expect(detail?.description).toBe('Published description');
   });
 });

@@ -44,21 +44,28 @@ export async function listPublishedServiceRequestDefinitions(
   knex: Knex,
   tenant: string
 ): Promise<ServiceRequestDefinitionListItem[]> {
-  return (await knex('service_request_definitions')
-    .where({ tenant, lifecycle_state: 'published' })
-    .orderBy([{ column: 'sort_order', order: 'asc' }, { column: 'name', order: 'asc' }])
+  return (await knex('service_request_definitions as definition')
+    .where('definition.tenant', tenant)
+    .whereNot('definition.lifecycle_state', 'archived')
+    .whereExists(function publishedVersionExists() {
+      this.select(knex.raw('1'))
+        .from('service_request_definition_versions as version')
+        .whereRaw('version.tenant = definition.tenant')
+        .andWhereRaw('version.definition_id = definition.definition_id');
+    })
+    .orderBy([{ column: 'definition.sort_order', order: 'asc' }, { column: 'definition.name', order: 'asc' }])
     .select(
-      'tenant',
-      'definition_id',
-      'name',
-      'description',
-      'icon',
-      'category_id',
-      'category_name_snapshot',
-      'sort_order',
-      'linked_service_id',
-      'linked_service_name_snapshot',
-      'lifecycle_state'
+      'definition.tenant',
+      'definition.definition_id',
+      'definition.name',
+      'definition.description',
+      'definition.icon',
+      'definition.category_id',
+      'definition.category_name_snapshot',
+      'definition.sort_order',
+      'definition.linked_service_id',
+      'definition.linked_service_name_snapshot',
+      'definition.lifecycle_state'
     )) as ServiceRequestDefinitionListItem[];
 }
 

@@ -153,6 +153,27 @@ Controls access to the quoting functionality in the billing area.
 - When disabled (default): Quote-related sidebar items and billing tabs are hidden. Standalone quote pages show construction placeholder if accessed directly.
 - When enabled: Full quoting UI is accessible. Backend (models, actions, migrations) is always available regardless of flag state.
 
+### 11. `service-requests`
+Controls access to the new service request definition and client portal request-services UI.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Service Requests sidebar navigation item (hidden when disabled)
+  - Service Requests management page at `/msp/service-requests`
+  - Service Request definition editor at `/msp/service-requests/:definitionId`
+
+- **Client Portal:**
+  - Request Services navigation link (hidden when disabled)
+  - Request Services catalog page at `/client-portal/request-services`
+  - Request Service detail/submit page at `/client-portal/request-services/:definitionId`
+  - My Requests page at `/client-portal/request-services/my-requests`
+  - Submission detail page at `/client-portal/request-services/my-requests/:submissionId`
+
+**Behavior:**
+- When disabled (default): MSP and client-portal navigation links are hidden. Direct page access shows the standard feature placeholder.
+- When enabled: The full service request UI is accessible.
+- Backend (tables, actions, provider execution, portal submission processing) remains active regardless of flag state.
+
 ## Implementation Details
 
 ### User Identification

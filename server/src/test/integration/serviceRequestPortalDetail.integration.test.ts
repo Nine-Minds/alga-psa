@@ -3,6 +3,10 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { getVisiblePublishedServiceRequestDefinitionDetail } from '../../lib/service-requests/portalDetail';
+import {
+  registerServiceRequestProviders,
+  resetServiceRequestProviderRegistry,
+} from '../../lib/service-requests/providers/registry';
 
 describe('service request portal detail', () => {
   let db: Knex;
@@ -12,6 +16,7 @@ describe('service request portal detail', () => {
   });
 
   afterAll(async () => {
+    resetServiceRequestProviderRegistry();
     if (db) {
       await db.destroy();
     }
@@ -91,5 +96,80 @@ describe('service request portal detail', () => {
     expect((detail?.formSchema as any).fields).toEqual([
       { key: 'published_field', label: 'Published Field', type: 'short-text' },
     ]);
+  });
+
+  it('uses the published snapshot visibility rules instead of mutable draft visibility settings', async () => {
+    resetServiceRequestProviderRegistry();
+
+    const visibilityProviderKey = `test-visibility-${uuidv4()}`;
+    registerServiceRequestProviders({
+      executionProviders: [],
+      formBehaviorProviders: [],
+      visibilityProviders: [
+        {
+          key: visibilityProviderKey,
+          displayName: 'Test visibility',
+          validateConfig: () => ({ isValid: true }),
+          canAccessDefinition: async (_context, _definition, config) => config.allow !== false,
+        },
+      ],
+      templateProviders: [],
+      adminExtensionProviders: [],
+    });
+
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+    const requesterUserId = uuidv4();
+    const clientId = uuidv4();
+
+    await db('tenants').insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+
+    await db('service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'Draft-hidden request',
+      form_schema: { fields: [] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: visibilityProviderKey,
+      visibility_config: { allow: false },
+      lifecycle_state: 'published',
+    });
+
+    await db('service_request_definition_versions').insert({
+      tenant,
+      version_id: versionId,
+      definition_id: definitionId,
+      version_number: 1,
+      name: 'Published-visible request',
+      form_schema_snapshot: { fields: [] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: visibilityProviderKey,
+      visibility_config: { allow: true },
+    });
+
+    const detail = await getVisiblePublishedServiceRequestDefinitionDetail(
+      db,
+      {
+        tenant,
+        requesterUserId,
+        clientId,
+        contactId: null,
+      },
+      definitionId
+    );
+
+    expect(detail).not.toBeNull();
+    expect(detail?.title).toBe('Published-visible request');
   });
 });

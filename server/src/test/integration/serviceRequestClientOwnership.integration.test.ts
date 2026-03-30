@@ -29,6 +29,7 @@ describe('service request client ownership and attachment authorization', () => 
     await db('service_request_submissions').where({ tenant }).del();
     await db('service_request_definition_versions').where({ tenant }).del();
     await db('service_request_definitions').where({ tenant }).del();
+    await db('external_files').where({ tenant }).del();
     await db('clients').where({ tenant }).del();
     await db('users').where({ tenant }).del();
     await db('tenants').where({ tenant }).del();
@@ -67,6 +68,7 @@ describe('service request client ownership and attachment authorization', () => 
     const otherClientId = uuidv4();
     const definitionId = uuidv4();
     const versionId = uuidv4();
+    const attachmentFileId = uuidv4();
 
     await db('tenants').insert({
       tenant,
@@ -152,6 +154,19 @@ describe('service request client ownership and attachment authorization', () => 
       },
     });
 
+    await db('external_files').insert({
+      tenant,
+      file_id: attachmentFileId,
+      file_name: 'notes.txt',
+      original_name: 'notes.txt',
+      mime_type: 'text/plain',
+      file_size: 32,
+      storage_path: `service-requests/${attachmentFileId}`,
+      uploaded_by_id: requesterUserId,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
     await expect(
       submitPortalServiceRequest({
         knex: db,
@@ -183,7 +198,7 @@ describe('service request client ownership and attachment authorization', () => 
       attachments: [
         {
           fieldKey: 'supporting_file',
-          fileId: uuidv4(),
+          fileId: attachmentFileId,
           fileName: 'notes.txt',
         },
       ],

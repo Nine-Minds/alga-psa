@@ -8,6 +8,13 @@ import { getServiceRequestFormBehaviorProvider } from './providers/registry';
 interface PublishedDefinitionRow {
   tenant: string;
   definition_id: string;
+  lifecycle_state: 'draft' | 'published' | 'archived';
+}
+
+interface DefinitionVersionRow {
+  definition_id: string;
+  version_id: string;
+  version_number: number;
   name: string;
   description: string | null;
   icon: string | null;
@@ -16,14 +23,6 @@ interface PublishedDefinitionRow {
   linked_service_id: string | null;
   visibility_provider: string;
   visibility_config: Record<string, unknown> | null;
-}
-
-interface DefinitionVersionRow {
-  version_id: string;
-  version_number: number;
-  name: string;
-  description: string | null;
-  icon: string | null;
   form_schema_snapshot: Record<string, unknown>;
   execution_provider: string;
   execution_config: Record<string, unknown> | null;
@@ -56,53 +55,11 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
     .where({
       tenant: context.tenant,
       definition_id: definitionId,
-      lifecycle_state: 'published',
     })
-    .first(
-      'tenant',
-      'definition_id',
-      'name',
-      'description',
-      'icon',
-      'category_id',
-      'sort_order',
-      'linked_service_id',
-      'visibility_provider',
-      'visibility_config'
-    )) as PublishedDefinitionRow | undefined;
+    .whereNot('lifecycle_state', 'archived')
+    .first('tenant', 'definition_id', 'lifecycle_state')) as PublishedDefinitionRow | undefined;
 
   if (!definition) {
-    return null;
-  }
-
-  const visibilityProvider = getServiceRequestVisibilityProvider(definition.visibility_provider);
-  if (!visibilityProvider) {
-    return null;
-  }
-
-  const definitionForVisibility: Pick<ServiceRequestDefinitionShape, 'tenant' | 'metadata' | 'linkedServiceId'> = {
-    tenant: definition.tenant,
-    metadata: {
-      name: definition.name,
-      description: definition.description,
-      icon: definition.icon,
-      categoryId: definition.category_id,
-      sortOrder: definition.sort_order,
-    },
-    linkedServiceId: definition.linked_service_id,
-  };
-
-  const canAccess = await visibilityProvider.canAccessDefinition(
-    {
-      tenant: context.tenant,
-      requesterUserId: context.requesterUserId,
-      clientId: context.clientId,
-      contactId: context.contactId ?? null,
-    },
-    definitionForVisibility,
-    definition.visibility_config ?? {}
-  );
-  if (!canAccess) {
     return null;
   }
 
@@ -114,10 +71,16 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
     .orderBy('version_number', 'desc')
     .first(
       'version_id',
+      'definition_id',
       'version_number',
       'name',
       'description',
       'icon',
+      'category_id',
+      'sort_order',
+      'linked_service_id',
+      'visibility_provider',
+      'visibility_config',
       'form_schema_snapshot',
       'execution_provider',
       'execution_config',
@@ -126,6 +89,37 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
     )) as DefinitionVersionRow | undefined;
 
   if (!latestVersion) {
+    return null;
+  }
+
+  const visibilityProvider = getServiceRequestVisibilityProvider(latestVersion.visibility_provider);
+  if (!visibilityProvider) {
+    return null;
+  }
+
+  const definitionForVisibility: Pick<ServiceRequestDefinitionShape, 'tenant' | 'metadata' | 'linkedServiceId'> = {
+    tenant: definition.tenant,
+    metadata: {
+      name: latestVersion.name,
+      description: latestVersion.description,
+      icon: latestVersion.icon,
+      categoryId: latestVersion.category_id,
+      sortOrder: latestVersion.sort_order,
+    },
+    linkedServiceId: latestVersion.linked_service_id,
+  };
+
+  const canAccess = await visibilityProvider.canAccessDefinition(
+    {
+      tenant: context.tenant,
+      requesterUserId: context.requesterUserId,
+      clientId: context.clientId,
+      contactId: context.contactId ?? null,
+    },
+    definitionForVisibility,
+    latestVersion.visibility_config ?? {}
+  );
+  if (!canAccess) {
     return null;
   }
 

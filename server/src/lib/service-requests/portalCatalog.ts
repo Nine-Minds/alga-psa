@@ -3,7 +3,10 @@ import { getServiceRequestVisibilityProvider } from './providers/registry';
 import type { ServiceRequestDefinitionShape } from './domain';
 
 interface PortalCatalogDefinitionRow {
-  tenant: string;
+  definition_id: string;
+}
+
+interface PortalCatalogDefinitionVersionRow {
   definition_id: string;
   name: string;
   description: string | null;
@@ -42,18 +45,32 @@ export async function listVisibleServiceRequestCatalogItems(
   knex: Knex,
   context: ServiceRequestPortalCatalogContext
 ): Promise<ServiceRequestPortalCatalogItem[]> {
-  const rows = (await knex('service_request_definitions')
-    .where({
-      tenant: context.tenant,
-      lifecycle_state: 'published',
+  const definitionRows = (await knex('service_request_definitions as definition')
+    .where('definition.tenant', context.tenant)
+    .whereNot('definition.lifecycle_state', 'archived')
+    .whereExists(function publishedVersionExists() {
+      this.select(knex.raw('1'))
+        .from('service_request_definition_versions as version')
+        .whereRaw('version.tenant = definition.tenant')
+        .andWhereRaw('version.definition_id = definition.definition_id');
     })
+    .select('definition.definition_id')) as PortalCatalogDefinitionRow[];
+
+  if (definitionRows.length === 0) {
+    return [];
+  }
+
+  const versionRows = (await knex('service_request_definition_versions')
+    .where({ tenant: context.tenant })
+    .whereIn(
+      'definition_id',
+      definitionRows.map((row) => row.definition_id)
+    )
     .orderBy([
-      { column: 'category_name_snapshot', order: 'asc', nulls: 'last' },
-      { column: 'sort_order', order: 'asc' },
-      { column: 'name', order: 'asc' },
+      { column: 'definition_id', order: 'asc' },
+      { column: 'version_number', order: 'desc' },
     ])
     .select(
-      'tenant',
       'definition_id',
       'name',
       'description',
@@ -64,11 +81,23 @@ export async function listVisibleServiceRequestCatalogItems(
       'linked_service_id',
       'visibility_provider',
       'visibility_config'
-    )) as PortalCatalogDefinitionRow[];
+    )) as PortalCatalogDefinitionVersionRow[];
+
+  const latestVersionByDefinitionId = new Map<string, PortalCatalogDefinitionVersionRow>();
+  for (const row of versionRows) {
+    if (!latestVersionByDefinitionId.has(row.definition_id)) {
+      latestVersionByDefinitionId.set(row.definition_id, row);
+    }
+  }
 
   const visible: ServiceRequestPortalCatalogItem[] = [];
 
-  for (const row of rows) {
+  for (const definitionRow of definitionRows) {
+    const row = latestVersionByDefinitionId.get(definitionRow.definition_id);
+    if (!row) {
+      continue;
+    }
+
     const visibilityProvider = getServiceRequestVisibilityProvider(row.visibility_provider);
     if (!visibilityProvider) {
       continue;
@@ -78,7 +107,7 @@ export async function listVisibleServiceRequestCatalogItems(
       ServiceRequestDefinitionShape,
       'tenant' | 'metadata' | 'linkedServiceId'
     > = {
-      tenant: row.tenant,
+      tenant: context.tenant,
       metadata: {
         name: row.name,
         description: row.description,
@@ -105,7 +134,7 @@ export async function listVisibleServiceRequestCatalogItems(
     }
 
     visible.push({
-      definitionId: row.definition_id,
+      definitionId: definitionRow.definition_id,
       title: row.name,
       description: row.description,
       icon: row.icon,
@@ -115,7 +144,17 @@ export async function listVisibleServiceRequestCatalogItems(
     });
   }
 
-  return visible;
+  return visible.sort((left, right) => {
+    const leftCategory = left.categoryName ?? 'Other Services';
+    const rightCategory = right.categoryName ?? 'Other Services';
+    if (leftCategory !== rightCategory) {
+      return leftCategory.localeCompare(rightCategory);
+    }
+    if (left.sortOrder !== right.sortOrder) {
+      return left.sortOrder - right.sortOrder;
+    }
+    return left.title.localeCompare(right.title);
+  });
 }
 
 export function groupServiceRequestCatalogItemsByCategory(

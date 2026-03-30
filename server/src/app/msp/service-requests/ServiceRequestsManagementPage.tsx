@@ -28,6 +28,7 @@ interface ServiceRequestDefinitionRow {
   name: string;
   description: string | null;
   lifecycle_state: 'draft' | 'published' | 'archived';
+  published_at: string | Date | null;
   updated_at: string | Date;
 }
 
@@ -38,12 +39,15 @@ interface ServiceRequestTemplateRow {
   providerDisplayName: string;
 }
 
-function lifecycleLabel(state: ServiceRequestDefinitionRow['lifecycle_state']): string {
-  if (state === 'published') {
+function lifecycleLabel(row: ServiceRequestDefinitionRow): string {
+  if (row.lifecycle_state === 'published') {
     return 'Published';
   }
-  if (state === 'archived') {
+  if (row.lifecycle_state === 'archived') {
     return 'Archived';
+  }
+  if (row.published_at) {
+    return 'Draft Changes';
   }
   return 'Draft';
 }
@@ -105,7 +109,7 @@ export default function ServiceRequestsManagementPage() {
       {
         title: 'State',
         dataIndex: 'lifecycle_state',
-        render: (value) => lifecycleLabel(value as ServiceRequestDefinitionRow['lifecycle_state']),
+        render: (_value, row) => lifecycleLabel(row),
       },
       {
         title: 'Updated',

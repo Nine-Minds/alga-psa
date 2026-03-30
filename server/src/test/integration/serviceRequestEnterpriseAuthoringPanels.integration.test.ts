@@ -67,9 +67,12 @@ describe('service request enterprise authoring panel gating', () => {
       editorData?.execution.availableExecutionProviders.map((provider) => provider.key) ?? [];
     const formBehaviorProviderKeys =
       editorData?.execution.availableFormBehaviorProviders.map((provider) => provider.key) ?? [];
+    const visibilityProviderKeys =
+      editorData?.execution.availableVisibilityProviders.map((provider) => provider.key) ?? [];
 
     expect(executionProviderKeys).toContain('workflow-only');
     expect(formBehaviorProviderKeys).toContain('advanced');
+    expect(visibilityProviderKeys).toContain('advanced-visibility');
     expect(editorData?.execution.showWorkflowExecutionConfigPanel).toBe(true);
     expect(editorData?.execution.showAdvancedFormBehaviorConfigPanel).toBe(true);
   });
@@ -111,9 +114,12 @@ describe('service request enterprise authoring panel gating', () => {
       editorData?.execution.availableExecutionProviders.map((provider) => provider.key) ?? [];
     const formBehaviorProviderKeys =
       editorData?.execution.availableFormBehaviorProviders.map((provider) => provider.key) ?? [];
+    const visibilityProviderKeys =
+      editorData?.execution.availableVisibilityProviders.map((provider) => provider.key) ?? [];
 
     expect(executionProviderKeys).toEqual(['ticket-only']);
     expect(formBehaviorProviderKeys).toEqual(['basic']);
+    expect(visibilityProviderKeys).toEqual(['all-authenticated-client-users']);
     expect(editorData?.execution.showWorkflowExecutionConfigPanel).toBe(false);
     expect(editorData?.execution.showAdvancedFormBehaviorConfigPanel).toBe(false);
   });

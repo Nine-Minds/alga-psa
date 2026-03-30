@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import {
   archiveServiceRequestDefinition,
+  createDraftFromLatestPublishedVersion,
   unarchiveServiceRequestDefinition,
 } from './definitionLifecycle';
 import { listServiceRequestTemplateProviders } from './providers/registry';
@@ -25,6 +26,24 @@ export interface ServiceRequestDefinitionManagementRow {
 
 interface ServiceRequestDefinitionSourceRow extends ServiceRequestDefinitionManagementRow {
   form_schema: Record<string, unknown>;
+  execution_provider: string;
+  execution_config: Record<string, unknown>;
+  form_behavior_provider: string;
+  form_behavior_config: Record<string, unknown>;
+  visibility_provider: string;
+  visibility_config: Record<string, unknown>;
+}
+
+interface ServiceRequestDefinitionVersionSourceRow {
+  name: string;
+  description: string | null;
+  icon: string | null;
+  category_id: string | null;
+  category_name_snapshot: string | null;
+  sort_order: number;
+  linked_service_id: string | null;
+  linked_service_name_snapshot: string | null;
+  form_schema_snapshot: Record<string, unknown>;
   execution_provider: string;
   execution_config: Record<string, unknown>;
   form_behavior_provider: string;
@@ -93,6 +112,33 @@ export interface LinkableServiceOption {
   service_id: string;
   service_name: string;
   description: string | null;
+}
+
+function jsonValueEquals(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
+function definitionMatchesPublishedVersion(
+  definition: ServiceRequestDefinitionSourceRow,
+  version: ServiceRequestDefinitionVersionSourceRow
+): boolean {
+  return (
+    definition.name === version.name &&
+    definition.description === version.description &&
+    definition.icon === version.icon &&
+    definition.category_id === version.category_id &&
+    definition.category_name_snapshot === version.category_name_snapshot &&
+    definition.sort_order === version.sort_order &&
+    definition.linked_service_id === version.linked_service_id &&
+    definition.linked_service_name_snapshot === version.linked_service_name_snapshot &&
+    definition.execution_provider === version.execution_provider &&
+    definition.form_behavior_provider === version.form_behavior_provider &&
+    definition.visibility_provider === version.visibility_provider &&
+    jsonValueEquals(definition.form_schema, version.form_schema_snapshot) &&
+    jsonValueEquals(definition.execution_config, version.execution_config) &&
+    jsonValueEquals(definition.form_behavior_config, version.form_behavior_config) &&
+    jsonValueEquals(definition.visibility_config, version.visibility_config)
+  );
 }
 
 export async function listServiceRequestDefinitionsForManagement(
@@ -275,23 +321,62 @@ export async function saveServiceRequestDefinitionDraft({
   updatedBy = null,
   updates,
 }: SaveDraftDefinitionInput): Promise<ServiceRequestDefinitionManagementRow> {
-  const [saved] = (await knex('service_request_definitions')
-    .where({ tenant, definition_id: definitionId })
-    .update({
-      ...updates,
-      lifecycle_state: 'draft',
-      published_by: null,
-      published_at: null,
-      updated_by: updatedBy,
-      updated_at: knex.fn.now(),
-    })
-    .returning('*')) as ServiceRequestDefinitionManagementRow[];
+  return knex.transaction(async (trx) => {
+    const existing = (await trx('service_request_definitions')
+      .where({ tenant, definition_id: definitionId })
+      .first()) as ServiceRequestDefinitionSourceRow | undefined;
 
-  if (!saved) {
-    throw new Error('Service request definition not found');
-  }
+    if (!existing) {
+      throw new Error('Service request definition not found');
+    }
 
-  return saved;
+    if (existing.lifecycle_state === 'published') {
+      const latestVersion = (await trx('service_request_definition_versions')
+        .where({ tenant, definition_id: definitionId })
+        .orderBy('version_number', 'desc')
+        .first(
+          'name',
+          'description',
+          'icon',
+          'category_id',
+          'category_name_snapshot',
+          'sort_order',
+          'linked_service_id',
+          'linked_service_name_snapshot',
+          'form_schema_snapshot',
+          'execution_provider',
+          'execution_config',
+          'form_behavior_provider',
+          'form_behavior_config',
+          'visibility_provider',
+          'visibility_config'
+        )) as ServiceRequestDefinitionVersionSourceRow | undefined;
+
+      if (latestVersion && definitionMatchesPublishedVersion(existing, latestVersion)) {
+        await createDraftFromLatestPublishedVersion(trx, tenant, definitionId, updatedBy);
+      } else {
+        await trx('service_request_definitions')
+          .where({ tenant, definition_id: definitionId })
+          .update({
+            lifecycle_state: 'draft',
+            updated_by: updatedBy,
+            updated_at: trx.fn.now(),
+          });
+      }
+    }
+
+    const [saved] = (await trx('service_request_definitions')
+      .where({ tenant, definition_id: definitionId })
+      .update({
+        ...updates,
+        lifecycle_state: 'draft',
+        updated_by: updatedBy,
+        updated_at: trx.fn.now(),
+      })
+      .returning('*')) as ServiceRequestDefinitionManagementRow[];
+
+    return saved;
+  });
 }
 
 export async function searchServiceCatalogForLinking(
