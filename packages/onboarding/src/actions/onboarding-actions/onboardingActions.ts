@@ -126,7 +126,7 @@ export const saveClientInfo = withAuth(async (
       // Save progress to tenant settings
       // IMPORTANT: Do NOT save user-specific fields (firstName, lastName, email) to tenant-wide storage
       // These fields are specific to the current user and should not be shared across users in the tenant
-      // Only save tenant-level data like clientName
+      // Only save tenant-level data like tenantName
       const progressData: any = {
         tenantName: data.tenantName
       };

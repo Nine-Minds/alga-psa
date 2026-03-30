@@ -189,7 +189,7 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
 
       <div className="space-y-2">
         <Label htmlFor="tenantName">
-          {t('clientInfoStep.fields.tenantName.label', {
+          {t('clientInfoStep.fields.companyName.label', {
             defaultValue: 'Company Name'
           })} <span className="text-red-500">*</span>
         </Label>
@@ -197,7 +197,7 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           id="tenantName"
           value={data.tenantName}
           onChange={(e) => updateData({ tenantName: e.target.value })}
-          placeholder={t('clientInfoStep.fields.tenantName.placeholder', {
+          placeholder={t('clientInfoStep.fields.companyName.placeholder', {
             defaultValue: 'Acme IT Solutions'
           })}
           required
