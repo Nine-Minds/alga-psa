@@ -2,6 +2,7 @@
  * @param {import('knex').Knex} knex
  */
 exports.up = async function up(knex) {
+  if (!(await knex.schema.hasTable('service_request_definitions'))) {
   await knex.schema.createTable('service_request_definitions', (table) => {
     table.uuid('tenant').notNullable();
     table.uuid('definition_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -34,8 +35,8 @@ exports.up = async function up(knex) {
 
     table.primary(['tenant', 'definition_id']);
     table.foreign('tenant').references('tenants.tenant').onDelete('CASCADE');
-    table.foreign(['tenant', 'category_id']).references(['tenant', 'category_id']).inTable('service_categories').onDelete('SET NULL');
-    table.foreign(['tenant', 'linked_service_id']).references(['tenant', 'service_id']).inTable('service_catalog').onDelete('SET NULL');
+    table.foreign(['tenant', 'category_id']).references(['tenant', 'category_id']).inTable('service_categories').onDelete('RESTRICT');
+    table.foreign(['tenant', 'linked_service_id']).references(['tenant', 'service_id']).inTable('service_catalog').onDelete('RESTRICT');
   });
 
   await knex.schema.raw(`
@@ -58,7 +59,9 @@ exports.up = async function up(knex) {
     CREATE INDEX idx_service_request_definitions_tenant_linked_service
     ON service_request_definitions (tenant, linked_service_id)
   `);
+  } // end if !hasTable('service_request_definitions')
 
+  if (!(await knex.schema.hasTable('service_request_definition_versions'))) {
   await knex.schema.createTable('service_request_definition_versions', (table) => {
     table.uuid('tenant').notNullable();
     table.uuid('version_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -102,7 +105,9 @@ exports.up = async function up(knex) {
     CREATE INDEX idx_service_request_definition_versions_tenant_definition
     ON service_request_definition_versions (tenant, definition_id)
   `);
+  } // end if !hasTable('service_request_definition_versions')
 
+  if (!(await knex.schema.hasTable('service_request_submissions'))) {
   await knex.schema.createTable('service_request_submissions', (table) => {
     table.uuid('tenant').notNullable();
     table.uuid('submission_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -157,7 +162,9 @@ exports.up = async function up(knex) {
     CREATE INDEX idx_service_request_submissions_tenant_requester_created_at
     ON service_request_submissions (tenant, requester_user_id, created_at DESC)
   `);
+  } // end if !hasTable('service_request_submissions')
 
+  if (!(await knex.schema.hasTable('service_request_submission_attachments'))) {
   await knex.schema.createTable('service_request_submission_attachments', (table) => {
     table.uuid('tenant').notNullable();
     table.uuid('submission_attachment_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -185,6 +192,54 @@ exports.up = async function up(knex) {
     CREATE INDEX idx_service_request_submission_attachments_tenant_submission
     ON service_request_submission_attachments (tenant, submission_id)
   `);
+  } // end if !hasTable('service_request_submission_attachments')
+
+  // Repair: if the table was created in a prior partial run with ON DELETE SET NULL,
+  // replace those FKs with ON DELETE RESTRICT (Citus requires this).
+  if (await knex.schema.hasTable('service_request_definitions')) {
+    const setNullFks = await knex.raw(`
+      SELECT con.conname
+      FROM pg_constraint con
+      JOIN pg_class rel ON rel.oid = con.conrelid
+      WHERE rel.relname = 'service_request_definitions'
+        AND con.contype = 'f'
+        AND con.confdeltype = 'n'  -- 'n' = SET NULL
+    `);
+    for (const row of (setNullFks.rows || [])) {
+      const fkName = row.conname;
+
+      // Read the referenced table and columns so we can re-create the FK
+      const fkMeta = await knex.raw(`
+        SELECT
+          ref.relname  AS ref_table,
+          array_agg(a1.attname ORDER BY u.i) AS fk_cols,
+          array_agg(a2.attname ORDER BY u.i) AS ref_cols
+        FROM pg_constraint con
+        JOIN pg_class ref ON ref.oid = con.confrelid
+        CROSS JOIN LATERAL unnest(con.conkey, con.confkey) WITH ORDINALITY AS u(fk_attnum, ref_attnum, i)
+        JOIN pg_attribute a1 ON a1.attrelid = con.conrelid AND a1.attnum = u.fk_attnum
+        JOIN pg_attribute a2 ON a2.attrelid = con.confrelid AND a2.attnum = u.ref_attnum
+        WHERE con.conname = '${fkName}'
+        GROUP BY ref.relname
+      `);
+
+      if (fkMeta.rows?.length) {
+        const { ref_table } = fkMeta.rows[0];
+        // pg returns array_agg as a pg array string "{a,b}" — parse to JS array
+        const parsePgArray = (v) => Array.isArray(v) ? v : String(v).replace(/^\{|\}$/g, '').split(',');
+        const fkCols = parsePgArray(fkMeta.rows[0].fk_cols);
+        const refCols = parsePgArray(fkMeta.rows[0].ref_cols);
+        await knex.raw(`ALTER TABLE service_request_definitions DROP CONSTRAINT "${fkName}"`);
+        await knex.raw(`
+          ALTER TABLE service_request_definitions
+          ADD CONSTRAINT "${fkName}"
+          FOREIGN KEY (${fkCols.map(c => `"${c}"`).join(', ')})
+          REFERENCES "${ref_table}" (${refCols.map(c => `"${c}"`).join(', ')})
+          ON DELETE RESTRICT
+        `);
+      }
+    }
+  }
 
   const citusFn = await knex.raw(`
     SELECT EXISTS (
@@ -194,10 +249,22 @@ exports.up = async function up(knex) {
   `);
 
   if (citusFn.rows?.[0]?.exists) {
-    await knex.raw("SELECT create_distributed_table('service_request_definitions', 'tenant')");
-    await knex.raw("SELECT create_distributed_table('service_request_definition_versions', 'tenant')");
-    await knex.raw("SELECT create_distributed_table('service_request_submissions', 'tenant')");
-    await knex.raw("SELECT create_distributed_table('service_request_submission_attachments', 'tenant')");
+    const tables = [
+      'service_request_definitions',
+      'service_request_definition_versions',
+      'service_request_submissions',
+      'service_request_submission_attachments',
+    ];
+    for (const t of tables) {
+      const already = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM citus_tables WHERE table_name = '${t}'::regclass
+        ) AS exists
+      `).catch(() => ({ rows: [{ exists: false }] }));
+      if (!already.rows?.[0]?.exists) {
+        await knex.raw(`SELECT create_distributed_table('${t}', 'tenant')`);
+      }
+    }
   } else {
     console.warn('[create_service_request_domain_tables] Skipping create_distributed_table (function unavailable)');
   }

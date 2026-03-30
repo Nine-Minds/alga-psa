@@ -560,6 +560,13 @@ const Service = {
 
         log.info(`[Service.delete] Updated ${updatedTemplateTasks} project_template_tasks records for service ${service_id}`);
 
+        // Clear linked_service_id from service_request_definitions (replaces ON DELETE SET NULL)
+        const updatedRequestDefs = await knexOrTrx('service_request_definitions')
+          .where({ linked_service_id: service_id, tenant })
+          .update({ linked_service_id: null, linked_service_name_snapshot: null });
+
+        log.info(`[Service.delete] Updated ${updatedRequestDefs} service_request_definitions records for service ${service_id}`);
+
         // Then delete the service
         const deletedCount = await knexOrTrx('service_catalog')
           .where({
@@ -607,6 +614,13 @@ const Service = {
             });
 
           log.info(`[Service.delete] Updated ${updatedTemplateTasks} project_template_tasks records for service ${service_id}`);
+
+          // Clear linked_service_id from service_request_definitions (replaces ON DELETE SET NULL)
+          const updatedRequestDefs = await trx('service_request_definitions')
+            .where({ linked_service_id: service_id, tenant })
+            .update({ linked_service_id: null, linked_service_name_snapshot: null });
+
+          log.info(`[Service.delete] Updated ${updatedRequestDefs} service_request_definitions records for service ${service_id}`);
 
           // Then delete the service
           const deletedCount = await trx('service_catalog')
