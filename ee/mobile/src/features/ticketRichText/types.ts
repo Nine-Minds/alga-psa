@@ -9,9 +9,25 @@ export type TicketMobileEditorCommand =
   | "toggle-bullet-list"
   | "toggle-ordered-list"
   | "undo"
-  | "redo";
+  | "redo"
+  | "insert-mention";
 
 export type TicketMobileEditorRequest = "get-html" | "get-json";
+
+export type TicketMobileEditorMentionPayload = {
+  userId: string;
+  username: string;
+  displayName: string;
+  from: number;
+  to: number;
+};
+
+export type TicketMobileEditorMentionQueryPayload = {
+  active: boolean;
+  query: string;
+  from: number;
+  to: number;
+};
 
 export type TicketMobileEditorToolbarState = {
   bold: boolean;
@@ -48,7 +64,7 @@ export type TicketMobileEditorNativeToWebMessage =
       type: "command";
       payload: {
         command: TicketMobileEditorCommand;
-        value?: string | boolean;
+        value?: string | boolean | TicketMobileEditorMentionPayload;
       };
     }
   | {
@@ -112,4 +128,8 @@ export type TicketMobileEditorWebToNativeMessage =
       payload: {
         src: string;
       };
+    }
+  | {
+      type: "mention-query";
+      payload: TicketMobileEditorMentionQueryPayload;
     };

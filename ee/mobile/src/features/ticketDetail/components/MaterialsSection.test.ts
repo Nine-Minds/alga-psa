@@ -19,8 +19,9 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+function MockBadge(props: Record<string, unknown>) { return React.createElement("span", props, props.label as React.ReactNode); }
 vi.mock("../../../ui/components/Badge", () => ({
-  Badge: (props: Record<string, unknown>) => React.createElement("MockBadge", props, props.label as React.ReactNode),
+  Badge: MockBadge,
 }));
 
 vi.mock("../../../ui/components/Card", () => ({
@@ -36,28 +37,29 @@ vi.mock("../../../ui/components/SectionHeader", () => ({
   SectionHeader: (props: Record<string, unknown>) => React.createElement("MockSectionHeader", props, props.action as React.ReactNode),
 }));
 
+function MockEntityPickerModal(props: Record<string, unknown>) {
+  if (!props.visible) return null;
+  const items = (props.items as Array<Record<string, unknown>>) ?? [];
+  return React.createElement(
+    "div",
+    props,
+    [
+      React.createElement(TextInput, {
+        key: "search",
+        accessibilityLabel: "product-search",
+        onChangeText: props.onSearch as ((value: string) => void) | undefined,
+      }),
+      ...items.map((item) => React.createElement("div", {
+        key: item.id as string,
+        accessibilityLabel: item.label as string,
+        subtitle: item.subtitle as string | undefined,
+        onPress: () => (props.onSelect as (id: string, label: string) => void)(item.id as string, item.label as string),
+      })),
+    ],
+  );
+}
 vi.mock("../../../ui/components/EntityPickerModal", () => ({
-  EntityPickerModal: (props: Record<string, unknown>) => {
-    if (!props.visible) return null;
-    const items = (props.items as Array<Record<string, unknown>>) ?? [];
-    return React.createElement(
-      "MockEntityPickerModal",
-      props,
-      [
-        React.createElement(TextInput, {
-          key: "search",
-          accessibilityLabel: "product-search",
-          onChangeText: props.onSearch as ((value: string) => void) | undefined,
-        }),
-        ...items.map((item) => React.createElement("MockEntityPickerItem", {
-          key: item.id as string,
-          accessibilityLabel: item.label as string,
-          subtitle: item.subtitle as string | undefined,
-          onPress: () => (props.onSelect as (id: string, label: string) => void)(item.id as string, item.label as string),
-        })),
-      ],
-    );
-  },
+  EntityPickerModal: MockEntityPickerModal,
 }));
 
 vi.mock("../../../api/materials", () => ({
@@ -115,7 +117,6 @@ describe("MaterialsSection", () => {
             service_name: "SSD Drive",
             sku: "SSD-1TB",
             default_rate: 7500,
-            currency_code: "USD",
           },
         ],
       },
@@ -148,7 +149,7 @@ describe("MaterialsSection", () => {
     expect(textContent).toContain("SSD Drive");
     expect(textContent).toContain("SSD-1TB");
     expect(textContent.some((value) => value.includes("Qty 2"))).toBe(true);
-    const badges = renderer.root.findAllByType("MockBadge");
+    const badges = renderer.root.findAllByType(MockBadge);
     expect(badges.some((node) => node.props.label === "1")).toBe(true);
     expect(badges.some((node) => node.props.label === "materials.billed")).toBe(true);
   });
@@ -170,7 +171,7 @@ describe("MaterialsSection", () => {
     await flushAsyncWork();
 
     expect(listProductsMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ search: "", limit: 20 }));
-    expect(renderer.root.findByType("MockEntityPickerModal")).toBeTruthy();
+    expect(renderer.root.findByType(MockEntityPickerModal)).toBeTruthy();
 
     await act(async () => {
       renderer.root.findByProps({ accessibilityLabel: "product-search" }).props.onChangeText("ssd");
@@ -178,7 +179,7 @@ describe("MaterialsSection", () => {
 
     expect(listProductsMock).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ search: "ssd", limit: 20 }));
     const pickerItem = renderer.root.findByProps({ accessibilityLabel: "SSD Drive" });
-    expect(pickerItem.props.subtitle).toBe("SSD-1TB");
+    expect(pickerItem.props.subtitle).toBe("SSD-1TB — $75.00");
   });
 
   it("shows the quantity/rate modal with the product default rate after selection", async () => {

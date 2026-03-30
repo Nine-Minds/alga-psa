@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getTicketDocumentsMock = vi.fn();
 const uploadTicketDocumentMock = vi.fn();
-const downloadAsyncMock = vi.fn();
+const fetchMock = vi.fn();
+globalThis.fetch = fetchMock;
 const requestCameraPermissionsAsyncMock = vi.fn();
 const launchCameraAsyncMock = vi.fn();
 const getDocumentAsyncMock = vi.fn();
@@ -17,8 +18,9 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+function MockBadge(props: Record<string, unknown>) { return React.createElement("span", props, props.label as React.ReactNode); }
 vi.mock("../../../ui/components/Badge", () => ({
-  Badge: (props: Record<string, unknown>) => React.createElement("MockBadge", props, props.label as React.ReactNode),
+  Badge: MockBadge,
 }));
 
 vi.mock("../../../ui/components/Card", () => ({
@@ -39,10 +41,15 @@ vi.mock("../../../api/documents", () => ({
   uploadTicketDocument: (...args: unknown[]) => uploadTicketDocumentMock(...args),
 }));
 
+const mockFileWrite = vi.fn();
+const mockFileUri = "file:///cache/test-file";
 vi.mock("expo-file-system", () => ({
-  cacheDirectory: "file:///cache/",
-  documentDirectory: "file:///documents/",
-  downloadAsync: (...args: unknown[]) => downloadAsyncMock(...args),
+  Paths: { cache: "file:///cache/" },
+  File: class MockFile {
+    uri = mockFileUri;
+    write = mockFileWrite;
+    constructor() { /* noop */ }
+  },
 }));
 
 vi.mock("expo-image-picker", () => ({
@@ -95,7 +102,7 @@ describe("DocumentsSection", () => {
     vi.clearAllMocks();
     getTicketDocumentsMock.mockResolvedValue({ ok: true, data: { data: [] } });
     uploadTicketDocumentMock.mockResolvedValue({ ok: true, data: { data: { document_id: "doc-1" } } });
-    downloadAsyncMock.mockResolvedValue({ uri: "file:///cache/report.pdf" });
+    fetchMock.mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) });
     requestCameraPermissionsAsyncMock.mockResolvedValue({ granted: true });
     launchCameraAsyncMock.mockResolvedValue({ canceled: true, assets: [] });
     getDocumentAsyncMock.mockResolvedValue({ canceled: true, assets: [] });
@@ -126,7 +133,7 @@ describe("DocumentsSection", () => {
 
     expect(textContent).toContain("report.pdf");
     expect(textContent.some((value) => value.includes("PDF"))).toBe(true);
-    expect(renderer.root.findByType("MockBadge").props.label).toBe("1");
+    expect(renderer.root.findByType(MockBadge).props.label).toBe("1");
   });
 
   it("shows the empty state when no documents are attached", async () => {
@@ -161,16 +168,12 @@ describe("DocumentsSection", () => {
       await documentPressable.props.onPress();
     });
 
-    expect(downloadAsyncMock).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "https://example.com/api/documents/download/file-1",
-      "file:///cache/report.pdf",
-      {
-        headers: {
-          "x-api-key": "api-key-1",
-        },
-      },
+      { headers: { "x-api-key": "api-key-1" } },
     );
-    expect(Linking.openURL).toHaveBeenCalledWith("file:///cache/report.pdf");
+    expect(mockFileWrite).toHaveBeenCalled();
+    expect(Linking.openURL).toHaveBeenCalledWith(mockFileUri);
   });
 
   it("shows upload options and uploads a picked file, then refreshes the list", async () => {

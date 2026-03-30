@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Platform, Pressable, Text, View } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import {
@@ -6,8 +6,10 @@ import {
 } from "./bridge";
 import type {
   TicketMobileEditorCommand,
+  TicketMobileEditorMentionQueryPayload,
   TicketMobileEditorStatePayload,
 } from "./types";
+import { MentionSuggestionList, type MentionSuggestionItem } from "./MentionSuggestionList";
 import { useTheme } from "../../ui/ThemeContext";
 import {
   createTicketRichTextInjectionScript,
@@ -38,6 +40,7 @@ function buildDarkModeStyleTag(colors: {
     a { color: ${colors.primary} !important; }
     code { background-color: rgba(255,255,255,0.1) !important; }
     blockquote { border-left-color: ${colors.border} !important; }
+    .mention-badge { background-color: rgba(59,130,246,0.2) !important; color: #93c5fd !important; }
   </style>`;
 }
 
@@ -94,6 +97,9 @@ export type TicketRichTextEditorProps = {
   onLinkPress?: (url: string) => void;
   qaAutoPressFirstLink?: boolean;
   imageAuth?: { baseUrl: string; apiKey: string };
+  onMentionSearch?: (query: string, signal: AbortSignal) => Promise<MentionSuggestionItem[]>;
+  mentionBaseUrl?: string | null;
+  mentionAuthToken?: string;
 };
 
 export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRichTextEditorProps>(
@@ -117,6 +123,9 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       onLinkPress,
       qaAutoPressFirstLink = false,
       imageAuth,
+      onMentionSearch,
+      mentionBaseUrl,
+      mentionAuthToken,
     },
     ref,
   ) {
@@ -135,6 +144,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       onContentHeight,
       onError,
       onLinkPress,
+      onMentionSearch,
     });
     callbacksRef.current = {
       onReadyChange,
@@ -143,6 +153,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       onContentHeight,
       onError,
       onLinkPress,
+      onMentionSearch,
     };
     const imageAuthRef = useRef(imageAuth);
     imageAuthRef.current = imageAuth;
@@ -153,6 +164,13 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       ...EMPTY_EDITOR_STATE,
       editable,
     });
+
+    // Mention suggestion state
+    const [mentionState, setMentionState] = useState<TicketMobileEditorMentionQueryPayload | null>(null);
+    const mentionStateRef = useRef<TicketMobileEditorMentionQueryPayload | null>(null);
+    const [mentionResults, setMentionResults] = useState<MentionSuggestionItem[]>([]);
+    const [mentionLoading, setMentionLoading] = useState(false);
+    const mentionAbortRef = useRef<AbortController | null>(null);
 
     const reportError = useMemo(
       () => (payload: { code: string; message: string; requestId?: string }) => {
@@ -204,6 +222,43 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
           callbacksRef.current.onContentHeight?.(payload);
         },
         onError: reportError,
+        onMentionQuery(payload) {
+          if (!payload.active) {
+            // Delay clearing so a tap on the suggestion list can still
+            // read mentionStateRef before the state is wiped.
+            setTimeout(() => {
+              // Only clear if nothing re-activated in the meantime
+              if (!mentionStateRef.current || !mentionStateRef.current.active) {
+                setMentionState(null);
+                setMentionResults([]);
+              }
+            }, 150);
+            mentionStateRef.current = null;
+            mentionAbortRef.current?.abort();
+            return;
+          }
+          mentionStateRef.current = payload;
+          setMentionState(payload);
+          mentionAbortRef.current?.abort();
+          const searchFn = callbacksRef.current.onMentionSearch;
+          if (!searchFn) return;
+          const controller = new AbortController();
+          mentionAbortRef.current = controller;
+          setMentionLoading(true);
+          searchFn(payload.query, controller.signal)
+            .then((results) => {
+              if (!controller.signal.aborted) {
+                setMentionResults(results);
+                setMentionLoading(false);
+              }
+            })
+            .catch(() => {
+              if (!controller.signal.aborted) {
+                setMentionResults([]);
+                setMentionLoading(false);
+              }
+            });
+        },
         onImageRequest(payload) {
           const auth = imageAuthRef.current;
           if (!auth) return;
@@ -384,6 +439,21 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       return false;
     };
 
+    const handleMentionSelect = useCallback((item: MentionSuggestionItem) => {
+      const ms = mentionState ?? mentionStateRef.current;
+      if (!bridgeRef.current || !ms) return;
+      bridgeRef.current.sendInsertMention({
+        userId: item.user_id,
+        username: item.username,
+        displayName: item.display_name,
+        from: ms.from,
+        to: ms.to,
+      });
+      mentionStateRef.current = null;
+      setMentionState(null);
+      setMentionResults([]);
+    }, [mentionState]);
+
     const toolbarEditable = ready && state.editable;
     const overlayBg = theme.mode === "dark" ? "rgba(0,0,0,0.72)" : "rgba(255,255,255,0.72)";
 
@@ -399,6 +469,16 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
             }}
           />
         ) : null}
+        <View style={{ position: "relative" }}>
+          {mentionState?.active ? (
+            <MentionSuggestionList
+              loading={mentionLoading}
+              users={mentionResults}
+              onSelect={handleMentionSelect}
+              baseUrl={mentionBaseUrl}
+              authToken={mentionAuthToken}
+            />
+          ) : null}
         <View
           style={{
             ...(editable ? { minHeight: height } : { height }),
@@ -454,6 +534,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
               </Text>
             </Pressable>
           ) : null}
+        </View>
         </View>
       </View>
     );

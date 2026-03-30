@@ -8,6 +8,7 @@ import {
   TicketRichTextEditor,
   type TicketRichTextEditorRef,
 } from "../../ticketRichText/TicketRichTextEditor";
+import type { MentionSuggestionItem } from "../../ticketRichText/MentionSuggestionList";
 import {
   extractPlainTextFromRichEditorJson,
   extractPlainTextFromSerializedRichEditorContent,
@@ -31,6 +32,9 @@ export function DescriptionSection({
   onCancelEditing,
   onSave,
   onDraftChange,
+  onMentionSearch,
+  mentionBaseUrl,
+  mentionAuthToken,
 }: {
   ticket: TicketDetail;
   isEditing: boolean;
@@ -46,6 +50,9 @@ export function DescriptionSection({
   onCancelEditing: () => void;
   onSave: () => void;
   onDraftChange: (content: string, plainText: string) => void;
+  onMentionSearch?: (query: string, signal: AbortSignal) => Promise<MentionSuggestionItem[]>;
+  mentionBaseUrl?: string | null;
+  mentionAuthToken?: string;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
@@ -114,6 +121,9 @@ export function DescriptionSection({
                   extractPlainTextFromRichEditorJson(json),
                 );
               }}
+              onMentionSearch={onMentionSearch}
+              mentionBaseUrl={mentionBaseUrl}
+              mentionAuthToken={mentionAuthToken}
             />
             {error ? (
               <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>

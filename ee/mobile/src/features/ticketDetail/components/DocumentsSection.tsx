@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
+import { Paths, File as ExpoFile } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useTranslation } from "react-i18next";
 import type { ApiClient } from "../../../api";
@@ -137,23 +137,17 @@ export function DocumentsSection({
     }
 
     try {
-      const targetDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
-      if (!targetDir) {
-        throw new Error("No writable document directory available");
-      }
+      const url = `${downloadBaseUrl}/api/documents/download/${document.file_id}`;
+      const response = await fetch(url, {
+        headers: { "x-api-key": apiKey },
+      });
+      if (!response.ok) throw new Error("Download failed");
 
-      const targetUri = `${targetDir}${document.document_name}`;
-      const download = await FileSystem.downloadAsync(
-        `${downloadBaseUrl}/api/documents/download/${document.file_id}`,
-        targetUri,
-        {
-          headers: {
-            "x-api-key": apiKey,
-          },
-        },
-      );
+      const buffer = await response.arrayBuffer();
+      const file = new ExpoFile(Paths.cache, document.document_name);
+      file.write(new Uint8Array(buffer));
 
-      await Linking.openURL(download.uri);
+      await Linking.openURL(file.uri);
     } catch {
       setError(t("documents.errors.open"));
     }

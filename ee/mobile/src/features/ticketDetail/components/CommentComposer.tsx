@@ -8,6 +8,7 @@ import {
   TicketRichTextEditor,
   type TicketRichTextEditorRef,
 } from "../../ticketRichText/TicketRichTextEditor";
+import type { MentionSuggestionItem } from "../../ticketRichText/MentionSuggestionList";
 import {
   extractPlainTextFromRichEditorJson,
   serializeRichEditorJson,
@@ -28,6 +29,9 @@ export function CommentComposer({
   onDraftChange,
   collapsed,
   onToggleCollapse,
+  onMentionSearch,
+  mentionBaseUrl,
+  mentionAuthToken,
 }: {
   draftContent: string;
   draftPlainText: string;
@@ -41,6 +45,9 @@ export function CommentComposer({
   onDraftChange: (content: string, plainText: string) => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  onMentionSearch?: (query: string, signal: AbortSignal) => Promise<MentionSuggestionItem[]>;
+  mentionBaseUrl?: string | null;
+  mentionAuthToken?: string;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
@@ -88,6 +95,9 @@ export function CommentComposer({
                   extractPlainTextFromRichEditorJson(json),
                 );
               }}
+              onMentionSearch={onMentionSearch}
+              mentionBaseUrl={mentionBaseUrl}
+              mentionAuthToken={mentionAuthToken}
             />
           </View>
           <Text

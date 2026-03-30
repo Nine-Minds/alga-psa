@@ -106,6 +106,17 @@ const html = `<!doctype html>
         max-width: 100%;
         height: auto;
       }
+
+      .mention-badge {
+        display: inline;
+        padding: 1px 4px;
+        border-radius: 4px;
+        background-color: #dbeafe;
+        color: #1e40af;
+        font-weight: 500;
+        white-space: nowrap;
+        user-select: none;
+      }
     </style>
   </head>
   <body>

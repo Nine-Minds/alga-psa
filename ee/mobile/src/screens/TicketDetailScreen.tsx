@@ -7,6 +7,8 @@ import { useTheme } from "../ui/ThemeContext";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
+import { listUsers, getUserDisplayName } from "../api/users";
+import type { MentionSuggestionItem } from "../features/ticketRichText/MentionSuggestionList";
 import { ErrorState, LoadingState } from "../ui/states";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNetworkStatus } from "../network/useNetworkStatus";
@@ -110,6 +112,57 @@ export function TicketDetailBody({
     if (!config.ok || !session) return undefined;
     return { baseUrl: config.baseUrl, apiKey: session.accessToken };
   }, [config, session]);
+
+  const mentionUsersCache = useRef<MentionSuggestionItem[]>([]);
+
+  const handleMentionSearch = useCallback(async (query: string, signal: AbortSignal): Promise<MentionSuggestionItem[]> => {
+    if (!client || !session) return [];
+    const results: MentionSuggestionItem[] = [];
+    if (!query || "everyone".includes(query.toLowerCase())) {
+      results.push({ user_id: "@everyone", username: "everyone", display_name: "Everyone", avatar_url: null });
+    }
+
+    // Fetch all internal users on first empty query, then filter client-side
+    // for subsequent typed queries. This avoids issues where the server search
+    // endpoint may not match partial names the same way.
+    if (!query) {
+      const res = await listUsers(client, { apiKey: session.accessToken, limit: 50, signal });
+      if (res.ok) {
+        const mapped = res.data.data.map((u) => ({
+          user_id: u.user_id,
+          username: u.username,
+          display_name: getUserDisplayName(u),
+          avatar_url: u.avatarUrl,
+        }));
+        mentionUsersCache.current = mapped;
+        results.push(...mapped);
+      }
+    } else {
+      const lowerQuery = query.toLowerCase();
+      // Client-side filter from cached users
+      const filtered = mentionUsersCache.current.filter((u) =>
+        u.display_name.toLowerCase().includes(lowerQuery)
+        || u.username.toLowerCase().includes(lowerQuery)
+      );
+      if (filtered.length > 0) {
+        results.push(...filtered);
+      } else {
+        // Fall back to server search if cache has no matches
+        const res = await listUsers(client, { apiKey: session.accessToken, search: query, limit: 10, signal });
+        if (res.ok) {
+          for (const u of res.data.data) {
+            results.push({
+              user_id: u.user_id,
+              username: u.username,
+              display_name: getUserDisplayName(u),
+              avatar_url: u.avatarUrl,
+            });
+          }
+        }
+      }
+    }
+    return results;
+  }, [client, session]);
 
   const deps = { client, session, ticketId, showToast, t };
 
@@ -504,6 +557,9 @@ export function TicketDetailBody({
             onStartEditing={descEditor.startDescriptionEditing}
             onCancelEditing={descEditor.cancelDescriptionEditing}
             onSave={() => void descEditor.saveDescription()}
+            onMentionSearch={handleMentionSearch}
+            mentionBaseUrl={config.ok ? config.baseUrl : null}
+            mentionAuthToken={session?.accessToken}
             onDraftChange={(nextContent, nextPlainText) => {
               descEditor.setDescriptionDraft(nextContent);
               descEditor.setDescriptionPlainText(nextPlainText);
@@ -538,6 +594,9 @@ export function TicketDetailBody({
             }}
             collapsed={composerCollapsed}
             onToggleCollapse={() => setComposerCollapsed((v) => !v)}
+            onMentionSearch={handleMentionSearch}
+            mentionBaseUrl={config.ok ? config.baseUrl : null}
+            mentionAuthToken={session?.accessToken}
           />
           <View style={{ height: spacing.sm }} />
           <DocumentsSection

@@ -41,13 +41,15 @@ vi.mock("../ui/components/Badge", () => ({
   Badge: (props: Record<string, unknown>) => React.createElement("MockBadge", props),
 }));
 
+function MockAvatar(props: Record<string, unknown>) {
+  return React.createElement(
+    "span",
+    props,
+    props.imageUri ? null : React.createElement(Text, null, getInitials(props.name as string | null | undefined)),
+  );
+}
 vi.mock("../ui/components/Avatar", () => ({
-  Avatar: (props: Record<string, unknown>) =>
-    React.createElement(
-      "MockAvatar",
-      props,
-      props.imageUri ? null : React.createElement(Text, null, getInitials(props.name as string | null | undefined)),
-    ),
+  Avatar: MockAvatar,
 }));
 
 vi.mock("../features/ticketDetail/hooks/useTicketData", () => ({
@@ -300,7 +302,7 @@ function renderScreen(ticketOverrides: Record<string, unknown> = {}) {
   return render(
     React.createElement(TicketDetailBody, {
       ticketId: "ticket-1",
-      config: { ok: true, baseUrl: "https://example.com" },
+      config: { ok: true, env: "dev" as const, baseUrl: "https://example.com" },
       session: {
         accessToken: "api-key-1",
         tenantId: "tenant-1",
@@ -318,7 +320,7 @@ describe("TicketDetailScreen avatars", () => {
 
   it("T006/T007: renders avatar components with contact and client image URLs", () => {
     const renderer = renderScreen();
-    const avatars = renderer.root.findAll((node) => node.type === "MockAvatar");
+    const avatars = renderer.root.findAll((node) => node.type === MockAvatar);
 
     expect(avatars).toHaveLength(2);
     expect(avatars[0].props.name).toBe("Casey Jones");

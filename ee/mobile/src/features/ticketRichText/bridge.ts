@@ -1,6 +1,8 @@
 import type {
   TicketMobileEditorCommand,
   TicketMobileEditorInitPayload,
+  TicketMobileEditorMentionPayload,
+  TicketMobileEditorMentionQueryPayload,
   TicketMobileEditorNativeToWebMessage,
   TicketMobileEditorRequest,
   TicketMobileEditorStatePayload,
@@ -27,6 +29,7 @@ export type TicketMobileEditorBridgeClientOptions = {
   onContentHeight?: (payload: { height: number }) => void;
   onError?: (payload: { code: string; message: string; requestId?: string }) => void;
   onImageRequest?: (payload: { src: string }) => void;
+  onMentionQuery?: (payload: TicketMobileEditorMentionQueryPayload) => void;
 };
 
 function decodeMessage(raw: unknown): unknown {
@@ -63,6 +66,7 @@ export function parseTicketMobileEditorWebToNativeMessage(
     case "response":
     case "error":
     case "image-request":
+    case "mention-query":
       return decoded as TicketMobileEditorWebToNativeMessage;
     default:
       throw new Error(`Unknown editor bridge message type: ${decoded.type}`);
@@ -94,6 +98,8 @@ export class TicketMobileEditorBridgeClient {
 
   private readonly onImageRequest?: TicketMobileEditorBridgeClientOptions["onImageRequest"];
 
+  private readonly onMentionQuery?: TicketMobileEditorBridgeClientOptions["onMentionQuery"];
+
   constructor(options: TicketMobileEditorBridgeClientOptions) {
     this.postMessage = options.postMessage;
     this.requestTimeoutMs = options.requestTimeoutMs ?? 1500;
@@ -105,6 +111,7 @@ export class TicketMobileEditorBridgeClient {
     this.onContentHeight = options.onContentHeight;
     this.onError = options.onError;
     this.onImageRequest = options.onImageRequest;
+    this.onMentionQuery = options.onMentionQuery;
   }
 
   initialize(payload: TicketMobileEditorInitPayload): void {
@@ -118,6 +125,16 @@ export class TicketMobileEditorBridgeClient {
     this.post({
       type: "image-data",
       payload: { src, dataUri },
+    });
+  }
+
+  sendInsertMention(payload: TicketMobileEditorMentionPayload): void {
+    this.post({
+      type: "command",
+      payload: {
+        command: "insert-mention",
+        value: payload,
+      },
     });
   }
 
@@ -170,6 +187,9 @@ export class TicketMobileEditorBridgeClient {
         break;
       case "image-request":
         this.onImageRequest?.(message.payload);
+        break;
+      case "mention-query":
+        this.onMentionQuery?.(message.payload);
         break;
     }
 
