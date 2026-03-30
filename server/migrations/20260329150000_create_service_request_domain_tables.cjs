@@ -2,6 +2,7 @@
  * @param {import('knex').Knex} knex
  */
 exports.up = async function up(knex) {
+  if (!(await knex.schema.hasTable('service_request_definitions'))) {
   await knex.schema.createTable('service_request_definitions', (table) => {
     table.uuid('tenant').notNullable();
     table.uuid('definition_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -58,7 +59,9 @@ exports.up = async function up(knex) {
     CREATE INDEX idx_service_request_definitions_tenant_linked_service
     ON service_request_definitions (tenant, linked_service_id)
   `);
+  } // end if !hasTable('service_request_definitions')
 
+  if (!(await knex.schema.hasTable('service_request_definition_versions'))) {
   await knex.schema.createTable('service_request_definition_versions', (table) => {
     table.uuid('tenant').notNullable();
     table.uuid('version_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -102,7 +105,9 @@ exports.up = async function up(knex) {
     CREATE INDEX idx_service_request_definition_versions_tenant_definition
     ON service_request_definition_versions (tenant, definition_id)
   `);
+  } // end if !hasTable('service_request_definition_versions')
 
+  if (!(await knex.schema.hasTable('service_request_submissions'))) {
   await knex.schema.createTable('service_request_submissions', (table) => {
     table.uuid('tenant').notNullable();
     table.uuid('submission_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -157,7 +162,9 @@ exports.up = async function up(knex) {
     CREATE INDEX idx_service_request_submissions_tenant_requester_created_at
     ON service_request_submissions (tenant, requester_user_id, created_at DESC)
   `);
+  } // end if !hasTable('service_request_submissions')
 
+  if (!(await knex.schema.hasTable('service_request_submission_attachments'))) {
   await knex.schema.createTable('service_request_submission_attachments', (table) => {
     table.uuid('tenant').notNullable();
     table.uuid('submission_attachment_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -185,6 +192,7 @@ exports.up = async function up(knex) {
     CREATE INDEX idx_service_request_submission_attachments_tenant_submission
     ON service_request_submission_attachments (tenant, submission_id)
   `);
+  } // end if !hasTable('service_request_submission_attachments')
 
   const citusFn = await knex.raw(`
     SELECT EXISTS (
@@ -194,10 +202,22 @@ exports.up = async function up(knex) {
   `);
 
   if (citusFn.rows?.[0]?.exists) {
-    await knex.raw("SELECT create_distributed_table('service_request_definitions', 'tenant')");
-    await knex.raw("SELECT create_distributed_table('service_request_definition_versions', 'tenant')");
-    await knex.raw("SELECT create_distributed_table('service_request_submissions', 'tenant')");
-    await knex.raw("SELECT create_distributed_table('service_request_submission_attachments', 'tenant')");
+    const tables = [
+      'service_request_definitions',
+      'service_request_definition_versions',
+      'service_request_submissions',
+      'service_request_submission_attachments',
+    ];
+    for (const t of tables) {
+      const already = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM citus_tables WHERE table_name = '${t}'::regclass
+        ) AS exists
+      `).catch(() => ({ rows: [{ exists: false }] }));
+      if (!already.rows?.[0]?.exists) {
+        await knex.raw(`SELECT create_distributed_table('${t}', 'tenant')`);
+      }
+    }
   } else {
     console.warn('[create_service_request_domain_tables] Skipping create_distributed_table (function unavailable)');
   }
