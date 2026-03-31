@@ -209,28 +209,24 @@ export class TenantEmailService extends BaseEmailService {
       }
     }
 
+    // Use tenant-configured provider first (SMTP, Resend, etc.)
+    if (this.providerManager) {
+      const providers = await this.providerManager.getAvailableProviders(this.tenantId);
+      if (providers.length > 0) {
+        logger.info(`[${this.getServiceName()}] Using tenant-configured provider: ${providers[0].providerId} (${providers[0].providerType})`);
+        return providers[0];
+      }
+    }
+
+    // Fall back to system provider in Enterprise Edition when no tenant provider is configured
     if (isEnterprise) {
-      logger.info(`[${this.getServiceName()}] Using system email provider (Enterprise Edition)`);
+      logger.info(`[${this.getServiceName()}] No tenant provider configured, using system email provider (Enterprise Edition)`);
       try {
         const systemProvider = await SystemEmailProviderFactory.createProvider();
         return systemProvider;
       } catch (err) {
         logger.error(`[${this.getServiceName()}] Failed to create system email provider:`, err);
-
-        if (this.providerManager) {
-          const providers = await this.providerManager.getAvailableProviders(this.tenantId);
-          if (providers.length > 0) {
-            return providers[0];
-          }
-        }
         return null;
-      }
-    }
-
-    if (this.providerManager) {
-      const providers = await this.providerManager.getAvailableProviders(this.tenantId);
-      if (providers.length > 0) {
-        return providers[0];
       }
     }
 
