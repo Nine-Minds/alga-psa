@@ -68,7 +68,6 @@ export async function POST(req: NextRequest) {
     documentContext: string;
     documentId?: string;
     tenantId: string;
-    conversationHistory?: Array<{ role: string; content: string }>;
   };
 
   try {
@@ -80,7 +79,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { instruction, documentContext, documentId, tenantId, conversationHistory } = body;
+  const { instruction, documentContext, documentId, tenantId } = body;
 
   if (!instruction || !tenantId) {
     return new Response(
@@ -124,30 +123,13 @@ export async function POST(req: NextRequest) {
     ? await resolveDocumentName(tenantId, documentId)
     : 'Untitled';
 
-  // Build conversation messages with optional history for follow-ups
-  const validHistory = Array.isArray(conversationHistory)
-    ? conversationHistory
-        .filter(
-          (msg) =>
-            msg &&
-            typeof msg.role === 'string' &&
-            typeof msg.content === 'string' &&
-            (msg.role === 'user' || msg.role === 'assistant'),
-        )
-        .slice(-10) // cap at last 10 messages
-    : [];
-
-  // Resolve AI provider and generate response
+  // Resolve AI provider and stream response
   try {
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
     const provider = await resolveChatProvider();
 
     const messages = [
       { role: 'system' as const, content: DOCUMENT_ASSIST_SYSTEM_PROMPT },
-      ...validHistory.map((msg) => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content,
-      })),
       {
         role: 'user' as const,
         content: `Document: "${documentName}"
@@ -160,20 +142,44 @@ Instruction: ${instruction}`,
       },
     ];
 
-    const completion = await provider.client.chat.completions.create({
+    const stream = await provider.client.chat.completions.create({
       model: provider.model,
       messages,
       max_tokens: 2048,
       temperature: 0.55,
+      stream: true,
       ...provider.requestOverrides.resolveTurnOverrides(),
     });
 
-    const responseText = completion.choices?.[0]?.message?.content || '';
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const content = chunk.choices?.[0]?.delta?.content || '';
+            if (content) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+            }
+          }
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        } catch (error) {
+          console.error('[document-assist] Stream error:', error);
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ error: 'Stream error' })}\n\n`),
+          );
+          controller.close();
+        }
+      },
+    });
 
-    return new Response(
-      JSON.stringify({ response: responseText }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    );
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      },
+    });
   } catch (error) {
     console.error('[document-assist] AI completion failed:', error);
     return new Response(
