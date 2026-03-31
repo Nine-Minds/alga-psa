@@ -1,90 +1,25 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent } from '@tiptap/react';
-import type { Editor } from '@tiptap/react';
-import type { Transaction } from '@tiptap/pm/state';
-import { Check, X, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 /**
  * TipTap Node extension that wraps AI-generated content in a visually distinct
- * container with Accept / Dismiss controls.
- *
- * - Accept: unwraps children into the parent document as regular content
- * - Dismiss: removes the entire AI response block
+ * container while it streams in. The wrapper is automatically removed by the
+ * Hocuspocus AiParticipantExtension once streaming completes, replacing it
+ * with properly formatted content.
  */
 
-// ── React NodeView ───────────────────────────────────────────────
-
-function AiResponseBlockView(props: any) {
-  const { editor, getPos, node } = props;
-
-  const handleAccept = useCallback(() => {
-    if (!editor || typeof getPos !== 'function') return;
-    const pos = getPos();
-    if (pos == null) return;
-
-    const resolvedPos = editor.state.doc.resolve(pos);
-    const nodeAtPos = editor.state.doc.nodeAt(pos);
-    if (!nodeAtPos) return;
-
-    // Replace the wrapper with its children
-    const content = nodeAtPos.content;
-    editor
-      .chain()
-      .focus()
-      .command(({ tr }: { tr: Transaction }) => {
-        tr.replaceWith(pos, pos + nodeAtPos.nodeSize, content);
-        return true;
-      })
-      .run();
-  }, [editor, getPos]);
-
-  const handleDismiss = useCallback(() => {
-    if (!editor || typeof getPos !== 'function') return;
-    const pos = getPos();
-    if (pos == null) return;
-
-    const nodeAtPos = editor.state.doc.nodeAt(pos);
-    if (!nodeAtPos) return;
-
-    editor
-      .chain()
-      .focus()
-      .command(({ tr }: { tr: Transaction }) => {
-        tr.delete(pos, pos + nodeAtPos.nodeSize);
-        return true;
-      })
-      .run();
-  }, [editor, getPos]);
-
+function AiResponseBlockView() {
   return (
     <NodeViewWrapper as="div" className="ai-response-block">
       <div className="ai-response-block__header">
         <div className="ai-response-block__label">
           <Sparkles className="ai-response-block__icon" />
           <span>Alga AI</span>
-        </div>
-        <div className="ai-response-block__actions">
-          <button
-            type="button"
-            className="ai-response-block__btn ai-response-block__btn--accept"
-            onClick={handleAccept}
-            title="Accept — keep this content"
-          >
-            <Check className="w-3.5 h-3.5" />
-            <span>Accept</span>
-          </button>
-          <button
-            type="button"
-            className="ai-response-block__btn ai-response-block__btn--dismiss"
-            onClick={handleDismiss}
-            title="Dismiss — remove this content"
-          >
-            <X className="w-3.5 h-3.5" />
-            <span>Dismiss</span>
-          </button>
+          <span className="ai-response-block__streaming-dot" />
         </div>
       </div>
       <div className="ai-response-block__content">

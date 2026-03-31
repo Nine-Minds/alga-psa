@@ -16,14 +16,13 @@
 import * as Y from 'yjs'
 
 const MAX_CONTEXT_CHARS = 8000
-const MAX_HISTORY_EXCHANGES = 10 // 5 user + 5 assistant messages
+const STREAM_FLUSH_INTERVAL_MS = 150
 
 export class AiParticipantExtension {
   constructor(config = {}) {
     this.aiApiUrl = config.aiApiUrl || 'http://localhost:3000/api/v1/ai/document-assist'
     this.aiApiKey = config.aiApiKey || ''
     this.processingDocs = new Set() // re-entrancy guard keyed by documentName
-    this.conversationHistories = new Map() // documentName -> [{role, content}]
     this.debounceTimers = new Map() // documentName -> timeout id
     this.DEBOUNCE_MS = 2000 // wait 2s after last keystroke before processing
   }
@@ -548,28 +547,23 @@ export class AiParticipantExtension {
   // ---------------------------------------------------------------------------
 
   /**
-   * Insert AI response as rich ProseMirror nodes wrapped in an aiResponseBlock
-   * container with accept/dismiss controls on the frontend.
+   * Insert formatted markdown blocks directly into the document fragment.
    */
-  insertRichResponse(document, fragment, afterIndex, markdownText) {
+  insertFormattedBlocks(document, fragment, atIndex, markdownText) {
     const blocks = this.parseMarkdownBlocks(markdownText)
     const yElements = this.blocksToYElements(blocks)
 
     if (yElements.length === 0) {
-      // Fallback: insert as plain paragraph
       const p = new Y.XmlElement('paragraph')
       p.insert(0, [new Y.XmlText(markdownText)])
       yElements.push(p)
     }
 
     document.transact(() => {
-      // Wrap all response elements in an aiResponseBlock container
-      const wrapper = new Y.XmlElement('aiResponseBlock')
-      wrapper.insert(0, yElements)
-      fragment.insert(afterIndex + 1, [wrapper])
+      fragment.insert(atIndex, yElements)
     })
 
-    return 1 // single wrapper node inserted
+    return yElements.length
   }
 
   /**
@@ -592,15 +586,31 @@ export class AiParticipantExtension {
   // ---------------------------------------------------------------------------
 
   /**
-   * Process a single AI mention: call the API and insert the response.
+   * Process a single AI mention: stream the API response into the document.
+   *
+   * 1. Insert an aiResponseBlock wrapper with an empty paragraph (streaming indicator)
+   * 2. Read the SSE stream, appending text to the paragraph in batched flushes
+   * 3. On completion, replace the wrapper with properly formatted markdown blocks
    */
   async processAiMention(document, fragment, mention, tenantId, documentId, documentName) {
     const { paragraphIndex, mentionElement, instruction } = mention
     const fullContext = this.serializeDocument(fragment)
     const documentContext = this.windowDocumentContext(fullContext)
-    const conversationHistory = this.conversationHistories.get(documentName) || []
 
     console.log(`[AiParticipantExtension] Processing AI mention in ${documentName}: "${instruction.substring(0, 100)}"`)
+
+    // Insert streaming container
+    const streamParagraph = new Y.XmlElement('paragraph')
+    const streamTextNode = new Y.XmlText('')
+    streamParagraph.insert(0, [streamTextNode])
+
+    const wrapper = new Y.XmlElement('aiResponseBlock')
+    wrapper.insert(0, [streamParagraph])
+    document.transact(() => {
+      fragment.insert(paragraphIndex + 1, [wrapper])
+    })
+
+    let fullText = ''
 
     try {
       const response = await fetch(this.aiApiUrl, {
@@ -614,45 +624,142 @@ export class AiParticipantExtension {
           documentContext,
           documentId,
           tenantId,
-          conversationHistory,
         }),
       })
 
       if (!response.ok) {
         const errorBody = await response.text()
         console.error(`[AiParticipantExtension] API error ${response.status}:`, errorBody)
-        this.insertErrorMessage(document, fragment, paragraphIndex, 'Unable to process request.')
+        this.replaceWrapper(document, fragment, wrapper, (idx) => {
+          this.insertErrorMessage(document, fragment, idx - 1, 'Unable to process request.')
+        })
         this.markMentionDone(mentionElement)
         return
       }
 
-      const data = await response.json()
-      const responseText = data.response || ''
+      // Read SSE stream with batched Y.js flushes
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let sseBuffer = ''
+      let pendingText = ''
+      let flushTimer = null
 
-      if (!responseText) {
-        this.insertErrorMessage(document, fragment, paragraphIndex, 'No response generated.')
+      const flush = () => {
+        if (pendingText) {
+          streamTextNode.insert(streamTextNode.length, pendingText)
+          pendingText = ''
+        }
+      }
+
+      const scheduleFlush = () => {
+        if (!flushTimer) {
+          flushTimer = setTimeout(() => {
+            flush()
+            flushTimer = null
+          }, STREAM_FLUSH_INTERVAL_MS)
+        }
+      }
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          sseBuffer += decoder.decode(value, { stream: true })
+          const lines = sseBuffer.split('\n')
+          sseBuffer = lines.pop() || ''
+
+          for (const line of lines) {
+            const trimmed = line.trim()
+            if (!trimmed || !trimmed.startsWith('data: ')) continue
+            const payload = trimmed.slice(6)
+            if (payload === '[DONE]') continue
+
+            try {
+              const data = JSON.parse(payload)
+              if (data.error) {
+                throw new Error(`AI stream error: ${data.error}`)
+              }
+              if (data.content) {
+                fullText += data.content
+                pendingText += data.content
+                scheduleFlush()
+              }
+            } catch (parseError) {
+              if (parseError.message.startsWith('AI stream error:')) throw parseError
+              // Log malformed SSE payloads but continue — partial data is recoverable
+              console.warn('[AiParticipantExtension] Skipping malformed SSE payload:', payload, parseError.message)
+            }
+          }
+        }
+      } finally {
+        if (flushTimer) clearTimeout(flushTimer)
+        flush() // flush any remaining text
+      }
+
+      if (!fullText) {
+        this.replaceWrapper(document, fragment, wrapper, (idx) => {
+          this.insertErrorMessage(document, fragment, idx - 1, 'No response generated.')
+        })
         this.markMentionDone(mentionElement)
         return
       }
 
-      const insertedCount = this.insertRichResponse(document, fragment, paragraphIndex, responseText)
+      // Stream complete: replace wrapper with formatted content
+      this.replaceWrapper(document, fragment, wrapper, (wrapperIndex) => {
+        const blocks = this.parseMarkdownBlocks(fullText)
+        const yElements = this.blocksToYElements(blocks)
+        if (yElements.length === 0) {
+          const p = new Y.XmlElement('paragraph')
+          p.insert(0, [new Y.XmlText(fullText)])
+          yElements.push(p)
+        }
+        fragment.insert(wrapperIndex, yElements)
+      })
+
       this.markMentionDone(mentionElement)
-
-      // Store conversation history for follow-ups
-      const history = this.conversationHistories.get(documentName) || []
-      history.push({ role: 'user', content: instruction })
-      history.push({ role: 'assistant', content: responseText })
-      if (history.length > MAX_HISTORY_EXCHANGES) {
-        history.splice(0, history.length - MAX_HISTORY_EXCHANGES)
-      }
-      this.conversationHistories.set(documentName, history)
-
-      console.log(`[AiParticipantExtension] Inserted AI response (${insertedCount} nodes) in ${documentName}`)
+      console.log(`[AiParticipantExtension] Streamed AI response in ${documentName}`)
     } catch (error) {
       console.error('[AiParticipantExtension] Failed to process AI mention:', error)
-      this.insertErrorMessage(document, fragment, paragraphIndex, 'Unable to process request.')
+      // Replace wrapper with partial content or error, using wrapper's actual position
+      this.replaceWrapper(document, fragment, wrapper, (idx) => {
+        if (fullText) {
+          const blocks = this.parseMarkdownBlocks(fullText)
+          const yElements = this.blocksToYElements(blocks)
+          if (yElements.length === 0) {
+            const p = new Y.XmlElement('paragraph')
+            p.insert(0, [new Y.XmlText(fullText)])
+            yElements.push(p)
+          }
+          fragment.insert(idx, yElements)
+        } else {
+          this.insertErrorMessage(document, fragment, idx - 1, 'Unable to process request.')
+        }
+      })
       this.markMentionDone(mentionElement)
     }
+  }
+
+  /**
+   * Atomically remove the wrapper and invoke a callback with the wrapper's
+   * position so replacement content can be inserted at the correct index.
+   *
+   * Using a single transaction ensures no concurrent edit can shift positions
+   * between the delete and the subsequent insert.  If the wrapper is no longer
+   * in the fragment (removed by a concurrent edit), the callback is skipped
+   * and a warning is logged.
+   */
+  replaceWrapper(document, fragment, wrapper, insertCb) {
+    document.transact(() => {
+      const nodes = fragment.toArray()
+      const idx = nodes.indexOf(wrapper)
+      if (idx === -1) {
+        console.warn('[AiParticipantExtension] Wrapper already removed from document — skipping replacement')
+        return
+      }
+      fragment.delete(idx, 1)
+      if (insertCb) insertCb(idx)
+    })
   }
 
   /**
