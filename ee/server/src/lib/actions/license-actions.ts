@@ -247,6 +247,8 @@ export async function createLicenseCheckoutSessionAction(
 
 /**
  * Server action to get license pricing information
+ * Reads from the tenant's actual subscription in stripe_subscriptions + stripe_prices.
+ * Falls back to the STRIPE_LICENSE_PRICE_ID env var for legacy tenants without a subscription row.
  * @returns License price information or error
  */
 export async function getLicensePricingAction(): Promise<{
@@ -260,32 +262,54 @@ export async function getLicensePricingAction(): Promise<{
   error?: string;
 }> {
   try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const knex = await getConnection(session.user.tenant);
+
+    // Try to get pricing from the tenant's actual subscription
+    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
+      .where({ tenant: session.user.tenant })
+      .whereIn('status', ['active', 'trialing', 'past_due'])
+      .first();
+
+    if (subscription) {
+      const price = await knex<IStripePrice>('stripe_prices')
+        .where({ stripe_price_id: subscription.stripe_price_id })
+        .first();
+
+      if (price) {
+        return {
+          success: true,
+          data: {
+            priceId: price.stripe_price_external_id,
+            unitAmount: price.unit_amount,
+            currency: price.currency || 'usd',
+            interval: price.recurring_interval || 'month',
+          },
+        };
+      }
+    }
+
+    // Fallback: fetch from Stripe API using legacy env var
     const licensePriceId = process.env.STRIPE_LICENSE_PRICE_ID;
 
     if (!licensePriceId) {
-      return {
-        success: false,
-        error: 'License pricing not configured',
-      };
+      return { success: false, error: 'License pricing not configured' };
     }
 
-    // Fetch pricing from Stripe API using the price ID
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
-      return {
-        success: false,
-        error: 'Stripe billing is not configured',
-      };
+      return { success: false, error: 'Stripe billing is not configured' };
     }
     const stripe = await stripeService.getStripeClient();
-
     const price = await stripe.prices.retrieve(licensePriceId);
 
     if (!price) {
-      return {
-        success: false,
-        error: 'Failed to retrieve price from Stripe',
-      };
+      return { success: false, error: 'Failed to retrieve price from Stripe' };
     }
 
     return {
