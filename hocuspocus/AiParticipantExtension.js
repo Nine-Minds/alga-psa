@@ -630,8 +630,9 @@ export class AiParticipantExtension {
       if (!response.ok) {
         const errorBody = await response.text()
         console.error(`[AiParticipantExtension] API error ${response.status}:`, errorBody)
-        this.removeWrapper(document, fragment, wrapper)
-        this.insertErrorMessage(document, fragment, paragraphIndex, 'Unable to process request.')
+        this.replaceWrapper(document, fragment, wrapper, (idx) => {
+          this.insertErrorMessage(document, fragment, idx - 1, 'Unable to process request.')
+        })
         this.markMentionDone(mentionElement)
         return
       }
@@ -676,14 +677,18 @@ export class AiParticipantExtension {
 
             try {
               const data = JSON.parse(payload)
-              if (data.error) throw new Error(data.error)
+              if (data.error) {
+                throw new Error(`AI stream error: ${data.error}`)
+              }
               if (data.content) {
                 fullText += data.content
                 pendingText += data.content
                 scheduleFlush()
               }
             } catch (parseError) {
-              if (parseError.message === 'Stream error') throw parseError
+              if (parseError.message.startsWith('AI stream error:')) throw parseError
+              // Log malformed SSE payloads but continue — partial data is recoverable
+              console.warn('[AiParticipantExtension] Skipping malformed SSE payload:', payload, parseError.message)
             }
           }
         }
@@ -693,18 +698,32 @@ export class AiParticipantExtension {
       }
 
       if (!fullText) {
-        this.removeWrapper(document, fragment, wrapper)
-        this.insertErrorMessage(document, fragment, paragraphIndex, 'No response generated.')
+        this.replaceWrapper(document, fragment, wrapper, (idx) => {
+          this.insertErrorMessage(document, fragment, idx - 1, 'No response generated.')
+        })
         this.markMentionDone(mentionElement)
         return
       }
 
       // Stream complete: replace wrapper with formatted content
-      document.transact(() => {
-        const nodes = fragment.toArray()
-        const wrapperIndex = nodes.indexOf(wrapper)
-        if (wrapperIndex !== -1) {
-          fragment.delete(wrapperIndex, 1)
+      this.replaceWrapper(document, fragment, wrapper, (wrapperIndex) => {
+        const blocks = this.parseMarkdownBlocks(fullText)
+        const yElements = this.blocksToYElements(blocks)
+        if (yElements.length === 0) {
+          const p = new Y.XmlElement('paragraph')
+          p.insert(0, [new Y.XmlText(fullText)])
+          yElements.push(p)
+        }
+        fragment.insert(wrapperIndex, yElements)
+      })
+
+      this.markMentionDone(mentionElement)
+      console.log(`[AiParticipantExtension] Streamed AI response in ${documentName}`)
+    } catch (error) {
+      console.error('[AiParticipantExtension] Failed to process AI mention:', error)
+      // Replace wrapper with partial content or error, using wrapper's actual position
+      this.replaceWrapper(document, fragment, wrapper, (idx) => {
+        if (fullText) {
           const blocks = this.parseMarkdownBlocks(fullText)
           const yElements = this.blocksToYElements(blocks)
           if (yElements.length === 0) {
@@ -712,33 +731,34 @@ export class AiParticipantExtension {
             p.insert(0, [new Y.XmlText(fullText)])
             yElements.push(p)
           }
-          fragment.insert(wrapperIndex, yElements)
+          fragment.insert(idx, yElements)
+        } else {
+          this.insertErrorMessage(document, fragment, idx - 1, 'Unable to process request.')
         }
       })
-
-      this.markMentionDone(mentionElement)
-      console.log(`[AiParticipantExtension] Streamed AI response in ${documentName}`)
-    } catch (error) {
-      console.error('[AiParticipantExtension] Failed to process AI mention:', error)
-      this.removeWrapper(document, fragment, wrapper)
-      // If we got partial text, insert it formatted rather than losing it
-      if (fullText) {
-        this.insertFormattedBlocks(document, fragment, paragraphIndex + 1, fullText)
-      } else {
-        this.insertErrorMessage(document, fragment, paragraphIndex, 'Unable to process request.')
-      }
       this.markMentionDone(mentionElement)
     }
   }
 
   /**
-   * Remove an aiResponseBlock wrapper from the fragment.
+   * Atomically remove the wrapper and invoke a callback with the wrapper's
+   * position so replacement content can be inserted at the correct index.
+   *
+   * Using a single transaction ensures no concurrent edit can shift positions
+   * between the delete and the subsequent insert.  If the wrapper is no longer
+   * in the fragment (removed by a concurrent edit), the callback is skipped
+   * and a warning is logged.
    */
-  removeWrapper(document, fragment, wrapper) {
+  replaceWrapper(document, fragment, wrapper, insertCb) {
     document.transact(() => {
       const nodes = fragment.toArray()
       const idx = nodes.indexOf(wrapper)
-      if (idx !== -1) fragment.delete(idx, 1)
+      if (idx === -1) {
+        console.warn('[AiParticipantExtension] Wrapper already removed from document — skipping replacement')
+        return
+      }
+      fragment.delete(idx, 1)
+      if (insertCb) insertCb(idx)
     })
   }
 
