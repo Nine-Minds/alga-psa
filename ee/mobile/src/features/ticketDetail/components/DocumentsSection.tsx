@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Image, Modal, Pressable, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
-import { Paths, File as ExpoFile } from "expo-file-system";
+import { File as ExpoFile, Paths, Directory } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
+import * as Sharing from "expo-sharing";
 import { useTranslation } from "react-i18next";
 import type { ApiClient } from "../../../api";
 import { getTicketDocuments, uploadTicketDocument, type TicketDocument, type TicketDocumentUpload } from "../../../api/documents";
@@ -46,6 +47,8 @@ export function DocumentsSection({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attachOptionsOpen, setAttachOptionsOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{ uri: string; name: string } | null>(null);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   const downloadBaseUrl = useMemo(() => baseUrl?.replace(/\/+$/, "") ?? null, [baseUrl]);
 
@@ -130,28 +133,76 @@ export function DocumentsSection({
     });
   }, [submitUpload]);
 
+  const downloadDocumentFile = useCallback(async (document: TicketDocument): Promise<string | null> => {
+    if (!downloadBaseUrl || !document.document_id) return null;
+
+    const url = `${downloadBaseUrl}/api/v1/tickets/${ticketId}/documents/${document.document_id}`;
+    const destination = new ExpoFile(Paths.cache, document.document_name);
+    if (destination.exists) {
+      destination.delete();
+    }
+    const file = await ExpoFile.downloadFileAsync(url, destination, {
+      headers: { "x-api-key": apiKey },
+    });
+
+    return file.uri;
+  }, [apiKey, downloadBaseUrl, ticketId]);
+
   const handleOpenDocument = useCallback(async (document: TicketDocument) => {
-    if (!downloadBaseUrl || !document.file_id) {
+    if (!downloadBaseUrl || !document.document_id) {
       setError(t("documents.errors.open"));
       return;
     }
 
+    setDownloading(document.document_id);
+    setError(null);
+
     try {
-      const url = `${downloadBaseUrl}/api/documents/download/${document.file_id}`;
-      const response = await fetch(url, {
-        headers: { "x-api-key": apiKey },
-      });
-      if (!response.ok) throw new Error("Download failed");
+      const isImage = (document.mime_type ?? "").startsWith("image/");
 
-      const buffer = await response.arrayBuffer();
-      const file = new ExpoFile(Paths.cache, document.document_name);
-      file.write(new Uint8Array(buffer));
-
-      await Linking.openURL(file.uri);
-    } catch {
+      if (isImage) {
+        const uri = await downloadDocumentFile(document);
+        if (!uri) throw new Error("Download failed");
+        setPreviewImage({ uri, name: document.document_name });
+      } else {
+        const uri = await downloadDocumentFile(document);
+        if (!uri) throw new Error("Download failed");
+        await Sharing.shareAsync(uri, {
+          mimeType: document.mime_type ?? undefined,
+          dialogTitle: document.document_name,
+        });
+      }
+    } catch (e) {
+      console.error("[DocumentsSection] open failed", e);
       setError(t("documents.errors.open"));
+    } finally {
+      setDownloading(null);
     }
-  }, [apiKey, downloadBaseUrl, t]);
+  }, [downloadBaseUrl, downloadDocumentFile, t]);
+
+  const handleSaveDocument = useCallback(async (document: TicketDocument) => {
+    if (!downloadBaseUrl || !document.document_id) {
+      setError(t("documents.errors.open"));
+      return;
+    }
+
+    setDownloading(document.document_id);
+    setError(null);
+
+    try {
+      const uri = await downloadDocumentFile(document);
+      if (!uri) throw new Error("Download failed");
+      await Sharing.shareAsync(uri, {
+        mimeType: document.mime_type ?? undefined,
+        dialogTitle: document.document_name,
+      });
+    } catch (e) {
+      console.error("[DocumentsSection] save failed", e);
+      setError(t("documents.errors.open"));
+    } finally {
+      setDownloading(null);
+    }
+  }, [downloadBaseUrl, downloadDocumentFile, t]);
 
   return (
     <Card accessibilityLabel={t("documents.title")}>
@@ -234,7 +285,9 @@ export function DocumentsSection({
               key={document.document_id}
               accessibilityRole="button"
               accessibilityLabel={document.document_name}
+              disabled={downloading === document.document_id}
               onPress={() => { void handleOpenDocument(document); }}
+              onLongPress={() => { void handleSaveDocument(document); }}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -245,9 +298,14 @@ export function DocumentsSection({
                 borderWidth: 1,
                 borderColor: colors.border,
                 backgroundColor: colors.card,
+                opacity: downloading === document.document_id ? 0.6 : 1,
               }}
             >
-              <Feather name={getDocumentIcon(document)} size={18} color={colors.textSecondary} />
+              {downloading === document.document_id ? (
+                <ActivityIndicator size={18} color={colors.textSecondary} />
+              ) : (
+                <Feather name={getDocumentIcon(document)} size={18} color={colors.textSecondary} />
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.body, color: colors.text }}>
                   {document.document_name}
@@ -260,6 +318,36 @@ export function DocumentsSection({
           ))}
         </View>
       )}
+      {previewImage ? (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          onRequestClose={() => setPreviewImage(null)}
+        >
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.9)", justifyContent: "center", alignItems: "center" }}>
+            <Pressable
+              onPress={() => setPreviewImage(null)}
+              accessibilityRole="button"
+              accessibilityLabel={t("documents.closePreview")}
+              style={{ position: "absolute", top: 56, right: 16, zIndex: 1, padding: spacing.sm }}
+            >
+              <Feather name="x" size={28} color="#fff" />
+            </Pressable>
+            <Text
+              style={{ ...typography.body, color: "#fff", position: "absolute", top: 60, left: 16, right: 60 }}
+              numberOfLines={1}
+            >
+              {previewImage.name}
+            </Text>
+            <Image
+              source={{ uri: previewImage.uri }}
+              style={{ width: "90%", height: "70%" }}
+              resizeMode="contain"
+            />
+          </View>
+        </Modal>
+      ) : null}
     </Card>
   );
 }

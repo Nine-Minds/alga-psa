@@ -12,6 +12,7 @@ import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { getEventBus } from 'server/src/lib/eventBus';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
@@ -460,6 +461,40 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     return createdDocument;
+  }
+
+  async downloadTicketDocument(
+    ticketId: string,
+    documentId: string,
+    context: ServiceContext
+  ): Promise<{ buffer: Buffer; fileName: string; mimeType: string }> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    // Verify the document belongs to this ticket and tenant
+    const doc = await knex('documents as d')
+      .join('document_associations as da', function () {
+        this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
+      })
+      .where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.document_id': documentId,
+        'd.tenant': context.tenant,
+      })
+      .select('d.file_id', 'd.document_name', 'd.mime_type')
+      .first();
+
+    if (!doc || !doc.file_id) {
+      throw new NotFoundError('Document not found');
+    }
+
+    const result = await StorageService.downloadFile(doc.file_id);
+    return {
+      buffer: result.buffer,
+      fileName: doc.document_name || result.metadata.original_name,
+      mimeType: doc.mime_type || result.metadata.mime_type,
+    };
   }
 
   async getTicketMaterials(ticketId: string, context: ServiceContext): Promise<ITicketMaterial[]> {
@@ -1563,13 +1598,10 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     try {
-      await getEventBus().publish(
-        {
-          eventType,
-          payload: event
-        },
-        { channel: getEmailEventChannel() }
-      );
+      await publishEvent({
+        eventType,
+        payload: event
+      });
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
     }
