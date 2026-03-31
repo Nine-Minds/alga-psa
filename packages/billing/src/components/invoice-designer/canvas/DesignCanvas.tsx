@@ -98,9 +98,9 @@ type TableBorderConfig = {
   columnDividers: boolean;
 };
 
-const INVOICE_BORDER_COLOR_CLASS = 'border-slate-300';
-const INVOICE_BORDER_SUBTLE_COLOR_CLASS = 'border-slate-200';
-const INVOICE_BORDER_STRONG_COLOR_CLASS = 'border-slate-400';
+const INVOICE_BORDER_COLOR_CLASS = 'border-slate-300 dark:border-slate-600';
+const INVOICE_BORDER_SUBTLE_COLOR_CLASS = 'border-slate-200 dark:border-slate-700';
+const INVOICE_BORDER_STRONG_COLOR_CLASS = 'border-slate-400 dark:border-slate-500';
 const FONT_WEIGHT_CLASS: Record<FontWeightStyle, string> = {
   normal: 'font-normal',
   medium: 'font-medium',
@@ -152,7 +152,7 @@ const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
   }
   return {
     label: 'Section',
-    toneClass: 'bg-blue-100/45',
+    toneClass: 'bg-blue-100/45 dark:bg-blue-900/20',
     chipClass: 'border-blue-300 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300',
     accentClass: 'bg-blue-400/80',
   };
@@ -494,7 +494,7 @@ const renderTablePreview = (
   return (
     <div
       className={clsx(
-        'h-full overflow-hidden text-[10px] text-slate-700 dark:text-slate-300 rounded-sm bg-white dark:bg-transparent',
+        'h-full overflow-hidden text-[10px] text-slate-700 dark:text-slate-300 rounded-sm bg-white dark:bg-slate-800',
         borderConfig.outer && ['border', INVOICE_BORDER_STRONG_COLOR_CLASS]
       )}
     >
@@ -743,7 +743,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
 	    case 'spacer':
 	      return {
 	        content: (
-	          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 bg-slate-50/50 border border-dashed border-slate-200">
+	          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 dark:text-slate-600 bg-slate-50/50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700">
 	            Spacer
 	          </div>
 	        ),
@@ -767,7 +767,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
           const label = node.type === 'qr' ? 'QR Code' : node.type === 'logo' ? 'Logo' : 'Image';
           return {
             content: (
-              <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 bg-slate-50/50 border border-dashed border-slate-200">
+              <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700">
                 {label}
               </div>
             ),
@@ -1015,7 +1015,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           ? 'rounded-sm border border-transparent bg-transparent shadow-none'
           : [
               'rounded-md',
-              isContainer ? sectionContainerClasses : `border bg-white dark:bg-transparent shadow-sm ${INVOICE_BORDER_COLOR_CLASS}`,
+              isContainer ? sectionContainerClasses : `border bg-white dark:bg-slate-800 shadow-sm ${INVOICE_BORDER_COLOR_CLASS}`,
             ],
         isSelected &&
           (isLabelNode

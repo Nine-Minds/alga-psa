@@ -606,7 +606,7 @@ const TransformsWorkspace: React.FC<Props> = ({
   const renderInspector = () => {
     if (!selectedOperation) {
       return (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-6 text-sm text-slate-500">
+        <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
           Select a transform card to edit its settings.
         </div>
       );
@@ -624,7 +624,7 @@ const TransformsWorkspace: React.FC<Props> = ({
             </Alert>
           )}
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Field</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Field</label>
             <CustomSelect
               id={`transform-filter-field-${selectedOperation.id}`}
               options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
@@ -645,7 +645,7 @@ const TransformsWorkspace: React.FC<Props> = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Operator</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Operator</label>
             <CustomSelect
               id={`transform-filter-operator-${selectedOperation.id}`}
               options={FILTER_OPERATOR_OPTIONS}
@@ -673,7 +673,7 @@ const TransformsWorkspace: React.FC<Props> = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
               {predicate.op === 'in' ? 'Values (comma separated)' : 'Value'}
             </label>
             <Input
@@ -718,9 +718,9 @@ const TransformsWorkspace: React.FC<Props> = ({
       return (
         <div className="space-y-3">
           {keys.map((key, index) => (
-            <div key={`${selectedOperation.id}-${index}`} className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2">
+            <div key={`${selectedOperation.id}-${index}`} className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] p-3 space-y-2">
 	              <div className="flex items-center justify-between">
-	                <p className="text-xs font-semibold text-slate-600">Sort key {index + 1}</p>
+	                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Sort key {index + 1}</p>
 	                <Button
 	                  id={`transform-sort-remove-${selectedOperation.id}-${index}`}
 	                  variant="outline"
@@ -739,7 +739,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                 </Button>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">Field</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Field</label>
                 <CustomSelect
                   id={`transform-sort-field-${selectedOperation.id}-${index}`}
                   options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
@@ -758,7 +758,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">Direction</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Direction</label>
                 <CustomSelect
                   id={`transform-sort-direction-${selectedOperation.id}-${index}`}
                   options={SORT_DIRECTION_OPTIONS}
@@ -801,7 +801,7 @@ const TransformsWorkspace: React.FC<Props> = ({
       return (
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Group field</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Group field</label>
             <CustomSelect
               id={`transform-group-key-${selectedOperation.id}`}
               options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
@@ -816,7 +816,7 @@ const TransformsWorkspace: React.FC<Props> = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Label (optional)</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Label (optional)</label>
             <Input
               id={`transform-group-label-${selectedOperation.id}`}
               value={selectedOperation.label ?? ''}
@@ -847,9 +847,9 @@ const TransformsWorkspace: React.FC<Props> = ({
       return (
         <div className="space-y-3">
           {aggregations.map((aggregation, index) => (
-            <div key={`${selectedOperation.id}-${index}`} className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2">
+            <div key={`${selectedOperation.id}-${index}`} className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] p-3 space-y-2">
 	              <div className="flex items-center justify-between">
-	                <p className="text-xs font-semibold text-slate-600">Aggregation {index + 1}</p>
+	                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Aggregation {index + 1}</p>
 	                <Button
 	                  id={`transform-aggregate-remove-${selectedOperation.id}-${index}`}
 	                  variant="outline"
@@ -868,7 +868,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                 </Button>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">Output ID</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Output ID</label>
                 <Input
                   id={`transform-aggregate-id-${selectedOperation.id}-${index}`}
                   value={aggregation.id}
@@ -899,7 +899,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">Operation</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Operation</label>
                 <CustomSelect
                   id={`transform-aggregate-op-${selectedOperation.id}-${index}`}
                   options={AGGREGATION_OPTIONS}
@@ -925,7 +925,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               </div>
               {aggregation.op !== 'count' && (
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-500">Field</label>
+                  <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Field</label>
                   <CustomSelect
                     id={`transform-aggregate-path-${selectedOperation.id}-${index}`}
                     options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
@@ -985,10 +985,10 @@ const TransformsWorkspace: React.FC<Props> = ({
   return (
     <div className="grid gap-4 xl:grid-cols-[280px_minmax(300px,1fr)_minmax(320px,1fr)]">
       <div className="space-y-4">
-        <section className="rounded-lg border border-slate-200 bg-white px-4 py-3 space-y-3">
+        <section className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
           <div>
-            <p className="text-sm font-semibold text-slate-800">Source data</p>
-            <p className="text-xs text-slate-500">Pick preview data and choose the collection binding to shape.</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Source data</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Pick preview data and choose the collection binding to shape.</p>
           </div>
           <ViewSwitcher
             currentView={previewState.sourceKind}
@@ -998,7 +998,7 @@ const TransformsWorkspace: React.FC<Props> = ({
 
           {previewState.sourceKind === 'sample' ? (
             <div className="space-y-1">
-              <label htmlFor="invoice-designer-transforms-sample-select" className="text-xs font-semibold text-slate-700">
+              <label htmlFor="invoice-designer-transforms-sample-select" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Sample scenario
               </label>
               <CustomSelect
@@ -1011,7 +1011,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                 onValueChange={onSampleChange}
                 size="sm"
               />
-              {activeSample && <p className="text-xs text-slate-500">{activeSample.description}</p>}
+              {activeSample && <p className="text-xs text-slate-500 dark:text-slate-400">{activeSample.description}</p>}
             </div>
           ) : (
             <div className="space-y-2">
@@ -1033,7 +1033,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                 label="Select invoice"
               />
               {previewState.isInvoiceDetailLoading && (
-                <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-500">
+                <p className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
                   Loading invoice details...
                 </p>
               )}
@@ -1046,7 +1046,7 @@ const TransformsWorkspace: React.FC<Props> = ({
           )}
 
           <div className="space-y-1">
-            <label htmlFor="invoice-designer-transforms-source-binding" className="text-xs font-semibold text-slate-700">
+            <label htmlFor="invoice-designer-transforms-source-binding" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Source collection
             </label>
             <CustomSelect
@@ -1068,7 +1068,7 @@ const TransformsWorkspace: React.FC<Props> = ({
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="invoice-designer-transforms-output-binding" className="text-xs font-semibold text-slate-700">
+            <label htmlFor="invoice-designer-transforms-output-binding" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Output binding ID
             </label>
             <Input
@@ -1086,41 +1086,41 @@ const TransformsWorkspace: React.FC<Props> = ({
           </div>
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white px-4 py-3 space-y-2">
+        <section className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-800">Source metadata</p>
-            <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Source metadata</p>
+            <span className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs text-slate-600 dark:text-slate-400">
               {sourceCollection.length} rows
             </span>
           </div>
-          <div className="space-y-1 text-xs text-slate-600">
+          <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400">
             <p>
-              <span className="font-semibold text-slate-700">Binding</span>: {transforms.sourceBindingId || 'None'}
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Binding</span>: {transforms.sourceBindingId || 'None'}
             </p>
             <p>
-              <span className="font-semibold text-slate-700">Resolved path</span>: {selectedSourceOption?.path ?? 'Not resolved'}
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Resolved path</span>: {selectedSourceOption?.path ?? 'Not resolved'}
             </p>
           </div>
           {sourceFieldPaths.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {sourceFieldPaths.map((path) => (
-                <code key={path} className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-700">
+                <code key={path} className="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[11px] text-slate-700 dark:text-slate-300">
                   {path}
                 </code>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-500">Choose preview data and a collection binding to discover fields.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Choose preview data and a collection binding to discover fields.</p>
           )}
         </section>
       </div>
 
       <div className="space-y-4">
-        <section className="rounded-lg border border-slate-200 bg-white px-4 py-3 space-y-3">
+        <section className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-semibold text-slate-800">Transform pipeline</p>
-              <p className="text-xs text-slate-500">Operations run top to bottom.</p>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Transform pipeline</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Operations run top to bottom.</p>
             </div>
           </div>
 	          <div className="flex flex-wrap gap-2">
@@ -1139,7 +1139,7 @@ const TransformsWorkspace: React.FC<Props> = ({
 	          </div>
 
           {transforms.operations.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-6 text-sm text-slate-500">
+            <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
               Add operations to build the transform pipeline.
             </div>
           ) : (
@@ -1153,8 +1153,8 @@ const TransformsWorkspace: React.FC<Props> = ({
                     tabIndex={0}
                     className={`w-full rounded-lg border px-3 py-3 text-left transition ${
                       isSelected
-                        ? 'border-sky-300 bg-sky-50 shadow-sm'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
+                        ? 'border-sky-300 dark:border-sky-700 bg-sky-50 dark:bg-sky-900/30 shadow-sm'
+                        : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] hover:border-slate-300 dark:hover:border-slate-500'
                     }`}
                     onClick={() => setSelectedOperationId(operation.id)}
                     onKeyDown={(event) => {
@@ -1167,12 +1167,12 @@ const TransformsWorkspace: React.FC<Props> = ({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-100 text-[10px] font-semibold text-slate-600">
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-400">
                             {index + 1}
                           </span>
-                          <span className="text-sm font-semibold capitalize text-slate-800">{operation.type}</span>
+                          <span className="text-sm font-semibold capitalize text-slate-800 dark:text-slate-200">{operation.type}</span>
                         </div>
-                        <p className="mt-1 truncate text-xs text-slate-500">{describeOperation(operation)}</p>
+                        <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{describeOperation(operation)}</p>
                       </div>
 	                      <div className="flex shrink-0 items-center gap-1">
 	                        <Button
@@ -1238,20 +1238,20 @@ const TransformsWorkspace: React.FC<Props> = ({
           )}
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white px-4 py-3 space-y-3">
+        <section className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
           <div>
-            <p className="text-sm font-semibold text-slate-800">Inspector</p>
-            <p className="text-xs text-slate-500">Edit the selected transform operation.</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Inspector</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Edit the selected transform operation.</p>
           </div>
           {renderInspector()}
         </section>
       </div>
 
       <div className="space-y-4">
-        <section className="rounded-lg border border-slate-200 bg-white px-4 py-3 space-y-3">
+        <section className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
           <div>
-            <p className="text-sm font-semibold text-slate-800">Output preview</p>
-            <p className="text-xs text-slate-500">Preview rows generated from the current transform pipeline.</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Output preview</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Preview rows generated from the current transform pipeline.</p>
           </div>
 
           {combinedIssues.length > 0 && (
@@ -1266,10 +1266,10 @@ const TransformsWorkspace: React.FC<Props> = ({
 
           {outputPreview.rowPaths.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-semibold text-slate-700">Available row paths</p>
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Available row paths</p>
               <div className="flex flex-wrap gap-1">
                 {outputPreview.rowPaths.map((path) => (
-                  <code key={path} className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-700">
+                  <code key={path} className="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[11px] text-slate-700 dark:text-slate-300">
                     {path}
                   </code>
                 ))}
@@ -1279,17 +1279,17 @@ const TransformsWorkspace: React.FC<Props> = ({
 
           {outputPreview.groups ? (
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-600">
+              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
                 <span>{outputPreview.groups.length} grouped rows</span>
                 <span>Binding: {transforms.outputBindingId || 'Not set'}</span>
               </div>
               {outputPreview.groups.slice(0, 5).map((group, index) => (
-                <div key={`group-${index}`} className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-1 text-xs">
+                <div key={`group-${index}`} className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] p-3 space-y-1 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-800">key: {formatValuePreview(group.key)}</span>
-                    <span className="text-slate-500">{Array.isArray(group.items) ? group.items.length : 0} items</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">key: {formatValuePreview(group.key)}</span>
+                    <span className="text-slate-500 dark:text-slate-400">{Array.isArray(group.items) ? group.items.length : 0} items</span>
                   </div>
-                  <pre className="overflow-x-auto rounded bg-white p-2 text-[11px] text-slate-700">
+                  <pre className="overflow-x-auto rounded bg-white dark:bg-[rgb(var(--color-card))] p-2 text-[11px] text-slate-700 dark:text-slate-300">
                     {JSON.stringify(group.aggregates ?? {}, null, 2)}
                   </pre>
                 </div>
@@ -1297,20 +1297,20 @@ const TransformsWorkspace: React.FC<Props> = ({
             </div>
           ) : outputPreview.rows.length > 0 ? (
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-600">
+              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
                 <span>{outputPreview.rows.length} rows</span>
                 <span>Binding: {transforms.outputBindingId || 'Not set'}</span>
               </div>
               <div className="space-y-2">
                 {outputPreview.rows.slice(0, 5).map((row, index) => (
-                  <pre key={`row-${index}`} className="overflow-x-auto rounded bg-slate-50 p-2 text-[11px] text-slate-700">
+                  <pre key={`row-${index}`} className="overflow-x-auto rounded bg-slate-50 dark:bg-[rgb(var(--color-background))] p-2 text-[11px] text-slate-700 dark:text-slate-300">
                     {JSON.stringify(row, null, 2)}
                   </pre>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-6 text-sm text-slate-500">
+            <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
               {previewData
                 ? 'Configure the source, output binding, and operations to preview transformed rows.'
                 : 'Choose preview data to inspect transformed output.'}

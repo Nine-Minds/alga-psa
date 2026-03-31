@@ -254,7 +254,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
                 <button
                   type="button"
                   id={`${domId}-color-picker`}
-                  className="h-10 w-10 shrink-0 rounded border border-slate-300 bg-white p-1 transition-colors hover:border-slate-400"
+                  className="h-10 w-10 shrink-0 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-[rgb(var(--color-card))] p-1 transition-colors hover:border-slate-400 dark:hover:border-slate-500"
                   title={`Pick ${field.label.toLowerCase()}`}
                   aria-label={`Pick ${field.label.toLowerCase()}`}
                 >
@@ -274,7 +274,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
       const value = resolveValue(field);
       const checked = Boolean(value);
       return (
-        <label key={field.id} className="flex items-center gap-2 text-xs text-slate-600">
+        <label key={field.id} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
           <input
             id={domId}
             type="checkbox"
