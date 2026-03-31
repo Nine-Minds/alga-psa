@@ -2,44 +2,36 @@
   "name": "@alga-psa/billing",
   "version": "0.1.0",
   "private": true,
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.mjs",
   "types": "./src/index.ts",
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.mjs"
     },
     "./actions": {
       "types": "./src/actions/index.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "import": "./dist/actions/index.mjs"
     },
     "./runtime": {
       "types": "./src/runtime.ts",
-      "import": "./dist/runtime.mjs",
-      "require": "./dist/runtime.js"
+      "import": "./dist/runtime.mjs"
     },
     "./components": {
       "types": "./src/components/index.ts",
-      "import": "./dist/components/index.mjs",
-      "require": "./dist/components/index.js"
+      "import": "./dist/components/index.mjs"
     },
     "./models": {
       "types": "./src/models/index.ts",
-      "import": "./dist/models/index.mjs",
-      "require": "./dist/models/index.js"
+      "import": "./dist/models/index.mjs"
     },
     "./schemas": {
       "types": "./src/schemas/index.ts",
-      "import": "./dist/schemas/index.mjs",
-      "require": "./dist/schemas/index.js"
+      "import": "./dist/schemas/index.mjs"
     },
     "./services": {
       "types": "./src/services/index.ts",
-      "import": "./dist/services/index.mjs",
-      "require": "./dist/services/index.js"
+      "import": "./dist/services/index.mjs"
     }
   },
   "scripts": {
