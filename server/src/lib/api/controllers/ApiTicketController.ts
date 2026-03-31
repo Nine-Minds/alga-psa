@@ -399,7 +399,7 @@ export class ApiTicketController extends ApiBaseController {
           headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(result.fileName)}"`);
           headers.set('Cache-Control', 'no-store');
 
-          return new NextResponse(result.buffer, { status: 200, headers });
+          return new NextResponse(new Uint8Array(result.buffer), { status: 200, headers });
         });
       } catch (error) {
         return handleApiError(error);
