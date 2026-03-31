@@ -31,6 +31,12 @@ export default function OnboardingPage() {
 
       if (settings?.onboarding_data) {
         data = settings.onboarding_data;
+        // Migrate legacy field: clientName was renamed to tenantName in the saved progress.
+        // Old saved data may still have clientName which would incorrectly prefill the Add Client step.
+        if ('clientName' in data && !data.tenantName) {
+          data.tenantName = data.clientName;
+        }
+        delete (data as any).clientName;
       }
 
       // For first-time users, fetch user data to prefill
