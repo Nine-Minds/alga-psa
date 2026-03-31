@@ -268,6 +268,11 @@ export async function getLicensePricingAction(): Promise<{
       return { success: false, error: 'Not authenticated' };
     }
 
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'Permission denied' };
+    }
+
     const knex = await getConnection(session.user.tenant);
 
     // Try to get pricing from the tenant's actual subscription
