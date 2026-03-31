@@ -56,12 +56,6 @@ const activities = proxyActivities<{
   sendWelcomeEmail(input: SendWelcomeEmailActivityInput): Promise<SendWelcomeEmailActivityResult>;
   rollbackTenant(tenantId: string): Promise<void>;
   rollbackUser(userId: string, tenantId: string): Promise<void>;
-  updateCheckoutSessionStatus(input: {
-    checkoutSessionId: string;
-    workflowStatus: 'pending' | 'started' | 'in_progress' | 'completed' | 'failed';
-    workflowId?: string;
-    error?: string;
-  }): Promise<void>;
   // Customer tracking activities
   createCustomerClientActivity(input: {
     tenantName: string;
@@ -109,25 +103,6 @@ const activities = proxyActivities<{
   },
 });
 
-// Separate proxy for nm-store callback with more aggressive retry policy
-// This ensures the callback is retried with exponential backoff even if nm-store is temporarily down
-const callbackActivities = proxyActivities<{
-  callbackToNmStore(input: {
-    sessionId: string;
-    algaTenantId?: string;
-    status: 'completed' | 'failed';
-    error?: string;
-  }): Promise<void>;
-}>({
-  startToCloseTimeout: '2m',
-  retry: {
-    maximumAttempts: 5,  // More attempts for callback
-    backoffCoefficient: 2.0,
-    initialInterval: '2s',  // Start with 2s
-    maximumInterval: '60s',  // Allow up to 60s between retries
-    nonRetryableErrorTypes: [],  // Retry all errors for callback
-  },
-});
 
 // Define signals for workflow control
 export const cancelWorkflowSignal = defineSignal<[TenantCreationCancelSignal]>('cancel');
@@ -190,23 +165,6 @@ export async function tenantCreationWorkflow(
 
   try {
     log.info('Starting tenant creation workflow', { input });
-    
-    // Update checkout session status to in_progress if we have a sessionId
-    if (input.checkoutSessionId) {
-      try {
-        await activities.updateCheckoutSessionStatus({
-          checkoutSessionId: input.checkoutSessionId,
-          workflowStatus: 'in_progress',
-          workflowId: workflowInfo().workflowId,
-        });
-      } catch (statusError) {
-        // Log but don't fail the workflow if status update fails
-        log.warn('Failed to update checkout session status to in_progress', {
-          error: statusError instanceof Error ? statusError.message : 'Unknown error',
-          checkoutSessionId: input.checkoutSessionId,
-        });
-      }
-    }
     
     // Step 0.5: Fetch Stripe details from checkout session if provided
     let stripeDetails = {
@@ -479,44 +437,6 @@ export async function tenantCreationWorkflow(
       emailSent,
     });
 
-    // Update checkout session status to completed if we have a sessionId
-    if (input.checkoutSessionId) {
-      try {
-        await activities.updateCheckoutSessionStatus({
-          checkoutSessionId: input.checkoutSessionId,
-          workflowStatus: 'completed',
-          workflowId: workflowInfo().workflowId,
-        });
-      } catch (statusError) {
-        // Log but don't fail the workflow if status update fails
-        log.warn('Failed to update checkout session status to completed', {
-          error: statusError instanceof Error ? statusError.message : 'Unknown error',
-          checkoutSessionId: input.checkoutSessionId,
-        });
-      }
-      
-      // Callback to nm-store with the tenant ID
-      // Use the separate callback proxy with enhanced retry policy
-      try {
-        await callbackActivities.callbackToNmStore({
-          sessionId: input.checkoutSessionId,
-          algaTenantId: tenantResult.tenantId,
-          status: 'completed',
-        });
-        log.info('Successfully called back to nm-store with tenant ID', {
-          sessionId: input.checkoutSessionId,
-          tenantId: tenantResult.tenantId,
-        });
-      } catch (callbackError) {
-        // Log but don't fail the workflow if callback fails after all retries
-        log.warn('Failed to callback to nm-store after retries', {
-          error: callbackError instanceof Error ? callbackError.message : 'Unknown error',
-          checkoutSessionId: input.checkoutSessionId,
-          tenantId: tenantResult.tenantId,
-        });
-      }
-    }
-
     return {
       tenantId: tenantResult.tenantId,
       adminUserId: userResult.userId,
@@ -539,24 +459,6 @@ export async function tenantCreationWorkflow(
       tenantCreated,
       userCreated 
     });
-
-    // Update checkout session status to failed if we have a sessionId
-    if (input.checkoutSessionId) {
-      try {
-        await activities.updateCheckoutSessionStatus({
-          checkoutSessionId: input.checkoutSessionId,
-          workflowStatus: 'failed',
-          workflowId: workflowInfo().workflowId,
-          error: workflowState.error,
-        });
-      } catch (statusError) {
-        // Log but don't fail the workflow if status update fails
-        log.warn('Failed to update checkout session status to failed', {
-          error: statusError instanceof Error ? statusError.message : 'Unknown error',
-          checkoutSessionId: input.checkoutSessionId,
-        });
-      }
-    }
 
     // Rollback operations in reverse order
     try {
