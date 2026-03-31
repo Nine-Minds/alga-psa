@@ -34,6 +34,15 @@ let gmailListMessagesSinceMock = vi.fn();
 let gmailGetMessageDetailsMock = vi.fn();
 let microsoftGetMessageDetailsMock = vi.fn();
 let storageUploadMock = vi.fn(async (_buffer: Buffer, storagePath: string) => ({ path: storagePath }));
+let inboundReplyAckDeciderDecideMock = vi.fn(async () => ({
+  decision: 'NOT_ACK',
+  source: 'default',
+  attempted: false,
+  reason: 'default_non_ai',
+  model: null,
+  rawOutput: null,
+  error: null,
+}));
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
@@ -97,6 +106,12 @@ vi.mock('@alga-psa/storage', () => ({
     })),
   },
   generateStoragePath: vi.fn((tenant: string, _prefix: string, fileName: string) => `${tenant}/${fileName}`),
+}));
+
+vi.mock('@alga-psa/shared/services/email/inboundReplyAcknowledgementDecider', () => ({
+  resolveInboundReplyAcknowledgementDecider: vi.fn(async () => ({
+    decide: (input: any) => inboundReplyAckDeciderDecideMock(input),
+  })),
 }));
 
 function makeFakeJwt(payload: Record<string, any>): string {
@@ -321,6 +336,49 @@ async function createInboundRoutingDefaults(params: {
   return defaultsId;
 }
 
+async function ensureSecondaryOpenStatus(boardIdForStatus: string): Promise<string> {
+  const openStatuses = await db('statuses')
+    .where({
+      tenant: tenantId,
+      board_id: boardIdForStatus,
+      status_type: 'ticket',
+      is_closed: false,
+    })
+    .orderBy('is_default', 'desc')
+    .orderBy('order_number', 'asc');
+
+  if (openStatuses.length >= 2 && openStatuses[1]?.status_id) {
+    return openStatuses[1].status_id;
+  }
+
+  if (!openStatuses[0]) {
+    throw new Error('Expected at least one open status on board');
+  }
+
+  const source = openStatuses[0];
+  const newStatusId = uuidv4();
+  const {
+    status_id: _sourceStatusId,
+    created_at: _sourceCreatedAt,
+    updated_at: _sourceUpdatedAt,
+    ...sourceRest
+  } = source;
+
+  await db('statuses').insert({
+    ...sourceRest,
+    status_id: newStatusId,
+    board_id: boardIdForStatus,
+    name: `Reopen ${newStatusId.slice(0, 6)}`,
+    is_default: false,
+    is_closed: false,
+    order_number: (source.order_number || 10) + 5,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  return newStatusId;
+}
+
 describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   const cleanup: Array<() => Promise<void>> = [];
 
@@ -366,6 +424,16 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     storageUploadMock.mockReset();
     storageUploadMock.mockImplementation(async (_buffer: Buffer, storagePath: string) => ({
       path: storagePath,
+    }));
+    inboundReplyAckDeciderDecideMock.mockReset();
+    inboundReplyAckDeciderDecideMock.mockImplementation(async () => ({
+      decision: 'NOT_ACK',
+      source: 'default',
+      attempted: false,
+      reason: 'default_non_ai',
+      model: null,
+      rawOutput: null,
+      error: null,
     }));
   });
 
@@ -1130,6 +1198,1161 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       .first<any>();
     expect(ticketAfterReply).toBeDefined();
     expect(ticketAfterReply.board_id).toBe(boardId);
+  });
+
+  it('T001: closed ticket internal threaded reply inside cutoff reopens to explicit board reopen status and adds comment', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-reopen-internal-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const closedStatus = await db('statuses')
+      .where({
+        tenant: tenantId,
+        board_id: boardId,
+        status_type: 'ticket',
+        is_closed: true,
+      })
+      .first<any>();
+    if (!closedStatus?.status_id) throw new Error('Expected a closed status on seeded board');
+
+    const explicitReopenStatusId = await ensureSecondaryOpenStatus(boardId);
+    const originalBoard = await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .first<any>();
+    if (!originalBoard) throw new Error('Expected board row');
+
+    await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .update({
+        inbound_reply_reopen_enabled: true,
+        inbound_reply_reopen_cutoff_hours: 72,
+        inbound_reply_reopen_status_id: explicitReopenStatusId,
+        inbound_reply_ai_ack_suppression_enabled: false,
+      });
+    cleanup.push(async () => {
+      await db('boards')
+        .where({ tenant: tenantId, board_id: boardId })
+        .update({
+          inbound_reply_reopen_enabled: originalBoard.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: originalBoard.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: originalBoard.inbound_reply_reopen_status_id ?? null,
+          inbound_reply_ai_ack_suppression_enabled: originalBoard.inbound_reply_ai_ack_suppression_enabled ?? false,
+        });
+    });
+
+    const internalReplyUserId = uuidv4();
+    const internalReplyEmail = `internal-reopen-${uuidv4().slice(0, 6)}@example.com`;
+    await db('users').insert({
+      user_id: internalReplyUserId,
+      tenant: tenantId,
+      username: `int-reopen-${internalReplyUserId.slice(0, 8)}`,
+      email: internalReplyEmail,
+      first_name: 'Internal',
+      last_name: 'Reopener',
+      hashed_password: 'not-a-real-hash',
+      user_type: 'internal',
+      is_inactive: false,
+      created_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('users').where({ tenant: tenantId, user_id: internalReplyUserId }).delete();
+    });
+
+    const ticketId = uuidv4();
+    const originalMessageId = `orig-internal-${uuidv4()}@mail`;
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `REOPEN-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Closed ticket for internal reopen test',
+      client_id: clientId,
+      status_id: closedStatus.status_id,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      updated_by: enteredByUserId,
+      is_closed: true,
+      closed_at: db.raw(`now() - interval '2 hours'`),
+      closed_by: enteredByUserId,
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-${uuidv4()}` }),
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-internal-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: internalReplyEmail, name: 'Internal Reopener' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Closed ticket for internal reopen test',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: {
+          text: 'Please reopen this and continue work.',
+          html: undefined,
+        },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+    expect(result.outcome === 'replied' ? result.ticketId : null).toBe(ticketId);
+
+    const ticketAfter = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first<any>();
+    expect(ticketAfter).toBeDefined();
+    expect(ticketAfter.status_id).toBe(explicitReopenStatusId);
+    expect(ticketAfter.is_closed).toBe(false);
+    expect(ticketAfter.closed_at).toBeNull();
+    expect(ticketAfter.closed_by).toBeNull();
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
+    expect(comments).toHaveLength(1);
+  });
+
+  it('T002: closed ticket internal threaded reply inside cutoff falls back to board default open status when explicit reopen status is unset', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-reopen-fallback-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const closedStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: true })
+      .first<any>();
+    const defaultOpenStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: false, is_default: true })
+      .first<any>();
+    if (!closedStatus?.status_id || !defaultOpenStatus?.status_id) {
+      throw new Error('Expected closed and default open statuses on seeded board');
+    }
+
+    const originalBoard = await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .first<any>();
+    if (!originalBoard) throw new Error('Expected board row');
+
+    await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .update({
+        inbound_reply_reopen_enabled: true,
+        inbound_reply_reopen_cutoff_hours: 72,
+        inbound_reply_reopen_status_id: null,
+        inbound_reply_ai_ack_suppression_enabled: false,
+      });
+    cleanup.push(async () => {
+      await db('boards')
+        .where({ tenant: tenantId, board_id: boardId })
+        .update({
+          inbound_reply_reopen_enabled: originalBoard.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: originalBoard.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: originalBoard.inbound_reply_reopen_status_id ?? null,
+          inbound_reply_ai_ack_suppression_enabled: originalBoard.inbound_reply_ai_ack_suppression_enabled ?? false,
+        });
+    });
+
+    const internalReplyUserId = uuidv4();
+    const internalReplyEmail = `internal-default-${uuidv4().slice(0, 6)}@example.com`;
+    await db('users').insert({
+      user_id: internalReplyUserId,
+      tenant: tenantId,
+      username: `int-default-${internalReplyUserId.slice(0, 8)}`,
+      email: internalReplyEmail,
+      first_name: 'Internal',
+      last_name: 'Fallback',
+      hashed_password: 'not-a-real-hash',
+      user_type: 'internal',
+      is_inactive: false,
+      created_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('users').where({ tenant: tenantId, user_id: internalReplyUserId }).delete();
+    });
+
+    const ticketId = uuidv4();
+    const originalMessageId = `orig-default-${uuidv4()}@mail`;
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `REOPEN-DEFAULT-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Closed ticket for default reopen status test',
+      client_id: clientId,
+      status_id: closedStatus.status_id,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      is_closed: true,
+      closed_at: db.raw(`now() - interval '1 hour'`),
+      closed_by: enteredByUserId,
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-${uuidv4()}` }),
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-default-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: internalReplyEmail, name: 'Internal Fallback' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Closed ticket for default reopen status test',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Follow-up requiring reopen', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+    const ticketAfter = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first<any>();
+    expect(ticketAfter.status_id).toBe(defaultOpenStatus.status_id);
+    expect(ticketAfter.is_closed).toBe(false);
+  });
+
+  it('T003: when board reopen-on-reply is disabled, threaded reply on closed ticket adds comment without reopening', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-reopen-disabled-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const closedStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: true })
+      .first<any>();
+    if (!closedStatus?.status_id) throw new Error('Expected closed status');
+
+    const originalBoard = await db('boards').where({ tenant: tenantId, board_id: boardId }).first<any>();
+    await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .update({
+        inbound_reply_reopen_enabled: false,
+        inbound_reply_reopen_cutoff_hours: 72,
+        inbound_reply_reopen_status_id: null,
+        inbound_reply_ai_ack_suppression_enabled: false,
+      });
+    cleanup.push(async () => {
+      await db('boards')
+        .where({ tenant: tenantId, board_id: boardId })
+        .update({
+          inbound_reply_reopen_enabled: originalBoard?.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: originalBoard?.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: originalBoard?.inbound_reply_reopen_status_id ?? null,
+          inbound_reply_ai_ack_suppression_enabled: originalBoard?.inbound_reply_ai_ack_suppression_enabled ?? false,
+        });
+    });
+
+    const ticketId = uuidv4();
+    const originalMessageId = `orig-disabled-${uuidv4()}@mail`;
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `REOPEN-OFF-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Closed ticket for reopen-disabled test',
+      client_id: clientId,
+      status_id: closedStatus.status_id,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      is_closed: true,
+      closed_at: db.raw(`now() - interval '1 hour'`),
+      closed_by: enteredByUserId,
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-${uuidv4()}` }),
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-disabled-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `client-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Closed ticket for reopen-disabled test',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Any update?', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+
+    const ticketAfter = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first<any>();
+    expect(ticketAfter.status_id).toBe(closedStatus.status_id);
+    expect(ticketAfter.is_closed).toBe(true);
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
+    expect(comments).toHaveLength(1);
+  });
+
+  it('T004: client threaded reply beyond cutoff creates a new ticket instead of attaching to closed ticket', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-reopen-cutoff-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const closedStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: true })
+      .first<any>();
+    if (!closedStatus?.status_id) throw new Error('Expected closed status');
+
+    const originalBoard = await db('boards').where({ tenant: tenantId, board_id: boardId }).first<any>();
+    await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .update({
+        inbound_reply_reopen_enabled: true,
+        inbound_reply_reopen_cutoff_hours: 1,
+        inbound_reply_reopen_status_id: null,
+        inbound_reply_ai_ack_suppression_enabled: false,
+      });
+    cleanup.push(async () => {
+      await db('boards')
+        .where({ tenant: tenantId, board_id: boardId })
+        .update({
+          inbound_reply_reopen_enabled: originalBoard?.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: originalBoard?.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: originalBoard?.inbound_reply_reopen_status_id ?? null,
+          inbound_reply_ai_ack_suppression_enabled: originalBoard?.inbound_reply_ai_ack_suppression_enabled ?? false,
+        });
+    });
+
+    const oldTicketId = uuidv4();
+    const originalMessageId = `orig-cutoff-${uuidv4()}@mail`;
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: oldTicketId,
+      ticket_number: `REOPEN-CUTOFF-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Closed ticket for cutoff reroute test',
+      client_id: clientId,
+      status_id: closedStatus.status_id,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      is_closed: true,
+      closed_at: db.raw(`now() - interval '8 hours'`),
+      closed_by: enteredByUserId,
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-${uuidv4()}` }),
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: oldTicketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: oldTicketId }).delete();
+    });
+
+    const subject = `Re: Closed ticket for cutoff reroute test ${uuidv4().slice(0, 6)}`;
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-cutoff-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `client-cutoff-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject,
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Need more work on this issue.', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+    expect(result.outcome === 'created' ? result.ticketId : null).not.toBe(oldTicketId);
+
+    const oldTicketAfter = await db('tickets').where({ tenant: tenantId, ticket_id: oldTicketId }).first<any>();
+    expect(oldTicketAfter.status_id).toBe(closedStatus.status_id);
+    expect(oldTicketAfter.is_closed).toBe(true);
+
+    const oldComments = await db('comments').where({ tenant: tenantId, ticket_id: oldTicketId });
+    expect(oldComments).toHaveLength(0);
+  });
+
+  it('T005: client threaded reply with AI suppression disabled reopens closed ticket and adds comment', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-reopen-client-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const closedStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: true })
+      .first<any>();
+    const defaultOpenStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: false, is_default: true })
+      .first<any>();
+    if (!closedStatus?.status_id || !defaultOpenStatus?.status_id) {
+      throw new Error('Expected closed and default open statuses');
+    }
+
+    const originalBoard = await db('boards').where({ tenant: tenantId, board_id: boardId }).first<any>();
+    await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .update({
+        inbound_reply_reopen_enabled: true,
+        inbound_reply_reopen_cutoff_hours: 72,
+        inbound_reply_reopen_status_id: null,
+        inbound_reply_ai_ack_suppression_enabled: false,
+      });
+    cleanup.push(async () => {
+      await db('boards')
+        .where({ tenant: tenantId, board_id: boardId })
+        .update({
+          inbound_reply_reopen_enabled: originalBoard?.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: originalBoard?.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: originalBoard?.inbound_reply_reopen_status_id ?? null,
+          inbound_reply_ai_ack_suppression_enabled: originalBoard?.inbound_reply_ai_ack_suppression_enabled ?? false,
+        });
+    });
+
+    const ticketId = uuidv4();
+    const originalMessageId = `orig-client-${uuidv4()}@mail`;
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `REOPEN-CLIENT-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Closed ticket for client reopen test',
+      client_id: clientId,
+      status_id: closedStatus.status_id,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      is_closed: true,
+      closed_at: db.raw(`now() - interval '30 minutes'`),
+      closed_by: enteredByUserId,
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-${uuidv4()}` }),
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-client-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `client-reopen-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Closed ticket for client reopen test',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Can you continue this work?', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+
+    const ticketAfter = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first<any>();
+    expect(ticketAfter.status_id).toBe(defaultOpenStatus.status_id);
+    expect(ticketAfter.is_closed).toBe(false);
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
+    expect(comments).toHaveLength(1);
+  });
+
+  it('T006: with board AI suppression enabled and decider ACK, client reply stays attached without reopening', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-reopen-ack-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const closedStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: true })
+      .first<any>();
+    if (!closedStatus?.status_id) throw new Error('Expected closed status');
+
+    const originalBoard = await db('boards').where({ tenant: tenantId, board_id: boardId }).first<any>();
+    await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .update({
+        inbound_reply_reopen_enabled: true,
+        inbound_reply_reopen_cutoff_hours: 72,
+        inbound_reply_reopen_status_id: null,
+        inbound_reply_ai_ack_suppression_enabled: true,
+      });
+    cleanup.push(async () => {
+      await db('boards')
+        .where({ tenant: tenantId, board_id: boardId })
+        .update({
+          inbound_reply_reopen_enabled: originalBoard?.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: originalBoard?.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: originalBoard?.inbound_reply_reopen_status_id ?? null,
+          inbound_reply_ai_ack_suppression_enabled: originalBoard?.inbound_reply_ai_ack_suppression_enabled ?? false,
+        });
+    });
+
+    inboundReplyAckDeciderDecideMock.mockResolvedValue({
+      decision: 'ACK',
+      source: 'ee_ai',
+      attempted: true,
+      reason: 'ai_classified',
+      model: 'test-model',
+      rawOutput: 'ACK',
+      error: null,
+    });
+
+    const ticketId = uuidv4();
+    const originalMessageId = `orig-client-ack-${uuidv4()}@mail`;
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `REOPEN-ACK-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Closed ticket for client ACK suppression test',
+      client_id: clientId,
+      status_id: closedStatus.status_id,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      is_closed: true,
+      closed_at: db.raw(`now() - interval '25 minutes'`),
+      closed_by: enteredByUserId,
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-${uuidv4()}` }),
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-client-ack-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `client-ack-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Closed ticket for client ACK suppression test',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Thanks, all set.', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+    expect(inboundReplyAckDeciderDecideMock).toHaveBeenCalledTimes(1);
+
+    const ticketAfter = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first<any>();
+    expect(ticketAfter.status_id).toBe(closedStatus.status_id);
+    expect(ticketAfter.is_closed).toBe(true);
+
+    const comment = await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).first<any>();
+    expect(comment).toBeDefined();
+    const decision = comment.metadata?.inboundReopenDecision ?? comment.metadata?.email?.inboundReopenDecision;
+    expect(decision?.action).toBe('comment_only');
+    expect(decision?.aiSuppression?.decision).toBe('ACK');
+  });
+
+  it('T007: with board AI suppression enabled and decider NOT_ACK, client reply reopens closed ticket', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-reopen-not-ack-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const closedStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: true })
+      .first<any>();
+    const defaultOpenStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: false, is_default: true })
+      .first<any>();
+    if (!closedStatus?.status_id || !defaultOpenStatus?.status_id) {
+      throw new Error('Expected closed and default open statuses');
+    }
+
+    const originalBoard = await db('boards').where({ tenant: tenantId, board_id: boardId }).first<any>();
+    await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .update({
+        inbound_reply_reopen_enabled: true,
+        inbound_reply_reopen_cutoff_hours: 72,
+        inbound_reply_reopen_status_id: null,
+        inbound_reply_ai_ack_suppression_enabled: true,
+      });
+    cleanup.push(async () => {
+      await db('boards')
+        .where({ tenant: tenantId, board_id: boardId })
+        .update({
+          inbound_reply_reopen_enabled: originalBoard?.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: originalBoard?.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: originalBoard?.inbound_reply_reopen_status_id ?? null,
+          inbound_reply_ai_ack_suppression_enabled: originalBoard?.inbound_reply_ai_ack_suppression_enabled ?? false,
+        });
+    });
+
+    inboundReplyAckDeciderDecideMock.mockResolvedValue({
+      decision: 'NOT_ACK',
+      source: 'ee_ai',
+      attempted: true,
+      reason: 'ai_classified',
+      model: 'test-model',
+      rawOutput: 'NOT_ACK',
+      error: null,
+    });
+
+    const ticketId = uuidv4();
+    const originalMessageId = `orig-client-not-ack-${uuidv4()}@mail`;
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `REOPEN-NOT-ACK-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Closed ticket for client NOT_ACK suppression test',
+      client_id: clientId,
+      status_id: closedStatus.status_id,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      is_closed: true,
+      closed_at: db.raw(`now() - interval '20 minutes'`),
+      closed_by: enteredByUserId,
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-${uuidv4()}` }),
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-client-not-ack-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `client-not-ack-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Closed ticket for client NOT_ACK suppression test',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Please reopen and continue work on this issue.', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+    expect(inboundReplyAckDeciderDecideMock).toHaveBeenCalledTimes(1);
+
+    const ticketAfter = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first<any>();
+    expect(ticketAfter.status_id).toBe(defaultOpenStatus.status_id);
+    expect(ticketAfter.is_closed).toBe(false);
+  });
+
+  it('T008: with AI suppression enabled but decider reports missing AI Assistant add-on, client reply reopens normally', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-reopen-addon-missing-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const closedStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: true })
+      .first<any>();
+    const defaultOpenStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: false, is_default: true })
+      .first<any>();
+    if (!closedStatus?.status_id || !defaultOpenStatus?.status_id) {
+      throw new Error('Expected closed and default open statuses');
+    }
+
+    const originalBoard = await db('boards').where({ tenant: tenantId, board_id: boardId }).first<any>();
+    await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .update({
+        inbound_reply_reopen_enabled: true,
+        inbound_reply_reopen_cutoff_hours: 72,
+        inbound_reply_reopen_status_id: null,
+        inbound_reply_ai_ack_suppression_enabled: true,
+      });
+    cleanup.push(async () => {
+      await db('boards')
+        .where({ tenant: tenantId, board_id: boardId })
+        .update({
+          inbound_reply_reopen_enabled: originalBoard?.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: originalBoard?.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: originalBoard?.inbound_reply_reopen_status_id ?? null,
+          inbound_reply_ai_ack_suppression_enabled: originalBoard?.inbound_reply_ai_ack_suppression_enabled ?? false,
+        });
+    });
+
+    inboundReplyAckDeciderDecideMock.mockResolvedValue({
+      decision: 'NOT_ACK',
+      source: 'ee_ai',
+      attempted: false,
+      reason: 'ai_addon_missing',
+      model: null,
+      rawOutput: null,
+      error: null,
+    });
+
+    const ticketId = uuidv4();
+    const originalMessageId = `orig-client-addon-missing-${uuidv4()}@mail`;
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `REOPEN-ADDON-MISSING-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Closed ticket for missing AI add-on fallback test',
+      client_id: clientId,
+      status_id: closedStatus.status_id,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      is_closed: true,
+      closed_at: db.raw(`now() - interval '20 minutes'`),
+      closed_by: enteredByUserId,
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-${uuidv4()}` }),
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-client-addon-missing-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `client-addon-missing-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Closed ticket for missing AI add-on fallback test',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Please proceed with additional work.', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+    expect(inboundReplyAckDeciderDecideMock).toHaveBeenCalledTimes(1);
+
+    const ticketAfter = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first<any>();
+    expect(ticketAfter.status_id).toBe(defaultOpenStatus.status_id);
+    expect(ticketAfter.is_closed).toBe(false);
+  });
+
+  it('T009: invalid AI classification output falls back to normal reopen behavior for client reply', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-reopen-ai-fallback-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const closedStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: true })
+      .first<any>();
+    const defaultOpenStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: false, is_default: true })
+      .first<any>();
+    if (!closedStatus?.status_id || !defaultOpenStatus?.status_id) {
+      throw new Error('Expected closed and default open statuses');
+    }
+
+    const originalBoard = await db('boards').where({ tenant: tenantId, board_id: boardId }).first<any>();
+    await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .update({
+        inbound_reply_reopen_enabled: true,
+        inbound_reply_reopen_cutoff_hours: 72,
+        inbound_reply_reopen_status_id: null,
+        inbound_reply_ai_ack_suppression_enabled: true,
+      });
+    cleanup.push(async () => {
+      await db('boards')
+        .where({ tenant: tenantId, board_id: boardId })
+        .update({
+          inbound_reply_reopen_enabled: originalBoard?.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: originalBoard?.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: originalBoard?.inbound_reply_reopen_status_id ?? null,
+          inbound_reply_ai_ack_suppression_enabled: originalBoard?.inbound_reply_ai_ack_suppression_enabled ?? false,
+        });
+    });
+
+    inboundReplyAckDeciderDecideMock.mockResolvedValue({
+      decision: 'NOT_ACK',
+      source: 'ee_ai',
+      attempted: true,
+      reason: 'ai_invalid_output',
+      model: 'test-model',
+      rawOutput: 'MAYBE',
+      error: 'unexpected output',
+    });
+
+    const ticketId = uuidv4();
+    const originalMessageId = `orig-client-ai-fallback-${uuidv4()}@mail`;
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `REOPEN-AI-FALLBACK-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Closed ticket for AI fallback reopen test',
+      client_id: clientId,
+      status_id: closedStatus.status_id,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      is_closed: true,
+      closed_at: db.raw(`now() - interval '15 minutes'`),
+      closed_by: enteredByUserId,
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-${uuidv4()}` }),
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-client-ai-fallback-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `client-ai-fallback-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Closed ticket for AI fallback reopen test',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Please continue work despite classification fallback.', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+    expect(inboundReplyAckDeciderDecideMock).toHaveBeenCalledTimes(1);
+
+    const ticketAfter = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first<any>();
+    expect(ticketAfter.status_id).toBe(defaultOpenStatus.status_id);
+    expect(ticketAfter.is_closed).toBe(false);
+  });
+
+  it('T010: token-only inbound replies are skipped before any reopen or comment work', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-token-only-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const closedStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: true })
+      .first<any>();
+    if (!closedStatus?.status_id) throw new Error('Expected closed status');
+
+    const originalBoard = await db('boards').where({ tenant: tenantId, board_id: boardId }).first<any>();
+    await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .update({
+        inbound_reply_reopen_enabled: true,
+        inbound_reply_reopen_cutoff_hours: 72,
+        inbound_reply_reopen_status_id: null,
+        inbound_reply_ai_ack_suppression_enabled: false,
+      });
+    cleanup.push(async () => {
+      await db('boards')
+        .where({ tenant: tenantId, board_id: boardId })
+        .update({
+          inbound_reply_reopen_enabled: originalBoard?.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: originalBoard?.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: originalBoard?.inbound_reply_reopen_status_id ?? null,
+          inbound_reply_ai_ack_suppression_enabled: originalBoard?.inbound_reply_ai_ack_suppression_enabled ?? false,
+        });
+    });
+
+    const ticketId = uuidv4();
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `TOKEN-ONLY-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Closed ticket for token-only skip test',
+      client_id: clientId,
+      status_id: closedStatus.status_id,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      is_closed: true,
+      closed_at: db.raw(`now() - interval '10 minutes'`),
+      closed_by: enteredByUserId,
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const replyToken = `token-${uuidv4()}`;
+    await db('email_reply_tokens').insert({
+      tenant: tenantId,
+      token: replyToken,
+      ticket_id: ticketId,
+      comment_id: null,
+      project_id: null,
+      created_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('email_reply_tokens').where({ tenant: tenantId, token: replyToken }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-token-only-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `token-only-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Closed ticket for token-only skip test',
+        body: {
+          text: `[ALGA-REPLY-TOKEN ${replyToken}]`,
+          html: undefined,
+        },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result).toEqual({
+      outcome: 'skipped',
+      reason: 'self_notification',
+    });
+
+    const ticketAfter = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first<any>();
+    expect(ticketAfter.status_id).toBe(closedStatus.status_id);
+    expect(ticketAfter.is_closed).toBe(true);
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
+    expect(comments).toHaveLength(0);
+  });
+
+  it('T012: threaded reply comment metadata stores reopen decision details for debugging', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-metadata-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const closedStatus = await db('statuses')
+      .where({ tenant: tenantId, board_id: boardId, status_type: 'ticket', is_closed: true })
+      .first<any>();
+    if (!closedStatus?.status_id) throw new Error('Expected closed status');
+
+    const originalBoard = await db('boards').where({ tenant: tenantId, board_id: boardId }).first<any>();
+    await db('boards')
+      .where({ tenant: tenantId, board_id: boardId })
+      .update({
+        inbound_reply_reopen_enabled: false,
+        inbound_reply_reopen_cutoff_hours: 72,
+        inbound_reply_reopen_status_id: null,
+        inbound_reply_ai_ack_suppression_enabled: false,
+      });
+    cleanup.push(async () => {
+      await db('boards')
+        .where({ tenant: tenantId, board_id: boardId })
+        .update({
+          inbound_reply_reopen_enabled: originalBoard?.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: originalBoard?.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: originalBoard?.inbound_reply_reopen_status_id ?? null,
+          inbound_reply_ai_ack_suppression_enabled: originalBoard?.inbound_reply_ai_ack_suppression_enabled ?? false,
+        });
+    });
+
+    const ticketId = uuidv4();
+    const originalMessageId = `orig-metadata-${uuidv4()}@mail`;
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `REOPEN-META-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Closed ticket for metadata test',
+      client_id: clientId,
+      status_id: closedStatus.status_id,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      is_closed: true,
+      closed_at: db.raw(`now() - interval '30 minutes'`),
+      closed_by: enteredByUserId,
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-${uuidv4()}` }),
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-metadata-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `client-meta-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Closed ticket for metadata test',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Thanks for closing this.', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+    const comment = await db('comments')
+      .where({ tenant: tenantId, ticket_id: ticketId })
+      .first<any>();
+    expect(comment).toBeDefined();
+    expect(comment.metadata?.inboundReopenDecision ?? comment.metadata?.email?.inboundReopenDecision).toBeTruthy();
   });
 
   it("Contact match: sender email matches existing contact and ticket uses contact's client_id/contact_id", async () => {

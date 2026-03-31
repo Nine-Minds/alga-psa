@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB-backed integration: a closed ticket with a threaded internal-user reply inside cutoff reopens to the board's explicit reopen status and records the reply comment.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F003",
@@ -14,7 +14,7 @@
   {
     "id": "T002",
     "description": "DB-backed integration: a closed ticket with a threaded internal-user reply inside cutoff falls back to the board default open status when no explicit reopen status is configured.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F003",
@@ -26,7 +26,7 @@
   {
     "id": "T003",
     "description": "DB-backed integration: when board reopen-on-reply is disabled, a threaded reply on a closed ticket adds the comment without reopening.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F004",
@@ -36,7 +36,7 @@
   {
     "id": "T004",
     "description": "DB-backed integration: a client reply beyond the board cutoff window creates a new ticket instead of attaching to and reopening the closed ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F005"
@@ -45,7 +45,7 @@
   {
     "id": "T005",
     "description": "DB-backed integration: a client reply with AI suppression disabled reopens the closed ticket and adds the reply comment.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F007",
@@ -55,7 +55,7 @@
   {
     "id": "T006",
     "description": "DB-backed integration: with board AI suppression enabled and EE acknowledgement decider returning `ACK`, the client reply stays attached to the closed ticket without reopening.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",
@@ -67,7 +67,7 @@
   {
     "id": "T007",
     "description": "DB-backed integration: with board AI suppression enabled and EE acknowledgement decider returning `NOT_ACK`, the client reply reopens the closed ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",
@@ -78,7 +78,7 @@
   {
     "id": "T008",
     "description": "DB-backed integration: when AI suppression is enabled but the tenant lacks `AI Assistant`, the client reply reopens normally without AI suppression.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F016"
@@ -87,7 +87,7 @@
   {
     "id": "T009",
     "description": "DB-backed integration: invalid AI output or acknowledgement-decider failure falls back to normal reopen behavior for the client reply.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F016"
@@ -96,7 +96,7 @@
   {
     "id": "T010",
     "description": "DB-backed integration: token-only inbound replies are still skipped before any reopen work occurs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
@@ -104,7 +104,7 @@
   {
     "id": "T011",
     "description": "Unit/integration coverage: CE or non-EE runtime uses the default non-AI acknowledgement decider without importing EE AI modules.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",
@@ -114,7 +114,7 @@
   {
     "id": "T012",
     "description": "DB-backed integration: decision metadata is persisted or logged in the chosen storage surface for reopen, cutoff, and AI suppression outcomes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
