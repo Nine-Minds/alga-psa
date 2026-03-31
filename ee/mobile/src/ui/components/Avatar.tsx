@@ -61,7 +61,7 @@ export function Avatar({
         width: dim,
         height: dim,
         borderRadius: dim / 2,
-        backgroundColor: bgColor,
+        backgroundColor: showImage ? "transparent" : bgColor,
         alignItems: "center",
         justifyContent: "center",
         overflow: "hidden",

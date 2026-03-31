@@ -1,15 +1,33 @@
 import React from "react";
-import { Linking, Text } from "react-native";
+import { Text } from "react-native";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+function MockModal(props: Record<string, unknown>) {
+  return props.visible
+    ? React.createElement("MockModal", { ...props, testID: "preview-modal" }, props.children as React.ReactNode)
+    : null;
+}
+function MockImage(props: Record<string, unknown>) {
+  return React.createElement("MockImage", { ...props, testID: "preview-image" });
+}
+
+vi.mock("react-native", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("react-native");
+  return {
+    ...actual,
+    Modal: MockModal,
+    Image: MockImage,
+  };
+});
+
 const getTicketDocumentsMock = vi.fn();
 const uploadTicketDocumentMock = vi.fn();
-const fetchMock = vi.fn();
-globalThis.fetch = fetchMock;
 const requestCameraPermissionsAsyncMock = vi.fn();
 const launchCameraAsyncMock = vi.fn();
 const getDocumentAsyncMock = vi.fn();
+const downloadFileAsyncMock = vi.fn();
+const shareAsyncMock = vi.fn();
 const translate = (key: string) => key;
 
 vi.mock("react-i18next", () => ({
@@ -41,16 +59,24 @@ vi.mock("../../../api/documents", () => ({
   uploadTicketDocument: (...args: unknown[]) => uploadTicketDocumentMock(...args),
 }));
 
-const mockFileWrite = vi.fn();
 const mockFileUri = "file:///cache/test-file";
-vi.mock("expo-file-system", () => ({
-  Paths: { cache: "file:///cache/" },
-  File: class MockFile {
+const mockFileExists = vi.fn().mockReturnValue(false);
+const mockFileDelete = vi.fn();
+
+vi.mock("expo-file-system", () => {
+  class MockFile {
     uri = mockFileUri;
-    write = mockFileWrite;
-    constructor() { /* noop */ }
-  },
-}));
+    get exists() { return mockFileExists(); }
+    delete = mockFileDelete;
+    static downloadFileAsync = (...args: unknown[]) => downloadFileAsyncMock(...args);
+  }
+  class MockDirectory {}
+  return {
+    File: MockFile,
+    Directory: MockDirectory,
+    Paths: { cache: { uri: "file:///cache/" } },
+  };
+});
 
 vi.mock("expo-image-picker", () => ({
   requestCameraPermissionsAsync: (...args: unknown[]) => requestCameraPermissionsAsyncMock(...args),
@@ -59,6 +85,10 @@ vi.mock("expo-image-picker", () => ({
 
 vi.mock("expo-document-picker", () => ({
   getDocumentAsync: (...args: unknown[]) => getDocumentAsyncMock(...args),
+}));
+
+vi.mock("expo-sharing", () => ({
+  shareAsync: (...args: unknown[]) => shareAsyncMock(...args),
 }));
 
 import { DocumentsSection } from "./DocumentsSection";
@@ -97,34 +127,43 @@ function getTextContent(renderer: ReactTestRenderer): string[] {
   });
 }
 
+const imageDoc = {
+  document_id: "doc-img",
+  document_name: "photo.jpg",
+  type_name: "Image",
+  mime_type: "image/jpeg",
+  file_size: 50000,
+  updated_at: "2026-03-26T12:00:00.000Z",
+  file_id: "file-img",
+};
+
+const pdfDoc = {
+  document_id: "doc-1",
+  document_name: "report.pdf",
+  type_name: "PDF",
+  mime_type: "application/pdf",
+  file_size: 42000,
+  updated_at: "2026-03-26T12:00:00.000Z",
+  file_id: "file-1",
+};
+
 describe("DocumentsSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getTicketDocumentsMock.mockResolvedValue({ ok: true, data: { data: [] } });
     uploadTicketDocumentMock.mockResolvedValue({ ok: true, data: { data: { document_id: "doc-1" } } });
-    fetchMock.mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) });
+    downloadFileAsyncMock.mockResolvedValue({ uri: mockFileUri });
+    shareAsyncMock.mockResolvedValue(undefined);
     requestCameraPermissionsAsyncMock.mockResolvedValue({ granted: true });
     launchCameraAsyncMock.mockResolvedValue({ canceled: true, assets: [] });
     getDocumentAsyncMock.mockResolvedValue({ canceled: true, assets: [] });
-    vi.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+    mockFileExists.mockReturnValue(false);
   });
 
   it("renders the document list, count badge, and metadata", async () => {
     getTicketDocumentsMock.mockResolvedValue({
       ok: true,
-      data: {
-        data: [
-          {
-            document_id: "doc-1",
-            document_name: "report.pdf",
-            type_name: "PDF",
-            mime_type: "application/pdf",
-            file_size: 42000,
-            updated_at: "2026-03-26T12:00:00.000Z",
-            file_id: "file-1",
-          },
-        ],
-      },
+      data: { data: [pdfDoc] },
     });
 
     const renderer = renderSection();
@@ -142,22 +181,10 @@ describe("DocumentsSection", () => {
     expect(getTextContent(renderer)).toContain("documents.empty");
   });
 
-  it("downloads and opens a tapped document", async () => {
+  it("downloads and opens share sheet for a tapped non-image document", async () => {
     getTicketDocumentsMock.mockResolvedValue({
       ok: true,
-      data: {
-        data: [
-          {
-            document_id: "doc-1",
-            document_name: "report.pdf",
-            type_name: "PDF",
-            mime_type: "application/pdf",
-            file_size: 42000,
-            updated_at: "2026-03-26T12:00:00.000Z",
-            file_id: "file-1",
-          },
-        ],
-      },
+      data: { data: [pdfDoc] },
     });
 
     const renderer = renderSection();
@@ -168,12 +195,127 @@ describe("DocumentsSection", () => {
       await documentPressable.props.onPress();
     });
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://example.com/api/documents/download/file-1",
+    expect(downloadFileAsyncMock).toHaveBeenCalledWith(
+      "https://example.com/api/v1/tickets/ticket-1/documents/doc-1",
+      expect.anything(),
       { headers: { "x-api-key": "api-key-1" } },
     );
-    expect(mockFileWrite).toHaveBeenCalled();
-    expect(Linking.openURL).toHaveBeenCalledWith(mockFileUri);
+    expect(shareAsyncMock).toHaveBeenCalledWith(mockFileUri, {
+      mimeType: "application/pdf",
+      dialogTitle: "report.pdf",
+    });
+  });
+
+  it("opens image preview modal when tapping an image document", async () => {
+    getTicketDocumentsMock.mockResolvedValue({
+      ok: true,
+      data: { data: [imageDoc] },
+    });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+    const documentPressable = renderer.root.findByProps({ accessibilityLabel: "photo.jpg" });
+
+    await act(async () => {
+      await documentPressable.props.onPress();
+    });
+
+    // Share sheet should NOT be shown for images
+    expect(shareAsyncMock).not.toHaveBeenCalled();
+
+    // Image preview modal should be visible
+    const modal = renderer.root.findAllByProps({ testID: "preview-modal" });
+    expect(modal.length).toBe(1);
+
+    // Preview image rendered
+    const previewImage = renderer.root.findAllByProps({ testID: "preview-image" });
+    expect(previewImage.length).toBe(1);
+    expect(previewImage[0].props.source.uri).toBe(mockFileUri);
+
+    // File name shown in preview
+    const previewTexts = getTextContent(renderer);
+    expect(previewTexts).toContain("photo.jpg");
+  });
+
+  it("closes image preview when tapping the close button", async () => {
+    getTicketDocumentsMock.mockResolvedValue({
+      ok: true,
+      data: { data: [imageDoc] },
+    });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+
+    // Open preview
+    await act(async () => {
+      await renderer.root.findByProps({ accessibilityLabel: "photo.jpg" }).props.onPress();
+    });
+
+    expect(renderer.root.findAllByProps({ testID: "preview-modal" }).length).toBe(1);
+
+    // Close preview
+    await act(async () => {
+      renderer.root.findByProps({ accessibilityLabel: "documents.closePreview" }).props.onPress();
+    });
+
+    // Modal should be gone
+    expect(renderer.root.findAllByProps({ testID: "preview-modal" }).length).toBe(0);
+  });
+
+  it("opens share sheet on long press for any document type", async () => {
+    getTicketDocumentsMock.mockResolvedValue({
+      ok: true,
+      data: { data: [imageDoc] },
+    });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+    const documentPressable = renderer.root.findByProps({ accessibilityLabel: "photo.jpg" });
+
+    await act(async () => {
+      await documentPressable.props.onLongPress();
+    });
+
+    // Long press always opens share sheet, even for images
+    expect(shareAsyncMock).toHaveBeenCalledWith(mockFileUri, {
+      mimeType: "image/jpeg",
+      dialogTitle: "photo.jpg",
+    });
+  });
+
+  it("deletes existing cached file before downloading", async () => {
+    mockFileExists.mockReturnValue(true);
+    getTicketDocumentsMock.mockResolvedValue({
+      ok: true,
+      data: { data: [pdfDoc] },
+    });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+
+    await act(async () => {
+      await renderer.root.findByProps({ accessibilityLabel: "report.pdf" }).props.onPress();
+    });
+
+    expect(mockFileDelete).toHaveBeenCalled();
+    expect(downloadFileAsyncMock).toHaveBeenCalled();
+  });
+
+  it("shows error when download fails", async () => {
+    downloadFileAsyncMock.mockRejectedValue(new Error("Network error"));
+    getTicketDocumentsMock.mockResolvedValue({
+      ok: true,
+      data: { data: [pdfDoc] },
+    });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+
+    await act(async () => {
+      await renderer.root.findByProps({ accessibilityLabel: "report.pdf" }).props.onPress();
+    });
+
+    expect(getTextContent(renderer)).toContain("documents.errors.open");
   });
 
   it("shows upload options and uploads a picked file, then refreshes the list", async () => {
@@ -320,5 +462,34 @@ describe("DocumentsSection", () => {
     await flushAsyncWork();
 
     expect(getTextContent(renderer)).toContain("documents.errors.cameraPermission");
+  });
+
+  it("disables the row and shows spinner while downloading", async () => {
+    let resolveDownload: ((value: unknown) => void) | null = null;
+    downloadFileAsyncMock.mockImplementation(
+      () => new Promise((resolve) => { resolveDownload = resolve; }),
+    );
+    getTicketDocumentsMock.mockResolvedValue({
+      ok: true,
+      data: { data: [pdfDoc] },
+    });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+
+    // Start download (don't await — it's pending)
+    act(() => {
+      void renderer.root.findByProps({ accessibilityLabel: "report.pdf" }).props.onPress();
+    });
+
+    // Row should be disabled and dimmed
+    const row = renderer.root.findByProps({ accessibilityLabel: "report.pdf" });
+    expect(row.props.disabled).toBe(true);
+    expect(row.props.style).toEqual(expect.objectContaining({ opacity: 0.6 }));
+
+    // Resolve to clean up
+    await act(async () => {
+      resolveDownload?.({ uri: mockFileUri });
+    });
   });
 });
