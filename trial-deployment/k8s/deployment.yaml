@@ -1,0 +1,73 @@
+# Deployment for the trial-deployment web app itself.
+# Runs in the trial-system namespace and uses the trial-deployer service account
+# for Kubernetes API access.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trial-system
+  labels:
+    app.kubernetes.io/managed-by: alga-trial-deployer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trial-deployment
+  namespace: trial-system
+  labels:
+    app: trial-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trial-deployment
+  template:
+    metadata:
+      labels:
+        app: trial-deployment
+    spec:
+      serviceAccountName: trial-deployer
+      containers:
+        - name: trial-deployment
+          image: ghcr.io/nine-minds/alga-psa-trial:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: TRIAL_BASE_DOMAIN
+              value: "trials.alga-psa.com"
+            - name: TRIAL_HELM_CHART_PATH
+              value: "/helm"
+            - name: TRIAL_SERVER_IMAGE
+              value: "ghcr.io/nine-minds/alga-psa-ce"
+            - name: TRIAL_SERVER_IMAGE_TAG
+              value: "latest"
+            - name: TRIAL_SETUP_IMAGE
+              value: "ghcr.io/nine-minds/alga-psa-ce"
+            - name: TRIAL_SETUP_IMAGE_TAG
+              value: "latest"
+            - name: TRIAL_DURATION_HOURS
+              value: "72"
+            - name: TRIAL_STORAGE_CLASS
+              value: "local-path"
+            - name: TRIAL_ISTIO_ENABLED
+              value: "false"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trial-deployment
+  namespace: trial-system
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3000
+  selector:
+    app: trial-deployment

@@ -16,7 +16,8 @@
     "sdk/*",
     "sdk/samples/*",
     "sdk/samples/*/*",
-    "tools/generators"
+    "tools/generators",
+    "trial-deployment"
   ],
   "scripts": {
     "install:ignore": "npm ci --ignore-scripts",

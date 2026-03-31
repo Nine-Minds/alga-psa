@@ -1,0 +1,55 @@
+# RBAC resources for the trial-deployment service.
+# The service account needs cluster-level permissions to create namespaces
+# and manage Helm releases (deployments, services, secrets, jobs, etc.)
+# in those dynamically-created namespaces.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trial-deployer
+  namespace: trial-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trial-deployer
+rules:
+  # Namespace management
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["create", "delete", "get", "list"]
+  # Core resources within trial namespaces
+  - apiGroups: [""]
+    resources:
+      - pods
+      - services
+      - secrets
+      - configmaps
+      - persistentvolumeclaims
+      - serviceaccounts
+    verbs: ["*"]
+  # Workload resources
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "replicasets"]
+    verbs: ["*"]
+  # Jobs for bootstrap/migration
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["*"]
+  # Istio virtual services (if Istio is enabled)
+  - apiGroups: ["networking.istio.io"]
+    resources: ["virtualservices", "gateways", "destinationrules"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: trial-deployer
+subjects:
+  - kind: ServiceAccount
+    name: trial-deployer
+    namespace: trial-system
+roleRef:
+  kind: ClusterRole
+  name: trial-deployer
+  apiGroup: rbac.authorization.k8s.io
