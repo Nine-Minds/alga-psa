@@ -234,15 +234,47 @@ async function fetchTenantParty(
   };
 }
 
+async function resolveAcceptedByName(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  acceptedBy: string | null | undefined
+): Promise<string | null> {
+  if (!acceptedBy) return null;
+
+  try {
+    // Try contacts first (client portal users link to a contact)
+    const contact = await knexOrTrx('contacts')
+      .select('full_name')
+      .where({ tenant, contact_name_id: acceptedBy })
+      .first<{ full_name?: string }>();
+    if (contact?.full_name) return contact.full_name;
+
+    // Fall back to internal users table
+    const user = await knexOrTrx('users')
+      .select('first_name', 'last_name')
+      .where({ tenant, user_id: acceptedBy })
+      .first<{ first_name?: string; last_name?: string }>();
+    if (user) {
+      const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+      if (name) return name;
+    }
+  } catch {
+    // Non-blocking — return null on any lookup error
+  }
+
+  return null;
+}
+
 export async function mapLoadedQuoteToViewModel(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quote: IQuote
 ): Promise<QuoteViewModel> {
-  const [client, contact, tenantParty] = await Promise.all([
+  const [client, contact, tenantParty, acceptedByName] = await Promise.all([
     fetchClientParty(knexOrTrx, tenant, quote.client_id),
     fetchContactParty(knexOrTrx, tenant, quote.contact_id),
     fetchTenantParty(knexOrTrx, tenant),
+    resolveAcceptedByName(knexOrTrx, tenant, quote.accepted_by),
   ]);
 
   const lineItems = (quote.quote_items ?? []).map(mapQuoteItemToViewModel);
@@ -272,6 +304,8 @@ export async function mapLoadedQuoteToViewModel(
     tenant: tenantParty,
     line_items: lineItems,
     phases: buildPhaseViewModels(lineItems),
+    accepted_by_name: acceptedByName,
+    accepted_at: quote.accepted_at ?? null,
   };
 }
 

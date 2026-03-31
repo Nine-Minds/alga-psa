@@ -91,6 +91,7 @@ export interface IQuote extends TenantEntity {
   viewed_at?: ISO8601String | null;
   accepted_at?: ISO8601String | null;
   accepted_by?: string | null;
+  accepted_by_name?: string | null;
   rejected_at?: ISO8601String | null;
   rejection_reason?: string | null;
   cancelled_at?: ISO8601String | null;
@@ -206,6 +207,8 @@ export interface QuoteViewModel {
   tenant?: QuoteViewModelParty | null;
   line_items: QuoteViewModelLineItem[];
   phases?: QuoteViewModelPhase[];
+  accepted_by_name?: string | null;
+  accepted_at?: ISO8601String | null;
 }
 
 export type QuoteDocumentTemplateSource = 'standard' | 'custom';

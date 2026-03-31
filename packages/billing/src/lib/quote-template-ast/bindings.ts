@@ -30,6 +30,8 @@ export const QUOTE_TEMPLATE_VALUE_BINDINGS: QuoteTemplateValueBindings = {
   tenantName: { id: 'tenantName', kind: 'value', path: 'tenant.name', fallback: 'Your Company' },
   tenantAddress: { id: 'tenantAddress', kind: 'value', path: 'tenant.address', fallback: '' },
   tenantLogo: { id: 'tenantLogo', kind: 'value', path: 'tenant.logo_url' },
+  acceptedByName: { id: 'acceptedByName', kind: 'value', path: 'accepted_by_name', fallback: '' },
+  acceptedAt: { id: 'acceptedAt', kind: 'value', path: 'accepted_at', fallback: '' },
 };
 
 export const QUOTE_TEMPLATE_COLLECTION_BINDINGS: QuoteTemplateCollectionBindings = {

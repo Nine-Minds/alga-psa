@@ -3509,3 +3509,32 @@ async function enrichFolderTreeWithCounts(
   }
   applyCounts(nodes);
 }
+
+// ---------------------------------------------------------------------------
+// Look up a document by its external file_id (used by the invoice designer
+// image picker to check client-portal visibility).
+// ---------------------------------------------------------------------------
+export const getDocumentByFileId = withAuth(async (
+  user,
+  { tenant },
+  fileId: string
+): Promise<{ document_id: string; document_name: string; is_client_visible: boolean } | null> => {
+  if (!await hasPermission(user, 'document', 'read')) {
+    return null;
+  }
+
+  const { knex } = await createTenantKnex();
+
+  const row = await knex('documents')
+    .select('document_id', 'document_name', 'is_client_visible')
+    .where({ tenant, file_id: fileId })
+    .first<{ document_id: string; document_name: string; is_client_visible: boolean }>();
+
+  if (!row) return null;
+
+  return {
+    document_id: row.document_id,
+    document_name: row.document_name,
+    is_client_visible: !!row.is_client_visible,
+  };
+});

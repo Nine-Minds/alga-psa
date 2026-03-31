@@ -12,11 +12,12 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
-import type { IClient, IContact, IQuote, IQuoteListItem } from '@alga-psa/types';
+import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem } from '@alga-psa/types';
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { addQuoteItem, createQuote, createQuoteFromTemplate, getQuote, listQuotes, removeQuoteItem, reorderQuoteItems, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
+import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
 import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
@@ -82,6 +83,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [templates, setTemplates] = useState<IQuoteListItem[]>([]);
+  const [documentTemplates, setDocumentTemplates] = useState<IQuoteDocumentTemplate[]>([]);
+  const [documentTemplateId, setDocumentTemplateId] = useState<string>('');
   const [lineItems, setLineItems] = useState<DraftQuoteItem[]>([]);
   const [persistedQuoteItemIds, setPersistedQuoteItemIds] = useState<string[]>([]);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
@@ -98,15 +101,17 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
     try {
       setIsLoading(true);
 
-      const [fetchedClients, fetchedContacts, fetchedTemplates] = await Promise.all([
+      const [fetchedClients, fetchedContacts, fetchedTemplates, fetchedDocTemplates] = await Promise.all([
         getAllClientsForBilling(false),
         getContactsForPicker('active'),
         listQuotes({ is_template: true, pageSize: 200 }),
+        getQuoteDocumentTemplates(),
       ]);
 
       setClients(fetchedClients);
       setContacts(fetchedContacts);
       setTemplates(isActionPermissionError(fetchedTemplates) ? [] : fetchedTemplates.data);
+      setDocumentTemplates(Array.isArray(fetchedDocTemplates) ? fetchedDocTemplates : []);
 
       if (isEditMode && quoteId) {
         const quote = await getQuote(quoteId);
@@ -115,6 +120,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         }
 
         setIsTemplate(quote.is_template === true);
+        setDocumentTemplateId(quote.template_id || '');
         setForm({
           client_id: quote.client_id || '',
           contact_id: quote.contact_id || '',
@@ -234,6 +240,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         total_amount: 0,
         currency_code: form.currency_code,
         is_template: isTemplate,
+        template_id: documentTemplateId || null,
       };
 
       let result: IQuote | { permissionError: string } | null;
@@ -523,6 +530,22 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
             Terms & Conditions
             <TextArea value={form.terms_and_conditions} onChange={(event) => handleChange('terms_and_conditions', event.target.value)} rows={4} />
           </label>
+
+          <div className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
+            <label htmlFor="quote-document-layout">Quote Layout</label>
+            <p className="text-xs text-muted-foreground">Choose which layout to use for this quote&apos;s PDF. Leave empty to use the default.</p>
+            <CustomSelect
+              id="quote-document-layout"
+              value={documentTemplateId || undefined}
+              onValueChange={(value) => setDocumentTemplateId(value || '')}
+              placeholder="Use default layout"
+              allowClear
+              options={documentTemplates.map((t) => ({
+                value: t.template_id,
+                label: `${t.name}${t.isStandard ? ' (Standard)' : ''}`,
+              }))}
+            />
+          </div>
         </div>
 
         <QuoteLineItemsEditor

@@ -82,6 +82,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [approvalComment, setApprovalComment] = useState('');
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [sendMessage, setSendMessage] = useState('');
+  const [additionalEmails, setAdditionalEmails] = useState('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
   const [isPreviewLoading2, setIsPreviewLoading2] = useState(false);
@@ -363,8 +364,13 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setIsWorking(true);
       setError(null);
       setNotice(null);
+      const parsedEmails = additionalEmails
+        .split(',')
+        .map((e) => e.trim())
+        .filter(Boolean);
       const result = await sendQuote(quote.quote_id, {
         message: sendMessage.trim() || undefined,
+        email_addresses: parsedEmails.length > 0 ? parsedEmails : undefined,
       });
 
       if ('permissionError' in result) {
@@ -374,6 +380,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setQuote(result);
       setIsSendDialogOpen(false);
       setSendMessage('');
+      setAdditionalEmails('');
       setNotice('Quote sent to the client.');
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : 'Failed to send quote');
@@ -740,9 +747,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         <section className="rounded-lg border border-border p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <h3 className="text-base font-semibold">Document Template</h3>
+              <h3 className="text-base font-semibold">Quote Layout</h3>
               <p className="text-sm text-muted-foreground">
-                Choose which template to use for this quote&apos;s PDF. Leave empty to use the tenant default.
+                Choose which layout to use for this quote&apos;s PDF. Leave empty to use the default.
               </p>
             </div>
             <div className="w-full md:w-72">
@@ -750,7 +757,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 id="quote-detail-template-select"
                 value={quote.template_id || undefined}
                 onValueChange={(value) => void handleAssignTemplate(value || null)}
-                placeholder="Use default template"
+                placeholder="Use default layout"
                 allowClear
                 options={documentTemplates.map((t) => ({
                   value: t.template_id,
@@ -787,6 +794,26 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           <h3 className="text-base font-semibold">Scope of Work</h3>
           <p className="whitespace-pre-wrap text-sm text-foreground">{quote.description || '—'}</p>
         </section>
+
+        {quote.status === 'accepted' && (
+          <section className="space-y-2 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 p-4">
+            <h3 className="text-base font-semibold text-emerald-800 dark:text-emerald-300">Quote Accepted</h3>
+            <div className="text-sm text-emerald-700 dark:text-emerald-400 space-y-1">
+              {quote.accepted_by_name && <p><span className="font-medium">Accepted by:</span> {quote.accepted_by_name}</p>}
+              {quote.accepted_at && <p><span className="font-medium">Accepted on:</span> {new Date(quote.accepted_at).toLocaleDateString()}</p>}
+            </div>
+          </section>
+        )}
+
+        {quote.status === 'rejected' && (
+          <section className="space-y-2 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30 p-4">
+            <h3 className="text-base font-semibold text-red-800 dark:text-red-300">Quote Rejected</h3>
+            <div className="text-sm text-red-700 dark:text-red-400 space-y-1">
+              {quote.rejected_at && <p><span className="font-medium">Rejected on:</span> {new Date(quote.rejected_at).toLocaleDateString()}</p>}
+              {quote.rejection_reason && <p><span className="font-medium">Reason:</span> {quote.rejection_reason}</p>}
+            </div>
+          </section>
+        )}
 
         <section className="space-y-3 rounded-lg border border-border p-4">
           <h3 className="text-base font-semibold">Line Items</h3>
@@ -1002,6 +1029,16 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             This will email the quote to the client&apos;s billing contacts and change its status to &ldquo;Sent&rdquo;.
           </DialogDescription>
           <div className="space-y-3 py-2">
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Additional recipients (comma-separated)
+              <input
+                type="text"
+                value={additionalEmails}
+                onChange={(event) => setAdditionalEmails(event.target.value)}
+                placeholder="email@example.com, another@example.com"
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Optional message to include in the email
               <TextArea

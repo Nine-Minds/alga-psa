@@ -1,19 +1,20 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { FileText, Settings } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
-import { renderQuotePreview } from '../../../actions/quoteActions';
+import { renderQuotePreview, updateQuote } from '../../../actions/quoteActions';
 
 interface QuotePreviewPanelProps {
   quoteId: string | null;
   templates: IQuoteDocumentTemplate[];
+  /** The currently-persisted template_id on the quote (if any). */
+  selectedTemplateId?: string | null;
   onDownload?: () => Promise<void>;
   onOpen?: () => void;
 }
@@ -21,6 +22,7 @@ interface QuotePreviewPanelProps {
 const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
   quoteId,
   templates,
+  selectedTemplateId: initialTemplateId,
   onDownload,
   onOpen,
 }) => {
@@ -30,6 +32,20 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const containerRef = React.useRef<HTMLDivElement>(null);
+
+  // Local template selection — initialised from the quote's persisted value.
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialTemplateId || '');
+
+  // Effective template: fall back to first template when nothing is selected.
+  const effectiveTemplateId =
+    selectedTemplateId && templates.some((t) => t.template_id === selectedTemplateId)
+      ? selectedTemplateId
+      : templates[0]?.template_id ?? '';
+
+  // Reset local selection when a different quote is selected.
+  useEffect(() => {
+    setSelectedTemplateId(initialTemplateId || '');
+  }, [quoteId, initialTemplateId]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -55,7 +71,10 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
       setPreviewHtml(null);
 
       try {
-        const result = await renderQuotePreview(quoteId);
+        const result = await renderQuotePreview(
+          quoteId,
+          effectiveTemplateId || undefined,
+        );
         if (result && typeof result === 'object' && 'permissionError' in result) {
           throw new Error(result.permissionError);
         }
@@ -69,7 +88,20 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
     };
 
     void loadPreview();
-  }, [quoteId]);
+  }, [quoteId, effectiveTemplateId]);
+
+  const handleTemplateChange = async (templateId: string) => {
+    setSelectedTemplateId(templateId);
+
+    // Persist the selection to the quote.
+    if (quoteId) {
+      try {
+        await updateQuote(quoteId, { template_id: templateId || null } as any);
+      } catch {
+        // Non-blocking — the preview will still reflect the selection.
+      }
+    }
+  };
 
   const handleAction = async (action: () => Promise<void>, actionName: string) => {
     setIsActionLoading(true);
@@ -106,6 +138,16 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
       <div className="p-6" ref={containerRef}>
         <div className="mb-4">
           <h3 className="text-lg font-semibold mb-2">Quote Preview</h3>
+          <CustomSelect
+            id="quote-preview-layout-select"
+            options={templates.map((t) => ({
+              value: t.template_id,
+              label: `${t.name}${t.isStandard ? ' (Standard)' : ''}`,
+            }))}
+            value={effectiveTemplateId}
+            onValueChange={(value) => void handleTemplateChange(value)}
+            placeholder="Select quote layout..."
+          />
         </div>
 
         {error && (

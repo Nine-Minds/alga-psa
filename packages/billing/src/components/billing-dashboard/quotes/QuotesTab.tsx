@@ -17,12 +17,11 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { MoreVertical, Eye, Edit, Send, Copy, Download, Trash2 } from 'lucide-react';
+import { MoreVertical, Edit, Send, Copy, Download, Trash2 } from 'lucide-react';
 import type { ColumnDefinition, IQuoteDocumentTemplate, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
 import { listQuotes, downloadQuotePdf, deleteQuote, duplicateQuote, sendQuote } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import QuoteApprovalDashboard from './QuoteApprovalDashboard';
-import QuoteDetail from './QuoteDetail';
 import QuoteForm from './QuoteForm';
 import QuotePreviewPanel from './QuotePreviewPanel';
 import QuoteStatusBadge from './QuoteStatusBadge';
@@ -91,7 +90,6 @@ interface QuoteSubTabContentProps {
   onRowClick: (quote: IQuoteListItem) => void;
   onOpen: () => void;
   onDownload: () => Promise<void>;
-  onViewDetail: (quoteId: string) => void;
   onEdit: (quoteId: string) => void;
   onSend: (quoteId: string) => void;
   onDuplicate: (quoteId: string) => Promise<void>;
@@ -107,7 +105,6 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
   onRowClick,
   onOpen,
   onDownload,
-  onViewDetail,
   onEdit,
   onSend,
   onDuplicate,
@@ -160,14 +157,6 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => onViewDetail(record.quote_id)}
-                  className="flex items-center gap-2"
-                  id={`view-quote-${record.quote_id}-menu-item`}
-                >
-                  <Eye className="h-4 w-4" />
-                  View
-                </DropdownMenuItem>
                 {canEdit && (
                   <DropdownMenuItem
                     onClick={() => onEdit(record.quote_id)}
@@ -220,7 +209,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
         );
       },
     },
-  ], [onViewDetail, onEdit, onSend, onDownloadPdf, onDuplicate, onDelete]);
+  ], [onEdit, onSend, onDownloadPdf, onDuplicate, onDelete]);
 
   if (filteredByStatus.length === 0) {
     return (
@@ -274,6 +263,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
             key={`preview-${selectedQuoteId}`}
             quoteId={selectedQuoteId}
             templates={templates}
+            selectedTemplateId={quotes.find((q) => q.quote_id === selectedQuoteId)?.template_id ?? null}
             onOpen={onOpen}
             onDownload={onDownload}
           />
@@ -353,7 +343,7 @@ const QuotesTab: React.FC = () => {
 
   const handleOpenQuote = () => {
     if (selectedQuoteId) {
-      router.push(`/msp/billing?tab=quotes&quoteId=${selectedQuoteId}&mode=detail`);
+      router.push(`/msp/billing?tab=quotes&quoteId=${selectedQuoteId}&mode=edit`);
     }
   };
 
@@ -466,7 +456,7 @@ const QuotesTab: React.FC = () => {
     );
   }
 
-  if (selectedQuoteId === 'new' || (selectedQuoteId && selectedMode === 'edit')) {
+  if (selectedQuoteId === 'new' || (selectedQuoteId && (selectedMode === 'edit' || selectedMode === 'detail'))) {
     return (
       <QuoteForm
         quoteId={selectedQuoteId}
@@ -480,17 +470,6 @@ const QuotesTab: React.FC = () => {
             router.push('/msp/billing?tab=quotes');
           }
         }}
-      />
-    );
-  }
-
-  if (selectedQuoteId && selectedMode === 'detail') {
-    return (
-      <QuoteDetail
-        quoteId={selectedQuoteId}
-        onBack={() => router.push(`/msp/billing?tab=quotes&subtab=${activeSubTab}`)}
-        onEdit={() => router.push(`/msp/billing?tab=quotes&quoteId=${selectedQuoteId}&mode=edit`)}
-        onSelectVersion={(quoteVersionId) => router.push(`/msp/billing?tab=quotes&quoteId=${quoteVersionId}&mode=detail`)}
       />
     );
   }
@@ -527,7 +506,6 @@ const QuotesTab: React.FC = () => {
                   onRowClick={handleRowClick}
                   onOpen={handleOpenQuote}
                   onDownload={handleDownloadPdf}
-                  onViewDetail={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=detail`)}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
                   onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
                   onDuplicate={handleDuplicateQuote}
@@ -548,7 +526,6 @@ const QuotesTab: React.FC = () => {
                   onRowClick={handleRowClick}
                   onOpen={handleOpenQuote}
                   onDownload={handleDownloadPdf}
-                  onViewDetail={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=detail`)}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
                   onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
                   onDuplicate={handleDuplicateQuote}
@@ -569,7 +546,6 @@ const QuotesTab: React.FC = () => {
                   onRowClick={handleRowClick}
                   onOpen={handleOpenQuote}
                   onDownload={handleDownloadPdf}
-                  onViewDetail={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=detail`)}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
                   onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
                   onDuplicate={handleDuplicateQuote}
