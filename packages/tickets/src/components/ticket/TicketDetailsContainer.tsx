@@ -58,6 +58,7 @@ interface TicketDetailsContainerProps {
     clients: any[];
     locations: any[];
     agentSchedules: any[];
+    timeEntries?: any[];
   };
   surveySummaryCard?: React.ReactNode;
   associatedAssets?: React.ReactNode;
@@ -233,6 +234,7 @@ export default function TicketDetailsContainer({
             initialClients={ticketData.clients}
             initialLocations={ticketData.locations}
             initialAgentSchedules={ticketData.agentSchedules}
+            initialTimeEntries={ticketData.timeEntries || []}
             onTicketUpdate={handleTicketUpdate}
             onBatchTicketUpdate={handleBatchTicketUpdate}
             onAddComment={handleAddComment}

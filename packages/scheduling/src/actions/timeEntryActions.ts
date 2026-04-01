@@ -12,6 +12,7 @@ import {
 } from './timeSheetOperations';
 import {
   fetchTimeEntriesForTimeSheet,
+  fetchTimeEntriesForWorkItem,
   saveTimeEntry,
   updateTimeEntryApprovalStatus,
   deleteTimeEntry,
@@ -39,6 +40,7 @@ export {
   fetchTimePeriods,
   fetchOrCreateTimeSheet,
   fetchTimeEntriesForTimeSheet,
+  fetchTimeEntriesForWorkItem,
   saveTimeEntry,
   updateTimeEntryApprovalStatus,
   deleteTimeEntry,

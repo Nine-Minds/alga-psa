@@ -119,6 +119,7 @@ interface TicketDetailsProps {
     initialClients?: IClient[];
     initialLocations?: IClientLocation[];
     initialAgentSchedules?: { userId: string; minutes: number }[];
+    initialTimeEntries?: any[];
 
     // Current user (for drawer usage)
     currentUser?: IUser | null;
@@ -200,6 +201,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialClients = [],
     initialLocations = [],
     initialAgentSchedules = [],
+    initialTimeEntries = [],
     // Current user (for drawer usage)
     currentUser,
     // Optimized handlers
@@ -257,6 +259,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
+    const [timeEntries, setTimeEntries] = useState<any[]>(initialTimeEntries);
+    useEffect(() => { setTimeEntries(initialTimeEntries); }, [initialTimeEntries]);
     const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
     const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
@@ -1287,6 +1291,12 @@ const handleClose = () => {
                 return;
             }
 
+            const baseOnComplete = createTicketTimeEntryOnComplete({
+                stopTracking,
+                setElapsedTime,
+                setIsRunning,
+            });
+
             await launchTimeEntry({
                 openDrawer,
                 closeDrawer,
@@ -1296,11 +1306,11 @@ const handleClose = () => {
                     elapsedTime,
                     timeDescription,
                 }),
-                onComplete: createTicketTimeEntryOnComplete({
-                    stopTracking,
-                    setElapsedTime,
-                    setIsRunning,
-                }),
+                onComplete: () => {
+                    baseOnComplete();
+                    // Refresh to pick up new time entries
+                    router.refresh();
+                },
             });
         } catch (error) {
             handleError(error, 'An error occurred while preparing the time entry. Please try again.');
@@ -2133,6 +2143,7 @@ const handleClose = () => {
                                     documents={documents}
                                     userMap={userMap}
                                     contactMap={contactMap}
+                                    timeEntries={timeEntries}
                                     currentUser={currentUser ? {
                                         id: currentUser.user_id,
                                         name: `${currentUser.first_name} ${currentUser.last_name}`,
