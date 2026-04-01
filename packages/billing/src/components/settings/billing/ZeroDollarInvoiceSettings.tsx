@@ -72,37 +72,33 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium mb-4">Zero-Dollar Invoice Settings</h3>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <CustomSelect
-              id="zero-dollar-invoice-handling"
-              options={handlingOptions}
-              value={settings.zeroDollarInvoiceHandling}
-              onValueChange={handleHandlingChange}
-              placeholder="Select handling option"
-              label="Invoice Handling"
-            />
-            <p className="text-sm text-muted-foreground">
-              Choose how zero-dollar invoices should be handled when generated
-            </p>
-          </div>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <CustomSelect
+          id="zero-dollar-invoice-handling"
+          options={handlingOptions}
+          value={settings.zeroDollarInvoiceHandling}
+          onValueChange={handleHandlingChange}
+          placeholder="Select handling option"
+          label="Invoice Handling"
+          className="!w-fit"
+        />
+        <p className="text-sm text-muted-foreground">
+          Choose how zero-dollar invoices should be handled when generated
+        </p>
+      </div>
 
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="suppress"
-              checked={settings.suppressZeroDollarInvoices}
-              onCheckedChange={handleSuppressionChange}
-            />
-            <div className="space-y-1">
-              <Label htmlFor="suppress">Suppress Empty Invoices</Label>
-              <p className="text-sm text-muted-foreground">
-                Skip creation of invoices with no line items
-              </p>
-            </div>
-          </div>
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="suppress"
+          checked={settings.suppressZeroDollarInvoices}
+          onCheckedChange={handleSuppressionChange}
+        />
+        <div className="space-y-1">
+          <Label htmlFor="suppress">Suppress Empty Invoices</Label>
+          <p className="text-sm text-muted-foreground">
+            Skip creation of invoices with no line items
+          </p>
         </div>
       </div>
     </div>

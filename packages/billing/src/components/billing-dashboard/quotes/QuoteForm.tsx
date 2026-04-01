@@ -14,6 +14,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteListItem } from '@alga-psa/types';
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
+import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { addQuoteItem, createQuote, createQuoteFromTemplate, getQuote, listQuotes, removeQuoteItem, reorderQuoteItems, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions';
@@ -65,7 +66,18 @@ const toDateInputValue = (value?: string | Date | null): string => {
 
 const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = false, onCancel, onSaved }) => {
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
+  const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [form, setForm] = useState<QuoteFormState>(EMPTY_FORM);
+
+  useEffect(() => {
+    getDefaultBillingSettings()
+      .then((settings) => {
+        const currency = settings.defaultCurrencyCode || 'USD';
+        setDefaultCurrency(currency);
+        setForm((prev) => prev.currency_code === 'USD' ? { ...prev, currency_code: currency } : prev);
+      })
+      .catch(() => {});
+  }, []);
   const [isTemplate, setIsTemplate] = useState(initialIsTemplate);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -115,7 +127,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
           opportunity_id: quote.opportunity_id || '',
           client_notes: quote.client_notes || '',
           terms_and_conditions: quote.terms_and_conditions || '',
-          currency_code: quote.currency_code || 'USD',
+          currency_code: quote.currency_code || defaultCurrency,
         });
         setLineItems((quote.quote_items || []).map(createDraftQuoteItemFromQuoteItem));
         setPersistedQuoteItemIds((quote.quote_items || []).map((item) => item.quote_item_id));
@@ -126,6 +138,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
 
         setForm({
           ...EMPTY_FORM,
+          currency_code: defaultCurrency,
           quote_date: today.toISOString().slice(0, 10),
           valid_until: validUntil.toISOString().slice(0, 10),
         });
@@ -175,7 +188,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         description: current.description || template.description || '',
         client_notes: current.client_notes || template.client_notes || '',
         terms_and_conditions: current.terms_and_conditions || template.terms_and_conditions || '',
-        currency_code: current.currency_code || template.currency_code || 'USD',
+        currency_code: current.currency_code || template.currency_code || defaultCurrency,
         po_number: current.po_number || template.po_number || '',
       }));
 

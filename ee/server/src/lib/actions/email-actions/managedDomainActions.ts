@@ -18,29 +18,11 @@ const DEFAULT_REGION = process.env.RESEND_DEFAULT_REGION || 'us-east-1';
 const EMAIL_SETTINGS_RESOURCE = 'ticket_settings';
 type EmailDomainPermissionAction = 'read' | 'create' | 'update' | 'delete';
 
-type TenantColumnName = 'tenant_id' | 'tenant';
-let cachedTenantColumn: Promise<TenantColumnName> | null = null;
 let loggedManagedDomainConflictFallback = false;
 
 type PostgresErrorLike = {
   code?: string;
 };
-
-async function getEmailDomainTenantColumn(knex: Knex): Promise<TenantColumnName> {
-  if (!cachedTenantColumn) {
-    cachedTenantColumn = (async () => {
-      if (await knex.schema.hasColumn('email_domains', 'tenant_id')) {
-        return 'tenant_id';
-      }
-      if (await knex.schema.hasColumn('email_domains', 'tenant')) {
-        return 'tenant';
-      }
-      throw new Error('email_domains table missing tenant identifier column');
-    })();
-  }
-
-  return cachedTenantColumn;
-}
 
 function isMissingEmailDomainConflictConstraintError(error: unknown): boolean {
   return typeof error === 'object' &&
@@ -52,7 +34,6 @@ function isMissingEmailDomainConflictConstraintError(error: unknown): boolean {
 function logManagedDomainConflictFallbackOnce(params: {
   tenantId: string;
   domain: string;
-  tenantColumn: TenantColumnName;
 }) {
   if (loggedManagedDomainConflictFallback) {
     return;
@@ -63,28 +44,27 @@ function logManagedDomainConflictFallbackOnce(params: {
     event_type: 'managed_email_domain_conflict_fallback',
     tenant_id: params.tenantId,
     domain: params.domain,
-    tenant_column: params.tenantColumn,
+    tenant_column: 'tenant',
   });
 }
 
 async function upsertManagedEmailDomainWithoutConflict(params: {
   knex: Knex;
-  tenantColumn: TenantColumnName;
   tenantId: string;
   domainName: string;
   record: Record<string, unknown>;
   mergeFields: Record<string, unknown>;
 }): Promise<void> {
-  const { knex, tenantColumn, tenantId, domainName, record, mergeFields } = params;
+  const { knex, tenantId, domainName, record, mergeFields } = params;
 
   await knex.transaction(async (trx) => {
     const existing = await trx('email_domains')
-      .where({ [tenantColumn]: tenantId, domain_name: domainName })
+      .where({ tenant: tenantId, domain_name: domainName })
       .first();
 
     if (existing) {
       await trx('email_domains')
-        .where({ [tenantColumn]: tenantId, domain_name: domainName })
+        .where({ tenant: tenantId, domain_name: domainName })
         .update(mergeFields);
       return;
     }
@@ -140,10 +120,9 @@ export const getManagedEmailDomains = withAuth(async (user, { tenant }): Promise
 
   const { knex } = await createTenantKnex();
   await checkEmailDomainPermission(user, 'read', knex);
-  const tenantColumn = await getEmailDomainTenantColumn(knex);
 
   const rows = await knex('email_domains')
-    .where({ [tenantColumn]: tenant })
+    .where({ tenant })
     .orderBy('created_at', 'desc');
 
   return rows.map((row: any) => {
@@ -178,7 +157,6 @@ export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domai
 
   const { knex } = await createTenantKnex();
   await checkEmailDomainPermission(user, 'create', knex);
-  const tenantColumn = await getEmailDomainTenantColumn(knex);
 
   const normalizedDomain = domainName.trim().toLowerCase();
   if (!isValidDomain(normalizedDomain)) {
@@ -187,7 +165,7 @@ export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domai
 
   const now = new Date();
   const record = {
-    [tenantColumn]: tenant,
+    tenant,
     domain_name: normalizedDomain,
     status: 'pending',
     created_at: now,
@@ -202,7 +180,7 @@ export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domai
   try {
     await knex('email_domains')
       .insert(record)
-      .onConflict([tenantColumn, 'domain_name'])
+      .onConflict(['tenant', 'domain_name'])
       .merge(mergeFields);
   } catch (error) {
     if (!isMissingEmailDomainConflictConstraintError(error)) {
@@ -212,11 +190,9 @@ export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domai
     logManagedDomainConflictFallbackOnce({
       tenantId: tenant,
       domain: normalizedDomain,
-      tenantColumn,
     });
     await upsertManagedEmailDomainWithoutConflict({
       knex,
-      tenantColumn,
       tenantId: tenant,
       domainName: normalizedDomain,
       record,
@@ -259,11 +235,10 @@ export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domai
 
   const { knex } = await createTenantKnex();
   await checkEmailDomainPermission(user, 'update', knex);
-  const tenantColumn = await getEmailDomainTenantColumn(knex);
   const normalizedDomain = domainName.trim().toLowerCase();
 
   const existing = await knex('email_domains')
-    .where({ [tenantColumn]: tenant, domain_name: normalizedDomain })
+    .where({ tenant, domain_name: normalizedDomain })
     .first();
 
   if (!existing) {
@@ -307,11 +282,10 @@ export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domain
 
   const { knex } = await createTenantKnex();
   await checkEmailDomainPermission(user, 'delete', knex);
-  const tenantColumn = await getEmailDomainTenantColumn(knex);
   const normalizedDomain = domainName.trim().toLowerCase();
 
   const existing = await knex('email_domains')
-    .where({ [tenantColumn]: tenant, domain_name: normalizedDomain })
+    .where({ tenant, domain_name: normalizedDomain })
     .first();
 
   if (!existing) {
@@ -320,7 +294,7 @@ export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domain
 
   const now = new Date();
   await knex('email_domains')
-    .where({ [tenantColumn]: tenant, domain_name: normalizedDomain })
+    .where({ tenant, domain_name: normalizedDomain })
     .update({
       status: 'deleting',
       updated_at: now,

@@ -23,10 +23,6 @@ export type EnsureDefaultContractFallbackResult = {
 };
 
 type DefaultContractEnsureLogOutcome = 'created' | 'reused' | 'skipped_no_billing_configuration';
-type ContractDefaultMarkerCapabilities = {
-  hasOwnerClientId: boolean;
-  hasSystemManagedDefaultMarker: boolean;
-};
 
 const logDefaultContractEnsure = (
   outcome: DefaultContractEnsureLogOutcome,
@@ -76,27 +72,15 @@ const isKnexTransaction = (
 
 async function findExistingDefaultContract(
   trx: Knex.Transaction,
-  params: EnsureDefaultContractForClientParams,
-  capabilities: ContractDefaultMarkerCapabilities
+  params: EnsureDefaultContractForClientParams
 ): Promise<{ contract_id: string; contract_name?: string | null; contract_description?: string | null } | null> {
-  if (!capabilities.hasOwnerClientId) {
-    return null;
-  }
-
-  const query = trx('contracts')
+  const rows = await trx('contracts')
     .where({
       tenant: params.tenant,
       owner_client_id: params.clientId,
+      is_system_managed_default: true,
     })
     .select('contract_id', 'contract_name', 'contract_description', 'is_template');
-
-  if (capabilities.hasSystemManagedDefaultMarker) {
-    query.andWhere('is_system_managed_default', true);
-  } else {
-    query.andWhere('contract_name', SYSTEM_MANAGED_DEFAULT_CONTRACT_NAME);
-  }
-
-  const rows = await query;
 
   const row = rows.find((candidate: { is_template?: boolean | null }) => candidate.is_template !== true);
   return row
@@ -147,15 +131,6 @@ async function ensureDefaultContractForClientInTransaction(
   trx: Knex.Transaction,
   params: EnsureDefaultContractForClientParams
 ): Promise<EnsureDefaultContractForClientResult> {
-  const [hasOwnerClientId, hasSystemManagedDefaultMarker] = await Promise.all([
-    trx.schema.hasColumn('contracts', 'owner_client_id'),
-    trx.schema.hasColumn('contracts', 'is_system_managed_default'),
-  ]);
-  const capabilities: ContractDefaultMarkerCapabilities = {
-    hasOwnerClientId,
-    hasSystemManagedDefaultMarker,
-  };
-
   const client = await trx('clients')
     .where({ tenant: params.tenant, client_id: params.clientId })
     .select('client_id', 'default_currency_code')
@@ -165,7 +140,7 @@ async function ensureDefaultContractForClientInTransaction(
     throw new Error(`Client ${params.clientId} not found`);
   }
 
-  let existing = await findExistingDefaultContract(trx, params, capabilities);
+  let existing = await findExistingDefaultContract(trx, params);
   let createdContract = false;
   let contractId = existing?.contract_id;
 
@@ -188,8 +163,8 @@ async function ensureDefaultContractForClientInTransaction(
         is_active: true,
         status: 'active',
         is_template: false,
-        ...(capabilities.hasOwnerClientId ? { owner_client_id: params.clientId } : {}),
-        ...(capabilities.hasSystemManagedDefaultMarker ? { is_system_managed_default: true } : {}),
+        owner_client_id: params.clientId,
+        is_system_managed_default: true,
         created_at: now,
         updated_at: now,
       });
@@ -200,7 +175,7 @@ async function ensureDefaultContractForClientInTransaction(
         throw error;
       }
 
-      existing = await findExistingDefaultContract(trx, params, capabilities);
+      existing = await findExistingDefaultContract(trx, params);
       if (!existing?.contract_id) {
         throw error;
       }
