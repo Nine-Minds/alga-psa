@@ -495,11 +495,16 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
             'internetMessageHeaders,receivedDateTime,subject,body,bodyPreview,from,toRecipients,ccRecipients,conversationId',
         },
         headers: {
-          Prefer: 'outlook.body-content-type="text"',
+          Prefer: 'outlook.body-content-type="html"',
         },
       });
 
       const message = response.data;
+      const bodyContentType = String(message.body?.contentType || '').toLowerCase();
+      const htmlBody = bodyContentType === 'html' ? message.body?.content : undefined;
+      const textBody = bodyContentType === 'text'
+        ? message.body?.content || ''
+        : message.bodyPreview || '';
 
       return {
         id: message.id,
@@ -520,8 +525,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         })),
         subject: message.subject || '',
         body: {
-          text: message.body?.content || '',
-          html: message.body?.contentType === 'html' ? message.body?.content : undefined,
+          text: textBody,
+          html: htmlBody,
         },
         attachments: message.attachments?.map((attachment: any) => ({
           id: attachment.id,
