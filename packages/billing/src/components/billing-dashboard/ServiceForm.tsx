@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Button } from '@alga-psa/ui/components/Button'
 import { Input } from '@alga-psa/ui/components/Input'
 import CustomSelect from '@alga-psa/ui/components/CustomSelect'
-import { createService, getServiceTypesForSelection } from '@alga-psa/billing/actions'
+import { createService, getServiceTypesForSelection, getDefaultBillingSettings } from '@alga-psa/billing/actions'
 import { getActiveTaxRegions, getTaxRates } from '@alga-psa/billing/actions/taxSettingsActions'; // Added getTaxRates
 import { ITaxRate, ITaxRegion } from '@alga-psa/types';
 import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
@@ -12,6 +12,7 @@ import { toast } from 'react-hot-toast';
 import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export const ServiceForm: React.FC = () => {
+  const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [serviceName, setServiceName] = useState('')
   const [serviceTypeId, setServiceTypeId] = useState<string>('') // Store the selected service type ID
   const [defaultRate, setDefaultRate] = useState('')
@@ -37,6 +38,9 @@ export const ServiceForm: React.FC = () => {
         setError('Failed to fetch service types')
       }
     }
+    getDefaultBillingSettings()
+      .then((settings) => setDefaultCurrency(settings.defaultCurrencyCode || 'USD'))
+      .catch(() => {});
     const fetchTaxData = async () => {
       setIsLoadingTaxData(true);
       setErrorTaxData(null);
@@ -82,7 +86,7 @@ export const ServiceForm: React.FC = () => {
       const baseData = {
         service_name: serviceName,
         default_rate: parseFloat(defaultRate) || 0,
-        currency_code: 'USD', // Default to USD; TODO: add currency selector to form
+        currency_code: defaultCurrency,
         unit_of_measure: unitOfMeasure,
         category_id: null,
         billing_method: billingMethod,

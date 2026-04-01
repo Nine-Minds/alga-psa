@@ -31,6 +31,7 @@ const requireBillingSettingsUpdatePermission = async (user: unknown): Promise<Ac
 export interface BillingSettings {
   zeroDollarInvoiceHandling: 'normal' | 'finalized';
   suppressZeroDollarInvoices: boolean;
+  defaultCurrencyCode?: string;
   enableCreditExpiration?: boolean;
   creditExpirationDays?: number;
   creditExpirationNotificationDays?: number[];
@@ -63,6 +64,7 @@ export const getDefaultBillingSettings = withAuth(async (
     return {
       zeroDollarInvoiceHandling: 'normal',
       suppressZeroDollarInvoices: false,
+      defaultCurrencyCode: 'USD',
       enableCreditExpiration: true,
       creditExpirationDays: 365,
       creditExpirationNotificationDays: [30, 7, 1],
@@ -95,6 +97,7 @@ export const getDefaultBillingSettings = withAuth(async (
   return {
     zeroDollarInvoiceHandling: settings.zero_dollar_invoice_handling,
     suppressZeroDollarInvoices: settings.suppress_zero_dollar_invoices,
+    defaultCurrencyCode: settings.default_currency_code ?? 'USD',
     enableCreditExpiration: settings.enable_credit_expiration ?? true,
     creditExpirationDays: settings.credit_expiration_days ?? 365,
     creditExpirationNotificationDays: settings.credit_expiration_notification_days ?? [30, 7, 1],
@@ -123,6 +126,7 @@ export const updateDefaultBillingSettings = withAuth(async (
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const [
+      hasDefaultCurrencyCodeColumn,
       hasDefaultRenewalModeColumn,
       hasDefaultNoticePeriodColumn,
       hasRenewalDueDateActionPolicyColumn,
@@ -131,6 +135,7 @@ export const updateDefaultBillingSettings = withAuth(async (
       hasRenewalTicketPriorityColumn,
       hasRenewalTicketAssigneeColumn,
     ] = await Promise.all([
+      trx.schema.hasColumn('default_billing_settings', 'default_currency_code'),
       trx.schema.hasColumn('default_billing_settings', 'default_renewal_mode'),
       trx.schema.hasColumn('default_billing_settings', 'default_notice_period_days'),
       trx.schema.hasColumn('default_billing_settings', 'renewal_due_date_action_policy'),
@@ -153,6 +158,9 @@ export const updateDefaultBillingSettings = withAuth(async (
     });
 
     const renewalUpdates: Record<string, unknown> = {};
+    if (hasDefaultCurrencyCodeColumn) {
+      renewalUpdates.default_currency_code = data.defaultCurrencyCode || 'USD';
+    }
     if (hasDefaultRenewalModeColumn) {
       renewalUpdates.default_renewal_mode =
         data.defaultRenewalMode === 'none' ||
