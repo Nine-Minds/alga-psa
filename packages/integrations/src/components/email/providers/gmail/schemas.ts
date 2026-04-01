@@ -1,9 +1,14 @@
 import * as z from 'zod';
 
-// Common/base schema used by both CE and EE
-export const baseGmailProviderSchema = z.object({
-  providerName: z.string().min(1, 'Provider name is required'),
-  mailbox: z.string().email('Valid Gmail address is required'),
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+export const createBaseGmailProviderSchema = (t: TranslateFn) => z.object({
+  providerName: z.string().min(1, t('forms.gmail.validation.providerNameRequired', {
+    defaultValue: 'Provider name is required',
+  })),
+  mailbox: z.string().email(t('forms.gmail.validation.gmailAddressRequired', {
+    defaultValue: 'Valid Gmail address is required',
+  })),
   isActive: z.boolean(),
   autoProcessEmails: z.boolean(),
   labelFilters: z.string().optional(),
@@ -12,9 +17,18 @@ export const baseGmailProviderSchema = z.object({
   inboundTicketDefaultsId: z.string().optional(),
 });
 
-export type BaseGmailProviderFormData = z.infer<typeof baseGmailProviderSchema>;
+export type BaseGmailProviderFormData = z.infer<ReturnType<typeof createBaseGmailProviderSchema>>;
 
-// CE-specific schema extends base with Google Cloud config fields
+export const createCeGmailProviderSchema = (t: TranslateFn) => createBaseGmailProviderSchema(t);
+
+export type CEGmailProviderFormData = z.infer<ReturnType<typeof createCeGmailProviderSchema>>;
+
+const englishFallbackT: TranslateFn = (key, options) => {
+  if (typeof options?.defaultValue === 'string') {
+    return options.defaultValue;
+  }
+  return key;
+};
+
+export const baseGmailProviderSchema = createBaseGmailProviderSchema(englishFallbackT);
 export const ceGmailProviderSchema = baseGmailProviderSchema;
-
-export type CEGmailProviderFormData = z.infer<typeof ceGmailProviderSchema>;

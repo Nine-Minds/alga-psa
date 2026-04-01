@@ -4,16 +4,19 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Badge } from '@alga-psa/ui/components/Badge';
 import { CheckCircle, ArrowRight, Loader2, Calendar, Users } from 'lucide-react';
 import Link from 'next/link';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
 import { getSubscriptionInfoAction } from '@ee/lib/actions/license-actions';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function LicensePurchaseSuccessPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const isScheduled = searchParams.get('scheduled') === 'true';
+  const { t } = useTranslation('msp/licensing');
+  const { t: tCommon } = useTranslation('common');
+  const { formatDate } = useFormatters();
   const [loading, setLoading] = useState(true);
   const [licenseCount, setLicenseCount] = useState<number | null>(null);
   const [scheduledDate, setScheduledDate] = useState<string | null>(null);
@@ -64,12 +67,18 @@ export default function LicensePurchaseSuccessPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold mb-2">
-                {isScheduled ? 'Change Scheduled Successfully!' : 'Update Successful!'}
+                {isScheduled
+                  ? t('purchaseSuccess.scheduledTitle', { defaultValue: 'Change Scheduled Successfully!' })
+                  : t('purchaseSuccess.updatedTitle', { defaultValue: 'Update Successful!' })}
               </h1>
               <p className="text-muted-foreground text-lg">
                 {isScheduled
-                  ? 'Your license change has been scheduled and will take effect at the end of your current billing period.'
-                  : 'Your license update has been processed successfully!'
+                  ? t('purchaseSuccess.scheduledDescription', {
+                      defaultValue: 'Your license change has been scheduled and will take effect at the end of your current billing period.',
+                    })
+                  : t('purchaseSuccess.updatedDescription', {
+                      defaultValue: 'Your license update has been processed successfully!',
+                    })
                 }
               </p>
             </div>
@@ -79,31 +88,43 @@ export default function LicensePurchaseSuccessPage() {
           {loading ? (
             <div className="flex items-center justify-center gap-3 text-muted-foreground py-6">
               <Loader2 className="h-5 w-5 animate-spin" />
-              <span>{isScheduled ? 'Loading subscription details...' : 'Updating license count...'}</span>
+              <span>
+                {isScheduled
+                  ? t('purchaseSuccess.loadingSubscriptionDetails', {
+                      defaultValue: 'Loading subscription details...',
+                    })
+                  : t('purchaseSuccess.updatingLicenseCount', {
+                      defaultValue: 'Updating license count...',
+                    })}
+              </span>
             </div>
           ) : (
             <div className="rounded-lg border bg-gradient-to-br from-primary-100 via-primary-50 to-blue-50 dark:from-primary-900/30 dark:via-primary-950/20 dark:to-blue-950/10 p-6">
               <div className="flex items-center justify-center gap-3 mb-3">
                 <Users className="h-6 w-6 text-primary-500" />
-                <h2 className="text-lg font-semibold">License Information</h2>
+                <h2 className="text-lg font-semibold">
+                  {t('purchaseSuccess.licenseInformation', { defaultValue: 'License Information' })}
+                </h2>
               </div>
               <div className="text-center space-y-2">
                 {licenseCount !== null && (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">You now have</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {t('purchaseSuccess.youNowHave', { defaultValue: 'You now have' })}
+                    </p>
                     <p className="text-5xl font-bold text-primary-500">{licenseCount}</p>
-                    <p className="text-lg text-muted-foreground mt-1">total licenses</p>
+                    <p className="text-lg text-muted-foreground mt-1">
+                      {t('purchaseSuccess.totalLicenses', { defaultValue: 'total licenses' })}
+                    </p>
                   </div>
                 )}
                 {isScheduled && scheduledDate && (
                   <div className="mt-4 pt-4 border-t border-primary-200 dark:border-primary-800">
-                    <p className="text-sm text-muted-foreground mb-1">Change effective</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {t('purchaseSuccess.changeEffective', { defaultValue: 'Change effective' })}
+                    </p>
                     <p className="text-xl font-semibold text-orange-600 dark:text-orange-400">
-                      {new Date(scheduledDate).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
+                      {formatDate(scheduledDate, { dateStyle: 'long' })}
                     </p>
                   </div>
                 )}
@@ -113,35 +134,61 @@ export default function LicensePurchaseSuccessPage() {
 
           {/* Next Steps */}
           <div className="rounded-lg border p-6 space-y-4">
-            <h3 className="text-lg font-semibold">What's next?</h3>
+            <h3 className="text-lg font-semibold">
+              {t('purchaseSuccess.whatsNext', { defaultValue: "What's next?" })}
+            </h3>
             {isScheduled ? (
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-muted-foreground">Your current licenses remain active until the end of the billing period</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('purchaseSuccess.scheduledSteps.currentLicenses', {
+                      defaultValue: 'Your current licenses remain active until the end of the billing period',
+                    })}
+                  </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-muted-foreground">The license count will automatically update on the scheduled date</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('purchaseSuccess.scheduledSteps.autoUpdate', {
+                      defaultValue: 'The license count will automatically update on the scheduled date',
+                    })}
+                  </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-muted-foreground">You'll receive an email confirmation when the change takes effect</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('purchaseSuccess.scheduledSteps.emailConfirmation', {
+                      defaultValue: "You'll receive an email confirmation when the change takes effect",
+                    })}
+                  </span>
                 </li>
               </ul>
             ) : (
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-muted-foreground">Your licenses are now active and ready to use</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('purchaseSuccess.updatedSteps.activeReady', {
+                      defaultValue: 'Your licenses are now active and ready to use',
+                    })}
+                  </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-muted-foreground">You can create new users immediately from User Management</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('purchaseSuccess.updatedSteps.createUsers', {
+                      defaultValue: 'You can create new users immediately from User Management',
+                    })}
+                  </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-muted-foreground">Your next invoice will include the prorated charges</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t('purchaseSuccess.updatedSteps.invoiceProrated', {
+                      defaultValue: 'Your next invoice will include the prorated charges',
+                    })}
+                  </span>
                 </li>
               </ul>
             )}
@@ -151,10 +198,12 @@ export default function LicensePurchaseSuccessPage() {
           {sessionId && (
             <details className="rounded-lg border p-4">
               <summary className="text-sm font-medium cursor-pointer hover:text-primary-500">
-                Session Details (for support)
+                {t('purchaseSuccess.sessionDetails', { defaultValue: 'Session Details (for support)' })}
               </summary>
               <div className="mt-3 pt-3 border-t">
-                <p className="text-xs text-muted-foreground mb-1">Session ID:</p>
+                <p className="text-xs text-muted-foreground mb-1">
+                  {t('purchaseSuccess.sessionId', { defaultValue: 'Session ID:' })}
+                </p>
                 <p className="text-xs font-mono bg-muted p-2 rounded break-all">
                   {sessionId}
                 </p>
@@ -166,13 +215,13 @@ export default function LicensePurchaseSuccessPage() {
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Link href="/msp/account" className="flex-1">
               <Button id="go-to-account-btn" variant="default" className="w-full gap-2">
-                Go to Account Management
+                {t('purchaseSuccess.goToAccountManagement', { defaultValue: 'Go to Account Management' })}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <Link href="/msp/dashboard" className="flex-1 sm:flex-initial">
               <Button id="go-to-dashboard-btn" variant="outline" className="w-full sm:w-auto">
-                Dashboard
+                {tCommon('nav.dashboard', { defaultValue: 'Dashboard' })}
               </Button>
             </Link>
           </div>

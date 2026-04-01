@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Trash, CalendarDays } from 'lucide-react';
 import { WorkItemType } from '@alga-psa/types';
 import { useIsCompactEvent } from '@alga-psa/ui/hooks';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface WeeklyScheduleEventProps {
   event: IScheduleEntry;
@@ -50,6 +51,8 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   onResizeStart,
   technicianMap = {}
 }) => {
+  const { t } = useTranslation('msp/schedule');
+  const { formatDate } = useFormatters();
   const eventRef = useRef<HTMLDivElement>(null);
 
   // Check if event spans multiple days
@@ -87,8 +90,10 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   // Find assigned technician names for tooltip
   const assignedTechnicians = event.assigned_user_ids?.map(userId => {
     const tech = technicianMap[userId];
-    return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
-  }).join(', ') || 'Unassigned';
+    return tech
+      ? `${tech.first_name} ${tech.last_name}`
+      : t('calendar.event.fallbacks.unknownTechnician', { defaultValue: 'Unknown' });
+  }).join(', ') || t('calendar.event.fallbacks.unassigned', { defaultValue: 'Unassigned' });
 
   // Format date and time for tooltip
   const startMoment = new Date(event.scheduled_start);
@@ -96,19 +101,40 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
 
   // Format start and end date/time
   const formatDateTime = (date: Date) => {
-    return date.toLocaleString([], {
-      month: 'numeric',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return formatDate(date, {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   };
 
   // Construct detailed tooltip
-  const tooltipTitle = `${event.title}\nScheduled for: ${assignedTechnicians}\nStart: ${formatDateTime(startMoment)}\nEnd: ${formatDateTime(endMoment)}${isMultiDay ? ' (Multi-day)' : ''}`;
+  const tooltipLines = [
+    event.title,
+    t('calendar.event.tooltip.scheduledFor', {
+      defaultValue: 'Scheduled for: {{technicians}}',
+      technicians: assignedTechnicians,
+    }),
+    t('calendar.event.tooltip.start', {
+      defaultValue: 'Start: {{dateTime}}',
+      dateTime: formatDateTime(startMoment),
+    }),
+    t('calendar.event.tooltip.end', {
+      defaultValue: 'End: {{dateTime}}',
+      dateTime: formatDateTime(endMoment),
+    }),
+  ];
 
-  const titleParts = event.title?.split(':') || ['Untitled'];
+  if (isMultiDay) {
+    tooltipLines.push(
+      t('calendar.event.tooltip.multiDay', { defaultValue: '(Multi-day)' })
+    );
+  }
+
+  const tooltipTitle = tooltipLines.join('\n');
+
+  const titleParts = event.title?.split(':') || [
+    t('calendar.event.fallbacks.untitled', { defaultValue: 'Untitled' }),
+  ];
   const mainTitle = titleParts[0];
   const subtitle = titleParts.slice(1).join(':').trim();
 
@@ -179,7 +205,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
               e.stopPropagation();
               onDeleteEvent(event);
             }}
-            title="Delete Entry"
+            title={t('weeklyEvent.actions.delete', { defaultValue: 'Delete Entry' })}
             onMouseDown={(e) => e.stopPropagation()}
           >
             <Trash className={`${compactClasses.button} pointer-events-none`} />
@@ -193,7 +219,14 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
           // For short events, show text with minimal padding
           <div className="flex items-center">
             {showContinuationIndicator && (
-              <span className="text-[9px] mr-0.5 opacity-60" title="Continues from previous week">...</span>
+              <span
+                className="text-[9px] mr-0.5 opacity-60"
+                title={t('weeklyEvent.continuation.previousWeek', {
+                  defaultValue: 'Continues from previous week',
+                })}
+              >
+                ...
+              </span>
             )}
             {isMultiDay && !showContinuationIndicator && (
               <CalendarDays className="w-2.5 h-2.5 mr-0.5 opacity-70 flex-shrink-0" />
@@ -207,7 +240,14 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
           <>
             <div className="font-semibold truncate flex items-center text-sm">
               {showContinuationIndicator && (
-                <span className="text-xs mr-1 opacity-60" title="Continues from previous week">...</span>
+                <span
+                  className="text-xs mr-1 opacity-60"
+                  title={t('weeklyEvent.continuation.previousWeek', {
+                    defaultValue: 'Continues from previous week',
+                  })}
+                >
+                  ...
+                </span>
               )}
               {isMultiDay && !showContinuationIndicator && (
                 <CalendarDays className="w-3.5 h-3.5 mr-1 opacity-70 flex-shrink-0"/>

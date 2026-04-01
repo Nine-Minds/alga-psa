@@ -1,0 +1,289 @@
+{
+  "page": {
+    "title": "Baza wiedzy",
+    "subtitle": "Twórz artykuły w bazie wiedzy i zarządzaj nimi",
+    "actions": {
+      "import": "Import",
+      "newArticle": "Nowy artykuł"
+    },
+    "tabs": {
+      "articles": "Artykuły",
+      "reviewDashboard": "Przejrzyj panel kontrolny"
+    },
+    "feedback": {
+      "loadError": "Nie udało się załadować artykułów",
+      "createError": "Nie udało się utworzyć artykułu",
+      "userLoadError": "Nie udało się załadować użytkownika. Edycja artykułu jest niedostępna."
+    },
+    "newArticleTitle": "Nowy artykuł"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "Projekt",
+      "review": "W recenzji",
+      "published": "Opublikowany",
+      "archived": "Zarchiwizowane"
+    },
+    "audienceLabels": {
+      "internal": "Wewnętrzny",
+      "client": "Klient",
+      "public": "Publiczny"
+    },
+    "typeLabels": {
+      "how_to": "Jak to zrobić",
+      "faq": "Często zadawane pytania",
+      "troubleshooting": "Rozwiązywanie problemów",
+      "reference": "Odniesienie"
+    },
+    "reviewCycleOptions": {
+      "30": "30 dni",
+      "60": "60 dni",
+      "90": "90 dni",
+      "180": "180 dni",
+      "365": "1 rok",
+      "none": "Brak cyklu recenzji"
+    },
+    "fallbacks": {
+      "emptyDate": "-"
+    }
+  },
+  "list": {
+    "title": "Artykuły z bazy wiedzy",
+    "countSummary": "{{count}} artykuł(y)",
+    "itemLabel": "artykuły",
+    "empty": "Nie znaleziono artykułów",
+    "createFirst": "Utwórz swój pierwszy artykuł",
+    "table": {
+      "title": "Tytuł",
+      "type": "Typ",
+      "audience": "Publiczność",
+      "status": "Status",
+      "tags": "Tagi",
+      "stats": "Statystyki",
+      "updated": "Zaktualizowano",
+      "actions": "Działania"
+    },
+    "stats": {
+      "views": "Widoki",
+      "helpful": "Pomocny",
+      "notHelpful": "Nieprzydatne"
+    },
+    "actions": {
+      "edit": "Redagować",
+      "submitForReview": "Prześlij do recenzji",
+      "publish": "Publikować",
+      "archive": "Archiwum"
+    },
+    "pagination": {
+      "itemsPerPage": {
+        "10": "10 elementów/stronę",
+        "20": "20 elementów/stronę",
+        "50": "50 elementów/stronę"
+      }
+    },
+    "stale": {
+      "reviewOverdue": "Opinia spóźniona"
+    },
+    "dialogs": {
+      "archive": {
+        "title": "Artykuł archiwalny",
+        "message": "Czy na pewno chcesz zarchiwizować „{{title}}”? Spowoduje to usunięcie go z widoczności klienta."
+      }
+    },
+    "feedback": {
+      "archiveError": "Nie udało się zarchiwizować artykułu",
+      "archiveSuccess": "Artykuł zarchiwizowany"
+    }
+  },
+  "editor": {
+    "header": {
+      "untitled": "Artykuł bez tytułu",
+      "back": "Z powrotem"
+    },
+    "actions": {
+      "submitForReview": "Prześlij do recenzji",
+      "publish": "Publikować",
+      "archive": "Archiwum",
+      "saveMetadata": "Zapisz metadane",
+      "saving": "Oszczędność..."
+    },
+    "feedback": {
+      "permissionDenied": "Odmowa pozwolenia",
+      "notFound": "Nie znaleziono artykułu",
+      "loadError": "Nie udało się załadować artykułu",
+      "noChanges": "Brak zmian do zapisania",
+      "saveError": "Nie udało się zapisać artykułu",
+      "saveSuccess": "Metadane artykułu zostały zapisane",
+      "publishError": "Nie udało się opublikować artykułu",
+      "publishSuccess": "Artykuł opublikowany",
+      "statusChangeError": "Nie udało się zmienić statusu artykułu",
+      "submitForReviewSuccess": "Artykuł przesłany do recenzji",
+      "archiveSuccess": "Artykuł zarchiwizowany"
+    },
+    "badges": {
+      "reviewOverdue": "Recenzja zaległa"
+    },
+    "stats": {
+      "title": "Statystyka",
+      "views": "Widoki",
+      "helpful": "Pomocny",
+      "notHelpful": "Nieprzydatne",
+      "published": "Opublikowany"
+    },
+    "metadata": {
+      "title": "Metadane",
+      "fields": {
+        "title": "Tytuł",
+        "slug": "Ślimak URL",
+        "articleType": "Typ artykułu",
+        "audience": "Publiczność",
+        "category": "Kategoria",
+        "reviewCycle": "Cykl przeglądu",
+        "nextReview": "Następna recenzja",
+        "noCategory": "Brak kategorii"
+      }
+    },
+    "tags": {
+      "title": "Tagi"
+    }
+  },
+  "filters": {
+    "title": "Filtry",
+    "actions": {
+      "clear": "Jasne"
+    },
+    "labels": {
+      "search": "Szukaj",
+      "status": "Status",
+      "audience": "Publiczność",
+      "articleType": "Typ artykułu",
+      "category": "Kategoria",
+      "tags": "Tagi"
+    },
+    "placeholders": {
+      "search": "Wyszukaj artykuły...",
+      "status": "Wybierz stan...",
+      "audience": "Wybierz odbiorców...",
+      "articleType": "Wybierz typ...",
+      "category": "Wybierz kategorię...",
+      "tags": "Filtruj według tagów..."
+    },
+    "options": {
+      "status": {
+        "all": "Wszystkie statusy"
+      },
+      "audience": {
+        "all": "Wszyscy odbiorcy"
+      },
+      "articleType": {
+        "all": "Wszystkie typy"
+      },
+      "category": {
+        "all": "Wszystkie kategorie"
+      }
+    }
+  },
+  "categoryTree": {
+    "allCategories": "Wszystkie kategorie",
+    "empty": "Brak zdefiniowanych kategorii"
+  },
+  "publishing": {
+    "title": "Wydawniczy",
+    "currentStatus": "Aktualny stan",
+    "actions": {
+      "submitForReview": "Prześlij do recenzji",
+      "publish": "Publikować",
+      "approveAndPublish": "Zatwierdź i opublikuj",
+      "archive": "Archiwum",
+      "republish": "Opublikuj ponownie"
+    },
+    "flow": {
+      "draft": "Projekt",
+      "review": "Recenzja",
+      "published": "Opublikowany"
+    },
+    "warnings": {
+      "audience": "Po opublikowaniu ten artykuł będzie widoczny dla {{audience}} użytkowników."
+    },
+    "dialogs": {
+      "publish": {
+        "title": "Opublikuj artykuł",
+        "message": "Czy na pewno chcesz opublikować ten artykuł?",
+        "messageWithAudience": "Spowoduje to opublikowanie artykułu i udostępnienie go {{audience}} użytkownikom. Czy jesteś pewien?"
+      },
+      "archive": {
+        "title": "Artykuł archiwalny",
+        "message": "Spowoduje to zarchiwizowanie artykułu i usunięcie go z widoku klienta. Czy jesteś pewien?"
+      }
+    },
+    "feedback": {
+      "publishError": "Nie udało się opublikować artykułu",
+      "publishSuccess": "Artykuł opublikowany pomyślnie",
+      "archiveError": "Nie udało się zarchiwizować artykułu",
+      "archiveSuccess": "Artykuł zarchiwizowany"
+    }
+  },
+  "reviewDashboard": {
+    "summary": {
+      "awaitingReview": "Oczekiwanie na recenzję",
+      "overdueReviews": "Zaległe recenzje"
+    },
+    "empty": "Wszystko złapane! Żaden artykuł nie wymaga recenzji.",
+    "sections": {
+      "awaitingReview": "Artykuły oczekujące na recenzję",
+      "overdue": "Zaległe do przeglądu"
+    },
+    "labels": {
+      "submitted": "Złożony",
+      "due": "Należny",
+      "lastReviewed": "Ostatnia recenzja",
+      "never": "Nigdy"
+    },
+    "actions": {
+      "view": "Pogląd",
+      "review": "Recenzja",
+      "reviewNow": "Przejrzyj teraz"
+    },
+    "feedback": {
+      "loadError": "Nie udało się załadować danych recenzji"
+    }
+  },
+  "importDialog": {
+    "title": "Importuj artykuły",
+    "dropzone": {
+      "title": "Upuść pliki tutaj lub kliknij, aby przeglądać",
+      "formats": "Obsługuje pliki .md i .html"
+    },
+    "fields": {
+      "audience": "Publiczność",
+      "articleType": "Typ artykułu"
+    },
+    "actions": {
+      "import": "Importuj pliki {{count}}",
+      "importing": "Importowanie..."
+    },
+    "feedback": {
+      "unsupportedFileType": "{{fileName}}: nieobsługiwany typ pliku. Użyj .md lub .html",
+      "permissionDenied": "Odmowa pozwolenia",
+      "importSuccess": "Zaimportowano {{imported}} z {{total}} artykułów",
+      "allFailed": "Cały import nie powiódł się",
+      "importError": "Import nie powiódł się"
+    },
+    "results": {
+      "summary": "Zaimportowano {{imported}} z {{total}} artykułów",
+      "failedCount": "{{count}} nie powiodło się:"
+    }
+  },
+  "staleness": {
+    "badges": {
+      "reviewOverdue": "Recenzja zaległa",
+      "reviewDueSoon": "Recenzja wkrótce",
+      "overdueBy": "Opóźnione o {{count}} dni",
+      "dueIn": "Termin za {{count}} dni"
+    },
+    "tooltips": {
+      "reviewOverdue": "Termin przeglądu przypadał {{date}}",
+      "reviewDue": "Termin przeglądu {{date}}"
+    }
+  }
+}

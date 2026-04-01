@@ -18,7 +18,7 @@ import type { SurveyTemplate, SurveyTrigger } from '@alga-psa/surveys/actions/su
 const DEFAULT_TAB = 'templates';
 
 const SurveySettings = (): React.JSX.Element => {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('msp/surveys');
   const searchParams = useSearchParams();
 
   const [templates, setTemplates] = useState<SurveyTemplate[]>([]);
@@ -63,17 +63,15 @@ const SurveySettings = (): React.JSX.Element => {
   }, []);
 
   const templateLoadErrorFallback = useMemo(
-    () =>
-      t('surveys.settings.templateList.errors.load', 'Unable to load survey templates.'),
+    () => t('settings.templateList.errors.load', { defaultValue: 'Unable to load survey templates.' }),
     [t]
   );
   const triggerLoadErrorFallback = useMemo(
-    () =>
-      t('surveys.settings.triggerList.errors.load', 'Unable to load survey triggers.'),
+    () => t('settings.triggerList.errors.load', { defaultValue: 'Unable to load survey triggers.' }),
     [t]
   );
   const loadingText = useMemo(
-    () => t('surveys.common.loading', 'Loading...'),
+    () => t('common.loading', { defaultValue: 'Loading...' }),
     [t]
   );
 
@@ -114,8 +112,8 @@ const SurveySettings = (): React.JSX.Element => {
     void loadTriggers();
   }, [loadTemplates, loadTriggers]);
 
-  const templateTabLabel = t('surveys.settings.tabs.templates', 'Templates');
-  const triggerTabLabel = t('surveys.settings.tabs.triggers', 'Triggers');
+  const templateTabLabel = t('settings.tabs.templates', { defaultValue: 'Templates' });
+  const triggerTabLabel = t('settings.tabs.triggers', { defaultValue: 'Triggers' });
 
   const tabs = useMemo(
     () => [
@@ -175,12 +173,11 @@ const SurveySettings = (): React.JSX.Element => {
   return (
     <Card className="space-y-6 p-6">
       <CardHeader className="px-0">
-        <CardTitle>{t('surveys.settings.title', 'Customer Satisfaction Surveys')}</CardTitle>
+        <CardTitle>{t('settings.title', { defaultValue: 'Customer Satisfaction Surveys' })}</CardTitle>
         <CardDescription>
-          {t(
-            'surveys.settings.subtitle',
-            'Configure templates, triggers, and delivery to collect post-ticket feedback.'
-          )}
+          {t('settings.subtitle', {
+            defaultValue: 'Configure templates, triggers, and delivery to collect post-ticket feedback.',
+          })}
         </CardDescription>
       </CardHeader>
       <CustomTabs

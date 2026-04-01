@@ -1,0 +1,427 @@
+{
+  "common": {
+    "loading": "Chargement..."
+  },
+  "moduleFrame": {
+    "title": "Enquêtes de satisfaction client",
+    "description": "Surveillez la qualité des réponses, analysez les tendances de satisfaction et assurez le suivi des retours.",
+    "badge": "Indicateurs de satisfaction",
+    "nav": {
+      "dashboard": "Tableau de bord",
+      "responses": "Réponses",
+      "analytics": "Analyses",
+      "setup": "Configuration"
+    }
+  },
+  "settings": {
+    "tabLabel": "Enquêtes",
+    "title": "Enquêtes de satisfaction client",
+    "subtitle": "Configurez les modèles, les déclencheurs et l'envoi pour recueillir les retours après ticket.",
+    "tabs": {
+      "templates": "Modèles",
+      "triggers": "Déclencheurs"
+    },
+    "templateList": {
+      "title": "Modèles d'enquête",
+      "description": "Gérez les invites et les échelles de notation envoyées à vos clients.",
+      "createButton": "Nouveau modèle",
+      "emptyTitle": "Aucun modèle d'enquête pour le moment",
+      "emptyDescription": "Créez votre premier modèle pour définir le texte de l'enquête et l'échelle de notation.",
+      "defaultBadge": "Par défaut",
+      "table": {
+        "name": "Modèle",
+        "rating": "Échelle de notation",
+        "status": "Statut",
+        "updated": "Mis à jour",
+        "actions": "Actions"
+      },
+      "status": {
+        "enabled": "Activé",
+        "disabled": "Désactivé"
+      },
+      "actions": {
+        "setDefault": "Définir par défaut"
+      },
+      "toasts": {
+        "created": "Modèle créé",
+        "updated": "Modèle mis à jour",
+        "deleted": "Modèle supprimé",
+        "error": "Impossible d'enregistrer le modèle",
+        "setDefault": "Modèle par défaut mis à jour"
+      },
+      "errors": {
+        "load": "Impossible de charger les modèles d'enquête."
+      },
+      "delete": {
+        "validationFailed": "Échec de la validation de la suppression. Veuillez réessayer.",
+        "error": "Impossible de supprimer le modèle",
+        "entityFallback": "ce modèle d'enquête"
+      },
+      "actionsMenuAria": "Ouvrir les actions pour {{name}}"
+    },
+    "templateForm": {
+      "titleCreate": "Créer un modèle d'enquête",
+      "titleEdit": "Modifier le modèle d'enquête",
+      "ratingTypes": {
+        "stars": "Étoiles",
+        "numbers": "Nombres",
+        "emojis": "Emojis"
+      },
+      "defaults": {
+        "promptText": "Question de l'enquête",
+        "commentPrompt": "Commentaires supplémentaires (facultatif)",
+        "thankYouText": "Merci !"
+      },
+      "labels": {
+        "name": "Nom du modèle",
+        "ratingType": "Type de notation",
+        "ratingScale": "Échelle de notation",
+        "ratingLabels": "Libellés des notes",
+        "preview": "Aperçu",
+        "promptText": "Question de l'enquête",
+        "commentPrompt": "Invite au commentaire",
+        "thankYouText": "Message de remerciement",
+        "isDefault": "Définir comme modèle par défaut",
+        "enabled": "Modèle activé"
+      },
+      "placeholders": {
+        "ratingLabels": "Exemple :\nTrès mauvais\nMauvais\nMoyen\nBon\nExcellent"
+      },
+      "help": {
+        "ratingLabels": "Fournissez un libellé par ligne, dans l'ordre de la note la plus basse à la plus élevée."
+      },
+      "actions": {
+        "create": "Créer le modèle",
+        "save": "Enregistrer les modifications",
+        "delete": "Supprimer le modèle"
+      },
+      "delete": {
+        "validationFailed": "Échec de la validation de la suppression. Veuillez réessayer.",
+        "error": "Impossible de supprimer le modèle",
+        "entityFallback": "ce modèle d'enquête"
+      }
+    },
+    "triggerList": {
+      "title": "Déclencheurs d'enquête",
+      "description": "Envoyez automatiquement des invitations lorsque des tickets ou des projets sont terminés.",
+      "createButton": "Nouveau déclencheur",
+      "emptyTitle": "Aucun déclencheur d'enquête configuré",
+      "emptyDescription": "Créez un déclencheur pour envoyer des enquêtes lorsque des tickets sont clôturés ou que des projets se terminent.",
+      "table": {
+        "template": "Modèle",
+        "type": "Déclencheur",
+        "conditions": "Conditions",
+        "status": "Statut",
+        "updated": "Mis à jour",
+        "actions": "Actions"
+      },
+      "status": {
+        "enabled": "Activé",
+        "disabled": "Désactivé"
+      },
+      "conditions": {
+        "unrestricted": "S'applique à tous les tickets et projets",
+        "boards": "Tableaux",
+        "statuses": "Statuts",
+        "priorities": "Priorités",
+        "any": "Tous"
+      },
+      "toasts": {
+        "created": "Déclencheur créé",
+        "updated": "Déclencheur mis à jour",
+        "deleted": "Déclencheur supprimé",
+        "error": "Impossible d'enregistrer le déclencheur",
+        "deleteError": "Impossible de supprimer le déclencheur"
+      },
+      "errors": {
+        "load": "Impossible de charger les déclencheurs d'enquête."
+      },
+      "deleteConfirm": "Supprimer ce déclencheur ? Les invitations déjà planifiées seront quand même envoyées.",
+      "actionsMenuAria": "Ouvrir les actions pour le déclencheur ciblant {{target}}"
+    },
+    "triggerForm": {
+      "titleCreate": "Créer un déclencheur d'enquête",
+      "titleEdit": "Modifier le déclencheur d'enquête",
+      "triggerTypes": {
+        "ticket_closed": "Ticket clôturé",
+        "project_completed": "Projet terminé"
+      },
+      "labels": {
+        "template": "Modèle d'enquête",
+        "triggerType": "Type de déclencheur",
+        "boardIds": "Tableaux",
+        "statusIds": "Statuts",
+        "priorities": "Priorités",
+        "enabled": "Déclencheur activé"
+      },
+      "placeholders": {
+        "boardIds": "Sélectionner un tableau",
+        "statusIds": "Ajouter un statut",
+        "priorities": "Ajouter une priorité"
+      },
+      "boardFilters": {
+        "active": "Tableaux actifs",
+        "inactive": "Tableaux inactifs",
+        "all": "Tous les tableaux"
+      },
+      "help": {
+        "conditions": "Laissez un champ vide pour correspondre à n'importe quelle valeur."
+      },
+      "actions": {
+        "create": "Créer le déclencheur",
+        "save": "Enregistrer les modifications",
+        "delete": "Supprimer le déclencheur"
+      },
+      "noTemplates": "Créez un modèle d'enquête avant d'ajouter des déclencheurs.",
+      "prioritiesMixed": "Les tableaux sélectionnés utilisent des types de priorité différents. Toutes les priorités sont affichées.",
+      "errors": {
+        "reference": "Impossible de charger les options du déclencheur. Veuillez réessayer."
+      }
+    }
+  },
+  "response": {
+    "pageTitle": "Enquête de satisfaction client",
+    "invalidTitle": "Enquête indisponible",
+    "invalidMessage": "Ce lien de retour n'est plus valide ou a déjà été utilisé.",
+    "ratingPrompt": "Comment s'est passée votre expérience ?",
+    "ratingAssistive": "Sélectionnez une note de 1 à {{scale}}",
+    "commentLabel": "Commentaires supplémentaires (facultatif)",
+    "submitButton": "Envoyer le retour",
+    "submitting": "Envoi du retour...",
+    "submittedTitle": "Merci pour votre réponse !",
+    "submittedMessage": "{{thankYouText}}",
+    "ratingSubmitted": "Retour envoyé",
+    "retryButton": "Réessayer",
+    "selectRatingError": "Sélectionnez une note avant d'envoyer.",
+    "errorMessage": "Nous n'avons pas pu enregistrer votre retour. Veuillez réessayer.",
+    "supportMessage": "Si vous avez des questions, veuillez contacter votre technicien."
+  },
+  "rating": {
+    "buttonAriaWithLabel": "{{rating}} - {{label}}",
+    "buttonAria": "Note {{rating}} sur {{scale}}",
+    "defaults": {
+      "3": {
+        "1": "Mauvais",
+        "2": "Bon",
+        "3": "Excellent"
+      },
+      "5": {
+        "1": "Très mauvais",
+        "2": "Mauvais",
+        "3": "Moyen",
+        "4": "Bon",
+        "5": "Excellent"
+      },
+      "10": {
+        "1": "Horrible",
+        "2": "Très mauvais",
+        "3": "Mauvais",
+        "4": "Sous la moyenne",
+        "5": "Moyen",
+        "6": "Au-dessus de la moyenne",
+        "7": "Bon",
+        "8": "Très bon",
+        "9": "Excellent",
+        "10": "Parfait"
+      }
+    }
+  },
+  "responses": {
+    "filters": {
+      "labels": {
+        "template": "Modèle",
+        "technician": "Technicien",
+        "client": "Client",
+        "dateRange": "Plage de dates"
+      },
+      "placeholders": {
+        "allTemplates": "Tous les modèles",
+        "allTechnicians": "Tous les techniciens",
+        "allClients": "Tous les clients"
+      },
+      "actions": {
+        "apply": "Appliquer",
+        "reset": "Réinitialiser"
+      }
+    },
+    "page": {
+      "filterTitle": "Filtrer les réponses",
+      "loading": "Actualisation des réponses...",
+      "error": "Impossible de charger les réponses d'enquête. Veuillez réessayer.",
+      "pageSizeOptions": {
+        "10": "10 par page",
+        "25": "25 par page",
+        "50": "50 par page"
+      },
+      "itemLabel": "réponses"
+    },
+    "detail": {
+      "title": "Détail de la réponse à l'enquête",
+      "empty": "Aucune réponse sélectionnée.",
+      "labels": {
+        "submittedAt": "Envoyée le",
+        "client": "Client",
+        "contact": "Contact",
+        "technician": "Technicien",
+        "ticket": "Ticket",
+        "rating": "Note",
+        "comment": "Commentaire"
+      },
+      "fallbacks": {
+        "unknown": "Inconnu",
+        "unassigned": "Non attribué",
+        "none": "-",
+        "noComment": "Aucun commentaire fourni."
+      }
+    }
+  },
+  "dashboard": {
+    "loadingInsights": "Chargement des indicateurs d'enquête...",
+    "responseMetrics": {
+      "cards": {
+        "sent": "Invitations envoyées",
+        "responses": "Réponses reçues",
+        "responseRate": "Taux de réponse",
+        "averageRating": "Note moyenne",
+        "outstanding": "Invitations en attente",
+        "negative": "Réponses négatives (<= 2 étoiles)"
+      },
+      "badges": {
+        "awaitingResponses": "En attente de réponses",
+        "needsReview": "À examiner"
+      }
+    },
+    "responseTrend": {
+      "title": "Tendance des réponses",
+      "emptyTitle": "Aucune réponse enregistrée pour la période sélectionnée.",
+      "emptyDescription": "Revenez après que les clients ont envoyé leurs retours.",
+      "tooltip": {
+        "averageRating": "Note moyenne",
+        "responses": "Réponses",
+        "date": "Date : {{label}}"
+      }
+    },
+    "responsesList": {
+      "title": "Réponses récentes",
+      "emptyTitle": "Aucune réponse d'enquête disponible pour le moment.",
+      "emptyDescription": "Encouragez les clients à donner leur avis pour alimenter cette vue.",
+      "table": {
+        "submitted": "Envoyée",
+        "client": "Client",
+        "technician": "Technicien",
+        "rating": "Note",
+        "comment": "Commentaire",
+        "ticket": "Ticket"
+      },
+      "fallbacks": {
+        "unknownClient": "Client inconnu",
+        "unassigned": "Non attribué",
+        "noComment": "Aucun commentaire"
+      }
+    },
+    "satisfactionDistribution": {
+      "title": "Répartition de la satisfaction",
+      "emptyTitle": "Aucune note d'enquête enregistrée pour le moment.",
+      "emptyDescription": "La répartition s'affichera une fois les retours collectés.",
+      "axes": {
+        "rating": "Note",
+        "responses": "Réponses"
+      },
+      "tooltip": {
+        "percent": "Pourcentage",
+        "responses": "Réponses",
+        "rating": "Note : {{label}}"
+      }
+    },
+    "topIssues": {
+      "title": "Principaux problèmes",
+      "emptyTitle": "Aucun retour négatif enregistré pour les filtres sélectionnés.",
+      "emptyDescription": "C'est bon signe ! Continuez comme ça.",
+      "fallbacks": {
+        "unknownClient": "Client inconnu",
+        "ticket": "Ticket {{ticket}}",
+        "noComment": "Aucun commentaire laissé.",
+        "assignedTo": "Attribué à : {{name}}"
+      }
+    }
+  },
+  "analytics": {
+    "filters": {
+      "labels": {
+        "customerSegment": "Segment client",
+        "surveyTemplate": "Modèle d'enquête",
+        "timeframe": "Période",
+        "calendarView": "Vue calendrier"
+      },
+      "defaults": {
+        "segments": {
+          "all": "Tous les clients",
+          "managed": "Clients gérés",
+          "project": "Clients projets uniquement"
+        },
+        "templates": {
+          "all": "Tous les modèles",
+          "default": "Modèle CSAT phase 1"
+        },
+        "timeframes": {
+          "30d": "30 derniers jours",
+          "90d": "90 derniers jours",
+          "365d": "Depuis le début de l'année"
+        }
+      },
+      "actions": {
+        "apply": "Appliquer les filtres",
+        "reset": "Réinitialiser",
+        "calendar": "Bientôt disponible"
+      }
+    },
+    "page": {
+      "filtersTitle": "Filtres d'analyse",
+      "overviewTitle": "Vue d'ensemble de la satisfaction",
+      "overviewDescription": "Comparez la satisfaction moyenne et les taux de réponse dans le temps. Une segmentation supplémentaire arrivera lors de prochaines itérations."
+    },
+    "chart": {
+      "empty": "Sélectionnez des filtres ci-dessus pour explorer les analyses avancées. (Bientôt disponible)",
+      "tooltip": {
+        "averageRating": "Note moyenne",
+        "responseRate": "Taux de réponse"
+      },
+      "legend": {
+        "averageRating": "Note moyenne",
+        "responseRate": "Taux de réponse"
+      }
+    },
+    "export": {
+      "csv": "Exporter en CSV",
+      "shareSnapshot": "Partager un instantané",
+      "emailDigest": "Résumé par e-mail"
+    }
+  },
+  "clientSummary": {
+    "title": "Résumé CSAT",
+    "empty": "Aucune donnée d'enquête n'est encore disponible pour ce client. Les enquêtes envoyées après la clôture des tickets alimenteront cette vue.",
+    "labels": {
+      "averageRating": "Note moyenne",
+      "responseRate": "Taux de réponse",
+      "totalResponses": "Nombre total de réponses",
+      "lastResponse": "Dernière réponse",
+      "rollingTrend": "Tendance glissante"
+    },
+    "fallbacks": {
+      "none": "-",
+      "noResponsesYet": "Aucune réponse pour le moment"
+    }
+  },
+  "ticketSummary": {
+    "title": "Retour client",
+    "empty": "Aucune réponse d'enquête reçue pour ce ticket pour le moment.",
+    "labels": {
+      "latestRating": "Dernière note",
+      "comment": "Commentaire",
+      "totalResponses": "Nombre total de réponses"
+    },
+    "fallbacks": {
+      "none": "-"
+    }
+  }
+}

@@ -1,0 +1,289 @@
+{
+  "page": {
+    "title": "Base de connaissances",
+    "subtitle": "Créer et gérer des articles de la base de connaissances",
+    "actions": {
+      "import": "Importer",
+      "newArticle": "Nouvel article"
+    },
+    "tabs": {
+      "articles": "Articles",
+      "reviewDashboard": "Examiner le tableau de bord"
+    },
+    "feedback": {
+      "loadError": "Échec du chargement des articles",
+      "createError": "Échec de la création de l'article",
+      "userLoadError": "Échec du chargement de l'utilisateur. La modification de l'article n'est pas disponible."
+    },
+    "newArticleTitle": "Nouvel article"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "Brouillon",
+      "review": "En revue",
+      "published": "Publié",
+      "archived": "Archivé"
+    },
+    "audienceLabels": {
+      "internal": "Interne",
+      "client": "Client",
+      "public": "Publique"
+    },
+    "typeLabels": {
+      "how_to": "Comment faire",
+      "faq": "FAQ",
+      "troubleshooting": "Dépannage",
+      "reference": "Référence"
+    },
+    "reviewCycleOptions": {
+      "30": "30 jours",
+      "60": "60 jours",
+      "90": "90 jours",
+      "180": "180 jours",
+      "365": "1 an",
+      "none": "Pas de cycle de révision"
+    },
+    "fallbacks": {
+      "emptyDate": "-"
+    }
+  },
+  "list": {
+    "title": "Articles de la base de connaissances",
+    "countSummary": "{{count}} article(s)",
+    "itemLabel": "articles",
+    "empty": "Aucun article trouvé",
+    "createFirst": "Créez votre premier article",
+    "table": {
+      "title": "Titre",
+      "type": "Taper",
+      "audience": "Public",
+      "status": "Statut",
+      "tags": "Balises",
+      "stats": "Statistiques",
+      "updated": "Mis à jour",
+      "actions": "Actes"
+    },
+    "stats": {
+      "views": "Vues",
+      "helpful": "Utile",
+      "notHelpful": "Pas utile"
+    },
+    "actions": {
+      "edit": "Modifier",
+      "submitForReview": "Soumettre pour examen",
+      "publish": "Publier",
+      "archive": "Archive"
+    },
+    "pagination": {
+      "itemsPerPage": {
+        "10": "10 articles/page",
+        "20": "20 articles/page",
+        "50": "50 articles/page"
+      }
+    },
+    "stale": {
+      "reviewOverdue": "Examen en retard"
+    },
+    "dialogs": {
+      "archive": {
+        "title": "Article d'archive",
+        "message": "Êtes-vous sûr de vouloir archiver \"{{title}}\" ? Cela le supprimera de la visibilité client."
+      }
+    },
+    "feedback": {
+      "archiveError": "Échec de l'archivage de l'article",
+      "archiveSuccess": "Article archivé"
+    }
+  },
+  "editor": {
+    "header": {
+      "untitled": "Article sans titre",
+      "back": "Dos"
+    },
+    "actions": {
+      "submitForReview": "Soumettre pour examen",
+      "publish": "Publier",
+      "archive": "Archive",
+      "saveMetadata": "Enregistrer les métadonnées",
+      "saving": "Économie..."
+    },
+    "feedback": {
+      "permissionDenied": "Autorisation refusée",
+      "notFound": "Article introuvable",
+      "loadError": "Échec du chargement de l'article",
+      "noChanges": "Aucune modification à enregistrer",
+      "saveError": "Échec de l'enregistrement de l'article",
+      "saveSuccess": "Métadonnées de l'article enregistrées",
+      "publishError": "Échec de la publication de l'article",
+      "publishSuccess": "Article publié",
+      "statusChangeError": "Échec de la modification du statut de l'article",
+      "submitForReviewSuccess": "Article soumis pour examen",
+      "archiveSuccess": "Article archivé"
+    },
+    "badges": {
+      "reviewOverdue": "Examen en retard"
+    },
+    "stats": {
+      "title": "Statistiques",
+      "views": "Vues",
+      "helpful": "Utile",
+      "notHelpful": "Pas utile",
+      "published": "Publié"
+    },
+    "metadata": {
+      "title": "Métadonnées",
+      "fields": {
+        "title": "Titre",
+        "slug": "Limace d'URL",
+        "articleType": "Type d'article",
+        "audience": "Public",
+        "category": "Catégorie",
+        "reviewCycle": "Cycle de révision",
+        "nextReview": "Revue suivante",
+        "noCategory": "Aucune catégorie"
+      }
+    },
+    "tags": {
+      "title": "Balises"
+    }
+  },
+  "filters": {
+    "title": "Filtres",
+    "actions": {
+      "clear": "Clair"
+    },
+    "labels": {
+      "search": "Recherche",
+      "status": "Statut",
+      "audience": "Public",
+      "articleType": "Type d'article",
+      "category": "Catégorie",
+      "tags": "Balises"
+    },
+    "placeholders": {
+      "search": "Rechercher des articles...",
+      "status": "Sélectionnez le statut...",
+      "audience": "Sélectionnez le public...",
+      "articleType": "Sélectionnez le type...",
+      "category": "Sélectionnez la catégorie...",
+      "tags": "Filtrer par balises..."
+    },
+    "options": {
+      "status": {
+        "all": "Tous les statuts"
+      },
+      "audience": {
+        "all": "Tous les publics"
+      },
+      "articleType": {
+        "all": "Tous types"
+      },
+      "category": {
+        "all": "Toutes les catégories"
+      }
+    }
+  },
+  "categoryTree": {
+    "allCategories": "Toutes les catégories",
+    "empty": "Aucune catégorie définie"
+  },
+  "publishing": {
+    "title": "Édition",
+    "currentStatus": "Statut actuel",
+    "actions": {
+      "submitForReview": "Soumettre pour examen",
+      "publish": "Publier",
+      "approveAndPublish": "Approuver et publier",
+      "archive": "Archive",
+      "republish": "Republier"
+    },
+    "flow": {
+      "draft": "Brouillon",
+      "review": "Revoir",
+      "published": "Publié"
+    },
+    "warnings": {
+      "audience": "La publication rendra cet article visible aux utilisateurs de {{audience}}."
+    },
+    "dialogs": {
+      "publish": {
+        "title": "Publier l'article",
+        "message": "Etes-vous sûr de vouloir publier cet article ?",
+        "messageWithAudience": "Cela publiera l'article et le rendra visible aux utilisateurs {{audience}}. Es-tu sûr?"
+      },
+      "archive": {
+        "title": "Article d'archive",
+        "message": "Cela archivera l'article et le supprimera de la visibilité client. Es-tu sûr?"
+      }
+    },
+    "feedback": {
+      "publishError": "Échec de la publication de l'article",
+      "publishSuccess": "Article publié avec succès",
+      "archiveError": "Échec de l'archivage de l'article",
+      "archiveSuccess": "Article archivé"
+    }
+  },
+  "reviewDashboard": {
+    "summary": {
+      "awaitingReview": "En attente d'examen",
+      "overdueReviews": "Examens en retard"
+    },
+    "empty": "Tous rattrapés ! Aucun article n’a besoin d’être révisé.",
+    "sections": {
+      "awaitingReview": "Articles en attente de révision",
+      "overdue": "En retard pour examen"
+    },
+    "labels": {
+      "submitted": "Soumis",
+      "due": "Exigible",
+      "lastReviewed": "Dernière révision",
+      "never": "Jamais"
+    },
+    "actions": {
+      "view": "Voir",
+      "review": "Revoir",
+      "reviewNow": "Réviser maintenant"
+    },
+    "feedback": {
+      "loadError": "Échec du chargement des données d'avis"
+    }
+  },
+  "importDialog": {
+    "title": "Importer des articles",
+    "dropzone": {
+      "title": "Déposez les fichiers ici ou cliquez pour parcourir",
+      "formats": "Prend en charge les fichiers .md et .html"
+    },
+    "fields": {
+      "audience": "Public",
+      "articleType": "Type d'article"
+    },
+    "actions": {
+      "import": "Importer le(s) fichier(s) {{count}}",
+      "importing": "Importation..."
+    },
+    "feedback": {
+      "unsupportedFileType": "{{fileName}} : type de fichier non pris en charge. Utilisez .md ou .html",
+      "permissionDenied": "Autorisation refusée",
+      "importSuccess": "{{imported}} importé(s) sur {{total}} article(s)",
+      "allFailed": "Toutes les importations ont échoué",
+      "importError": "Échec de l'importation"
+    },
+    "results": {
+      "summary": "{{imported}} sur {{total}} article(s) importé(s)",
+      "failedCount": "{{count}} a échoué :"
+    }
+  },
+  "staleness": {
+    "badges": {
+      "reviewOverdue": "Examen en retard",
+      "reviewDueSoon": "Examen à rendre prochainement",
+      "overdueBy": "En retard de {{count}} jours",
+      "dueIn": "À payer dans {{count}} jours"
+    },
+    "tooltips": {
+      "reviewOverdue": "L'examen devait être effectué le {{date}}.",
+      "reviewDue": "Révision due {{date}}"
+    }
+  }
+}

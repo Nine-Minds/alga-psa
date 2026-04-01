@@ -11,8 +11,8 @@ interface Labels {
   descriptionIdle: string;
   descriptionSuccess: string;
   buttonIdleText: string;
-  buttonAuthorizingText?: string;
-  buttonSuccessText?: string;
+  buttonAuthorizingText: string;
+  buttonSuccessText: string;
 }
 
 interface Props {
@@ -54,13 +54,13 @@ export function OAuthSection({
             {oauthStatus === 'authorizing' && (
               <>
                 <Clock className="h-4 w-4 mr-2 animate-spin" />
-                {labels.buttonAuthorizingText || 'Authorizing...'}
+                {labels.buttonAuthorizingText}
               </>
             )}
             {oauthStatus === 'success' && (
               <>
                 <CheckCircle className="h-4 w-4 mr-2" />
-                {labels.buttonSuccessText || 'Authorized'}
+                {labels.buttonSuccessText}
               </>
             )}
             {(oauthStatus === 'idle' || oauthStatus === 'error') && labels.buttonIdleText}

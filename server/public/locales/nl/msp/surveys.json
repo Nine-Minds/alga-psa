@@ -1,0 +1,427 @@
+{
+  "common": {
+    "loading": "Laden..."
+  },
+  "moduleFrame": {
+    "title": "Klanttevredenheidsenquêtes",
+    "description": "Bewaak de kwaliteit van reacties, analyseer tevredenheidstrends en volg feedback op.",
+    "badge": "Tevredenheidsinzichten",
+    "nav": {
+      "dashboard": "Dashboard",
+      "responses": "Reacties",
+      "analytics": "Analyses",
+      "setup": "Configuratie"
+    }
+  },
+  "settings": {
+    "tabLabel": "Enquêtes",
+    "title": "Klanttevredenheidsenquêtes",
+    "subtitle": "Configureer sjablonen, triggers en verzending om feedback na tickets te verzamelen.",
+    "tabs": {
+      "templates": "Sjablonen",
+      "triggers": "Triggers"
+    },
+    "templateList": {
+      "title": "Enquêtesjablonen",
+      "description": "Beheer de prompts en beoordelingsschalen die naar uw klanten worden verzonden.",
+      "createButton": "Nieuw sjabloon",
+      "emptyTitle": "Nog geen enquêtesjablonen",
+      "emptyDescription": "Maak uw eerste sjabloon om de enquêtetekst en beoordelingsschaal vast te leggen.",
+      "defaultBadge": "Standaard",
+      "table": {
+        "name": "Sjabloon",
+        "rating": "Beoordelingsschaal",
+        "status": "Status",
+        "updated": "Bijgewerkt",
+        "actions": "Acties"
+      },
+      "status": {
+        "enabled": "Ingeschakeld",
+        "disabled": "Uitgeschakeld"
+      },
+      "actions": {
+        "setDefault": "Als standaard instellen"
+      },
+      "toasts": {
+        "created": "Sjabloon gemaakt",
+        "updated": "Sjabloon bijgewerkt",
+        "deleted": "Sjabloon verwijderd",
+        "error": "Kan sjabloon niet opslaan",
+        "setDefault": "Standaardsjabloon bijgewerkt"
+      },
+      "errors": {
+        "load": "Kan enquêtesjablonen niet laden."
+      },
+      "delete": {
+        "validationFailed": "Verwijderen kon niet worden gevalideerd. Probeer het opnieuw.",
+        "error": "Kan sjabloon niet verwijderen",
+        "entityFallback": "dit enquêtesjabloon"
+      },
+      "actionsMenuAria": "Acties openen voor {{name}}"
+    },
+    "templateForm": {
+      "titleCreate": "Enquêtesjabloon maken",
+      "titleEdit": "Enquêtesjabloon bewerken",
+      "ratingTypes": {
+        "stars": "Sterren",
+        "numbers": "Nummers",
+        "emojis": "Emoji's"
+      },
+      "defaults": {
+        "promptText": "Enquêtevraag",
+        "commentPrompt": "Aanvullende opmerkingen (optioneel)",
+        "thankYouText": "Bedankt!"
+      },
+      "labels": {
+        "name": "Sjabloonnaam",
+        "ratingType": "Beoordelingstype",
+        "ratingScale": "Beoordelingsschaal",
+        "ratingLabels": "Beoordelingslabels",
+        "preview": "Voorbeeld",
+        "promptText": "Enquêtevraag",
+        "commentPrompt": "Opmerkingsprompt",
+        "thankYouText": "Bedankbericht",
+        "isDefault": "Als standaardsjabloon instellen",
+        "enabled": "Sjabloon ingeschakeld"
+      },
+      "placeholders": {
+        "ratingLabels": "Voorbeeld:\nZeer slecht\nSlecht\nGemiddeld\nGoed\nUitstekend"
+      },
+      "help": {
+        "ratingLabels": "Geef één label per regel op, van laagste naar hoogste beoordeling."
+      },
+      "actions": {
+        "create": "Sjabloon maken",
+        "save": "Wijzigingen opslaan",
+        "delete": "Sjabloon verwijderen"
+      },
+      "delete": {
+        "validationFailed": "Verwijderen kon niet worden gevalideerd. Probeer het opnieuw.",
+        "error": "Kan sjabloon niet verwijderen",
+        "entityFallback": "dit enquêtesjabloon"
+      }
+    },
+    "triggerList": {
+      "title": "Enquêtetriggers",
+      "description": "Verstuur automatisch uitnodigingen wanneer tickets of projecten worden afgerond.",
+      "createButton": "Nieuwe trigger",
+      "emptyTitle": "Geen enquêtetriggers geconfigureerd",
+      "emptyDescription": "Maak een trigger om enquêtes te verzenden wanneer tickets worden gesloten of projecten worden afgerond.",
+      "table": {
+        "template": "Sjabloon",
+        "type": "Trigger",
+        "conditions": "Voorwaarden",
+        "status": "Status",
+        "updated": "Bijgewerkt",
+        "actions": "Acties"
+      },
+      "status": {
+        "enabled": "Ingeschakeld",
+        "disabled": "Uitgeschakeld"
+      },
+      "conditions": {
+        "unrestricted": "Van toepassing op elk ticket en project",
+        "boards": "Boards",
+        "statuses": "Statussen",
+        "priorities": "Prioriteiten",
+        "any": "Alle"
+      },
+      "toasts": {
+        "created": "Trigger gemaakt",
+        "updated": "Trigger bijgewerkt",
+        "deleted": "Trigger verwijderd",
+        "error": "Kan trigger niet opslaan",
+        "deleteError": "Kan trigger niet verwijderen"
+      },
+      "errors": {
+        "load": "Kan enquêtetriggers niet laden."
+      },
+      "deleteConfirm": "Deze trigger verwijderen? Uitnodigingen die al in de wachtrij staan, worden nog steeds verzonden.",
+      "actionsMenuAria": "Acties openen voor de trigger gericht op {{target}}"
+    },
+    "triggerForm": {
+      "titleCreate": "Enquêtetrigger maken",
+      "titleEdit": "Enquêtetrigger bewerken",
+      "triggerTypes": {
+        "ticket_closed": "Ticket gesloten",
+        "project_completed": "Project afgerond"
+      },
+      "labels": {
+        "template": "Enquêtesjabloon",
+        "triggerType": "Triggertype",
+        "boardIds": "Boards",
+        "statusIds": "Statussen",
+        "priorities": "Prioriteiten",
+        "enabled": "Trigger ingeschakeld"
+      },
+      "placeholders": {
+        "boardIds": "Board selecteren",
+        "statusIds": "Status toevoegen",
+        "priorities": "Prioriteit toevoegen"
+      },
+      "boardFilters": {
+        "active": "Actieve boards",
+        "inactive": "Inactieve boards",
+        "all": "Alle boards"
+      },
+      "help": {
+        "conditions": "Laat een veld leeg om overeen te komen met elke waarde."
+      },
+      "actions": {
+        "create": "Trigger maken",
+        "save": "Wijzigingen opslaan",
+        "delete": "Trigger verwijderen"
+      },
+      "noTemplates": "Maak een enquêtesjabloon voordat u triggers toevoegt.",
+      "prioritiesMixed": "De geselecteerde boards gebruiken verschillende prioriteitstypen. Alle prioriteiten worden getoond.",
+      "errors": {
+        "reference": "Kan triggeropties niet laden. Probeer het opnieuw."
+      }
+    }
+  },
+  "response": {
+    "pageTitle": "Klanttevredenheidsenquête",
+    "invalidTitle": "Enquête niet beschikbaar",
+    "invalidMessage": "Deze feedbacklink is niet meer geldig of is al gebruikt.",
+    "ratingPrompt": "Hoe was uw ervaring?",
+    "ratingAssistive": "Selecteer een score van 1 tot {{scale}}",
+    "commentLabel": "Aanvullende opmerkingen (optioneel)",
+    "submitButton": "Feedback verzenden",
+    "submitting": "Feedback wordt verzonden...",
+    "submittedTitle": "Bedankt voor uw reactie!",
+    "submittedMessage": "{{thankYouText}}",
+    "ratingSubmitted": "Feedback verzonden",
+    "retryButton": "Opnieuw proberen",
+    "selectRatingError": "Selecteer een beoordeling voordat u verzendt.",
+    "errorMessage": "Uw feedback kon niet worden vastgelegd. Probeer het opnieuw.",
+    "supportMessage": "Neem contact op met uw technicus als u vragen heeft."
+  },
+  "rating": {
+    "buttonAriaWithLabel": "{{rating}} - {{label}}",
+    "buttonAria": "Beoordeling {{rating}} van {{scale}}",
+    "defaults": {
+      "3": {
+        "1": "Slecht",
+        "2": "Goed",
+        "3": "Uitstekend"
+      },
+      "5": {
+        "1": "Zeer slecht",
+        "2": "Slecht",
+        "3": "Gemiddeld",
+        "4": "Goed",
+        "5": "Uitstekend"
+      },
+      "10": {
+        "1": "Verschrikkelijk",
+        "2": "Zeer slecht",
+        "3": "Slecht",
+        "4": "Onder gemiddeld",
+        "5": "Gemiddeld",
+        "6": "Boven gemiddeld",
+        "7": "Goed",
+        "8": "Zeer goed",
+        "9": "Uitstekend",
+        "10": "Perfect"
+      }
+    }
+  },
+  "responses": {
+    "filters": {
+      "labels": {
+        "template": "Sjabloon",
+        "technician": "Technicus",
+        "client": "Klant",
+        "dateRange": "Datumbereik"
+      },
+      "placeholders": {
+        "allTemplates": "Alle sjablonen",
+        "allTechnicians": "Alle technici",
+        "allClients": "Alle klanten"
+      },
+      "actions": {
+        "apply": "Toepassen",
+        "reset": "Resetten"
+      }
+    },
+    "page": {
+      "filterTitle": "Reacties filteren",
+      "loading": "Reacties vernieuwen...",
+      "error": "Kan enquêtereacties niet laden. Probeer het opnieuw.",
+      "pageSizeOptions": {
+        "10": "10 per pagina",
+        "25": "25 per pagina",
+        "50": "50 per pagina"
+      },
+      "itemLabel": "reacties"
+    },
+    "detail": {
+      "title": "Details van enquêtereactie",
+      "empty": "Geen reactie geselecteerd.",
+      "labels": {
+        "submittedAt": "Ingediend op",
+        "client": "Klant",
+        "contact": "Contact",
+        "technician": "Technicus",
+        "ticket": "Ticket",
+        "rating": "Beoordeling",
+        "comment": "Opmerking"
+      },
+      "fallbacks": {
+        "unknown": "Onbekend",
+        "unassigned": "Niet toegewezen",
+        "none": "-",
+        "noComment": "Geen opmerking opgegeven."
+      }
+    }
+  },
+  "dashboard": {
+    "loadingInsights": "Enquête-inzichten laden...",
+    "responseMetrics": {
+      "cards": {
+        "sent": "Verzonden uitnodigingen",
+        "responses": "Ontvangen reacties",
+        "responseRate": "Responspercentage",
+        "averageRating": "Gemiddelde beoordeling",
+        "outstanding": "Openstaande uitnodigingen",
+        "negative": "Negatieve reacties (<= 2 sterren)"
+      },
+      "badges": {
+        "awaitingResponses": "Wacht op reacties",
+        "needsReview": "Moet worden beoordeeld"
+      }
+    },
+    "responseTrend": {
+      "title": "Reactietrend",
+      "emptyTitle": "Geen reacties vastgelegd voor de geselecteerde periode.",
+      "emptyDescription": "Kom later terug nadat klanten feedback hebben ingestuurd.",
+      "tooltip": {
+        "averageRating": "Gemiddelde beoordeling",
+        "responses": "Reacties",
+        "date": "Datum: {{label}}"
+      }
+    },
+    "responsesList": {
+      "title": "Recente reacties",
+      "emptyTitle": "Nog geen enquêtereacties beschikbaar.",
+      "emptyDescription": "Moedig klanten aan om feedback te geven zodat deze weergave gevuld wordt.",
+      "table": {
+        "submitted": "Ingediend",
+        "client": "Klant",
+        "technician": "Technicus",
+        "rating": "Beoordeling",
+        "comment": "Opmerking",
+        "ticket": "Ticket"
+      },
+      "fallbacks": {
+        "unknownClient": "Onbekende klant",
+        "unassigned": "Niet toegewezen",
+        "noComment": "Geen opmerking"
+      }
+    },
+    "satisfactionDistribution": {
+      "title": "Tevredenheidsverdeling",
+      "emptyTitle": "Nog geen enquêteratings vastgelegd.",
+      "emptyDescription": "De verdeling verschijnt nadat feedback is verzameld.",
+      "axes": {
+        "rating": "Beoordeling",
+        "responses": "Reacties"
+      },
+      "tooltip": {
+        "percent": "Percentage",
+        "responses": "Reacties",
+        "rating": "Beoordeling: {{label}}"
+      }
+    },
+    "topIssues": {
+      "title": "Belangrijkste problemen",
+      "emptyTitle": "Geen negatieve feedback vastgelegd voor de geselecteerde filters.",
+      "emptyDescription": "Dat is een goed teken. Ga zo door.",
+      "fallbacks": {
+        "unknownClient": "Onbekende klant",
+        "ticket": "Ticket {{ticket}}",
+        "noComment": "Geen opmerking achtergelaten.",
+        "assignedTo": "Toegewezen aan: {{name}}"
+      }
+    }
+  },
+  "analytics": {
+    "filters": {
+      "labels": {
+        "customerSegment": "Klantsegment",
+        "surveyTemplate": "Enquêtesjabloon",
+        "timeframe": "Periode",
+        "calendarView": "Kalenderweergave"
+      },
+      "defaults": {
+        "segments": {
+          "all": "Alle klanten",
+          "managed": "Beheerde klanten",
+          "project": "Alleen projectklanten"
+        },
+        "templates": {
+          "all": "Alle sjablonen",
+          "default": "CSAT-sjabloon fase 1"
+        },
+        "timeframes": {
+          "30d": "Afgelopen 30 dagen",
+          "90d": "Afgelopen 90 dagen",
+          "365d": "Jaar tot nu toe"
+        }
+      },
+      "actions": {
+        "apply": "Filters toepassen",
+        "reset": "Resetten",
+        "calendar": "Binnenkort beschikbaar"
+      }
+    },
+    "page": {
+      "filtersTitle": "Analysefilters",
+      "overviewTitle": "Tevredenheidsoverzicht",
+      "overviewDescription": "Vergelijk de gemiddelde tevredenheid en responspercentages in de tijd. Extra segmentatie volgt in latere iteraties."
+    },
+    "chart": {
+      "empty": "Selecteer hierboven filters om geavanceerde analyses te verkennen. (Binnenkort beschikbaar)",
+      "tooltip": {
+        "averageRating": "Gemiddelde beoordeling",
+        "responseRate": "Responspercentage"
+      },
+      "legend": {
+        "averageRating": "Gemiddelde beoordeling",
+        "responseRate": "Responspercentage"
+      }
+    },
+    "export": {
+      "csv": "CSV exporteren",
+      "shareSnapshot": "Momentopname delen",
+      "emailDigest": "E-mailsamenvatting"
+    }
+  },
+  "clientSummary": {
+    "title": "CSAT-overzicht",
+    "empty": "Er zijn nog geen enquêtegegevens beschikbaar voor deze klant. Enquêtes die na het sluiten van tickets worden verzonden, vullen deze weergave.",
+    "labels": {
+      "averageRating": "Gemiddelde beoordeling",
+      "responseRate": "Responspercentage",
+      "totalResponses": "Totaal aantal reacties",
+      "lastResponse": "Laatste reactie",
+      "rollingTrend": "Doorlopende trend"
+    },
+    "fallbacks": {
+      "none": "-",
+      "noResponsesYet": "Nog geen reacties"
+    }
+  },
+  "ticketSummary": {
+    "title": "Klantfeedback",
+    "empty": "Er zijn nog geen enquêtereacties ontvangen voor dit ticket.",
+    "labels": {
+      "latestRating": "Laatste beoordeling",
+      "comment": "Opmerking",
+      "totalResponses": "Totaal aantal reacties"
+    },
+    "fallbacks": {
+      "none": "-"
+    }
+  }
+}

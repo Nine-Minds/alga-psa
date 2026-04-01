@@ -1,0 +1,199 @@
+{
+  "profile": {
+    "tabs": {
+      "profile": "Profil",
+      "security": "Sicherheit",
+      "sso": "Single Sign-On",
+      "apiKeys": "API Keys",
+      "notifications": "Benachrichtigungen",
+      "calendar": "Kalender"
+    },
+    "basicInfo": {
+      "title": "Grundlegende Informationen"
+    },
+    "fields": {
+      "firstName": {
+        "label": "Vorname *"
+      },
+      "lastName": {
+        "label": "Nachname *"
+      },
+      "email": {
+        "label": "E-Mail *"
+      },
+      "phoneNumber": {
+        "label": "Telefonnummer"
+      },
+      "timeZone": {
+        "label": "Zeitzone"
+      }
+    },
+    "actions": {
+      "saveChanges": "Änderungen speichern"
+    },
+    "notifications": {
+      "title": "Benachrichtigungspräferenzen",
+      "viewSwitcher": {
+        "email": "E-Mail",
+        "internal": "Intern"
+      }
+    },
+    "loading": "Profil wird geladen...",
+    "messages": {
+      "success": {
+        "profileUpdated": "Profil erfolgreich aktualisiert"
+      },
+      "error": {
+        "userNotFound": "Benutzer nicht gefunden",
+        "fillRequiredFields": "Bitte füllen Sie alle Pflichtfelder aus",
+        "loadFailed": "Profil konnte nicht geladen werden",
+        "saveFailed": "Profil konnte nicht gespeichert werden",
+        "errorPrefix": "Fehler: {{error}}"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "Vorname ist erforderlich",
+      "lastNameRequired": "Nachname ist erforderlich"
+    },
+    "pageTitle": "Ihr Profil",
+    "changePassword": {
+      "title": "Passwort ändern",
+      "current": "Aktuelles Passwort",
+      "new": "Neues Passwort",
+      "confirm": "Neues Passwort bestätigen",
+      "requirements": "Das Passwort muss mindestens 8 Zeichen lang sein",
+      "submit": "Passwort ändern",
+      "success": "Passwort erfolgreich geändert",
+      "error": "Passwort konnte nicht geändert werden",
+      "passwordMismatch": "Die neuen Passwörter stimmen nicht überein",
+      "unknownError": "Beim Ändern des Passworts ist ein Fehler aufgetreten",
+      "validationFailed": "Das Passwort erfüllt nicht alle Anforderungen"
+    },
+    "loadingStates": {
+      "sso": {
+        "title": "Single Sign-On",
+        "description": "SSO-Einstellungen werden geladen..."
+      },
+      "calendar": {
+        "title": "Kalender",
+        "description": "Kalendereinstellungen werden geladen..."
+      }
+    }
+  },
+  "security": {
+    "title": "Sicherheitseinstellungen",
+    "tabs": {
+      "roles": "Rollen",
+      "sessions": "Sitzungen",
+      "sso": "Single Sign-On",
+      "permissions": "Berechtigungen",
+      "userRoles": "Benutzerrollen",
+      "policies": "Richtlinien",
+      "apiKeys": "API Keys"
+    },
+    "loading": {
+      "roles": "Rollenkonfiguration wird geladen...",
+      "permissions": "Berechtigungskonfiguration wird geladen...",
+      "userRoles": "Benutzerrollenkonfiguration wird geladen...",
+      "policies": "Richtlinienkonfiguration wird geladen...",
+      "apiKeys": "API-Key-Konfiguration wird geladen...",
+      "sso": "SSO-Verwaltungswerkzeuge werden geladen...",
+      "sessions": "Aktive Sitzungen werden geladen..."
+    },
+    "userRoles": {
+      "title": "Rollen an Benutzer zuweisen",
+      "description": {
+        "msp": "Benutzerrollenzuweisungen für MSP-Benutzer verwalten",
+        "client": "Benutzerrollenzuweisungen für Kundenportal-Benutzer verwalten"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Kundenportal"
+      },
+      "showInactive": "Inaktive Benutzer anzeigen",
+      "fields": {
+        "selectUser": "Benutzer auswählen",
+        "selectRole": "Rolle auswählen"
+      },
+      "actions": {
+        "assignRole": "Rolle zuweisen"
+      },
+      "table": {
+        "user": "Benutzer",
+        "email": "E-Mail",
+        "roles": "Rollen",
+        "actions": "Aktionen"
+      },
+      "noRolesAssigned": "Keine Rollen zugewiesen",
+      "removeRole": "{{role}} entfernen",
+      "emptyState": {
+        "noUsers": "Keine {{type}}-Benutzer gefunden",
+        "inactiveHidden": "(Inaktive Benutzer ausgeblendet)"
+      },
+      "inactiveTag": "(Inaktiv)",
+      "unnamedUser": "Unbenannter Benutzer"
+    },
+    "sessions": {
+      "title": "Alle Benutzersitzungen",
+      "subtitle": "{{sessionCount}} aktive Sitzung bei {{userCount}} Benutzer",
+      "subtitle_plural": "{{sessionCount}} aktive Sitzungen bei {{userCount}} Benutzern",
+      "filters": {
+        "search": "Suche",
+        "searchPlaceholder": "Nach Name, E-Mail, Gerät oder IP suchen...",
+        "user": "Benutzer",
+        "allUsers": "Alle Benutzer",
+        "loginMethod": "Anmeldemethode",
+        "allMethods": "Alle Methoden",
+        "userType": "Benutzertyp",
+        "allTypes": "Alle Typen",
+        "from": "Von",
+        "to": "Bis",
+        "selectDate": "Datum auswählen",
+        "reset": "Zurücksetzen"
+      },
+      "loginMethods": {
+        "password": "Passwort",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Intern",
+        "client": "Kunde"
+      },
+      "session": {
+        "yourSession": "Ihre Sitzung",
+        "unknownDevice": "Unbekanntes Gerät",
+        "lastActive": "Zuletzt aktiv {{time}}",
+        "logout": "Abmelden",
+        "revoke": "Widerrufen",
+        "revoking": "Wird widerrufen..."
+      },
+      "oauthWarning": "Das Widerrufen dieser Sitzung widerruft nicht den {{provider}} OAuth-Zugriff. Widerrufen Sie den Zugriff in Ihren {{provider}}-Kontoeinstellungen.",
+      "confirmLogout": "Sind Sie sicher, dass Sie sich von diesem Gerät abmelden möchten?",
+      "messages": {
+        "loggingOut": "Wird abgemeldet...",
+        "revoked": "Sitzung erfolgreich widerrufen",
+        "loadFailed": "Sitzungen konnten nicht geladen werden",
+        "revokeFailed": "Sitzung konnte nicht widerrufen werden"
+      },
+      "emptyState": {
+        "loading": "Sitzungen werden geladen...",
+        "noMatch": "Keine Sitzungen entsprechen Ihrer Suche",
+        "noSessions": "Keine aktiven Sitzungen gefunden"
+      }
+    }
+  },
+  "platformUpdates": {
+    "detail": {
+      "back": "Zurück",
+      "labels": {
+        "info": "Info",
+        "warning": "Warnung",
+        "destructive": "Kritisch",
+        "success": "Erfolg",
+        "default": "Hinweis"
+      }
+    }
+  }
+}

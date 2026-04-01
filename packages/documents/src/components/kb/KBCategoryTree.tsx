@@ -100,7 +100,7 @@ export default function KBCategoryTree({
   showAllOption = true,
   className = '',
 }: KBCategoryTreeProps) {
-  const { t } = useTranslation('features/documents');
+  const { t } = useTranslation('msp/knowledge-base');
 
   // Build tree structure from flat list
   const buildTree = (items: Category[]): Category[] => {
@@ -143,7 +143,7 @@ export default function KBCategoryTree({
           <span className="w-4" />
           <Folder className="w-4 h-4 text-gray-400" />
           <span className={`text-sm ${selectedCategoryId === null ? 'font-medium' : ''}`}>
-            {t('kb.allCategories', 'All Categories')}
+            {t('categoryTree.allCategories', { defaultValue: 'All Categories' })}
           </span>
         </div>
       )}
@@ -160,7 +160,7 @@ export default function KBCategoryTree({
 
       {categories.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-4">
-          {t('kb.noCategories', 'No categories defined')}
+          {t('categoryTree.empty', { defaultValue: 'No categories defined' })}
         </p>
       )}
     </div>

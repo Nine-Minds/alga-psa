@@ -15,42 +15,32 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Eye, EyeOff } from 'lucide-react';
 import type { EmailProvider } from './types';
 import { createEmailProvider, updateEmailProvider } from '@alga-psa/integrations/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
 
-const imapProviderSchema = z.object({
-  providerName: z.string().min(1, 'Provider name is required'),
-  mailbox: z
-    .string()
-    .trim()
-    .min(1, 'Mailbox is required')
-    .refine((value) => {
-      const lower = value.toLowerCase();
-      const isLocalPartOnly = /^[^\s@]+$/.test(lower);
-      const isEmailLike = /^[^\s@]+@[^\s@]+$/.test(lower);
-      return isLocalPartOnly || isEmailLike;
-    }, 'Valid mailbox is required (e.g. user@domain.com, user@localhost, user@test-server, or user)'),
-  host: z.string().min(1, 'IMAP host is required'),
-  port: z.number().min(1).max(65535),
-  secure: z.boolean(),
-  allowStarttls: z.boolean(),
-  authType: z.enum(['password', 'oauth2']),
-  username: z.string().min(1, 'IMAP username is required'),
-  password: z.string().optional(),
-  oauthAuthorizeUrl: z.string().optional(),
-  oauthTokenUrl: z.string().optional(),
-  oauthClientId: z.string().optional(),
-  oauthClientSecret: z.string().optional(),
-  oauthScopes: z.string().optional(),
-  isActive: z.boolean(),
-  folderFilters: z.string().optional(),
-  inboundTicketDefaultsId: z.string().uuid().optional()
-});
-
-type ImapProviderFormData = z.infer<typeof imapProviderSchema>;
+type ImapProviderFormData = {
+  providerName: string;
+  mailbox: string;
+  host: string;
+  port: number;
+  secure: boolean;
+  allowStarttls: boolean;
+  authType: 'password' | 'oauth2';
+  username: string;
+  password?: string;
+  oauthAuthorizeUrl?: string;
+  oauthTokenUrl?: string;
+  oauthClientId?: string;
+  oauthClientSecret?: string;
+  oauthScopes?: string;
+  isActive: boolean;
+  folderFilters?: string;
+  inboundTicketDefaultsId?: string;
+};
 
 interface ImapProviderFormProps {
   tenant: string;
@@ -65,6 +55,7 @@ export function ImapProviderForm({
   onSuccess,
   onCancel
 }: ImapProviderFormProps) {
+  const { t } = useTranslation('msp/email-providers');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -74,6 +65,35 @@ export function ImapProviderForm({
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'error'>('idle');
 
   const isEditing = !!provider;
+
+  const imapProviderSchema = z.object({
+    providerName: z.string().min(1, t('forms.imap.validation.providerNameRequired', { defaultValue: 'Provider name is required' })),
+    mailbox: z
+      .string()
+      .trim()
+      .min(1, t('forms.imap.validation.mailboxRequired', { defaultValue: 'Mailbox is required' }))
+      .refine((value) => {
+        const lower = value.toLowerCase();
+        const isLocalPartOnly = /^[^\s@]+$/.test(lower);
+        const isEmailLike = /^[^\s@]+@[^\s@]+$/.test(lower);
+        return isLocalPartOnly || isEmailLike;
+      }, t('forms.imap.validation.mailboxInvalid', { defaultValue: 'Valid mailbox is required (e.g. user@domain.com, user@localhost, user@test-server, or user)' })),
+    host: z.string().min(1, t('forms.imap.validation.hostRequired', { defaultValue: 'IMAP host is required' })),
+    port: z.number().min(1).max(65535),
+    secure: z.boolean(),
+    allowStarttls: z.boolean(),
+    authType: z.enum(['password', 'oauth2']),
+    username: z.string().min(1, t('forms.imap.validation.usernameRequired', { defaultValue: 'IMAP username is required' })),
+    password: z.string().optional(),
+    oauthAuthorizeUrl: z.string().optional(),
+    oauthTokenUrl: z.string().optional(),
+    oauthClientId: z.string().optional(),
+    oauthClientSecret: z.string().optional(),
+    oauthScopes: z.string().optional(),
+    isActive: z.boolean(),
+    folderFilters: z.string().optional(),
+    inboundTicketDefaultsId: z.string().uuid().optional()
+  });
 
   const form = useForm<ImapProviderFormData>({
     resolver: zodResolver(imapProviderSchema) as any,
@@ -187,7 +207,7 @@ export function ImapProviderForm({
       });
       const result = await response.json();
       if (!response.ok || !result.authUrl) {
-        throw new Error(result.error || 'Failed to initiate IMAP OAuth');
+        throw new Error(result.error || t('forms.imap.validation.oauthInitiateFailed', { defaultValue: 'Failed to initiate IMAP OAuth' }));
       }
       window.open(result.authUrl, '_blank', 'width=600,height=700');
       setOauthStatus('idle');
@@ -207,25 +227,25 @@ export function ImapProviderForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Basic Settings</CardTitle>
-          <CardDescription>Define the IMAP mailbox connection details.</CardDescription>
+          <CardTitle>{t('forms.imap.basic.title', { defaultValue: 'Basic Settings' })}</CardTitle>
+          <CardDescription>{t('forms.imap.basic.description', { defaultValue: 'Define the IMAP mailbox connection details.' })}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="providerName">Provider Name</Label>
+            <Label htmlFor="providerName">{t('forms.imap.basic.providerName', { defaultValue: 'Provider Name' })}</Label>
             <Input id="providerName" {...form.register('providerName')} error={form.formState.errors.providerName?.message} />
           </div>
           <div>
-            <Label htmlFor="mailbox">Mailbox Address</Label>
+            <Label htmlFor="mailbox">{t('forms.imap.basic.mailboxAddress', { defaultValue: 'Mailbox Address' })}</Label>
             <Input id="mailbox" type="email" {...form.register('mailbox')} error={form.formState.errors.mailbox?.message} />
           </div>
           <div>
-            <Label htmlFor="host">IMAP Host</Label>
+            <Label htmlFor="host">{t('forms.imap.basic.host', { defaultValue: 'IMAP Host' })}</Label>
             <Input id="host" {...form.register('host')} error={form.formState.errors.host?.message} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="port">Port</Label>
+              <Label htmlFor="port">{t('forms.imap.basic.port', { defaultValue: 'Port' })}</Label>
               <Input
                 id="port"
                 type="number"
@@ -233,12 +253,12 @@ export function ImapProviderForm({
               />
             </div>
             <div className="flex items-center justify-between pt-6">
-              <Label htmlFor="secure">Use TLS/SSL</Label>
+              <Label htmlFor="secure">{t('forms.imap.basic.useTls', { defaultValue: 'Use TLS/SSL' })}</Label>
               <Switch id="secure" checked={form.watch('secure')} onCheckedChange={(v) => form.setValue('secure', v)} />
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="allowStarttls">Allow STARTTLS Upgrade</Label>
+            <Label htmlFor="allowStarttls">{t('forms.imap.basic.allowStarttls', { defaultValue: 'Allow STARTTLS Upgrade' })}</Label>
             <Switch id="allowStarttls" checked={form.watch('allowStarttls')} onCheckedChange={(v) => form.setValue('allowStarttls', v)} />
           </div>
         </CardContent>
@@ -246,33 +266,33 @@ export function ImapProviderForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Authentication</CardTitle>
-          <CardDescription>Choose password or OAuth2 authentication.</CardDescription>
+          <CardTitle>{t('forms.imap.auth.title', { defaultValue: 'Authentication' })}</CardTitle>
+          <CardDescription>{t('forms.imap.auth.description', { defaultValue: 'Choose password or OAuth2 authentication.' })}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label>Authentication Type</Label>
+            <Label>{t('forms.imap.auth.typeLabel', { defaultValue: 'Authentication Type' })}</Label>
             <CustomSelect
               id="imap-auth-type"
               value={authType}
               onValueChange={(v) => form.setValue('authType', v as 'password' | 'oauth2')}
               options={[
-                { value: 'password', label: 'Password' },
-                { value: 'oauth2', label: 'OAuth2 (XOAUTH2)' }
+                { value: 'password', label: t('forms.imap.auth.passwordOption', { defaultValue: 'Password' }) },
+                { value: 'oauth2', label: t('forms.imap.auth.oauth2Option', { defaultValue: 'OAuth2 (XOAUTH2)' }) }
               ]}
             />
           </div>
           <div>
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username">{t('forms.imap.auth.username', { defaultValue: 'Username' })}</Label>
             <Input id="username" {...form.register('username')} error={form.formState.errors.username?.message} />
           </div>
 
           {authType === 'password' && (
             <div>
-              <Label htmlFor="password">Password / App Password</Label>
+              <Label htmlFor="password">{t('forms.imap.auth.password', { defaultValue: 'Password / App Password' })}</Label>
               {isEditing && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Passwords are stored securely and will not be displayed. Leave blank to keep the existing password.
+                  {t('forms.imap.auth.passwordHelp', { defaultValue: 'Passwords are stored securely and will not be displayed. Leave blank to keep the existing password.' })}
                 </p>
               )}
               <div className="relative">
@@ -297,28 +317,30 @@ export function ImapProviderForm({
               {provider && (
                 <div className="flex items-center justify-between rounded border border-gray-200 p-3 text-sm">
                   <div>
-                    <p className="font-medium">OAuth Status</p>
-                    <p className="text-muted-foreground">{oauthConnected ? 'Connected' : 'Not connected'}</p>
+                    <p className="font-medium">{t('forms.imap.auth.oauthStatus', { defaultValue: 'OAuth Status' })}</p>
+                    <p className="text-muted-foreground">{oauthConnected ? t('forms.imap.auth.connected', { defaultValue: 'Connected' }) : t('forms.imap.auth.notConnected', { defaultValue: 'Not connected' })}</p>
                   </div>
                   <Button id="imap-oauth-reconnect-btn" type="button" variant="outline" onClick={handleOauthConnect} disabled={oauthStatus === 'authorizing'}>
-                    {oauthStatus === 'authorizing' ? 'Authorizing...' : 'Reconnect OAuth'}
+                    {oauthStatus === 'authorizing'
+                      ? t('forms.common.oauth.authorizing', { defaultValue: 'Authorizing...' })
+                      : t('forms.imap.auth.reconnectOauth', { defaultValue: 'Reconnect OAuth' })}
                   </Button>
                 </div>
               )}
               <div>
-                <Label htmlFor="oauthAuthorizeUrl">Authorize URL</Label>
+                <Label htmlFor="oauthAuthorizeUrl">{t('forms.imap.auth.authorizeUrl', { defaultValue: 'Authorize URL' })}</Label>
                 <Input id="oauthAuthorizeUrl" {...form.register('oauthAuthorizeUrl')} error={form.formState.errors.oauthAuthorizeUrl?.message} />
               </div>
               <div>
-                <Label htmlFor="oauthTokenUrl">Token URL</Label>
+                <Label htmlFor="oauthTokenUrl">{t('forms.imap.auth.tokenUrl', { defaultValue: 'Token URL' })}</Label>
                 <Input id="oauthTokenUrl" {...form.register('oauthTokenUrl')} error={form.formState.errors.oauthTokenUrl?.message} />
               </div>
               <div>
-                <Label htmlFor="oauthClientId">OAuth Client ID</Label>
+                <Label htmlFor="oauthClientId">{t('forms.imap.auth.clientId', { defaultValue: 'OAuth Client ID' })}</Label>
                 <Input id="oauthClientId" {...form.register('oauthClientId')} error={form.formState.errors.oauthClientId?.message} />
               </div>
               <div>
-                <Label htmlFor="oauthClientSecret">OAuth Client Secret</Label>
+                <Label htmlFor="oauthClientSecret">{t('forms.imap.auth.clientSecret', { defaultValue: 'OAuth Client Secret' })}</Label>
                 <div className="relative">
                   <Input
                     id="oauthClientSecret"
@@ -335,8 +357,8 @@ export function ImapProviderForm({
                 </div>
               </div>
               <div>
-                <Label htmlFor="oauthScopes">OAuth Scopes</Label>
-                <Input id="oauthScopes" {...form.register('oauthScopes')} error={form.formState.errors.oauthScopes?.message} placeholder="space-delimited scopes" />
+                <Label htmlFor="oauthScopes">{t('forms.imap.auth.scopes', { defaultValue: 'OAuth Scopes' })}</Label>
+                <Input id="oauthScopes" {...form.register('oauthScopes')} error={form.formState.errors.oauthScopes?.message} placeholder={t('forms.imap.auth.scopesPlaceholder', { defaultValue: 'space-delimited scopes' })} />
               </div>
             </div>
           )}
@@ -345,25 +367,27 @@ export function ImapProviderForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Processing Settings</CardTitle>
-          <CardDescription>Choose folders and processing behavior.</CardDescription>
+          <CardTitle>{t('forms.imap.processing.title', { defaultValue: 'Processing Settings' })}</CardTitle>
+          <CardDescription>{t('forms.imap.processing.description', { defaultValue: 'Choose folders and processing behavior.' })}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="folderFilters">Folder Filters</Label>
-            <Input id="folderFilters" {...form.register('folderFilters')} error={form.formState.errors.folderFilters?.message} placeholder="Inbox, Support, Tickets" />
+            <Label htmlFor="folderFilters">{t('forms.imap.processing.folderFilters', { defaultValue: 'Folder Filters' })}</Label>
+            <Input id="folderFilters" {...form.register('folderFilters')} error={form.formState.errors.folderFilters?.message} placeholder={t('forms.imap.processing.folderFiltersPlaceholder', { defaultValue: 'Inbox, Support, Tickets' })} />
           </div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="isActive">Active</Label>
+            <Label htmlFor="isActive">{t('forms.imap.processing.active', { defaultValue: 'Active' })}</Label>
             <Switch id="isActive" checked={form.watch('isActive')} onCheckedChange={(v) => form.setValue('isActive', v)} />
           </div>
           <CustomSelect
             id="imap-defaults-select"
-            label="Ticket Defaults"
+            label={t('forms.common.ticketDefaults.title', { defaultValue: 'Ticket Defaults' })}
             value={form.watch('inboundTicketDefaultsId') || ''}
             onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
             options={defaultsOptions}
-            placeholder={defaultsOptions.length ? 'Select defaults...' : 'No defaults available'}
+            placeholder={defaultsOptions.length
+              ? t('forms.common.ticketDefaults.placeholder', { defaultValue: 'Select defaults (optional)' })
+              : t('forms.common.ticketDefaults.empty', { defaultValue: 'No defaults available' })}
             allowClear
           />
         </CardContent>
@@ -371,16 +395,20 @@ export function ImapProviderForm({
 
       {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
         <Alert variant="destructive">
-          <AlertDescription>Please fix the highlighted fields and try again.</AlertDescription>
+          <AlertDescription>{t('forms.common.validation.fixHighlightedFields', { defaultValue: 'Please fix the highlighted fields and try again.' })}</AlertDescription>
         </Alert>
       )}
 
       <div className="flex justify-end space-x-3">
         <Button id="imap-provider-cancel-btn" type="button" variant="outline" onClick={onCancel} disabled={loading}>
-          Cancel
+          {t('forms.common.actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
         <Button id="imap-provider-submit-btn" type="submit" disabled={loading}>
-          {loading ? 'Saving...' : isEditing ? 'Update Provider' : 'Create Provider'}
+          {loading
+            ? t('forms.common.actions.saving', { defaultValue: 'Saving...' })
+            : isEditing
+            ? t('forms.common.actions.updateProvider', { defaultValue: 'Update Provider' })
+            : t('forms.common.actions.createProvider', { defaultValue: 'Create Provider' })}
         </Button>
       </div>
     </form>
