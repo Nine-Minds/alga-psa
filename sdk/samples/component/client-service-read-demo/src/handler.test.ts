@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { createMockHostBindings } from '../../../../extension-runtime/src/index.ts'
 
 import { handler } from './handler.ts'
-import { fetchSummaryViaUiProxy } from './uiProxy.ts'
 
 function decodeJson(response: { body?: Uint8Array | null }) {
   return JSON.parse(new TextDecoder().decode(response.body ?? new Uint8Array()))
@@ -69,38 +68,13 @@ describe('client-service-read-demo', () => {
     expect(body.services.totalCount).toBe(1)
   })
 
-  it('T025: ui proxy summary path returns same read-only summary data as direct summary path', async () => {
-    const directHost = createMockHostBindings({
-      clients: {
-        list: vi.fn().mockResolvedValue({ items: [{ clientId: 'c-1', clientName: 'Acme', clientType: null, isInactive: false, defaultCurrencyCode: 'USD', accountManagerId: null, accountManagerName: null, billingEmail: null }], totalCount: 1, page: 1, pageSize: 10 }),
-        get: vi.fn(),
-      },
-      services: {
-        list: vi.fn().mockResolvedValue({ items: [{ serviceId: 's-1', serviceName: 'Monitoring', itemKind: 'service', billingMethod: 'fixed', serviceTypeId: null, serviceTypeName: null, defaultRate: 100, unitOfMeasure: 'month', isActive: true, sku: null }], totalCount: 1, page: 1, pageSize: 10 }),
-        get: vi.fn(),
-      },
-      user: {
-        getUser: vi.fn().mockResolvedValue({ tenantId: 'tenant-1', clientName: 'Acme', userId: 'user-1', userEmail: 'u@example.com', userName: 'User One', userType: 'msp' }),
-      },
-    })
+  it('T025: returns not_found for removed summary route', async () => {
+    const host = createMockHostBindings()
 
-    const directResponse = await handler(makeRequest('/api/summary') as any, directHost)
-    const directJson = decodeJson(directResponse)
+    const res = await handler(makeRequest('/api/summary') as any, host)
+    const body = decodeJson(res)
 
-    const proxyHost = createMockHostBindings({
-      uiProxy: {
-        callRoute: vi.fn(async (route: string) => {
-          const proxied = await handler(makeRequest(route) as any, directHost)
-          return proxied.body ?? new Uint8Array()
-        }),
-        call: vi.fn(),
-      },
-    })
-
-    const proxiedJson = await fetchSummaryViaUiProxy(proxyHost.uiProxy)
-
-    expect(proxiedJson).toEqual(directJson)
-    expect(proxiedJson.clients.items[0]).toEqual(directJson.clients.items[0])
-    expect(proxiedJson.services.items[0]).toEqual(directJson.services.items[0])
+    expect(res.status).toBe(404)
+    expect(body).toEqual({ error: 'not_found' })
   })
 })
