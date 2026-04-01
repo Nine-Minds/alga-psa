@@ -1,0 +1,491 @@
+[
+  {
+    "id": "T000a",
+    "description": "Inspector panel scrolls independently when content overflows, without moving the canvas",
+    "implemented": true,
+    "featureIds": [
+      "F000a",
+      "F000b"
+    ]
+  },
+  {
+    "id": "T000b",
+    "description": "Palette panel scrolls independently without jumping over the app header",
+    "implemented": true,
+    "featureIds": [
+      "F000a",
+      "F000c"
+    ]
+  },
+  {
+    "id": "T000c",
+    "description": "Canvas remains fully visible when either side panel is scrolled to the bottom",
+    "implemented": true,
+    "featureIds": [
+      "F000e"
+    ]
+  },
+  {
+    "id": "T000d",
+    "description": "isPaletteFloating state and fixed-top positioning are removed",
+    "implemented": true,
+    "featureIds": [
+      "F000d"
+    ]
+  },
+  {
+    "id": "T001",
+    "description": "Grid column picker renders 5 visual preset options when layout mode is grid",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004"
+    ]
+  },
+  {
+    "id": "T001a",
+    "description": "Layout controls render for selected section nodes, including the grid column picker",
+    "implemented": true,
+    "featureIds": [
+      "F004b"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Grid column picker remains visible when layout mode is flex so users can switch into grid",
+    "implemented": true,
+    "featureIds": [
+      "F004a"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Clicking '2 equal columns' sets gridTemplateColumns to '1fr 1fr'",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Clicking 'sidebar + main' sets gridTemplateColumns to '1fr 2fr'",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Clicking 'main + sidebar' sets gridTemplateColumns to '2fr 1fr'",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Clicking '3 equal columns' sets gridTemplateColumns to '1fr 1fr 1fr'",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Clicking '1 column' sets gridTemplateColumns to '1fr'",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T007a",
+    "description": "Clicking a grid preset from flex mode switches layout.display to 'grid' and applies the preset columns",
+    "implemented": true,
+    "featureIds": [
+      "F002a"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Active preset highlighted based on current gridTemplateColumns value",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "No preset highlighted when gridTemplateColumns is a custom value",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Raw CSS input for gridTemplateColumns visible below the picker",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Gap stepper: renders numeric input + unit dropdown instead of text input",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Padding stepper: renders numeric input + unit dropdown",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Unit dropdown shows px, %, rem options",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Stepper parses '16px' into value=16, unit='px'",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Stepper parses '2rem' into value=2, unit='rem'",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Stepper parses '50%' into value=50, unit='%'",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Stepper parses '0' or '0px' into value=0, unit='px'",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Stepper writes back combined string when value changes",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Stepper writes back combined string when unit changes",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Margin renders 4 stepper fields (top, right, bottom, left)",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Margin link-all toggle: when linked, changing one value updates all four",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Margin link-all toggle: when unlinked, values are independent",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Margin parses '8px 16px' shorthand correctly",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Margin parses '8px' single-value shorthand (all sides equal)",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Margin parses '8px 16px 24px 32px' full shorthand",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Margin writes back optimized shorthand",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "New preset 'Notes + Totals Row' creates a 2-col grid section",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "New preset 'Two Equal Columns' creates a 2-col grid section",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "New preset 'Three Info Columns' creates a 3-col grid section",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "New presets use layout.display:'grid' and gridTemplateColumns",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T030a",
+    "description": "New preset 'Recurring + One-time Tables' creates two dynamic tables bound to recurringItems and onetimeItems",
+    "implemented": true,
+    "featureIds": [
+      "F018a"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "recurringItems collection filters to items where is_recurring === true",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "onetimeItems collection filters to items where is_recurring !== true",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "serviceItems collection filters to items where service_item_kind === 'service'",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "productItems collection filters to items where service_item_kind === 'product'",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Empty filtered collection returns empty array, not error",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F020",
+      "F021",
+      "F022"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "recurringSubtotal sums total_price of recurring items only",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "recurringTax sums tax_amount of recurring items only",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "recurringTotal equals recurringSubtotal + recurringTax",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "onetimeSubtotal sums total_price of one-time items only",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "onetimeTax sums tax_amount of one-time items only",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "onetimeTotal equals onetimeSubtotal + onetimeTax",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "serviceSubtotal/serviceTax/serviceTotal computed from service items",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "productSubtotal/productTax/productTotal computed from product items",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "QuoteViewModel includes filtered item arrays",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "QuoteViewModel includes per-group aggregate number fields",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "mapLoadedQuoteToViewModel populates filtered arrays correctly",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "mapLoadedQuoteToViewModel computes aggregates matching sum of filtered items",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Aggregate values are 0 when no items match the filter (not NaN or undefined)",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024",
+      "F025",
+      "F026"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "Table editor collection dropdown includes recurringItems, onetimeItems, serviceItems, productItems",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Fields palette shows new quote aggregate bindings for discovery",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "New inspector controls render correctly in dark theme",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Existing standard invoice template renders identically after changes",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "Existing standard quote templates render identically after changes",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  }
+]
