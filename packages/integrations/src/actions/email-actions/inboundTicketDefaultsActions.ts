@@ -252,25 +252,19 @@ export const deleteInboundTicketDefaults = withAuth(async (
           updated_at: trx.fn.now(),
         });
 
-      const hasClientDestinationColumn = await trx.schema.hasColumn('clients', 'inbound_ticket_defaults_id');
-      if (hasClientDestinationColumn) {
-        await trx('clients')
-          .where({ tenant, inbound_ticket_defaults_id: id })
-          .update({
-            inbound_ticket_defaults_id: null,
-            updated_at: trx.fn.now(),
-          });
-      }
+      await trx('clients')
+        .where({ tenant, inbound_ticket_defaults_id: id })
+        .update({
+          inbound_ticket_defaults_id: null,
+          updated_at: trx.fn.now(),
+        });
 
-      const hasContactDestinationColumn = await trx.schema.hasColumn('contacts', 'inbound_ticket_defaults_id');
-      if (hasContactDestinationColumn) {
-        await trx('contacts')
-          .where({ tenant, inbound_ticket_defaults_id: id })
-          .update({
-            inbound_ticket_defaults_id: null,
-            updated_at: trx.fn.now(),
-          });
-      }
+      await trx('contacts')
+        .where({ tenant, inbound_ticket_defaults_id: id })
+        .update({
+          inbound_ticket_defaults_id: null,
+          updated_at: trx.fn.now(),
+        });
 
       const rowsDeleted = await trx('inbound_ticket_defaults')
         .where({ id, tenant })

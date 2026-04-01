@@ -158,37 +158,10 @@ const computeDaysUntilDate = (params: {
   );
 };
 
-type RenewalDefaultSelectionConfig = {
-  joinDefaultSettings: boolean;
-  defaultSelections: string[];
-};
-
-const getRenewalDefaultSelectionConfig = async (
-  db: Knex | Knex.Transaction
-): Promise<RenewalDefaultSelectionConfig> => {
-  const schema = (db as any).schema;
-  if (!schema?.hasColumn) {
-    return { joinDefaultSettings: false, defaultSelections: [] };
-  }
-
-  const [hasDefaultRenewalModeColumn, hasDefaultNoticePeriodColumn] = await Promise.all([
-    schema.hasColumn('default_billing_settings', 'default_renewal_mode'),
-    schema.hasColumn('default_billing_settings', 'default_notice_period_days'),
-  ]);
-
-  const defaultSelections: string[] = [];
-  if (hasDefaultRenewalModeColumn) {
-    defaultSelections.push('dbs.default_renewal_mode as tenant_default_renewal_mode');
-  }
-  if (hasDefaultNoticePeriodColumn) {
-    defaultSelections.push('dbs.default_notice_period_days as tenant_default_notice_period_days');
-  }
-
-  return {
-    joinDefaultSettings: defaultSelections.length > 0,
-    defaultSelections,
-  };
-};
+const RENEWAL_DEFAULT_SELECTIONS = [
+  'dbs.default_renewal_mode as tenant_default_renewal_mode',
+  'dbs.default_notice_period_days as tenant_default_notice_period_days',
+];
 
 const validateContractOwnershipForClient = (params: {
   contract: {
@@ -225,13 +198,8 @@ const validateContractOwnershipForClient = (params: {
 };
 
 const withRenewalDefaultsJoin = (
-  query: Knex.QueryBuilder,
-  joinDefaultSettings: boolean
+  query: Knex.QueryBuilder
 ): Knex.QueryBuilder => {
-  if (!joinDefaultSettings) {
-    return query;
-  }
-
   return query.leftJoin('default_billing_settings as dbs', function joinDefaultBillingSettings() {
     this.on('cc.tenant', '=', 'dbs.tenant');
   });
@@ -358,8 +326,6 @@ const ClientContract = {
     }
 
     try {
-      const renewalDefaults = await getRenewalDefaultSelectionConfig(db);
-
       const baseQuery = db('client_contracts as cc')
         .leftJoin('contracts as c', function joinContracts() {
           this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
@@ -367,11 +333,11 @@ const ClientContract = {
         .where({ 'cc.client_id': clientId, 'cc.tenant': tenant, 'cc.is_active': true })
         .orderBy('cc.start_date', 'desc');
 
-      const rows = await withRenewalDefaultsJoin(baseQuery, renewalDefaults.joinDefaultSettings).select([
+      const rows = await withRenewalDefaultsJoin(baseQuery).select([
         'cc.*',
         'c.billing_frequency as contract_billing_frequency',
         'c.status as contract_status',
-        ...renewalDefaults.defaultSelections,
+        ...RENEWAL_DEFAULT_SELECTIONS,
       ]);
 
       return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
@@ -392,8 +358,6 @@ const ClientContract = {
     }
 
     try {
-      const renewalDefaults = await getRenewalDefaultSelectionConfig(db);
-
       const baseQuery = db('client_contracts as cc')
         .leftJoin('contracts as c', function joinContracts() {
           this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
@@ -405,11 +369,11 @@ const ClientContract = {
           { column: 'cc.start_date', order: 'desc' }
         ]);
 
-      const rows = await withRenewalDefaultsJoin(baseQuery, renewalDefaults.joinDefaultSettings).select([
+      const rows = await withRenewalDefaultsJoin(baseQuery).select([
         'cc.*',
         'c.billing_frequency as contract_billing_frequency',
         'c.status as contract_status',
-        ...renewalDefaults.defaultSelections,
+        ...RENEWAL_DEFAULT_SELECTIONS,
       ]);
 
       return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
@@ -426,20 +390,18 @@ const ClientContract = {
     }
 
     try {
-      const renewalDefaults = await getRenewalDefaultSelectionConfig(db);
-
       const baseQuery = db('client_contracts as cc')
         .leftJoin('contracts as c', function joinContracts() {
           this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
         })
         .where({ 'cc.client_contract_id': clientContractId, 'cc.tenant': tenant });
 
-      const row = await withRenewalDefaultsJoin(baseQuery, renewalDefaults.joinDefaultSettings)
+      const row = await withRenewalDefaultsJoin(baseQuery)
         .select([
           'cc.*',
           'c.billing_frequency as contract_billing_frequency',
           'c.status as contract_status',
-          ...renewalDefaults.defaultSelections,
+          ...RENEWAL_DEFAULT_SELECTIONS,
         ])
         .first();
 
@@ -457,22 +419,20 @@ const ClientContract = {
     }
 
     try {
-      const renewalDefaults = await getRenewalDefaultSelectionConfig(db);
-
       const baseQuery = db('client_contracts as cc')
         .join('contracts as c', function joinContracts() {
           this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
         })
         .where({ 'cc.client_contract_id': clientContractId, 'cc.tenant': tenant });
 
-      const clientContract = await withRenewalDefaultsJoin(baseQuery, renewalDefaults.joinDefaultSettings).select(
+      const clientContract = await withRenewalDefaultsJoin(baseQuery).select(
         [
           'cc.*',
           'c.contract_name',
           'c.contract_description',
           'c.billing_frequency as contract_billing_frequency',
           'c.status as contract_status',
-          ...renewalDefaults.defaultSelections,
+          ...RENEWAL_DEFAULT_SELECTIONS,
         ]
       )
         .first();

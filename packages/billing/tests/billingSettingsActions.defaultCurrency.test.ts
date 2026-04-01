@@ -55,9 +55,6 @@ function createMockTransaction(state: MockState) {
     },
   })) as any;
 
-  trx.schema = {
-    hasColumn: vi.fn(async () => true),
-  };
   trx.fn = {
     now: () => '2026-04-01T12:00:00.000Z',
   };

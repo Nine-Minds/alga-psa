@@ -125,26 +125,6 @@ export const updateDefaultBillingSettings = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const [
-      hasDefaultCurrencyCodeColumn,
-      hasDefaultRenewalModeColumn,
-      hasDefaultNoticePeriodColumn,
-      hasRenewalDueDateActionPolicyColumn,
-      hasRenewalTicketBoardColumn,
-      hasRenewalTicketStatusColumn,
-      hasRenewalTicketPriorityColumn,
-      hasRenewalTicketAssigneeColumn,
-    ] = await Promise.all([
-      trx.schema.hasColumn('default_billing_settings', 'default_currency_code'),
-      trx.schema.hasColumn('default_billing_settings', 'default_renewal_mode'),
-      trx.schema.hasColumn('default_billing_settings', 'default_notice_period_days'),
-      trx.schema.hasColumn('default_billing_settings', 'renewal_due_date_action_policy'),
-      trx.schema.hasColumn('default_billing_settings', 'renewal_ticket_board_id'),
-      trx.schema.hasColumn('default_billing_settings', 'renewal_ticket_status_id'),
-      trx.schema.hasColumn('default_billing_settings', 'renewal_ticket_priority'),
-      trx.schema.hasColumn('default_billing_settings', 'renewal_ticket_assignee_id'),
-    ]);
-
     const existingSettings = await trx('default_billing_settings')
       .where({ tenant })
       .first();
@@ -152,48 +132,39 @@ export const updateDefaultBillingSettings = withAuth(async (
     await assertBoardScopedTicketStatusSelection({
       trx,
       tenant,
-      boardId: hasRenewalTicketBoardColumn ? data.renewalTicketBoardId ?? null : null,
-      statusId: hasRenewalTicketStatusColumn ? data.renewalTicketStatusId ?? null : null,
+      boardId: data.renewalTicketBoardId ?? null,
+      statusId: data.renewalTicketStatusId ?? null,
       statusLabel: 'Renewal ticket status',
     });
 
-    const renewalUpdates: Record<string, unknown> = {};
-    if (hasDefaultCurrencyCodeColumn) {
-      renewalUpdates.default_currency_code = data.defaultCurrencyCode || 'USD';
-    }
-    if (hasDefaultRenewalModeColumn) {
-      renewalUpdates.default_renewal_mode =
-        data.defaultRenewalMode === 'none' ||
-        data.defaultRenewalMode === 'manual' ||
-        data.defaultRenewalMode === 'auto'
-          ? data.defaultRenewalMode
-          : DEFAULT_RENEWAL_MODE;
-    }
-    if (hasDefaultNoticePeriodColumn) {
-      renewalUpdates.default_notice_period_days =
-        Number.isInteger(data.defaultNoticePeriodDays) && (data.defaultNoticePeriodDays as number) >= 0
-          ? data.defaultNoticePeriodDays
-          : DEFAULT_NOTICE_PERIOD_DAYS;
-    }
-    if (hasRenewalDueDateActionPolicyColumn) {
-      renewalUpdates.renewal_due_date_action_policy =
-        data.renewalDueDateActionPolicy === 'queue_only' ||
-        data.renewalDueDateActionPolicy === 'create_ticket'
-          ? data.renewalDueDateActionPolicy
-          : DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY;
-    }
-    if (hasRenewalTicketBoardColumn) {
-      renewalUpdates.renewal_ticket_board_id = data.renewalTicketBoardId ?? null;
-    }
-    if (hasRenewalTicketStatusColumn) {
-      renewalUpdates.renewal_ticket_status_id = data.renewalTicketStatusId ?? null;
-    }
-    if (hasRenewalTicketPriorityColumn) {
-      renewalUpdates.renewal_ticket_priority = data.renewalTicketPriority ?? null;
-    }
-    if (hasRenewalTicketAssigneeColumn) {
-      renewalUpdates.renewal_ticket_assignee_id = data.renewalTicketAssigneeId ?? null;
-    }
+    const renewalMode =
+      data.defaultRenewalMode === 'none' ||
+      data.defaultRenewalMode === 'manual' ||
+      data.defaultRenewalMode === 'auto'
+        ? data.defaultRenewalMode
+        : DEFAULT_RENEWAL_MODE;
+
+    const noticePeriodDays =
+      Number.isInteger(data.defaultNoticePeriodDays) && (data.defaultNoticePeriodDays as number) >= 0
+        ? data.defaultNoticePeriodDays
+        : DEFAULT_NOTICE_PERIOD_DAYS;
+
+    const renewalDueDateActionPolicy =
+      data.renewalDueDateActionPolicy === 'queue_only' ||
+      data.renewalDueDateActionPolicy === 'create_ticket'
+        ? data.renewalDueDateActionPolicy
+        : DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY;
+
+    const columnValues = {
+      default_currency_code: data.defaultCurrencyCode || 'USD',
+      default_renewal_mode: renewalMode,
+      default_notice_period_days: noticePeriodDays,
+      renewal_due_date_action_policy: renewalDueDateActionPolicy,
+      renewal_ticket_board_id: data.renewalTicketBoardId ?? null,
+      renewal_ticket_status_id: data.renewalTicketStatusId ?? null,
+      renewal_ticket_priority: data.renewalTicketPriority ?? null,
+      renewal_ticket_assignee_id: data.renewalTicketAssigneeId ?? null,
+    };
 
     if (existingSettings) {
       return await trx('default_billing_settings')
@@ -204,7 +175,7 @@ export const updateDefaultBillingSettings = withAuth(async (
           enable_credit_expiration: data.enableCreditExpiration,
           credit_expiration_days: data.creditExpirationDays,
           credit_expiration_notification_days: data.creditExpirationNotificationDays,
-          ...renewalUpdates,
+          ...columnValues,
           updated_at: trx.fn.now()
         });
     } else {
@@ -215,8 +186,7 @@ export const updateDefaultBillingSettings = withAuth(async (
         enable_credit_expiration: data.enableCreditExpiration ?? true,
         credit_expiration_days: data.creditExpirationDays ?? 365,
         credit_expiration_notification_days: data.creditExpirationNotificationDays ?? [30, 7, 1],
-        ...renewalUpdates,
-        // created_at and updated_at will be set by default values
+        ...columnValues,
       });
     }
   });

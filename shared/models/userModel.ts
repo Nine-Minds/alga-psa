@@ -96,12 +96,10 @@ export async function determinePortalUserRole(
 }
 
 /**
- * Check if the password field exists in the users table
- * Some databases use 'password' while others use 'hashed_password'
+ * Get the password field name for the users table.
  */
-export async function getPasswordFieldName(knex: Knex): Promise<string> {
-  const hasPasswordField = await knex.schema.hasColumn('users', 'password');
-  return hasPasswordField ? 'password' : 'hashed_password';
+export async function getPasswordFieldName(_knex: Knex): Promise<string> {
+  return 'hashed_password';
 }
 
 /**

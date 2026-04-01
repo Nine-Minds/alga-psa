@@ -156,30 +156,11 @@ const loadAvailableWorkflowDesignerAppKeys = async (
     return new Set();
   }
 
-  const [hasInstallEnabledColumn, hasInstallStatusColumn] = await Promise.all([
-    knex.schema.hasColumn('tenant_extension_install', 'is_enabled'),
-    knex.schema.hasColumn('tenant_extension_install', 'status')
-  ]);
-
   const rows = await knex('tenant_extension_install as install')
     .innerJoin('extension_registry as registry', 'registry.id', 'install.registry_id')
     .where('install.tenant_id', tenantId)
-    .modify((query) => {
-      if (hasInstallEnabledColumn && hasInstallStatusColumn) {
-        query.andWhere((builder) => {
-          builder.where('install.is_enabled', true).orWhere('install.status', 'enabled');
-        });
-        return;
-      }
-
-      if (hasInstallEnabledColumn) {
-        query.andWhere('install.is_enabled', true);
-        return;
-      }
-
-      if (hasInstallStatusColumn) {
-        query.andWhere('install.status', 'enabled');
-      }
+    .andWhere((builder) => {
+      builder.where('install.is_enabled', true).orWhere('install.status', 'enabled');
     })
     .select<{ publisher: string | null; name: string | null }[]>([
       'registry.publisher as publisher',
