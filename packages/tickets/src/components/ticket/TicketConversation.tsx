@@ -54,6 +54,7 @@ import type { IAggregatedReaction } from '@alga-psa/types';
 interface TicketTimeEntry {
   entry_id: string;
   user_id: string;
+  user_name?: string;
   start_time: string;
   end_time: string;
   billable_duration: number;
@@ -493,14 +494,14 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       content: (
         <ReflectionContainer id={`${id}-time-entries`} label="Time Entries">
           {timeEntries.length === 0 ? (
-            <p className="text-sm text-gray-500 py-4">{t('conversation.noTimeEntries', 'No time entries recorded for this ticket.')}</p>
+            <p id={`${compId}-time-entries-empty`} className="text-sm text-gray-500 dark:text-gray-400 py-4">{t('conversation.noTimeEntries', 'No time entries recorded for this ticket.')}</p>
           ) : (
-            <div className="space-y-3">
+            <div id={`${compId}-time-entries-list`} className="space-y-3">
               {timeEntries.map((entry: TicketTimeEntry) => {
                 const entryUser = userMap[entry.user_id];
                 const userName = entryUser
                   ? `${entryUser.first_name} ${entryUser.last_name}`.trim()
-                  : t('conversation.unknownUser', 'Unknown User');
+                  : (entry.user_name || t('conversation.unknownUser', 'Unknown User'));
                 const hours = Math.floor(entry.billable_duration / 60);
                 const mins = entry.billable_duration % 60;
                 const durationStr = hours > 0
@@ -514,21 +515,21 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                   ? entry.approval_status.charAt(0) + entry.approval_status.slice(1).toLowerCase()
                   : '';
                 const approvalColor = entry.approval_status === 'APPROVED'
-                  ? 'bg-green-100 text-green-800'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                   : entry.approval_status === 'SUBMITTED'
-                    ? 'bg-yellow-100 text-yellow-800'
+                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
                     : entry.approval_status === 'CHANGES_REQUESTED'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-gray-100 text-gray-600';
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
                 return (
-                  <div key={entry.entry_id} className="border rounded-lg p-3 bg-white">
+                  <div key={entry.entry_id} id={`${compId}-time-entry-${entry.entry_id}`} className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-900">{userName}</span>
-                      <span className="text-sm text-gray-500">{entryDate}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{userName}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{entryDate}</span>
                     </div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-indigo-600">{durationStr}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded ${isBillable ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                      <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{durationStr}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${isBillable ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
                         {isBillable ? t('conversation.billable', 'Billable') : t('conversation.nonBillable', 'Non-billable')}
                       </span>
                       {approvalLabel && (
@@ -538,7 +539,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                       )}
                     </div>
                     {(entry.service_name || entry.notes) && (
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-gray-600 dark:text-gray-300">
                         {entry.service_name && (
                           <span className="font-medium">{entry.service_name}{entry.notes ? ' — ' : ''}</span>
                         )}

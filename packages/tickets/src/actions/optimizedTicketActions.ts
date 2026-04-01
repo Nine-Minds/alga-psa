@@ -273,18 +273,22 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         .where({ tenant })
         .orderBy('category_name', 'asc'),
 
-      // Time entries for this ticket (with service name)
+      // Time entries for this ticket (with service name and user name)
       trx('time_entries as te')
         .leftJoin('service_catalog as sc', function() {
           this.on('te.service_id', 'sc.service_id')
               .andOn('te.tenant', 'sc.tenant');
+        })
+        .leftJoin('users as teu', function() {
+          this.on('te.user_id', 'teu.user_id')
+              .andOn('te.tenant', 'teu.tenant');
         })
         .where({
           'te.work_item_id': ticketId,
           'te.work_item_type': 'ticket',
           'te.tenant': tenant
         })
-        .select('te.*', 'sc.service_name')
+        .select('te.*', 'sc.service_name', trx.raw("concat(teu.first_name, ' ', teu.last_name) as user_name"))
         .orderBy('te.start_time', 'desc')
     ]);
 
@@ -714,7 +718,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       clients: clientsWithLogos,
       locations,
       agentSchedules: agentSchedulesList,
-      timeEntries
+      timeEntries: await hasPermission(user, 'timeentry', 'read', trx) ? timeEntries : []
     };
     } catch (error) {
       console.error('Failed to fetch consolidated ticket data:', error);

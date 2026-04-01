@@ -251,6 +251,8 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   return attachTimeEntryChangeRequests(entriesWithWorkItems, changeRequestsByEntryId);
 });
 
+const ALLOWED_WORK_ITEM_TYPES = new Set(['ticket', 'project_task', 'non_billable_category', 'ad_hoc', 'interaction']);
+
 export const fetchTimeEntriesForWorkItem = withAuth(async (
   user,
   { tenant },
@@ -258,6 +260,10 @@ export const fetchTimeEntriesForWorkItem = withAuth(async (
   workItemType: string
 ): Promise<ITimeEntryWithWorkItem[]> => {
   const {knex: db} = await createTenantKnex();
+
+  if (!ALLOWED_WORK_ITEM_TYPES.has(workItemType)) {
+    throw new Error(`Invalid work item type: ${workItemType}`);
+  }
 
   if (!await hasPermission(user, 'timeentry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entries');
