@@ -904,6 +904,7 @@ export function QuickAddTicket({
         tags: createdTags,
       });
       resetForm();
+
       onOpenChange(false);
 
       if (openAfterCreate && newTicket.ticket_id) {
@@ -1078,6 +1079,18 @@ export function QuickAddTicket({
                       showPlaceholderInDropdown={false}
                     />
                   )}
+                  <div className={hasAttemptedSubmit && !boardId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                    <BoardPicker
+                      id={`${id}-board-picker`}
+                      boards={boards}
+                      onSelect={handleBoardChange}
+                      selectedBoardId={boardId}
+                      onFilterStateChange={setQuickAddBoardFilterState}
+                      filterState={quickAddBoardFilterState}
+                      placeholder="Select Board *"
+                    />
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
@@ -1236,18 +1249,6 @@ export function QuickAddTicket({
                         />
                       )}
                     </div>
-                  </div>
-
-                  <div className={hasAttemptedSubmit && !boardId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
-                    <BoardPicker
-                      id={`${id}-board-picker`}
-                      boards={boards}
-                      onSelect={handleBoardChange}
-                      selectedBoardId={boardId}
-                      onFilterStateChange={setQuickAddBoardFilterState}
-                      filterState={quickAddBoardFilterState}
-                      placeholder="Select Board *"
-                    />
                   </div>
 
                   {boardId && boardConfig.category_type && (
@@ -1505,24 +1506,24 @@ export function QuickAddTicket({
                     <Button
                       id={`${id}-create-open-btn`}
                       type="button"
-                      variant="default"
+                      variant="secondary"
                       disabled={isSubmitting}
                       onClick={() => {
                         void handleCreateTicket({ openAfterCreate: true });
                       }}
                       className={hasRequiredFieldErrors ? 'opacity-50' : ''}
                     >
-                      {isSubmitting ? 'Saving...' : 'Save + Open'}
+                      {isSubmitting ? 'Creating...' : 'Create + View Ticket'}
                     </Button>
                     <Button
                       id={`${id}-submit-btn`}
-                      type={isEmbedded ? "button" : "submit"}
+                      type="button"
                       variant="default"
                       disabled={isSubmitting}
-                      onClick={isEmbedded ? () => { void handleCreateTicket(); } : undefined}
+                      onClick={() => { void handleCreateTicket(); }}
                       className={hasRequiredFieldErrors ? 'opacity-50' : ''}
                     >
-                      {isSubmitting ? 'Saving...' : 'Save Ticket'}
+                      {isSubmitting ? 'Creating...' : 'Create'}
                     </Button>
                   </DialogFooter>
                 </FormOrDiv>
