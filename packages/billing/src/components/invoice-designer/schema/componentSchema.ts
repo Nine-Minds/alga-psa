@@ -1,4 +1,4 @@
-import { DEFAULT_INVOICE_PRINT_SETTINGS, resolveInvoiceTemplatePrintSettings } from '@alga-psa/types';
+import { DEFAULT_INVOICE_PRINT_SETTINGS, resolveTemplatePrintSettings } from '@alga-psa/types';
 import type {
   DesignerComponentType,
   DesignerContainerLayout,
@@ -22,7 +22,7 @@ export type DesignerComponentHierarchy = {
   allowedParents: DesignerComponentType[];
 };
 
-const DEFAULT_RESOLVED_PRINT_SETTINGS = resolveInvoiceTemplatePrintSettings({
+const DEFAULT_RESOLVED_PRINT_SETTINGS = resolveTemplatePrintSettings({
   printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
 });
 
@@ -73,18 +73,20 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
           ],
         },
         {
-          kind: 'css-length',
+          kind: 'css-length-stepper',
           id: 'gap',
           label: 'Gap',
           path: 'layout.gap',
-          placeholder: '0px',
+          allowedUnits: ['px', '%', 'rem'],
+          defaultUnit: 'px',
         },
         {
-          kind: 'css-length',
+          kind: 'css-length-stepper',
           id: 'padding',
           label: 'Padding',
           path: 'layout.padding',
-          placeholder: '0px',
+          allowedUnits: ['px', '%', 'rem'],
+          defaultUnit: 'px',
         },
         {
           kind: 'enum',
@@ -238,11 +240,12 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
           placeholder: '8px',
         },
         {
-          kind: 'css-length',
+          kind: 'css-length-box',
           id: 'margin',
           label: 'Margin',
           path: 'style.margin',
-          placeholder: '0 | 0 0 12px 0',
+          allowedUnits: ['px', '%', 'rem'],
+          defaultUnit: 'px',
         },
       ],
     },

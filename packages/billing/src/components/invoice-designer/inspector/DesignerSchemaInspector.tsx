@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -18,6 +18,15 @@ import {
   normalizeString,
   normalizeStringLive,
 } from './normalizers';
+import {
+  areCssLengthBoxValuesLinked,
+  formatCssLength,
+  formatCssLengthBox,
+  getCssLengthStep,
+  parseCssLength,
+  parseCssLengthBox,
+  type CssLengthUnit,
+} from './cssLengthFields';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -60,6 +69,249 @@ const toPickerHexColor = (value: string): string | null => {
 type Props = {
   node: DesignerNode;
   nodesById: Map<string, DesignerNode>;
+};
+
+type ApplyNormalized = (path: string, next: unknown, commit: boolean) => void;
+
+type CssLengthFieldProps = {
+  domId: string;
+  label: string;
+  path: string;
+  rawValue: string | undefined;
+  allowedUnits?: CssLengthUnit[];
+  defaultUnit?: CssLengthUnit;
+  applyNormalized: ApplyNormalized;
+};
+
+const CssLengthStepperField: React.FC<CssLengthFieldProps> = ({
+  domId,
+  label,
+  path,
+  rawValue,
+  allowedUnits,
+  defaultUnit,
+  applyNormalized,
+}) => {
+  const parsed = useMemo(
+    () => parseCssLength(rawValue, { allowedUnits, defaultUnit }),
+    [allowedUnits, defaultUnit, rawValue]
+  );
+  const valueAsString = parsed.value === null ? '' : String(parsed.value);
+
+  const applyValue = (raw: string, commit: boolean) => {
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) {
+      applyNormalized(path, undefined, commit);
+      return;
+    }
+    const numeric = Number(trimmed);
+    if (!Number.isFinite(numeric)) {
+      return;
+    }
+    applyNormalized(path, formatCssLength(numeric, parsed.unit), commit);
+  };
+
+  const handleUnitChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextUnit = event.target.value as CssLengthUnit;
+    if (parsed.value === null) {
+      return;
+    }
+    applyNormalized(path, formatCssLength(parsed.value, nextUnit), true);
+  };
+
+  return (
+    <div>
+      <label htmlFor={domId} className="text-[10px] text-slate-500 block mb-1">
+        {label}
+      </label>
+      <div className="flex items-center gap-2">
+        <input
+          id={domId}
+          type="number"
+          className="h-10 w-full rounded-md border border-[rgb(var(--color-border-400))] bg-white px-3 py-2 text-[rgb(var(--color-text-900))] shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] dark:bg-[rgb(var(--color-card))]"
+          step={getCssLengthStep(parsed.unit)}
+          value={valueAsString}
+          data-automation-id={`${domId}-value`}
+          onChange={(event) => applyValue(event.target.value, false)}
+          onBlur={(event) => applyValue(event.target.value, true)}
+          onWheel={(event) => (event.target as HTMLInputElement).blur()}
+        />
+        <select
+          className="h-10 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-[rgb(var(--color-card))] dark:text-slate-300"
+          value={parsed.unit}
+          data-automation-id={`${domId}-unit`}
+          onChange={handleUnitChange}
+        >
+          {(allowedUnits ?? ['px', '%', 'rem']).map((unit) => (
+            <option key={unit} value={unit}>
+              {unit}
+            </option>
+          ))}
+        </select>
+      </div>
+      {parsed.isCustom && parsed.raw ? (
+        <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+          Custom CSS value preserved until edited: {parsed.raw}
+        </p>
+      ) : null}
+    </div>
+  );
+};
+
+const CssLengthBoxField: React.FC<CssLengthFieldProps> = ({
+  domId,
+  label,
+  path,
+  rawValue,
+  allowedUnits,
+  defaultUnit,
+  applyNormalized,
+}) => {
+  const parsed = useMemo(
+    () => parseCssLengthBox(rawValue, { allowedUnits, defaultUnit }),
+    [allowedUnits, defaultUnit, rawValue]
+  );
+  const [linked, setLinked] = useState(() => areCssLengthBoxValuesLinked(parsed));
+
+  const currentValues = {
+    top: parsed.top,
+    right: parsed.right,
+    bottom: parsed.bottom,
+    left: parsed.left,
+  };
+
+  const coerceNumber = (value: number | null): number => value ?? 0;
+
+  const applyBoxValues = (
+    values: { top: number | null; right: number | null; bottom: number | null; left: number | null },
+    unit: CssLengthUnit,
+    commit: boolean
+  ) => {
+    applyNormalized(path, formatCssLengthBox(values, unit), commit);
+  };
+
+  const handleSideChange = (
+    side: 'top' | 'right' | 'bottom' | 'left',
+    raw: string,
+    commit: boolean
+  ) => {
+    const trimmed = raw.trim();
+    const nextValue = trimmed.length === 0 ? null : Number(trimmed);
+    if (trimmed.length > 0 && !Number.isFinite(nextValue)) {
+      return;
+    }
+
+    const baseValues = {
+      top: coerceNumber(currentValues.top),
+      right: coerceNumber(currentValues.right),
+      bottom: coerceNumber(currentValues.bottom),
+      left: coerceNumber(currentValues.left),
+    };
+    const nextValues = linked
+      ? { top: nextValue, right: nextValue, bottom: nextValue, left: nextValue }
+      : { ...baseValues, [side]: nextValue };
+    applyBoxValues(nextValues, parsed.unit, commit);
+  };
+
+  const handleLinkToggle = () => {
+    if (linked) {
+      setLinked(false);
+      return;
+    }
+
+    const linkedValue =
+      currentValues.top ?? currentValues.right ?? currentValues.bottom ?? currentValues.left ?? 0;
+    const nextValues = {
+      top: linkedValue,
+      right: linkedValue,
+      bottom: linkedValue,
+      left: linkedValue,
+    };
+    setLinked(true);
+    applyBoxValues(nextValues, parsed.unit, true);
+  };
+
+  const handleUnitChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextUnit = event.target.value as CssLengthUnit;
+    const hasAnyValue = Object.values(currentValues).some((value) => value !== null);
+    if (!hasAnyValue) {
+      return;
+    }
+    applyBoxValues(
+      {
+        top: coerceNumber(currentValues.top),
+        right: coerceNumber(currentValues.right),
+        bottom: coerceNumber(currentValues.bottom),
+        left: coerceNumber(currentValues.left),
+      },
+      nextUnit,
+      true
+    );
+  };
+
+  const renderSideInput = (side: 'top' | 'right' | 'bottom' | 'left', shortLabel: string) => (
+    <div key={side} className="space-y-1">
+      <label className="block text-[10px] uppercase tracking-wide text-slate-500" htmlFor={`${domId}-${side}`}>
+        {shortLabel}
+      </label>
+      <input
+        id={`${domId}-${side}`}
+        type="number"
+        className="h-10 w-full rounded-md border border-[rgb(var(--color-border-400))] bg-white px-3 py-2 text-[rgb(var(--color-text-900))] shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] dark:bg-[rgb(var(--color-card))]"
+        step={getCssLengthStep(parsed.unit)}
+        value={currentValues[side] === null ? '' : String(currentValues[side])}
+        data-automation-id={`${domId}-${side}`}
+        onChange={(event) => handleSideChange(side, event.target.value, false)}
+        onBlur={(event) => handleSideChange(side, event.target.value, true)}
+        onWheel={(event) => (event.target as HTMLInputElement).blur()}
+      />
+    </div>
+  );
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <label className="text-[10px] text-slate-500" htmlFor={`${domId}-top`}>
+          {label}
+        </label>
+        <button
+          type="button"
+          className="rounded border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800"
+          aria-pressed={linked}
+          data-automation-id={`${domId}-link-all`}
+          onClick={handleLinkToggle}
+        >
+          Link all
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {renderSideInput('top', 'Top')}
+        {renderSideInput('right', 'Right')}
+        {renderSideInput('bottom', 'Bottom')}
+        {renderSideInput('left', 'Left')}
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <span className="text-[10px] uppercase tracking-wide text-slate-500">Unit</span>
+        <select
+          className="h-10 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-[rgb(var(--color-card))] dark:text-slate-300"
+          value={parsed.unit}
+          data-automation-id={`${domId}-unit`}
+          onChange={handleUnitChange}
+        >
+          {(allowedUnits ?? ['px', '%', 'rem']).map((unit) => (
+            <option key={unit} value={unit}>
+              {unit}
+            </option>
+          ))}
+        </select>
+      </div>
+      {parsed.isCustom && parsed.raw ? (
+        <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+          Custom CSS value preserved until edited: {parsed.raw}
+        </p>
+      ) : null}
+    </div>
+  );
 };
 
 export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) => {
@@ -222,6 +474,38 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
             onBlur={(event) => applyNormalized(field.path, normalizeCssLength(event.target.value), true)}
           />
         </div>
+      );
+    }
+
+    if (field.kind === 'css-length-stepper') {
+      const value = resolveValue(field);
+      return (
+        <CssLengthStepperField
+          key={field.id}
+          domId={domId}
+          label={field.label}
+          path={field.path}
+          rawValue={typeof value === 'string' ? value : undefined}
+          allowedUnits={field.allowedUnits}
+          defaultUnit={field.defaultUnit}
+          applyNormalized={applyNormalized}
+        />
+      );
+    }
+
+    if (field.kind === 'css-length-box') {
+      const value = resolveValue(field);
+      return (
+        <CssLengthBoxField
+          key={`${node.id}-${field.id}`}
+          domId={domId}
+          label={field.label}
+          path={field.path}
+          rawValue={typeof value === 'string' ? value : undefined}
+          allowedUnits={field.allowedUnits}
+          defaultUnit={field.defaultUnit}
+          applyNormalized={applyNormalized}
+        />
       );
     }
 
