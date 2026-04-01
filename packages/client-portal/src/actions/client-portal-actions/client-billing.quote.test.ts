@@ -498,7 +498,7 @@ describe('client quote billing actions', () => {
     // to avoid breaking other tests that depend on the same mock
     vi.doMock('@alga-psa/billing/services', () => ({
       recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
-      createQuotePDFGenerationService: vi.fn(() => ({
+      createPDFGenerationService: vi.fn(() => ({
         generateAndStore: vi.fn(async () => ({ file_id: 'generated-pdf-file-1' })),
       })),
     }));

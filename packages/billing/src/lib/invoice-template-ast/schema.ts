@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import type { InvoiceTemplateAst } from '@alga-psa/types';
+import type { TemplateAst } from '@alga-psa/types';
 import {
   INVOICE_PRINT_MARGIN_MM_RANGE,
   INVOICE_PAPER_PRESET_IDS,
-  INVOICE_TEMPLATE_AST_VERSION,
+  TEMPLATE_AST_VERSION,
 } from '@alga-psa/types';
 
 // Conservative allowlist for any identifier we emit into CSS selectors or custom property names.
@@ -431,9 +431,9 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
   ])
 );
 
-export const invoiceTemplateAstSchema = z.object({
+export const templateAstSchema = z.object({
   kind: z.literal('invoice-template-ast'),
-  version: z.literal(INVOICE_TEMPLATE_AST_VERSION),
+  version: z.literal(TEMPLATE_AST_VERSION),
   metadata: z.object({
     templateName: z.string().optional(),
     description: z.string().optional(),
@@ -460,32 +460,32 @@ export const invoiceTemplateAstSchema = z.object({
   layout: nodeSchema,
 }).strict();
 
-export interface InvoiceTemplateAstValidationError {
+export interface TemplateAstValidationError {
   code: string;
   path: string;
   message: string;
 }
 
-export type InvoiceTemplateAstValidationResult =
+export type TemplateAstValidationResult =
   | {
       success: true;
-      ast: InvoiceTemplateAst;
+      ast: TemplateAst;
     }
   | {
       success: false;
-      errors: InvoiceTemplateAstValidationError[];
+      errors: TemplateAstValidationError[];
     };
 
 const issuePathToString = (path: (string | number)[]): string => path.map(String).join('.');
 
-const toValidationError = (issue: z.ZodIssue): InvoiceTemplateAstValidationError => ({
+const toValidationError = (issue: z.ZodIssue): TemplateAstValidationError => ({
   code: issue.code,
   path: issuePathToString(issue.path),
   message: issue.message,
 });
 
-export const validateInvoiceTemplateAst = (input: unknown): InvoiceTemplateAstValidationResult => {
-  const parsed = invoiceTemplateAstSchema.safeParse(input);
+export const validateTemplateAst = (input: unknown): TemplateAstValidationResult => {
+  const parsed = templateAstSchema.safeParse(input);
   if (!parsed.success) {
     return {
       success: false,
@@ -495,12 +495,12 @@ export const validateInvoiceTemplateAst = (input: unknown): InvoiceTemplateAstVa
 
   return {
     success: true,
-    ast: parsed.data as InvoiceTemplateAst,
+    ast: parsed.data as TemplateAst,
   };
 };
 
-export const parseInvoiceTemplateAst = (input: unknown): InvoiceTemplateAst => {
-  const result = validateInvoiceTemplateAst(input);
+export const parseTemplateAst = (input: unknown): TemplateAst => {
+  const result = validateTemplateAst(input);
   if (!result.success) {
     const validationErrors = 'errors' in result ? result.errors : [];
     const message = validationErrors.map((error) =>
@@ -510,3 +510,4 @@ export const parseInvoiceTemplateAst = (input: unknown): InvoiceTemplateAst => {
   }
   return result.ast;
 };
+

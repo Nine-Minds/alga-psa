@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import { useInvoiceDesignerStore } from '../invoice-designer/state/designerStore';
 import type { DesignerWorkspaceSnapshot } from '../invoice-designer/state/designerStore';
-import { exportWorkspaceToInvoiceTemplateAst } from '../invoice-designer/ast/workspaceAst';
+import { exportWorkspaceToTemplateAst } from '../invoice-designer/ast/workspaceAst';
 
 const pushMock = vi.fn();
 const getInvoiceTemplateMock = vi.fn();
@@ -173,7 +173,7 @@ const buildTransformedTemplateAst = () => {
     ] as any,
   };
 
-  return exportWorkspaceToInvoiceTemplateAst(workspace);
+  return exportWorkspaceToTemplateAst(workspace);
 };
 
 const installLocalStorageMock = () => {
@@ -299,7 +299,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
 
   it('hydrates workspace from persisted templateAst payload', async () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable('ast-field');
-    const astPayload = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const astPayload = exportWorkspaceToTemplateAst(workspace);
     getInvoiceTemplateMock.mockResolvedValueOnce({
       template_id: 'tpl-ast',
       name: 'Template AST',

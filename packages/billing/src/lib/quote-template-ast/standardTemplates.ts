@@ -1,18 +1,18 @@
-import type { InvoiceTemplateAst } from '@alga-psa/types';
-import { DEFAULT_INVOICE_PRINT_SETTINGS, INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import type { TemplateAst } from '@alga-psa/types';
+import { DEFAULT_INVOICE_PRINT_SETTINGS, TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 import { buildQuoteTemplateBindings } from './bindings';
 
-const cloneAst = (ast: InvoiceTemplateAst): InvoiceTemplateAst =>
-  JSON.parse(JSON.stringify(ast)) as InvoiceTemplateAst;
+const cloneAst = (ast: TemplateAst): TemplateAst =>
+  JSON.parse(JSON.stringify(ast)) as TemplateAst;
 
 /**
  * Standard Quote Default — clean, professional layout with logo, party blocks,
  * line items table, totals, terms, and signature block.
  */
-const buildStandardQuoteDefaultAst = (): InvoiceTemplateAst => ({
+const buildStandardQuoteDefaultAst = (): TemplateAst => ({
   kind: 'invoice-template-ast',
-  version: INVOICE_TEMPLATE_AST_VERSION,
+  version: TEMPLATE_AST_VERSION,
   metadata: {
     templateName: 'Standard Quote Default',
     printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
@@ -184,9 +184,9 @@ const buildStandardQuoteDefaultAst = (): InvoiceTemplateAst => ({
             children: [
               { id: 'sig-client-label', type: 'text', content: { type: 'literal', value: 'Accepted By' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700 } } },
               { id: 'sig-client-line', type: 'divider', style: { inline: { margin: '24px 0 4px 0', borderColor: '#000' } } },
-              { id: 'sig-client-name', type: 'text', content: { type: 'literal', value: 'Signature' }, style: { inline: { color: '#9ca3af', fontSize: '12px' } } },
+              { id: 'sig-client-name', type: 'text', content: { type: 'binding', bindingId: 'acceptedByName' }, style: { inline: { color: '#9ca3af', fontSize: '12px' } } },
               { id: 'sig-client-date-line', type: 'divider', style: { inline: { margin: '20px 0 4px 0', borderColor: '#000' } } },
-              { id: 'sig-client-date', type: 'text', content: { type: 'literal', value: 'Date' }, style: { inline: { color: '#9ca3af', fontSize: '12px' } } },
+              { id: 'sig-client-date', type: 'text', content: { type: 'binding', bindingId: 'acceptedAt' }, style: { inline: { color: '#9ca3af', fontSize: '12px' } } },
             ],
           },
           {
@@ -212,9 +212,9 @@ const buildStandardQuoteDefaultAst = (): InvoiceTemplateAst => ({
  * Standard Quote Detailed — includes phases, optional/recurring flags,
  * PO number, version, and a more detailed line items table.
  */
-const buildStandardQuoteDetailedAst = (): InvoiceTemplateAst => ({
+const buildStandardQuoteDetailedAst = (): TemplateAst => ({
   kind: 'invoice-template-ast',
-  version: INVOICE_TEMPLATE_AST_VERSION,
+  version: TEMPLATE_AST_VERSION,
   metadata: {
     templateName: 'Standard Quote Detailed',
     printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
@@ -382,9 +382,9 @@ const buildStandardQuoteDetailedAst = (): InvoiceTemplateAst => ({
             children: [
               { id: 'sig-client-label', type: 'text', content: { type: 'literal', value: 'Accepted By' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700 } } },
               { id: 'sig-client-line', type: 'divider', style: { inline: { margin: '24px 0 4px 0', borderColor: '#000' } } },
-              { id: 'sig-client-name', type: 'text', content: { type: 'literal', value: 'Signature' }, style: { inline: { color: '#9ca3af', fontSize: '12px' } } },
+              { id: 'sig-client-name', type: 'text', content: { type: 'binding', bindingId: 'acceptedByName' }, style: { inline: { color: '#9ca3af', fontSize: '12px' } } },
               { id: 'sig-client-date-line', type: 'divider', style: { inline: { margin: '20px 0 4px 0', borderColor: '#000' } } },
-              { id: 'sig-client-date', type: 'text', content: { type: 'literal', value: 'Date' }, style: { inline: { color: '#9ca3af', fontSize: '12px' } } },
+              { id: 'sig-client-date', type: 'text', content: { type: 'binding', bindingId: 'acceptedAt' }, style: { inline: { color: '#9ca3af', fontSize: '12px' } } },
             ],
           },
           {
@@ -406,12 +406,12 @@ const buildStandardQuoteDetailedAst = (): InvoiceTemplateAst => ({
   },
 });
 
-export const STANDARD_QUOTE_TEMPLATE_ASTS: Record<string, InvoiceTemplateAst> = {
+export const STANDARD_QUOTE_TEMPLATE_ASTS: Record<string, TemplateAst> = {
   'standard-quote-default': buildStandardQuoteDefaultAst(),
   'standard-quote-detailed': buildStandardQuoteDetailedAst(),
 };
 
-export const getStandardQuoteTemplateAstByCode = (code: string): InvoiceTemplateAst | null => {
+export const getStandardQuoteTemplateAstByCode = (code: string): TemplateAst | null => {
   const ast = STANDARD_QUOTE_TEMPLATE_ASTS[code];
 
   return ast ? cloneAst(ast) : null;

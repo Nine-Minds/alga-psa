@@ -7,7 +7,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
-import { parseInvoiceTemplateToken } from '../../../lib/invoice-template-ast/templateInterpolationFilters';
+import { parseTemplateToken } from '../../../lib/invoice-template-ast/templateInterpolationFilters';
 import { AlignmentGuide } from '../utils/layout';
 import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
@@ -368,7 +368,7 @@ const resolveTextInterpolationValue = (
   previewData: WasmInvoiceViewModel | null,
   bindingPath: string
 ): string | null => {
-  const parsedToken = parseInvoiceTemplateToken(bindingPath);
+  const parsedToken = parseTemplateToken(bindingPath);
   if (!parsedToken || !parsedToken.path) {
     return null;
   }
@@ -846,8 +846,11 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const astHadHeight = metadata.__astHadHeight === true;
   const allowInferredFlowMinWidth = !astImported || astHadWidth;
   const allowInferredFlowMinHeight = !astImported || astHadHeight;
+  // Strip visual styles (backgroundColor, color, border) from resolved AST inline styles
+  // so that Tailwind dark-mode classes on the canvas node can take effect.
+  const { backgroundColor: _bg, color: _fg, border: _bdr, ...layoutBoxStyle } = resolvedBoxStyle;
   const nodeStyle: React.CSSProperties = {
-    ...resolvedBoxStyle,
+    ...layoutBoxStyle,
     // Keep box sizing stable when we apply padding/borders via Tailwind classes.
     boxSizing: 'border-box',
     // In flow layouts (flex/grid), do not force a fixed width/height from legacy node.size.

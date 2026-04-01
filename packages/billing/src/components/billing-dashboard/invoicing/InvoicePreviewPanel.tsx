@@ -18,7 +18,7 @@ import CreditExpirationInfo from '../CreditExpirationInfo';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
-import { resolveInvoiceTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
+import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;
@@ -71,7 +71,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     : null;
 
   const resolvedPreviewPrintSettings = useMemo(
-    () => resolveInvoiceTemplatePrintSettingsFromAst(selectedTemplate?.templateAst ?? null),
+    () => resolveTemplatePrintSettingsFromAst(selectedTemplate?.templateAst ?? null),
     [selectedTemplate]
   );
 

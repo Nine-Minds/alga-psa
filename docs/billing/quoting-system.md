@@ -305,7 +305,7 @@ In-browser preview renders the template without Puppeteer, using the same AST ev
 - Bindings: `packages/billing/src/lib/quote-template-ast/bindings.ts`
 - Standard templates: `packages/billing/src/lib/quote-template-ast/standardTemplates.ts`
 - Template selection: `packages/billing/src/lib/quote-template-ast/templateSelection.ts`
-- PDF service: `packages/billing/src/services/quotePdfGenerationService.ts`
+- PDF service: `packages/billing/src/services/pdfGenerationService.ts`
 
 ---
 
@@ -551,7 +551,7 @@ Runtime flag: defined in `packages/core/src/lib/featureFlagRuntime.ts`
 |------|---------|
 | `packages/billing/src/services/quoteCalculationService.ts` | Totals recalculation |
 | `packages/billing/src/services/quoteConversionService.ts` | Quote to contract/invoice conversion |
-| `packages/billing/src/services/quotePdfGenerationService.ts` | PDF generation |
+| `packages/billing/src/services/pdfGenerationService.ts` | PDF generation (invoices, quotes, documents) |
 
 ### UI Components (MSP)
 

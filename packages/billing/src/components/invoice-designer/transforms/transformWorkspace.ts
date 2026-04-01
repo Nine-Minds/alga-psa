@@ -1,6 +1,6 @@
 import type {
-  InvoiceTemplateTransformOperation,
-  InvoiceTemplateTransformPipeline,
+  TemplateTransformOperation,
+  TemplateTransformPipeline,
 } from '@alga-psa/types';
 import type { DesignerTransformWorkspace } from '../state/designerStore';
 
@@ -70,9 +70,9 @@ export const validateDesignerTransformWorkspace = (
   return issues;
 };
 
-export const toInvoiceTemplateTransformPipeline = (
+export const toTemplateTransformPipeline = (
   transforms: DesignerTransformWorkspace
-): InvoiceTemplateTransformPipeline | undefined => {
+): TemplateTransformPipeline | undefined => {
   if (!hasDesignerTransforms(transforms)) {
     return undefined;
   }
@@ -80,7 +80,7 @@ export const toInvoiceTemplateTransformPipeline = (
   return {
     sourceBindingId: transforms.sourceBindingId.trim(),
     outputBindingId: transforms.outputBindingId.trim(),
-    operations: cloneJson(transforms.operations) as InvoiceTemplateTransformOperation[],
+    operations: cloneJson(transforms.operations) as TemplateTransformOperation[],
   };
 };
 

@@ -15,11 +15,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/component
 import { DesignerVisualWorkspace } from '../invoice-designer/DesignerVisualWorkspace';
 import { useInvoiceDesignerStore } from '../invoice-designer/state/designerStore';
 import {
-  exportWorkspaceToInvoiceTemplateAst,
-  exportWorkspaceToInvoiceTemplateAstJson,
-  importInvoiceTemplateAstToWorkspace,
+  exportWorkspaceToTemplateAst,
+  exportWorkspaceToTemplateAstJson,
+  importTemplateAstToWorkspace,
 } from '../invoice-designer/ast/workspaceAst';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 interface InvoiceTemplateEditorProps {
   templateId: string | null; // null indicates a new template
@@ -49,7 +49,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   const [designerHydratedFor, setDesignerHydratedFor] = useState<string | null>(null);
   const generatedCodeViewSource = useMemo(() => {
     try {
-      return exportWorkspaceToInvoiceTemplateAstJson(designerExportWorkspace());
+      return exportWorkspaceToTemplateAstJson(designerExportWorkspace());
     } catch {
       return null;
     }
@@ -83,7 +83,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
       // Initialize with default values for a new template
       const emptyAst = {
         kind: 'invoice-template-ast',
-        version: INVOICE_TEMPLATE_AST_VERSION,
+        version: TEMPLATE_AST_VERSION,
         layout: { id: 'root', type: 'document', children: [] },
       } as any;
       setTemplate({ name: '', version: 1, isStandard: false, templateAst: emptyAst });
@@ -103,7 +103,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
     const templateAst = (template as Record<string, unknown>)?.templateAst;
     if (templateAst && typeof templateAst === 'object') {
       try {
-        const importedWorkspace = importInvoiceTemplateAstToWorkspace(templateAst as any);
+        const importedWorkspace = importTemplateAstToWorkspace(templateAst as any);
         designerLoadWorkspace(importedWorkspace);
         setDesignerHydratedFor(hydrationKey);
         return;
@@ -210,7 +210,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
       }
 
       try {
-        const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+        const ast = exportWorkspaceToTemplateAst(workspace);
         (dataToSave as Record<string, unknown>).templateAst = ast;
       } catch (compilerError) {
         const message = compilerError instanceof Error ? compilerError.message : 'Unknown AST export error';

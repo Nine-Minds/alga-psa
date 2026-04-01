@@ -71,7 +71,7 @@ vi.mock('../../src/services', () => ({
   convertQuoteToDraftContract: vi.fn(),
   convertQuoteToDraftContractAndInvoice: vi.fn(),
   convertQuoteToDraftInvoice: vi.fn(),
-  createQuotePDFGenerationService: vi.fn(() => ({
+  createPDFGenerationService: vi.fn(() => ({
     generatePDF: (...args: any[]) => generatePDFMock(...args),
     generateAndStore: (...args: any[]) => generateAndStoreMock(...args),
   })),

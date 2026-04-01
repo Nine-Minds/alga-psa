@@ -1,22 +1,22 @@
 import React from 'react';
 import {
-  resolveInvoiceTemplatePrintSettings,
-  type InvoiceTemplateAst,
-  type InvoiceTemplatePrintSettings,
+  resolveTemplatePrintSettings,
+  type TemplateAst,
+  type TemplatePrintSettings,
 } from '@alga-psa/types';
-import { resolveInvoiceTemplatePrintSettingsFromAst } from '../../lib/invoice-template-ast/printSettings';
+import { resolveTemplatePrintSettingsFromAst } from '../../lib/invoice-template-ast/printSettings';
 import styles from './PaperInvoice.module.css';
 
 interface PaperInvoiceProps {
   children: React.ReactNode;
-  templateAst?: InvoiceTemplateAst | null;
-  printSettings?: InvoiceTemplatePrintSettings | null;
+  templateAst?: TemplateAst | null;
+  printSettings?: TemplatePrintSettings | null;
 }
 
 const PaperInvoice: React.FC<PaperInvoiceProps> = ({ children, templateAst, printSettings }) => {
   const resolvedPrintSettings = templateAst
-    ? resolveInvoiceTemplatePrintSettingsFromAst(templateAst)
-    : resolveInvoiceTemplatePrintSettings({
+    ? resolveTemplatePrintSettingsFromAst(templateAst)
+    : resolveTemplatePrintSettings({
         printSettings: printSettings ?? undefined,
       });
   const paperStyle: React.CSSProperties & Record<'--paper-printable-inset', string> = {

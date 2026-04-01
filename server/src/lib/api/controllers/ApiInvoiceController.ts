@@ -20,8 +20,8 @@ import {
   bulkInvoiceDeleteSchema,
   bulkInvoiceCreditSchema,
   taxCalculationRequestSchema,
-  createRecurringInvoiceTemplateSchema,
-  updateRecurringInvoiceTemplateSchema,
+  createRecurringTemplateSchema,
+  updateRecurringTemplateSchema,
   invoicePreviewRequestSchema,
   generateInvoiceSchema
 } from '../schemas/invoiceSchemas';
@@ -791,7 +791,7 @@ export class ApiInvoiceController extends ApiBaseController {
 
           // Validate request body
           const body = await req.json();
-          const data = createRecurringInvoiceTemplateSchema.parse(body);
+          const data = createRecurringTemplateSchema.parse(body);
           
           const template = await this.invoiceService.createRecurringTemplate(data, apiRequest.context);
           
@@ -821,7 +821,7 @@ export class ApiInvoiceController extends ApiBaseController {
           
           // Validate request body
           const body = await req.json();
-          const data = updateRecurringInvoiceTemplateSchema.parse(body);
+          const data = updateRecurringTemplateSchema.parse(body);
           
           // TODO: Implement recurring template update
           return createSuccessResponse({ template_id: id, ...data });

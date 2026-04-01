@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { InvoiceTemplateAst, InvoiceTemplateTransformOperation } from '@alga-psa/types';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import type { TemplateAst, TemplateTransformOperation } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import * as strategiesModule from './strategies';
-import { evaluateInvoiceTemplateAst, InvoiceTemplateEvaluationError } from './evaluator';
+import { evaluateTemplateAst, TemplateEvaluationError } from './evaluator';
 
 const invoiceFixture = {
   invoiceNumber: 'INV-1001',
@@ -17,9 +17,9 @@ const invoiceFixture = {
   ],
 };
 
-const buildAst = (operations: InvoiceTemplateTransformOperation[]): InvoiceTemplateAst => ({
+const buildAst = (operations: TemplateTransformOperation[]): TemplateAst => ({
   kind: 'invoice-template-ast',
-  version: INVOICE_TEMPLATE_AST_VERSION,
+  version: TEMPLATE_AST_VERSION,
   bindings: {
     collections: {
       lineItems: {
@@ -41,7 +41,7 @@ const buildAst = (operations: InvoiceTemplateTransformOperation[]): InvoiceTempl
   },
 });
 
-describe('evaluateInvoiceTemplateAst', () => {
+describe('evaluateTemplateAst', () => {
   it('applies filter transforms to invoice items', () => {
     const ast = buildAst([
       {
@@ -56,7 +56,7 @@ describe('evaluateInvoiceTemplateAst', () => {
       },
     ]);
 
-    const result = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+    const result = evaluateTemplateAst(ast, invoiceFixture);
     expect(result.output).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'a' }),
@@ -79,7 +79,7 @@ describe('evaluateInvoiceTemplateAst', () => {
       },
     ]);
 
-    const result = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+    const result = evaluateTemplateAst(ast, invoiceFixture);
     const sortedIds = (result.output as Array<{ id: string }>).map((item) => item.id);
     expect(sortedIds).toEqual(['c', 'd', 'a', 'b']);
   });
@@ -102,7 +102,7 @@ describe('evaluateInvoiceTemplateAst', () => {
       },
     ]);
 
-    const result = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+    const result = evaluateTemplateAst(ast, invoiceFixture);
     expect(result.groups?.map((group) => group.key)).toEqual(['Services', 'Adjustments', 'Products']);
     expect(result.aggregates.sumTotal).toBe(315);
     expect(result.aggregates.countItems).toBe(4);
@@ -144,7 +144,7 @@ describe('evaluateInvoiceTemplateAst', () => {
       },
     ]);
 
-    const result = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+    const result = evaluateTemplateAst(ast, invoiceFixture);
     const recomputed = (result.output as Array<Record<string, unknown>>)[0].lineTotalRecomputed;
     expect(recomputed).toBeDefined();
     expect(result.totals.grandTotal).toBe(315);
@@ -160,7 +160,7 @@ describe('evaluateInvoiceTemplateAst', () => {
       },
     ]);
 
-    const result = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+    const result = evaluateTemplateAst(ast, invoiceFixture);
     expect(result.groups?.map((group) => group.key)).toEqual(['services', 'adjustments', 'products']);
   });
 
@@ -175,17 +175,17 @@ describe('evaluateInvoiceTemplateAst', () => {
     ]);
 
     try {
-      evaluateInvoiceTemplateAst(ast, invoiceFixture);
+      evaluateTemplateAst(ast, invoiceFixture);
       throw new Error('Expected evaluator to throw');
     } catch (error) {
-      expect(error).toBeInstanceOf(InvoiceTemplateEvaluationError);
-      expect((error as InvoiceTemplateEvaluationError).code).toBe('UNKNOWN_STRATEGY');
+      expect(error).toBeInstanceOf(TemplateEvaluationError);
+      expect((error as TemplateEvaluationError).code).toBe('UNKNOWN_STRATEGY');
     }
   });
 
   it('reports explicit strategy execution errors when strategy hooks throw', () => {
     const strategySpy = vi
-      .spyOn(strategiesModule, 'executeInvoiceTemplateStrategy')
+      .spyOn(strategiesModule, 'executeTemplateStrategy')
       .mockImplementationOnce(() => {
         throw new Error('strategy boom');
       });
@@ -200,13 +200,13 @@ describe('evaluateInvoiceTemplateAst', () => {
     ]);
 
     try {
-      evaluateInvoiceTemplateAst(ast, invoiceFixture);
+      evaluateTemplateAst(ast, invoiceFixture);
       throw new Error('Expected evaluator to throw');
     } catch (error) {
-      expect(error).toBeInstanceOf(InvoiceTemplateEvaluationError);
-      expect((error as InvoiceTemplateEvaluationError).code).toBe('STRATEGY_EXECUTION_FAILED');
-      expect((error as InvoiceTemplateEvaluationError).operationId).toBe('group-by-strategy');
-      expect((error as InvoiceTemplateEvaluationError).message).toContain('strategy boom');
+      expect(error).toBeInstanceOf(TemplateEvaluationError);
+      expect((error as TemplateEvaluationError).code).toBe('STRATEGY_EXECUTION_FAILED');
+      expect((error as TemplateEvaluationError).operationId).toBe('group-by-strategy');
+      expect((error as TemplateEvaluationError).message).toContain('strategy boom');
     } finally {
       strategySpy.mockRestore();
     }
@@ -236,8 +236,8 @@ describe('evaluateInvoiceTemplateAst', () => {
       },
     ]);
 
-    const first = evaluateInvoiceTemplateAst(ast, invoiceFixture);
-    const second = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+    const first = evaluateTemplateAst(ast, invoiceFixture);
+    const second = evaluateTemplateAst(ast, invoiceFixture);
 
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
   });
@@ -245,7 +245,7 @@ describe('evaluateInvoiceTemplateAst', () => {
   it('returns structured schema validation issues for invalid AST payloads', () => {
     const invalidAst = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       transforms: {
         sourceBindingId: 'lineItems',
         outputBindingId: 'lineItems.shaped',
@@ -255,13 +255,13 @@ describe('evaluateInvoiceTemplateAst', () => {
         id: 'root',
         type: 'unknown-node',
       },
-    } as unknown as InvoiceTemplateAst;
+    } as unknown as TemplateAst;
 
     try {
-      evaluateInvoiceTemplateAst(invalidAst, invoiceFixture);
+      evaluateTemplateAst(invalidAst, invoiceFixture);
       throw new Error('Expected evaluator to throw');
     } catch (error) {
-      const evaluationError = error as InvoiceTemplateEvaluationError;
+      const evaluationError = error as TemplateEvaluationError;
       expect(evaluationError.code).toBe('SCHEMA_VALIDATION_FAILED');
       expect(evaluationError.issues.length).toBeGreaterThan(0);
       expect(evaluationError.issues[0]).toEqual(
@@ -274,9 +274,9 @@ describe('evaluateInvoiceTemplateAst', () => {
   });
 
   it('throws a missing-binding error when source binding cannot be resolved', () => {
-    const ast: InvoiceTemplateAst = {
+    const ast: TemplateAst = {
       kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      version: TEMPLATE_AST_VERSION,
       transforms: {
         sourceBindingId: 'lineItems',
         outputBindingId: 'lineItems.shaped',
@@ -301,10 +301,10 @@ describe('evaluateInvoiceTemplateAst', () => {
     };
 
     try {
-      evaluateInvoiceTemplateAst(ast, invoiceFixture);
+      evaluateTemplateAst(ast, invoiceFixture);
       throw new Error('Expected evaluator to throw');
     } catch (error) {
-      expect((error as InvoiceTemplateEvaluationError).code).toBe('MISSING_BINDING');
+      expect((error as TemplateEvaluationError).code).toBe('MISSING_BINDING');
     }
   });
 
@@ -324,10 +324,10 @@ describe('evaluateInvoiceTemplateAst', () => {
     ]);
 
     try {
-      evaluateInvoiceTemplateAst(ast, invoiceFixture);
+      evaluateTemplateAst(ast, invoiceFixture);
       throw new Error('Expected evaluator to throw');
     } catch (error) {
-      expect((error as InvoiceTemplateEvaluationError).code).toBe('INVALID_OPERAND');
+      expect((error as TemplateEvaluationError).code).toBe('INVALID_OPERAND');
     }
   });
 
@@ -363,7 +363,7 @@ describe('evaluateInvoiceTemplateAst', () => {
       },
     ]);
 
-    const result = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+    const result = evaluateTemplateAst(ast, invoiceFixture);
     expect(result.groups?.map((group) => group.key)).toEqual(['Services', 'Products']);
     expect(result.aggregates.sumTotal).toBe(330);
     expect(result.aggregates.countItems).toBe(3);
@@ -397,7 +397,7 @@ describe('evaluateInvoiceTemplateAst', () => {
       },
     ]);
 
-    const result = evaluateInvoiceTemplateAst(ast, { ...invoiceFixture, items: [] });
+    const result = evaluateTemplateAst(ast, { ...invoiceFixture, items: [] });
     expect(result.groups).toEqual([]);
     expect(result.aggregates).toEqual({
       sumTotal: 0,

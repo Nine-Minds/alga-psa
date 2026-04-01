@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IInvoiceTemplate } from './invoice.interfaces';
-import { INVOICE_TEMPLATE_AST_VERSION } from '../lib/invoice-template-ast';
+import { TEMPLATE_AST_VERSION } from '../lib/invoice-template-ast';
 
 describe('IInvoiceTemplate AST contract', () => {
   it('accepts canonical templateAst payload without requiring legacy AssemblyScript source', () => {
@@ -10,7 +10,7 @@ describe('IInvoiceTemplate AST contract', () => {
       version: 1,
       templateAst: {
         kind: 'invoice-template-ast',
-        version: INVOICE_TEMPLATE_AST_VERSION,
+        version: TEMPLATE_AST_VERSION,
         layout: {
           id: 'root',
           type: 'document',

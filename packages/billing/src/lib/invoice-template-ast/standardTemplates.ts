@@ -1,10 +1,10 @@
-import type { InvoiceTemplateAst } from '@alga-psa/types';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import type { TemplateAst } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
-const cloneAst = (ast: InvoiceTemplateAst): InvoiceTemplateAst =>
-  JSON.parse(JSON.stringify(ast)) as InvoiceTemplateAst;
+const cloneAst = (ast: TemplateAst): TemplateAst =>
+  JSON.parse(JSON.stringify(ast)) as TemplateAst;
 
-const buildSharedBindings = (): NonNullable<InvoiceTemplateAst['bindings']> => ({
+const buildSharedBindings = (): NonNullable<TemplateAst['bindings']> => ({
   values: {
     invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
     issueDate: { id: 'issueDate', kind: 'value', path: 'issueDate' },
@@ -43,9 +43,9 @@ const buildSharedBindings = (): NonNullable<InvoiceTemplateAst['bindings']> => (
   },
 });
 
-const buildStandardDefaultAst = (templateName: string): InvoiceTemplateAst => ({
+const buildStandardDefaultAst = (templateName: string): TemplateAst => ({
   kind: 'invoice-template-ast',
-  version: INVOICE_TEMPLATE_AST_VERSION,
+  version: TEMPLATE_AST_VERSION,
   metadata: {
     templateName,
   },
@@ -131,9 +131,9 @@ const buildStandardDefaultAst = (templateName: string): InvoiceTemplateAst => ({
   },
 });
 
-const buildStandardDetailedAst = (): InvoiceTemplateAst => ({
+const buildStandardDetailedAst = (): TemplateAst => ({
   kind: 'invoice-template-ast',
-  version: INVOICE_TEMPLATE_AST_VERSION,
+  version: TEMPLATE_AST_VERSION,
   metadata: {
     templateName: 'Detailed Template',
   },
@@ -466,14 +466,14 @@ const buildStandardDetailedAst = (): InvoiceTemplateAst => ({
   },
 });
 
-export const STANDARD_INVOICE_TEMPLATE_ASTS: Readonly<Record<string, InvoiceTemplateAst>> = {
+export const STANDARD_INVOICE_TEMPLATE_ASTS: Readonly<Record<string, TemplateAst>> = {
   'standard-default': buildStandardDefaultAst('Standard Template'),
   'standard-detailed': buildStandardDetailedAst(),
 };
 
-export const getStandardInvoiceTemplateAstByCode = (
+export const getStandardTemplateAstByCode = (
   code: string | null | undefined
-): InvoiceTemplateAst | undefined => {
+): TemplateAst | undefined => {
   if (!code) {
     return undefined;
   }

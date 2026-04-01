@@ -3,14 +3,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { generateUUID } from '@alga-psa/core';
 import type {
-  InvoiceTemplateAggregateTransform,
-  InvoiceTemplateAggregation,
-  InvoiceTemplateFilterTransform,
-  InvoiceTemplateGroupTransform,
-  InvoiceTemplatePredicate,
-  InvoiceTemplateSortKey,
-  InvoiceTemplateSortTransform,
-  InvoiceTemplateTransformOperation,
+  TemplateAggregateTransform,
+  TemplateAggregation,
+  TemplateFilterTransform,
+  TemplateGroupTransform,
+  TemplatePredicate,
+  TemplateSortKey,
+  TemplateSortTransform,
+  TemplateTransformOperation,
 } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AsyncSearchableSelect } from '@alga-psa/ui/components/AsyncSearchableSelect';
@@ -18,15 +18,15 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
-import { exportWorkspaceToInvoiceTemplateAst } from '../ast/workspaceAst';
+import { exportWorkspaceToTemplateAst } from '../ast/workspaceAst';
 import {
   DEFAULT_PREVIEW_SAMPLE_ID,
   INVOICE_PREVIEW_SAMPLE_SCENARIOS,
 } from '../preview/sampleScenarios';
 import type { PreviewSessionState, PreviewSourceKind } from '../preview/previewSessionState';
 import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '../state/designerStore';
-import { evaluateInvoiceTemplateAst, InvoiceTemplateEvaluationError } from '../../../lib/invoice-template-ast/evaluator';
-import { validateInvoiceTemplateAst } from '../../../lib/invoice-template-ast/schema';
+import { evaluateTemplateAst, TemplateEvaluationError } from '../../../lib/invoice-template-ast/evaluator';
+import { validateTemplateAst } from '../../../lib/invoice-template-ast/schema';
 import {
   cloneDesignerTransformWorkspace,
   suggestTransformOutputBindingId,
@@ -89,7 +89,7 @@ const AGGREGATION_OPTIONS = [
   { value: 'max', label: 'Maximum' },
 ];
 
-type ComparisonPredicate = Extract<InvoiceTemplatePredicate, { type: 'comparison' }>;
+type ComparisonPredicate = Extract<TemplatePredicate, { type: 'comparison' }>;
 
 const createLocalId = (prefix: string) => `${prefix}-${generateUUID()}`;
 
@@ -144,7 +144,7 @@ const parsePredicateValue = (rawValue: string, operator: ComparisonPredicate['op
   return rawValue;
 };
 
-const describeOperation = (operation: InvoiceTemplateTransformOperation): string => {
+const describeOperation = (operation: TemplateTransformOperation): string => {
   switch (operation.type) {
     case 'filter':
       if (operation.predicate.type !== 'comparison') {
@@ -231,7 +231,7 @@ const getSourceCollection = (
 };
 
 const coerceComparisonPredicate = (
-  predicate: InvoiceTemplatePredicate,
+  predicate: TemplatePredicate,
   fieldPaths: string[]
 ): ComparisonPredicate => {
   if (predicate.type === 'comparison') {
@@ -300,7 +300,7 @@ const TransformsWorkspace: React.FC<Props> = ({
   );
 
   const baseAst = useMemo(
-    () => exportWorkspaceToInvoiceTemplateAst(workspaceWithoutTransforms),
+    () => exportWorkspaceToTemplateAst(workspaceWithoutTransforms),
     [workspaceWithoutTransforms]
   );
 
@@ -401,8 +401,8 @@ const TransformsWorkspace: React.FC<Props> = ({
     }
 
     try {
-      const ast = exportWorkspaceToInvoiceTemplateAst(workspaceSnapshot);
-      const validationResult = validateInvoiceTemplateAst(ast);
+      const ast = exportWorkspaceToTemplateAst(workspaceSnapshot);
+      const validationResult = validateTemplateAst(ast);
       if (!validationResult.success) {
         const validationErrors = 'errors' in validationResult ? validationResult.errors : [];
         return {
@@ -417,7 +417,7 @@ const TransformsWorkspace: React.FC<Props> = ({
         };
       }
 
-      const evaluation = evaluateInvoiceTemplateAst(validationResult.ast, previewData as unknown as Record<string, unknown>);
+      const evaluation = evaluateTemplateAst(validationResult.ast, previewData as unknown as Record<string, unknown>);
       const outputRows = Array.isArray(evaluation.output) ? evaluation.output.filter(isRecord) : [];
       return {
         issues: [] as PreviewIssue[],
@@ -426,7 +426,7 @@ const TransformsWorkspace: React.FC<Props> = ({
         rows: outputRows,
       };
     } catch (error) {
-      if (error instanceof InvoiceTemplateEvaluationError) {
+      if (error instanceof TemplateEvaluationError) {
         return {
           issues: error.issues.map((issue, index) => ({
             key: `${issue.code}-${issue.operationId ?? 'global'}-${index}`,
@@ -493,7 +493,7 @@ const TransformsWorkspace: React.FC<Props> = ({
       ? sourceFieldPaths.find((path) => typeof getPathValue(sourceCollection[0], path) === 'number') ?? firstField
       : firstField;
 
-    const operation: InvoiceTemplateTransformOperation =
+    const operation: TemplateTransformOperation =
       type === 'filter'
         ? ({
             id: createLocalId('filter'),
@@ -504,7 +504,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               op: 'eq',
               value: '',
             },
-          } satisfies InvoiceTemplateFilterTransform)
+          } satisfies TemplateFilterTransform)
         : type === 'sort'
           ? ({
               id: createLocalId('sort'),
@@ -515,14 +515,14 @@ const TransformsWorkspace: React.FC<Props> = ({
                   direction: 'asc',
                 },
               ],
-            } satisfies InvoiceTemplateSortTransform)
+            } satisfies TemplateSortTransform)
           : type === 'group'
             ? ({
                 id: createLocalId('group'),
                 type: 'group',
                 key: firstField,
                 label: '',
-              } satisfies InvoiceTemplateGroupTransform)
+              } satisfies TemplateGroupTransform)
             : ({
                 id: createLocalId('aggregate'),
                 type: 'aggregate',
@@ -533,7 +533,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                     path: numericField,
                   },
                 ],
-              } satisfies InvoiceTemplateAggregateTransform);
+              } satisfies TemplateAggregateTransform);
 
     updateTransforms((current) => ({
       ...current,
@@ -542,7 +542,7 @@ const TransformsWorkspace: React.FC<Props> = ({
     setSelectedOperationId(operation.id);
   };
 
-  const updateOperation = (operationId: string, updater: (operation: InvoiceTemplateTransformOperation) => InvoiceTemplateTransformOperation, commit = true) => {
+  const updateOperation = (operationId: string, updater: (operation: TemplateTransformOperation) => TemplateTransformOperation, commit = true) => {
     updateTransforms(
       (current) => ({
         ...current,
@@ -570,7 +570,7 @@ const TransformsWorkspace: React.FC<Props> = ({
     if (!source) {
       return;
     }
-    const duplicate = cloneJson(source) as InvoiceTemplateTransformOperation;
+    const duplicate = cloneJson(source) as TemplateTransformOperation;
     duplicate.id = createLocalId(source.type);
     updateTransforms((current) => {
       const operations = [...current.operations];
@@ -768,7 +768,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                       ...operation,
                       keys: operation.type === 'sort'
                         ? operation.keys.map((entry, entryIndex) =>
-                            entryIndex === index ? { ...entry, direction: value as InvoiceTemplateSortKey['direction'] } : entry
+                            entryIndex === index ? { ...entry, direction: value as TemplateSortKey['direction'] } : entry
                           )
                         : keys,
                     }))
@@ -912,7 +912,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                             entryIndex === index
                               ? {
                                   ...entry,
-                                  op: value as InvoiceTemplateAggregation['op'],
+                                  op: value as TemplateAggregation['op'],
                                   ...(value === 'count' ? { path: undefined } : {}),
                                 }
                               : entry

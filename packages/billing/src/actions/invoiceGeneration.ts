@@ -1807,10 +1807,11 @@ export const generateInvoicePDF = withAuth(async (
 export const downloadInvoicePDF = withAuth(async (
   user,
   { tenant },
-  invoiceId: string
+  invoiceId: string,
+  templateId?: string | null
 ): Promise<{ pdfData: number[]; invoiceNumber: string }> => {
   try {
-    console.log('[downloadInvoicePDF] Called with invoiceId:', invoiceId);
+    console.log('[downloadInvoicePDF] Called with invoiceId:', invoiceId, 'templateId:', templateId);
 
     const { knex } = await createTenantKnex();
 
@@ -1836,7 +1837,8 @@ export const downloadInvoicePDF = withAuth(async (
 
     const pdfBuffer = await pdfGenerationService.generatePDF({
       invoiceId,
-      userId: user.user_id
+      userId: user.user_id,
+      templateId: templateId || undefined,
     });
 
     console.log('[downloadInvoicePDF] PDF generated, size:', pdfBuffer.length, 'bytes');

@@ -7,7 +7,7 @@
 export { TaxService } from './taxService';
 export { BillingEngine } from '../lib/billing/billingEngine';
 export { recalculateQuoteFinancials } from './quoteCalculationService';
-export { QuotePDFGenerationService, createQuotePDFGenerationService } from './quotePdfGenerationService';
+export { PDFGenerationService, createPDFGenerationService } from './pdfGenerationService';
 export {
   buildQuoteConversionPreview,
   convertQuoteToDraftContract,
@@ -51,7 +51,7 @@ export {
   type ReconciliationResult
 } from './externalTaxImportService';
 export {
-  resolveInvoicePdfPrintOptionsFromAst,
-  resolveInvoicePrintResolutionInputFromAst,
-  resolveInvoiceTemplatePrintSettingsFromAst,
+  resolvePdfPrintOptionsFromAst,
+  resolvePrintResolutionInputFromAst,
+  resolveTemplatePrintSettingsFromAst,
 } from '../lib/invoice-template-ast/printSettings';

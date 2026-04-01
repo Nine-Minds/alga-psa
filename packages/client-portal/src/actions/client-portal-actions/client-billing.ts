@@ -855,8 +855,8 @@ export const downloadClientQuotePdf = withAuth(async (
     }
 
     // No stored PDF yet — generate one on the fly
-    const { createQuotePDFGenerationService } = await import('@alga-psa/billing/services');
-    const pdfService = createQuotePDFGenerationService(tenant);
+    const { createPDFGenerationService } = await import('@alga-psa/billing/services');
+    const pdfService = createPDFGenerationService(tenant);
     const fileRecord = await pdfService.generateAndStore({
       quoteId: quote.quote_id,
       quoteNumber: quote.quote_number ?? undefined,

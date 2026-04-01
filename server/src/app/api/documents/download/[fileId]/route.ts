@@ -6,7 +6,7 @@ import { marked } from 'marked';
 
 import logger from '@alga-psa/core/logger';
 import { downloadDocument } from '@alga-psa/documents/actions/documentActions';
-import { createPDFGenerationService } from 'server/src/services/pdf-generation.service';
+import { createPDFGenerationService } from '@alga-psa/billing/services';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { withTransaction, runWithTenant } from '@alga-psa/db';
 import { Knex } from 'knex';

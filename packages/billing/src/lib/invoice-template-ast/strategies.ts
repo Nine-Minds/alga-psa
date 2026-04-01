@@ -1,14 +1,14 @@
-export type InvoiceTemplateStrategyInput = Record<string, unknown>;
+export type TemplateStrategyInput = Record<string, unknown>;
 
-export type InvoiceTemplateStrategyHandler = (input: InvoiceTemplateStrategyInput) => unknown;
+export type TemplateStrategyHandler = (input: TemplateStrategyInput) => unknown;
 
-export class InvoiceTemplateStrategyResolutionError extends Error {
+export class TemplateStrategyResolutionError extends Error {
   public readonly code: 'STRATEGY_NOT_ALLOWLISTED' = 'STRATEGY_NOT_ALLOWLISTED';
   public readonly strategyId: string;
 
   constructor(strategyId: string) {
     super(`Invoice template strategy "${strategyId}" is not allowlisted.`);
-    this.name = 'InvoiceTemplateStrategyResolutionError';
+    this.name = 'TemplateStrategyResolutionError';
     this.strategyId = strategyId;
   }
 }
@@ -26,7 +26,7 @@ const toSafeNumeric = (value: unknown): number => {
   return 0;
 };
 
-const allowlistedStrategies: Readonly<Record<string, InvoiceTemplateStrategyHandler>> = {
+const allowlistedStrategies: Readonly<Record<string, TemplateStrategyHandler>> = {
   'custom-group-key': (input) => {
     const item = (input.item ?? null) as Record<string, unknown> | null;
     const rawValue = item?.category ?? item?.group ?? item?.type ?? 'ungrouped';
@@ -46,21 +46,21 @@ const allowlistedStrategies: Readonly<Record<string, InvoiceTemplateStrategyHand
   },
 };
 
-export const listAllowlistedInvoiceTemplateStrategyIds = (): string[] =>
+export const listAllowlistedTemplateStrategyIds = (): string[] =>
   Object.keys(allowlistedStrategies);
 
-export const isAllowlistedInvoiceTemplateStrategy = (strategyId: string): boolean =>
+export const isAllowlistedTemplateStrategy = (strategyId: string): boolean =>
   Object.prototype.hasOwnProperty.call(allowlistedStrategies, strategyId);
 
-export const resolveInvoiceTemplateStrategy = (strategyId: string): InvoiceTemplateStrategyHandler => {
+export const resolveTemplateStrategy = (strategyId: string): TemplateStrategyHandler => {
   const strategy = allowlistedStrategies[strategyId];
   if (!strategy) {
-    throw new InvoiceTemplateStrategyResolutionError(strategyId);
+    throw new TemplateStrategyResolutionError(strategyId);
   }
   return strategy;
 };
 
-export const executeInvoiceTemplateStrategy = (
+export const executeTemplateStrategy = (
   strategyId: string,
-  input: InvoiceTemplateStrategyInput
-): unknown => resolveInvoiceTemplateStrategy(strategyId)(input);
+  input: TemplateStrategyInput
+): unknown => resolveTemplateStrategy(strategyId)(input);

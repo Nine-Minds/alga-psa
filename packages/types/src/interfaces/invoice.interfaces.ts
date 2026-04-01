@@ -1,7 +1,7 @@
 import type { DateValue, ISO8601String } from '../lib/temporal';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
-import type { InvoiceTemplateAst } from '../lib/invoice-template-ast';
+import type { TemplateAst } from '../lib/invoice-template-ast';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
@@ -172,7 +172,7 @@ export interface IInvoiceTemplate extends TenantEntity {
   template_id: string;
   name: string;
   version: number;
-  templateAst?: InvoiceTemplateAst | null;
+  templateAst?: TemplateAst | null;
   isStandard?: boolean;
   isClone?: boolean;
   is_default?: boolean; // Legacy flag retained for compatibility

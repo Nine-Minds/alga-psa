@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { InvoiceTemplateAst } from '@alga-psa/types';
+import type { TemplateAst } from '@alga-psa/types';
 
 const { getBrowserMock, releaseBrowserMock } = vi.hoisted(() => ({
   getBrowserMock: vi.fn(),
@@ -27,7 +27,7 @@ const buildTemplateAst = ({
   widthPx: number;
   heightPx: number;
   paddingPx: number;
-}): InvoiceTemplateAst => ({
+}): TemplateAst => ({
   kind: 'invoice-template-ast',
   version: 1,
   metadata: paperPreset && typeof marginMm === 'number' ? { printSettings: { paperPreset, marginMm } } : undefined,

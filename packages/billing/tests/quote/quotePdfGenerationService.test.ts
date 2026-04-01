@@ -53,7 +53,7 @@ vi.mock('../../src/services/browserPoolService', () => ({
   },
 }));
 
-import { createQuotePDFGenerationService } from '../../src/services/quotePdfGenerationService';
+import { createPDFGenerationService } from '../../src/services/pdfGenerationService';
 import { getStandardQuoteTemplateAstByCode } from '../../src/lib/quote-template-ast/standardTemplates';
 
 describe('quotePdfGenerationService', () => {
@@ -136,8 +136,8 @@ describe('quotePdfGenerationService', () => {
   });
 
   it('T083: generates a valid PDF buffer from quote data', async () => {
-    const service = createQuotePDFGenerationService(TENANT_ID);
-    const pdf = await service.generatePDF({ quoteId: QUOTE_ID });
+    const service = createPDFGenerationService(TENANT_ID);
+    const pdf = await service.generatePDF({ quoteId: QUOTE_ID, userId: USER_ID });
 
     expect(Buffer.isBuffer(pdf)).toBe(true);
     expect(pdf.toString('utf8')).toContain('%PDF-quote-test');
@@ -147,7 +147,7 @@ describe('quotePdfGenerationService', () => {
   });
 
   it('T084: stores generated file in file storage and returns file_id', async () => {
-    const service = createQuotePDFGenerationService(TENANT_ID);
+    const service = createPDFGenerationService(TENANT_ID);
     const result = await service.generateAndStore({ quoteId: QUOTE_ID, userId: USER_ID });
 
     expect(uploadMock).toHaveBeenCalledWith(expect.any(Buffer), '22222222-2222-4222-8222-222222222222/pdfs/Q-0042.pdf', {
