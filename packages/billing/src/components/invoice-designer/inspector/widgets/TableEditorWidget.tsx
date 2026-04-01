@@ -23,6 +23,20 @@ type ColumnModel = {
   width?: number;
 } & Record<string, unknown>;
 
+const COLLECTION_BINDING_LABELS: Record<string, string> = {
+  lineItems: 'All Line Items',
+  phases: 'Phases',
+  recurringItems: 'Recurring Items',
+  onetimeItems: 'One-time Items',
+  serviceItems: 'Service Items',
+  productItems: 'Product Items',
+  items: 'Items',
+};
+
+const humanizeCollectionBindingLabel = (bindingId: string, _path: string): string => {
+  return COLLECTION_BINDING_LABELS[bindingId] ?? bindingId;
+};
+
 type BorderPreset = 'list' | 'boxed' | 'grid' | 'none' | 'custom';
 
 type ColumnPreset = {
@@ -178,14 +192,14 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
     options.push(
       ...Object.entries(baseAst.bindings?.collections ?? {}).map(([bindingId, binding]) => ({
         value: bindingId,
-        label: `${bindingId} (${binding.path})`,
+        label: humanizeCollectionBindingLabel(bindingId, binding.path),
       }))
     );
 
     if (!options.some((option) => option.value === sourceBindingId)) {
       options.unshift({
         value: sourceBindingId,
-        label: `${sourceBindingId} (current)`,
+        label: humanizeCollectionBindingLabel(sourceBindingId, sourceBindingId),
       });
     }
 

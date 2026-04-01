@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -41,6 +41,7 @@ interface DesignCanvasProps {
   onPointerLocationChange: (point: { x: number; y: number } | null) => void;
   onNodeSelect: (id: string | null) => void;
   onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
+  onTextEdit?: (id: string, text: string, commit: boolean) => void;
   readOnly?: boolean;
   previewData?: WasmInvoiceViewModel | null;
 }
@@ -65,6 +66,7 @@ interface CanvasNodeProps {
   forcedDropTarget: string | 'canvas' | null;
   onSelect: (id: string | null) => void;
   onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
+  onTextEdit?: (id: string, text: string, commit: boolean) => void;
   renderChildren: (parentId: string) => React.ReactNode;
   childExtents?: { maxRight: number; maxBottom: number };
   readOnly: boolean;
@@ -807,6 +809,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   forcedDropTarget,
   onSelect,
   onResize,
+  onTextEdit,
   renderChildren,
   childExtents,
   readOnly,
@@ -815,6 +818,8 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   dnd,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = dnd;
+  const [isEditingText, setIsEditingText] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isContainer = node.allowedChildren.length > 0;
   const { setNodeRef: setDropZoneRef, isOver: isNodeDropTarget } = useDroppable({
     id: `droppable-${node.id}`,
@@ -895,11 +900,10 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const isInlineFieldLike = isFieldNode || isLabelNode;
   const isCompactLeaf = isTotalsRow || isInlineFieldLike || isTextNode;
   const isResizeHandleSupported =
-    node.type === 'image' ||
-    node.type === 'logo' ||
-    node.type === 'qr' ||
-    node.type === 'section' ||
-    node.type === 'container';
+    node.type !== 'document' &&
+    node.type !== 'page' &&
+    node.type !== 'divider' &&
+    node.type !== 'spacer';
 
   const combinedRef = useCallback(
     (element: HTMLDivElement | null) => {
@@ -975,6 +979,32 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     }
   };
 
+  const handleDoubleClick: React.MouseEventHandler<HTMLDivElement> = (event) => {
+    if (readOnly || !isTextNode || !onTextEdit) {
+      return;
+    }
+    event.stopPropagation();
+    setIsEditingText(true);
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.select();
+    });
+  };
+
+  const handleTextEditBlur = () => {
+    if (!textareaRef.current || !onTextEdit) {
+      return;
+    }
+    onTextEdit(node.id, textareaRef.current.value, true);
+    setIsEditingText(false);
+  };
+
+  const handleTextEditKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Escape') {
+      setIsEditingText(false);
+    }
+  };
+
   const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
     if (readOnly) {
       return;
@@ -1045,6 +1075,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
       onClick={handleNodeClick}
+      onDoubleClick={handleDoubleClick}
       {...(readOnly ? {} : attributes)}
     >
       {dropIndicator?.kind === 'insert' && parentUsesFlowLayout && dropIndicator.overNodeId === node.id && (
@@ -1139,7 +1170,22 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           </>
         )
       )}
-      {!readOnly && node.allowResize !== false && isResizeHandleSupported && (
+      {isEditingText && isTextNode && (
+        <textarea
+          ref={textareaRef}
+          className="absolute inset-0 z-30 w-full h-full resize-none border-2 border-primary-500 rounded bg-white dark:bg-[rgb(var(--color-card))] px-2 py-1 text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap focus:outline-none"
+          defaultValue={metadata.text ?? metadata.label ?? metadata.content ?? ''}
+          onBlur={handleTextEditBlur}
+          onKeyDown={(event) => {
+            event.stopPropagation();
+            handleTextEditKeyDown(event);
+          }}
+          onKeyUp={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        />
+      )}
+      {!readOnly && node.allowResize !== false && isResizeHandleSupported && !isEditingText && (
         <div
           role="button"
           tabIndex={0}
@@ -1226,6 +1272,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   onPointerLocationChange,
   onNodeSelect,
   onResize,
+  onTextEdit,
   readOnly = false,
   previewData = null,
 }) => {
@@ -1352,6 +1399,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           forcedDropTarget={forcedDropTarget}
           onSelect={onNodeSelect}
           onResize={onResize}
+          onTextEdit={onTextEdit}
           renderChildren={renderNodeTree}
           childExtents={childExtentsMap.get(node.id)}
           readOnly={readOnly}
@@ -1381,6 +1429,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     isDragActive,
     onNodeSelect,
     onResize,
+    onTextEdit,
     previewData,
     readOnly,
     selectionContextNodeIds,

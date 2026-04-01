@@ -332,28 +332,20 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               )}
             </div>
 
-            <div className="mb-4 max-h-[600px] overflow-y-auto overflow-x-auto">
+            <div className="mb-4 max-h-[80vh] overflow-y-auto overflow-x-auto">
               <div
                 style={{
-                  width: `${baseInvoiceWidth * scale}px`,
-                  height: `${baseInvoiceHeight * scale}px`
+                  zoom: scale,
+                  width: `${baseInvoiceWidth}px`,
+                  transition: 'zoom 0.2s ease-out'
                 }}
               >
-                <div
-                  style={{
-                    transform: `scale(${scale})`,
-                    transformOrigin: 'top left',
-                    width: `${baseInvoiceWidth}px`,
-                    transition: 'transform 0.2s ease-out'
-                  }}
-                >
-                  <PaperInvoice templateAst={selectedTemplate?.templateAst ?? null}>
-                    <TemplateRenderer
-                      template={selectedTemplate}
-                      invoiceData={detailedInvoiceData}
-                    />
-                  </PaperInvoice>
-                </div>
+                <PaperInvoice templateAst={selectedTemplate?.templateAst ?? null}>
+                  <TemplateRenderer
+                    template={selectedTemplate}
+                    invoiceData={detailedInvoiceData}
+                  />
+                </PaperInvoice>
               </div>
             </div>
 

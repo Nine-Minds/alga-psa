@@ -186,27 +186,19 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
               )}
             </div>
 
-            <div className="mb-4 max-h-[600px] overflow-y-auto overflow-x-auto">
+            <div className="mb-4 max-h-[80vh] overflow-y-auto overflow-x-auto">
               <div
                 style={{
-                  width: `${baseWidth * scale}px`,
-                  height: `${baseHeight * scale}px`,
+                  zoom: scale,
+                  width: `${baseWidth}px`,
+                  transition: 'zoom 0.2s ease-out',
+                  colorScheme: 'light',
+                  backgroundColor: 'white',
+                  color: 'black',
                 }}
               >
-                <div
-                  style={{
-                    transform: `scale(${scale})`,
-                    transformOrigin: 'top left',
-                    width: `${baseWidth}px`,
-                    transition: 'transform 0.2s ease-out',
-                    colorScheme: 'light',
-                    backgroundColor: 'white',
-                    color: 'black',
-                  }}
-                >
-                  <style dangerouslySetInnerHTML={{ __html: previewHtml.css }} />
-                  <div dangerouslySetInnerHTML={{ __html: previewHtml.html }} />
-                </div>
+                <style dangerouslySetInnerHTML={{ __html: previewHtml.css }} />
+                <div dangerouslySetInnerHTML={{ __html: previewHtml.html }} />
               </div>
             </div>
           </>

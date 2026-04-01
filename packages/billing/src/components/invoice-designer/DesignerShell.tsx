@@ -561,6 +561,13 @@ export const DesignerShell: React.FC = () => {
     [setNodeProp]
   );
 
+  const handleTextEdit = useCallback(
+    (id: string, text: string, commit: boolean) => {
+      setNodeProp(id, 'metadata.text', text, commit);
+    },
+    [setNodeProp]
+  );
+
   // Constraints were removed as part of the CSS-first layout cutover.
   const referenceNodeId = null;
   const selectedCounterpartNodeIds = useMemo(() => new Set<string>(), []);
@@ -1005,54 +1012,55 @@ export const DesignerShell: React.FC = () => {
         {renderButtonGroup('mode', 'Layout', CONTAINER_LAYOUT_MODE_OPTIONS, layoutMode, (value) => {
           setNodeProp(selectedNode.id, 'layout.display', value, true);
         }, 2)}
-        <div className="space-y-1.5">
-          <p className="text-xs text-slate-500">Columns</p>
-          <div className="grid grid-cols-2 gap-2" data-automation-id="designer-container-layout-grid-presets">
-            {GRID_COLUMN_PRESETS.map((preset) => {
-              const isSelected = normalizeGridTemplateColumns(preset.template) === activeGridTemplateColumns;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => {
-                    setNodeProp(selectedNode.id, 'layout.display', 'grid', false);
-                    setNodeProp(selectedNode.id, 'layout.gridTemplateColumns', preset.template, true);
-                  }}
-                  className={clsx(
-                    'rounded border px-2 py-2 text-left transition-colors',
-                    isSelected
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-                      : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  )}
-                  aria-pressed={isSelected}
-                  aria-label={`Columns: ${preset.label}`}
-                  data-automation-id={`designer-container-layout-grid-preset-${preset.id}`}
-                >
-                  <div
-                    className="mb-2 grid h-8 gap-1"
-                    style={{
-                      gridTemplateColumns: preset.tracks.map((track) => `minmax(0, ${track}fr)`).join(' '),
+        {layoutMode === 'grid' && (
+          <div className="space-y-1.5">
+            <p className="text-xs text-slate-500">Columns</p>
+            <div className="grid grid-cols-2 gap-2" data-automation-id="designer-container-layout-grid-presets">
+              {GRID_COLUMN_PRESETS.map((preset) => {
+                const isSelected = normalizeGridTemplateColumns(preset.template) === activeGridTemplateColumns;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => {
+                      setNodeProp(selectedNode.id, 'layout.gridTemplateColumns', preset.template, true);
                     }}
+                    className={clsx(
+                      'rounded border px-2 py-2 text-left transition-colors',
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                        : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    )}
+                    aria-pressed={isSelected}
+                    aria-label={`Columns: ${preset.label}`}
+                    data-automation-id={`designer-container-layout-grid-preset-${preset.id}`}
                   >
-                    {preset.tracks.map((track, index) => (
-                      <div
-                        key={`${preset.id}-${index}`}
-                        className={clsx(
-                          'rounded-sm border',
-                          isSelected
-                            ? 'border-blue-300 bg-blue-200/70 dark:border-blue-700 dark:bg-blue-800/70'
-                            : 'border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800'
-                        )}
-                        style={{ opacity: Math.max(0.6, track / Math.max(...preset.tracks)) }}
-                      />
-                    ))}
-                  </div>
-                  <div className="text-xs font-medium">{preset.label}</div>
-                </button>
-              );
-            })}
+                    <div
+                      className="mb-2 grid h-8 gap-1"
+                      style={{
+                        gridTemplateColumns: preset.tracks.map((track) => `minmax(0, ${track}fr)`).join(' '),
+                      }}
+                    >
+                      {preset.tracks.map((track, index) => (
+                        <div
+                          key={`${preset.id}-${index}`}
+                          className={clsx(
+                            'rounded-sm border',
+                            isSelected
+                              ? 'border-blue-300 bg-blue-200/70 dark:border-blue-700 dark:bg-blue-800/70'
+                              : 'border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800'
+                          )}
+                          style={{ opacity: Math.max(0.6, track / Math.max(...preset.tracks)) }}
+                        />
+                      ))}
+                    </div>
+                    <div className="text-xs font-medium">{preset.label}</div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
         {layoutMode === 'flex' && (
           <>
             {renderButtonGroup('direction', 'Direction', CONTAINER_FLEX_DIRECTION_OPTIONS, direction, (value) => {
@@ -1840,6 +1848,7 @@ export const DesignerShell: React.FC = () => {
 	            onPointerLocationChange={updatePointerLocation}
             onNodeSelect={selectNode}
 	            onResize={resizeNode}
+	            onTextEdit={handleTextEdit}
 	            onDragStart={handleDragStart}
 	            onDragMove={handleDragMove}
               onDragOver={handleDragOver}
@@ -2010,6 +2019,7 @@ type DesignerWorkspaceProps = {
   onPointerLocationChange: (point: { x: number; y: number } | null) => void;
   onNodeSelect: (nodeId: string | null) => void;
   onResize: (nodeId: string, size: { width: number; height: number }, commit?: boolean) => void;
+  onTextEdit: (nodeId: string, text: string, commit: boolean) => void;
   onDragStart: (event: DragStartEvent) => void;
   onDragMove: (event: DragMoveEvent) => void;
   onDragOver: (event: DragOverEvent) => void;
@@ -2036,6 +2046,7 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
   onPointerLocationChange,
   onNodeSelect,
   onResize,
+  onTextEdit,
   onDragStart,
   onDragMove,
   onDragOver,
@@ -2074,6 +2085,7 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
 	        onPointerLocationChange={onPointerLocationChange}
 	        onNodeSelect={onNodeSelect}
 	        onResize={onResize}
+	        onTextEdit={onTextEdit}
 	      />
 	      <DragOverlay modifiers={modifiers}>
 	        {activeDrag && (

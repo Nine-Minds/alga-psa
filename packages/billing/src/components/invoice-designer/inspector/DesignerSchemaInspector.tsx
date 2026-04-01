@@ -111,8 +111,7 @@ const CssLengthStepperField: React.FC<CssLengthFieldProps> = ({
     applyNormalized(path, formatCssLength(numeric, parsed.unit), commit);
   };
 
-  const handleUnitChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextUnit = event.target.value as CssLengthUnit;
+  const handleUnitChange = (nextUnit: CssLengthUnit) => {
     if (parsed.value === null) {
       return;
     }
@@ -136,18 +135,13 @@ const CssLengthStepperField: React.FC<CssLengthFieldProps> = ({
           onBlur={(event) => applyValue(event.target.value, true)}
           onWheel={(event) => (event.target as HTMLInputElement).blur()}
         />
-        <select
-          className="h-10 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-[rgb(var(--color-card))] dark:text-slate-300"
+        <CustomSelect
+          id={`${domId}-unit`}
           value={parsed.unit}
-          data-automation-id={`${domId}-unit`}
-          onChange={handleUnitChange}
-        >
-          {(allowedUnits ?? ['px', '%', 'rem']).map((unit) => (
-            <option key={unit} value={unit}>
-              {unit}
-            </option>
-          ))}
-        </select>
+          onValueChange={(value: string) => handleUnitChange(value as CssLengthUnit)}
+          options={(allowedUnits ?? ['px', '%', 'rem']).map((unit) => ({ value: unit, label: unit }))}
+          size="sm"
+        />
       </div>
       {parsed.isCustom && parsed.raw ? (
         <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
@@ -231,8 +225,7 @@ const CssLengthBoxField: React.FC<CssLengthFieldProps> = ({
     applyBoxValues(nextValues, parsed.unit, true);
   };
 
-  const handleUnitChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextUnit = event.target.value as CssLengthUnit;
+  const handleUnitChange = (nextUnit: CssLengthUnit) => {
     const hasAnyValue = Object.values(currentValues).some((value) => value !== null);
     if (!hasAnyValue) {
       return;
@@ -292,18 +285,13 @@ const CssLengthBoxField: React.FC<CssLengthFieldProps> = ({
       </div>
       <div className="mt-2 flex items-center gap-2">
         <span className="text-[10px] uppercase tracking-wide text-slate-500">Unit</span>
-        <select
-          className="h-10 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-[rgb(var(--color-card))] dark:text-slate-300"
+        <CustomSelect
+          id={`${domId}-unit`}
           value={parsed.unit}
-          data-automation-id={`${domId}-unit`}
-          onChange={handleUnitChange}
-        >
-          {(allowedUnits ?? ['px', '%', 'rem']).map((unit) => (
-            <option key={unit} value={unit}>
-              {unit}
-            </option>
-          ))}
-        </select>
+          onValueChange={(value: string) => handleUnitChange(value as CssLengthUnit)}
+          options={(allowedUnits ?? ['px', '%', 'rem']).map((unit) => ({ value: unit, label: unit }))}
+          size="sm"
+        />
       </div>
       {parsed.isCustom && parsed.raw ? (
         <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
