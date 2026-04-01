@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { exportWorkspaceToInvoiceTemplateAst } from '../../ast/workspaceAst';
+import { exportWorkspaceToTemplateAst } from '../../ast/workspaceAst';
 import type { DesignerNode } from '../../state/designerStore';
 import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '../../state/designerStore';
 import { hasDesignerTransforms } from '../../transforms/transformWorkspace';
@@ -161,7 +161,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       canvasScale,
     };
 
-    const baseAst = exportWorkspaceToInvoiceTemplateAst(workspaceWithoutTransforms);
+    const baseAst = exportWorkspaceToTemplateAst(workspaceWithoutTransforms);
     const options: Array<{ value: string; label: string }> = [];
 
     if (hasDesignerTransforms(transforms)) {
