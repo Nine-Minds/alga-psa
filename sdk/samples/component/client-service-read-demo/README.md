@@ -9,7 +9,5 @@ Endpoints:
 
 - `GET /api/clients`
 - `GET /api/services`
-- `GET /api/summary`
-- `GET /api/ui-proxy/summary`
 
 The sample intentionally uses host capabilities directly and does not call `http.fetch` for these reads.
