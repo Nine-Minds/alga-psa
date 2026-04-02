@@ -95,6 +95,8 @@ export class SMTPEmailProvider implements IEmailProvider {
       return {
         success: true,
         messageId: result.messageId,
+        providerMessageId: result.messageId,
+        rfcMessageId: result.messageId,
         providerId: this.providerId,
         providerType: this.providerType,
         sentAt: new Date(),

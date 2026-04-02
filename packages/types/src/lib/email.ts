@@ -44,6 +44,8 @@ export interface EmailProviderConfig {
 export interface EmailSendResult {
   success: boolean;
   messageId?: string;
+  providerMessageId?: string;
+  rfcMessageId?: string;
   providerId: string;
   providerType: string;
   error?: string;

@@ -14,6 +14,7 @@ const imapGetMailboxLockMock = vi.fn();
 const imapFetchMock = vi.fn();
 const imapLogoutMock = vi.fn();
 const imapCloseMock = vi.fn();
+const imapOnMock = vi.fn();
 const getTenantSecretMock = vi.fn();
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -63,6 +64,9 @@ vi.mock('imapflow', () => ({
     }
     fetch(...args: any[]) {
       return imapFetchMock(...args);
+    }
+    on(...args: any[]) {
+      return imapOnMock(...args);
     }
     logout(...args: any[]) {
       return imapLogoutMock(...args);
@@ -191,6 +195,7 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     imapFetchMock.mockReset();
     imapLogoutMock.mockReset();
     imapCloseMock.mockReset();
+    imapOnMock.mockReset();
     getTenantSecretMock.mockReset();
 
     processInboundEmailInAppMock.mockResolvedValue({
@@ -268,8 +273,142 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
           id: 'ms-msg-1',
           subject: 'Microsoft Subject',
         }),
-      })
+      }),
+      { collectDiagnostics: true }
     );
+  });
+
+  it('persists parser and threading diagnostics in email_processed_messages metadata', async () => {
+    const { db, emailProcessedInsertMock, emailProcessedUpdateMock } = createDbMock({
+      microsoftRow: {
+        id: 'provider-ms-1',
+        tenant: 'tenant-1',
+        mailbox: 'support@example.com',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    });
+    getAdminConnectionMock.mockResolvedValue(db);
+
+    microsoftGetMessageDetailsMock.mockResolvedValue({
+      id: 'ms-diagnostics-1',
+      provider: 'microsoft',
+      providerId: 'provider-ms-1',
+      tenant: 'tenant-1',
+      receivedAt: new Date().toISOString(),
+      from: { email: 'sender@example.com' },
+      to: [{ email: 'support@example.com' }],
+      subject: 'Diagnostics Subject',
+      body: { text: 'Body', html: '<p>Body</p>' },
+      attachments: [],
+      threadId: 'thread-1',
+      inReplyTo: '<prior@example.com>',
+      references: ['<prior@example.com>'],
+    } as any);
+    processInboundEmailInAppMock.mockResolvedValue({
+      outcome: 'replied',
+      matchedBy: 'reply_token',
+      ticketId: 'ticket-1',
+      commentId: 'comment-1',
+      diagnostics: {
+        parser: {
+          confidence: 0.98,
+          strategy: 'custom-boundary',
+          heuristics: ['token-strip'],
+          warnings: [],
+          parseError: null,
+          tokenPresent: true,
+          replyTokenHash: 'a'.repeat(64),
+          replyTokenSuffix: 'deadbeef',
+        },
+        headersSnapshot: {
+          messageId: 'ms-diagnostics-1',
+          threadId: 'thread-1',
+          inReplyTo: '<prior@example.com>',
+          references: ['<prior@example.com>'],
+          from: 'sender@example.com',
+          to: ['support@example.com'],
+          subject: 'Diagnostics Subject',
+        },
+        threading: {
+          tokenLookupAttempted: true,
+          tokenLookupMatched: true,
+          tokenLookupMissReason: null,
+          tokenLookupError: null,
+          headerLookupAttempted: false,
+          headerLookupMatched: false,
+          headerLookupMissReason: null,
+          headerLookupError: null,
+          matchedBy: 'reply_token',
+          matchedTicketId: 'ticket-1',
+          matchedCommentId: 'comment-1',
+          threadId: 'thread-1',
+          inReplyTo: '<prior@example.com>',
+          references: ['<prior@example.com>'],
+          originalMessageIdCandidate: '<prior@example.com>',
+          failureReason: null,
+        },
+        outcome: {
+          kind: 'replied',
+          matchedBy: 'reply_token',
+          ticketId: 'ticket-1',
+          commentId: 'comment-1',
+        },
+      },
+    });
+
+    const { processUnifiedInboundEmailQueueJob } = await import(
+      '../../services/email/unifiedInboundEmailQueueJobProcessor'
+    );
+    await processUnifiedInboundEmailQueueJob({
+      jobId: 'job-ms-diagnostics-1',
+      schemaVersion: 1,
+      tenantId: 'tenant-1',
+      providerId: 'provider-ms-1',
+      provider: 'microsoft',
+      pointer: {
+        subscriptionId: 'sub-ms-1',
+        messageId: 'ms-diagnostics-1',
+      },
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    } as UnifiedInboundEmailQueueJob);
+
+    const insertedMetadata = JSON.parse(emailProcessedInsertMock.mock.calls[0][0].metadata);
+    expect(insertedMetadata).toMatchObject({
+      queueJobId: 'job-ms-diagnostics-1',
+      queueProvider: 'microsoft',
+      headersSnapshot: {
+        messageId: 'ms-diagnostics-1',
+        threadId: 'thread-1',
+        inReplyTo: '<prior@example.com>',
+      },
+    });
+
+    const updatedMetadata = JSON.parse(emailProcessedUpdateMock.mock.calls[0][0].metadata);
+    expect(updatedMetadata).toMatchObject({
+      queueJobId: 'job-ms-diagnostics-1',
+      queueProvider: 'microsoft',
+      parser: {
+        strategy: 'custom-boundary',
+        tokenPresent: true,
+        replyTokenSuffix: 'deadbeef',
+      },
+      threading: {
+        tokenLookupAttempted: true,
+        tokenLookupMatched: true,
+        matchedBy: 'reply_token',
+        matchedTicketId: 'ticket-1',
+      },
+      outcome: {
+        kind: 'replied',
+        matchedBy: 'reply_token',
+        ticketId: 'ticket-1',
+        commentId: 'comment-1',
+      },
+    });
   });
 
   it('T013: Google pointer fetch resolves full email payload before processing', async () => {
@@ -340,7 +479,8 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
           id: 'g-msg-1',
           subject: 'Google Subject',
         }),
-      })
+      }),
+      { collectDiagnostics: true }
     );
   });
 
@@ -477,7 +617,8 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
           subject: 'IMAP Subject',
           rawMimeBase64: expect.any(String),
         }),
-      })
+      }),
+      { collectDiagnostics: true }
     );
   });
 

@@ -9,6 +9,8 @@ export interface EmailSendingLogRecord {
   id: number;
   tenant: string;
   message_id: string | null;
+  provider_message_id: string | null;
+  rfc_message_id: string | null;
   provider_id: string;
   provider_type: string;
   from_address: string;
@@ -27,6 +29,10 @@ export interface EmailSendingLogRecord {
   entity_id: string | null;
   contact_id: string | null;
   notification_subtype_id: number | null;
+  thread_id: string | null;
+  comment_id: string | null;
+  reply_token_hash: string | null;
+  reply_token_suffix: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -47,6 +53,8 @@ export const getEmailLogsForTicket = withAuth(
           'id',
           'tenant',
           'message_id',
+          'provider_message_id',
+          'rfc_message_id',
           'provider_id',
           'provider_type',
           'from_address',
@@ -65,6 +73,10 @@ export const getEmailLogsForTicket = withAuth(
           'entity_id',
           'contact_id',
           'notification_subtype_id',
+          'thread_id',
+          'comment_id',
+          'reply_token_hash',
+          'reply_token_suffix',
           'created_at',
           'updated_at'
         )
@@ -195,6 +207,8 @@ export const getEmailLogs = withAuth(
           'esl.id',
           'esl.tenant',
           'esl.message_id',
+          'esl.provider_message_id',
+          'esl.rfc_message_id',
           'esl.provider_id',
           'esl.provider_type',
           'esl.from_address',
@@ -213,6 +227,10 @@ export const getEmailLogs = withAuth(
           'esl.entity_id',
           'esl.contact_id',
           'esl.notification_subtype_id',
+          'esl.thread_id',
+          'esl.comment_id',
+          'esl.reply_token_hash',
+          'esl.reply_token_suffix',
           'esl.created_at',
           'esl.updated_at',
           trx.raw('t.ticket_number as ticket_number')

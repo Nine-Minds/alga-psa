@@ -676,6 +676,7 @@ async function insertProcessingRecord(params: {
   job: UnifiedInboundEmailQueueJob;
   externalIdentity: string;
   emailData?: EmailMessageDetails;
+  metadata?: Record<string, unknown>;
 }): Promise<boolean> {
   const db = await getAdminConnection();
   try {
@@ -689,11 +690,13 @@ async function insertProcessingRecord(params: {
       subject: params.emailData?.subject || null,
       received_at: params.emailData?.receivedAt ? new Date(params.emailData.receivedAt) : null,
       attachment_count: params.emailData?.attachments?.length || 0,
-      metadata: JSON.stringify({
-        queueJobId: params.job.jobId,
-        queueProvider: params.job.provider,
-        pointer: params.job.pointer,
-      }),
+      metadata: JSON.stringify(
+        params.metadata ?? {
+          queueJobId: params.job.jobId,
+          queueProvider: params.job.provider,
+          pointer: params.job.pointer,
+        }
+      ),
     });
     return true;
   } catch (error: any) {
@@ -711,6 +714,7 @@ async function updateProcessingRecord(params: {
   emailData?: EmailMessageDetails;
   ticketId?: string | null;
   errorMessage?: string | null;
+  metadata?: Record<string, unknown>;
 }): Promise<void> {
   const db = await getAdminConnection();
   await db('email_processed_messages')
@@ -727,7 +731,40 @@ async function updateProcessingRecord(params: {
       received_at: params.emailData?.receivedAt ? new Date(params.emailData.receivedAt) : null,
       attachment_count: params.emailData?.attachments?.length || 0,
       error_message: params.errorMessage || null,
+      metadata: JSON.stringify(
+        params.metadata ?? {
+          queueJobId: params.job.jobId,
+          queueProvider: params.job.provider,
+          pointer: params.job.pointer,
+        }
+      ),
     });
+}
+
+function buildProcessingMetadata(params: {
+  job: UnifiedInboundEmailQueueJob;
+  emailData?: EmailMessageDetails;
+  diagnostics?: Record<string, unknown>;
+}): Record<string, unknown> {
+  return {
+    queueJobId: params.job.jobId,
+    queueProvider: params.job.provider,
+    pointer: params.job.pointer,
+    ...(params.emailData
+      ? {
+          headersSnapshot: {
+            messageId: params.emailData.id,
+            threadId: params.emailData.threadId ?? null,
+            inReplyTo: params.emailData.inReplyTo ?? null,
+            references: params.emailData.references ?? [],
+            from: params.emailData.from?.email ?? null,
+            to: (params.emailData.to ?? []).map((recipient) => recipient.email),
+            subject: params.emailData.subject ?? null,
+          },
+        }
+      : {}),
+    ...(params.diagnostics ?? {}),
+  };
 }
 
 export async function processUnifiedInboundEmailQueueJob(
@@ -751,6 +788,15 @@ export async function processUnifiedInboundEmailQueueJob(
       const inserted = await insertProcessingRecord({
         job,
         externalIdentity,
+        metadata: buildProcessingMetadata({
+          job,
+          diagnostics: {
+            outcome: {
+              kind: 'skipped',
+              reason: `source_unavailable:${error.reason}`,
+            },
+          },
+        }),
       });
       if (inserted) {
         await updateProcessingRecord({
@@ -758,6 +804,15 @@ export async function processUnifiedInboundEmailQueueJob(
           externalIdentity,
           status: 'partial',
           errorMessage: `source_unavailable:${error.reason}`,
+          metadata: buildProcessingMetadata({
+            job,
+            diagnostics: {
+              outcome: {
+                kind: 'skipped',
+                reason: `source_unavailable:${error.reason}`,
+              },
+            },
+          }),
         });
       }
       return {
@@ -793,6 +848,7 @@ export async function processUnifiedInboundEmailQueueJob(
       job,
       externalIdentity,
       emailData,
+      metadata: buildProcessingMetadata({ job, emailData }),
     });
     if (!inserted) {
       dedupedCount += 1;
@@ -804,6 +860,8 @@ export async function processUnifiedInboundEmailQueueJob(
         tenantId: job.tenantId,
         providerId: job.providerId,
         emailData,
+      }, {
+        collectDiagnostics: true,
       });
       const status = result.outcome === 'skipped' ? 'partial' : 'success';
       await updateProcessingRecord({
@@ -813,6 +871,11 @@ export async function processUnifiedInboundEmailQueueJob(
         emailData,
         ticketId: result.outcome === 'created' || result.outcome === 'replied' ? result.ticketId : null,
         errorMessage: result.outcome === 'skipped' ? `skipped:${result.reason}` : null,
+        metadata: buildProcessingMetadata({
+          job,
+          emailData,
+          diagnostics: result.diagnostics,
+        }),
       });
       processedCount += 1;
     } catch (error: any) {
@@ -822,6 +885,16 @@ export async function processUnifiedInboundEmailQueueJob(
         status: 'failed',
         emailData,
         errorMessage: error?.message || String(error),
+        metadata: buildProcessingMetadata({
+          job,
+          emailData,
+          diagnostics: {
+            outcome: {
+              kind: 'failed',
+              error: error?.message || String(error),
+            },
+          },
+        }),
       });
       throw error;
     }
