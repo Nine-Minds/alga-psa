@@ -172,6 +172,13 @@ export function AppRoot() {
         const nextRefreshToken = result.data.refreshToken;
         const expiresAtMs = Date.now() + result.data.expiresInSec * 1000;
 
+        // Guard: if the session was cleared (logout) or rotated while
+        // the refresh was in flight, discard the result to avoid
+        // overwriting a newer state or re-logging in after logout.
+        if (!sessionRef.current || sessionRef.current.refreshToken !== currentSession.refreshToken) {
+          return null;
+        }
+
         const nextSession: MobileSession = {
           ...currentSession,
           accessToken: nextAccessToken,

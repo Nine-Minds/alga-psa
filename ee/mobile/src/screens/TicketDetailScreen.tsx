@@ -586,7 +586,9 @@ export function TicketDetailBody({
             isResolution={commentDraftHook.commentIsResolution}
             onChangeIsResolution={(value) => {
               commentDraftHook.setCommentIsResolution(value);
-              if (value && statusHook.statusOptions.length === 0) {
+              if (!value) {
+                commentDraftHook.setCommentCloseStatusId(null);
+              } else if (statusHook.statusOptions.length === 0) {
                 void statusHook.openStatusPicker();
                 statusHook.setStatusPickerOpen(false);
               }
