@@ -221,16 +221,16 @@ export class ApiKeyService {
   /**
    * List all API keys across users (admin only)
    */
-  static async listAllApiKeys(tenantId?: string): Promise<(ApiKey & { username: string })[]> {
+  static async listAllApiKeys(tenantId?: string): Promise<(ApiKey & { username: string; first_name: string | null; last_name: string | null })[]> {
     const { knex, tenant } = await createTenantKnex(tenantId);
-    
+
     if (!tenant) {
       throw new Error('Tenant context is required for listing API keys');
     }
 
     try {
       return await knex('api_keys')
-        .select('api_keys.*', 'users.username')
+        .select('api_keys.*', 'users.username', 'users.first_name', 'users.last_name')
         .join('users', function() {
           this.on('api_keys.user_id', '=', 'users.user_id')
               .andOn('users.tenant', '=', 'api_keys.tenant');
