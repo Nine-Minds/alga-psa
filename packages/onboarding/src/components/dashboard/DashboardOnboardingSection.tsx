@@ -8,6 +8,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { cn } from '@alga-psa/ui/lib';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import type { ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Progress } from '@alga-psa/ui/components/Progress';
 import { STEP_DEFINITIONS, type StepDefinition } from '@alga-psa/onboarding/lib';
@@ -227,16 +228,12 @@ const QuickStartCard = ({
       </div>
 
       {step.blocker ? (
-        <div
-          className={cn(
-            'mt-4 rounded-md border px-3 py-2 text-xs font-medium leading-5',
-            step.status === 'blocked'
-              ? 'border-red-500/20 bg-red-500/10 text-red-600'
-              : 'border-orange-500/20 bg-orange-500/10 text-orange-600'
-          )}
+        <Alert
+          variant="destructive"
+          className="mt-4 py-3"
         >
-          {step.blocker}
-        </div>
+          <AlertDescription className="text-xs">{step.blocker}</AlertDescription>
+        </Alert>
       ) : null}
 
       <div className="mt-auto" />
