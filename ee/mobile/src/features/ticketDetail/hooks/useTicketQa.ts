@@ -138,7 +138,7 @@ export function useTicketQa({
   const updateQaStatus = useCallback(
     (next: Exclude<TicketRichTextQaStatus, null>) => {
       setQaStatus(next);
-      console.info("[TicketRichTextQA]", next.scenario, next.state, next.step, next.detail ?? "");
+      if (__DEV__) console.info("[TicketRichTextQA]", next.scenario, next.state, next.step, next.detail ?? "");
     },
     [],
   );

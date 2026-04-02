@@ -1101,7 +1101,7 @@ export class TicketService extends BaseService<ITicket> {
         ticket_id: ticketId,
         note: data.comment_text,
         is_internal: data.is_internal || false,
-        is_resolution: false,
+        is_resolution: data.is_resolution || false,
         user_id: context.userId,
         tenant: context.tenant,
         created_at: knex.raw('now()'),

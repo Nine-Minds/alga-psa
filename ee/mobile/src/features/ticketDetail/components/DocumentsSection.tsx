@@ -6,6 +6,7 @@ import { File as ExpoFile, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import * as Sharing from "expo-sharing";
 import { useTranslation } from "react-i18next";
+import { logger } from "../../../logging/logger";
 import type { ApiClient } from "../../../api";
 import { getTicketDocuments, uploadTicketDocument, type TicketDocument, type TicketDocumentUpload } from "../../../api/documents";
 import { Badge } from "../../../ui/components/Badge";
@@ -173,7 +174,7 @@ export function DocumentsSection({
         });
       }
     } catch (e) {
-      console.error("[DocumentsSection] open failed", e);
+      logger.error("[DocumentsSection] open failed", { error: e });
       setError(t("documents.errors.open"));
     } finally {
       setDownloading(null);
@@ -197,7 +198,7 @@ export function DocumentsSection({
         dialogTitle: document.document_name,
       });
     } catch (e) {
-      console.error("[DocumentsSection] save failed", e);
+      logger.error("[DocumentsSection] save failed", { error: e });
       setError(t("documents.errors.open"));
     } finally {
       setDownloading(null);

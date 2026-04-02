@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TicketComment } from "../../../api/tickets";
-import { addTicketComment } from "../../../api/tickets";
+import { addTicketComment, updateTicketStatus } from "../../../api/tickets";
 import { getSecureJson, secureStorage, setSecureJson } from "../../../storage/secureStorage";
 import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import { invalidateTicketsListCache } from "../../../cache/ticketsCache";
@@ -28,6 +28,8 @@ export function useCommentDraft(
   const [commentDraft, setCommentDraft] = useState("");
   const [commentDraftPlainText, setCommentDraftPlainText] = useState("");
   const [commentIsInternal, setCommentIsInternal] = useState(true);
+  const [commentIsResolution, setCommentIsResolution] = useState(false);
+  const [commentCloseStatusId, setCommentCloseStatusId] = useState<string | null>(null);
   const [commentSendError, setCommentSendError] = useState<string | null>(null);
   const [commentSending, setCommentSending] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -89,12 +91,16 @@ export function useCommentDraft(
       originalDraft,
       originalDraftPlainText,
       originalIsInternal,
+      isResolution,
+      closeStatusId,
     }: {
       serializedDraft: string;
       text: string;
       originalDraft: string;
       originalDraftPlainText: string;
       originalIsInternal: boolean;
+      isResolution?: boolean;
+      closeStatusId?: string | null;
     }): Promise<boolean> => {
       if (!client || !session) return false;
       if (commentSendInFlightRef.current || commentSending) return false;
@@ -140,6 +146,7 @@ export function useCommentDraft(
           ticketId,
           comment_text: serializedDraft,
           is_internal: originalIsInternal,
+          is_resolution: isResolution,
           auditHeaders,
         });
         if (!result.ok) {
@@ -183,6 +190,16 @@ export function useCommentDraft(
             };
           }),
         );
+        // If resolution with a close status, update the ticket status
+        if (isResolution && closeStatusId) {
+          await updateTicketStatus(client, {
+            apiKey: session.accessToken,
+            ticketId,
+            status_id: closeStatusId,
+            auditHeaders,
+          }).catch(() => {});
+        }
+
         await secureStorage.deleteItem(draftKey);
         invalidateTicketsListCache();
         await Promise.all([fetchTicket(), fetchComments()]);
@@ -206,13 +223,19 @@ export function useCommentDraft(
     const text = draftJson
       ? extractPlainTextFromRichEditorJson(draftJson).trim()
       : originalDraftPlainText.trim();
-    await submitCommentPayload({
+    const sent = await submitCommentPayload({
       serializedDraft,
       text,
       originalDraft,
       originalDraftPlainText,
       originalIsInternal,
+      isResolution: commentIsResolution,
+      closeStatusId: commentCloseStatusId,
     });
+    if (sent) {
+      setCommentIsResolution(false);
+      setCommentCloseStatusId(null);
+    }
   };
 
   return {
@@ -224,6 +247,10 @@ export function useCommentDraft(
     setCommentDraftPlainText,
     commentIsInternal,
     setCommentIsInternal,
+    commentIsResolution,
+    setCommentIsResolution,
+    commentCloseStatusId,
+    setCommentCloseStatusId,
     commentSendError,
     commentSending,
     draftLoaded,
