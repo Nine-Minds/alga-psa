@@ -59,10 +59,11 @@ async function tenantHasAiAssistantAddOn(tenantId: string): Promise<boolean> {
       .where({ tenant: tenantId }) as Array<{ addon_key: string; expires_at: string | Date | null }>;
 
     const now = Date.now();
+    const knownAddOns = new Set<string>(Object.values(ADD_ONS));
     const active = rows
       .filter((row) => !row.expires_at || new Date(row.expires_at).getTime() > now)
       .map((row) => row.addon_key)
-      .filter((value): value is AddOnKey => Object.values(ADD_ONS).includes(value as AddOnKey));
+      .filter((value): value is AddOnKey => knownAddOns.has(value));
 
     return tenantHasAddOn(active, ADD_ONS.AI_ASSISTANT);
   } catch {

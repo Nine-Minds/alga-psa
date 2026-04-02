@@ -36,7 +36,7 @@ import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
-import { findUserById, getCurrentUser } from "@alga-psa/user-composition/actions";
+import { findUserById, getCurrentUser, getCurrentUserPermissions } from "@alga-psa/user-composition/actions";
 import { findBoardById } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
@@ -85,6 +85,7 @@ import {
     type CommentImageDocumentReference,
 } from '../../lib/commentImageDocuments';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
+import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
 
 interface PendingCommentDelete {
     commentId: string;
@@ -218,11 +219,24 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { t } = useTranslation('features/tickets');
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
+    const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(false);
     const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
     const { getDocumentByTicketId, deleteDocument } = useDocumentsCrossFeature();
 
     useEffect(() => {
         setHasHydrated(true);
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        void getCurrentUserPermissions().then((perms) => {
+            if (!cancelled) {
+                setCanViewCommentMetadataDebug(hasAdminSettingsViewAccess(perms));
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     // Use passed currentUser if available (for drawer), otherwise fallback to session
@@ -2157,6 +2171,7 @@ const handleClose = () => {
                                     externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
                                     onClipboardImageUploaded={refreshTicketDocuments}
                                     defaultNewestFirst
+                                    canViewCommentMetadataDebug={canViewCommentMetadataDebug}
                                 />
                             </div>
                         </Suspense>

@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
-import { Pencil, Trash, Lock, CheckCircle } from 'lucide-react';
+import { Pencil, Trash, Lock, CheckCircle, Cog } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { IComment } from '@alga-psa/types';
@@ -22,6 +22,8 @@ import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
+import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
+import { isNonEmptyCommentMetadata } from './commentMetadataDebug';
 
 interface CommentItemProps {
   id?: string;
@@ -42,6 +44,8 @@ interface CommentItemProps {
   reactions?: IAggregatedReaction[];
   onToggleReaction?: (commentId: string, emoji: string) => void;
   userNames?: Record<string, string>;
+  /** When true and metadata is non-empty, show debug metadata control (Admin Settings viewers). */
+  canViewCommentMetadataDebug?: boolean;
 }
 
 function getInboundSenderIdentity(
@@ -117,8 +121,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
   reactions,
   onToggleReaction,
   userNames,
+  canViewCommentMetadataDebug = false,
 }) => {
   const { t } = useTranslation('features/tickets');
+  const [metadataDebugOpen, setMetadataDebugOpen] = useState(false);
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() =>
@@ -345,6 +351,28 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       inboundEmail: t('responseSource.inboundEmail', 'Received via Inbound Email'),
                     }}
                   />
+                )}
+                {canViewCommentMetadataDebug && isNonEmptyCommentMetadata(conversation.metadata) && (
+                  <>
+                    <Tooltip content={t('conversation.metadataDebug', 'View metadata (debug)')}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-gray-400 hover:text-gray-600 dark:text-[rgb(var(--color-text-400))] dark:hover:text-[rgb(var(--color-text-200))]"
+                        aria-label={t('conversation.metadataDebug', 'View metadata (debug)')}
+                        onClick={() => setMetadataDebugOpen(true)}
+                      >
+                        <Cog className="h-4 w-4" />
+                      </Button>
+                    </Tooltip>
+                    <CommentMetadataDebugModal
+                      commentId={commentId}
+                      metadata={conversation.metadata}
+                      isOpen={metadataDebugOpen}
+                      onClose={() => setMetadataDebugOpen(false)}
+                    />
+                  </>
                 )}
               </div>
               <div className="flex flex-col min-w-0">
