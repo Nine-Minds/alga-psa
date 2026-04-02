@@ -147,7 +147,7 @@
     "next": "^16.1.6",
     "next-auth": "^5.0.0-beta.30",
     "node-vault": "^0.10.2",
-    "nodemailer": "^8.0.0",
+    "nodemailer": "^8.0.4",
     "null-loader": "^4.0.1",
     "parsimmon": "^1.18.1",
     "pdf-lib": "^1.17.1",
@@ -268,7 +268,7 @@
   "overrides": {
     "preact": "^10.25.4",
     "tsup": "^8.5.1",
-    "fast-xml-parser": ">=5.5.0",
+    "fast-xml-parser": ">=5.5.9",
     "serialize-javascript": ">=6.0.3",
     "basic-ftp": ">=5.2.0",
     "form-data": ">=4.0.2",
@@ -283,8 +283,10 @@
     "koa": ">=2.16.2",
     "rollup": ">=4.59.0",
     "minimatch": ">=9.0.5",
+    "brace-expansion": ">=1.1.13",
+    "yaml": ">=2.8.3",
     "nx": {
-      "brace-expansion": "^2.0.2"
+      "brace-expansion": "^2.0.3"
     },
     "qs": ">=6.14.0",
     "path-to-regexp": ">=8.0.0",
