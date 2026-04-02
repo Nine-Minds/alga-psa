@@ -266,7 +266,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         }] : []),
       ],
     },
-  ], [isEEAvailable, isEntraUiEnabled]);
+  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isEntraUiEnabled]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter((category) => {
