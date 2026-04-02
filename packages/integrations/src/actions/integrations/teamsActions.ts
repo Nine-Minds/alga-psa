@@ -5,6 +5,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex } from '@alga-psa/db';
 import { getTeamsAvailability } from '../../lib/teamsAvailability';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
+import { evaluateTenantFeatureFlag } from './tenantFeatureFlags';
 import {
   TEAMS_ALLOWED_ACTIONS,
   TEAMS_CAPABILITIES,
@@ -306,6 +307,7 @@ export const getTeamsIntegrationStatus = withAuth(async (
   { tenant }
 ): Promise<TeamsIntegrationStatusResponse> => {
   const availability = await getTeamsAvailability({
+    evaluateFlag: evaluateTenantFeatureFlag,
     tenantId: tenant,
     userId: (user as any)?.user_id,
   });
@@ -328,6 +330,7 @@ export const saveTeamsIntegrationSettings = withAuth(async (
   input: TeamsIntegrationSettingsInput
 ): Promise<TeamsIntegrationStatusResponse> => {
   const availability = await getTeamsAvailability({
+    evaluateFlag: evaluateTenantFeatureFlag,
     tenantId: tenant,
     userId: (user as any)?.user_id,
   });
