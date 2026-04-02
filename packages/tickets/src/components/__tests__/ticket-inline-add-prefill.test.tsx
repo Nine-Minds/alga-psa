@@ -441,7 +441,7 @@ describe('QuickAddTicket prefills', () => {
     expect(screen.getByTestId('due-date')).toHaveValue('2026-02-05T12:00:00.000Z');
   });
 
-  it('navigates to the created ticket when Save + Open is clicked', async () => {
+  it('navigates to the created ticket when Create + View Ticket is clicked', async () => {
     const onTicketAdded = vi.fn();
 
     render(
@@ -458,7 +458,7 @@ describe('QuickAddTicket prefills', () => {
       target: { value: 'New ticket from quick add' }
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save + Open' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create + View Ticket' }));
 
     await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
     await waitFor(() => expect(onTicketAdded).toHaveBeenCalled());
@@ -579,7 +579,7 @@ describe('QuickAddTicket prefills', () => {
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Pasted markdown replacement' }
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Ticket' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
     const submittedFormData = addTicketMock.mock.calls[0][0] as FormData;
@@ -636,7 +636,7 @@ describe('QuickAddTicket prefills', () => {
       target: { value: 'Ticket body' }
     });
     fireEvent.click(screen.getByRole('button', { name: 'Paste Image' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save Ticket' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(uploadDocumentMock).toHaveBeenCalled());
     await waitFor(() => expect(updateTicketMock).toHaveBeenCalledWith(
