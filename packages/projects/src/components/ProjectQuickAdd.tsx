@@ -17,6 +17,8 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
+import { createStatus as createStatusAction } from '@alga-psa/reference-data/actions';
 import { IContact } from '@alga-psa/types';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -61,6 +63,17 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [clientPortalConfig, setClientPortalConfig] = useState<IClientPortalConfig>(DEFAULT_CLIENT_PORTAL_CONFIG);
   const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
+  const [showQuickAddProjectStatus, setShowQuickAddProjectStatus] = useState(false);
+  const pendingStatusSelectRef = React.useRef<string | null>(null);
+
+  // Apply pending status selection after statuses array is updated
+  useEffect(() => {
+    if (pendingStatusSelectRef.current) {
+      const id = pendingStatusSelectRef.current;
+      pendingStatusSelectRef.current = null;
+      setSelectedStatusId(id);
+    }
+  }, [statuses]);
 
   const mergedClients = React.useMemo(() => {
     const clientIds = new Set(clients.map(c => c.client_id));
@@ -244,6 +257,8 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   }))}
                   placeholder="Select Status"
                   className={hasAttemptedSubmit && !selectedStatusId ? 'ring-1 ring-red-500' : ''}
+                  onAddNew={() => setShowQuickAddProjectStatus(true)}
+                  addNewLabel="Add new status"
                 />
               </div>
               <div>
@@ -411,6 +426,27 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         },
         skipSuccessDialog: true,
       })}
+
+      <QuickAddStatus
+        open={showQuickAddProjectStatus}
+        onOpenChange={setShowQuickAddProjectStatus}
+        onStatusCreated={(newStatus) => {
+          pendingStatusSelectRef.current = newStatus.status_id;
+          setStatuses(prev => [...prev, newStatus]);
+        }}
+        statusType="project"
+        showColorPicker={false}
+        createStatus={async ({ name, statusType, isClosed, color }) =>
+          createStatusAction({
+            name,
+            status_type: statusType,
+            item_type: statusType,
+            is_closed: isClosed,
+            color,
+          })
+        }
+        existingStatuses={statuses}
+      />
     </>
   );
 };
