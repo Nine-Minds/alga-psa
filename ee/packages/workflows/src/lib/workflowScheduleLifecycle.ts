@@ -44,7 +44,7 @@ type WorkflowScheduleJobData = {
   scheduleId: string;
 };
 
-const workflowScheduleSingletonKey = (workflowId: string, scheduleId: string): string =>
+export const buildWorkflowScheduleSingletonKey = (workflowId: string, scheduleId: string): string =>
   `workflow-schedule:${workflowId}:${scheduleId}`;
 
 const TERMINAL_JOB_STATUSES = new Set(['completed', 'failed']);
@@ -149,7 +149,7 @@ async function scheduleDesiredWorkflow(
     workflowId,
     scheduleId
   };
-  const singletonKey = workflowScheduleSingletonKey(workflowId, scheduleId);
+  const singletonKey = buildWorkflowScheduleSingletonKey(workflowId, scheduleId);
 
   if (desired.triggerType === 'schedule') {
     const runAt = desired.runAt ? new Date(desired.runAt) : null;
