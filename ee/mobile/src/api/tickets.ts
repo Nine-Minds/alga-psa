@@ -71,6 +71,7 @@ export type TicketComment = {
   comment_text: string;
   comment_html?: string | null;
   is_internal?: boolean;
+  is_resolution?: boolean;
   created_by?: string | null;
   created_by_name?: string | null;
   created_by_avatar_url?: string | null;
@@ -183,6 +184,7 @@ export function addTicketComment(
     ticketId: string;
     comment_text: string;
     is_internal: boolean;
+    is_resolution?: boolean;
     auditHeaders?: Record<string, string | undefined>;
   },
 ): Promise<ApiResult<SuccessResponse<TicketComment>>> {
@@ -196,6 +198,7 @@ export function addTicketComment(
     body: {
       comment_text: params.comment_text,
       is_internal: params.is_internal,
+      ...(params.is_resolution ? { is_resolution: true } : {}),
     },
   });
 }

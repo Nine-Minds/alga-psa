@@ -240,7 +240,7 @@ export function CommentsSection({
             const isEditingThis = editingCommentId === c.comment_id;
             const commentPlainText = extractPlainTextFromSerializedRichEditorContent(c.comment_text);
             const eventText = c.event_text ?? (eventType ? `${eventType}: ${commentPlainText}` : commentPlainText);
-            const badgeLabel = isSystemEvent ? t("comments.event") : isOptimistic ? t("comments.sending") : c.is_internal ? t("comments.internal") : t("comments.public");
+            const badgeLabel = isSystemEvent ? t("comments.event") : isOptimistic ? t("comments.sending") : c.is_resolution ? t("comments.resolution") : c.is_internal ? t("comments.internal") : t("comments.client");
             const accessibilityLabel = `${badgeLabel}. ${c.created_by_name ?? t("common:unknown")}. ${formatDateTimeWithRelative(c.created_at)}. ${
               isSystemEvent ? eventText : commentPlainText || t("comments.richComment")
             }`;
@@ -271,7 +271,15 @@ export function CommentsSection({
                     ) : isOptimistic ? (
                       <Badge label={t("comments.sending")} tone="neutral" />
                     ) : (
-                      <Badge label={c.is_internal ? t("comments.internal") : t("comments.public")} tone={c.is_internal ? "warning" : "info"} />
+                      <>
+                        <Badge label={c.is_internal ? t("comments.internal") : t("comments.client")} tone={c.is_internal ? "warning" : "info"} />
+                        {c.is_resolution ? (
+                          <>
+                            <View style={{ width: spacing.xs }} />
+                            <Badge label={t("comments.resolution")} tone="success" />
+                          </>
+                        ) : null}
+                      </>
                     )}
                   </View>
                   {isEditingThis ? (

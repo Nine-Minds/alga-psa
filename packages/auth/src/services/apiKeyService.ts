@@ -274,6 +274,38 @@ export class ApiKeyService {
   }
 
   /**
+   * Delete stale API keys for a user: deactivate expired keys, then delete all
+   * inactive keys older than the retention period.
+   */
+  static async cleanupStaleKeys(
+    userId: string,
+    tenantId: string,
+    retentionDays: number = 7,
+  ): Promise<number> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
+
+    if (!tenant) {
+      throw new Error('Tenant context is required for cleaning up API keys');
+    }
+
+    // Deactivate any keys that are still marked active but have expired
+    await knex('api_keys')
+      .where({ user_id: userId, tenant, active: true })
+      .whereNotNull('expires_at')
+      .where('expires_at', '<', knex.fn.now())
+      .update({ active: false, updated_at: knex.fn.now() });
+
+    // Delete all inactive keys older than the retention period
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+    const deleted = await knex('api_keys')
+      .where({ user_id: userId, tenant, active: false })
+      .where('created_at', '<', cutoff)
+      .del();
+
+    return deleted;
+  }
+
+  /**
    * Increment usage count for an API key and optionally deactivate when exhausted.
    */
   static async consumeApiKey(

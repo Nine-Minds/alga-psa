@@ -189,6 +189,7 @@ export const createTicketCommentSchema = z.object({
       `Comment text is too long (max ${MAX_TICKET_COMMENT_LENGTH} characters)`
     ),
   is_internal: z.boolean().optional().default(false),
+  is_resolution: z.boolean().optional().default(false),
   time_spent: z.number().min(0).optional(),
   metadata: z.record(z.unknown()).optional(),
 });
