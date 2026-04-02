@@ -161,11 +161,46 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
       <div className="space-y-2">
         <h2 className="text-xl font-semibold">
           {t('billingSetupStep.header.title', {
-            defaultValue: 'Create Your First Service'
+            defaultValue: 'Billing Setup'
           })}
         </h2>
         <p className="text-sm text-gray-600">
           {t('billingSetupStep.header.description', {
+            defaultValue: 'Set your default currency and create your first service.'
+          })}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="default-currency">
+          {t('billingSetupStep.fields.defaultCurrency.label', {
+            defaultValue: 'Default Currency *'
+          })}
+        </Label>
+        <CustomSelect
+          id="default-currency"
+          value={data.currencyCode || 'USD'}
+          onValueChange={(value) => updateData({ currencyCode: value })}
+          options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
+          className="max-w-[200px]"
+        />
+        <p className="text-sm text-gray-600">
+          {t('billingSetupStep.fields.defaultCurrency.description', {
+            defaultValue: 'This currency will be used as the default across all billing — services, contracts, quotes, and invoices. You can override it per client later.'
+          })}
+        </p>
+      </div>
+
+      <hr className="border-gray-200" />
+
+      <div className="space-y-2">
+        <h3 className="text-lg font-medium">
+          {t('billingSetupStep.header.serviceTitle', {
+            defaultValue: 'Create Your First Service'
+          })}
+        </h3>
+        <p className="text-sm text-gray-600">
+          {t('billingSetupStep.header.serviceDescription', {
             defaultValue: 'Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior.'
           })}
         </p>
@@ -237,7 +272,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
               </span>
             )}
           </Label>
-          <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+          <div className="grid grid-cols-[1fr_auto] gap-2">
             <CustomSelect
               id="service-type-select"
               value={data.serviceTypeId || ''}
@@ -251,13 +286,6 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                 : t('billingSetupStep.fields.serviceType.placeholder', {
                     defaultValue: 'Select a service type'
                   })}
-            />
-            <CustomSelect
-              id="currency-select"
-              value={data.currencyCode || 'USD'}
-              onValueChange={(value) => updateData({ currencyCode: value })}
-              options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
-              className="min-w-[130px]"
             />
             <Button
               id="manage-service-types-button"

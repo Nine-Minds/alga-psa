@@ -419,6 +419,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       entityId: params.entityId,
       contactId: params.contactId,
       notificationSubtypeId: params.notificationSubtypeId,
+      replyContext: params.replyContext,
       templateProcessor: processor,
       headers: params.headers,
       attachments: params.attachments,

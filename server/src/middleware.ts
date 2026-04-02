@@ -167,6 +167,8 @@ const _middleware = auth((request) => {
       '/api/internal/ext-runner/',   // Runner install-config/registry API uses x-runner-auth token
       '/api/internal/ext-scheduler/', // Runner scheduler host API uses x-runner-auth token
       '/api/internal/ext-invoicing/', // Runner invoicing host API uses x-runner-auth token
+      '/api/internal/ext-clients/', // Runner client read host API uses x-runner-auth token
+      '/api/internal/ext-services/', // Runner service read host API uses x-runner-auth token
     ];
 
     // Log for debugging CORS issues

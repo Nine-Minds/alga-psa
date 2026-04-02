@@ -1,0 +1,199 @@
+{
+  "profile": {
+    "tabs": {
+      "profile": "Perfil",
+      "security": "Seguridad",
+      "sso": "Inicio de sesión único",
+      "apiKeys": "Claves API",
+      "notifications": "Notificaciones",
+      "calendar": "Calendario"
+    },
+    "basicInfo": {
+      "title": "Información básica"
+    },
+    "fields": {
+      "firstName": {
+        "label": "Nombre *"
+      },
+      "lastName": {
+        "label": "Apellido *"
+      },
+      "email": {
+        "label": "Correo electrónico *"
+      },
+      "phoneNumber": {
+        "label": "Número de teléfono"
+      },
+      "timeZone": {
+        "label": "Zona horaria"
+      }
+    },
+    "actions": {
+      "saveChanges": "Guardar cambios"
+    },
+    "notifications": {
+      "title": "Preferencias de notificaciones",
+      "viewSwitcher": {
+        "email": "Correo electrónico",
+        "internal": "Internas"
+      }
+    },
+    "loading": "Cargando perfil...",
+    "messages": {
+      "success": {
+        "profileUpdated": "Perfil actualizado correctamente"
+      },
+      "error": {
+        "userNotFound": "Usuario no encontrado",
+        "fillRequiredFields": "Complete todos los campos obligatorios",
+        "loadFailed": "No se pudo cargar el perfil",
+        "saveFailed": "No se pudo guardar el perfil",
+        "errorPrefix": "Error: {{error}}"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "El nombre es obligatorio",
+      "lastNameRequired": "El apellido es obligatorio"
+    },
+    "pageTitle": "Su perfil",
+    "changePassword": {
+      "title": "Cambiar contraseña",
+      "current": "Contraseña actual",
+      "new": "Nueva contraseña",
+      "confirm": "Confirmar nueva contraseña",
+      "requirements": "La contraseña debe tener al menos 8 caracteres",
+      "submit": "Cambiar contraseña",
+      "success": "Contraseña cambiada correctamente",
+      "error": "No se pudo cambiar la contraseña",
+      "passwordMismatch": "Las nuevas contraseñas no coinciden",
+      "unknownError": "Se produjo un error al cambiar la contraseña",
+      "validationFailed": "La contraseña no cumple todos los requisitos"
+    },
+    "loadingStates": {
+      "sso": {
+        "title": "Inicio de sesión único",
+        "description": "Cargando configuración de SSO..."
+      },
+      "calendar": {
+        "title": "Calendario",
+        "description": "Cargando configuración del calendario..."
+      }
+    }
+  },
+  "security": {
+    "title": "Configuración de seguridad",
+    "tabs": {
+      "roles": "Roles",
+      "sessions": "Sesiones",
+      "sso": "Inicio de sesión único",
+      "permissions": "Permisos",
+      "userRoles": "Roles de usuario",
+      "policies": "Políticas",
+      "apiKeys": "Claves API"
+    },
+    "loading": {
+      "roles": "Cargando configuración de roles...",
+      "permissions": "Cargando configuración de permisos...",
+      "userRoles": "Cargando configuración de roles de usuario...",
+      "policies": "Cargando configuración de políticas...",
+      "apiKeys": "Cargando configuración de claves API...",
+      "sso": "Cargando herramientas de gestión de SSO...",
+      "sessions": "Cargando sesiones activas..."
+    },
+    "userRoles": {
+      "title": "Asignar roles a usuarios",
+      "description": {
+        "msp": "Administrar asignaciones de roles de usuario para usuarios de MSP",
+        "client": "Administrar asignaciones de roles de usuario para usuarios del portal del cliente"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Portal de clientes"
+      },
+      "showInactive": "Mostrar usuarios inactivos",
+      "fields": {
+        "selectUser": "Seleccionar usuario",
+        "selectRole": "Seleccionar rol"
+      },
+      "actions": {
+        "assignRole": "Asignar rol"
+      },
+      "table": {
+        "user": "Usuario",
+        "email": "Correo electrónico",
+        "roles": "Roles",
+        "actions": "Acciones"
+      },
+      "noRolesAssigned": "No hay roles asignados",
+      "removeRole": "Eliminar {{role}}",
+      "emptyState": {
+        "noUsers": "No se encontraron usuarios de tipo {{type}}",
+        "inactiveHidden": "(usuarios inactivos ocultos)"
+      },
+      "inactiveTag": "(Inactivo)",
+      "unnamedUser": "Usuario sin nombre"
+    },
+    "sessions": {
+      "title": "Todas las sesiones de usuarios",
+      "subtitle": "{{sessionCount}} sesión activa en {{userCount}} usuario",
+      "subtitle_plural": "{{sessionCount}} sesiones activas en {{userCount}} usuarios",
+      "filters": {
+        "search": "Buscar",
+        "searchPlaceholder": "Buscar por nombre, correo electrónico, dispositivo o IP...",
+        "user": "Usuario",
+        "allUsers": "Todos los usuarios",
+        "loginMethod": "Método de inicio de sesión",
+        "allMethods": "Todos los métodos",
+        "userType": "Tipo de usuario",
+        "allTypes": "Todos los tipos",
+        "from": "Desde",
+        "to": "Hasta",
+        "selectDate": "Seleccionar fecha",
+        "reset": "Restablecer"
+      },
+      "loginMethods": {
+        "password": "Contraseña",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Interno",
+        "client": "Cliente"
+      },
+      "session": {
+        "yourSession": "Su sesión",
+        "unknownDevice": "Dispositivo desconocido",
+        "lastActive": "Última actividad {{time}}",
+        "logout": "Cerrar sesión",
+        "revoke": "Revocar",
+        "revoking": "Revocando..."
+      },
+      "oauthWarning": "Revocar esta sesión no revocará el acceso de OAuth de {{provider}}. Revoque el acceso desde la configuración de su cuenta de {{provider}}.",
+      "confirmLogout": "¿Está seguro de que desea cerrar sesión en este dispositivo?",
+      "messages": {
+        "loggingOut": "Cerrando sesión...",
+        "revoked": "Sesión revocada correctamente",
+        "loadFailed": "No se pudieron cargar las sesiones",
+        "revokeFailed": "No se pudo revocar la sesión"
+      },
+      "emptyState": {
+        "loading": "Cargando sesiones...",
+        "noMatch": "Ninguna sesión coincide con su búsqueda",
+        "noSessions": "No se encontraron sesiones activas"
+      }
+    }
+  },
+  "platformUpdates": {
+    "detail": {
+      "back": "Volver",
+      "labels": {
+        "info": "Información",
+        "warning": "Advertencia",
+        "destructive": "Crítico",
+        "success": "Correcto",
+        "default": "Aviso"
+      }
+    }
+  }
+}

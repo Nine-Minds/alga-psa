@@ -1,6 +1,9 @@
+'use client';
+
 import { Download, Mail, Share2 } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ExportOptionsProps = {
   onExportCsv?: () => void;
@@ -13,6 +16,8 @@ export default function ExportOptions({
   onShareSnapshot,
   onEmailDigest,
 }: ExportOptionsProps) {
+  const { t } = useTranslation('msp/surveys');
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button
@@ -22,7 +27,7 @@ export default function ExportOptions({
         className="flex items-center gap-2"
       >
         <Download className="h-4 w-4" />
-        Export CSV
+        {t('analytics.export.csv', { defaultValue: 'Export CSV' })}
       </Button>
       <Button
         id="share-snapshot"
@@ -31,7 +36,7 @@ export default function ExportOptions({
         className="flex items-center gap-2"
       >
         <Share2 className="h-4 w-4" />
-        Share Snapshot
+        {t('analytics.export.shareSnapshot', { defaultValue: 'Share Snapshot' })}
       </Button>
       <Button
         id="email-digest"
@@ -40,7 +45,7 @@ export default function ExportOptions({
         className="flex items-center gap-2"
       >
         <Mail className="h-4 w-4" />
-        Email Digest
+        {t('analytics.export.emailDigest', { defaultValue: 'Email Digest' })}
       </Button>
     </div>
   );

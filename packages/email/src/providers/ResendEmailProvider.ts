@@ -140,6 +140,7 @@ export class ResendEmailProvider implements IEmailProvider {
         return {
           success: true,
           messageId: response.data.id,
+          providerMessageId: response.data.id,
           providerId: this.providerId,
           providerType: this.providerType,
           metadata: {
@@ -191,6 +192,7 @@ export class ResendEmailProvider implements IEmailProvider {
 
         results.push({
           success: false,
+          providerMessageId: undefined,
           providerId: this.providerId,
           providerType: this.providerType,
           error: error.message,

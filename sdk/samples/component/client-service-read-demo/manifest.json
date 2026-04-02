@@ -1,15 +1,11 @@
 {
   "name": "com.alga.sample.client-service-read-demo",
   "publisher": "Alga",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "runtime": "wasm-js@1",
   "capabilities": [
     "cap:client.read",
-    "cap:service.read",
-    "cap:user.read",
-    "cap:ui.proxy",
-    "cap:log.emit",
-    "cap:context.read"
+    "cap:service.read"
   ],
   "ui": {
     "type": "iframe",
@@ -21,9 +17,7 @@
   "api": {
     "endpoints": [
       { "method": "GET", "path": "/api/clients", "handler": "dist/main" },
-      { "method": "GET", "path": "/api/services", "handler": "dist/main" },
-      { "method": "GET", "path": "/api/summary", "handler": "dist/main" },
-      { "method": "GET", "path": "/api/ui-proxy/summary", "handler": "dist/main" }
+      { "method": "GET", "path": "/api/services", "handler": "dist/main" }
     ]
   }
 }

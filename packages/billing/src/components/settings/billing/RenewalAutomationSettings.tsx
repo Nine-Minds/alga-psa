@@ -174,88 +174,83 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
   const isCreateTicketPolicy = settings.renewalDueDateActionPolicy !== 'queue_only';
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium mb-4">Renewal Automation Settings</h3>
-        <div className="space-y-4">
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="renewal-due-date-action-policy">Due Date Action</Label>
+        <CustomSelect
+          id="renewal-due-date-action-policy"
+          options={POLICY_OPTIONS}
+          value={settings.renewalDueDateActionPolicy ?? 'create_ticket'}
+          onValueChange={(value) => {
+            setSettings((current) => ({
+              ...current,
+              renewalDueDateActionPolicy: value as BillingSettings['renewalDueDateActionPolicy'],
+            }));
+          }}
+          className="!w-fit"
+          disabled={loading || saving}
+        />
+        <p className="text-sm text-muted-foreground">
+          Choose whether renewal due dates should create tickets or stay queue-only by default.
+        </p>
+      </div>
+
+      {isCreateTicketPolicy && (
+        <>
           <div className="space-y-2">
-            <Label htmlFor="renewal-due-date-action-policy">Due Date Action</Label>
+            <Label htmlFor="renewal-ticket-board">Renewal Ticket Board</Label>
             <CustomSelect
-              id="renewal-due-date-action-policy"
-              options={POLICY_OPTIONS}
-              value={settings.renewalDueDateActionPolicy ?? 'create_ticket'}
+              id="renewal-ticket-board"
+              options={boardOptions}
+              value={settings.renewalTicketBoardId ?? ''}
               onValueChange={(value) => {
                 setSettings((current) => ({
                   ...current,
-                  renewalDueDateActionPolicy: value as BillingSettings['renewalDueDateActionPolicy'],
+                  renewalTicketBoardId: value || undefined,
+                  renewalTicketStatusId: undefined,
                 }));
               }}
-              className="w-full"
+              placeholder={loading ? 'Loading boards...' : 'Select board'}
+              className="!w-fit"
               disabled={loading || saving}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="renewal-ticket-status">Renewal Ticket Status</Label>
+            <CustomSelect
+              id="renewal-ticket-status"
+              options={statusOptions}
+              value={settings.renewalTicketStatusId ?? ''}
+              onValueChange={(value) => {
+                setSettings((current) => ({
+                  ...current,
+                  renewalTicketStatusId: value || undefined,
+                }));
+              }}
+              placeholder={
+                settings.renewalTicketBoardId
+                  ? (loadingStatuses ? 'Loading statuses...' : 'Select status')
+                  : 'Select a board first'
+              }
+              className="!w-fit"
+              disabled={loading || saving || loadingStatuses || !settings.renewalTicketBoardId}
+            />
             <p className="text-sm text-muted-foreground">
-              Choose whether renewal due dates should create tickets or stay queue-only by default.
+              Renewal ticket statuses are scoped to the selected board.
             </p>
           </div>
+        </>
+      )}
 
-          {isCreateTicketPolicy && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="renewal-ticket-board">Renewal Ticket Board</Label>
-                <CustomSelect
-                  id="renewal-ticket-board"
-                  options={boardOptions}
-                  value={settings.renewalTicketBoardId ?? ''}
-                  onValueChange={(value) => {
-                    setSettings((current) => ({
-                      ...current,
-                      renewalTicketBoardId: value || undefined,
-                      renewalTicketStatusId: undefined,
-                    }));
-                  }}
-                  placeholder={loading ? 'Loading boards...' : 'Select board'}
-                  className="w-full"
-                  disabled={loading || saving}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="renewal-ticket-status">Renewal Ticket Status</Label>
-                <CustomSelect
-                  id="renewal-ticket-status"
-                  options={statusOptions}
-                  value={settings.renewalTicketStatusId ?? ''}
-                  onValueChange={(value) => {
-                    setSettings((current) => ({
-                      ...current,
-                      renewalTicketStatusId: value || undefined,
-                    }));
-                  }}
-                  placeholder={
-                    settings.renewalTicketBoardId
-                      ? (loadingStatuses ? 'Loading statuses...' : 'Select status')
-                      : 'Select a board first'
-                  }
-                  className="w-full"
-                  disabled={loading || saving || loadingStatuses || !settings.renewalTicketBoardId}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Renewal ticket statuses are scoped to the selected board.
-                </p>
-              </div>
-            </>
-          )}
-
-          <div>
-            <Button
-              id="save-renewal-automation-settings"
-              onClick={handleSave}
-              disabled={loading || saving}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
-        </div>
+      <div>
+        <Button
+          id="save-renewal-automation-settings"
+          onClick={handleSave}
+          disabled={loading || saving}
+        >
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
       </div>
     </div>
   );

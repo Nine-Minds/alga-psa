@@ -1,0 +1,164 @@
+{
+  "reduceModal": {
+    "title": "Réduire les licences",
+    "enterpriseOnly": "Cette fonctionnalité est disponible uniquement dans l'édition Enterprise."
+  },
+  "purchaseForm": {
+    "title": "Achat de licences",
+    "enterpriseOnlyHosted": "L'achat de licences est disponible dans l'édition Enterprise pour les déploiements hébergés.",
+    "communityEditionUnlimited": "L'édition Community auto-hébergée propose un nombre illimité d'utilisateurs sans coût supplémentaire."
+  },
+  "purchasePage": {
+    "title": "Acheter des licences",
+    "description": "Ajoutez davantage de licences utilisateur à votre compte AlgaPSA"
+  },
+  "purchaseSuccess": {
+    "metaTitle": "Achat réussi",
+    "scheduledTitle": "Changement planifié avec succès !",
+    "updatedTitle": "Mise à jour réussie !",
+    "scheduledDescription": "Votre changement de licences a été planifié et prendra effet à la fin de votre période de facturation actuelle.",
+    "updatedDescription": "La mise à jour de vos licences a été traitée avec succès !",
+    "loadingSubscriptionDetails": "Chargement des détails de l'abonnement...",
+    "updatingLicenseCount": "Mise à jour du nombre de licences...",
+    "licenseInformation": "Informations sur les licences",
+    "youNowHave": "Vous avez maintenant",
+    "totalLicenses": "licences au total",
+    "changeEffective": "Changement effectif",
+    "whatsNext": "Et maintenant ?",
+    "scheduledSteps": {
+      "currentLicenses": "Vos licences actuelles restent actives jusqu'à la fin de la période de facturation",
+      "autoUpdate": "Le nombre de licences sera mis à jour automatiquement à la date planifiée",
+      "emailConfirmation": "Vous recevrez un e-mail de confirmation lorsque le changement prendra effet"
+    },
+    "updatedSteps": {
+      "activeReady": "Vos licences sont maintenant actives et prêtes à être utilisées",
+      "createUsers": "Vous pouvez créer de nouveaux utilisateurs immédiatement depuis la gestion des utilisateurs",
+      "invoiceProrated": "Votre prochaine facture inclura les frais au prorata"
+    },
+    "sessionDetails": "Détails de la session (pour le support)",
+    "sessionId": "ID de session :",
+    "goToAccountManagement": "Aller à la gestion du compte"
+  },
+  "subscriptionForm": {
+    "title": "Gérer l'abonnement de licences",
+    "errors": {
+      "loadPricing": "Impossible de charger la tarification",
+      "loadLicenseInformation": "Impossible de charger les informations de licence",
+      "prepareUpdate": "Impossible de préparer la mise à jour des licences",
+      "processUpdate": "Impossible de traiter la mise à jour des licences",
+      "missingCheckoutSessionData": "Données de session de paiement manquantes"
+    },
+    "checkout": {
+      "title": "Finalisez votre achat",
+      "summary": "Vous achetez {{quantity}} {{licenseLabel}} à {{price}} par licence et par {{interval}}.",
+      "total": "Total : {{total}}/{{interval}}",
+      "cancel": "Annuler"
+    },
+    "confirmation": {
+      "title": "Confirmer la mise à jour des licences",
+      "increaseDescription": "Vérifiez les détails de votre augmentation de licences avant de confirmer.",
+      "decreaseDescription": "Vérifiez les détails de votre diminution de licences. Les changements prendront effet à la fin de votre période de facturation.",
+      "currentMonthlyCost": "Coût mensuel actuel",
+      "currentLicenseCount": "Nombre actuel de licences",
+      "newMonthlyCost": "Nouveau coût mensuel",
+      "newLicenseCount": "Nouveau nombre de licences",
+      "monthlyIncrease": "Augmentation mensuelle",
+      "monthlySavings": "Économie mensuelle",
+      "paymentMethod": "Moyen de paiement",
+      "changePaymentMethod": "Modifier",
+      "immediateChargeTitle": "Débit immédiat",
+      "immediateChargeDescription": "Un montant de {{amountDue}} vous sera facturé maintenant au prorata.",
+      "prorationDescription": "Prorata : {{amount}} pour le reste de cette période de facturation",
+      "scheduledTitle": "Planifié pour la fin de période",
+      "scheduledDescription": "La diminution de licences prendra effet le {{date}} à la fin de votre période de facturation actuelle.",
+      "scheduledKeepAccess": "Vous conserverez l'accès aux {{count}} licences jusque-là.",
+      "cancel": "Annuler",
+      "confirmPayNow": "Confirmer et payer maintenant",
+      "confirmSchedule": "Confirmer la planification"
+    },
+    "usage": {
+      "title": "Utilisation actuelle des licences",
+      "licensesUsed": "licences utilisées"
+    },
+    "fields": {
+      "totalLicenseCount": "Nombre total de licences"
+    },
+    "help": {
+      "totalLicenseCount": "Saisissez le nouveau nombre total de licences (minimum : {{minimum}}). Actuel : {{current}}",
+      "reduceViaAccount": "Pour réduire les licences, accédez à la gestion du compte",
+      "quantityWarning": "Avertissement : vous avez {{used}} utilisateurs, mais vous définissez le total à {{quantity}}"
+    },
+    "pricing": {
+      "pricePerLicense": "Prix par licence :",
+      "quantity": "Quantité :",
+      "total": "Total :"
+    },
+    "actions": {
+      "creatingCheckout": "Création du paiement...",
+      "noChange": "Aucun changement",
+      "updateToTotal": "Mettre à jour à {{quantity}} au total ({{difference}} {{licenseLabel}})"
+    },
+    "info": {
+      "totalQuantity": "Cela définit la quantité totale de votre abonnement (et non un ajout aux licences actuelles)",
+      "increasingImmediate": "Augmentation de licences : accès immédiat avec facturation au prorata",
+      "billedMonthly": "Les licences sont facturées mensuellement et peuvent être résiliées à tout moment"
+    }
+  },
+  "removalModal": {
+    "title": "Supprimer des licences",
+    "description": "Supprimez des licences de votre compte. Les changements prendront effet à la fin de votre période de facturation actuelle.",
+    "stats": {
+      "currentLicenses": "Licences actuelles",
+      "activeUsers": "Utilisateurs actifs"
+    },
+    "fields": {
+      "newLicenseCount": "Nouveau nombre de licences",
+      "minimum": "Minimum : {{count}} (pour couvrir tous les utilisateurs actifs)"
+    },
+    "validation": {
+      "positiveInteger": "Le nombre de licences doit être un entier positif (minimum 1)",
+      "useAddFlow": "Utilisez le flux \"Ajouter des licences\" pour augmenter le nombre de licences",
+      "deactivateUsers": "Vous avez {{activeUsers}} utilisateurs actifs. Veuillez d'abord désactiver {{usersToDeactivate}} {{userLabel}}."
+    },
+    "actions": {
+      "goToUserManagement": "Aller à la gestion des utilisateurs",
+      "reviewRemoval": "Vérifier la suppression",
+      "confirmRemoval": "Confirmer la suppression"
+    },
+    "scheduled": {
+      "title": "La suppression sera planifiée",
+      "description": "Votre nombre de licences passera de {{current}} à {{next}} à la fin de votre période de facturation actuelle.",
+      "creditDescription": "Vous recevrez un crédit sur votre prochaine facture pour les licences inutilisées."
+    },
+    "confirmation": {
+      "description": "Veuillez vérifier et confirmer la suppression de vos licences :",
+      "currentMonthlyCost": "Coût mensuel actuel",
+      "currentLicenseCount": "Nombre actuel de licences",
+      "newMonthlyCost": "Nouveau coût mensuel",
+      "newLicenseCount": "Nouveau nombre de licences",
+      "monthlySavings": "Économie mensuelle",
+      "creditNotice": "Les changements prendront effet à la fin de votre période de facturation actuelle. Vous recevrez un crédit au prorata sur votre prochaine facture."
+    },
+    "errors": {
+      "deactivateUsersFirst": "Veuillez d'abord désactiver des utilisateurs",
+      "reduceFailed": "Impossible de réduire les licences",
+      "removeFailed": "Impossible de supprimer les licences. Veuillez réessayer."
+    },
+    "success": {
+      "scheduled": "La suppression des licences a été planifiée ! Votre nombre de licences passera de {{current}} à {{next}} le {{effectiveDate}}."
+    }
+  },
+  "shared": {
+    "licenseSingular": "licence",
+    "licensePlural": "licences",
+    "userSingular": "utilisateur",
+    "userPlural": "utilisateurs",
+    "licenseCount": "{{count}} {{licenseLabel}}",
+    "perInterval": "{{amount}}/{{interval}}",
+    "none": "Aucun",
+    "intervals": {
+      "month": "mois",
+      "year": "an"
+    }
+  }
+}

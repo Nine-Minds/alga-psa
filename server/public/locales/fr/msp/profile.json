@@ -1,0 +1,199 @@
+{
+  "profile": {
+    "tabs": {
+      "profile": "Profil",
+      "security": "Sécurité",
+      "sso": "SSO",
+      "apiKeys": "Clés API",
+      "notifications": "Notifications",
+      "calendar": "Calendrier"
+    },
+    "basicInfo": {
+      "title": "Informations de base"
+    },
+    "fields": {
+      "firstName": {
+        "label": "Prénom *"
+      },
+      "lastName": {
+        "label": "Nom *"
+      },
+      "email": {
+        "label": "Courriel *"
+      },
+      "phoneNumber": {
+        "label": "Numéro de téléphone"
+      },
+      "timeZone": {
+        "label": "Fuseau horaire"
+      }
+    },
+    "actions": {
+      "saveChanges": "Enregistrer les modifications"
+    },
+    "notifications": {
+      "title": "Préférences de notification",
+      "viewSwitcher": {
+        "email": "Courriel",
+        "internal": "Interne"
+      }
+    },
+    "loading": "Chargement du profil...",
+    "messages": {
+      "success": {
+        "profileUpdated": "Profil mis à jour avec succès"
+      },
+      "error": {
+        "userNotFound": "Utilisateur introuvable",
+        "fillRequiredFields": "Veuillez remplir tous les champs obligatoires",
+        "loadFailed": "Échec du chargement du profil",
+        "saveFailed": "Échec de l'enregistrement du profil",
+        "errorPrefix": "Erreur : {{error}}"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "Le prénom est obligatoire",
+      "lastNameRequired": "Le nom est obligatoire"
+    },
+    "pageTitle": "Votre profil",
+    "changePassword": {
+      "title": "Changer le mot de passe",
+      "current": "Mot de passe actuel",
+      "new": "Nouveau mot de passe",
+      "confirm": "Confirmer le nouveau mot de passe",
+      "requirements": "Le mot de passe doit contenir au moins 8 caractères",
+      "submit": "Changer le mot de passe",
+      "success": "Mot de passe modifié avec succès",
+      "error": "Échec de la modification du mot de passe",
+      "passwordMismatch": "Les nouveaux mots de passe ne correspondent pas",
+      "unknownError": "Une erreur est survenue lors du changement de mot de passe",
+      "validationFailed": "Le mot de passe ne respecte pas toutes les exigences"
+    },
+    "loadingStates": {
+      "sso": {
+        "title": "Authentification unique",
+        "description": "Chargement des paramètres SSO..."
+      },
+      "calendar": {
+        "title": "Calendrier",
+        "description": "Chargement des paramètres du calendrier..."
+      }
+    }
+  },
+  "security": {
+    "title": "Paramètres de sécurité",
+    "tabs": {
+      "roles": "Rôles",
+      "sessions": "Sessions",
+      "sso": "SSO",
+      "permissions": "Permissions",
+      "userRoles": "Rôles des utilisateurs",
+      "policies": "Politiques",
+      "apiKeys": "Clés API"
+    },
+    "loading": {
+      "roles": "Chargement de la configuration des rôles...",
+      "permissions": "Chargement de la configuration des permissions...",
+      "userRoles": "Chargement de la configuration des rôles des utilisateurs...",
+      "policies": "Chargement de la configuration des politiques...",
+      "apiKeys": "Chargement de la configuration des clés API...",
+      "sso": "Chargement des outils de gestion SSO...",
+      "sessions": "Chargement des sessions actives..."
+    },
+    "userRoles": {
+      "title": "Attribuer des rôles aux utilisateurs",
+      "description": {
+        "msp": "Gérer les attributions de rôles pour les utilisateurs MSP",
+        "client": "Gérer les attributions de rôles pour les utilisateurs du portail client"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Portail client"
+      },
+      "showInactive": "Afficher les utilisateurs inactifs",
+      "fields": {
+        "selectUser": "Sélectionner un utilisateur",
+        "selectRole": "Sélectionner un rôle"
+      },
+      "actions": {
+        "assignRole": "Attribuer un rôle"
+      },
+      "table": {
+        "user": "Utilisateur",
+        "email": "Courriel",
+        "roles": "Rôles",
+        "actions": "Actions"
+      },
+      "noRolesAssigned": "Aucun rôle attribué",
+      "removeRole": "Supprimer {{role}}",
+      "emptyState": {
+        "noUsers": "Aucun utilisateur {{type}} trouvé",
+        "inactiveHidden": "(utilisateurs inactifs masqués)"
+      },
+      "inactiveTag": "(Inactif)",
+      "unnamedUser": "Utilisateur sans nom"
+    },
+    "sessions": {
+      "title": "Toutes les sessions utilisateur",
+      "subtitle": "{{sessionCount}} session active pour {{userCount}} utilisateur",
+      "subtitle_plural": "{{sessionCount}} sessions actives pour {{userCount}} utilisateurs",
+      "filters": {
+        "search": "Rechercher",
+        "searchPlaceholder": "Rechercher par nom, courriel, appareil ou IP...",
+        "user": "Utilisateur",
+        "allUsers": "Tous les utilisateurs",
+        "loginMethod": "Méthode de connexion",
+        "allMethods": "Toutes les méthodes",
+        "userType": "Type d'utilisateur",
+        "allTypes": "Tous les types",
+        "from": "Du",
+        "to": "Au",
+        "selectDate": "Sélectionner une date",
+        "reset": "Réinitialiser"
+      },
+      "loginMethods": {
+        "password": "Mot de passe",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Interne",
+        "client": "Client"
+      },
+      "session": {
+        "yourSession": "Votre session",
+        "unknownDevice": "Appareil inconnu",
+        "lastActive": "Dernière activité {{time}}",
+        "logout": "Déconnexion",
+        "revoke": "Révoquer",
+        "revoking": "Révocation..."
+      },
+      "oauthWarning": "La révocation de cette session ne révoquera pas l'accès OAuth {{provider}}. Révoquez l'accès depuis les paramètres de votre compte {{provider}}.",
+      "confirmLogout": "Êtes-vous sûr de vouloir vous déconnecter de cet appareil ?",
+      "messages": {
+        "loggingOut": "Déconnexion en cours...",
+        "revoked": "Session révoquée avec succès",
+        "loadFailed": "Échec du chargement des sessions",
+        "revokeFailed": "Échec de la révocation de la session"
+      },
+      "emptyState": {
+        "loading": "Chargement des sessions...",
+        "noMatch": "Aucune session ne correspond à votre recherche",
+        "noSessions": "Aucune session active trouvée"
+      }
+    }
+  },
+  "platformUpdates": {
+    "detail": {
+      "back": "Retour",
+      "labels": {
+        "info": "Info",
+        "warning": "Avertissement",
+        "destructive": "Critique",
+        "success": "Succès",
+        "default": "Avis"
+      }
+    }
+  }
+}

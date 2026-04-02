@@ -1,0 +1,533 @@
+{
+  "page": {
+    "title": "Schedule",
+    "actions": {
+      "configureAvailability": "Configure Availability",
+      "appointmentRequests": "Appointment Requests"
+    }
+  },
+  "sidebar": {
+    "actions": {
+      "compareAll": "Compare All",
+      "clearAll": "Clear All",
+      "viewWeek": "View Week",
+      "compare": "Compare",
+      "stopComparing": "Stop Comparing"
+    },
+    "labels": {
+      "inactive": "(Inactive)"
+    },
+    "aria": {
+      "viewWeek": "View week for {{name}}",
+      "compare": "Compare {{name}}"
+    }
+  },
+  "agentView": {
+    "loading": "Loading...",
+    "errors": {
+      "loadPermissions": "Failed to load user permissions",
+      "forbidden": "You do not have permission to view this schedule."
+    }
+  },
+  "calendar": {
+    "legend": {
+      "types": {
+        "ticket": "Ticket",
+        "projectTask": "Project task",
+        "nonBillableCategory": "Non-billable category",
+        "adHoc": "Ad-Hoc Entry",
+        "interaction": "Interaction",
+        "appointmentRequest": "Appointment Request"
+      },
+      "showInactiveUsers": "Show Inactive Users"
+    },
+    "loading": {
+      "initial": "Loading schedule...",
+      "overlay": "Loading..."
+    },
+    "errors": {
+      "validateDeletion": "Failed to validate deletion. Please try again.",
+      "loadPermissions": "Failed to load permissions.",
+      "loadCurrentUser": "Failed to load current user.",
+      "unknown": "An unknown error occurred",
+      "deleteFailed": "Failed to delete schedule entry",
+      "deleteUnexpected": "An error occurred while deleting the schedule entry",
+      "updateFailed": "Failed to update schedule entry: {{error}}",
+      "createFailed": "Failed to add schedule entry: {{error}}",
+      "saveUnexpected": "An error occurred while saving the schedule entry"
+    },
+    "toolbar": {
+      "previousAria": "Previous {{view}}",
+      "previous": "< Prev",
+      "today": "Today",
+      "nextAria": "Next {{view}}",
+      "next": "Next >",
+      "views": {
+        "month": "Month",
+        "week": "Week",
+        "day": "Day"
+      }
+    },
+    "event": {
+      "fallbacks": {
+        "unknownTechnician": "Unknown",
+        "unassigned": "Unassigned",
+        "untitled": "Untitled"
+      },
+      "tooltip": {
+        "scheduledFor": "Scheduled for: {{technicians}}",
+        "start": "Start: {{dateTime}}",
+        "end": "End: {{dateTime}}",
+        "multiDay": "(Multi-day)"
+      }
+    },
+    "deleteDialog": {
+      "title": "Delete Schedule Entry",
+      "messageRecurring": "Select which events to delete:",
+      "messageSingle": "Are you sure you want to delete this schedule entry? This action cannot be undone.",
+      "confirm": "Delete",
+      "entityFallback": "this schedule entry",
+      "options": {
+        "single": "Only this event",
+        "future": "This and future events",
+        "all": "All events"
+      }
+    }
+  },
+  "weeklyEvent": {
+    "actions": {
+      "delete": "Delete Entry"
+    },
+    "continuation": {
+      "previousWeek": "Continues from previous week"
+    }
+  },
+  "requests": {
+    "errors": {
+      "load": "Failed to load appointment requests",
+      "ticketNotFound": "Ticket not found",
+      "loadTicket": "Failed to load ticket",
+      "assignTechnicianRequired": "Please assign a technician",
+      "approve": "Failed to approve request",
+      "declineReasonRequired": "Please provide a reason for declining",
+      "decline": "Failed to decline request"
+    },
+    "feedback": {
+      "approved": "Appointment request approved",
+      "declined": "Appointment request declined"
+    },
+    "filters": {
+      "statusLabel": "Filter by Status",
+      "statusOptions": {
+        "all": "All",
+        "pending": "Pending",
+        "approved": "Approved",
+        "declined": "Declined",
+        "cancelled": "Cancelled"
+      }
+    },
+    "fallbacks": {
+      "invalidDateTime": "Invalid date/time"
+    },
+    "list": {
+      "title": "Appointment Requests",
+      "badgeTotal": "Total",
+      "loading": "Loading requests...",
+      "empty": "No {{status}} requests found",
+      "duration": "{{count}} minutes",
+      "ticketFallback": "Ticket #{{ticket}}",
+      "fallbacks": {
+        "publicRequest": "Public Request"
+      }
+    },
+    "detail": {
+      "back": "← Back to List",
+      "title": "Request Details",
+      "section": {
+        "requestInformation": "Request Information"
+      },
+      "labels": {
+        "reference": "Reference",
+        "client": "Client",
+        "contact": "Contact",
+        "email": "Email",
+        "phone": "Phone",
+        "service": "Service",
+        "requestedTime": "Requested Time",
+        "duration": "Duration",
+        "status": "Status",
+        "linkedTicket": "Linked Ticket",
+        "description": "Description"
+      }
+    },
+    "approval": {
+      "title": "Approval Details",
+      "fields": {
+        "assignedTechnician": "Assign Technician *",
+        "finalDateTime": "Final Date & Time",
+        "internalNotes": "Internal Notes (Optional)",
+        "linkedTicket": "Link to Ticket (Optional)"
+      },
+      "placeholders": {
+        "assignedTechnician": "Select technician",
+        "internalNotes": "Add any internal notes...",
+        "linkedTicket": "Enter ticket ID to link..."
+      },
+      "actions": {
+        "approve": "Approve",
+        "decline": "Decline"
+      }
+    },
+    "decline": {
+      "title": "Decline Request",
+      "fields": {
+        "reason": "Reason for Declining *"
+      },
+      "placeholders": {
+        "reason": "Please provide a reason for declining this request..."
+      },
+      "actions": {
+        "confirm": "Confirm Decline",
+        "cancel": "Cancel"
+      }
+    }
+  },
+  "availabilitySettings": {
+    "dialog": {
+      "title": "Availability Settings"
+    },
+    "loading": "Loading settings...",
+    "tabs": {
+      "general": "General Settings",
+      "userHours": "User Hours",
+      "serviceRules": "Service Rules",
+      "exceptions": "Exceptions"
+    },
+    "days": {
+      "sunday": "Sunday",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday"
+    },
+    "common": {
+      "yes": "Yes",
+      "no": "No",
+      "columns": {
+        "action": "Action"
+      },
+      "actions": {
+        "edit": "Edit"
+      },
+      "defaultApprover": {
+        "placeholder": "Select an approver"
+      },
+      "teamSelect": {
+        "label": "Select Team",
+        "placeholder": "Select a team"
+      }
+    },
+    "feedback": {
+      "loadError": "Failed to load settings"
+    },
+    "general": {
+      "autoApproval": {
+        "title": "Enable Auto-Approval",
+        "description": "Automatically approve appointments that meet the criteria configured below",
+        "criteriaTitle": "Auto-Approval Criteria:",
+        "criteria": {
+          "requireAvailability": "Technician must have availability configured for requested time",
+          "requireContract": "Client must have active contract (if service requires it)",
+          "checkConflicts": "No scheduling conflicts with existing appointments",
+          "respectBuffers": "Respect buffer times before/after appointments"
+        }
+      },
+      "defaultApprover": {
+        "label": "Default Approver",
+        "help": "Company-wide default approver for appointment requests that require manual approval. This can be overridden per technician in User Hours settings."
+      },
+      "advanceBookingDays": {
+        "label": "Default Advance Booking (Days)"
+      },
+      "minimumNoticeHours": {
+        "label": "Minimum Notice (Hours)"
+      },
+      "actions": {
+        "save": "Save General Settings"
+      },
+      "feedback": {
+        "saveSuccess": "General settings saved",
+        "saveError": "Failed to save settings"
+      }
+    },
+    "userHours": {
+      "roleManager": {
+        "label": "Team Manager:",
+        "description": "You can configure availability settings for members of your team(s). The \"Configured Users\" table below shows all users with availability settings across the system."
+      },
+      "roleAdmin": {
+        "label": "Administrator:",
+        "description": "You can configure availability settings for any user in the system. The \"Configured Users\" table below shows all users with availability settings."
+      },
+      "userSelect": {
+        "label": "Select User to Configure",
+        "placeholderSelectTeamFirst": "Select a team first",
+        "placeholder": "Select a user to configure"
+      },
+      "appointmentSettings": {
+        "title": "Appointment Settings",
+        "defaultDuration": {
+          "label": "Default Appointment Duration (Minutes)",
+          "help": "Technician-specific duration override. Leave empty to use the service-specific duration from Service Rules.",
+          "placeholder": "Leave empty to use service default"
+        },
+        "bufferAfter": {
+          "label": "Buffer Time Between Appointments (Minutes)",
+          "placeholder": "15"
+        },
+        "defaultApprover": {
+          "label": "Default Approver",
+          "help": "Who should review and approve appointment requests for this technician that require manual approval"
+        },
+        "allowClientPreference": {
+          "label": "Allow Client Preference",
+          "help": "Let clients request this technician specifically"
+        }
+      },
+      "schedule": {
+        "timezoneNotice": "Times are in your local timezone ({{timeZone}})",
+        "columns": {
+          "day": "Day",
+          "available": "Available",
+          "startTime": "Start Time",
+          "endTime": "End Time"
+        }
+      },
+      "configuredUsers": {
+        "title": "Configured Users",
+        "description": "Users with availability settings configured",
+        "empty": "No users configured yet",
+        "columns": {
+          "userName": "User Name",
+          "status": "Status"
+        },
+        "status": {
+          "configured": "Configured"
+        }
+      },
+      "actions": {
+        "save": "Save User Hours"
+      },
+      "feedback": {
+        "selectUserError": "Please select a user",
+        "saveSuccess": "User hours saved",
+        "saveError": "Failed to save user hours"
+      }
+    },
+    "serviceRules": {
+      "serviceSelect": {
+        "label": "Select Service to Configure",
+        "placeholder": "Select a service to configure"
+      },
+      "editor": {
+        "title": "Edit Rules: {{serviceName}}",
+        "allowWithoutContract": {
+          "label": "Allow Booking Without Contract"
+        },
+        "maxAppointmentsPerDay": {
+          "label": "Max Appointments Per Day"
+        },
+        "defaultDuration": {
+          "label": "Default Appointment Duration (Minutes)",
+          "help": "Default duration for appointments of this service type. Can be overridden by technician-specific settings in User Hours.",
+          "placeholder": "e.g., 60 (minutes)"
+        }
+      },
+      "configuredServices": {
+        "title": "Configured Services",
+        "description": "Services with appointment rules configured",
+        "empty": "No services configured yet",
+        "columns": {
+          "serviceName": "Service Name",
+          "duration": "Duration (min)",
+          "withoutContract": "Without Contract",
+          "maxPerDay": "Max Per Day"
+        }
+      },
+      "common": {
+        "noLimit": "No limit"
+      },
+      "actions": {
+        "save": "Save Service Rules"
+      },
+      "feedback": {
+        "selectServiceError": "Please select a service",
+        "saveSuccess": "Service rules saved",
+        "saveError": "Failed to save service rules"
+      }
+    },
+    "exceptions": {
+      "form": {
+        "title": "Add Exception",
+        "date": {
+          "label": "Select Date"
+        },
+        "user": {
+          "label": "User (Optional - leave empty for company-wide)",
+          "placeholder": "Select user"
+        },
+        "isAvailable": {
+          "label": "Available on this day"
+        },
+        "reason": {
+          "label": "Reason",
+          "placeholder": "Holiday, Time off, etc."
+        }
+      },
+      "common": {
+        "companyWide": "Company-wide"
+      },
+      "actions": {
+        "add": "Add Exception"
+      },
+      "list": {
+        "title": "Existing Exceptions",
+        "empty": "No exceptions configured",
+        "status": {
+          "available": "Available",
+          "unavailable": "Unavailable"
+        }
+      },
+      "feedback": {
+        "selectDateError": "Please select a date",
+        "addSuccess": "Exception added",
+        "addError": "Failed to add exception",
+        "deleteSuccess": "Exception deleted",
+        "deleteError": "Failed to delete exception"
+      }
+    }
+  },
+  "entryPopup": {
+    "title": {
+      "appointmentRequest": "Appointment Request",
+      "view": "View Entry",
+      "edit": "Edit Entry",
+      "new": "New Entry"
+    },
+    "alerts": {
+      "privateEntryOnlyCreator": "This is a private entry. Only the creator can view or edit details."
+    },
+    "validation": {
+      "summaryTitle": "Please fill in the required fields:",
+      "titleRequiredForAdHoc": "Title is required for ad-hoc entries",
+      "startRequired": "Start date/time",
+      "endRequired": "End date/time",
+      "assigneeRequired": "At least one assigned user",
+      "startInvalid": "Start date is invalid",
+      "endInvalid": "End date is invalid",
+      "endAfterStart": "End date must be after start date",
+      "recurrenceIntervalPositive": "Recurrence interval must be a positive whole number",
+      "recurrenceCountPositive": "Number of occurrences must be a positive whole number",
+      "recurrenceEndInvalid": "Recurrence end date is invalid",
+      "recurrenceEndAfterStart": "Recurrence end date must be after start date"
+    },
+    "fields": {
+      "title": "Title",
+      "assignedUsers": "Assigned Users *",
+      "privateEntry": "Private entry (not visible to other users)",
+      "start": "Start *",
+      "end": "End *",
+      "notes": "Notes"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "close": "Close",
+      "save": "Save",
+      "delete": "Delete Entry"
+    },
+    "workItem": {
+      "adHocFallback": "Ad-hoc entry (no work item)",
+      "openDetails": "Details"
+    },
+    "appointmentRequest": {
+      "approved": {
+        "title": "Approved Appointment",
+        "descriptionWithDate": "This appointment originated from a client request and was approved on {{date}}.",
+        "description": "This appointment originated from a client request."
+      },
+      "pending": {
+        "title": "Pending Appointment Request",
+        "description": "This is an appointment request from a client. You can approve or decline it below."
+      },
+      "declined": {
+        "title": "Declined Appointment Request",
+        "descriptionWithReason": "This appointment request was declined: {{reason}}",
+        "description": "This appointment request was declined."
+      },
+      "cancelled": {
+        "title": "Cancelled Appointment Request",
+        "description": "This appointment request was cancelled by the client."
+      },
+      "requestedDateTimeLabel": "Requested Date & Time",
+      "assignTechnicianLabel": "Assign Technician *",
+      "assignTechnicianPlaceholder": "Select technician",
+      "scheduledDateTimeLabel": "Scheduled Date & Time",
+      "noNotes": "No notes provided",
+      "declineReasonLabel": "Reason for Declining *",
+      "declineReasonPlaceholder": "Please provide a reason for declining this request...",
+      "actions": {
+        "approve": "Approve",
+        "decline": "Decline",
+        "confirmDecline": "Confirm Decline"
+      },
+      "toasts": {
+        "assignTechnicianRequired": "Please assign a technician",
+        "approved": "Appointment request approved",
+        "approveFailed": "Failed to approve request",
+        "declineReasonRequired": "Please provide a reason for declining",
+        "declined": "Appointment request declined",
+        "declineFailed": "Failed to decline request"
+      }
+    },
+    "recurrence": {
+      "label": "Recurrence",
+      "intervalLabel": "Interval",
+      "endLabel": "End",
+      "endDateLabel": "End Date",
+      "occurrencesLabel": "Occurrences",
+      "workdaysOnly": "Workdays only (Mon-Fri, excluding holidays)",
+      "options": {
+        "none": "None",
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "yearly": "Yearly"
+      },
+      "endOptions": {
+        "never": "Never",
+        "date": "On Date",
+        "count": "After"
+      },
+      "applyDialog": {
+        "title": "Apply Changes To",
+        "message": "Select which events to update:"
+      }
+    },
+    "delete": {
+      "validationFailed": "Failed to validate deletion. Please try again.",
+      "entityFallback": "this schedule entry",
+      "scopeDialog": {
+        "title": "Delete Schedule Entry",
+        "message": "Select which events to delete:",
+        "confirm": "Continue"
+      }
+    },
+    "scopeOptions": {
+      "single": "Only this event",
+      "future": "This and future events",
+      "all": "All events"
+    }
+  }
+}

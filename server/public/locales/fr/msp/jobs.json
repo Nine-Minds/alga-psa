@@ -1,0 +1,85 @@
+{
+  "shared": {
+    "fallbacks": {
+      "empty": "-"
+    },
+    "statusLabels": {
+      "completed": "Complété",
+      "failed": "Échoué",
+      "processing": "Traitement",
+      "pending": "En attente"
+    },
+    "runnerLabels": {
+      "temporal": "Temporel",
+      "pgboss": "Patron du PG"
+    }
+  },
+  "recentTable": {
+    "columns": {
+      "jobName": "Nom du travail",
+      "runner": "Coureur",
+      "status": "Statut",
+      "duration": "Durée",
+      "started": "Commencé",
+      "completed": "Complété"
+    },
+    "time": {
+      "justNow": "Tout à l' heure",
+      "minutesAgo": "il y a {{count}} m",
+      "hoursAgo": "Il y a {{count}}h"
+    },
+    "duration": {
+      "milliseconds": "{{count}}ms",
+      "seconds": "{{count}}s",
+      "minutesSeconds": "{{minutes}}m {{seconds}}s",
+      "hoursMinutes": "{{hours}}h {{minutes}}m"
+    },
+    "externalId": "ID : {{id}}..."
+  },
+  "metrics": {
+    "labels": {
+      "totalJobs": "Emplois totaux",
+      "totalJobsPgBoss": "Nombre total d'emplois (patron PG)",
+      "totalJobsTemporal": "Total des emplois (temporels)",
+      "completed": "Complété",
+      "failed": "Échoué",
+      "pending": "En attente",
+      "processing": "Traitement",
+      "pgboss": "Patron du PG",
+      "temporal": "Temporel"
+    },
+    "successRate": "{{count}}% de taux de réussite"
+  },
+  "historyTable": {
+    "columns": {
+      "jobName": "Nom du travail",
+      "status": "Statut",
+      "created": "Créé",
+      "started": "Commencé",
+      "completed": "Complété"
+    }
+  },
+  "progress": {
+    "loading": "Chargement des détails de la tâche...",
+    "labels": {
+      "created": "Créé :",
+      "jobData": "Données de travail"
+    }
+  },
+  "drawer": {
+    "title": "Détails du poste",
+    "jobId": "ID : {{id}}",
+    "sections": {
+      "progress": "Progression du travail",
+      "metrics": "Indicateurs de travail",
+      "history": "Historique des tâches"
+    }
+  },
+  "stepHistory": {
+    "title": "Étapes du travail",
+    "labels": {
+      "processed": "Traité:",
+      "retries": "Nouvelles tentatives :"
+    }
+  }
+}

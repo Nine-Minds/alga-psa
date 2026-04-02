@@ -1,0 +1,199 @@
+{
+  "profile": {
+    "tabs": {
+      "profile": "Profilo",
+      "security": "Sicurezza",
+      "sso": "SSO",
+      "apiKeys": "Chiavi API",
+      "notifications": "Notifiche",
+      "calendar": "Calendario"
+    },
+    "basicInfo": {
+      "title": "Informazioni di base"
+    },
+    "fields": {
+      "firstName": {
+        "label": "Nome *"
+      },
+      "lastName": {
+        "label": "Cognome *"
+      },
+      "email": {
+        "label": "Email *"
+      },
+      "phoneNumber": {
+        "label": "Numero di telefono"
+      },
+      "timeZone": {
+        "label": "Fuso orario"
+      }
+    },
+    "actions": {
+      "saveChanges": "Salva modifiche"
+    },
+    "notifications": {
+      "title": "Preferenze di notifica",
+      "viewSwitcher": {
+        "email": "Email",
+        "internal": "Interne"
+      }
+    },
+    "loading": "Caricamento profilo...",
+    "messages": {
+      "success": {
+        "profileUpdated": "Profilo aggiornato con successo"
+      },
+      "error": {
+        "userNotFound": "Utente non trovato",
+        "fillRequiredFields": "Compili tutti i campi obbligatori",
+        "loadFailed": "Impossibile caricare il profilo",
+        "saveFailed": "Impossibile salvare il profilo",
+        "errorPrefix": "Errore: {{error}}"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "Il nome è obbligatorio",
+      "lastNameRequired": "Il cognome è obbligatorio"
+    },
+    "pageTitle": "Il Suo profilo",
+    "changePassword": {
+      "title": "Cambia password",
+      "current": "Password attuale",
+      "new": "Nuova password",
+      "confirm": "Conferma nuova password",
+      "requirements": "La password deve avere almeno 8 caratteri",
+      "submit": "Cambia password",
+      "success": "Password modificata correttamente",
+      "error": "Impossibile modificare la password",
+      "passwordMismatch": "Le nuove password non coincidono",
+      "unknownError": "Si è verificato un errore durante il cambio password",
+      "validationFailed": "La password non soddisfa tutti i requisiti"
+    },
+    "loadingStates": {
+      "sso": {
+        "title": "Single Sign-On",
+        "description": "Caricamento impostazioni SSO..."
+      },
+      "calendar": {
+        "title": "Calendario",
+        "description": "Caricamento impostazioni calendario..."
+      }
+    }
+  },
+  "security": {
+    "title": "Impostazioni di sicurezza",
+    "tabs": {
+      "roles": "Ruoli",
+      "sessions": "Sessioni",
+      "sso": "SSO",
+      "permissions": "Permessi",
+      "userRoles": "Ruoli utente",
+      "policies": "Criteri",
+      "apiKeys": "Chiavi API"
+    },
+    "loading": {
+      "roles": "Caricamento configurazione ruoli...",
+      "permissions": "Caricamento configurazione permessi...",
+      "userRoles": "Caricamento configurazione ruoli utente...",
+      "policies": "Caricamento configurazione criteri...",
+      "apiKeys": "Caricamento configurazione chiavi API...",
+      "sso": "Caricamento strumenti di gestione SSO...",
+      "sessions": "Caricamento sessioni attive..."
+    },
+    "userRoles": {
+      "title": "Assegna ruoli agli utenti",
+      "description": {
+        "msp": "Gestisca le assegnazioni dei ruoli per gli utenti MSP",
+        "client": "Gestisca le assegnazioni dei ruoli per gli utenti del portale clienti"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Portale clienti"
+      },
+      "showInactive": "Mostra utenti inattivi",
+      "fields": {
+        "selectUser": "Seleziona utente",
+        "selectRole": "Seleziona ruolo"
+      },
+      "actions": {
+        "assignRole": "Assegna ruolo"
+      },
+      "table": {
+        "user": "Utente",
+        "email": "Email",
+        "roles": "Ruoli",
+        "actions": "Azioni"
+      },
+      "noRolesAssigned": "Nessun ruolo assegnato",
+      "removeRole": "Rimuovi {{role}}",
+      "emptyState": {
+        "noUsers": "Nessun utente {{type}} trovato",
+        "inactiveHidden": "(utenti inattivi nascosti)"
+      },
+      "inactiveTag": "(Inattivo)",
+      "unnamedUser": "Utente senza nome"
+    },
+    "sessions": {
+      "title": "Tutte le sessioni utente",
+      "subtitle": "{{sessionCount}} sessione attiva su {{userCount}} utente",
+      "subtitle_plural": "{{sessionCount}} sessioni attive su {{userCount}} utenti",
+      "filters": {
+        "search": "Cerca",
+        "searchPlaceholder": "Cerca per nome, email, dispositivo o IP...",
+        "user": "Utente",
+        "allUsers": "Tutti gli utenti",
+        "loginMethod": "Metodo di accesso",
+        "allMethods": "Tutti i metodi",
+        "userType": "Tipo di utente",
+        "allTypes": "Tutti i tipi",
+        "from": "Da",
+        "to": "A",
+        "selectDate": "Seleziona data",
+        "reset": "Reimposta"
+      },
+      "loginMethods": {
+        "password": "Password",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Interno",
+        "client": "Cliente"
+      },
+      "session": {
+        "yourSession": "La Sua sessione",
+        "unknownDevice": "Dispositivo sconosciuto",
+        "lastActive": "Ultima attività {{time}}",
+        "logout": "Disconnetti",
+        "revoke": "Revoca",
+        "revoking": "Revoca in corso..."
+      },
+      "oauthWarning": "La revoca di questa sessione non revochera l'accesso OAuth di {{provider}}. Revochi l'accesso dalle impostazioni del Suo account {{provider}}.",
+      "confirmLogout": "Desidera davvero disconnettersi da questo dispositivo?",
+      "messages": {
+        "loggingOut": "Disconnessione in corso...",
+        "revoked": "Sessione revocata con successo",
+        "loadFailed": "Impossibile caricare le sessioni",
+        "revokeFailed": "Impossibile revocare la sessione"
+      },
+      "emptyState": {
+        "loading": "Caricamento sessioni...",
+        "noMatch": "Nessuna sessione corrisponde alla Sua ricerca",
+        "noSessions": "Nessuna sessione attiva trovata"
+      }
+    }
+  },
+  "platformUpdates": {
+    "detail": {
+      "back": "Indietro",
+      "labels": {
+        "info": "Info",
+        "warning": "Avviso",
+        "destructive": "Critico",
+        "success": "Operazione riuscita",
+        "default": "Avviso"
+      }
+    }
+  }
+}

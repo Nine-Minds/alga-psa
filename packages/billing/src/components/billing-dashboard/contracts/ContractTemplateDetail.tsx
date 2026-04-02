@@ -32,6 +32,7 @@ import { toPlainDate } from '@alga-psa/core';
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
 import GenericPlanServicesList from '../contract-lines/GenericContractLineServicesList';
 import { ContractLineEditDialog } from './ContractLineEditDialog';
 
@@ -159,8 +160,19 @@ const ContractTemplateDetail: React.FC = () => {
   const searchParams = useSearchParams();
   const contractId = searchParams?.get('contractId') ?? undefined;
 
+  const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getDefaultBillingSettings()
+      .then((settings) => {
+        const currency = settings.defaultCurrencyCode || 'USD';
+        setDefaultCurrency(currency);
+        setBasicsForm((prev) => prev.currency_code === 'USD' ? { ...prev, currency_code: currency } : prev);
+      })
+      .catch(() => {});
+  }, []);
 
   const [contract, setContract] = useState<IContract | null>(null);
   const [summary, setSummary] = useState<TemplateSummary | null>(null);
@@ -172,7 +184,7 @@ const ContractTemplateDetail: React.FC = () => {
     contract_name: '',
     contract_description: '',
     billing_frequency: 'monthly',
-    currency_code: 'USD',
+    currency_code: defaultCurrency,
   });
   const [isSavingBasics, setIsSavingBasics] = useState(false);
   const [basicsError, setBasicsError] = useState<string | null>(null);
@@ -398,7 +410,7 @@ const ContractTemplateDetail: React.FC = () => {
         contract_name: '',
         contract_description: '',
         billing_frequency: 'monthly',
-        currency_code: 'USD',
+        currency_code: defaultCurrency,
       });
       return;
     }
@@ -407,9 +419,9 @@ const ContractTemplateDetail: React.FC = () => {
       contract_name: contract.contract_name ?? '',
       contract_description: contract.contract_description ?? '',
       billing_frequency: contract.billing_frequency ?? 'monthly',
-      currency_code: contract.currency_code ?? 'USD',
+      currency_code: contract.currency_code ?? defaultCurrency,
     });
-  }, [contract]);
+  }, [contract, defaultCurrency]);
 
   const resetGuidanceForm = useCallback(() => {
     setGuidanceForm({

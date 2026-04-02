@@ -1,0 +1,427 @@
+{
+  "common": {
+    "loading": "Ładowanie..."
+  },
+  "moduleFrame": {
+    "title": "Ankiety satysfakcji klienta",
+    "description": "Monitoruj jakość odpowiedzi, analizuj trendy satysfakcji i reaguj na opinie.",
+    "badge": "Analiza satysfakcji",
+    "nav": {
+      "dashboard": "Pulpit",
+      "responses": "Odpowiedzi",
+      "analytics": "Analityka",
+      "setup": "Konfiguracja"
+    }
+  },
+  "settings": {
+    "tabLabel": "Ankiety",
+    "title": "Ankiety satysfakcji klienta",
+    "subtitle": "Skonfiguruj szablony, wyzwalacze i wysyłkę, aby zbierać opinie po zamknięciu ticketów.",
+    "tabs": {
+      "templates": "Szablony",
+      "triggers": "Wyzwalacze"
+    },
+    "templateList": {
+      "title": "Szablony ankiet",
+      "description": "Zarządzaj treściami i skalami ocen wysyłanymi do klientów.",
+      "createButton": "Nowy szablon",
+      "emptyTitle": "Brak szablonów ankiet",
+      "emptyDescription": "Utwórz pierwszy szablon, aby zdefiniować treść ankiety i skalę ocen.",
+      "defaultBadge": "Domyślny",
+      "table": {
+        "name": "Szablon",
+        "rating": "Skala ocen",
+        "status": "Status",
+        "updated": "Zaktualizowano",
+        "actions": "Akcje"
+      },
+      "status": {
+        "enabled": "Włączony",
+        "disabled": "Wyłączony"
+      },
+      "actions": {
+        "setDefault": "Ustaw jako domyślny"
+      },
+      "toasts": {
+        "created": "Utworzono szablon",
+        "updated": "Zaktualizowano szablon",
+        "deleted": "Usunięto szablon",
+        "error": "Nie udało się zapisać szablonu",
+        "setDefault": "Zaktualizowano domyślny szablon"
+      },
+      "errors": {
+        "load": "Nie udało się załadować szablonów ankiet."
+      },
+      "delete": {
+        "validationFailed": "Nie udało się zweryfikować usunięcia. Proszę spróbować ponownie.",
+        "error": "Nie udało się usunąć szablonu",
+        "entityFallback": "ten szablon ankiety"
+      },
+      "actionsMenuAria": "Otwórz akcje dla {{name}}"
+    },
+    "templateForm": {
+      "titleCreate": "Utwórz szablon ankiety",
+      "titleEdit": "Edytuj szablon ankiety",
+      "ratingTypes": {
+        "stars": "Gwiazdki",
+        "numbers": "Liczby",
+        "emojis": "Emoji"
+      },
+      "defaults": {
+        "promptText": "Pytanie ankiety",
+        "commentPrompt": "Dodatkowe komentarze (opcjonalnie)",
+        "thankYouText": "Dziękujemy!"
+      },
+      "labels": {
+        "name": "Nazwa szablonu",
+        "ratingType": "Typ oceny",
+        "ratingScale": "Skala ocen",
+        "ratingLabels": "Etykiety ocen",
+        "preview": "Podgląd",
+        "promptText": "Pytanie ankiety",
+        "commentPrompt": "Treść komentarza",
+        "thankYouText": "Wiadomość z podziękowaniem",
+        "isDefault": "Ustaw jako szablon domyślny",
+        "enabled": "Szablon włączony"
+      },
+      "placeholders": {
+        "ratingLabels": "Przykład:\nBardzo słabo\nSłabo\nŚrednio\nDobrze\nDoskonale"
+      },
+      "help": {
+        "ratingLabels": "Podaj jedną etykietę w każdym wierszu, od najniższej do najwyższej oceny."
+      },
+      "actions": {
+        "create": "Utwórz szablon",
+        "save": "Zapisz zmiany",
+        "delete": "Usuń szablon"
+      },
+      "delete": {
+        "validationFailed": "Nie udało się zweryfikować usunięcia. Proszę spróbować ponownie.",
+        "error": "Nie udało się usunąć szablonu",
+        "entityFallback": "ten szablon ankiety"
+      }
+    },
+    "triggerList": {
+      "title": "Wyzwalacze ankiet",
+      "description": "Automatycznie wysyłaj zaproszenia, gdy tickety lub projekty zostaną zakończone.",
+      "createButton": "Nowy wyzwalacz",
+      "emptyTitle": "Brak skonfigurowanych wyzwalaczy ankiet",
+      "emptyDescription": "Utwórz wyzwalacz, aby wysyłać ankiety po zamknięciu ticketów lub zakończeniu projektów.",
+      "table": {
+        "template": "Szablon",
+        "type": "Wyzwalacz",
+        "conditions": "Warunki",
+        "status": "Status",
+        "updated": "Zaktualizowano",
+        "actions": "Akcje"
+      },
+      "status": {
+        "enabled": "Włączony",
+        "disabled": "Wyłączony"
+      },
+      "conditions": {
+        "unrestricted": "Dotyczy każdego ticketu i projektu",
+        "boards": "Tablice",
+        "statuses": "Statusy",
+        "priorities": "Priorytety",
+        "any": "Dowolne"
+      },
+      "toasts": {
+        "created": "Utworzono wyzwalacz",
+        "updated": "Zaktualizowano wyzwalacz",
+        "deleted": "Usunięto wyzwalacz",
+        "error": "Nie udało się zapisać wyzwalacza",
+        "deleteError": "Nie udało się usunąć wyzwalacza"
+      },
+      "errors": {
+        "load": "Nie udało się załadować wyzwalaczy ankiet."
+      },
+      "deleteConfirm": "Usunąć ten wyzwalacz? Zaplanowane już zaproszenia nadal zostaną wysłane.",
+      "actionsMenuAria": "Otwórz akcje dla wyzwalacza kierowanego na {{target}}"
+    },
+    "triggerForm": {
+      "titleCreate": "Utwórz wyzwalacz ankiety",
+      "titleEdit": "Edytuj wyzwalacz ankiety",
+      "triggerTypes": {
+        "ticket_closed": "Ticket zamknięty",
+        "project_completed": "Projekt zakończony"
+      },
+      "labels": {
+        "template": "Szablon ankiety",
+        "triggerType": "Typ wyzwalacza",
+        "boardIds": "Tablice",
+        "statusIds": "Statusy",
+        "priorities": "Priorytety",
+        "enabled": "Wyzwalacz włączony"
+      },
+      "placeholders": {
+        "boardIds": "Wybierz tablicę",
+        "statusIds": "Dodaj status",
+        "priorities": "Dodaj priorytet"
+      },
+      "boardFilters": {
+        "active": "Aktywne tablice",
+        "inactive": "Nieaktywne tablice",
+        "all": "Wszystkie tablice"
+      },
+      "help": {
+        "conditions": "Pozostaw pole puste, aby dopasować dowolną wartość."
+      },
+      "actions": {
+        "create": "Utwórz wyzwalacz",
+        "save": "Zapisz zmiany",
+        "delete": "Usuń wyzwalacz"
+      },
+      "noTemplates": "Utwórz szablon ankiety przed dodaniem wyzwalaczy.",
+      "prioritiesMixed": "Wybrane tablice używają różnych typów priorytetów. Wyświetlane są wszystkie priorytety.",
+      "errors": {
+        "reference": "Nie udało się załadować opcji wyzwalacza. Proszę spróbować ponownie."
+      }
+    }
+  },
+  "response": {
+    "pageTitle": "Ankieta satysfakcji klienta",
+    "invalidTitle": "Ankieta niedostępna",
+    "invalidMessage": "Ten link do opinii nie jest już ważny albo został już użyty.",
+    "ratingPrompt": "Jak ocenia Pan/Pani swoje doświadczenie?",
+    "ratingAssistive": "Wybierz ocenę od 1 do {{scale}}",
+    "commentLabel": "Dodatkowe komentarze (opcjonalnie)",
+    "submitButton": "Prześlij opinię",
+    "submitting": "Wysyłanie opinii...",
+    "submittedTitle": "Dziękujemy za odpowiedź!",
+    "submittedMessage": "{{thankYouText}}",
+    "ratingSubmitted": "Opinia została wysłana",
+    "retryButton": "Spróbuj ponownie",
+    "selectRatingError": "Wybierz ocenę przed wysłaniem.",
+    "errorMessage": "Nie udało się zapisać opinii. Proszę spróbować ponownie.",
+    "supportMessage": "W razie pytań prosimy o kontakt z technikiem."
+  },
+  "rating": {
+    "buttonAriaWithLabel": "{{rating}} - {{label}}",
+    "buttonAria": "Ocena {{rating}} z {{scale}}",
+    "defaults": {
+      "3": {
+        "1": "Słabo",
+        "2": "Dobrze",
+        "3": "Doskonale"
+      },
+      "5": {
+        "1": "Bardzo słabo",
+        "2": "Słabo",
+        "3": "Średnio",
+        "4": "Dobrze",
+        "5": "Doskonale"
+      },
+      "10": {
+        "1": "Fatalnie",
+        "2": "Bardzo słabo",
+        "3": "Słabo",
+        "4": "Poniżej średniej",
+        "5": "Średnio",
+        "6": "Powyżej średniej",
+        "7": "Dobrze",
+        "8": "Bardzo dobrze",
+        "9": "Doskonale",
+        "10": "Perfekcyjnie"
+      }
+    }
+  },
+  "responses": {
+    "filters": {
+      "labels": {
+        "template": "Szablon",
+        "technician": "Technik",
+        "client": "Klient",
+        "dateRange": "Zakres dat"
+      },
+      "placeholders": {
+        "allTemplates": "Wszystkie szablony",
+        "allTechnicians": "Wszyscy technicy",
+        "allClients": "Wszyscy klienci"
+      },
+      "actions": {
+        "apply": "Zastosuj",
+        "reset": "Resetuj"
+      }
+    },
+    "page": {
+      "filterTitle": "Filtruj odpowiedzi",
+      "loading": "Odświeżanie odpowiedzi...",
+      "error": "Nie udało się załadować odpowiedzi ankiety. Proszę spróbować ponownie.",
+      "pageSizeOptions": {
+        "10": "10 na stronę",
+        "25": "25 na stronę",
+        "50": "50 na stronę"
+      },
+      "itemLabel": "odpowiedzi"
+    },
+    "detail": {
+      "title": "Szczegóły odpowiedzi ankiety",
+      "empty": "Nie wybrano odpowiedzi.",
+      "labels": {
+        "submittedAt": "Przesłano",
+        "client": "Klient",
+        "contact": "Kontakt",
+        "technician": "Technik",
+        "ticket": "Ticket",
+        "rating": "Ocena",
+        "comment": "Komentarz"
+      },
+      "fallbacks": {
+        "unknown": "Nieznane",
+        "unassigned": "Nieprzypisano",
+        "none": "-",
+        "noComment": "Nie podano komentarza."
+      }
+    }
+  },
+  "dashboard": {
+    "loadingInsights": "Ładowanie analizy ankiet...",
+    "responseMetrics": {
+      "cards": {
+        "sent": "Wysłane zaproszenia",
+        "responses": "Otrzymane odpowiedzi",
+        "responseRate": "Wskaźnik odpowiedzi",
+        "averageRating": "Średnia ocena",
+        "outstanding": "Oczekujące zaproszenia",
+        "negative": "Negatywne odpowiedzi (<= 2 gwiazdki)"
+      },
+      "badges": {
+        "awaitingResponses": "Oczekiwanie na odpowiedzi",
+        "needsReview": "Wymaga przeglądu"
+      }
+    },
+    "responseTrend": {
+      "title": "Trend odpowiedzi",
+      "emptyTitle": "Brak zarejestrowanych odpowiedzi w wybranym okresie.",
+      "emptyDescription": "Proszę wrócić, gdy klienci prześlą opinie.",
+      "tooltip": {
+        "averageRating": "Średnia ocena",
+        "responses": "Odpowiedzi",
+        "date": "Data: {{label}}"
+      }
+    },
+    "responsesList": {
+      "title": "Najnowsze odpowiedzi",
+      "emptyTitle": "Brak dostępnych odpowiedzi ankiety.",
+      "emptyDescription": "Zachęć klientów do przesyłania opinii, aby wypełnić ten widok.",
+      "table": {
+        "submitted": "Przesłano",
+        "client": "Klient",
+        "technician": "Technik",
+        "rating": "Ocena",
+        "comment": "Komentarz",
+        "ticket": "Ticket"
+      },
+      "fallbacks": {
+        "unknownClient": "Nieznany klient",
+        "unassigned": "Nieprzypisano",
+        "noComment": "Brak komentarza"
+      }
+    },
+    "satisfactionDistribution": {
+      "title": "Rozkład satysfakcji",
+      "emptyTitle": "Nie zarejestrowano jeszcze ocen ankiet.",
+      "emptyDescription": "Rozkład pojawi się po zebraniu opinii.",
+      "axes": {
+        "rating": "Ocena",
+        "responses": "Odpowiedzi"
+      },
+      "tooltip": {
+        "percent": "Procent",
+        "responses": "Odpowiedzi",
+        "rating": "Ocena: {{label}}"
+      }
+    },
+    "topIssues": {
+      "title": "Najczęstsze problemy",
+      "emptyTitle": "Nie zarejestrowano negatywnych opinii dla wybranych filtrów.",
+      "emptyDescription": "To dobry znak. Tak trzymać.",
+      "fallbacks": {
+        "unknownClient": "Nieznany klient",
+        "ticket": "Ticket {{ticket}}",
+        "noComment": "Nie pozostawiono komentarza.",
+        "assignedTo": "Przypisano do: {{name}}"
+      }
+    }
+  },
+  "analytics": {
+    "filters": {
+      "labels": {
+        "customerSegment": "Segment klientów",
+        "surveyTemplate": "Szablon ankiety",
+        "timeframe": "Okres",
+        "calendarView": "Widok kalendarza"
+      },
+      "defaults": {
+        "segments": {
+          "all": "Wszyscy klienci",
+          "managed": "Klienci zarządzani",
+          "project": "Klienci tylko projektowi"
+        },
+        "templates": {
+          "all": "Wszystkie szablony",
+          "default": "Szablon CSAT faza 1"
+        },
+        "timeframes": {
+          "30d": "Ostatnie 30 dni",
+          "90d": "Ostatnie 90 dni",
+          "365d": "Od początku roku"
+        }
+      },
+      "actions": {
+        "apply": "Zastosuj filtry",
+        "reset": "Resetuj",
+        "calendar": "Wkrótce"
+      }
+    },
+    "page": {
+      "filtersTitle": "Filtry analityczne",
+      "overviewTitle": "Przegląd satysfakcji",
+      "overviewDescription": "Porównuj średnią satysfakcję i wskaźniki odpowiedzi w czasie. Dodatkowa segmentacja pojawi się w kolejnych iteracjach."
+    },
+    "chart": {
+      "empty": "Wybierz filtry powyżej, aby sprawdzić zaawansowaną analitykę. (Wkrótce)",
+      "tooltip": {
+        "averageRating": "Średnia ocena",
+        "responseRate": "Wskaźnik odpowiedzi"
+      },
+      "legend": {
+        "averageRating": "Średnia ocena",
+        "responseRate": "Wskaźnik odpowiedzi"
+      }
+    },
+    "export": {
+      "csv": "Eksport CSV",
+      "shareSnapshot": "Udostępnij zrzut",
+      "emailDigest": "Podsumowanie e-mail"
+    }
+  },
+  "clientSummary": {
+    "title": "Podsumowanie CSAT",
+    "empty": "Dla tego klienta nie ma jeszcze dostępnych danych z ankiet. Ankiety wysyłane po zamknięciu ticketów uzupełnią ten widok.",
+    "labels": {
+      "averageRating": "Średnia ocena",
+      "responseRate": "Wskaźnik odpowiedzi",
+      "totalResponses": "Łączna liczba odpowiedzi",
+      "lastResponse": "Ostatnia odpowiedź",
+      "rollingTrend": "Trend kroczący"
+    },
+    "fallbacks": {
+      "none": "-",
+      "noResponsesYet": "Brak odpowiedzi"
+    }
+  },
+  "ticketSummary": {
+    "title": "Opinia klienta",
+    "empty": "Nie otrzymano jeszcze odpowiedzi ankiety dla tego ticketu.",
+    "labels": {
+      "latestRating": "Najnowsza ocena",
+      "comment": "Komentarz",
+      "totalResponses": "Łączna liczba odpowiedzi"
+    },
+    "fallbacks": {
+      "none": "-"
+    }
+  }
+}

@@ -1,15 +1,16 @@
 'use client';
 
 import {
+  CartesianGrid,
+  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Legend,
 } from 'recharts';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type AnalyticsDataPoint = {
   label: string;
@@ -23,11 +24,15 @@ type ResponseAnalyticsChartProps = {
 };
 
 export default function ResponseAnalyticsChart({ data }: ResponseAnalyticsChartProps) {
+  const { t } = useTranslation('msp/surveys');
+
   return (
     <div className="h-96">
       {data.length === 0 ? (
         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-          Select filters above to explore advanced analytics. (Coming soon)
+          {t('analytics.chart.empty', {
+            defaultValue: 'Select filters above to explore advanced analytics. (Coming soon)',
+          })}
         </div>
       ) : (
         <ResponsiveContainer width="100%" height="100%">
@@ -45,10 +50,20 @@ export default function ResponseAnalyticsChart({ data }: ResponseAnalyticsChartP
               }}
               formatter={(value: number, name: string) => {
                 if (name === 'averageRating') {
-                  return [`${value.toFixed(1)} ★`, 'Average Rating'];
+                  return [
+                    `${value.toFixed(1)} ★`,
+                    t('analytics.chart.tooltip.averageRating', {
+                      defaultValue: 'Average Rating',
+                    }),
+                  ];
                 }
                 if (name === 'responseRate') {
-                  return [`${value.toFixed(1)}%`, 'Response Rate'];
+                  return [
+                    `${value.toFixed(1)}%`,
+                    t('analytics.chart.tooltip.responseRate', {
+                      defaultValue: 'Response Rate',
+                    }),
+                  ];
                 }
                 return [value, name];
               }}
@@ -61,7 +76,9 @@ export default function ResponseAnalyticsChart({ data }: ResponseAnalyticsChartP
               stroke="rgb(var(--color-primary-500))"
               strokeWidth={2}
               dot={false}
-              name="Average Rating"
+              name={t('analytics.chart.legend.averageRating', {
+                defaultValue: 'Average Rating',
+              })}
             />
             <Line
               type="monotone"
@@ -70,7 +87,9 @@ export default function ResponseAnalyticsChart({ data }: ResponseAnalyticsChartP
               stroke="rgb(var(--color-primary-300))"
               strokeWidth={2}
               dot={false}
-              name="Response Rate"
+              name={t('analytics.chart.legend.responseRate', {
+                defaultValue: 'Response Rate',
+              })}
             />
           </LineChart>
         </ResponsiveContainer>

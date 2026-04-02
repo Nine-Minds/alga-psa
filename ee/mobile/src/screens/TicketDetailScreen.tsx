@@ -583,6 +583,19 @@ export function TicketDetailBody({
             draftPlainText={commentDraftHook.commentDraftPlainText}
             isInternal={commentDraftHook.commentIsInternal}
             onChangeIsInternal={commentDraftHook.setCommentIsInternal}
+            isResolution={commentDraftHook.commentIsResolution}
+            onChangeIsResolution={(value) => {
+              commentDraftHook.setCommentIsResolution(value);
+              if (!value) {
+                commentDraftHook.setCommentCloseStatusId(null);
+              } else if (statusHook.statusOptions.length === 0) {
+                void statusHook.openStatusPicker();
+                statusHook.setStatusPickerOpen(false);
+              }
+            }}
+            closedStatuses={statusHook.statusOptions.filter((s) => s.is_closed)}
+            closeStatusId={commentDraftHook.commentCloseStatusId}
+            onChangeCloseStatusId={commentDraftHook.setCommentCloseStatusId}
             onSend={() => void commentDraftHook.sendComment()}
             sending={commentDraftHook.commentSending}
             offline={isOffline}

@@ -4,7 +4,7 @@
     "libsDir": "packages",
     "appsDir": "."
   },
-  "useDaemonProcess": false,
+  "useDaemonProcess": true,
   "defaultBase": "main",
   "generators": {
     "@alga-psa/generators:alga-module": {

@@ -15,12 +15,18 @@ import {
 } from "../../ticketRichText/helpers";
 import { ActionChip } from "./ActionChip";
 import { MAX_COMMENT_LENGTH } from "../types";
+import type { TicketStatus } from "../../../api/tickets";
 
 export function CommentComposer({
   draftContent,
   draftPlainText,
   isInternal,
   onChangeIsInternal,
+  isResolution,
+  onChangeIsResolution,
+  closedStatuses,
+  closeStatusId,
+  onChangeCloseStatusId,
   onSend,
   sending,
   offline,
@@ -37,6 +43,11 @@ export function CommentComposer({
   draftPlainText: string;
   isInternal: boolean;
   onChangeIsInternal: (value: boolean) => void;
+  isResolution?: boolean;
+  onChangeIsResolution?: (value: boolean) => void;
+  closedStatuses?: TicketStatus[];
+  closeStatusId?: string | null;
+  onChangeCloseStatusId?: (id: string | null) => void;
   onSend: () => void;
   sending: boolean;
   offline: boolean;
@@ -110,11 +121,36 @@ export function CommentComposer({
             {draftPlainText.length}/{MAX_COMMENT_LENGTH}
           </Text>
 
-          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
             <ActionChip label={isInternal ? t("comments.internalChecked") : t("comments.internal")} onPress={() => onChangeIsInternal(true)} />
-            <View style={{ width: spacing.sm }} />
-            <ActionChip label={!isInternal ? t("comments.publicChecked") : t("comments.public")} onPress={() => onChangeIsInternal(false)} />
+            <ActionChip label={!isInternal ? t("comments.clientChecked") : t("comments.client")} onPress={() => onChangeIsInternal(false)} />
+            {onChangeIsResolution ? (
+              <ActionChip
+                label={isResolution ? t("comments.resolutionChecked") : t("comments.resolution")}
+                onPress={() => onChangeIsResolution(!isResolution)}
+              />
+            ) : null}
           </View>
+          {isResolution && onChangeCloseStatusId && closedStatuses && closedStatuses.length > 0 ? (
+            <View style={{ marginTop: spacing.sm }}>
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: 4 }}>
+                {t("comments.closeStatus")}
+              </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
+                <ActionChip
+                  label={!closeStatusId ? `${t("comments.doNotChangeStatus")} \u2713` : t("comments.doNotChangeStatus")}
+                  onPress={() => onChangeCloseStatusId(null)}
+                />
+                {closedStatuses.map((s) => (
+                  <ActionChip
+                    key={s.status_id}
+                    label={closeStatusId === s.status_id ? `${s.name} \u2713` : s.name}
+                    onPress={() => onChangeCloseStatusId(s.status_id)}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
           {error ? (
             <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
               {error}

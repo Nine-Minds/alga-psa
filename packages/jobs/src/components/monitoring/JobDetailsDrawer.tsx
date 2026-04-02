@@ -1,5 +1,8 @@
+'use client';
+
 import React from 'react';
 import Drawer from '@alga-psa/ui/components/Drawer';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { JobProgress } from './JobProgress';
 import JobMetricsDisplay from './JobMetricsDisplay';
 import { useJobMonitor } from '@alga-psa/jobs/hooks';
@@ -11,6 +14,7 @@ interface JobDetailsDrawerProps {
 }
 
 const JobDetailsDrawer: React.FC<JobDetailsDrawerProps> = ({ jobId, onClose }) => {
+  const { t } = useTranslation('msp/jobs');
   const { job, error } = useJobMonitor(jobId || '');
 
   return (
@@ -23,18 +27,20 @@ const JobDetailsDrawer: React.FC<JobDetailsDrawerProps> = ({ jobId, onClose }) =
         {jobId && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Job Details</h2>
-              <div className="text-sm text-gray-500">ID: {jobId}</div>
+              <h2 className="text-xl font-semibold">{t('drawer.title', { defaultValue: 'Job Details' })}</h2>
+              <div className="text-sm text-gray-500">
+                {t('drawer.jobId', { defaultValue: 'ID: {{id}}', id: jobId })}
+              </div>
             </div>
             
             <div className="space-y-6">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Job Progress</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('drawer.sections.progress', { defaultValue: 'Job Progress' })}</h3>
                 <JobProgress jobId={jobId} />
               </div>
               
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Job Metrics</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('drawer.sections.metrics', { defaultValue: 'Job Metrics' })}</h3>
                 <JobMetricsDisplay metrics={job?.metrics || {
                   total: 0,
                   completed: 0,
@@ -50,7 +56,7 @@ const JobDetailsDrawer: React.FC<JobDetailsDrawerProps> = ({ jobId, onClose }) =
               </div>
               
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Job History</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('drawer.sections.history', { defaultValue: 'Job History' })}</h3>
                 <JobStepHistory steps={job?.details || []} />
               </div>
             </div>

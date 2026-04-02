@@ -49,10 +49,31 @@ export default function KBArticleFilters({
   categories = [],
   availableTags = [],
 }: KBArticleFiltersProps) {
-  const { t } = useTranslation('features/documents');
+  const { t } = useTranslation('msp/knowledge-base');
+
+  const statusOptions: SelectOption[] = STATUS_OPTIONS.map((option) => ({
+    ...option,
+    label: option.value
+      ? t(`shared.statusLabels.${option.value}`, { defaultValue: option.label })
+      : t('filters.options.status.all', { defaultValue: option.label }),
+  }));
+
+  const audienceOptions: SelectOption[] = AUDIENCE_OPTIONS.map((option) => ({
+    ...option,
+    label: option.value
+      ? t(`shared.audienceLabels.${option.value}`, { defaultValue: option.label })
+      : t('filters.options.audience.all', { defaultValue: option.label }),
+  }));
+
+  const typeOptions: SelectOption[] = TYPE_OPTIONS.map((option) => ({
+    ...option,
+    label: option.value
+      ? t(`shared.typeLabels.${option.value}`, { defaultValue: option.label })
+      : t('filters.options.articleType.all', { defaultValue: option.label }),
+  }));
 
   const categoryOptions: SelectOption[] = [
-    { value: '', label: t('kb.allCategories', 'All Categories') },
+    { value: '', label: t('filters.options.category.all', { defaultValue: 'All Categories' }) },
     ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
   ];
 
@@ -68,7 +89,7 @@ export default function KBArticleFilters({
     <Card className="sticky top-6">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">{t('kb.filters', 'Filters')}</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('filters.title', { defaultValue: 'Filters' })}</CardTitle>
           {hasFilters && onClearFilters && (
             <Button
               id="kb-filters-clear"
@@ -78,7 +99,7 @@ export default function KBArticleFilters({
               className="h-7 px-2 text-xs"
             >
               <X className="w-3 h-3 mr-1" />
-              {t('kb.clearFilters', 'Clear')}
+              {t('filters.actions.clear', { defaultValue: 'Clear' })}
             </Button>
           )}
         </div>
@@ -87,13 +108,13 @@ export default function KBArticleFilters({
         {/* Search */}
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-            {t('kb.search', 'Search')}
+            {t('filters.labels.search', { defaultValue: 'Search' })}
           </label>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder={t('kb.searchPlaceholder', 'Search articles...')}
+              placeholder={t('filters.placeholders.search', { defaultValue: 'Search articles...' })}
               value={filters.search || ''}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 onFiltersChange({ ...filters, search: e.target.value || undefined })
@@ -106,45 +127,45 @@ export default function KBArticleFilters({
         {/* Status */}
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-            {t('kb.status', 'Status')}
+            {t('filters.labels.status', { defaultValue: 'Status' })}
           </label>
           <CustomSelect
-            options={STATUS_OPTIONS}
+            options={statusOptions}
             value={filters.status || ''}
             onValueChange={(value) =>
               onFiltersChange({ ...filters, status: (value as ArticleStatus) || undefined })
             }
-            placeholder={t('kb.selectStatus', 'Select status...')}
+            placeholder={t('filters.placeholders.status', { defaultValue: 'Select status...' })}
           />
         </div>
 
         {/* Audience */}
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-            {t('kb.audience', 'Audience')}
+            {t('filters.labels.audience', { defaultValue: 'Audience' })}
           </label>
           <CustomSelect
-            options={AUDIENCE_OPTIONS}
+            options={audienceOptions}
             value={filters.audience || ''}
             onValueChange={(value) =>
               onFiltersChange({ ...filters, audience: (value as ArticleAudience) || undefined })
             }
-            placeholder={t('kb.selectAudience', 'Select audience...')}
+            placeholder={t('filters.placeholders.audience', { defaultValue: 'Select audience...' })}
           />
         </div>
 
         {/* Article Type */}
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-            {t('kb.articleType', 'Article Type')}
+            {t('filters.labels.articleType', { defaultValue: 'Article Type' })}
           </label>
           <CustomSelect
-            options={TYPE_OPTIONS}
+            options={typeOptions}
             value={filters.articleType || ''}
             onValueChange={(value) =>
               onFiltersChange({ ...filters, articleType: (value as ArticleType) || undefined })
             }
-            placeholder={t('kb.selectType', 'Select type...')}
+            placeholder={t('filters.placeholders.articleType', { defaultValue: 'Select type...' })}
           />
         </div>
 
@@ -152,7 +173,7 @@ export default function KBArticleFilters({
         {categories.length > 0 && (
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              {t('kb.category', 'Category')}
+              {t('filters.labels.category', { defaultValue: 'Category' })}
             </label>
             <CustomSelect
               options={categoryOptions}
@@ -160,7 +181,7 @@ export default function KBArticleFilters({
               onValueChange={(value) =>
                 onFiltersChange({ ...filters, categoryId: value || undefined })
               }
-              placeholder={t('kb.selectCategory', 'Select category...')}
+              placeholder={t('filters.placeholders.category', { defaultValue: 'Select category...' })}
             />
           </div>
         )}
@@ -169,7 +190,7 @@ export default function KBArticleFilters({
         {availableTags.length > 0 && (
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              {t('kb.tags', 'Tags')}
+              {t('filters.labels.tags', { defaultValue: 'Tags' })}
             </label>
             <TagFilter
               tags={availableTags}
@@ -182,7 +203,7 @@ export default function KBArticleFilters({
                 onFiltersChange({ ...filters, tags: updated.length > 0 ? updated : undefined });
               }}
               onClearTags={() => onFiltersChange({ ...filters, tags: undefined })}
-              placeholder={t('kb.filterByTags', 'Filter by tags...')}
+              placeholder={t('filters.placeholders.tags', { defaultValue: 'Filter by tags...' })}
             />
           </div>
         )}

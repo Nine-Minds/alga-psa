@@ -20,6 +20,7 @@ import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getAvailabilitySettings,
   createOrUpdateAvailabilitySetting,
@@ -38,16 +39,6 @@ import { getTeams } from '@alga-psa/teams/actions';
 import { ITeam } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
-const DAYS_OF_WEEK = [
-  { value: 0, label: 'Sunday' },
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' }
-];
-
 interface UserHoursSetting {
   day_of_week: number;
   is_available: boolean;
@@ -61,6 +52,7 @@ interface AvailabilitySettingsProps {
 }
 
 export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySettingsProps) {
+  const { t } = useTranslation('msp/schedule');
   const [activeTab, setActiveTab] = useState('general');
   const [isLoading, setIsLoading] = useState(true);
   const { data: session } = useSession();
@@ -112,6 +104,15 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const [servicesCurrentPage, setServicesCurrentPage] = useState(1);
   const [servicesPageSize, setServicesPageSize] = useState(10);
   const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+  const daysOfWeek = useMemo(() => ([
+    { value: 0, label: t('availabilitySettings.days.sunday', { defaultValue: 'Sunday' }) },
+    { value: 1, label: t('availabilitySettings.days.monday', { defaultValue: 'Monday' }) },
+    { value: 2, label: t('availabilitySettings.days.tuesday', { defaultValue: 'Tuesday' }) },
+    { value: 3, label: t('availabilitySettings.days.wednesday', { defaultValue: 'Wednesday' }) },
+    { value: 4, label: t('availabilitySettings.days.thursday', { defaultValue: 'Thursday' }) },
+    { value: 5, label: t('availabilitySettings.days.friday', { defaultValue: 'Friday' }) },
+    { value: 6, label: t('availabilitySettings.days.saturday', { defaultValue: 'Saturday' }) }
+  ]), [t]);
 
   const buildReportsToUserIds = (usersList: Omit<IUser, 'tenant'>[]) => {
     if (!isTeamsV2Enabled || !session?.user?.id) {
@@ -232,7 +233,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         setExceptions(exceptionsResult.data);
       }
     } catch (error) {
-      handleError(error, 'Failed to load settings');
+      handleError(error, t('availabilitySettings.feedback.loadError', { defaultValue: 'Failed to load settings' }));
     } finally {
       setIsLoading(false);
     }
@@ -421,18 +422,18 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       });
 
       if (result.success) {
-        toast.success('General settings saved');
+        toast.success(t('availabilitySettings.general.feedback.saveSuccess', { defaultValue: 'General settings saved' }));
       } else {
-        toast.error(result.error || 'Failed to save settings');
+        toast.error(result.error || t('availabilitySettings.general.feedback.saveError', { defaultValue: 'Failed to save settings' }));
       }
     } catch (error) {
-      handleError(error, 'Failed to save settings');
+      handleError(error, t('availabilitySettings.general.feedback.saveError', { defaultValue: 'Failed to save settings' }));
     }
   };
 
   const handleSaveUserHours = async () => {
     if (!selectedUserId) {
-      toast.error('Please select a user');
+      toast.error(t('availabilitySettings.userHours.feedback.selectUserError', { defaultValue: 'Please select a user' }));
       return;
     }
 
@@ -462,17 +463,17 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           config_json: configJson
         });
       }
-      toast.success('User hours saved');
+      toast.success(t('availabilitySettings.userHours.feedback.saveSuccess', { defaultValue: 'User hours saved' }));
       // Reload configured users list
       await loadConfiguredUsers();
     } catch (error) {
-      handleError(error, 'Failed to save user hours');
+      handleError(error, t('availabilitySettings.userHours.feedback.saveError', { defaultValue: 'Failed to save user hours' }));
     }
   };
 
   const handleSaveServiceRules = async () => {
     if (!selectedServiceId) {
-      toast.error('Please select a service');
+      toast.error(t('availabilitySettings.serviceRules.feedback.selectServiceError', { defaultValue: 'Please select a service' }));
       return;
     }
 
@@ -490,20 +491,20 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       });
 
       if (result.success) {
-        toast.success('Service rules saved');
+        toast.success(t('availabilitySettings.serviceRules.feedback.saveSuccess', { defaultValue: 'Service rules saved' }));
         // Reload all service rules to update the table
         await loadAllServiceRules();
       } else {
-        toast.error(result.error || 'Failed to save service rules');
+        toast.error(result.error || t('availabilitySettings.serviceRules.feedback.saveError', { defaultValue: 'Failed to save service rules' }));
       }
     } catch (error) {
-      handleError(error, 'Failed to save service rules');
+      handleError(error, t('availabilitySettings.serviceRules.feedback.saveError', { defaultValue: 'Failed to save service rules' }));
     }
   };
 
   const handleAddException = async () => {
     if (!selectedDate) {
-      toast.error('Please select a date');
+      toast.error(t('availabilitySettings.exceptions.feedback.selectDateError', { defaultValue: 'Please select a date' }));
       return;
     }
 
@@ -517,7 +518,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       });
 
       if (result.success) {
-        toast.success('Exception added');
+        toast.success(t('availabilitySettings.exceptions.feedback.addSuccess', { defaultValue: 'Exception added' }));
         // Reload exceptions
         const exceptionsResult = await getAvailabilityExceptions();
         if (exceptionsResult.success && exceptionsResult.data) {
@@ -529,10 +530,10 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         setExceptionReason('');
         setExceptionIsAvailable(false);
       } else {
-        toast.error(result.error || 'Failed to add exception');
+        toast.error(result.error || t('availabilitySettings.exceptions.feedback.addError', { defaultValue: 'Failed to add exception' }));
       }
     } catch (error) {
-      handleError(error, 'Failed to add exception');
+      handleError(error, t('availabilitySettings.exceptions.feedback.addError', { defaultValue: 'Failed to add exception' }));
     }
   };
 
@@ -540,13 +541,13 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     try {
       const result = await deleteAvailabilityException(exceptionId);
       if (result.success) {
-        toast.success('Exception deleted');
+        toast.success(t('availabilitySettings.exceptions.feedback.deleteSuccess', { defaultValue: 'Exception deleted' }));
         setExceptions(exceptions.filter(e => e.exception_id !== exceptionId));
       } else {
-        toast.error(result.error || 'Failed to delete exception');
+        toast.error(result.error || t('availabilitySettings.exceptions.feedback.deleteError', { defaultValue: 'Failed to delete exception' }));
       }
     } catch (error) {
-      handleError(error, 'Failed to delete exception');
+      handleError(error, t('availabilitySettings.exceptions.feedback.deleteError', { defaultValue: 'Failed to delete exception' }));
     }
   };
 
@@ -569,17 +570,17 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   // Column definitions for configured users table
   const configuredUsersColumns: ColumnDefinition<Omit<IUser, 'tenant'>>[] = useMemo(() => [
     {
-      title: 'User Name',
+      title: t('availabilitySettings.userHours.configuredUsers.columns.userName', { defaultValue: 'User Name' }),
       dataIndex: 'first_name' as any,
       render: (_, user: Omit<IUser, 'tenant'>) => `${user.first_name} ${user.last_name}`
     },
     {
-      title: 'Status',
+      title: t('availabilitySettings.userHours.configuredUsers.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'user_id' as any,
-      render: () => <Badge variant="default">Configured</Badge>
+      render: () => <Badge variant="default">{t('availabilitySettings.userHours.configuredUsers.status.configured', { defaultValue: 'Configured' })}</Badge>
     },
     {
-      title: 'Action',
+      title: t('availabilitySettings.common.columns.action', { defaultValue: 'Action' }),
       dataIndex: 'user_id' as any,
       render: (_, user: Omit<IUser, 'tenant'>) => (
         <Button
@@ -588,35 +589,35 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           size="sm"
           onClick={() => setSelectedUserId(user.user_id)}
         >
-          Edit
+          {t('availabilitySettings.common.actions.edit', { defaultValue: 'Edit' })}
         </Button>
       )
     }
-  ], []);
+  ], [t]);
 
   // Column definitions for configured services table
   const configuredServicesColumns: ColumnDefinition<IService>[] = useMemo(() => [
     {
-      title: 'Service Name',
+      title: t('availabilitySettings.serviceRules.configuredServices.columns.serviceName', { defaultValue: 'Service Name' }),
       dataIndex: 'service_name' as any,
     },
     {
-      title: 'Duration (min)',
+      title: t('availabilitySettings.serviceRules.configuredServices.columns.duration', { defaultValue: 'Duration (min)' }),
       dataIndex: 'service_id' as any,
       render: (_, service: IService) => serviceSettings[service.service_id]?.config_json?.default_duration || '-'
     },
     {
-      title: 'Without Contract',
+      title: t('availabilitySettings.serviceRules.configuredServices.columns.withoutContract', { defaultValue: 'Without Contract' }),
       dataIndex: 'service_id' as any,
-      render: (_, service: IService) => serviceSettings[service.service_id]?.allow_without_contract ? 'Yes' : 'No'
+      render: (_, service: IService) => serviceSettings[service.service_id]?.allow_without_contract ? t('availabilitySettings.common.yes', { defaultValue: 'Yes' }) : t('availabilitySettings.common.no', { defaultValue: 'No' })
     },
     {
-      title: 'Max Per Day',
+      title: t('availabilitySettings.serviceRules.configuredServices.columns.maxPerDay', { defaultValue: 'Max Per Day' }),
       dataIndex: 'service_id' as any,
-      render: (_, service: IService) => serviceSettings[service.service_id]?.max_appointments_per_day || 'No limit'
+      render: (_, service: IService) => serviceSettings[service.service_id]?.max_appointments_per_day || t('availabilitySettings.serviceRules.common.noLimit', { defaultValue: 'No limit' })
     },
     {
-      title: 'Action',
+      title: t('availabilitySettings.common.columns.action', { defaultValue: 'Action' }),
       dataIndex: 'service_id' as any,
       render: (_, service: IService) => (
         <Button
@@ -625,11 +626,11 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           size="sm"
           onClick={() => setSelectedServiceId(service.service_id)}
         >
-          Edit
+          {t('availabilitySettings.common.actions.edit', { defaultValue: 'Edit' })}
         </Button>
       )
     }
-  ], [serviceSettings]);
+  ], [serviceSettings, t]);
 
   // Filtered data for configured users
   const configuredUsersData = useMemo(() =>
@@ -644,19 +645,19 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   );
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} id="availability-settings" title="Availability Settings" className="max-w-4xl">
+    <Dialog isOpen={isOpen} onClose={onClose} id="availability-settings" title={t('availabilitySettings.dialog.title', { defaultValue: 'Availability Settings' })} className="max-w-4xl">
       {isLoading ? (
         <div className="p-6">
-          <div className="text-center">Loading settings...</div>
+          <div className="text-center">{t('availabilitySettings.loading', { defaultValue: 'Loading settings...' })}</div>
         </div>
       ) : (
         <div>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="general">General Settings</TabsTrigger>
-            <TabsTrigger value="user-hours">User Hours</TabsTrigger>
-            <TabsTrigger value="service-rules">Service Rules</TabsTrigger>
-            <TabsTrigger value="exceptions">Exceptions</TabsTrigger>
+            <TabsTrigger value="general">{t('availabilitySettings.tabs.general', { defaultValue: 'General Settings' })}</TabsTrigger>
+            <TabsTrigger value="user-hours">{t('availabilitySettings.tabs.userHours', { defaultValue: 'User Hours' })}</TabsTrigger>
+            <TabsTrigger value="service-rules">{t('availabilitySettings.tabs.serviceRules', { defaultValue: 'Service Rules' })}</TabsTrigger>
+            <TabsTrigger value="exceptions">{t('availabilitySettings.tabs.exceptions', { defaultValue: 'Exceptions' })}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="space-y-4 mt-4">
@@ -669,16 +670,16 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                     onCheckedChange={setAutoApprovalEnabled}
                   />
                   <div className="flex-1">
-                    <Label htmlFor="auto-approval-enabled" className="text-base font-semibold">Enable Auto-Approval</Label>
+                    <Label htmlFor="auto-approval-enabled" className="text-base font-semibold">{t('availabilitySettings.general.autoApproval.title', { defaultValue: 'Enable Auto-Approval' })}</Label>
                     <p className="text-sm text-gray-600 mt-1">
-                      Automatically approve appointments that meet the criteria configured below
+                      {t('availabilitySettings.general.autoApproval.description', { defaultValue: 'Automatically approve appointments that meet the criteria configured below' })}
                     </p>
                   </div>
                 </div>
 
               {autoApprovalEnabled && (
                 <div className="ml-8 space-y-3 border-l-2 border-blue-300 pl-4">
-                  <p className="text-sm font-medium text-gray-700">Auto-Approval Criteria:</p>
+                  <p className="text-sm font-medium text-gray-700">{t('availabilitySettings.general.autoApproval.criteriaTitle', { defaultValue: 'Auto-Approval Criteria:' })}</p>
 
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -687,7 +688,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                       onCheckedChange={setAutoApprovalRequireAvailability}
                     />
                     <Label htmlFor="auto-approval-require-availability" className="text-sm">
-                      Technician must have availability configured for requested time
+                      {t('availabilitySettings.general.autoApproval.criteria.requireAvailability', { defaultValue: 'Technician must have availability configured for requested time' })}
                     </Label>
                   </div>
 
@@ -698,7 +699,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                       onCheckedChange={setAutoApprovalRequireContract}
                     />
                     <Label htmlFor="auto-approval-require-contract" className="text-sm">
-                      Client must have active contract (if service requires it)
+                      {t('availabilitySettings.general.autoApproval.criteria.requireContract', { defaultValue: 'Client must have active contract (if service requires it)' })}
                     </Label>
                   </div>
 
@@ -709,7 +710,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                       onCheckedChange={setAutoApprovalCheckConflicts}
                     />
                     <Label htmlFor="auto-approval-check-conflicts" className="text-sm">
-                      No scheduling conflicts with existing appointments
+                      {t('availabilitySettings.general.autoApproval.criteria.checkConflicts', { defaultValue: 'No scheduling conflicts with existing appointments' })}
                     </Label>
                   </div>
 
@@ -720,7 +721,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                       onCheckedChange={setAutoApprovalRespectBuffers}
                     />
                     <Label htmlFor="auto-approval-respect-buffers" className="text-sm">
-                      Respect buffer times before/after appointments
+                      {t('availabilitySettings.general.autoApproval.criteria.respectBuffers', { defaultValue: 'Respect buffer times before/after appointments' })}
                     </Label>
                   </div>
                 </div>
@@ -729,10 +730,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             </Alert>
 
             <div>
-              <Label htmlFor="general-default-approver">Default Approver</Label>
+              <Label htmlFor="general-default-approver">{t('availabilitySettings.general.defaultApprover.label', { defaultValue: 'Default Approver' })}</Label>
               <p className="text-xs text-gray-600 mb-2">
-                Company-wide default approver for appointment requests that require manual approval.
-                This can be overridden per technician in User Hours settings.
+                {t('availabilitySettings.general.defaultApprover.help', { defaultValue: 'Company-wide default approver for appointment requests that require manual approval. This can be overridden per technician in User Hours settings.' })}
               </p>
               <CustomSelect
                 id="general-default-approver"
@@ -742,13 +742,13 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                 }))}
                 value={defaultApproverId || undefined}
                 onValueChange={setDefaultApproverId}
-                placeholder="Select an approver"
+                placeholder={t('availabilitySettings.common.defaultApprover.placeholder', { defaultValue: 'Select an approver' })}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="advance-booking-days">Default Advance Booking (Days)</Label>
+                <Label htmlFor="advance-booking-days">{t('availabilitySettings.general.advanceBookingDays.label', { defaultValue: 'Default Advance Booking (Days)' })}</Label>
                 <Input
                   id="advance-booking-days"
                   type="number"
@@ -757,7 +757,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                 />
               </div>
               <div>
-                <Label htmlFor="minimum-notice-hours">Minimum Notice (Hours)</Label>
+                <Label htmlFor="minimum-notice-hours">{t('availabilitySettings.general.minimumNoticeHours.label', { defaultValue: 'Minimum Notice (Hours)' })}</Label>
                 <Input
                   id="minimum-notice-hours"
                   type="number"
@@ -768,7 +768,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             </div>
             <Button id="save-general-settings" onClick={handleSaveGeneralSettings}>
               <Save className="h-4 w-4 mr-2" />
-              Save General Settings
+              {t('availabilitySettings.general.actions.save', { defaultValue: 'Save General Settings' })}
             </Button>
           </TabsContent>
 
@@ -777,13 +777,11 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
               <AlertDescription>
                 {isManager ? (
                   <>
-                    <strong>Team Manager:</strong> You can configure availability settings for members of your team(s).
-                    The "Configured Users" table below shows all users with availability settings across the system.
+                    <strong>{t('availabilitySettings.userHours.roleManager.label', { defaultValue: 'Team Manager:' })}</strong> {t('availabilitySettings.userHours.roleManager.description', { defaultValue: 'You can configure availability settings for members of your team(s). The "Configured Users" table below shows all users with availability settings across the system.' })}
                   </>
                 ) : (
                   <>
-                    <strong>Administrator:</strong> You can configure availability settings for any user in the system.
-                    The "Configured Users" table below shows all users with availability settings.
+                    <strong>{t('availabilitySettings.userHours.roleAdmin.label', { defaultValue: 'Administrator:' })}</strong> {t('availabilitySettings.userHours.roleAdmin.description', { defaultValue: 'You can configure availability settings for any user in the system. The "Configured Users" table below shows all users with availability settings.' })}
                   </>
                 )}
               </AlertDescription>
@@ -791,7 +789,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
             {isManager && managedTeams.length > 1 && (
               <div>
-                <Label>Select Team</Label>
+                <Label>{t('availabilitySettings.common.teamSelect.label', { defaultValue: 'Select Team' })}</Label>
                 <CustomSelect
                   id="team-selector"
                   options={managedTeams.map(team => ({
@@ -800,19 +798,19 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                   }))}
                   value={selectedTeamId || undefined}
                   onValueChange={setSelectedTeamId}
-                  placeholder="Select a team"
+                  placeholder={t('availabilitySettings.common.teamSelect.placeholder', { defaultValue: 'Select a team' })}
                 />
               </div>
             )}
 
             <div>
-              <Label>Select User to Configure</Label>
+              <Label>{t('availabilitySettings.userHours.userSelect.label', { defaultValue: 'Select User to Configure' })}</Label>
               <CustomSelect
                 id="user-hours-selector"
                 options={userOptions}
                 value={selectedUserId || undefined}
                 onValueChange={setSelectedUserId}
-                placeholder={isManager && !selectedTeamId && managedTeams.length > 1 ? "Select a team first" : "Select a user to configure"}
+                placeholder={isManager && !selectedTeamId && managedTeams.length > 1 ? t('availabilitySettings.userHours.userSelect.placeholderSelectTeamFirst', { defaultValue: 'Select a team first' }) : t('availabilitySettings.userHours.userSelect.placeholder', { defaultValue: 'Select a user to configure' })}
                 disabled={isManager && !selectedTeamId && managedTeams.length > 1}
               />
             </div>
@@ -820,35 +818,35 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             {selectedUserId && (
               <>
                 <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                  <h3 className="text-sm font-semibold">Appointment Settings</h3>
+                  <h3 className="text-sm font-semibold">{t('availabilitySettings.userHours.appointmentSettings.title', { defaultValue: 'Appointment Settings' })}</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="user-default-duration">Default Appointment Duration (Minutes)</Label>
+                      <Label htmlFor="user-default-duration">{t('availabilitySettings.userHours.appointmentSettings.defaultDuration.label', { defaultValue: 'Default Appointment Duration (Minutes)' })}</Label>
                       <p className="text-xs text-gray-600 mb-2">
-                        Technician-specific duration override. Leave empty to use the service-specific duration from Service Rules.
+                        {t('availabilitySettings.userHours.appointmentSettings.defaultDuration.help', { defaultValue: 'Technician-specific duration override. Leave empty to use the service-specific duration from Service Rules.' })}
                       </p>
                       <Input
                         id="user-default-duration"
                         type="number"
                         value={userDefaultDuration}
                         onChange={(e) => setUserDefaultDuration(e.target.value)}
-                        placeholder="Leave empty to use service default"
+                        placeholder={t('availabilitySettings.userHours.appointmentSettings.defaultDuration.placeholder', { defaultValue: 'Leave empty to use service default' })}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="user-buffer-after">Buffer Time Between Appointments (Minutes)</Label>
+                      <Label htmlFor="user-buffer-after">{t('availabilitySettings.userHours.appointmentSettings.bufferAfter.label', { defaultValue: 'Buffer Time Between Appointments (Minutes)' })}</Label>
                       <Input
                         id="user-buffer-after"
                         type="number"
                         value={userBufferAfter}
                         onChange={(e) => setUserBufferAfter(e.target.value)}
-                        placeholder="15"
+                        placeholder={t('availabilitySettings.userHours.appointmentSettings.bufferAfter.placeholder', { defaultValue: '15' })}
                       />
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="user-default-approver">Default Approver</Label>
-                    <p className="text-xs text-gray-600 mb-2">Who should review and approve appointment requests for this technician that require manual approval</p>
+                    <Label htmlFor="user-default-approver">{t('availabilitySettings.userHours.appointmentSettings.defaultApprover.label', { defaultValue: 'Default Approver' })}</Label>
+                    <p className="text-xs text-gray-600 mb-2">{t('availabilitySettings.userHours.appointmentSettings.defaultApprover.help', { defaultValue: 'Who should review and approve appointment requests for this technician that require manual approval' })}</p>
                     <CustomSelect
                       id="user-default-approver"
                       options={allUsers
@@ -859,7 +857,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                         }))}
                       value={userDefaultApproverId || undefined}
                       onValueChange={setUserDefaultApproverId}
-                      placeholder="Select an approver"
+                      placeholder={t('availabilitySettings.common.defaultApprover.placeholder', { defaultValue: 'Select an approver' })}
                     />
                   </div>
                   <div className="flex items-center space-x-2">
@@ -869,27 +867,27 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                       onCheckedChange={setUserAllowClientPreference}
                     />
                     <div>
-                      <Label htmlFor="user-allow-client-preference" className="font-medium">Allow Client Preference</Label>
-                      <p className="text-sm text-gray-600">Let clients request this technician specifically</p>
+                      <Label htmlFor="user-allow-client-preference" className="font-medium">{t('availabilitySettings.userHours.appointmentSettings.allowClientPreference.label', { defaultValue: 'Allow Client Preference' })}</Label>
+                      <p className="text-sm text-gray-600">{t('availabilitySettings.userHours.appointmentSettings.allowClientPreference.help', { defaultValue: 'Let clients request this technician specifically' })}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="border rounded-lg overflow-hidden">
                   <div className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400 border-b dark:border-gray-700">
-                    Times are in your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone})
+                    {t('availabilitySettings.userHours.schedule.timezoneNotice', { defaultValue: 'Times are in your local timezone ({{timeZone}})', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })}
                   </div>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="py-2">Day</TableHead>
-                        <TableHead className="py-2">Available</TableHead>
-                        <TableHead className="py-2">Start Time</TableHead>
-                        <TableHead className="py-2">End Time</TableHead>
+                        <TableHead className="py-2">{t('availabilitySettings.userHours.schedule.columns.day', { defaultValue: 'Day' })}</TableHead>
+                        <TableHead className="py-2">{t('availabilitySettings.userHours.schedule.columns.available', { defaultValue: 'Available' })}</TableHead>
+                        <TableHead className="py-2">{t('availabilitySettings.userHours.schedule.columns.startTime', { defaultValue: 'Start Time' })}</TableHead>
+                        <TableHead className="py-2">{t('availabilitySettings.userHours.schedule.columns.endTime', { defaultValue: 'End Time' })}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {DAYS_OF_WEEK.map(day => {
+                      {daysOfWeek.map(day => {
                         const hours = userHours[day.value] || {
                           day_of_week: day.value,
                           is_available: false,
@@ -946,18 +944,18 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                 </div>
                 <Button id="save-user-hours" onClick={handleSaveUserHours}>
                   <Save className="h-4 w-4 mr-2" />
-                  Save User Hours
+                  {t('availabilitySettings.userHours.actions.save', { defaultValue: 'Save User Hours' })}
                 </Button>
               </>
             )}
 
             {/* Configured Users Table */}
             <div className="border-t pt-4 mt-6">
-              <h3 className="text-lg font-semibold mb-2">Configured Users</h3>
-              <p className="text-sm text-gray-600 mb-4">Users with availability settings configured</p>
+              <h3 className="text-lg font-semibold mb-2">{t('availabilitySettings.userHours.configuredUsers.title', { defaultValue: 'Configured Users' })}</h3>
+              <p className="text-sm text-gray-600 mb-4">{t('availabilitySettings.userHours.configuredUsers.description', { defaultValue: 'Users with availability settings configured' })}</p>
               {configuredUsersData.length === 0 ? (
                 <div className="text-center text-gray-500 py-8 border rounded-lg">
-                  No users configured yet
+                  {t('availabilitySettings.userHours.configuredUsers.empty', { defaultValue: 'No users configured yet' })}
                 </div>
               ) : (
                 <DataTable
@@ -979,13 +977,13 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
           <TabsContent value="service-rules" className="space-y-4 mt-4">
             <div>
-              <Label>Select Service to Configure</Label>
+              <Label>{t('availabilitySettings.serviceRules.serviceSelect.label', { defaultValue: 'Select Service to Configure' })}</Label>
               <CustomSelect
                 id="service-rules-selector"
                 options={serviceOptions}
                 value={selectedServiceId || undefined}
                 onValueChange={setSelectedServiceId}
-                placeholder="Select a service to configure"
+                placeholder={t('availabilitySettings.serviceRules.serviceSelect.placeholder', { defaultValue: 'Select a service to configure' })}
               />
             </div>
 
@@ -993,7 +991,10 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
               <>
                 <div className="border-t pt-4 mt-4">
                   <h3 className="text-lg font-semibold mb-4">
-                    Edit Rules: {services.find(s => s.service_id === selectedServiceId)?.service_name}
+                    {t('availabilitySettings.serviceRules.editor.title', {
+                      defaultValue: 'Edit Rules: {{serviceName}}',
+                      serviceName: services.find(s => s.service_id === selectedServiceId)?.service_name || ''
+                    })}
                   </h3>
                   <div className="space-y-4">
                     <div className="flex items-center space-x-2">
@@ -1010,11 +1011,11 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                           }));
                         }}
                       />
-                      <Label htmlFor="allow-without-contract">Allow Booking Without Contract</Label>
+                      <Label htmlFor="allow-without-contract">{t('availabilitySettings.serviceRules.editor.allowWithoutContract.label', { defaultValue: 'Allow Booking Without Contract' })}</Label>
                     </div>
 
                     <div>
-                      <Label htmlFor="max-appointments-per-day">Max Appointments Per Day</Label>
+                      <Label htmlFor="max-appointments-per-day">{t('availabilitySettings.serviceRules.editor.maxAppointmentsPerDay.label', { defaultValue: 'Max Appointments Per Day' })}</Label>
                       <Input
                         id="max-appointments-per-day"
                         type="number"
@@ -1028,14 +1029,14 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                             }
                           }));
                         }}
-                        placeholder="No limit"
+                        placeholder={t('availabilitySettings.serviceRules.common.noLimit', { defaultValue: 'No limit' })}
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="service-default-duration">Default Appointment Duration (Minutes)</Label>
+                      <Label htmlFor="service-default-duration">{t('availabilitySettings.serviceRules.editor.defaultDuration.label', { defaultValue: 'Default Appointment Duration (Minutes)' })}</Label>
                       <p className="text-xs text-gray-600 mb-2">
-                        Default duration for appointments of this service type. Can be overridden by technician-specific settings in User Hours.
+                        {t('availabilitySettings.serviceRules.editor.defaultDuration.help', { defaultValue: 'Default duration for appointments of this service type. Can be overridden by technician-specific settings in User Hours.' })}
                       </p>
                       <Input
                         id="service-default-duration"
@@ -1053,14 +1054,14 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                             }
                           }));
                         }}
-                        placeholder="e.g., 60 (minutes)"
+                        placeholder={t('availabilitySettings.serviceRules.editor.defaultDuration.placeholder', { defaultValue: 'e.g., 60 (minutes)' })}
                       />
                     </div>
                   </div>
 
                   <Button id="save-service-rules" onClick={handleSaveServiceRules} className="mt-4">
                     <Save className="h-4 w-4 mr-2" />
-                    Save Service Rules
+                    {t('availabilitySettings.serviceRules.actions.save', { defaultValue: 'Save Service Rules' })}
                   </Button>
                 </div>
               </>
@@ -1068,11 +1069,11 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
             {/* Configured Services Table */}
             <div className="border-t pt-4 mt-6">
-              <h3 className="text-lg font-semibold mb-2">Configured Services</h3>
-              <p className="text-sm text-gray-600 mb-4">Services with appointment rules configured</p>
+              <h3 className="text-lg font-semibold mb-2">{t('availabilitySettings.serviceRules.configuredServices.title', { defaultValue: 'Configured Services' })}</h3>
+              <p className="text-sm text-gray-600 mb-4">{t('availabilitySettings.serviceRules.configuredServices.description', { defaultValue: 'Services with appointment rules configured' })}</p>
               {configuredServicesData.length === 0 ? (
                 <div className="text-center text-gray-500 py-8 border rounded-lg">
-                  No services configured yet
+                  {t('availabilitySettings.serviceRules.configuredServices.empty', { defaultValue: 'No services configured yet' })}
                 </div>
               ) : (
                 <DataTable
@@ -1095,7 +1096,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           <TabsContent value="exceptions" className="space-y-4 mt-4">
             {isManager && managedTeams.length > 1 && (
               <div>
-                <Label>Select Team</Label>
+                <Label>{t('availabilitySettings.common.teamSelect.label', { defaultValue: 'Select Team' })}</Label>
                 <CustomSelect
                   id="team-selector-exceptions"
                   options={managedTeams.map(team => ({
@@ -1104,17 +1105,17 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                   }))}
                   value={selectedTeamId || undefined}
                   onValueChange={setSelectedTeamId}
-                  placeholder="Select a team"
+                  placeholder={t('availabilitySettings.common.teamSelect.placeholder', { defaultValue: 'Select a team' })}
                 />
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Add Exception</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('availabilitySettings.exceptions.form.title', { defaultValue: 'Add Exception' })}</h3>
                 <div className="space-y-4">
                   <div>
-                    <Label>Select Date</Label>
+                    <Label>{t('availabilitySettings.exceptions.form.date.label', { defaultValue: 'Select Date' })}</Label>
                     <Calendar
                       mode="single"
                       selected={selectedDate}
@@ -1124,13 +1125,13 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                   </div>
 
                   <div>
-                    <Label>User (Optional - leave empty for company-wide)</Label>
+                    <Label>{t('availabilitySettings.exceptions.form.user.label', { defaultValue: 'User (Optional - leave empty for company-wide)' })}</Label>
                     <CustomSelect
                       id="exception-user-selector"
-                      options={[{ value: '__company_wide__', label: 'Company-wide' }, ...userOptions]}
+                      options={[{ value: '__company_wide__', label: t('availabilitySettings.exceptions.common.companyWide', { defaultValue: 'Company-wide' }) }, ...userOptions]}
                       value={exceptionUserId || '__company_wide__'}
                       onValueChange={setExceptionUserId}
-                      placeholder="Select user"
+                      placeholder={t('availabilitySettings.exceptions.form.user.placeholder', { defaultValue: 'Select user' })}
                       disabled={isManager && !selectedTeamId && managedTeams.length > 1}
                     />
                   </div>
@@ -1141,31 +1142,31 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                       checked={exceptionIsAvailable}
                       onCheckedChange={setExceptionIsAvailable}
                     />
-                    <Label htmlFor="exception-is-available">Available on this day</Label>
+                    <Label htmlFor="exception-is-available">{t('availabilitySettings.exceptions.form.isAvailable.label', { defaultValue: 'Available on this day' })}</Label>
                   </div>
 
                   <div>
-                    <Label htmlFor="exception-reason">Reason</Label>
+                    <Label htmlFor="exception-reason">{t('availabilitySettings.exceptions.form.reason.label', { defaultValue: 'Reason' })}</Label>
                     <Input
                       id="exception-reason"
                       value={exceptionReason}
                       onChange={(e) => setExceptionReason(e.target.value)}
-                      placeholder="Holiday, Time off, etc."
+                      placeholder={t('availabilitySettings.exceptions.form.reason.placeholder', { defaultValue: 'Holiday, Time off, etc.' })}
                     />
                   </div>
 
                   <Button id="add-exception" onClick={handleAddException}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Exception
+                    {t('availabilitySettings.exceptions.actions.add', { defaultValue: 'Add Exception' })}
                   </Button>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold mb-2">Existing Exceptions</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('availabilitySettings.exceptions.list.title', { defaultValue: 'Existing Exceptions' })}</h3>
                 <div className="space-y-2">
                   {exceptions.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No exceptions configured</p>
+                    <p className="text-gray-500 text-sm">{t('availabilitySettings.exceptions.list.empty', { defaultValue: 'No exceptions configured' })}</p>
                   ) : (
                     exceptions.map(exception => {
                       const user = users.find(u => u.user_id === exception.user_id);
@@ -1182,13 +1183,13 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                           <div className="flex-1">
                             <div className="font-medium">{dateStr}</div>
                             <div className="text-sm text-gray-600">
-                              {user ? `${user.first_name} ${user.last_name}` : 'Company-wide'}
+                              {user ? `${user.first_name} ${user.last_name}` : t('availabilitySettings.exceptions.common.companyWide', { defaultValue: 'Company-wide' })}
                             </div>
                             {exception.reason && (
                               <div className="text-sm text-gray-500 italic">{exception.reason}</div>
                             )}
                             <Badge variant={exception.is_available ? 'success' : 'error'} className="mt-1">
-                              {exception.is_available ? 'Available' : 'Unavailable'}
+                              {exception.is_available ? t('availabilitySettings.exceptions.list.status.available', { defaultValue: 'Available' }) : t('availabilitySettings.exceptions.list.status.unavailable', { defaultValue: 'Unavailable' })}
                             </Badge>
                           </div>
                           <Button

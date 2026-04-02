@@ -1,16 +1,28 @@
+/* global process */
+
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import ExtensionIframe from './ExtensionIframe';
 import DockerExtensionIframe from './DockerExtensionIframe';
 import { getInstallInfo } from '@ee/lib/actions/extensionDomainActions';
 import { buildExtUiSrc } from './lib/extensions/assets/url.shared';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-export const metadata = { title: 'Extension' };
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 type PageParams = { id: string };
 
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'msp/extensions');
+
+  return {
+    title: t('runtime.metadataTitle', { defaultValue: 'Extension' }),
+  };
+}
+
 export default async function Page({ params }: { params: PageParams | Promise<PageParams> }) {
+  const { t } = await getServerTranslation(undefined, 'msp/extensions');
   const resolvedParams = await params;
   const id = resolvedParams.id;
   const runnerBackend = (process.env.RUNNER_BACKEND || 'knative').toLowerCase();
@@ -28,8 +40,8 @@ export default async function Page({ params }: { params: PageParams | Promise<Pa
 
   try {
     info = await getInstallInfo(id);
-  } catch (e: unknown) {
-    error = 'Failed to load extension runtime info';
+  } catch {
+    error = t('runtime.loadError', { defaultValue: 'Failed to load extension runtime info' });
   }
 
   if (error) {
@@ -39,8 +51,12 @@ export default async function Page({ params }: { params: PageParams | Promise<Pa
   if (!info) {
     return (
       <div className="p-6 space-y-2">
-        <div className="text-gray-800 font-medium">Extension not found.</div>
-        <Link href="/msp/settings/extensions" className="text-primary-600 hover:underline text-sm">Go to extensions</Link>
+        <div className="text-gray-800 font-medium">
+          {t('runtime.notFoundTitle', { defaultValue: 'Extension not found.' })}
+        </div>
+        <Link href="/msp/settings/extensions" className="text-primary-600 hover:underline text-sm">
+          {t('runtime.goToExtensions', { defaultValue: 'Go to extensions' })}
+        </Link>
       </div>
     );
   }
@@ -50,9 +66,17 @@ export default async function Page({ params }: { params: PageParams | Promise<Pa
     if (!info.content_hash) {
       return (
         <div className="p-6 space-y-2">
-          <div className="text-gray-800 font-medium">Extension bundle not available.</div>
-          <div className="text-gray-600 text-sm">The extension bundle is missing or has not been uploaded.</div>
-          <Link href={`/msp/settings/extensions/${encodeURIComponent(id)}`} className="text-primary-600 hover:underline text-sm">Go to extension details</Link>
+          <div className="text-gray-800 font-medium">
+            {t('runtime.bundleUnavailableTitle', { defaultValue: 'Extension bundle not available.' })}
+          </div>
+          <div className="text-gray-600 text-sm">
+            {t('runtime.bundleUnavailableDescription', {
+              defaultValue: 'The extension bundle is missing or has not been uploaded.',
+            })}
+          </div>
+          <Link href={`/msp/settings/extensions/${encodeURIComponent(id)}`} className="text-primary-600 hover:underline text-sm">
+            {t('runtime.goToDetails', { defaultValue: 'Go to extension details' })}
+          </Link>
         </div>
       );
     }
@@ -97,9 +121,20 @@ export default async function Page({ params }: { params: PageParams | Promise<Pa
   if (!info.runner_domain) {
     return (
       <div className="p-6 space-y-2">
-        <div className="text-gray-800 font-medium">Extension runtime domain not available.</div>
-        <div className="text-gray-600 text-sm">Reprovision the extension from Settings → Extensions → select extension → Provision.</div>
-        <Link href={`/msp/settings/extensions/${encodeURIComponent(id)}`} className="text-primary-600 hover:underline text-sm">Go to extension details</Link>
+        <div className="text-gray-800 font-medium">
+          {t('runtime.runtimeDomainUnavailableTitle', {
+            defaultValue: 'Extension runtime domain not available.',
+          })}
+        </div>
+        <div className="text-gray-600 text-sm">
+          {t('runtime.runtimeDomainUnavailableDescription', {
+            defaultValue:
+              'Reprovision the extension from Settings -> Extensions -> select extension -> Provision.',
+          })}
+        </div>
+        <Link href={`/msp/settings/extensions/${encodeURIComponent(id)}`} className="text-primary-600 hover:underline text-sm">
+          {t('runtime.goToDetails', { defaultValue: 'Go to extension details' })}
+        </Link>
       </div>
     );
   }

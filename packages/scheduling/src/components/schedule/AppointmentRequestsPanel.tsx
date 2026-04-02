@@ -24,6 +24,7 @@ import {
 } from '@alga-psa/scheduling/actions';
 import { getSchedulingTicketById, type SchedulingTicketDetailsRecord } from '../../actions/ticketLookupActions';
 import { SchedulingTicketDetails } from '../shared/SchedulingTicketDetails';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AppointmentRequestsPanelProps {
   isOpen: boolean;
@@ -38,6 +39,8 @@ export default function AppointmentRequestsPanel({
   onRequestProcessed,
   highlightedRequestId
 }: AppointmentRequestsPanelProps) {
+  const { t } = useTranslation('msp/schedule');
+  const { formatDate } = useFormatters();
   const [requests, setRequests] = useState<IAppointmentRequest[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<IAppointmentRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<IAppointmentRequest | null>(null);
@@ -79,10 +82,14 @@ export default function AppointmentRequestsPanel({
       if (result.success && result.data) {
         setRequests(result.data);
       } else {
-        toast.error(result.error || 'Failed to load appointment requests');
+        toast.error(result.error || t('requests.errors.load', {
+          defaultValue: 'Failed to load appointment requests',
+        }));
       }
     } catch (error) {
-      handleError(error, 'Failed to load appointment requests');
+      handleError(error, t('requests.errors.load', {
+        defaultValue: 'Failed to load appointment requests',
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -190,10 +197,14 @@ export default function AppointmentRequestsPanel({
         setSelectedTicket(ticketData);
         setIsTicketDrawerOpen(true);
       } else {
-        toast.error('Ticket not found');
+        toast.error(t('requests.errors.ticketNotFound', {
+          defaultValue: 'Ticket not found',
+        }));
       }
     } catch (error) {
-      handleError(error, 'Failed to load ticket');
+      handleError(error, t('requests.errors.loadTicket', {
+        defaultValue: 'Failed to load ticket',
+      }));
     }
   };
 
@@ -201,7 +212,9 @@ export default function AppointmentRequestsPanel({
     if (!selectedRequest) return;
 
     if (!assignedTechnicianId) {
-      toast.error('Please assign a technician');
+      toast.error(t('requests.errors.assignTechnicianRequired', {
+        defaultValue: 'Please assign a technician',
+      }));
       return;
     }
 
@@ -228,15 +241,21 @@ export default function AppointmentRequestsPanel({
       });
 
       if (result.success) {
-        toast.success('Appointment request approved');
+        toast.success(t('requests.feedback.approved', {
+          defaultValue: 'Appointment request approved',
+        }));
         setSelectedRequest(null);
         loadRequests();
         onRequestProcessed?.();
       } else {
-        toast.error(result.error || 'Failed to approve request');
+        toast.error(result.error || t('requests.errors.approve', {
+          defaultValue: 'Failed to approve request',
+        }));
       }
     } catch (error) {
-      handleError(error, 'Failed to approve request');
+      handleError(error, t('requests.errors.approve', {
+        defaultValue: 'Failed to approve request',
+      }));
     }
   };
 
@@ -244,7 +263,9 @@ export default function AppointmentRequestsPanel({
     if (!selectedRequest) return;
 
     if (!declineReason.trim()) {
-      toast.error('Please provide a reason for declining');
+      toast.error(t('requests.errors.declineReasonRequired', {
+        defaultValue: 'Please provide a reason for declining',
+      }));
       return;
     }
 
@@ -255,16 +276,22 @@ export default function AppointmentRequestsPanel({
       });
 
       if (result.success) {
-        toast.success('Appointment request declined');
+        toast.success(t('requests.feedback.declined', {
+          defaultValue: 'Appointment request declined',
+        }));
         setSelectedRequest(null);
         setShowDeclineForm(false);
         loadRequests();
         onRequestProcessed?.();
       } else {
-        toast.error(result.error || 'Failed to decline request');
+        toast.error(result.error || t('requests.errors.decline', {
+          defaultValue: 'Failed to decline request',
+        }));
       }
     } catch (error) {
-      handleError(error, 'Failed to decline request');
+      handleError(error, t('requests.errors.decline', {
+        defaultValue: 'Failed to decline request',
+      }));
     }
   };
 
@@ -277,11 +304,11 @@ export default function AppointmentRequestsPanel({
   );
 
   const statusOptions: SelectOption[] = [
-    { value: 'all', label: 'All' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'declined', label: 'Declined' },
-    { value: 'cancelled', label: 'Cancelled' }
+    { value: 'all', label: t('requests.filters.statusOptions.all', { defaultValue: 'All' }) },
+    { value: 'pending', label: t('requests.filters.statusOptions.pending', { defaultValue: 'Pending' }) },
+    { value: 'approved', label: t('requests.filters.statusOptions.approved', { defaultValue: 'Approved' }) },
+    { value: 'declined', label: t('requests.filters.statusOptions.declined', { defaultValue: 'Declined' }) },
+    { value: 'cancelled', label: t('requests.filters.statusOptions.cancelled', { defaultValue: 'Cancelled' }) }
   ];
 
   const getStatusBadgeVariant = (status: string): 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' => {
@@ -297,7 +324,7 @@ export default function AppointmentRequestsPanel({
   const formatDateTime = (date: unknown, time: unknown) => {
     try {
       if (!date || !time) {
-        return 'Invalid date/time';
+        return t('requests.fallbacks.invalidDateTime', { defaultValue: 'Invalid date/time' });
       }
       // Normalize PG DATE (may be JS Date object) to YYYY-MM-DD string
       const dateStr = date instanceof Date
@@ -306,13 +333,13 @@ export default function AppointmentRequestsPanel({
       // Normalize PG TIME to HH:MM string
       const timeStr = typeof time === 'string' ? time.slice(0, 5) : null;
 
-      if (!dateStr || !timeStr) return 'Invalid date/time';
+      if (!dateStr || !timeStr) return t('requests.fallbacks.invalidDateTime', { defaultValue: 'Invalid date/time' });
 
       const dateTime = new Date(`${dateStr}T${timeStr}:00Z`);
       if (isNaN(dateTime.getTime())) {
         return `${dateStr} ${timeStr}`;
       }
-      return dateTime.toLocaleString('en-US', {
+      return formatDate(dateTime, {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
@@ -321,7 +348,7 @@ export default function AppointmentRequestsPanel({
         minute: '2-digit'
       });
     } catch {
-      return 'Invalid date/time';
+      return t('requests.fallbacks.invalidDateTime', { defaultValue: 'Invalid date/time' });
     }
   };
 
@@ -333,8 +360,15 @@ export default function AppointmentRequestsPanel({
           <>
             {/* List View */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Appointment Requests</h2>
-              <Badge variant="primary">{filteredRequests.length} {statusFilter === 'all' ? 'Total' : statusFilter}</Badge>
+              <h2 className="text-2xl font-bold">{t('requests.list.title', { defaultValue: 'Appointment Requests' })}</h2>
+              <Badge variant="primary">
+                {filteredRequests.length}{' '}
+                {statusFilter === 'all'
+                  ? t('requests.list.badgeTotal', { defaultValue: 'Total' })
+                  : t(`requests.filters.statusOptions.${statusFilter}`, {
+                      defaultValue: statusFilter,
+                    })}
+              </Badge>
             </div>
 
             {/* Filters */}
@@ -344,17 +378,22 @@ export default function AppointmentRequestsPanel({
                 options={statusOptions}
                 value={statusFilter}
                 onValueChange={setStatusFilter}
-                label="Filter by Status"
+                label={t('requests.filters.statusLabel', { defaultValue: 'Filter by Status' })}
               />
             </div>
 
             {/* Request List */}
             <div className="flex-1 overflow-y-auto space-y-2">
               {isLoading ? (
-                <div className="text-center py-8 text-gray-500">Loading requests...</div>
+                <div className="text-center py-8 text-gray-500">{t('requests.list.loading', { defaultValue: 'Loading requests...' })}</div>
               ) : filteredRequests.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  No {statusFilter !== 'all' ? statusFilter : ''} requests found
+                  {t('requests.list.empty', {
+                    defaultValue: 'No {{status}} requests found',
+                    status: statusFilter !== 'all'
+                      ? t(`requests.filters.statusOptions.${statusFilter}`, { defaultValue: statusFilter })
+                      : '',
+                  }).replace(/\s+/g, ' ').trim()}
                 </div>
               ) : (
                 filteredRequests.map(request => (
@@ -367,7 +406,11 @@ export default function AppointmentRequestsPanel({
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-1">
                           <div className="font-semibold text-lg">
-                            {request.is_authenticated ? (request as any).client_company_name : request.company_name || 'Public Request'}
+                            {request.is_authenticated
+                              ? (request as any).client_company_name
+                              : request.company_name || t('requests.list.fallbacks.publicRequest', {
+                                  defaultValue: 'Public Request',
+                                })}
                           </div>
                           {(request as any).contact_name && (
                             <div className="text-sm text-gray-600">{(request as any).contact_name}</div>
@@ -389,7 +432,10 @@ export default function AppointmentRequestsPanel({
                         </div>
                         <div className="flex items-center text-gray-600">
                           <Clock className="h-4 w-4 mr-2" />
-                          {request.requested_duration} minutes
+                          {t('requests.list.duration', {
+                            defaultValue: '{{count}} minutes',
+                            count: request.requested_duration,
+                          })}
                         </div>
                         {request.ticket_id && (
                           <div className="flex items-center text-blue-600">
@@ -401,7 +447,10 @@ export default function AppointmentRequestsPanel({
                               }}
                               className="text-blue-600 hover:text-blue-800 hover:underline text-left"
                             >
-                              {(request as any).ticket_title || `Ticket #${(request as any).ticket_number || request.ticket_id.slice(0, 8)}`}
+                              {(request as any).ticket_title || t('requests.list.ticketFallback', {
+                                defaultValue: 'Ticket #{{ticket}}',
+                                ticket: (request as any).ticket_number || request.ticket_id.slice(0, 8),
+                              })}
                             </button>
                           </div>
                         )}
@@ -422,79 +471,82 @@ export default function AppointmentRequestsPanel({
                 onClick={() => setSelectedRequest(null)}
                 className="mb-2"
               >
-                ← Back to List
+                {t('requests.detail.back', { defaultValue: '← Back to List' })}
               </Button>
-              <h2 className="text-2xl font-bold">Request Details</h2>
+              <h2 className="text-2xl font-bold">{t('requests.detail.title', { defaultValue: 'Request Details' })}</h2>
             </div>
 
             <div className="flex-1 overflow-y-auto">
               <Card>
             <CardHeader>
-              <CardTitle>Request Information</CardTitle>
+              <CardTitle>{t('requests.detail.section.requestInformation', { defaultValue: 'Request Information' })}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Request Information */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <div className="font-semibold text-gray-700">Reference</div>
+                  <div className="font-semibold text-gray-700">{t('requests.detail.labels.reference', { defaultValue: 'Reference' })}</div>
                   <div className="font-mono">{selectedRequest.appointment_request_id.slice(0, 8).toUpperCase()}</div>
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-700">Client</div>
+                  <div className="font-semibold text-gray-700">{t('requests.detail.labels.client', { defaultValue: 'Client' })}</div>
                   <div>{selectedRequest.is_authenticated ? (selectedRequest as any).client_company_name : selectedRequest.company_name}</div>
                 </div>
                 {(selectedRequest as any).contact_name && (
                   <div>
-                    <div className="font-semibold text-gray-700">Contact</div>
+                    <div className="font-semibold text-gray-700">{t('requests.detail.labels.contact', { defaultValue: 'Contact' })}</div>
                     <div>{(selectedRequest as any).contact_name}</div>
                   </div>
                 )}
                 {(selectedRequest as any).contact_email && (
                   <div>
-                    <div className="font-semibold text-gray-700">Email</div>
+                    <div className="font-semibold text-gray-700">{t('requests.detail.labels.email', { defaultValue: 'Email' })}</div>
                     <div>{(selectedRequest as any).contact_email}</div>
                   </div>
                 )}
                 {selectedRequest.requester_email && !selectedRequest.is_authenticated && (
                   <div>
-                    <div className="font-semibold text-gray-700">Email</div>
+                    <div className="font-semibold text-gray-700">{t('requests.detail.labels.email', { defaultValue: 'Email' })}</div>
                     <div>{selectedRequest.requester_email}</div>
                   </div>
                 )}
                 {selectedRequest.requester_phone && (
                   <div>
-                    <div className="font-semibold text-gray-700">Phone</div>
+                    <div className="font-semibold text-gray-700">{t('requests.detail.labels.phone', { defaultValue: 'Phone' })}</div>
                     <div>{selectedRequest.requester_phone}</div>
                   </div>
                 )}
                 <div>
-                  <div className="font-semibold text-gray-700">Service</div>
+                  <div className="font-semibold text-gray-700">{t('requests.detail.labels.service', { defaultValue: 'Service' })}</div>
                   <div>{(selectedRequest as any).service_name}</div>
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-700">Requested Time</div>
+                  <div className="font-semibold text-gray-700">{t('requests.detail.labels.requestedTime', { defaultValue: 'Requested Time' })}</div>
                   <div>{formatDateTime(selectedRequest.requested_date, selectedRequest.requested_time)}</div>
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-700">Duration</div>
-                  <div>{selectedRequest.requested_duration} minutes</div>
+                  <div className="font-semibold text-gray-700">{t('requests.detail.labels.duration', { defaultValue: 'Duration' })}</div>
+                  <div>{t('requests.list.duration', { defaultValue: '{{count}} minutes', count: selectedRequest.requested_duration })}</div>
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-700">Status</div>
+                  <div className="font-semibold text-gray-700">{t('requests.detail.labels.status', { defaultValue: 'Status' })}</div>
                   <Badge variant={getStatusBadgeVariant(selectedRequest.status)}>
-                    {selectedRequest.status}
+                    {t(`requests.filters.statusOptions.${selectedRequest.status}`, { defaultValue: selectedRequest.status })}
                   </Badge>
                 </div>
                 {selectedRequest.ticket_id && (
                   <div className="col-span-2">
-                    <div className="font-semibold text-gray-700 mb-1">Linked Ticket</div>
+                    <div className="font-semibold text-gray-700 mb-1">{t('requests.detail.labels.linkedTicket', { defaultValue: 'Linked Ticket' })}</div>
                     <div className="flex items-center">
                       <Ticket className="h-4 w-4 mr-2 text-blue-600" />
                       <button
                         onClick={() => handleOpenTicket(selectedRequest.ticket_id!)}
                         className="text-blue-600 hover:text-blue-800 hover:underline text-left"
                       >
-                        {(selectedRequest as any).ticket_title || `Ticket #${(selectedRequest as any).ticket_number || selectedRequest.ticket_id.slice(0, 8)}`}
+                        {(selectedRequest as any).ticket_title || t('requests.list.ticketFallback', {
+                          defaultValue: 'Ticket #{{ticket}}',
+                          ticket: (selectedRequest as any).ticket_number || selectedRequest.ticket_id.slice(0, 8),
+                        })}
                       </button>
                     </div>
                   </div>
@@ -503,7 +555,7 @@ export default function AppointmentRequestsPanel({
 
               {selectedRequest.description && (
                 <div>
-                  <div className="font-semibold text-gray-700 mb-1">Description</div>
+                  <div className="font-semibold text-gray-700 mb-1">{t('requests.detail.labels.description', { defaultValue: 'Description' })}</div>
                   <div className="text-sm bg-gray-50 p-3 rounded border">{selectedRequest.description}</div>
                 </div>
               )}
@@ -513,24 +565,24 @@ export default function AppointmentRequestsPanel({
                 <>
                   {!showDeclineForm ? (
                     <div className="space-y-4 border-t pt-4">
-                      <h3 className="font-semibold text-lg">Approval Details</h3>
+                      <h3 className="font-semibold text-lg">{t('requests.approval.title', { defaultValue: 'Approval Details' })}</h3>
 
                       <div>
                         <UserPicker
                           id="assign-technician"
-                          label="Assign Technician *"
+                          label={t('requests.approval.fields.assignedTechnician', { defaultValue: 'Assign Technician *' })}
                           users={technicians}
                           value={assignedTechnicianId}
                           onValueChange={setAssignedTechnicianId}
                           getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                          placeholder="Select technician"
+                          placeholder={t('requests.approval.placeholders.assignedTechnician', { defaultValue: 'Select technician' })}
                           userTypeFilter="internal"
                           buttonWidth="full"
                         />
                       </div>
 
                       <div>
-                        <Label>Final Date & Time</Label>
+                        <Label>{t('requests.approval.fields.finalDateTime', { defaultValue: 'Final Date & Time' })}</Label>
                         <DateTimePicker
                           id="final-datetime"
                           value={finalDateTime || undefined}
@@ -539,24 +591,24 @@ export default function AppointmentRequestsPanel({
                       </div>
 
                       <div>
-                        <Label htmlFor="internal-notes">Internal Notes (Optional)</Label>
+                        <Label htmlFor="internal-notes">{t('requests.approval.fields.internalNotes', { defaultValue: 'Internal Notes (Optional)' })}</Label>
                         <TextArea
                           id="internal-notes"
                           value={internalNotes}
                           onChange={(e) => setInternalNotes(e.target.value)}
-                          placeholder="Add any internal notes..."
+                          placeholder={t('requests.approval.placeholders.internalNotes', { defaultValue: 'Add any internal notes...' })}
                           rows={3}
                         />
                       </div>
 
                       {!selectedRequest.ticket_id && (
                         <div>
-                          <Label htmlFor="linked-ticket">Link to Ticket (Optional)</Label>
+                          <Label htmlFor="linked-ticket">{t('requests.approval.fields.linkedTicket', { defaultValue: 'Link to Ticket (Optional)' })}</Label>
                           <Input
                             id="linked-ticket"
                             value={linkedTicketId}
                             onChange={(e) => setLinkedTicketId(e.target.value)}
-                            placeholder="Enter ticket ID to link..."
+                            placeholder={t('requests.approval.placeholders.linkedTicket', { defaultValue: 'Enter ticket ID to link...' })}
                           />
                         </div>
                       )}
@@ -568,7 +620,7 @@ export default function AppointmentRequestsPanel({
                           className="flex-1"
                         >
                           <Check className="h-4 w-4 mr-2" />
-                          Approve
+                          {t('requests.approval.actions.approve', { defaultValue: 'Approve' })}
                         </Button>
                         <Button
                           id="show-decline-form"
@@ -577,21 +629,21 @@ export default function AppointmentRequestsPanel({
                           className="flex-1"
                         >
                           <X className="h-4 w-4 mr-2" />
-                          Decline
+                          {t('requests.approval.actions.decline', { defaultValue: 'Decline' })}
                         </Button>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-4 border-t pt-4">
-                      <h3 className="font-semibold text-lg">Decline Request</h3>
+                      <h3 className="font-semibold text-lg">{t('requests.decline.title', { defaultValue: 'Decline Request' })}</h3>
 
                       <div>
-                        <Label htmlFor="decline-reason">Reason for Declining *</Label>
+                        <Label htmlFor="decline-reason">{t('requests.decline.fields.reason', { defaultValue: 'Reason for Declining *' })}</Label>
                         <TextArea
                           id="decline-reason"
                           value={declineReason}
                           onChange={(e) => setDeclineReason(e.target.value)}
-                          placeholder="Please provide a reason for declining this request..."
+                          placeholder={t('requests.decline.placeholders.reason', { defaultValue: 'Please provide a reason for declining this request...' })}
                           rows={4}
                         />
                       </div>
@@ -604,7 +656,7 @@ export default function AppointmentRequestsPanel({
                           className="flex-1"
                         >
                           <X className="h-4 w-4 mr-2" />
-                          Confirm Decline
+                          {t('requests.decline.actions.confirm', { defaultValue: 'Confirm Decline' })}
                         </Button>
                         <Button
                           id="cancel-decline"
@@ -612,7 +664,7 @@ export default function AppointmentRequestsPanel({
                           onClick={() => setShowDeclineForm(false)}
                           className="flex-1"
                         >
-                          Cancel
+                          {t('requests.decline.actions.cancel', { defaultValue: 'Cancel' })}
                         </Button>
                       </div>
                     </div>

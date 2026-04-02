@@ -1,19 +1,27 @@
+'use client';
+
 import Link from 'next/link';
 import { MessageCircle } from 'lucide-react';
 
 import type { SurveyResponseListItem } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ResponsesListProps = {
   responses: SurveyResponseListItem[];
 };
 
 export default function ResponsesList({ responses }: ResponsesListProps) {
+  const { t } = useTranslation('msp/surveys');
+  const { formatDate } = useFormatters();
+
   return (
     <Card className="border-border-200 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-base font-semibold text-text-900">Recent Responses</CardTitle>
+        <CardTitle className="text-base font-semibold text-text-900">
+          {t('dashboard.responsesList.title', { defaultValue: 'Recent Responses' })}
+        </CardTitle>
         <div className="rounded-lg bg-primary-500/10 p-2 shadow-sm">
           <MessageCircle className="h-4 w-4 text-primary-500" />
         </div>
@@ -25,10 +33,14 @@ export default function ResponsesList({ responses }: ResponsesListProps) {
               <MessageCircle className="h-6 w-6 text-primary-500" />
             </div>
             <p className="text-center text-sm font-medium text-text-600">
-              No survey responses available yet.
+              {t('dashboard.responsesList.emptyTitle', {
+                defaultValue: 'No survey responses available yet.',
+              })}
             </p>
             <p className="text-center text-xs text-text-500">
-              Encourage customers to provide feedback to populate this view.
+              {t('dashboard.responsesList.emptyDescription', {
+                defaultValue: 'Encourage customers to provide feedback to populate this view.',
+              })}
             </p>
           </div>
         ) : (
@@ -36,22 +48,29 @@ export default function ResponsesList({ responses }: ResponsesListProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[140px]">Submitted</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Technician</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Comment</TableHead>
-                  <TableHead className="text-right">Ticket</TableHead>
+                  <TableHead className="w-[140px]">
+                    {t('dashboard.responsesList.table.submitted', { defaultValue: 'Submitted' })}
+                  </TableHead>
+                  <TableHead>{t('dashboard.responsesList.table.client', { defaultValue: 'Client' })}</TableHead>
+                  <TableHead>{t('dashboard.responsesList.table.technician', { defaultValue: 'Technician' })}</TableHead>
+                  <TableHead>{t('dashboard.responsesList.table.rating', { defaultValue: 'Rating' })}</TableHead>
+                  <TableHead>{t('dashboard.responsesList.table.comment', { defaultValue: 'Comment' })}</TableHead>
+                  <TableHead className="text-right">
+                    {t('dashboard.responsesList.table.ticket', { defaultValue: 'Ticket' })}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {responses.map((response) => (
                   <TableRow key={response.responseId}>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(response.submittedAt).toLocaleString()}
+                      {formatDate(response.submittedAt, { dateStyle: 'medium', timeStyle: 'short' })}
                     </TableCell>
                     <TableCell className="text-sm font-medium text-[rgb(var(--color-text-900))]">
-                      {response.clientName ?? 'Unknown Client'}
+                      {response.clientName ??
+                        t('dashboard.responsesList.fallbacks.unknownClient', {
+                          defaultValue: 'Unknown Client',
+                        })}
                       {response.contactName && (
                         <span className="block text-xs text-muted-foreground">
                           {response.contactName}
@@ -59,7 +78,10 @@ export default function ResponsesList({ responses }: ResponsesListProps) {
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {response.technicianName ?? 'Unassigned'}
+                      {response.technicianName ??
+                        t('dashboard.responsesList.fallbacks.unassigned', {
+                          defaultValue: 'Unassigned',
+                        })}
                     </TableCell>
                     <TableCell>
                       <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -68,9 +90,13 @@ export default function ResponsesList({ responses }: ResponsesListProps) {
                     </TableCell>
                     <TableCell className="max-w-[240px]">
                       {response.comment ? (
-                        <span className="text-sm text-[rgb(var(--color-text-700))] line-clamp-2">{response.comment}</span>
+                        <span className="line-clamp-2 text-sm text-[rgb(var(--color-text-700))]">{response.comment}</span>
                       ) : (
-                        <span className="text-sm italic text-muted-foreground">No comment</span>
+                        <span className="text-sm italic text-muted-foreground">
+                          {t('dashboard.responsesList.fallbacks.noComment', {
+                            defaultValue: 'No comment',
+                          })}
+                        </span>
                       )}
                     </TableCell>
                     <TableCell className="text-right text-sm">

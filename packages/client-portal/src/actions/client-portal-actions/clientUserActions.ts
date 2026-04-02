@@ -107,11 +107,7 @@ export const resetClientUserPassword = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    // Check if the password field exists in the users table
-    const hasPasswordField = await knex.schema.hasColumn('users', 'password');
-    const passwordField = hasPasswordField ? 'password' : 'hashed_password';
-
-    console.log(`Using password field: ${passwordField}`);
+    const passwordField = 'hashed_password';
 
     const hashedPassword = await hashPassword(newPassword);
 

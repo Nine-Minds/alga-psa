@@ -1,0 +1,199 @@
+{
+  "profile": {
+    "tabs": {
+      "profile": "Profil",
+      "security": "Bezpieczeństwo",
+      "sso": "Single Sign-On",
+      "apiKeys": "Klucze API",
+      "notifications": "Powiadomienia",
+      "calendar": "Kalendarz"
+    },
+    "basicInfo": {
+      "title": "Podstawowe informacje"
+    },
+    "fields": {
+      "firstName": {
+        "label": "Imię *"
+      },
+      "lastName": {
+        "label": "Nazwisko *"
+      },
+      "email": {
+        "label": "E-mail *"
+      },
+      "phoneNumber": {
+        "label": "Numer telefonu"
+      },
+      "timeZone": {
+        "label": "Strefa czasowa"
+      }
+    },
+    "actions": {
+      "saveChanges": "Zapisz zmiany"
+    },
+    "notifications": {
+      "title": "Preferencje powiadomień",
+      "viewSwitcher": {
+        "email": "E-mail",
+        "internal": "Wewnętrzne"
+      }
+    },
+    "loading": "Ładowanie profilu...",
+    "messages": {
+      "success": {
+        "profileUpdated": "Profil został zaktualizowany pomyślnie"
+      },
+      "error": {
+        "userNotFound": "Nie znaleziono użytkownika",
+        "fillRequiredFields": "Proszę wypełnić wszystkie wymagane pola",
+        "loadFailed": "Nie udało się załadować profilu",
+        "saveFailed": "Nie udało się zapisać profilu",
+        "errorPrefix": "Błąd: {{error}}"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "Imię jest wymagane",
+      "lastNameRequired": "Nazwisko jest wymagane"
+    },
+    "pageTitle": "Twój profil",
+    "changePassword": {
+      "title": "Zmień hasło",
+      "current": "Obecne hasło",
+      "new": "Nowe hasło",
+      "confirm": "Potwierdź nowe hasło",
+      "requirements": "Hasło musi mieć co najmniej 8 znaków",
+      "submit": "Zmień hasło",
+      "success": "Hasło zostało zmienione",
+      "error": "Nie udało się zmienić hasła",
+      "passwordMismatch": "Nowe hasła nie są zgodne",
+      "unknownError": "Wystąpił błąd podczas zmiany hasła",
+      "validationFailed": "Hasło nie spełnia wszystkich wymagań"
+    },
+    "loadingStates": {
+      "sso": {
+        "title": "Logowanie jednokrotne",
+        "description": "Ładowanie ustawień logowania SSO..."
+      },
+      "calendar": {
+        "title": "Kalendarz",
+        "description": "Ładowanie ustawień kalendarza..."
+      }
+    }
+  },
+  "security": {
+    "title": "Ustawienia bezpieczeństwa",
+    "tabs": {
+      "roles": "Role",
+      "sessions": "Sesje",
+      "sso": "Single Sign-On",
+      "permissions": "Uprawnienia",
+      "userRoles": "Role użytkowników",
+      "policies": "Zasady",
+      "apiKeys": "Klucze API"
+    },
+    "loading": {
+      "roles": "Ładowanie konfiguracji ról...",
+      "permissions": "Ładowanie konfiguracji uprawnień...",
+      "userRoles": "Ładowanie konfiguracji ról użytkowników...",
+      "policies": "Ładowanie konfiguracji zasad...",
+      "apiKeys": "Ładowanie konfiguracji kluczy API...",
+      "sso": "Ładowanie narzędzi zarządzania SSO...",
+      "sessions": "Ładowanie aktywnych sesji..."
+    },
+    "userRoles": {
+      "title": "Przypisywanie ról użytkownikom",
+      "description": {
+        "msp": "Zarządzanie przypisaniami ról użytkowników MSP",
+        "client": "Zarządzanie przypisaniami ról użytkowników portalu klienta"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Portal klienta"
+      },
+      "showInactive": "Pokaż nieaktywnych użytkowników",
+      "fields": {
+        "selectUser": "Wybierz użytkownika",
+        "selectRole": "Wybierz rolę"
+      },
+      "actions": {
+        "assignRole": "Przypisz rolę"
+      },
+      "table": {
+        "user": "Użytkownik",
+        "email": "E-mail",
+        "roles": "Role",
+        "actions": "Akcje"
+      },
+      "noRolesAssigned": "Brak przypisanych ról",
+      "removeRole": "Usuń {{role}}",
+      "emptyState": {
+        "noUsers": "Nie znaleziono użytkowników typu {{type}}",
+        "inactiveHidden": "(nieaktywni użytkownicy ukryci)"
+      },
+      "inactiveTag": "(Nieaktywny)",
+      "unnamedUser": "Użytkownik bez nazwy"
+    },
+    "sessions": {
+      "title": "Wszystkie sesje użytkowników",
+      "subtitle": "{{sessionCount}} aktywna sesja u {{userCount}} użytkownika",
+      "subtitle_plural": "{{sessionCount}} aktywnych sesji u {{userCount}} użytkowników",
+      "filters": {
+        "search": "Szukaj",
+        "searchPlaceholder": "Szukaj po nazwie, e-mailu, urządzeniu lub adresie IP...",
+        "user": "Użytkownik",
+        "allUsers": "Wszyscy użytkownicy",
+        "loginMethod": "Metoda logowania",
+        "allMethods": "Wszystkie metody",
+        "userType": "Typ użytkownika",
+        "allTypes": "Wszystkie typy",
+        "from": "Od",
+        "to": "Do",
+        "selectDate": "Wybierz datę",
+        "reset": "Resetuj"
+      },
+      "loginMethods": {
+        "password": "Hasło",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Wewnętrzny",
+        "client": "Klient"
+      },
+      "session": {
+        "yourSession": "Państwa sesja",
+        "unknownDevice": "Nieznane urządzenie",
+        "lastActive": "Ostatnia aktywność {{time}}",
+        "logout": "Wyloguj",
+        "revoke": "Unieważnij",
+        "revoking": "Unieważnianie..."
+      },
+      "oauthWarning": "Unieważnienie tej sesji nie spowoduje cofnięcia dostępu OAuth {{provider}}. Proszę cofnąć dostęp w ustawieniach konta {{provider}}.",
+      "confirmLogout": "Czy na pewno chcą Państwo wylogować się z tego urządzenia?",
+      "messages": {
+        "loggingOut": "Wylogowywanie...",
+        "revoked": "Sesja została unieważniona pomyślnie",
+        "loadFailed": "Nie udało się załadować sesji",
+        "revokeFailed": "Nie udało się unieważnić sesji"
+      },
+      "emptyState": {
+        "loading": "Ładowanie sesji...",
+        "noMatch": "Żadne sesje nie pasują do wyszukiwania",
+        "noSessions": "Nie znaleziono aktywnych sesji"
+      }
+    }
+  },
+  "platformUpdates": {
+    "detail": {
+      "back": "Wstecz",
+      "labels": {
+        "info": "Informacja",
+        "warning": "Ostrzeżenie",
+        "destructive": "Krytyczne",
+        "success": "Sukces",
+        "default": "Powiadomienie"
+      }
+    }
+  }
+}

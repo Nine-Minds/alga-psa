@@ -35,7 +35,6 @@ import {
 import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
 import {
   ensureDefaultContractForClientIfBillingConfigured,
-  SYSTEM_MANAGED_DEFAULT_CONTRACT_NAME,
 } from '@alga-psa/shared/billingClients/defaultContract';
 
 function maybeUserActorFromContext(context: ServiceContext) {
@@ -501,28 +500,13 @@ export class ClientService extends BaseService<IClient> {
     tenant: string,
     clientId: string
   ): Promise<void> {
-    const hasContractsTable = await trx.schema.hasTable('contracts');
-    const hasClientContractsTable = await trx.schema.hasTable('client_contracts');
-    if (!hasContractsTable || !hasClientContractsTable) {
-      return;
-    }
-
-    const hasSystemManagedDefaultMarker = await trx.schema.hasColumn('contracts', 'is_system_managed_default');
-
-    const defaultContractsQuery = trx('contracts')
+    const defaultContracts = await trx('contracts')
       .where({
         tenant,
         owner_client_id: clientId,
+        is_system_managed_default: true,
       })
       .select('contract_id');
-
-    if (hasSystemManagedDefaultMarker) {
-      defaultContractsQuery.andWhere('is_system_managed_default', true);
-    } else {
-      defaultContractsQuery.andWhere('contract_name', SYSTEM_MANAGED_DEFAULT_CONTRACT_NAME);
-    }
-
-    const defaultContracts = await defaultContractsQuery;
 
     const assignmentsForClient = await trx('client_contracts')
       .where({ tenant, client_id: clientId })
@@ -534,7 +518,7 @@ export class ClientService extends BaseService<IClient> {
     }
 
     const invoicedDefaultContractIds = new Set<string>();
-    if (assignmentsById.size > 0 && await trx.schema.hasTable('invoice_charges')) {
+    if (assignmentsById.size > 0) {
       const invoiceRows = await trx('invoice_charges')
         .where({ tenant })
         .whereIn('client_contract_id', [...assignmentsById.keys()])

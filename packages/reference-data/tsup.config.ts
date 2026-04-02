@@ -6,7 +6,7 @@ export default defineConfig({
     'actions/index': 'src/actions/index.ts',
     'components/index': 'src/components/index.ts',
   },
-  format: ['esm', 'cjs'],
+  format: ['esm'],
   dts: false,
   bundle: false,
   splitting: false,

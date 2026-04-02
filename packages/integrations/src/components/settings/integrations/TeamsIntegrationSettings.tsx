@@ -566,6 +566,12 @@ export function TeamsIntegrationSettings() {
               </div>
 
               <div className="flex flex-wrap gap-3">
+                <Button id="teams-download-zip" asChild variant="default">
+                  <a href="/api/teams/package/download" download={packageStatus.fileName}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download app package (.zip)
+                  </a>
+                </Button>
                 <Button id="teams-download-manifest" asChild variant="secondary">
                   <a href={`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(packageStatus.manifest, null, 2))}`} download={`${packageStatus.fileName.replace(/\.zip$/, '')}.json`}>
                     <Download className="mr-2 h-4 w-4" />

@@ -71,7 +71,10 @@ describe('BaseEmailService → email_sending_logs', () => {
   });
 
   it('successful send creates log entry with status sent', async () => {
-    const messageId = `msg-${uuidv4()}`;
+    const providerMessageId = `provider-${uuidv4()}`;
+    const rfcMessageId = `<${uuidv4()}@example.com>`;
+    const replyCommentId = uuidv4();
+    const conversationToken = uuidv4();
     const provider: IEmailProvider = {
       providerId: 'test-provider',
       providerType: 'test',
@@ -82,7 +85,9 @@ describe('BaseEmailService → email_sending_logs', () => {
       async sendEmail(_message: EmailMessage, _tenant: string): Promise<EmailSendResult> {
         return {
           success: true,
-          messageId,
+          messageId: providerMessageId,
+          providerMessageId,
+          rfcMessageId,
           providerId: 'test-provider',
           providerType: 'test',
           metadata: { ok: true },
@@ -107,14 +112,22 @@ describe('BaseEmailService → email_sending_logs', () => {
       entityId,
       contactId,
       notificationSubtypeId: 42,
+      replyContext: {
+        ticketId: entityId,
+        commentId: replyCommentId,
+        threadId: 'thread-123',
+        conversationToken,
+      },
     });
 
     expect(result.success).toBe(true);
-    expect(result.messageId).toBe(messageId);
+    expect(result.messageId).toBe(providerMessageId);
 
-    const row = await waitForEmailLog(knex, { tenant: tenantId, message_id: messageId });
+    const row = await waitForEmailLog(knex, { tenant: tenantId, message_id: providerMessageId });
     expect(row.status).toBe('sent');
-    expect(row.message_id).toBe(messageId);
+    expect(row.message_id).toBe(providerMessageId);
+    expect(row.provider_message_id).toBe(providerMessageId);
+    expect(row.rfc_message_id).toBe(rfcMessageId);
     expect(row.from_address).toBe('from@example.com');
     expect(row.subject).toBe('Hello');
     expect(row.provider_id).toBe('test-provider');
@@ -123,9 +136,22 @@ describe('BaseEmailService → email_sending_logs', () => {
     expect(row.entity_id).toBe(entityId);
     expect(row.contact_id).toBe(contactId);
     expect(row.notification_subtype_id).toBe(42);
+    expect(row.thread_id).toBe('thread-123');
+    expect(row.comment_id).toBe(replyCommentId);
+    expect(row.reply_token_hash).toHaveLength(64);
+    expect(row.reply_token_suffix).toBe(conversationToken.slice(-8));
 
     const toAddresses = Array.isArray(row.to_addresses) ? row.to_addresses : [];
     expect(toAddresses).toContain('to@example.com');
+    expect(row.metadata.algaDiagnostics.outbound).toMatchObject({
+      providerMessageId,
+      rfcMessageId,
+      threadId: 'thread-123',
+      ticketId: entityId,
+      commentId: replyCommentId,
+      replyTokenPresent: true,
+      replyTokenSuffix: conversationToken.slice(-8),
+    });
   });
 
   it('failed send creates log entry with status failed and error_message', async () => {

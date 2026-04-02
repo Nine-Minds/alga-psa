@@ -387,6 +387,15 @@ async function initializeJobScheduler(storageService: StorageService) {
   try {
     const jobRunner = await initializeJobRunner();
     logger.info(`Job runner initialized: ${jobRunner.getRunnerType()}`);
+
+    if (isEnterprise) {
+      try {
+        const { reconcileWorkflowSchedulePgBossHandlers } = await import('./jobs/reconcileWorkflowSchedulePgBossHandlers');
+        await reconcileWorkflowSchedulePgBossHandlers(jobRunner);
+      } catch (error) {
+        logger.error('Failed to reconcile workflow schedule PG Boss handlers:', error);
+      }
+    }
   } catch (error) {
     logger.error('Failed to initialize new job runner abstraction:', error);
     // Fall back to legacy scheduler

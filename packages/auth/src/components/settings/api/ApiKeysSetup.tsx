@@ -2,18 +2,21 @@
 
 // Auth-owned API key management UI.
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { createApiKey, deactivateApiKey, listApiKeys } from '@alga-psa/auth/actions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { Search, RotateCcw } from 'lucide-react';
 
 export interface ApiKey {
   api_key_id: string;
@@ -23,6 +26,30 @@ export interface ApiKey {
   expires_at: Date | null;
   active: boolean;
 }
+
+const SearchInput = memo(({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder: string;
+}) => (
+  <div className="relative p-0.5">
+    <Input
+      id="search-api-keys"
+      type="text"
+      placeholder={placeholder}
+      className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+      value={value}
+      onChange={onChange}
+      preserveCursor={true}
+    />
+    <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+  </div>
+));
+SearchInput.displayName = 'SearchInput';
 
 export default function ApiKeysSetup() {
   const [description, setDescription] = useState('');
@@ -36,11 +63,61 @@ export default function ApiKeysSetup() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Filter state
+  const [searchInput, setSearchInput] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
+  const [lastUsedAfter, setLastUsedAfter] = useState<Date | undefined>(undefined);
+  const [expiresBeforeDate, setExpiresBeforeDate] = useState<Date | undefined>(undefined);
+
+  const isFiltered = searchTerm !== '' || statusFilter !== 'active' || !!lastUsedAfter || !!expiresBeforeDate;
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTerm(searchInput);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const handleSearchInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchInput(e.target.value);
+  }, []);
+
+  const handleResetFilters = useCallback(() => {
+    setSearchInput('');
+    setSearchTerm('');
+    setStatusFilter('active');
+    setLastUsedAfter(undefined);
+    setExpiresBeforeDate(undefined);
+    setCurrentPage(1);
+  }, []);
+
   // Handle page size change - reset to page 1
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setCurrentPage(1);
   };
+
+  // Filter keys client-side
+  const filteredKeys = useMemo(() => {
+    return apiKeys.filter((key) => {
+      if (statusFilter === 'active' && !key.active) return false;
+      if (statusFilter === 'inactive' && key.active) return false;
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        if (!key.description?.toLowerCase().includes(term)) return false;
+      }
+      if (lastUsedAfter) {
+        if (!key.last_used_at || new Date(key.last_used_at) < lastUsedAfter) return false;
+      }
+      if (expiresBeforeDate) {
+        if (!key.expires_at || new Date(key.expires_at) > expiresBeforeDate) return false;
+      }
+      return true;
+    });
+  }, [apiKeys, statusFilter, searchTerm, lastUsedAfter, expiresBeforeDate]);
 
   const loadApiKeys = useCallback(async () => {
     try {
@@ -193,9 +270,66 @@ export default function ApiKeysSetup() {
 
       <Card className="p-6">
         <h2 className="text-2xl font-semibold mb-4">Your API Keys</h2>
+        <div className="flex items-center mb-4 gap-4 flex-wrap">
+          <SearchInput
+            value={searchInput}
+            onChange={handleSearchInputChange}
+            placeholder="Search by description"
+          />
+          <div className="w-48 shrink-0">
+            <CustomSelect
+              id="api-keys-status-filter"
+              value={statusFilter}
+              onValueChange={(value) => {
+                setStatusFilter(value as 'all' | 'active' | 'inactive');
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'all', label: 'All Statuses' },
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' },
+              ]}
+            />
+          </div>
+          <div className="w-48 shrink-0">
+            <DatePicker
+              id="api-keys-last-used-filter"
+              value={lastUsedAfter}
+              onChange={(date) => {
+                setLastUsedAfter(date);
+                setCurrentPage(1);
+              }}
+              clearable
+              placeholder="Last used after"
+            />
+          </div>
+          <div className="w-48 shrink-0">
+            <DatePicker
+              id="api-keys-expires-before-filter"
+              value={expiresBeforeDate}
+              onChange={(date) => {
+                setExpiresBeforeDate(date);
+                setCurrentPage(1);
+              }}
+              clearable
+              placeholder="Expires before"
+            />
+          </div>
+          <Button
+            id="reset-api-keys-filters"
+            variant="ghost"
+            size="sm"
+            className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+            onClick={handleResetFilters}
+            disabled={!isFiltered}
+          >
+            <RotateCcw size={14} />
+            Reset
+          </Button>
+        </div>
         <DataTable
           id="api-keys-table"
-          data={apiKeys}
+          data={filteredKeys}
           columns={columns}
           pagination={true}
           currentPage={currentPage}

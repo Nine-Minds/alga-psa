@@ -1,0 +1,80 @@
+{
+  "navigation": {
+    "heading": "Extensies"
+  },
+  "enterpriseFeature": {
+    "title": "Enterprise-functie",
+    "description": "Voor {{feature}} is de Enterprise-editie vereist. Upgrade om toegang te krijgen tot deze functie."
+  },
+  "settings": {
+    "title": "Extensiebeheer",
+    "description": "Installeer, configureer en beheer extensies om de functionaliteit van Alga PSA uit te breiden.",
+    "tabs": {
+      "manage": "Beheren",
+      "install": "Installeren"
+    },
+    "enterpriseOnly": {
+      "title": "Enterprise-functie",
+      "description": "Extensies zijn beschikbaar in de Enterprise-editie van Alga PSA."
+    },
+    "links": {
+      "needLogs": "Extensielogs nodig?",
+      "debugConsole": "Service Proxy Demo Debug Console openen"
+    },
+    "loading": {
+      "extensions": "Extensies laden...",
+      "installer": "Installatieprogramma laden..."
+    },
+    "featureNames": {
+      "settings": "extensie-instellingen",
+      "details": "extensiedetails",
+      "permissions": "extensierechten",
+      "management": "extensiebeheer",
+      "installer": "extensie-installatieprogramma"
+    }
+  },
+  "communityEdition": {
+    "listUnavailable": "Extensies zijn niet beschikbaar in deze editie",
+    "dynamicListUnavailable": "Extensies zijn niet beschikbaar in de Community Edition",
+    "dynamicInstallUnavailable": "Extensie-installatie is niet beschikbaar in de Community Edition"
+  },
+  "page": {
+    "metadata": {
+      "title": "Extensies",
+      "description": "Extensies beheren"
+    },
+    "title": "Extensies",
+    "description": "Extensiebeheer is beschikbaar in de Enterprise-editie."
+  },
+  "detail": {
+    "metadataTitle": "Extensies - Enterprise-functie",
+    "extensionId": "Extensie-ID: {{id}}"
+  },
+  "detailsPage": {
+    "metadata": {
+      "title": "Extensiedetails",
+      "description": "Extensiedetails bekijken"
+    },
+    "title": "Extensiedetails",
+    "description": "Extensiedetails zijn beschikbaar in de Enterprise-editie."
+  },
+  "settingsPage": {
+    "metadata": {
+      "title": "Extensie-instellingen",
+      "description": "Extensie-instellingen configureren"
+    },
+    "title": "Extensie-instellingen",
+    "description": "Extensie-instellingen zijn beschikbaar in de Enterprise-editie."
+  },
+  "runtime": {
+    "metadataTitle": "Extensie",
+    "loadError": "Runtime-informatie van de extensie kon niet worden geladen",
+    "notFoundTitle": "Extensie niet gevonden.",
+    "goToExtensions": "Ga naar extensies",
+    "bundleUnavailableTitle": "Extensiebundel niet beschikbaar.",
+    "bundleUnavailableDescription": "De extensiebundel ontbreekt of is niet geüpload.",
+    "goToDetails": "Ga naar extensiedetails",
+    "runtimeDomainUnavailableTitle": "Runtime-domein van de extensie niet beschikbaar.",
+    "runtimeDomainUnavailableDescription": "Voorzie de extensie opnieuw via Instellingen -> Extensies -> selecteer extensie -> Provision."
+  }
+}

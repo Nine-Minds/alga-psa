@@ -22,43 +22,6 @@ const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY = 'create_ticket' as const;
 const RENEWAL_TICKET_SOURCE = 'renewal_due_date_manual_retry';
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const REQUIRED_RENEWAL_SCHEMA_COLUMNS = {
-  client_contracts: [
-    'decision_due_date',
-    'status',
-    'renewal_cycle_start',
-    'renewal_cycle_end',
-    'renewal_cycle_key',
-    'snoozed_until',
-    'assigned_to',
-    'last_action',
-    'last_action_by',
-    'last_action_at',
-    'last_action_note',
-    'created_draft_contract_id',
-    'created_ticket_id',
-    'automation_error',
-    'renewal_mode',
-    'notice_period_days',
-    'renewal_term_months',
-    'use_tenant_renewal_defaults',
-    'renewal_due_date_action_policy',
-    'renewal_ticket_board_id',
-    'renewal_ticket_status_id',
-    'renewal_ticket_priority',
-    'renewal_ticket_assignee_id',
-  ],
-  default_billing_settings: [
-    'default_renewal_mode',
-    'default_notice_period_days',
-    'renewal_due_date_action_policy',
-    'renewal_ticket_board_id',
-    'renewal_ticket_status_id',
-    'renewal_ticket_priority',
-    'renewal_ticket_assignee_id',
-  ],
-} as const;
-
 const isRenewalWorkItemStatus = (value: unknown): value is RenewalWorkItemStatus =>
   typeof value === 'string' && RENEWAL_WORK_ITEM_STATUSES.includes(value as RenewalWorkItemStatus);
 const toRenewalWorkItemStatus = (value: unknown): RenewalWorkItemStatus =>
@@ -173,48 +136,6 @@ const buildRenewalTicketDescription = (
     `Source contract: ${contractId}`,
   ].join('\n');
 };
-const getMissingRenewalSchemaColumns = async (knex: any): Promise<string[]> => {
-  const schema = knex?.schema as any;
-  if (!schema?.hasTable || !schema?.hasColumn) {
-    return [];
-  }
-
-  const missing: string[] = [];
-  for (const [tableName, columns] of Object.entries(REQUIRED_RENEWAL_SCHEMA_COLUMNS)) {
-    const tableExists = await schema.hasTable(tableName);
-    if (!tableExists) {
-      missing.push(`${tableName} (table)`);
-      continue;
-    }
-
-    const columnChecks = await Promise.all(
-      columns.map(async (columnName) => ({
-        columnName,
-        exists: await schema.hasColumn(tableName, columnName),
-      }))
-    );
-
-    for (const check of columnChecks) {
-      if (!check.exists) {
-        missing.push(`${tableName}.${check.columnName}`);
-      }
-    }
-  }
-
-  return missing;
-};
-const assertRenewalSchemaReady = async (knex: any): Promise<void> => {
-  const missing = await getMissingRenewalSchemaColumns(knex);
-  if (missing.length === 0) {
-    return;
-  }
-
-  throw new Error(
-    `Renewal schema is not ready. Missing required columns: ${missing.join(', ')}. ` +
-    'Run the latest server database migrations, then retry this renewals operation.'
-  );
-};
-
 export type RenewalQueueRow = {
   client_contract_id: string;
   contract_id: string;
@@ -302,7 +223,6 @@ export const listRenewalQueueRows = withAuth(async (
   if (denied) return denied;
 
   const { knex } = await createTenantKnex();
-  await assertRenewalSchemaReady(knex);
   const resolvedHorizonDays =
     Number.isInteger(horizonDays) && horizonDays > 0
       ? Math.trunc(horizonDays)
@@ -398,7 +318,6 @@ export const markRenewalQueueItemRenewing = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  await assertRenewalSchemaReady(knex);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
 
@@ -465,7 +384,6 @@ export const markRenewalQueueItemNonRenewing = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  await assertRenewalSchemaReady(knex);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
 
@@ -532,7 +450,6 @@ export const createRenewalDraftForQueueItem = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  await assertRenewalSchemaReady(knex);
   const schema = knex.schema as any;
   const hasTemplateContractIdColumn = await (schema?.hasColumn?.('client_contracts', 'template_contract_id') ?? false);
   const actorUserId = resolveActorUserId(user);
@@ -692,7 +609,6 @@ export const snoozeRenewalQueueItem = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  await assertRenewalSchemaReady(knex);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
 
@@ -772,7 +688,6 @@ export const assignRenewalQueueItemOwner = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  await assertRenewalSchemaReady(knex);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
 
@@ -857,7 +772,6 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  await assertRenewalSchemaReady(knex);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
 
@@ -960,7 +874,6 @@ export const completeRenewalQueueItemForNonRenewal = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  await assertRenewalSchemaReady(knex);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
 
@@ -1024,7 +937,6 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  await assertRenewalSchemaReady(knex);
 
   return knex.transaction(async (trx) => {
     const defaultSelections: string[] = [
