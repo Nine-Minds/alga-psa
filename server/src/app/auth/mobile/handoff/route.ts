@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/app/api/auth/[...nextauth]/edge-auth';
+import { auth } from '@alga-psa/auth/nextauth/edge-auth';
 import { issueMobileOtt } from '@/lib/mobileAuth/mobileAuthService';
 import { enforceMobileOttIssueLimit } from '@/lib/security/mobileAuthRateLimiting';
 
