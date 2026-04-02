@@ -4,7 +4,7 @@ import {
   isFeatureFlagEnabled,
   type FeatureFlagContext,
 } from '@alga-psa/core';
-import { FeatureFlags } from '@alga-psa/core/server';
+import { FeatureFlags } from '@alga-psa/core/lib/featureFlagRuntime';
 
 const fallbackFeatureFlags = new FeatureFlags();
 
