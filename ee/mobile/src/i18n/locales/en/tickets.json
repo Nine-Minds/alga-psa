@@ -212,6 +212,7 @@
     "uploading": "Uploading attachment…",
     "empty": "No documents attached.",
     "unknownType": "Unknown type",
+    "closePreview": "Close preview",
     "errors": {
       "load": "Unable to load documents.",
       "upload": "Unable to upload the document. Please try again.",

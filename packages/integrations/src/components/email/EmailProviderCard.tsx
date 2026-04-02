@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
@@ -45,58 +46,6 @@ interface EmailProviderCardProps {
   onChangeDefaults: (provider: EmailProvider, defaultsId?: string) => void | Promise<void>;
 }
 
-const getExpirationStatus = (provider: EmailProvider) => {
-  if (provider.providerType !== 'microsoft' || !provider.microsoftConfig?.webhook_expires_at) {
-    return null;
-  }
-  const expiresAt = new Date(provider.microsoftConfig.webhook_expires_at);
-  const now = new Date();
-  const diffMs = expiresAt.getTime() - now.getTime();
-  const diffHours = diffMs / (1000 * 60 * 60);
-
-  if (diffHours < 0) {
-    return { label: 'Expired', color: 'text-red-500' };
-  }
-  if (diffHours < 24) {
-    return { label: `Expires in ${Math.ceil(diffHours)}h`, color: 'text-yellow-600' };
-  }
-  return { label: `Expires in ${Math.ceil(diffHours / 24)}d`, color: 'text-muted-foreground' };
-};
-
-const getStatusIcon = (status: EmailProvider['status']) => {
-  switch (status) {
-    case 'connected':
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
-    case 'disconnected':
-      return <XCircle className="h-4 w-4 text-red-500" />;
-    case 'error':
-      return <AlertCircle className="h-4 w-4 text-red-500" />;
-    case 'configuring':
-      return <Clock className="h-4 w-4 text-yellow-500" />;
-    default:
-      return <Clock className="h-4 w-4 text-gray-500" />;
-  }
-};
-
-const getStatusBadge = (status: EmailProvider['status'], isActive: boolean) => {
-  if (!isActive) {
-    return <Badge variant="secondary">Disabled</Badge>;
-  }
-
-  switch (status) {
-    case 'connected':
-      return <Badge variant="success">Connected</Badge>;
-    case 'disconnected':
-      return <Badge variant="secondary">Disconnected</Badge>;
-    case 'error':
-      return <Badge variant="error">Error</Badge>;
-    case 'configuring':
-      return <Badge variant="secondary">Configuring</Badge>;
-    default:
-      return <Badge variant="secondary">Unknown</Badge>;
-  }
-};
-
 const getProviderIcon = (providerType: string) => {
   switch (providerType) {
     case 'microsoft':
@@ -108,20 +57,6 @@ const getProviderIcon = (providerType: string) => {
     default:
       return '📧';
   }
-};
-
-const formatLastSync = (lastSyncAt?: string) => {
-  if (!lastSyncAt) return 'Never';
-
-  const date = new Date(lastSyncAt);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
-  return `${Math.floor(diffMins / 1440)}d ago`;
 };
 
 export function EmailProviderCard({
@@ -140,6 +75,80 @@ export function EmailProviderCard({
   onRunDiagnostics,
   onChangeDefaults,
 }: EmailProviderCardProps) {
+  const { t } = useTranslation('msp/email-providers');
+
+  const getExpirationStatus = (activeProvider: EmailProvider) => {
+    if (activeProvider.providerType !== 'microsoft' || !activeProvider.microsoftConfig?.webhook_expires_at) {
+      return null;
+    }
+    const expiresAt = new Date(activeProvider.microsoftConfig.webhook_expires_at);
+    const now = new Date();
+    const diffMs = expiresAt.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    if (diffHours < 0) {
+      return { label: t('providerCard.subscription.expired', { defaultValue: 'Expired' }), color: 'text-red-500' };
+    }
+    if (diffHours < 24) {
+      return {
+        label: t('providerCard.subscription.expiresInHours', { defaultValue: 'Expires in {{count}}h', count: Math.ceil(diffHours) }),
+        color: 'text-yellow-600'
+      };
+    }
+    return {
+      label: t('providerCard.subscription.expiresInDays', { defaultValue: 'Expires in {{count}}d', count: Math.ceil(diffHours / 24) }),
+      color: 'text-muted-foreground'
+    };
+  };
+
+  const getStatusIcon = (status: EmailProvider['status']) => {
+    switch (status) {
+      case 'connected':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'disconnected':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'error':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case 'configuring':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusBadge = (status: EmailProvider['status'], isActive: boolean) => {
+    if (!isActive) {
+      return <Badge variant="secondary">{t('providerCard.badges.disabled', { defaultValue: 'Disabled' })}</Badge>;
+    }
+
+    switch (status) {
+      case 'connected':
+        return <Badge variant="success">{t('providerCard.badges.connected', { defaultValue: 'Connected' })}</Badge>;
+      case 'disconnected':
+        return <Badge variant="secondary">{t('providerCard.badges.disconnected', { defaultValue: 'Disconnected' })}</Badge>;
+      case 'error':
+        return <Badge variant="error">{t('providerCard.badges.error', { defaultValue: 'Error' })}</Badge>;
+      case 'configuring':
+        return <Badge variant="secondary">{t('providerCard.badges.configuring', { defaultValue: 'Configuring' })}</Badge>;
+      default:
+        return <Badge variant="secondary">{t('providerCard.badges.unknown', { defaultValue: 'Unknown' })}</Badge>;
+    }
+  };
+
+  const formatLastSync = (lastSyncAt?: string) => {
+    if (!lastSyncAt) return t('providerCard.lastSync.never', { defaultValue: 'Never' });
+
+    const date = new Date(lastSyncAt);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+
+    if (diffMins < 1) return t('providerCard.lastSync.justNow', { defaultValue: 'Just now' });
+    if (diffMins < 60) return t('providerCard.lastSync.minutesAgo', { defaultValue: '{{count}}m ago', count: diffMins });
+    if (diffMins < 1440) return t('providerCard.lastSync.hoursAgo', { defaultValue: '{{count}}h ago', count: Math.floor(diffMins / 60) });
+    return t('providerCard.lastSync.daysAgo', { defaultValue: '{{count}}d ago', count: Math.floor(diffMins / 1440) });
+  };
+
   const expirationStatus = getExpirationStatus(provider);
 
   return (
@@ -153,7 +162,7 @@ export function EmailProviderCard({
               <CardDescription className="flex items-center space-x-2">
                 <span>{provider.mailbox}</span>
                 <span>•</span>
-                <span className="capitalize">{provider.providerType}</span>
+                <span>{t(`providerCard.types.${provider.providerType}`, { defaultValue: provider.providerType })}</span>
               </CardDescription>
             </div>
           </div>
@@ -170,40 +179,44 @@ export function EmailProviderCard({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onEdit(provider)} disabled={busy}>
                   <Settings className="h-4 w-4 mr-2" />
-                  Edit Configuration
+                  {t('providerCard.actions.edit', { defaultValue: 'Edit Configuration' })}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onTestConnection(provider)} disabled={busy}>
                   <TestTube className="h-4 w-4 mr-2" />
-                  {busy && busyAction === 'test' ? 'Testing…' : 'Test Connection'}
+                  {busy && busyAction === 'test'
+                    ? t('providerCard.actions.testing', { defaultValue: 'Testing…' })
+                    : t('providerCard.actions.testConnection', { defaultValue: 'Test Connection' })}
                 </DropdownMenuItem>
                 {provider.providerType === 'google' && (
                   <DropdownMenuItem onClick={() => onRefreshWatchSubscription(provider)} disabled={busy}>
                     <Repeat className="h-4 w-4 mr-2" />
-                    Refresh Pub/Sub & Watch
+                    {t('providerCard.actions.refreshWatch', { defaultValue: 'Refresh Pub/Sub & Watch' })}
                   </DropdownMenuItem>
                 )}
                 {provider.providerType === 'microsoft' && (
                   <>
                     <DropdownMenuItem onClick={() => onRetryRenewal(provider)} disabled={busy}>
                       <RefreshCw className="h-4 w-4 mr-2" />
-                      Retry Renewal
+                      {t('providerCard.actions.retryRenewal', { defaultValue: 'Retry Renewal' })}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onRunDiagnostics(provider)} disabled={busy}>
                       <Stethoscope className="h-4 w-4 mr-2" />
-                      Run Microsoft 365 Diagnostics
+                      {t('providerCard.actions.runDiagnostics', { defaultValue: 'Run Microsoft 365 Diagnostics' })}
                     </DropdownMenuItem>
                   </>
                 )}
                 {provider.providerType === 'imap' && provider.imapConfig?.auth_type === 'oauth2' && onReconnectOAuth && (
                   <DropdownMenuItem onClick={() => onReconnectOAuth(provider)} disabled={busy}>
                     <RefreshCw className="h-4 w-4 mr-2" />
-                    Reconnect OAuth
+                    {t('providerCard.actions.reconnectOauth', { defaultValue: 'Reconnect OAuth' })}
                   </DropdownMenuItem>
                 )}
                 {provider.providerType === 'imap' && onResyncProvider && (
                   <DropdownMenuItem onClick={() => onResyncProvider(provider)} disabled={busy}>
                     <Repeat className="h-4 w-4 mr-2" />
-                    {busy && busyAction === 'resync' ? 'Resyncing…' : 'Resync Mailbox'}
+                    {busy && busyAction === 'resync'
+                      ? t('providerCard.actions.resyncing', { defaultValue: 'Resyncing…' })
+                      : t('providerCard.actions.resyncMailbox', { defaultValue: 'Resync Mailbox' })}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
@@ -213,7 +226,7 @@ export function EmailProviderCard({
                   disabled={busy}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Provider
+                  {t('providerCard.actions.delete', { defaultValue: 'Delete Provider' })}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -226,26 +239,26 @@ export function EmailProviderCard({
           <div>
             <div className="flex items-center space-x-1 text-muted-foreground mb-1">
               {getStatusIcon(provider.status)}
-              <span>Status</span>
+              <span>{t('providerCard.fields.status', { defaultValue: 'Status' })}</span>
             </div>
             <div className="font-medium">
               {provider.status === 'connected' && provider.isActive
-                ? 'Active'
+                ? t('providerCard.values.active', { defaultValue: 'Active' })
                 : provider.status === 'error'
-                ? 'Error'
+                ? t('providerCard.values.error', { defaultValue: 'Error' })
                 : !provider.isActive
-                ? 'Disabled'
-                : 'Inactive'}
+                ? t('providerCard.values.disabled', { defaultValue: 'Disabled' })
+                : t('providerCard.values.inactive', { defaultValue: 'Inactive' })}
             </div>
           </div>
 
           <div>
-            <div className="text-muted-foreground mb-1">Last Sync</div>
+            <div className="text-muted-foreground mb-1">{t('providerCard.fields.lastSync', { defaultValue: 'Last Sync' })}</div>
             <div className="font-medium">{formatLastSync(provider.lastSyncAt)}</div>
           </div>
 
           <div>
-            <div className="text-muted-foreground mb-1">Created</div>
+            <div className="text-muted-foreground mb-1">{t('providerCard.fields.created', { defaultValue: 'Created' })}</div>
             <div className="font-medium">
               {new Date(provider.createdAt).toLocaleDateString()}
             </div>
@@ -253,7 +266,7 @@ export function EmailProviderCard({
 
           {expirationStatus && (
             <div>
-              <div className="text-muted-foreground mb-1">Subscription</div>
+              <div className="text-muted-foreground mb-1">{t('providerCard.fields.subscription', { defaultValue: 'Subscription' })}</div>
               <div className={`font-medium ${expirationStatus.color}`}>
                 {expirationStatus.label}
               </div>
@@ -264,14 +277,16 @@ export function EmailProviderCard({
         {provider.status === 'error' && provider.errorMessage && (
           <Alert variant="destructive" className="mt-3">
             <AlertDescription>
-              <strong>Error:</strong> {provider.errorMessage}
+              <strong>{t('providerCard.fields.error', { defaultValue: 'Error:' })}</strong> {provider.errorMessage}
             </AlertDescription>
           </Alert>
         )}
 
         {providerNeedsInboundDefaults(provider) && (
           <Alert variant="destructive" className="mt-3">
-            <AlertDescription>{INBOUND_DEFAULTS_WARNING}</AlertDescription>
+            <AlertDescription>{t('providerCard.warnings.inboundDefaults', {
+              defaultValue: INBOUND_DEFAULTS_WARNING,
+            })}</AlertDescription>
           </Alert>
         )}
 
@@ -280,21 +295,30 @@ export function EmailProviderCard({
             {provider.providerType === 'microsoft' && provider.microsoftConfig && (
               <>
                 {provider.microsoftConfig.folder_filters && provider.microsoftConfig.folder_filters.length > 0 && (
-                  <span>Folders: {provider.microsoftConfig.folder_filters.join(', ')}</span>
+                  <span>{t('providerCard.filters.folders', {
+                    defaultValue: 'Folders: {{filters}}',
+                    filters: provider.microsoftConfig.folder_filters.join(', '),
+                  })}</span>
                 )}
               </>
             )}
             {provider.providerType === 'google' && provider.googleConfig && (
               <>
                 {provider.googleConfig.label_filters && provider.googleConfig.label_filters.length > 0 && (
-                  <span>Labels: {provider.googleConfig.label_filters.join(', ')}</span>
+                  <span>{t('providerCard.filters.labels', {
+                    defaultValue: 'Labels: {{filters}}',
+                    filters: provider.googleConfig.label_filters.join(', '),
+                  })}</span>
                 )}
               </>
             )}
             {provider.providerType === 'imap' && provider.imapConfig && (
               <>
                 {provider.imapConfig.folder_filters && provider.imapConfig.folder_filters.length > 0 && (
-                  <span>Folders: {provider.imapConfig.folder_filters.join(', ')}</span>
+                  <span>{t('providerCard.filters.folders', {
+                    defaultValue: 'Folders: {{filters}}',
+                    filters: provider.imapConfig.folder_filters.join(', '),
+                  })}</span>
                 )}
               </>
             )}
@@ -304,11 +328,13 @@ export function EmailProviderCard({
         <div className="mt-4">
           <CustomSelect
             id={`provider-defaults-select-${provider.id}`}
-            label="Ticket Defaults"
+            label={t('providerCard.fields.defaults', { defaultValue: 'Ticket Defaults' })}
             value={provider.inboundTicketDefaultsId || ''}
             onValueChange={(v) => onChangeDefaults(provider, v || undefined)}
             options={defaultsOptions}
-            placeholder={defaultsOptions.length ? 'Select defaults...' : 'No defaults available'}
+            placeholder={defaultsOptions.length
+              ? t('providerCard.defaults.placeholder', { defaultValue: 'Select defaults...' })
+              : t('providerCard.defaults.empty', { defaultValue: 'No defaults available' })}
             allowClear
             disabled={updatingProviderId === provider.id}
           />
@@ -319,17 +345,19 @@ export function EmailProviderCard({
 }
 
 export function EmptyProviderPlaceholder({ onAddClick }: { onAddClick?: () => void }) {
+  const { t } = useTranslation('msp/email-providers');
+
   return (
     <Card>
       <CardContent className="flex flex-col items-center justify-center py-12">
         <Mail className="h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium mb-2">No Email Providers Configured</h3>
+        <h3 className="text-lg font-medium mb-2">{t('providerCard.empty.title', { defaultValue: 'No Email Providers Configured' })}</h3>
         <p className="text-muted-foreground text-center mb-4">
-          Add an email provider to start receiving and processing inbound emails as tickets.
+          {t('providerCard.empty.description', { defaultValue: 'Add an email provider to start receiving and processing inbound emails as tickets.' })}
         </p>
         {onAddClick && (
           <Button id="empty-add-provider-btn" onClick={onAddClick}>
-            Add Email Provider
+            {t('providerCard.empty.action', { defaultValue: 'Add Email Provider' })}
           </Button>
         )}
       </CardContent>

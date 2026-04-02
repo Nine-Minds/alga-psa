@@ -22,7 +22,7 @@ type ViewMode = 'msp' | 'client';
 // viewOptions is defined inside the component to access translations
 
 export default function UserRoleAssignment() {
-  const { t } = useTranslation('msp/settings');
+  const { t } = useTranslation('msp/profile');
 
   const viewOptions: ViewSwitcherOption<ViewMode>[] = [
     { value: 'msp', label: t('security.userRoles.viewSwitcher.msp') },
@@ -123,7 +123,9 @@ export default function UserRoleAssignment() {
       title: t('security.userRoles.table.user'),
       dataIndex: 'username',
       render: (_, record) => {
-        const displayName = `${record.first_name || ''} ${record.last_name || ''}`.trim() || record.username || 'Unnamed User';
+        const displayName = `${record.first_name || ''} ${record.last_name || ''}`.trim()
+          || record.username
+          || t('security.userRoles.unnamedUser', { defaultValue: 'Unnamed User' });
         return (
           <div className="flex items-center gap-2">
             <span>{displayName}</span>
@@ -232,7 +234,11 @@ export default function UserRoleAssignment() {
 
           {filteredUsers.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {t('security.userRoles.emptyState.noUsers', { type: viewMode === 'msp' ? 'MSP' : 'Client Portal' })}
+              {t('security.userRoles.emptyState.noUsers', {
+                type: viewMode === 'msp'
+                  ? t('security.userRoles.viewSwitcher.msp', { defaultValue: 'MSP' })
+                  : t('security.userRoles.viewSwitcher.clientPortal', { defaultValue: 'Client Portal' }),
+              })}
               {!showInactiveUsers && ` ${t('security.userRoles.emptyState.inactiveHidden')}`}
             </div>
           ) : (

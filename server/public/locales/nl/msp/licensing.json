@@ -1,0 +1,164 @@
+{
+  "reduceModal": {
+    "title": "Licenties verminderen",
+    "enterpriseOnly": "Deze functie is alleen beschikbaar in de Enterprise-editie."
+  },
+  "purchaseForm": {
+    "title": "Licentieaankoop",
+    "enterpriseOnlyHosted": "Licenties aanschaffen is beschikbaar in de Enterprise-editie voor gehoste implementaties.",
+    "communityEditionUnlimited": "De zelf-gehoste Community Edition heeft onbeperkte gebruikers zonder extra kosten."
+  },
+  "purchasePage": {
+    "title": "Licenties aanschaffen",
+    "description": "Voeg meer gebruikerslicenties toe aan uw AlgaPSA-account"
+  },
+  "purchaseSuccess": {
+    "metaTitle": "Aankoop voltooid",
+    "scheduledTitle": "Wijziging succesvol ingepland!",
+    "updatedTitle": "Update geslaagd!",
+    "scheduledDescription": "Uw licentiewijziging is ingepland en gaat in aan het einde van uw huidige factureringsperiode.",
+    "updatedDescription": "Uw licentie-update is succesvol verwerkt!",
+    "loadingSubscriptionDetails": "Abonnementsgegevens worden geladen...",
+    "updatingLicenseCount": "Aantal licenties wordt bijgewerkt...",
+    "licenseInformation": "Licentiegegevens",
+    "youNowHave": "U heeft nu",
+    "totalLicenses": "licenties in totaal",
+    "changeEffective": "Wijziging van kracht",
+    "whatsNext": "Wat nu?",
+    "scheduledSteps": {
+      "currentLicenses": "Uw huidige licenties blijven actief tot het einde van de factureringsperiode",
+      "autoUpdate": "Het aantal licenties wordt automatisch bijgewerkt op de geplande datum",
+      "emailConfirmation": "U ontvangt een e-mailbevestiging wanneer de wijziging van kracht wordt"
+    },
+    "updatedSteps": {
+      "activeReady": "Uw licenties zijn nu actief en klaar voor gebruik",
+      "createUsers": "U kunt direct nieuwe gebruikers aanmaken via Gebruikersbeheer",
+      "invoiceProrated": "Uw volgende factuur bevat de naar rato berekende kosten"
+    },
+    "sessionDetails": "Sessiedetails (voor ondersteuning)",
+    "sessionId": "Sessie-ID:",
+    "goToAccountManagement": "Ga naar accountbeheer"
+  },
+  "subscriptionForm": {
+    "title": "Licentieabonnement beheren",
+    "errors": {
+      "loadPricing": "Prijzen konden niet worden geladen",
+      "loadLicenseInformation": "Licentiegegevens konden niet worden geladen",
+      "prepareUpdate": "Licentie-update kon niet worden voorbereid",
+      "processUpdate": "Licentie-update kon niet worden verwerkt",
+      "missingCheckoutSessionData": "Gegevens van de betaalsessie ontbreken"
+    },
+    "checkout": {
+      "title": "Voltooi uw aankoop",
+      "summary": "U koopt {{quantity}} {{licenseLabel}} voor {{price}} per licentie per {{interval}}.",
+      "total": "Totaal: {{total}}/{{interval}}",
+      "cancel": "Annuleren"
+    },
+    "confirmation": {
+      "title": "Licentie-update bevestigen",
+      "increaseDescription": "Controleer de details van uw licentie-uitbreiding voordat u bevestigt.",
+      "decreaseDescription": "Controleer de details van uw licentievermindering. De wijzigingen gaan in aan het einde van uw factureringsperiode.",
+      "currentMonthlyCost": "Huidige maandelijkse kosten",
+      "currentLicenseCount": "Huidig aantal licenties",
+      "newMonthlyCost": "Nieuwe maandelijkse kosten",
+      "newLicenseCount": "Nieuw aantal licenties",
+      "monthlyIncrease": "Maandelijkse toename",
+      "monthlySavings": "Maandelijkse besparing",
+      "paymentMethod": "Betaalmethode",
+      "changePaymentMethod": "Wijzigen",
+      "immediateChargeTitle": "Directe afschrijving",
+      "immediateChargeDescription": "Er wordt nu {{amountDue}} in rekening gebracht voor het naar rato berekende bedrag.",
+      "prorationDescription": "Naar rato: {{amount}} voor de rest van deze factureringsperiode",
+      "scheduledTitle": "Ingepland voor einde van de periode",
+      "scheduledDescription": "De licentievermindering gaat op {{date}} in aan het einde van uw huidige factureringsperiode.",
+      "scheduledKeepAccess": "U behoudt tot die tijd toegang tot alle {{count}} licenties.",
+      "cancel": "Annuleren",
+      "confirmPayNow": "Bevestigen en nu betalen",
+      "confirmSchedule": "Planning bevestigen"
+    },
+    "usage": {
+      "title": "Huidig licentiegebruik",
+      "licensesUsed": "gebruikte licenties"
+    },
+    "fields": {
+      "totalLicenseCount": "Totaal aantal licenties"
+    },
+    "help": {
+      "totalLicenseCount": "Voer het nieuwe totale aantal licenties in (minimum: {{minimum}}). Huidig: {{current}}",
+      "reduceViaAccount": "Ga naar accountbeheer om licenties te verminderen",
+      "quantityWarning": "Waarschuwing: u heeft {{used}} gebruikers, maar stelt het totaal in op {{quantity}}"
+    },
+    "pricing": {
+      "pricePerLicense": "Prijs per licentie:",
+      "quantity": "Aantal:",
+      "total": "Totaal:"
+    },
+    "actions": {
+      "creatingCheckout": "Checkout wordt aangemaakt...",
+      "noChange": "Geen wijziging",
+      "updateToTotal": "Bijwerken naar totaal {{quantity}} ({{difference}} {{licenseLabel}})"
+    },
+    "info": {
+      "totalQuantity": "Hiermee stelt u het totale abonnementsaantal in (geen toevoeging aan huidige licenties)",
+      "increasingImmediate": "Licenties verhogen: directe toegang met een naar rato berekende kostenpost",
+      "billedMonthly": "Licenties worden maandelijks gefactureerd en kunnen op elk moment worden opgezegd"
+    }
+  },
+  "removalModal": {
+    "title": "Licenties verwijderen",
+    "description": "Verwijder licenties uit uw account. Wijzigingen gaan in aan het einde van uw huidige factureringsperiode.",
+    "stats": {
+      "currentLicenses": "Huidige licenties",
+      "activeUsers": "Actieve gebruikers"
+    },
+    "fields": {
+      "newLicenseCount": "Nieuw aantal licenties",
+      "minimum": "Minimum: {{count}} (om alle actieve gebruikers te kunnen bedienen)"
+    },
+    "validation": {
+      "positiveInteger": "Het aantal licenties moet een positief geheel getal zijn (minimaal 1)",
+      "useAddFlow": "Gebruik de stroom \"Licenties toevoegen\" om licenties te verhogen",
+      "deactivateUsers": "U heeft {{activeUsers}} actieve gebruikers. Deactiveer eerst {{usersToDeactivate}} {{userLabel}}."
+    },
+    "actions": {
+      "goToUserManagement": "Ga naar gebruikersbeheer",
+      "reviewRemoval": "Verwijdering controleren",
+      "confirmRemoval": "Verwijdering bevestigen"
+    },
+    "scheduled": {
+      "title": "De verwijdering wordt ingepland",
+      "description": "Uw aantal licenties wordt aan het einde van uw huidige factureringsperiode verlaagd van {{current}} naar {{next}}.",
+      "creditDescription": "U ontvangt op uw volgende factuur een tegoed voor de ongebruikte licenties."
+    },
+    "confirmation": {
+      "description": "Controleer en bevestig de verwijdering van uw licenties:",
+      "currentMonthlyCost": "Huidige maandelijkse kosten",
+      "currentLicenseCount": "Huidig aantal licenties",
+      "newMonthlyCost": "Nieuwe maandelijkse kosten",
+      "newLicenseCount": "Nieuw aantal licenties",
+      "monthlySavings": "Maandelijkse besparing",
+      "creditNotice": "De wijzigingen gaan in aan het einde van uw huidige factureringsperiode. U ontvangt op uw volgende factuur een naar rato berekend tegoed."
+    },
+    "errors": {
+      "deactivateUsersFirst": "Deactiveer eerst gebruikers",
+      "reduceFailed": "Licenties konden niet worden verminderd",
+      "removeFailed": "Licenties konden niet worden verwijderd. Probeer het opnieuw."
+    },
+    "success": {
+      "scheduled": "Het verwijderen van licenties is ingepland! Uw aantal licenties verandert op {{effectiveDate}} van {{current}} naar {{next}}."
+    }
+  },
+  "shared": {
+    "licenseSingular": "licentie",
+    "licensePlural": "licenties",
+    "userSingular": "gebruiker",
+    "userPlural": "gebruikers",
+    "licenseCount": "{{count}} {{licenseLabel}}",
+    "perInterval": "{{amount}}/{{interval}}",
+    "none": "Geen",
+    "intervals": {
+      "month": "maand",
+      "year": "jaar"
+    }
+  }
+}

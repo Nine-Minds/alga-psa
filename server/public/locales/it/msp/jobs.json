@@ -1,0 +1,85 @@
+{
+  "shared": {
+    "fallbacks": {
+      "empty": "-"
+    },
+    "statusLabels": {
+      "completed": "Completato",
+      "failed": "Fallito",
+      "processing": "Elaborazione",
+      "pending": "In attesa di"
+    },
+    "runnerLabels": {
+      "temporal": "Temporale",
+      "pgboss": "Capo PG"
+    }
+  },
+  "recentTable": {
+    "columns": {
+      "jobName": "Nome del lavoro",
+      "runner": "Corridore",
+      "status": "Stato",
+      "duration": "Durata",
+      "started": "Iniziato",
+      "completed": "Completato"
+    },
+    "time": {
+      "justNow": "Proprio adesso",
+      "minutesAgo": "{{count}}m fa",
+      "hoursAgo": "{{count}}h fa"
+    },
+    "duration": {
+      "milliseconds": "{{count}}ms",
+      "seconds": "{{count}}s",
+      "minutesSeconds": "{{minutes}}m {{seconds}}s",
+      "hoursMinutes": "{{hours}}h {{minutes}}m"
+    },
+    "externalId": "ID: {{id}}..."
+  },
+  "metrics": {
+    "labels": {
+      "totalJobs": "Posti di lavoro totali",
+      "totalJobsPgBoss": "Lavori totali (capo PG)",
+      "totalJobsTemporal": "Lavori totali (temporanei)",
+      "completed": "Completato",
+      "failed": "Fallito",
+      "pending": "In attesa di",
+      "processing": "Elaborazione",
+      "pgboss": "Capo PG",
+      "temporal": "Temporale"
+    },
+    "successRate": "Tasso di successo del {{count}}%."
+  },
+  "historyTable": {
+    "columns": {
+      "jobName": "Nome del lavoro",
+      "status": "Stato",
+      "created": "Creato",
+      "started": "Iniziato",
+      "completed": "Completato"
+    }
+  },
+  "progress": {
+    "loading": "Caricamento dettagli lavoro...",
+    "labels": {
+      "created": "Creato:",
+      "jobData": "Dati sul lavoro"
+    }
+  },
+  "drawer": {
+    "title": "Dettagli del lavoro",
+    "jobId": "ID: {{id}}",
+    "sections": {
+      "progress": "Avanzamento del lavoro",
+      "metrics": "Metriche del lavoro",
+      "history": "Storia del lavoro"
+    }
+  },
+  "stepHistory": {
+    "title": "Fasi di lavoro",
+    "labels": {
+      "processed": "Elaborato:",
+      "retries": "Nuovi tentativi:"
+    }
+  }
+}

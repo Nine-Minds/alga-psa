@@ -9,6 +9,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import { NumberingSettings } from '@alga-psa/reference-data/components';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import DefaultCurrencySettings from './DefaultCurrencySettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
 import RenewalAutomationSettings from './RenewalAutomationSettings';
@@ -129,7 +130,18 @@ const BillingSettings: React.FC = () => {
       label: 'General',
       content: (
         <div className="space-y-6">
-          {/* Invoice Numbering Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Default Currency</CardTitle>
+              <CardDescription>
+                Set the default currency for new products, services, contracts, and quotes. This can be overridden per client in their billing configuration.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DefaultCurrencySettings />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Invoice Numbering</CardTitle>
@@ -142,9 +154,41 @@ const BillingSettings: React.FC = () => {
             </CardContent>
           </Card>
 
-          <ZeroDollarInvoiceSettings />
-          <CreditExpirationSettings />
-          <RenewalAutomationSettings />
+          <Card>
+            <CardHeader>
+              <CardTitle>Zero-Dollar Invoices</CardTitle>
+              <CardDescription>
+                Control how invoices with no charges are handled.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ZeroDollarInvoiceSettings />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Credit Expiration</CardTitle>
+              <CardDescription>
+                Configure when and how client credits expire.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CreditExpirationSettings />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Renewal Automation</CardTitle>
+              <CardDescription>
+                Configure default behavior when contracts reach their renewal date.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RenewalAutomationSettings />
+            </CardContent>
+          </Card>
         </div>
       ),
     },

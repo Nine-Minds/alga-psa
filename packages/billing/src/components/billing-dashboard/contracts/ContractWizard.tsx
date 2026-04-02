@@ -286,6 +286,19 @@ export function ContractWizard({
       .finally(() => {
         setIsLoadingTemplates(false);
       });
+
+    // Apply tenant default currency for new contracts
+    if (!editingContract) {
+      getDefaultBillingSettings()
+        .then((settings) => {
+          const currency = settings.defaultCurrencyCode || 'USD';
+          setWizardData((prev) => ({
+            ...prev,
+            currency_code: currency,
+          }));
+        })
+        .catch(() => {});
+    }
   }, [open, editingContract]);
 
   const resetWizard = () => {

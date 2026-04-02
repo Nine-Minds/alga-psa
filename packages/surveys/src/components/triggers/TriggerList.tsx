@@ -1,8 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { SurveyTemplate, SurveyTrigger } from '@alga-psa/surveys/actions/surveyActions';
 import {
   updateSurveyTrigger,
@@ -34,7 +33,9 @@ interface TriggerListProps {
 }
 
 export function TriggerList({ templates, triggers, isLoading, onTriggersChange, onRefresh }: TriggerListProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('msp/surveys');
+  const { t: tCommon } = useTranslation('common');
+  const { formatRelativeTime } = useFormatters();
   const { toast } = useToast();
   const { data: referenceData } = useTriggerReferenceData();
 
@@ -106,7 +107,7 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
     if (!date || Number.isNaN(date.getTime())) {
       return '—';
     }
-    return formatDistanceToNow(date, { addSuffix: true });
+    return formatRelativeTime(date);
   };
 
   const handleToggleEnabled = async (trigger: SurveyTrigger, enabled: boolean) => {
@@ -117,13 +118,17 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
         prev.map((item) => (item.triggerId === updated.triggerId ? updated : item))
       );
       toast({
-        title: t('surveys.settings.triggerList.toasts.updated', 'Trigger updated'),
+        title: t('settings.triggerList.toasts.updated', {
+          defaultValue: 'Trigger updated',
+        }),
         description: '',
       });
     } catch (error) {
       console.error('[TriggerList] Failed to toggle trigger enabled', error);
       toast({
-        title: t('surveys.settings.triggerList.toasts.error', 'Unable to save trigger'),
+        title: t('settings.triggerList.toasts.error', {
+          defaultValue: 'Unable to save trigger',
+        }),
         description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
@@ -137,13 +142,17 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
       await deleteSurveyTrigger(trigger.triggerId);
       onTriggersChange((prev) => prev.filter((item) => item.triggerId !== trigger.triggerId));
       toast({
-        title: t('surveys.settings.triggerList.toasts.deleted', 'Trigger deleted'),
+        title: t('settings.triggerList.toasts.deleted', {
+          defaultValue: 'Trigger deleted',
+        }),
         description: '',
       });
     } catch (error) {
       console.error('[TriggerList] Failed to delete trigger', error);
       toast({
-        title: t('surveys.settings.triggerList.toasts.deleteError', 'Unable to delete trigger'),
+        title: t('settings.triggerList.toasts.deleteError', {
+          defaultValue: 'Unable to delete trigger',
+        }),
         description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
@@ -157,7 +166,9 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
     } catch (error) {
       console.error('[TriggerList] Failed to refresh triggers', error);
       toast({
-        title: t('surveys.settings.triggerList.toasts.error', 'Unable to save trigger'),
+        title: t('settings.triggerList.toasts.error', {
+          defaultValue: 'Unable to save trigger',
+        }),
         description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
@@ -189,7 +200,7 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
       }
     });
     return map;
-  }, [referenceData?.ticketStatuses, referenceData?.projectStatuses]);
+  }, [referenceData?.projectStatuses, referenceData?.ticketStatuses]);
 
   const priorityMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -223,15 +234,12 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
           )
         : null;
 
-    const hasFilters = Boolean(boardText || statusText || priorityText);
-
-    if (!hasFilters) {
+    if (!boardText && !statusText && !priorityText) {
       return (
         <span className="text-xs text-gray-500">
-          {t(
-            'surveys.settings.triggerList.conditions.unrestricted',
-            'Applies to every ticket and project'
-          )}
+          {t('settings.triggerList.conditions.unrestricted', {
+            defaultValue: 'Applies to every ticket and project',
+          })}
         </span>
       );
     }
@@ -241,7 +249,7 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
         {boardText && (
           <div>
             <span className="font-medium">
-              {t('surveys.settings.triggerList.conditions.boards', 'Boards')}
+              {t('settings.triggerList.conditions.boards', { defaultValue: 'Boards' })}
             </span>{' '}
             <span>{boardText}</span>
           </div>
@@ -249,7 +257,7 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
         {statusText && (
           <div>
             <span className="font-medium">
-              {t('surveys.settings.triggerList.conditions.statuses', 'Statuses')}
+              {t('settings.triggerList.conditions.statuses', { defaultValue: 'Statuses' })}
             </span>{' '}
             <span>{statusText}</span>
           </div>
@@ -257,7 +265,7 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
         {priorityText && (
           <div>
             <span className="font-medium">
-              {t('surveys.settings.triggerList.conditions.priorities', 'Priorities')}
+              {t('settings.triggerList.conditions.priorities', { defaultValue: 'Priorities' })}
             </span>{' '}
             <span>{priorityText}</span>
           </div>
@@ -270,12 +278,13 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
     <Card>
       <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <CardTitle>{t('surveys.settings.triggerList.title', 'Survey triggers')}</CardTitle>
+          <CardTitle>
+            {t('settings.triggerList.title', { defaultValue: 'Survey triggers' })}
+          </CardTitle>
           <CardDescription>
-            {t(
-              'surveys.settings.triggerList.description',
-              'Automatically send invitations when tickets or projects reach completion.'
-            )}
+            {t('settings.triggerList.description', {
+              defaultValue: 'Automatically send invitations when tickets or projects reach completion.',
+            })}
           </CardDescription>
         </div>
         <div className="flex gap-2">
@@ -287,7 +296,7 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
             disabled={isRefreshing}
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {t('actions.refresh', 'Refresh')}
+            {tCommon('actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
           <Button
             id="survey-trigger-add-button"
@@ -295,7 +304,7 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
             className="gap-2"
           >
             <PlusIcon className="h-4 w-4" />
-            {t('surveys.settings.triggerList.createButton', 'New trigger')}
+            {t('settings.triggerList.createButton', { defaultValue: 'New trigger' })}
           </Button>
         </div>
       </CardHeader>
@@ -304,48 +313,52 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
           <div className="flex justify-center py-12">
             <LoadingIndicator
               layout="stacked"
-              text={t('surveys.common.loading', 'Loading...')}
+              text={t('common.loading', { defaultValue: 'Loading...' })}
             />
           </div>
         ) : sortedTriggers.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-200 py-16 text-center">
             <h3 className="text-lg font-semibold">
-              {t('surveys.settings.triggerList.emptyTitle', 'No survey triggers configured')}
+              {t('settings.triggerList.emptyTitle', {
+                defaultValue: 'No survey triggers configured',
+              })}
             </h3>
             <p className="max-w-md text-sm text-gray-500">
-              {t(
-                'surveys.settings.triggerList.emptyDescription',
-                'Create a trigger to send surveys when tickets close or projects finish.'
-              )}
+              {t('settings.triggerList.emptyDescription', {
+                defaultValue: 'Create a trigger to send surveys when tickets close or projects finish.',
+              })}
             </p>
             <Button id="survey-trigger-empty-create" onClick={handleOpenCreate} className="mt-2 gap-2">
               <PlusIcon className="h-4 w-4" />
-              {t('surveys.settings.triggerList.createButton', 'New trigger')}
+              {t('settings.triggerList.createButton', { defaultValue: 'New trigger' })}
             </Button>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('surveys.settings.triggerList.table.template', 'Template')}</TableHead>
-                <TableHead>{t('surveys.settings.triggerList.table.type', 'Trigger')}</TableHead>
-                <TableHead>{t('surveys.settings.triggerList.table.conditions', 'Conditions')}</TableHead>
-                <TableHead>{t('surveys.settings.triggerList.table.status', 'Status')}</TableHead>
-                <TableHead>{t('surveys.settings.triggerList.table.updated', 'Updated')}</TableHead>
-                <TableHead className="text-right">{t('surveys.settings.triggerList.table.actions', 'Actions')}</TableHead>
+                <TableHead>{t('settings.triggerList.table.template', { defaultValue: 'Template' })}</TableHead>
+                <TableHead>{t('settings.triggerList.table.type', { defaultValue: 'Trigger' })}</TableHead>
+                <TableHead>{t('settings.triggerList.table.conditions', { defaultValue: 'Conditions' })}</TableHead>
+                <TableHead>{t('settings.triggerList.table.status', { defaultValue: 'Status' })}</TableHead>
+                <TableHead>{t('settings.triggerList.table.updated', { defaultValue: 'Updated' })}</TableHead>
+                <TableHead className="text-right">
+                  {t('settings.triggerList.table.actions', { defaultValue: 'Actions' })}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedTriggers.map((trigger) => {
                 const template = templateLookup[trigger.templateId];
+                const targetName = template?.templateName ?? trigger.triggerType;
+
                 return (
                   <TableRow key={trigger.triggerId}>
-                    <TableCell>{template?.templateName ?? trigger.templateId}</TableCell>
+                    <TableCell>{targetName}</TableCell>
                     <TableCell>
-                      {t(
-                        `surveys.settings.triggerForm.triggerTypes.${trigger.triggerType}`,
-                        triggerTypeFallbackLabels[trigger.triggerType]
-                      )}
+                      {t(`settings.triggerForm.triggerTypes.${trigger.triggerType}`, {
+                        defaultValue: triggerTypeFallbackLabels[trigger.triggerType],
+                      })}
                     </TableCell>
                     <TableCell>{renderConditions(trigger)}</TableCell>
                     <TableCell>
@@ -356,8 +369,12 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
                         disabled={isToggling === trigger.triggerId}
                         label={
                           trigger.enabled
-                            ? t('surveys.settings.triggerList.status.enabled', 'Enabled')
-                            : t('surveys.settings.triggerList.status.disabled', 'Disabled')
+                            ? t('settings.triggerList.status.enabled', {
+                                defaultValue: 'Enabled',
+                              })
+                            : t('settings.triggerList.status.disabled', {
+                                defaultValue: 'Disabled',
+                              })
                         }
                       />
                     </TableCell>
@@ -370,7 +387,10 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            aria-label={`Open actions for trigger targeting ${template?.templateName ?? trigger.triggerType}`}
+                            aria-label={t('settings.triggerList.actionsMenuAria', {
+                              defaultValue: 'Open actions for trigger targeting {{target}}',
+                              target: targetName,
+                            })}
                           >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
@@ -380,21 +400,21 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
                             id={`survey-trigger-edit-${trigger.triggerId}`}
                             onSelect={() => handleEdit(trigger)}
                           >
-                            {t('actions.edit', 'Edit')}
+                            {tCommon('actions.edit', { defaultValue: 'Edit' })}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             id={`survey-trigger-delete-${trigger.triggerId}`}
                             className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                             onSelect={() => handleDelete(trigger)}
                           >
-                            {t('actions.delete', 'Delete')}
+                            {tCommon('actions.delete', { defaultValue: 'Delete' })}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
@@ -406,8 +426,12 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
         onClose={closeDialog}
         title={
           editingTrigger
-            ? t('surveys.settings.triggerForm.titleEdit', 'Edit survey trigger')
-            : t('surveys.settings.triggerForm.titleCreate', 'Create survey trigger')
+            ? t('settings.triggerForm.titleEdit', {
+                defaultValue: 'Edit survey trigger',
+              })
+            : t('settings.triggerForm.titleCreate', {
+                defaultValue: 'Create survey trigger',
+              })
         }
         className="max-w-3xl"
       >

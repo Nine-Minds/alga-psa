@@ -16,6 +16,6 @@
   "devDependencies": {
     "@alga-psa/cli": "^0.2.0",
     "rimraf": "^5.0.0",
-    "vitest": "^3.0.7"
+    "vitest": "^4.0.18"
   }
 }

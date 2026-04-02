@@ -368,6 +368,46 @@ export class ApiTicketController extends ApiBaseController {
   }
 
   /**
+   * Download a ticket document
+   */
+  downloadDocument() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+
+          // Extract documentId from the URL path segment after "documents/"
+          const url = new URL(apiRequest.url || req.url);
+          const segments = url.pathname.split('/');
+          const docsIndex = segments.indexOf('documents');
+          const documentId = docsIndex >= 0 ? segments[docsIndex + 1] : undefined;
+
+          if (!documentId) {
+            throw new ValidationError('Validation failed', [
+              { path: ['documentId'], message: 'document ID is required' },
+            ]);
+          }
+
+          const result = await this.ticketService.downloadTicketDocument(ticketId, documentId, apiRequest.context!);
+
+          const headers = new Headers();
+          headers.set('Content-Type', result.mimeType);
+          headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(result.fileName)}"`);
+          headers.set('Cache-Control', 'no-store');
+
+          return new NextResponse(new Uint8Array(result.buffer), { status: 200, headers });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Get ticket materials
    */
   getMaterials() {

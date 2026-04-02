@@ -688,6 +688,21 @@ export const setupBilling = withAuth(async (
         .whereNull('default_currency_code')
         .update({ default_currency_code: currencyCode });
 
+      // Persist the selected currency as the tenant-level billing default
+      const existingSettings = await trx('default_billing_settings').where({ tenant }).first();
+      if (existingSettings) {
+        await trx('default_billing_settings')
+          .where({ tenant })
+          .update({ default_currency_code: currencyCode, updated_at: trx.fn.now() });
+      } else {
+        await trx('default_billing_settings').insert({
+          tenant,
+          zero_dollar_invoice_handling: 'normal',
+          suppress_zero_dollar_invoices: false,
+          default_currency_code: currencyCode,
+        });
+      }
+
       // Save progress
       await saveTenantOnboardingProgress({
         serviceName: data.serviceName,

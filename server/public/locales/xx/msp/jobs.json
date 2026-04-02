@@ -1,0 +1,85 @@
+{
+  "shared": {
+    "fallbacks": {
+      "empty": "11111"
+    },
+    "statusLabels": {
+      "completed": "11111",
+      "failed": "11111",
+      "processing": "11111",
+      "pending": "11111"
+    },
+    "runnerLabels": {
+      "temporal": "11111",
+      "pgboss": "11111"
+    }
+  },
+  "recentTable": {
+    "columns": {
+      "jobName": "11111",
+      "runner": "11111",
+      "status": "11111",
+      "duration": "11111",
+      "started": "11111",
+      "completed": "11111"
+    },
+    "time": {
+      "justNow": "11111",
+      "minutesAgo": "11111",
+      "hoursAgo": "11111"
+    },
+    "duration": {
+      "milliseconds": "11111",
+      "seconds": "11111",
+      "minutesSeconds": "11111",
+      "hoursMinutes": "11111"
+    },
+    "externalId": "11111"
+  },
+  "metrics": {
+    "labels": {
+      "totalJobs": "11111",
+      "totalJobsPgBoss": "11111",
+      "totalJobsTemporal": "11111",
+      "completed": "11111",
+      "failed": "11111",
+      "pending": "11111",
+      "processing": "11111",
+      "pgboss": "11111",
+      "temporal": "11111"
+    },
+    "successRate": "11111"
+  },
+  "historyTable": {
+    "columns": {
+      "jobName": "11111",
+      "status": "11111",
+      "created": "11111",
+      "started": "11111",
+      "completed": "11111"
+    }
+  },
+  "progress": {
+    "loading": "11111",
+    "labels": {
+      "created": "11111",
+      "jobData": "11111"
+    }
+  },
+  "drawer": {
+    "title": "11111",
+    "jobId": "11111",
+    "sections": {
+      "progress": "11111",
+      "metrics": "11111",
+      "history": "11111"
+    }
+  },
+  "stepHistory": {
+    "title": "11111",
+    "labels": {
+      "processed": "11111",
+      "retries": "11111"
+    }
+  }
+}

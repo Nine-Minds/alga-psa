@@ -1,0 +1,199 @@
+{
+  "profile": {
+    "tabs": {
+      "profile": "Profiel",
+      "security": "Beveiliging",
+      "sso": "Single Sign-On",
+      "apiKeys": "API-sleutels",
+      "notifications": "Meldingen",
+      "calendar": "Agenda"
+    },
+    "basicInfo": {
+      "title": "Basisinformatie"
+    },
+    "fields": {
+      "firstName": {
+        "label": "Voornaam *"
+      },
+      "lastName": {
+        "label": "Achternaam *"
+      },
+      "email": {
+        "label": "E-mail *"
+      },
+      "phoneNumber": {
+        "label": "Telefoonnummer"
+      },
+      "timeZone": {
+        "label": "Tijdzone"
+      }
+    },
+    "actions": {
+      "saveChanges": "Wijzigingen opslaan"
+    },
+    "notifications": {
+      "title": "Meldingsvoorkeuren",
+      "viewSwitcher": {
+        "email": "E-mail",
+        "internal": "Intern"
+      }
+    },
+    "loading": "Profiel laden...",
+    "messages": {
+      "success": {
+        "profileUpdated": "Profiel succesvol bijgewerkt"
+      },
+      "error": {
+        "userNotFound": "Gebruiker niet gevonden",
+        "fillRequiredFields": "Vul alle verplichte velden in",
+        "loadFailed": "Kan profiel niet laden",
+        "saveFailed": "Kan profiel niet opslaan",
+        "errorPrefix": "Fout: {{error}}"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "Voornaam is vereist",
+      "lastNameRequired": "Achternaam is vereist"
+    },
+    "pageTitle": "Uw profiel",
+    "changePassword": {
+      "title": "Wachtwoord wijzigen",
+      "current": "Huidig wachtwoord",
+      "new": "Nieuw wachtwoord",
+      "confirm": "Nieuw wachtwoord bevestigen",
+      "requirements": "Wachtwoord moet minimaal 8 tekens bevatten",
+      "submit": "Wachtwoord wijzigen",
+      "success": "Wachtwoord succesvol gewijzigd",
+      "error": "Kan wachtwoord niet wijzigen",
+      "passwordMismatch": "Nieuwe wachtwoorden komen niet overeen",
+      "unknownError": "Er is een fout opgetreden bij het wijzigen van het wachtwoord",
+      "validationFailed": "Het wachtwoord voldoet niet aan alle vereisten"
+    },
+    "loadingStates": {
+      "sso": {
+        "title": "Single Sign-On",
+        "description": "SSO-instellingen laden..."
+      },
+      "calendar": {
+        "title": "Agenda",
+        "description": "Agenda-instellingen laden..."
+      }
+    }
+  },
+  "security": {
+    "title": "Beveiligingsinstellingen",
+    "tabs": {
+      "roles": "Rollen",
+      "sessions": "Sessies",
+      "sso": "Single Sign-On",
+      "permissions": "Machtigingen",
+      "userRoles": "Gebruikersrollen",
+      "policies": "Beleidsregels",
+      "apiKeys": "API-sleutels"
+    },
+    "loading": {
+      "roles": "Rolconfiguratie laden...",
+      "permissions": "Machtigingsconfiguratie laden...",
+      "userRoles": "Gebruikersrolconfiguratie laden...",
+      "policies": "Beleidsregelconfiguratie laden...",
+      "apiKeys": "API-sleutelconfiguratie laden...",
+      "sso": "SSO-beheertools laden...",
+      "sessions": "Actieve sessies laden..."
+    },
+    "userRoles": {
+      "title": "Rollen toewijzen aan gebruikers",
+      "description": {
+        "msp": "Beheer gebruikersroltoewijzingen voor MSP-gebruikers",
+        "client": "Beheer gebruikersroltoewijzingen voor klantenportaalgebruikers"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Klantenportaal"
+      },
+      "showInactive": "Inactieve gebruikers tonen",
+      "fields": {
+        "selectUser": "Gebruiker selecteren",
+        "selectRole": "Rol selecteren"
+      },
+      "actions": {
+        "assignRole": "Rol toewijzen"
+      },
+      "table": {
+        "user": "Gebruiker",
+        "email": "E-mail",
+        "roles": "Rollen",
+        "actions": "Acties"
+      },
+      "noRolesAssigned": "Geen rollen toegewezen",
+      "removeRole": "{{role}} verwijderen",
+      "emptyState": {
+        "noUsers": "Geen {{type}}-gebruikers gevonden",
+        "inactiveHidden": "(inactieve gebruikers verborgen)"
+      },
+      "inactiveTag": "(Inactief)",
+      "unnamedUser": "Naamloze gebruiker"
+    },
+    "sessions": {
+      "title": "Alle gebruikerssessies",
+      "subtitle": "{{sessionCount}} actieve sessie bij {{userCount}} gebruiker",
+      "subtitle_plural": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers",
+      "filters": {
+        "search": "Zoeken",
+        "searchPlaceholder": "Zoeken op naam, e-mail, apparaat of IP...",
+        "user": "Gebruiker",
+        "allUsers": "Alle gebruikers",
+        "loginMethod": "Aanmeldmethode",
+        "allMethods": "Alle methoden",
+        "userType": "Gebruikerstype",
+        "allTypes": "Alle typen",
+        "from": "Van",
+        "to": "Tot",
+        "selectDate": "Datum selecteren",
+        "reset": "Herstellen"
+      },
+      "loginMethods": {
+        "password": "Wachtwoord",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Intern",
+        "client": "Klant"
+      },
+      "session": {
+        "yourSession": "Uw sessie",
+        "unknownDevice": "Onbekend apparaat",
+        "lastActive": "Laatst actief {{time}}",
+        "logout": "Uitloggen",
+        "revoke": "Intrekken",
+        "revoking": "Intrekken..."
+      },
+      "oauthWarning": "Het intrekken van deze sessie zal de {{provider}} OAuth-toegang niet intrekken. Trek de toegang in via uw {{provider}}-accountinstellingen.",
+      "confirmLogout": "Weet u zeker dat u wilt uitloggen van dit apparaat?",
+      "messages": {
+        "loggingOut": "Uitloggen...",
+        "revoked": "Sessie succesvol ingetrokken",
+        "loadFailed": "Kan sessies niet laden",
+        "revokeFailed": "Kan sessie niet intrekken"
+      },
+      "emptyState": {
+        "loading": "Sessies laden...",
+        "noMatch": "Geen sessies gevonden die overeenkomen met uw zoekopdracht",
+        "noSessions": "Geen actieve sessies gevonden"
+      }
+    }
+  },
+  "platformUpdates": {
+    "detail": {
+      "back": "Terug",
+      "labels": {
+        "info": "Info",
+        "warning": "Waarschuwing",
+        "destructive": "Kritiek",
+        "success": "Succes",
+        "default": "Melding"
+      }
+    }
+  }
+}

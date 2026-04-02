@@ -157,7 +157,6 @@ async function listActiveTenantDomains(knex: Knex, tenant: string): Promise<stri
 }
 
 async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise<MspSsoDomainClaim[]> {
-  const hasClaimStatus = await knex.schema.hasColumn(MSP_SSO_LOGIN_DOMAIN_TABLE, 'claim_status');
   const hasChallengeTable = await knex.schema.hasTable(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE);
 
   const rows = await knex(MSP_SSO_LOGIN_DOMAIN_TABLE)
@@ -165,16 +164,12 @@ async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise
       'id',
       'domain',
       'is_active',
-      ...(hasClaimStatus
-        ? [
-            'claim_status',
-            'claim_status_updated_at',
-            'claimed_at',
-            'verified_at',
-            'rejected_at',
-            'revoked_at',
-          ]
-        : [])
+      'claim_status',
+      'claim_status_updated_at',
+      'claimed_at',
+      'verified_at',
+      'rejected_at',
+      'revoked_at'
     )
     .where({ tenant, is_active: true })
     .orderByRaw('lower(domain) asc');
@@ -269,23 +264,17 @@ async function toDomainClaim(
   tenant: string,
   claimId: string
 ): Promise<MspSsoDomainClaim | null> {
-  const hasClaimStatus = await knex.schema.hasColumn(MSP_SSO_LOGIN_DOMAIN_TABLE, 'claim_status');
-
   const row = await knex(MSP_SSO_LOGIN_DOMAIN_TABLE)
     .select(
       'id',
       'domain',
       'is_active',
-      ...(hasClaimStatus
-        ? [
-            'claim_status',
-            'claim_status_updated_at',
-            'claimed_at',
-            'verified_at',
-            'rejected_at',
-            'revoked_at',
-          ]
-        : [])
+      'claim_status',
+      'claim_status_updated_at',
+      'claimed_at',
+      'verified_at',
+      'rejected_at',
+      'revoked_at'
     )
     .where({ tenant, id: claimId })
     .first();

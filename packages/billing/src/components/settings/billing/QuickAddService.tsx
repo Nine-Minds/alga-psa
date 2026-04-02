@@ -8,7 +8,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect'
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect'
 import { Switch } from '@alga-psa/ui/components/Switch'
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert'
-import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '@alga-psa/billing/actions'
+import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices, getDefaultBillingSettings } from '@alga-psa/billing/actions'
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core'
 // Import getTaxRates and ITaxRate instead
 import { getTaxRates } from '@alga-psa/billing/actions'; // Removed getActiveTaxRegions
@@ -70,13 +70,25 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
   // Support both controlled (isOpen/onClose) and uncontrolled (internal state) modes
   const isControlled = isOpen !== undefined;
   const [internalOpen, setInternalOpen] = useState(false)
+  const [defaultCurrency, setDefaultCurrency] = useState('USD');
+
+  useEffect(() => {
+    getDefaultBillingSettings()
+      .then((settings) => {
+        const currency = settings.defaultCurrencyCode || 'USD';
+        setDefaultCurrency(currency);
+        setPrices([{ currency_code: currency, rate: 0 }]);
+        setServiceData((prev) => ({ ...prev, currency_code: currency }));
+      })
+      .catch(() => {});
+  }, []);
 
   // In controlled mode, use external state; in uncontrolled mode, use internal state
   const dialogOpen = isControlled ? isOpen : internalOpen;
 
   // Handler for closing the dialog - resets form state and calls appropriate close handler
   const handleDialogClose = () => {
-    setPrices([{ currency_code: 'USD', rate: 0 }]);
+    setPrices([{ currency_code: defaultCurrency, rate: 0 }]);
     setPriceInputs(['']);
     setHasAttemptedSubmit(false);
     setValidationErrors([]);
@@ -99,7 +111,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
   const tenant = useTenant()
   // State for multi-currency pricing (rate stored in cents)
   const [prices, setPrices] = useState<Array<{ currency_code: string; rate: number }>>([
-    { currency_code: 'USD', rate: 0 }
+    { currency_code: defaultCurrency, rate: 0 }
   ])
   // State for price input display values (allows temporary invalid states during editing)
   const [priceInputs, setPriceInputs] = useState<string[]>([''])
@@ -110,7 +122,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
     custom_service_type_id: '',
     billing_method: '',
     default_rate: 0,
-    currency_code: 'USD', // Default to USD
+    currency_code: defaultCurrency,
     unit_of_measure: '',
     // is_taxable and region_code removed
     tax_rate_id: null, // Added
@@ -281,7 +293,7 @@ if (createdService?.service_id) {
         custom_service_type_id: '',
         billing_method: '',
         default_rate: 0,
-        currency_code: 'USD', // Reset to default USD
+        currency_code: defaultCurrency,
         unit_of_measure: '',
         description: '',
         // is_taxable and region_code removed
@@ -293,7 +305,7 @@ if (createdService?.service_id) {
         seat_limit: 0,
         license_term: 'monthly'
       })
-      setPrices([{ currency_code: 'USD', rate: 0 }])
+      setPrices([{ currency_code: defaultCurrency, rate: 0 }])
       setPriceInputs([''])
       setError(null)
       setHasAttemptedSubmit(false)

@@ -4,6 +4,7 @@ import type { UnifiedInboundEmailQueueJob } from '@alga-psa/shared/interfaces/in
 const getAdminConnectionMock = vi.fn();
 const processInboundEmailInAppMock = vi.fn();
 const microsoftConnectMock = vi.fn();
+const microsoftDownloadMessageSourceMock = vi.fn();
 const microsoftGetMessageDetailsMock = vi.fn();
 const gmailConnectMock = vi.fn();
 const gmailListMessagesSinceMock = vi.fn();
@@ -29,6 +30,9 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
   MicrosoftGraphAdapter: class MicrosoftGraphAdapter {
     connect(...args: any[]) {
       return microsoftConnectMock(...args);
+    }
+    downloadMessageSource(...args: any[]) {
+      return microsoftDownloadMessageSourceMock(...args);
     }
     getMessageDetails(...args: any[]) {
       return microsoftGetMessageDetailsMock(...args);
@@ -56,6 +60,7 @@ vi.mock('mailparser', () => ({
 
 vi.mock('imapflow', () => ({
   ImapFlow: class ImapFlow {
+    on() {}
     connect(...args: any[]) {
       return imapConnectMock(...args);
     }
@@ -185,6 +190,7 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     getAdminConnectionMock.mockReset();
     processInboundEmailInAppMock.mockReset();
     microsoftConnectMock.mockReset();
+    microsoftDownloadMessageSourceMock.mockReset();
     microsoftGetMessageDetailsMock.mockReset();
     gmailConnectMock.mockReset();
     gmailListMessagesSinceMock.mockReset();
@@ -224,19 +230,28 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     });
     getAdminConnectionMock.mockResolvedValue(db);
 
-    const microsoftEmail = {
-      id: 'ms-msg-1',
-      provider: 'microsoft',
-      providerId: 'provider-ms-1',
-      tenant: 'tenant-1',
-      receivedAt: new Date().toISOString(),
-      from: { email: 'sender@example.com' },
-      to: [{ email: 'support@example.com' }],
+    const rawMimeBuffer = Buffer.from('microsoft raw mime payload');
+    microsoftDownloadMessageSourceMock.mockResolvedValue(rawMimeBuffer);
+    simpleParserMock.mockResolvedValue({
+      messageId: '<ms-msg-1@example.com>',
+      date: new Date('2026-03-01T00:00:00.000Z'),
+      from: { value: [{ address: 'sender@example.com', name: 'Sender' }] },
+      to: { value: [{ address: 'support@example.com', name: 'Support' }] },
+      cc: { value: [] },
       subject: 'Microsoft Subject',
-      body: { text: 'Body', html: '<p>Body</p>' },
-      attachments: [],
-    } as any;
-    microsoftGetMessageDetailsMock.mockResolvedValue(microsoftEmail);
+      text: 'Microsoft Body',
+      html: '<p>Microsoft Body<img src="cid:inline-image-1" /></p>',
+      attachments: [
+        {
+          contentId: 'inline-image-1',
+          filename: 'image.png',
+          contentType: 'image/png',
+          size: 4,
+          contentDisposition: 'inline',
+          content: Buffer.from('png!'),
+        },
+      ],
+    });
 
     const { processUnifiedInboundEmailQueueJob } = await import(
       '../../services/email/unifiedInboundEmailQueueJobProcessor'
@@ -264,14 +279,30 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
       dedupedCount: 0,
     });
     expect(microsoftConnectMock).toHaveBeenCalledTimes(1);
-    expect(microsoftGetMessageDetailsMock).toHaveBeenCalledWith('ms-msg-1');
+    expect(microsoftDownloadMessageSourceMock).toHaveBeenCalledWith('ms-msg-1');
+    expect(microsoftGetMessageDetailsMock).not.toHaveBeenCalled();
+    expect(simpleParserMock).toHaveBeenCalledWith(rawMimeBuffer);
+    const processedEmail = processInboundEmailInAppMock.mock.calls[0][0].emailData;
+    expect(processedEmail).toMatchObject({
+      id: '<ms-msg-1@example.com>',
+      subject: 'Microsoft Subject',
+      rawMimeBase64: rawMimeBuffer.toString('base64'),
+    });
+    expect(processedEmail.attachments).toEqual([
+      expect.objectContaining({
+        contentId: 'inline-image-1',
+        isInline: true,
+        content: Buffer.from('png!').toString('base64'),
+      }),
+    ]);
     expect(processInboundEmailInAppMock).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant-1',
         providerId: 'provider-ms-1',
         emailData: expect.objectContaining({
-          id: 'ms-msg-1',
+          id: '<ms-msg-1@example.com>',
           subject: 'Microsoft Subject',
+          rawMimeBase64: rawMimeBuffer.toString('base64'),
         }),
       }),
       { collectDiagnostics: true }
@@ -291,21 +322,21 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     });
     getAdminConnectionMock.mockResolvedValue(db);
 
-    microsoftGetMessageDetailsMock.mockResolvedValue({
-      id: 'ms-diagnostics-1',
-      provider: 'microsoft',
-      providerId: 'provider-ms-1',
-      tenant: 'tenant-1',
-      receivedAt: new Date().toISOString(),
-      from: { email: 'sender@example.com' },
-      to: [{ email: 'support@example.com' }],
+    const rawMimeBuffer = Buffer.from('microsoft diagnostics raw mime payload');
+    microsoftDownloadMessageSourceMock.mockResolvedValue(rawMimeBuffer);
+    simpleParserMock.mockResolvedValue({
+      messageId: 'ms-diagnostics-1',
+      date: new Date(),
+      from: { value: [{ address: 'sender@example.com', name: 'Sender' }] },
+      to: { value: [{ address: 'support@example.com', name: 'Support' }] },
+      cc: { value: [] },
       subject: 'Diagnostics Subject',
-      body: { text: 'Body', html: '<p>Body</p>' },
+      text: 'Body',
+      html: '<p>Body</p>',
       attachments: [],
-      threadId: 'thread-1',
       inReplyTo: '<prior@example.com>',
       references: ['<prior@example.com>'],
-    } as any);
+    });
     processInboundEmailInAppMock.mockResolvedValue({
       outcome: 'replied',
       matchedBy: 'reply_token',
@@ -382,7 +413,7 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
       queueProvider: 'microsoft',
       headersSnapshot: {
         messageId: 'ms-diagnostics-1',
-        threadId: 'thread-1',
+        threadId: '<prior@example.com>',
         inReplyTo: '<prior@example.com>',
       },
     });
@@ -635,18 +666,18 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     });
     getAdminConnectionMock.mockResolvedValue(db);
 
-    microsoftGetMessageDetailsMock.mockResolvedValue({
-      id: 'ms-idempotent-1',
-      provider: 'microsoft',
-      providerId: 'provider-ms-1',
-      tenant: 'tenant-1',
-      receivedAt: new Date().toISOString(),
-      from: { email: 'sender@example.com' },
-      to: [{ email: 'support@example.com' }],
+    microsoftDownloadMessageSourceMock.mockResolvedValue(Buffer.from('idempotent microsoft mime'));
+    simpleParserMock.mockResolvedValue({
+      messageId: '<ms-idempotent-1@example.com>',
+      date: new Date('2026-03-01T00:00:00.000Z'),
+      from: { value: [{ address: 'sender@example.com' }] },
+      to: { value: [{ address: 'support@example.com' }] },
+      cc: { value: [] },
       subject: 'Idempotent Subject',
-      body: { text: 'Body', html: '<p>Body</p>' },
+      text: 'Body',
+      html: '<p>Body</p>',
       attachments: [],
-    } as any);
+    });
 
     const { processUnifiedInboundEmailQueueJob } = await import(
       '../../services/email/unifiedInboundEmailQueueJobProcessor'
@@ -673,7 +704,7 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     });
     expect(emailProcessedInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        message_id: 'microsoft:ms-idempotent-1',
+        message_id: 'microsoft:<ms-idempotent-1@example.com>',
         provider_id: 'provider-ms-1',
         tenant: 'tenant-1',
         processing_status: 'processing',
@@ -696,18 +727,18 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     getAdminConnectionMock.mockResolvedValue(db);
 
     emailProcessedInsertMock.mockRejectedValueOnce({ code: '23505' });
-    microsoftGetMessageDetailsMock.mockResolvedValue({
-      id: 'ms-idempotent-dup-1',
-      provider: 'microsoft',
-      providerId: 'provider-ms-1',
-      tenant: 'tenant-1',
-      receivedAt: new Date().toISOString(),
-      from: { email: 'sender@example.com' },
-      to: [{ email: 'support@example.com' }],
+    microsoftDownloadMessageSourceMock.mockResolvedValue(Buffer.from('duplicate microsoft mime'));
+    simpleParserMock.mockResolvedValue({
+      messageId: '<ms-idempotent-dup-1@example.com>',
+      date: new Date('2026-03-01T00:00:00.000Z'),
+      from: { value: [{ address: 'sender@example.com' }] },
+      to: { value: [{ address: 'support@example.com' }] },
+      cc: { value: [] },
       subject: 'Duplicate Subject',
-      body: { text: 'Body', html: '<p>Body</p>' },
+      text: 'Body',
+      html: '<p>Body</p>',
       attachments: [],
-    } as any);
+    });
 
     const { processUnifiedInboundEmailQueueJob } = await import(
       '../../services/email/unifiedInboundEmailQueueJobProcessor'

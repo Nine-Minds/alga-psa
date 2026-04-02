@@ -527,24 +527,15 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
       lineCountRaw = result?.count;
     }
 
-    const hasPoRequired = await knex.schema.hasColumn('client_contracts', 'po_required');
-    const hasPoNumber = await knex.schema.hasColumn('client_contracts', 'po_number');
-
     const assignmentColumns = [
       'client_contract_id',
       'client_id',
       'is_active',
       'start_date',
-      'end_date'
+      'end_date',
+      'po_required',
+      'po_number'
     ];
-
-    if (hasPoRequired) {
-      assignmentColumns.push('po_required');
-    }
-
-    if (hasPoNumber) {
-      assignmentColumns.push('po_number');
-    }
 
     const assignmentsRaw = await knex('client_contracts')
       .where({ contract_id: contractId })
@@ -553,8 +544,7 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
 
     const assignments = assignmentsRaw.map((assignment: any) => ({
       ...assignment,
-      po_required: hasPoRequired ? Boolean(assignment.po_required) : false,
-      po_number: hasPoNumber ? assignment.po_number : undefined,
+      po_required: Boolean(assignment.po_required),
     }));
 
     const totalAssignments = assignments.length;
@@ -607,12 +597,6 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
   try {
     const { knex } = await createTenantKnex();
 
-    const hasPoRequired = await knex.schema.hasColumn('client_contracts', 'po_required');
-    const hasPoNumber = await knex.schema.hasColumn('client_contracts', 'po_number');
-    const hasPoAmount = await knex.schema.hasColumn('client_contracts', 'po_amount');
-    const hasRenewalTicketBoard = await knex.schema.hasColumn('client_contracts', 'renewal_ticket_board_id');
-    const hasRenewalTicketStatus = await knex.schema.hasColumn('client_contracts', 'renewal_ticket_status_id');
-
     const selection = [
       'cc.client_contract_id',
       'cc.client_id',
@@ -627,24 +611,13 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       'cc.tenant',
       'c.client_name',
       'dbs.default_renewal_mode as tenant_default_renewal_mode',
-      'dbs.default_notice_period_days as tenant_default_notice_period_days'
+      'dbs.default_notice_period_days as tenant_default_notice_period_days',
+      'cc.po_required',
+      'cc.po_number',
+      'cc.po_amount',
+      'cc.renewal_ticket_board_id',
+      'cc.renewal_ticket_status_id'
     ];
-
-    if (hasPoRequired) {
-      selection.push('cc.po_required');
-    }
-    if (hasPoNumber) {
-      selection.push('cc.po_number');
-    }
-    if (hasPoAmount) {
-      selection.push('cc.po_amount');
-    }
-    if (hasRenewalTicketBoard) {
-      selection.push('cc.renewal_ticket_board_id');
-    }
-    if (hasRenewalTicketStatus) {
-      selection.push('cc.renewal_ticket_status_id');
-    }
 
     const rows = await knex('client_contracts as cc')
       .leftJoin('clients as c', function joinClients() {
@@ -709,8 +682,8 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
         notice_period_days: noticePeriodDays,
         renewal_term_months: renewalTermMonths,
         use_tenant_renewal_defaults: useTenantRenewalDefaults,
-        renewal_ticket_board_id: hasRenewalTicketBoard ? row.renewal_ticket_board_id ?? null : null,
-        renewal_ticket_status_id: hasRenewalTicketStatus ? row.renewal_ticket_status_id ?? null : null,
+        renewal_ticket_board_id: row.renewal_ticket_board_id ?? null,
+        renewal_ticket_status_id: row.renewal_ticket_status_id ?? null,
         effective_renewal_mode: useTenantRenewalDefaults
           ? tenantDefaultRenewalMode
           : renewalMode ?? tenantDefaultRenewalMode,
@@ -719,9 +692,9 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
           : noticePeriodDays ?? tenantDefaultNoticePeriodDays,
         decision_due_date: row.decision_due_date ? new Date(row.decision_due_date).toISOString().split('T')[0] : null,
         is_active: row.is_active ?? false,
-        po_required: hasPoRequired ? Boolean(row.po_required) : false,
-        po_number: hasPoNumber ? row.po_number : undefined,
-        po_amount: hasPoAmount ? row.po_amount : undefined,
+        po_required: Boolean(row.po_required),
+        po_number: row.po_number,
+        po_amount: row.po_amount,
         tenant: row.tenant,
       };
     });

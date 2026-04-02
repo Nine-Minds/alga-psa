@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 
 import ResponsesList from '../dashboard/ResponsesList';
 import ResponseFilters, { type ResponseFilterState } from './ResponseFilters';
@@ -11,17 +11,12 @@ import Pagination from '@alga-psa/ui/components/Pagination';
 import type { SurveyFilterOptions } from '@alga-psa/surveys/actions/survey-actions/surveyResponseFilterActions';
 import type { SurveyResponsePage, SurveyDashboardFilters } from '@alga-psa/types';
 import { getSurveyResponsesPage } from '@alga-psa/surveys/actions/survey-actions/surveyAnalyticsActions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type SurveyResponsesViewProps = {
   filterOptions: SurveyFilterOptions;
   initialPage: SurveyResponsePage;
 };
-
-const DEFAULT_ITEMS_PER_PAGE_OPTIONS = [
-  { value: '10', label: '10 per page' },
-  { value: '25', label: '25 per page' },
-  { value: '50', label: '50 per page' },
-];
 
 function mapFiltersToDashboardFilters(filters: ResponseFilterState | undefined): SurveyDashboardFilters | undefined {
   if (!filters) {
@@ -54,10 +49,19 @@ function mapFiltersToDashboardFilters(filters: ResponseFilterState | undefined):
 }
 
 export default function SurveyResponsesView({ filterOptions, initialPage }: SurveyResponsesViewProps) {
+  const { t } = useTranslation('msp/surveys');
   const [data, setData] = useState<SurveyResponsePage>(initialPage);
   const [appliedFilters, setAppliedFilters] = useState<ResponseFilterState>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const itemsPerPageOptions = useMemo(
+    () => [
+      { value: '10', label: t('responses.page.pageSizeOptions.10', { defaultValue: '10 per page' }) },
+      { value: '25', label: t('responses.page.pageSizeOptions.25', { defaultValue: '25 per page' }) },
+      { value: '50', label: t('responses.page.pageSizeOptions.50', { defaultValue: '50 per page' }) },
+    ],
+    [t]
+  );
 
   const handleFetch = useCallback(
     (filters: ResponseFilterState | undefined, page: number, pageSize: number) => {
@@ -73,11 +77,15 @@ export default function SurveyResponsesView({ filterOptions, initialPage }: Surv
           })
           .catch((error) => {
             console.error('[SurveyResponsesView] Failed to load responses', error);
-            setErrorMessage('Unable to load survey responses. Please try again.');
+            setErrorMessage(
+              t('responses.page.error', {
+                defaultValue: 'Unable to load survey responses. Please try again.',
+              })
+            );
           });
       });
     },
-    []
+    [t]
   );
 
   const handleApplyFilters = useCallback(
@@ -111,7 +119,9 @@ export default function SurveyResponsesView({ filterOptions, initialPage }: Surv
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Filter Responses</CardTitle>
+          <CardTitle className="text-base font-semibold">
+            {t('responses.page.filterTitle', { defaultValue: 'Filter Responses' })}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <ResponseFilters
@@ -132,7 +142,10 @@ export default function SurveyResponsesView({ filterOptions, initialPage }: Surv
       <div className="relative">
         {isPending && (
           <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70">
-            <LoadingIndicator layout="stacked" text="Refreshing responses..." />
+            <LoadingIndicator
+              layout="stacked"
+              text={t('responses.page.loading', { defaultValue: 'Refreshing responses...' })}
+            />
           </div>
         )}
         <ResponsesList responses={data.items} />
@@ -146,8 +159,8 @@ export default function SurveyResponsesView({ filterOptions, initialPage }: Surv
         onPageChange={handlePageChange}
         variant="numbered"
         onItemsPerPageChange={handleItemsPerPageChange}
-        itemsPerPageOptions={DEFAULT_ITEMS_PER_PAGE_OPTIONS}
-        itemLabel="responses"
+        itemsPerPageOptions={itemsPerPageOptions}
+        itemLabel={t('responses.page.itemLabel', { defaultValue: 'responses' })}
       />
     </div>
   );

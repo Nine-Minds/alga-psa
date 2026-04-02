@@ -92,7 +92,7 @@
   text-decoration-color: rgb(var(--badge-info-text));
 }
 
-/* ── AI Response Block ─────────────────────────────────────────── */
+/* ── AI Response Block (streaming container) ─────────────────── */
 
 .editorContainer :global(.ai-response-block) {
   position: relative;
@@ -106,7 +106,6 @@
 .editorContainer :global(.ai-response-block__header) {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   margin-bottom: 8px;
   padding-bottom: 6px;
   border-bottom: 1px solid rgb(var(--color-border-200, 226 232 240) / 0.6);
@@ -127,45 +126,17 @@
   height: 14px;
 }
 
-.editorContainer :global(.ai-response-block__actions) {
-  display: flex;
-  gap: 4px;
+.editorContainer :global(.ai-response-block__streaming-dot) {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(var(--color-primary-500, 139 92 246));
+  animation: ai-pulse 1.4s ease-in-out infinite;
 }
 
-.editorContainer :global(.ai-response-block__btn) {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
-}
-
-.editorContainer :global(.ai-response-block__btn--accept) {
-  color: rgb(var(--color-success-700, 21 128 61));
-  background: rgb(var(--color-success-50, 240 253 244));
-  border-color: rgb(var(--color-success-200, 187 247 208));
-}
-
-.editorContainer :global(.ai-response-block__btn--accept:hover) {
-  background: rgb(var(--color-success-100, 220 252 231));
-}
-
-.editorContainer :global(.ai-response-block__btn--dismiss) {
-  color: rgb(var(--color-text-500, 113 128 150));
-  background: rgb(var(--color-border-100, 237 242 247));
-  border-color: rgb(var(--color-border-200, 226 232 240));
-}
-
-.editorContainer :global(.ai-response-block__btn--dismiss:hover) {
-  color: rgb(var(--color-danger-600, 220 38 38));
-  background: rgb(var(--color-danger-50, 254 242 242));
-  border-color: rgb(var(--color-danger-200, 254 202 202));
+@keyframes ai-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .editorContainer :global(.ai-response-block__content) {

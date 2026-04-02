@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { momentLocalizer, NavigateAction, View, ToolbarProps } from 'react-big-calendar';
 import moment from 'moment';
 import CalendarSkeleton from '@alga-psa/ui/components/skeletons/CalendarSkeleton';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Dynamic import for react-big-calendar
 const DynamicBigCalendar = dynamic(() => import('./DynamicBigCalendar'), {
@@ -39,6 +40,8 @@ import { Label } from '@alga-psa/ui/components/Label';
 const localizer = momentLocalizer(moment);
 
 const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
+  const { t } = useTranslation('msp/schedule');
+  const { formatDate } = useFormatters();
   // Use the custom hook for schedule view preference
   const { 
     value: view, 
@@ -112,14 +115,16 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('calendar.errors.validateDeletion', {
+          defaultValue: 'Failed to validate deletion. Please try again.',
+        }),
         dependencies: [],
         alternatives: []
       });
     } finally {
       setIsDeleteValidating(false);
     }
-  }, []);
+  }, [t]);
 
   const handleDeleteConfirm = (deleteType?: IEditScope) => {
     if (selectedEvent) {
@@ -163,6 +168,46 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     appointment_request: 'rgb(var(--color-event-appointment-hover))',
   };
 
+  const getViewLabel = useCallback((calendarView: View) => {
+    const fallbackMap: Record<View, string> = {
+      month: 'Month',
+      week: 'Week',
+      day: 'Day',
+      agenda: 'Agenda',
+      work_week: 'Work week',
+    };
+
+    const keyMap: Partial<Record<View, string>> = {
+      month: 'month',
+      week: 'week',
+      day: 'day',
+    };
+
+    const key = keyMap[calendarView];
+    return key
+      ? t(`calendar.toolbar.views.${key}`, { defaultValue: fallbackMap[calendarView] })
+      : fallbackMap[calendarView];
+  }, [t]);
+
+  const getWorkItemLabel = useCallback((type: WorkItemType) => {
+    switch (type) {
+      case 'ticket':
+        return t('calendar.legend.types.ticket', { defaultValue: 'Ticket' });
+      case 'project_task':
+        return t('calendar.legend.types.projectTask', { defaultValue: 'Project task' });
+      case 'non_billable_category':
+        return t('calendar.legend.types.nonBillableCategory', { defaultValue: 'Non-billable category' });
+      case 'ad_hoc':
+        return t('calendar.legend.types.adHoc', { defaultValue: 'Ad-Hoc Entry' });
+      case 'interaction':
+        return t('calendar.legend.types.interaction', { defaultValue: 'Interaction' });
+      case 'appointment_request':
+        return t('calendar.legend.types.appointmentRequest', { defaultValue: 'Appointment Request' });
+      default:
+        return type;
+    }
+  }, [t]);
+
   const Legend = () => (
     <div className="flex justify-between items-center mb-4 p-2 rounded-lg bg-opacity-50">
       <div className="flex justify-center space-x-4 flex-1">
@@ -173,9 +218,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
               style={{ backgroundColor: color }}
             ></div>
             <span className="capitalize text-sm font-medium text-[rgb(var(--color-text-900))]">
-              {type === 'ad_hoc' ? 'Ad-Hoc Entry' :
-               type === 'appointment_request' ? 'Appointment Request' :
-               type.replace('_', ' ')}
+              {getWorkItemLabel(type as WorkItemType)}
             </span>
           </div>
         ))}
@@ -183,7 +226,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
       {canViewOthers && (
         <div className="flex items-center">
           <SwitchWithLabel
-            label="Show Inactive Users"
+            label={t('calendar.legend.showInactiveUsers', { defaultValue: 'Show Inactive Users' })}
             checked={showInactiveUsers}
             onCheckedChange={setShowInactiveUsers}
           />
@@ -245,13 +288,13 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           setIsLoadingPreferences(false);
         } catch (err: any) {
            console.error("Failed to fetch user permissions:", err);
-           setError(err.message || "Failed to load permissions.");
+           setError(err?.message || t('calendar.errors.loadPermissions', { defaultValue: 'Failed to load permissions.' }));
            setUserPermissions([]);
            setComparisonTechnicianIds([]);
            setIsLoadingPreferences(false);
         }
       } else {
-        setError("Failed to load current user.");
+        setError(t('calendar.errors.loadCurrentUser', { defaultValue: 'Failed to load current user.' }));
         setComparisonTechnicianIds([]);
         setIsLoadingPreferences(false);
       }
@@ -320,11 +363,11 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
       setEvents(result.entries);
     } else {
       console.error('Failed to fetch schedule entries:', result.error);
-      setError(result.error || 'An unknown error occurred');
+      setError(result.error || t('calendar.errors.unknown', { defaultValue: 'An unknown error occurred' }));
       setEvents([]);
     }
     setIsLoading(false);
-  }, [date, view, viewingTechnicianIds]);
+  }, [date, t, view, viewingTechnicianIds]);
 
   useEffect(() => {
     fetchEvents();
@@ -363,7 +406,9 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         await fetchEvents();
         setError(null);
       } else {
-        const message = result.error || result.message || 'Failed to delete schedule entry';
+        const message = result.error || result.message || t('calendar.errors.deleteFailed', {
+          defaultValue: 'Failed to delete schedule entry',
+        });
         console.error('Failed to delete entry:', message);
         setError(message);
       }
@@ -372,10 +417,14 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
       console.error('Error deleting schedule entry:', error);
       const fallback: DeletionValidationResult & { success: boolean; error?: string } = {
         success: false,
-        error: 'An error occurred while deleting the schedule entry',
+        error: t('calendar.errors.deleteUnexpected', {
+          defaultValue: 'An error occurred while deleting the schedule entry',
+        }),
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'An error occurred while deleting the schedule entry',
+        message: t('calendar.errors.deleteUnexpected', {
+          defaultValue: 'An error occurred while deleting the schedule entry',
+        }),
         dependencies: [],
         alternatives: []
       };
@@ -447,7 +496,10 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           console.log('Updated entry:', updatedEntry);
         } else {
           console.error('Failed to update entry:', result.error);
-          alert('Failed to update schedule entry: ' + result.error);
+          alert(t('calendar.errors.updateFailed', {
+            defaultValue: 'Failed to update schedule entry: {{error}}',
+            error: result.error,
+          }));
           return;
         }
       } else {
@@ -460,7 +512,10 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           console.log('Added new entry:', updatedEntry);
         } else {
           console.error('Failed to add entry:', result.error);
-          alert('Failed to add schedule entry: ' + result.error);
+          alert(t('calendar.errors.createFailed', {
+            defaultValue: 'Failed to add schedule entry: {{error}}',
+            error: result.error,
+          }));
           return;
         }
       }
@@ -473,7 +528,9 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
       setSelectedEvent(null);
     } catch (error) {
       console.error('Error saving schedule entry:', error);
-      alert('An error occurred while saving the schedule entry');
+      alert(t('calendar.errors.saveUnexpected', {
+        defaultValue: 'An error occurred while saving the schedule entry',
+      }));
     }
   };
 
@@ -499,7 +556,6 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   };
 
   const handleNavigate = useCallback((newDate: Date, view: View, action: NavigateAction) => {
-    const navigateAction = action === 'PREV' ? 'PREV' : action === 'NEXT' ? 'NEXT' : 'TODAY';
     setDate(newDate);
   }, [setDate]);
 
@@ -762,23 +818,29 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
             variant="ghost"
             size="sm"
             onClick={() => navigate('PREV')}
-            aria-label={`Previous ${currentView}`}
+            aria-label={t('calendar.toolbar.previousAria', {
+              defaultValue: 'Previous {{view}}',
+              view: getViewLabel(currentView),
+            })}
             className="px-3 py-1 rounded-none border-r border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
           >
-            {'< Prev'}
+            {t('calendar.toolbar.previous', { defaultValue: '< Prev' })}
           </Button>
           <Button id="schedule-nav-today" variant="outline" size="sm" onClick={() => navigate('TODAY')}>
-            Today
+            {t('calendar.toolbar.today', { defaultValue: 'Today' })}
           </Button>
           <Button
             id="dispatch-next-button"
             variant="ghost"
             size="sm"
             onClick={() => navigate('NEXT')}
-            aria-label={`Next ${currentView}`}
+            aria-label={t('calendar.toolbar.nextAria', {
+              defaultValue: 'Next {{view}}',
+              view: getViewLabel(currentView),
+            })}
             className="px-3 py-1 rounded-none border-l border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
           >
-            {'Next >'}
+            {t('calendar.toolbar.next', { defaultValue: 'Next >' })}
           </Button>
         </div>
 
@@ -788,9 +850,9 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           currentView={currentView}
           onChange={handleViewChange}
           options={[
-            { value: 'month', label: 'Month' },
-            { value: 'week', label: 'Week' },
-            { value: 'day', label: 'Day' }
+            { value: 'month', label: t('calendar.toolbar.views.month', { defaultValue: 'Month' }) },
+            { value: 'week', label: t('calendar.toolbar.views.week', { defaultValue: 'Week' }) },
+            { value: 'day', label: t('calendar.toolbar.views.day', { defaultValue: 'Day' }) }
           ]}
           className="border-[rgb(var(--color-border-200))]"
         />
@@ -909,13 +971,17 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
 
     // For month view, use a different component to show more details
     if (view === 'month') {
-      const titleParts = scheduleEvent.title?.split(':') || ['Untitled'];
+      const titleParts = scheduleEvent.title?.split(':') || [
+        t('calendar.event.fallbacks.untitled', { defaultValue: 'Untitled' }),
+      ];
       const mainTitle = titleParts[0];
 
       const assignedTechnicians = scheduleEvent.assigned_user_ids?.map(userId => {
         const tech = technicianMap[userId];
-        return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
-      }).join(', ') || 'Unassigned';
+        return tech
+          ? `${tech.first_name} ${tech.last_name}`
+          : t('calendar.event.fallbacks.unknownTechnician', { defaultValue: 'Unknown' });
+      }).join(', ') || t('calendar.event.fallbacks.unassigned', { defaultValue: 'Unassigned' });
 
       const startMoment = new Date(scheduleEvent.scheduled_start);
       const endMoment = new Date(scheduleEvent.scheduled_end);
@@ -923,16 +989,37 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
 
       // Format start and end date/time
       const formatDateTime = (date: Date) => {
-        return date.toLocaleString([], {
-          month: 'numeric',
-          day: 'numeric',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
+        return formatDate(date, {
+          dateStyle: 'short',
+          timeStyle: 'short',
         });
       };
 
-      const tooltipTitle = `${scheduleEvent.title}\nScheduled for: ${assignedTechnicians}\nStart: ${formatDateTime(startMoment)}\nEnd: ${formatDateTime(endMoment)}${isMultiDay ? ' (Multi-day)' : ''}`;
+      const tooltipLines = [
+        scheduleEvent.title,
+        t('calendar.event.tooltip.scheduledFor', {
+          defaultValue: 'Scheduled for: {{technicians}}',
+          technicians: assignedTechnicians,
+        }),
+        t('calendar.event.tooltip.start', {
+          defaultValue: 'Start: {{dateTime}}',
+          dateTime: formatDateTime(startMoment),
+        }),
+        t('calendar.event.tooltip.end', {
+          defaultValue: 'End: {{dateTime}}',
+          dateTime: formatDateTime(endMoment),
+        }),
+      ];
+
+      if (isMultiDay) {
+        tooltipLines.push(
+          t('calendar.event.tooltip.multiDay', {
+            defaultValue: '(Multi-day)',
+          })
+        );
+      }
+
+      const tooltipTitle = tooltipLines.join('\n');
 
       const opacity = isPrimary ? 1 : (isComparison ? 0.3 : 1);
 
@@ -974,7 +1061,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         technicianMap={technicianMap}
       />
     );
-  }, [view, focusedTechnicianId, comparisonTechnicianIds, hoveredEventId, canModifySchedule, currentUserId, technicianMap, handleResizeStart, handleSelectEvent]);
+  }, [comparisonTechnicianIds, formatDate, focusedTechnicianId, handleResizeStart, handleSelectEvent, hoveredEventId, technicianMap, t, view]);
 
 
   // Show loading state until preferences are loaded
@@ -985,7 +1072,9 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         <div className="flex-grow flex items-center justify-center">
           <div className="text-center">
             <Spinner size="lg" className="mb-4" />
-            <div className="text-[rgb(var(--color-text-600))]">Loading schedule...</div>
+            <div className="text-[rgb(var(--color-text-600))]">
+              {t('calendar.loading.initial', { defaultValue: 'Loading schedule...' })}
+            </div>
           </div>
         </div>
       </div>
@@ -1014,7 +1103,11 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         
         {/* Calendar container */}
         <div className="flex-grow relative" ref={calendarRef}>
-          {isLoading && <div className="absolute inset-0 bg-[rgb(var(--color-card))] bg-opacity-50 flex items-center justify-center z-10">Loading...</div>}
+          {isLoading && (
+            <div className="absolute inset-0 bg-[rgb(var(--color-card))] bg-opacity-50 flex items-center justify-center z-10">
+              {t('calendar.loading.overlay', { defaultValue: 'Loading...' })}
+            </div>
+          )}
           {error && <div className="absolute inset-0 bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center z-10 p-4">{error}</div>}
           {/* Create a date object for 8 AM to auto-scroll to working hours */}
           {(() => {
@@ -1099,16 +1192,29 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           setSelectedEvent(null);
           setPendingDeleteScope(undefined);
         }}
-        title="Delete Schedule Entry"
+        title={t('calendar.deleteDialog.title', { defaultValue: 'Delete Schedule Entry' })}
         message={selectedEvent?.is_recurring
-          ? "Select which events to delete:"
-          : "Are you sure you want to delete this schedule entry? This action cannot be undone."}
+          ? t('calendar.deleteDialog.messageRecurring', {
+              defaultValue: 'Select which events to delete:',
+            })
+          : t('calendar.deleteDialog.messageSingle', {
+              defaultValue: 'Are you sure you want to delete this schedule entry? This action cannot be undone.',
+            })}
         options={selectedEvent?.is_recurring ? [
-          { value: IEditScope.SINGLE, label: 'Only this event' },
-          { value: IEditScope.FUTURE, label: 'This and future events' },
-          { value: IEditScope.ALL, label: 'All events' }
+          {
+            value: IEditScope.SINGLE,
+            label: t('calendar.deleteDialog.options.single', { defaultValue: 'Only this event' }),
+          },
+          {
+            value: IEditScope.FUTURE,
+            label: t('calendar.deleteDialog.options.future', { defaultValue: 'This and future events' }),
+          },
+          {
+            value: IEditScope.ALL,
+            label: t('calendar.deleteDialog.options.all', { defaultValue: 'All events' }),
+          }
         ] : undefined}
-        confirmLabel="Delete"
+        confirmLabel={t('calendar.deleteDialog.confirm', { defaultValue: 'Delete' })}
       />
 
       <DeleteEntityDialog
@@ -1116,7 +1222,9 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         isOpen={isDeleteDialogOpen}
         onClose={resetDeleteState}
         onConfirmDelete={handleDeleteDialogConfirm}
-        entityName={selectedEvent?.title || 'this schedule entry'}
+        entityName={selectedEvent?.title || t('calendar.deleteDialog.entityFallback', {
+          defaultValue: 'this schedule entry',
+        })}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}

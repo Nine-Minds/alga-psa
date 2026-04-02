@@ -155,7 +155,7 @@ export default function AccountManagement() {
             total_licenses: usage.limit,
             active_licenses: usage.used,
             available_licenses: usage.remaining,
-            plan_name: 'Professional', // Could fetch from tenant settings if needed
+            plan_name: TIER_LABELS[tier] || 'Professional',
             price_per_license: pricing.unitAmount / 100, // Convert cents to dollars
           });
         }
@@ -278,7 +278,7 @@ export default function AccountManagement() {
           total_licenses: usage.limit,
           active_licenses: usage.used,
           available_licenses: usage.remaining,
-          plan_name: 'Professional',
+          plan_name: TIER_LABELS[tier] || 'Professional',
           price_per_license: pricing.unitAmount / 100,
         });
       }

@@ -15,12 +15,15 @@ import { Sparkles } from 'lucide-react';
 
 import type { SurveyTrendPoint } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ResponseTrendChartProps = {
   trend: SurveyTrendPoint[];
 };
 
 export default function ResponseTrendChart({ trend }: ResponseTrendChartProps) {
+  const { t } = useTranslation('msp/surveys');
+
   const ratingDomain = useMemo<[number, number]>(() => {
     if (trend.length === 0) {
       return [0, 5];
@@ -33,14 +36,15 @@ export default function ResponseTrendChart({ trend }: ResponseTrendChartProps) {
         .filter((value) => typeof value === 'number' && !Number.isNaN(value))
     );
 
-    const upperBound = Math.max(5, Math.ceil(maxRating + 0.5));
-    return [0, upperBound];
+    return [0, Math.max(5, Math.ceil(maxRating + 0.5))];
   }, [trend]);
 
   return (
-    <Card className="col-span-1 flex flex-col border-border-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+    <Card className="col-span-1 flex flex-col border-border-200 shadow-sm transition-shadow duration-200 hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-base font-semibold text-text-900">Response Trend</CardTitle>
+        <CardTitle className="text-base font-semibold text-text-900">
+          {t('dashboard.responseTrend.title', { defaultValue: 'Response Trend' })}
+        </CardTitle>
         <div className="rounded-lg bg-primary-500/10 p-2 shadow-sm">
           <Sparkles className="h-4 w-4 text-primary-500" />
         </div>
@@ -52,10 +56,14 @@ export default function ResponseTrendChart({ trend }: ResponseTrendChartProps) {
               <Sparkles className="h-6 w-6 text-primary-500" />
             </div>
             <p className="text-center text-sm font-medium text-text-600">
-              No responses captured for the selected period.
+              {t('dashboard.responseTrend.emptyTitle', {
+                defaultValue: 'No responses captured for the selected period.',
+              })}
             </p>
             <p className="text-center text-xs text-text-500">
-              Check back after customers submit feedback.
+              {t('dashboard.responseTrend.emptyDescription', {
+                defaultValue: 'Check back after customers submit feedback.',
+              })}
             </p>
           </div>
         ) : (
@@ -96,14 +104,29 @@ export default function ResponseTrendChart({ trend }: ResponseTrendChartProps) {
                   }}
                   formatter={(value: number, name: string) => {
                     if (name === 'averageRating') {
-                      return [`${value.toFixed(1)} ★`, 'Average Rating'];
+                      return [
+                        `${value.toFixed(1)} ★`,
+                        t('dashboard.responseTrend.tooltip.averageRating', {
+                          defaultValue: 'Average Rating',
+                        }),
+                      ];
                     }
                     if (name === 'responseCount') {
-                      return [value, 'Responses'];
+                      return [
+                        value,
+                        t('dashboard.responseTrend.tooltip.responses', {
+                          defaultValue: 'Responses',
+                        }),
+                      ];
                     }
                     return [value, name];
                   }}
-                  labelFormatter={(label: string) => `Date: ${label}`}
+                  labelFormatter={(label: string) =>
+                    t('dashboard.responseTrend.tooltip.date', {
+                      defaultValue: 'Date: {{label}}',
+                      label,
+                    })
+                  }
                 />
                 <Area
                   type="monotone"

@@ -1,0 +1,289 @@
+{
+  "page": {
+    "title": "Wissensdatenbank",
+    "subtitle": "Erstellen und verwalten Sie Wissensdatenbankartikel",
+    "actions": {
+      "import": "Import",
+      "newArticle": "Neuer Artikel"
+    },
+    "tabs": {
+      "articles": "Artikel",
+      "reviewDashboard": "Überprüfen Sie das Dashboard"
+    },
+    "feedback": {
+      "loadError": "Artikel konnten nicht geladen werden",
+      "createError": "Artikel konnte nicht erstellt werden",
+      "userLoadError": "Benutzer konnte nicht geladen werden. Die Artikelbearbeitung ist nicht verfügbar."
+    },
+    "newArticleTitle": "Neuer Artikel"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "Entwurf",
+      "review": "Im Rückblick",
+      "published": "Veröffentlicht",
+      "archived": "Archiviert"
+    },
+    "audienceLabels": {
+      "internal": "Intern",
+      "client": "Kunde",
+      "public": "Öffentlich"
+    },
+    "typeLabels": {
+      "how_to": "Anleitung",
+      "faq": "FAQ",
+      "troubleshooting": "Fehlerbehebung",
+      "reference": "Referenz"
+    },
+    "reviewCycleOptions": {
+      "30": "30 Tage",
+      "60": "60 Tage",
+      "90": "90 Tage",
+      "180": "180 Tage",
+      "365": "1 Jahr",
+      "none": "Kein Überprüfungszyklus"
+    },
+    "fallbacks": {
+      "emptyDate": "-"
+    }
+  },
+  "list": {
+    "title": "Artikel der Wissensdatenbank",
+    "countSummary": "{{count}} Artikel(s)",
+    "itemLabel": "Artikel",
+    "empty": "Keine Artikel gefunden",
+    "createFirst": "Erstellen Sie Ihren ersten Artikel",
+    "table": {
+      "title": "Titel",
+      "type": "Typ",
+      "audience": "Publikum",
+      "status": "Status",
+      "tags": "Schlagworte",
+      "stats": "Statistiken",
+      "updated": "Aktualisiert",
+      "actions": "Aktionen"
+    },
+    "stats": {
+      "views": "Ansichten",
+      "helpful": "Hilfreich",
+      "notHelpful": "Nicht hilfreich"
+    },
+    "actions": {
+      "edit": "Bearbeiten",
+      "submitForReview": "Zur Überprüfung einreichen",
+      "publish": "Veröffentlichen",
+      "archive": "Archiv"
+    },
+    "pagination": {
+      "itemsPerPage": {
+        "10": "10 Artikel/Seite",
+        "20": "20 Artikel/Seite",
+        "50": "50 Artikel/Seite"
+      }
+    },
+    "stale": {
+      "reviewOverdue": "Rezension überfällig"
+    },
+    "dialogs": {
+      "archive": {
+        "title": "Archivartikel",
+        "message": "Sind Sie sicher, dass Sie „{{title}}“ archivieren möchten? Dadurch wird es aus der Sichtbarkeit des Clients entfernt."
+      }
+    },
+    "feedback": {
+      "archiveError": "Artikel konnte nicht archiviert werden",
+      "archiveSuccess": "Artikel archiviert"
+    }
+  },
+  "editor": {
+    "header": {
+      "untitled": "Artikel ohne Titel",
+      "back": "Zurück"
+    },
+    "actions": {
+      "submitForReview": "Zur Überprüfung einreichen",
+      "publish": "Veröffentlichen",
+      "archive": "Archiv",
+      "saveMetadata": "Metadaten speichern",
+      "saving": "Sparen..."
+    },
+    "feedback": {
+      "permissionDenied": "Zugriff verweigert",
+      "notFound": "Artikel nicht gefunden",
+      "loadError": "Artikel konnte nicht geladen werden",
+      "noChanges": "Keine Änderungen zum Speichern",
+      "saveError": "Artikel konnte nicht gespeichert werden",
+      "saveSuccess": "Artikelmetadaten gespeichert",
+      "publishError": "Artikel konnte nicht veröffentlicht werden",
+      "publishSuccess": "Artikel veröffentlicht",
+      "statusChangeError": "Artikelstatus konnte nicht geändert werden",
+      "submitForReviewSuccess": "Artikel zur Überprüfung eingereicht",
+      "archiveSuccess": "Artikel archiviert"
+    },
+    "badges": {
+      "reviewOverdue": "Überprüfung überfällig"
+    },
+    "stats": {
+      "title": "Statistiken",
+      "views": "Ansichten",
+      "helpful": "Hilfreich",
+      "notHelpful": "Nicht hilfreich",
+      "published": "Veröffentlicht"
+    },
+    "metadata": {
+      "title": "Metadaten",
+      "fields": {
+        "title": "Titel",
+        "slug": "URL-Slug",
+        "articleType": "Artikeltyp",
+        "audience": "Publikum",
+        "category": "Kategorie",
+        "reviewCycle": "Überprüfungszyklus",
+        "nextReview": "Nächste Rezension",
+        "noCategory": "Keine Kategorie"
+      }
+    },
+    "tags": {
+      "title": "Schlagworte"
+    }
+  },
+  "filters": {
+    "title": "Filter",
+    "actions": {
+      "clear": "Klar"
+    },
+    "labels": {
+      "search": "Suchen",
+      "status": "Status",
+      "audience": "Publikum",
+      "articleType": "Artikeltyp",
+      "category": "Kategorie",
+      "tags": "Schlagworte"
+    },
+    "placeholders": {
+      "search": "Artikel durchsuchen...",
+      "status": "Status auswählen...",
+      "audience": "Zielgruppe auswählen...",
+      "articleType": "Typ auswählen...",
+      "category": "Kategorie auswählen...",
+      "tags": "Nach Tags filtern..."
+    },
+    "options": {
+      "status": {
+        "all": "Alle Status"
+      },
+      "audience": {
+        "all": "Alle Zielgruppen"
+      },
+      "articleType": {
+        "all": "Alle Typen"
+      },
+      "category": {
+        "all": "Alle Kategorien"
+      }
+    }
+  },
+  "categoryTree": {
+    "allCategories": "Alle Kategorien",
+    "empty": "Keine Kategorien definiert"
+  },
+  "publishing": {
+    "title": "Veröffentlichung",
+    "currentStatus": "Aktueller Status",
+    "actions": {
+      "submitForReview": "Zur Überprüfung einreichen",
+      "publish": "Veröffentlichen",
+      "approveAndPublish": "Genehmigen und veröffentlichen",
+      "archive": "Archiv",
+      "republish": "Neu veröffentlichen"
+    },
+    "flow": {
+      "draft": "Entwurf",
+      "review": "Rezension",
+      "published": "Veröffentlicht"
+    },
+    "warnings": {
+      "audience": "Durch die Veröffentlichung wird dieser Artikel für {{audience}}-Benutzer sichtbar."
+    },
+    "dialogs": {
+      "publish": {
+        "title": "Artikel veröffentlichen",
+        "message": "Sind Sie sicher, dass Sie diesen Artikel veröffentlichen möchten?",
+        "messageWithAudience": "Dadurch wird der Artikel veröffentlicht und für {{audience}}-Benutzer sichtbar gemacht. Bist du sicher?"
+      },
+      "archive": {
+        "title": "Archivartikel",
+        "message": "Dadurch wird der Artikel archiviert und aus der Client-Sichtbarkeit entfernt. Bist du sicher?"
+      }
+    },
+    "feedback": {
+      "publishError": "Artikel konnte nicht veröffentlicht werden",
+      "publishSuccess": "Artikel erfolgreich veröffentlicht",
+      "archiveError": "Artikel konnte nicht archiviert werden",
+      "archiveSuccess": "Artikel archiviert"
+    }
+  },
+  "reviewDashboard": {
+    "summary": {
+      "awaitingReview": "Warten auf Rezension",
+      "overdueReviews": "Überfällige Bewertungen"
+    },
+    "empty": "Alles aufgeholt! Es sind keine Artikel erforderlich, die überprüft werden müssen.",
+    "sections": {
+      "awaitingReview": "Artikel warten auf Rezension",
+      "overdue": "Überprüfung überfällig"
+    },
+    "labels": {
+      "submitted": "Eingereicht",
+      "due": "Fällig",
+      "lastReviewed": "Zuletzt überprüft",
+      "never": "Niemals"
+    },
+    "actions": {
+      "view": "Sicht",
+      "review": "Rezension",
+      "reviewNow": "Jetzt bewerten"
+    },
+    "feedback": {
+      "loadError": "Überprüfungsdaten konnten nicht geladen werden"
+    }
+  },
+  "importDialog": {
+    "title": "Artikel importieren",
+    "dropzone": {
+      "title": "Legen Sie die Dateien hier ab oder klicken Sie zum Durchsuchen",
+      "formats": "Unterstützt .md- und .html-Dateien"
+    },
+    "fields": {
+      "audience": "Publikum",
+      "articleType": "Artikeltyp"
+    },
+    "actions": {
+      "import": "{{count}} Datei(en) importieren",
+      "importing": "Importieren..."
+    },
+    "feedback": {
+      "unsupportedFileType": "{{fileName}}: nicht unterstützter Dateityp. Verwenden Sie .md oder .html",
+      "permissionDenied": "Zugriff verweigert",
+      "importSuccess": "Importierte {{imported}} von {{total}} Artikel(n)",
+      "allFailed": "Alle Importe sind fehlgeschlagen",
+      "importError": "Der Import ist fehlgeschlagen"
+    },
+    "results": {
+      "summary": "{{imported}} von {{total}} Artikel importiert",
+      "failedCount": "{{count}} fehlgeschlagen:"
+    }
+  },
+  "staleness": {
+    "badges": {
+      "reviewOverdue": "Überprüfung überfällig",
+      "reviewDueSoon": "Rezension in Kürze fällig",
+      "overdueBy": "{{count}} Tage überfällig",
+      "dueIn": "Fällig in {{count}} Tagen"
+    },
+    "tooltips": {
+      "reviewOverdue": "Die Überprüfung war fällig am {{date}}",
+      "reviewDue": "Überprüfung fällig am {{date}}"
+    }
+  }
+}

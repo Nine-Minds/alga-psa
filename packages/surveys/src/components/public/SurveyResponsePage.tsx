@@ -20,7 +20,7 @@ interface SurveyResponsePageProps {
 type SubmissionState = 'idle' | 'submitting' | 'success' | 'error';
 
 export function SurveyResponsePage({ token, invitation, initialRating }: SurveyResponsePageProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('msp/surveys');
   const ratingScale = invitation.template.ratingScale;
   const initialRatingIsValid =
     typeof initialRating === 'number' &&
@@ -59,7 +59,7 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
       setError(
         err instanceof Error && err.message
           ? err.message
-          : t('surveys.response.errorMessage', 'We could not record your feedback. Please try again.')
+          : t('response.errorMessage', { defaultValue: 'We could not record your feedback. Please try again.' })
       );
       setStatus('error');
     }
@@ -75,7 +75,7 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedRating) {
-      setError(t('surveys.response.selectRatingError', 'Select a rating before submitting.'));
+      setError(t('response.selectRatingError', { defaultValue: 'Select a rating before submitting.' }));
       return;
     }
     await submitResponse(selectedRating, comment);
@@ -85,14 +85,14 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
     return (
       <Card className="mx-auto max-w-xl shadow-lg" id="survey-response-success-card">
         <CardHeader>
-          <CardTitle>{t('surveys.response.submittedTitle', 'Thank you for your response!')}</CardTitle>
+          <CardTitle>{t('response.submittedTitle', { defaultValue: 'Thank you for your response!' })}</CardTitle>
           <CardDescription>{invitation.template.promptText}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p>{t('surveys.response.submittedMessage', thankYouMessage, { thankYouText: thankYouMessage })}</p>
+          <p>{t('response.submittedMessage', { defaultValue: '{{thankYouText}}', thankYouText: thankYouMessage })}</p>
           <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-4">
             <span className="text-sm font-medium text-gray-600">
-              {t('surveys.response.ratingSubmitted', 'Feedback submitted')}:
+              {t('response.ratingSubmitted', { defaultValue: 'Feedback submitted' })}:
             </span>
             {selectedRating && (
               <RatingDisplay
@@ -117,13 +117,13 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
         <CardHeader>
           <CardTitle>{invitation.template.promptText}</CardTitle>
           <CardDescription>
-            {t('surveys.response.ratingPrompt', 'How was your experience?')}
+            {t('response.ratingPrompt', { defaultValue: 'How was your experience?' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {status === 'submitting' && (
             <div className="rounded-md border border-blue-100 bg-blue-50 px-4 py-3">
-              <LoadingIndicator layout="inline" text={t('surveys.response.submitting', 'Submitting feedback…')} />
+              <LoadingIndicator layout="inline" text={t('response.submitting', { defaultValue: 'Submitting feedback...' })} />
             </div>
           )}
 
@@ -135,7 +135,10 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
 
           <div className="space-y-3">
             <p className="text-sm text-gray-600">
-              {t('surveys.response.ratingAssistive', 'Select a score from 1 to {{scale}}', { scale: ratingScale })}
+              {t('response.ratingAssistive', {
+                defaultValue: 'Select a score from 1 to {{scale}}',
+                scale: ratingScale,
+              })}
             </p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
               {ratingOptions.map(({ rating, label }) => {
@@ -158,7 +161,7 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-comment`}>
-              {t('surveys.response.commentLabel', 'Additional comments (optional)')}
+              {t('response.commentLabel', { defaultValue: 'Additional comments (optional)' })}
             </label>
             <TextArea
               id={`${formInstanceId}-comment`}
@@ -176,8 +179,8 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
               disabled={status === 'submitting' || !selectedRating}
             >
               {status === 'submitting'
-                ? t('surveys.response.submitting', 'Submitting feedback…')
-                : t('surveys.response.submitButton', 'Submit feedback')}
+                ? t('response.submitting', { defaultValue: 'Submitting feedback...' })
+                : t('response.submitButton', { defaultValue: 'Submit feedback' })}
             </Button>
           </div>
         </CardContent>

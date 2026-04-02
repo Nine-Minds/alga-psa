@@ -2,9 +2,8 @@
 
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { AlertCircle, Clock } from 'lucide-react';
-import { formatDate } from '@alga-psa/core/formatters';
 
 interface KBStalenessBadgeProps {
   nextReviewDue: Date | string | null;
@@ -19,7 +18,8 @@ export default function KBStalenessBadge({
   size = 'md',
   className = '',
 }: KBStalenessBadgeProps) {
-  const { t } = useTranslation('features/documents');
+  const { t } = useTranslation('msp/knowledge-base');
+  const { formatDate } = useFormatters();
 
   if (!nextReviewDue) {
     return null;
@@ -45,13 +45,19 @@ export default function KBStalenessBadge({
     return (
       <Badge
         className={`bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 ${badgeClass} ${className}`}
-        title={t('kb.reviewOverdueTooltip', `Review was due ${formatDate(dueDate)}`)}
+        title={t('staleness.tooltips.reviewOverdue', {
+          defaultValue: 'Review was due {{date}}',
+          date: formatDate(dueDate),
+        })}
       >
         <AlertCircle className={`${iconClass} mr-1`} />
         {showDate ? (
-          <span>{t('kb.overdueBy', `Overdue by ${Math.abs(diffDays)} days`)}</span>
+          <span>{t('staleness.badges.overdueBy', {
+            defaultValue: 'Overdue by {{count}} days',
+            count: Math.abs(diffDays),
+          })}</span>
         ) : (
-          <span>{t('kb.reviewOverdue', 'Review Overdue')}</span>
+          <span>{t('staleness.badges.reviewOverdue', { defaultValue: 'Review Overdue' })}</span>
         )}
       </Badge>
     );
@@ -61,13 +67,19 @@ export default function KBStalenessBadge({
   return (
     <Badge
       className={`bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 ${badgeClass} ${className}`}
-      title={t('kb.reviewDueTooltip', `Review due ${formatDate(dueDate)}`)}
+      title={t('staleness.tooltips.reviewDue', {
+        defaultValue: 'Review due {{date}}',
+        date: formatDate(dueDate),
+      })}
     >
       <Clock className={`${iconClass} mr-1`} />
       {showDate ? (
-        <span>{t('kb.dueIn', `Due in ${diffDays} days`)}</span>
+        <span>{t('staleness.badges.dueIn', {
+          defaultValue: 'Due in {{count}} days',
+          count: diffDays,
+        })}</span>
       ) : (
-        <span>{t('kb.reviewDueSoon', 'Review Due Soon')}</span>
+        <span>{t('staleness.badges.reviewDueSoon', { defaultValue: 'Review Due Soon' })}</span>
       )}
     </Badge>
   );

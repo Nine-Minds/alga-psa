@@ -13,7 +13,8 @@ import {
   setServicePrices,
   createServiceTypeInline,
   updateServiceTypeInline,
-  deleteServiceTypeInline
+  deleteServiceTypeInline,
+  getDefaultBillingSettings,
 } from '@alga-psa/billing/actions';
 import { getTaxRates } from '@alga-psa/billing/actions';
 import { ITaxRate } from '@alga-psa/types';
@@ -45,6 +46,18 @@ interface QuickAddProductProps {
 export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: QuickAddProductProps) {
   const isEditMode = !!product;
   const [error, setError] = useState<string | null>(null);
+  const [defaultCurrency, setDefaultCurrency] = useState('USD');
+
+  useEffect(() => {
+    getDefaultBillingSettings()
+      .then((settings) => {
+        const currency = settings.defaultCurrencyCode || 'USD';
+        setDefaultCurrency(currency);
+        setFormProduct((prev) => ({ ...prev, cost_currency: currency }));
+        setFormPrices([{ currency_code: currency, rate: 0 }]);
+      })
+      .catch(() => {});
+  }, []);
 
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
   const [isLoadingTaxRates, setIsLoadingTaxRates] = useState(true);
@@ -61,14 +74,14 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     is_active: true,
     billing_method: 'usage',
     unit_of_measure: '',
-    cost_currency: 'USD',
+    cost_currency: defaultCurrency,
     is_license: false,
     license_term: 'monthly',
     license_billing_cadence: 'monthly'
   });
 
   const [formProduct, setFormProduct] = useState<Partial<IService>>(getInitialProductState());
-  const [formPrices, setFormPrices] = useState<PriceDraft[]>([{ currency_code: 'USD', rate: 0 }]);
+  const [formPrices, setFormPrices] = useState<PriceDraft[]>([{ currency_code: defaultCurrency, rate: 0 }]);
   const [priceInput, setPriceInput] = useState<string>('');
   const [costInput, setCostInput] = useState<string>('');
 
@@ -85,7 +98,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       setCostInput(product.cost != null ? (product.cost / 100).toFixed(2) : '');
     } else if (isOpen && !product) {
       setFormProduct(getInitialProductState());
-      setFormPrices([{ currency_code: 'USD', rate: 0 }]);
+      setFormPrices([{ currency_code: defaultCurrency, rate: 0 }]);
       setPriceInput('');
       setCostInput('');
     }
@@ -167,7 +180,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
 
   const resetForm = () => {
     setFormProduct(getInitialProductState());
-    setFormPrices([{ currency_code: 'USD', rate: 0 }]);
+    setFormPrices([{ currency_code: defaultCurrency, rate: 0 }]);
     setPriceInput('');
     setCostInput('');
     setError(null);
