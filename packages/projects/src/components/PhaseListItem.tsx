@@ -397,7 +397,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             </div>
           </div>
           {/* Hover Action Buttons — absolutely positioned so they don't consume layout space */}
-          <div className="absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-inherit rounded">
+          <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-inherit rounded">
             <button
               onClick={(e) => {
                 e.stopPropagation();
