@@ -26,7 +26,7 @@ const collectNodeIds = (node: TemplateNode): string[] => {
 
 const assertStandardTemplateRegression = (
   source: TemplateAst,
-  criticalNodeIds: string[]
+  criticalNodeIds: readonly string[]
 ) => {
   const roundTripped = roundTripAst(source);
 

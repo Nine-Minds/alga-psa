@@ -399,10 +399,11 @@ const renderNode = (
       return <hr key={node.id} id={node.id} className={elementClassName || undefined} style={style} />;
     case 'table': {
       const rows = resolveCollection(node.sourceBinding.bindingId, evaluation);
+      const { style: headerStyle } = resolveStyleRef(node.headerStyle);
       return (
         <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           <thead>
-            <tr>
+            <tr style={headerStyle}>
               {node.columns.map((column) => {
                 const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                 const alignRight = column.format === 'currency' || column.format === 'number';
@@ -449,10 +450,11 @@ const renderNode = (
     }
     case 'dynamic-table': {
       const rows = resolveCollection(node.repeat.sourceBinding.bindingId, evaluation);
+      const { style: dynamicHeaderStyle } = resolveStyleRef(node.headerStyle);
       return (
         <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           <thead>
-            <tr>
+            <tr style={dynamicHeaderStyle}>
               {node.columns.map((column) => {
                 const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                 const alignRight = column.format === 'currency' || column.format === 'number';
@@ -504,8 +506,13 @@ const renderNode = (
         <div key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           {node.rows.map((row) => {
             const raw = totals[row.id] ?? resolveExpressionValue(row.value, evaluation, scope, ctx) ?? '';
+            const { style: rowStyle } = resolveStyleRef(row.style);
+            const emphasizeStyle = row.emphasize ? { fontWeight: 700 } : undefined;
+            const mergedRowStyle = rowStyle || emphasizeStyle
+              ? { ...(emphasizeStyle ?? {}), ...(rowStyle ?? {}) }
+              : undefined;
             return (
-              <div key={row.id} className="ast-totals-row" style={row.emphasize ? { fontWeight: 700 } : undefined}>
+              <div key={row.id} className="ast-totals-row" style={mergedRowStyle}>
                 <span className="ast-totals-label">{row.label}</span>
                 <span className="ast-totals-value">{formatValue(raw, row.format, ctx)}</span>
               </div>

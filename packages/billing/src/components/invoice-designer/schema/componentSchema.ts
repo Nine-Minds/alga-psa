@@ -562,6 +562,26 @@ const TABLE_INSPECTOR: DesignerInspectorSchema = {
         },
       ],
     },
+    {
+      id: 'table-header-style',
+      title: 'Header Style',
+      fields: [
+        {
+          kind: 'css-color',
+          id: 'headerBackgroundColor',
+          label: 'Background',
+          path: 'metadata.headerBackgroundColor',
+          placeholder: '#1f2937',
+        },
+        {
+          kind: 'css-color',
+          id: 'headerColor',
+          label: 'Text color',
+          path: 'metadata.headerColor',
+          placeholder: '#ffffff',
+        },
+      ],
+    },
   ],
 };
 

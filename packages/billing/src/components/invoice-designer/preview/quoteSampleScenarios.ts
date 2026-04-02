@@ -1,4 +1,4 @@
-import type { QuoteViewModel } from '@alga-psa/types';
+import type { QuoteViewModel, QuoteViewModelLineItem } from '@alga-psa/types';
 
 export type QuotePreviewSampleScenario = {
   id: string;
@@ -6,6 +6,25 @@ export type QuotePreviewSampleScenario = {
   description: string;
   data: QuoteViewModel;
 };
+
+/** Derives recurring/one-time grouped fields from line_items so sample data works with grouped templates. */
+function enrichQuoteSampleWithGroups(data: QuoteViewModel): QuoteViewModel {
+  const recurring = data.line_items.filter((item: QuoteViewModelLineItem) => item.is_recurring);
+  const onetime = data.line_items.filter((item: QuoteViewModelLineItem) => !item.is_recurring);
+  const sumField = (items: QuoteViewModelLineItem[], field: 'total_price' | 'tax_amount') =>
+    items.reduce((sum, item) => sum + (item[field] ?? 0), 0);
+
+  data.recurring_items = recurring;
+  data.onetime_items = onetime;
+  data.recurring_subtotal = sumField(recurring, 'total_price');
+  data.recurring_tax = sumField(recurring, 'tax_amount');
+  data.recurring_total = (data.recurring_subtotal ?? 0) + (data.recurring_tax ?? 0);
+  data.onetime_subtotal = sumField(onetime, 'total_price');
+  data.onetime_tax = sumField(onetime, 'tax_amount');
+  data.onetime_total = (data.onetime_subtotal ?? 0) + (data.onetime_tax ?? 0);
+
+  return data;
+}
 
 const createBaseQuote = (): QuoteViewModel => ({
   quote_id: 'preview-quote-001',
@@ -41,8 +60,13 @@ const createBaseQuote = (): QuoteViewModel => ({
   phases: [],
 });
 
+const enrichQuoteScenario = (scenario: QuotePreviewSampleScenario): QuotePreviewSampleScenario => ({
+  ...scenario,
+  data: enrichQuoteSampleWithGroups({ ...scenario.data }),
+});
+
 export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
-  {
+  enrichQuoteScenario({
     id: 'sample-simple-quote',
     label: 'Simple Quote',
     description: 'Small services quote with straightforward recurring items.',
@@ -92,8 +116,8 @@ export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
       tax: 7830,
       total_amount: 94830,
     },
-  },
-  {
+  }),
+  enrichQuoteScenario({
     id: 'sample-phased-quote',
     label: 'Phased Project',
     description: 'Multi-phase project quote with optional add-ons and discounts.',
@@ -219,8 +243,8 @@ export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
       total_amount: 967500,
       terms_and_conditions: 'Net 30. Phase payments due at the start of each phase. Recurring services billed monthly in arrears.',
     },
-  },
-  {
+  }),
+  enrichQuoteScenario({
     id: 'sample-large-quote',
     label: 'Large Enterprise',
     description: 'High line count quote for enterprise deployment.',
@@ -250,7 +274,7 @@ export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
       tax: 177000,
       total_amount: 2389500,
     },
-  },
+  }),
 ];
 
 export const DEFAULT_QUOTE_PREVIEW_SAMPLE_ID = QUOTE_PREVIEW_SAMPLE_SCENARIOS[0]?.id ?? null;

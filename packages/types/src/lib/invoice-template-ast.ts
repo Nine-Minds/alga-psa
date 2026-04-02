@@ -100,6 +100,7 @@ export interface TemplateTableNode extends TemplateNodeBase {
   sourceBinding: TemplateBindingRef;
   rowBinding: string;
   columns: TemplateTableColumn[];
+  headerStyle?: TemplateNodeStyleRef;
   emptyStateText?: string;
   children?: never;
 }
@@ -114,6 +115,7 @@ export interface TemplateDynamicTableNode extends TemplateNodeBase {
   type: 'dynamic-table';
   repeat: TemplateRepeatRegionBinding;
   columns: TemplateTableColumn[];
+  headerStyle?: TemplateNodeStyleRef;
   emptyStateText?: string;
   children?: never;
 }
@@ -131,6 +133,7 @@ export interface TemplateTotalsRow {
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
   emphasize?: boolean;
+  style?: TemplateNodeStyleRef;
 }
 
 export type TemplateNode =

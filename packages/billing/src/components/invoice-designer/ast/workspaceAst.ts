@@ -984,6 +984,17 @@ const mapDesignerNodeToAstNode = (
         registerCollectionBinding,
         transformOutputBindingId
       );
+      const headerBg = asTrimmedString(metadata.headerBackgroundColor);
+      const headerClr = asTrimmedString(metadata.headerColor);
+      const headerStyle: TemplateNodeStyleRef | undefined =
+        headerBg.length > 0 || headerClr.length > 0
+          ? {
+              inline: {
+                ...(headerBg.length > 0 ? { backgroundColor: headerBg } : {}),
+                ...(headerClr.length > 0 ? { color: headerClr } : {}),
+              },
+            }
+          : undefined;
       return {
         ...createBaseNode(node),
         type: 'dynamic-table',
@@ -992,6 +1003,7 @@ const mapDesignerNodeToAstNode = (
           itemBinding: 'item',
         },
         columns: mapTableColumns(node),
+        headerStyle,
         emptyStateText:
           typeof metadata.emptyStateText === 'string' && metadata.emptyStateText.trim().length > 0
             ? metadata.emptyStateText.trim()
@@ -1026,6 +1038,15 @@ const mapDesignerNodeToAstNode = (
               }
               if (row.emphasize === true) {
                 mappedRow.emphasize = true;
+              }
+              if (isRecord(row.style) && Object.keys(row.style).length > 0) {
+                const rowStyleRef: TemplateNodeStyleRef = {};
+                if (isRecord(row.style.inline)) {
+                  rowStyleRef.inline = { ...(row.style.inline as Record<string, unknown>) };
+                }
+                if (Object.keys(rowStyleRef).length > 0) {
+                  mappedRow.style = rowStyleRef;
+                }
               }
               return mappedRow;
             })
@@ -1697,6 +1718,11 @@ export const importTemplateAstToWorkspace = (
           if (typeof inputNode.emptyStateText === 'string' && inputNode.emptyStateText.trim().length > 0) {
             metadata.emptyStateText = inputNode.emptyStateText.trim();
           }
+          if (inputNode.headerStyle?.inline) {
+            const hs = inputNode.headerStyle.inline;
+            if (hs.backgroundColor) metadata.headerBackgroundColor = hs.backgroundColor;
+            if (hs.color) metadata.headerColor = hs.color;
+          }
         } else if (inputNode.type === 'totals') {
           const sourcePath =
             astInput.bindings?.collections?.[inputNode.sourceBinding.bindingId]?.path ??
@@ -1710,6 +1736,7 @@ export const importTemplateAstToWorkspace = (
             type: row.format,
             format: row.format,
             emphasize: row.emphasize === true,
+            ...(row.style ? { style: row.style } : {}),
           }));
         } else if (inputNode.type === 'image') {
           metadata.astSrcExpression = inputNode.src;

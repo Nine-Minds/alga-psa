@@ -502,11 +502,16 @@ const renderTablePreview = (
     >
       <div
         className={clsx(
-          'grid gap-0 pb-1 uppercase tracking-wide text-slate-500',
+          'grid gap-0 pb-1 uppercase tracking-wide',
+          !metadata.headerBackgroundColor && 'text-slate-500',
           headerWeightClass,
           borderConfig.rowDividers && ['border-b', INVOICE_BORDER_COLOR_CLASS]
         )}
-        style={{ gridTemplateColumns: tableGridTemplateColumns }}
+        style={{
+          gridTemplateColumns: tableGridTemplateColumns,
+          ...(metadata.headerBackgroundColor ? { backgroundColor: String(metadata.headerBackgroundColor), borderRadius: '2px 2px 0 0' } : {}),
+          ...(metadata.headerColor ? { color: String(metadata.headerColor) } : {}),
+        }}
       >
         {visibleColumns.map((column, index) => (
           <span
@@ -1174,7 +1179,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
         <textarea
           ref={textareaRef}
           className="absolute inset-0 z-30 w-full h-full resize-none border-2 border-primary-500 rounded bg-white dark:bg-[rgb(var(--color-card))] px-2 py-1 text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap focus:outline-none"
-          defaultValue={metadata.text ?? metadata.label ?? metadata.content ?? ''}
+          defaultValue={asTrimmedString(metadata.text) || asTrimmedString(metadata.label) || asTrimmedString(metadata.content) || ''}
           onBlur={handleTextEditBlur}
           onKeyDown={(event) => {
             event.stopPropagation();

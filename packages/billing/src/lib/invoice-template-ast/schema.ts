@@ -386,6 +386,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       id: z.string().min(1),
       type: z.literal('table'),
       style: nodeStyleRefSchema.optional(),
+      headerStyle: nodeStyleRefSchema.optional(),
       sourceBinding: bindingRefSchema,
       rowBinding: z.string().min(1),
       columns: z.array(z.object({
@@ -401,6 +402,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       id: z.string().min(1),
       type: z.literal('dynamic-table'),
       style: nodeStyleRefSchema.optional(),
+      headerStyle: nodeStyleRefSchema.optional(),
       repeat: z.object({
         sourceBinding: bindingRefSchema,
         itemBinding: z.string().min(1),
@@ -426,6 +428,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         value: valueExpressionSchema,
         format: valueFormatSchema.optional(),
         emphasize: z.boolean().optional(),
+        style: nodeStyleRefSchema.optional(),
       }).strict()).min(1),
     }).strict(),
   ])
