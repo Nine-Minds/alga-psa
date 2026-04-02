@@ -25,6 +25,11 @@ export {
   OPTIONS as handleTeamsPackageOptions,
 } from '../app/api/teams/package/route';
 export {
+  dynamic as teamsPackageDownloadDynamic,
+  GET as handleTeamsPackageDownloadGet,
+  OPTIONS as handleTeamsPackageDownloadOptions,
+} from '../app/api/teams/package/download/route';
+export {
   dynamic as teamsQuickActionsDynamic,
   POST as handleTeamsQuickActionsPost,
 } from '../app/api/teams/quick-actions/route';
