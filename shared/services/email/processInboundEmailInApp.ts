@@ -23,7 +23,7 @@ export interface ProcessInboundEmailInAppOptions {
   collectDiagnostics?: boolean;
 }
 
-export interface ProcessInboundEmailInAppDiagnostics {
+export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unknown> {
   parser: {
     confidence: number | null;
     strategy: string | null;
