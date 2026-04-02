@@ -1,10 +1,15 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 // OSS stub implementation for Extensions feature
 export const metadata = {
   title: 'Extensions - Enterprise Feature'
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  return metadata;
+}
 
 type PageParams = { id: string };
 
