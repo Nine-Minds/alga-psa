@@ -48,8 +48,8 @@ describe('designerStore preset metadata', () => {
 
     const section = useInvoiceDesignerStore.getState().nodes.find((node) => getNodeName(node) === 'Notes + Totals Row');
     expect(section).toBeTruthy();
-    expect(getNodeLayout(section!).display).toBe('grid');
-    expect(getNodeLayout(section!).gridTemplateColumns).toBe('2fr 1fr');
+    expect(getNodeLayout(section!)!.display).toBe('grid');
+    expect(getNodeLayout(section!)!.gridTemplateColumns).toBe('2fr 1fr');
   });
 
   it('inserts the Two Equal Columns preset as a grid section with equal tracks', () => {
@@ -59,8 +59,8 @@ describe('designerStore preset metadata', () => {
 
     const section = useInvoiceDesignerStore.getState().nodes.find((node) => getNodeName(node) === 'Two Equal Columns');
     expect(section).toBeTruthy();
-    expect(getNodeLayout(section!).display).toBe('grid');
-    expect(getNodeLayout(section!).gridTemplateColumns).toBe('1fr 1fr');
+    expect(getNodeLayout(section!)!.display).toBe('grid');
+    expect(getNodeLayout(section!)!.gridTemplateColumns).toBe('1fr 1fr');
   });
 
   it('inserts the Three Info Columns preset as a grid section with three equal tracks', () => {
@@ -70,8 +70,8 @@ describe('designerStore preset metadata', () => {
 
     const section = useInvoiceDesignerStore.getState().nodes.find((node) => getNodeName(node) === 'Three Info Columns');
     expect(section).toBeTruthy();
-    expect(getNodeLayout(section!).display).toBe('grid');
-    expect(getNodeLayout(section!).gridTemplateColumns).toBe('1fr 1fr 1fr');
+    expect(getNodeLayout(section!)!.display).toBe('grid');
+    expect(getNodeLayout(section!)!.gridTemplateColumns).toBe('1fr 1fr 1fr');
   });
 
   it('keeps the new grid presets on modern CSS layout properties instead of the legacy flex preset shape', () => {
@@ -82,7 +82,7 @@ describe('designerStore preset metadata', () => {
       store.insertPreset(presetId, { x: 0, y: 0 });
 
       const section = useInvoiceDesignerStore.getState().nodes.find((node) => node.type === 'section');
-      const layout = getNodeLayout(section!);
+      const layout = getNodeLayout(section!)!;
       expect(layout.display).toBe('grid');
       expect(typeof layout.gridTemplateColumns).toBe('string');
       expect((layout as any).mode).toBeUndefined();
@@ -101,8 +101,8 @@ describe('designerStore preset metadata', () => {
     const onetimeTable = nodes.find((node) => getNodeName(node) === 'One-time Items');
 
     expect(section).toBeTruthy();
-    expect(getNodeLayout(section!).display).toBe('grid');
-    expect(getNodeLayout(section!).gridTemplateColumns).toBe('1fr');
+    expect(getNodeLayout(section!)!.display).toBe('grid');
+    expect(getNodeLayout(section!)!.gridTemplateColumns).toBe('1fr');
 
     expect(recurringTable?.type).toBe('dynamic-table');
     expect(getNodeMetadata(recurringTable!).collectionBindingKey).toBe('recurringItems');

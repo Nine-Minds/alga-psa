@@ -186,7 +186,7 @@ describe('DesignerShell grid layout controls', () => {
 
     expect(presets).toBeTruthy();
     expect(rawInput).toBeTruthy();
-    expect(Boolean(presets?.compareDocumentPosition(rawInput) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean(presets!.compareDocumentPosition(rawInput) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
   });
 
   it('retains dark-theme styling hooks for the grid preset controls', () => {

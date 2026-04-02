@@ -38,7 +38,6 @@ const renderInspector = (overrides?: {
             metadata: {},
           },
           children: [],
-          allowedChildren: ['label', 'field', 'text', 'container'],
         },
       },
       snapToGrid: false,

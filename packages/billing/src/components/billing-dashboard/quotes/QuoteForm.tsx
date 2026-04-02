@@ -410,9 +410,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       setNotice(null);
       const result = await action();
       if (result && typeof result === 'object' && 'permissionError' in result) {
-        throw new Error(result.permissionError);
+        throw new Error((result as { permissionError: string }).permissionError);
       }
-      setQuote(result);
+      setQuote(result as IQuote);
       return result;
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : `Failed to ${label}`);
