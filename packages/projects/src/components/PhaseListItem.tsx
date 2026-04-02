@@ -368,14 +368,14 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
         </div>
       ) : (
         <>
-          {/* Drag Handle */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab pr-2">
+          {/* Drag Handle — absolutely positioned so it doesn't consume layout space */}
+          <div className="absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab">
             <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           </div>
           {/* Display View */}
-          <div className="flex flex-col flex-1 min-w-0">
+          <div className="flex flex-col w-full min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{phase.phase_name}</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-gray-100 min-w-0 break-words">{phase.phase_name}</span>
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 shrink-0">
                 {taskCount ?? 0} {(taskCount ?? 0) === 1 ? 'task' : 'tasks'}
               </span>
@@ -396,8 +396,8 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
               </div>
             </div>
           </div>
-          {/* Hover Action Buttons */}
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 shrink-0">
+          {/* Hover Action Buttons — absolutely positioned so they don't consume layout space */}
+          <div className="absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-inherit rounded">
             <button
               onClick={(e) => {
                 e.stopPropagation();
