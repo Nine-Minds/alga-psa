@@ -356,6 +356,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   <>
                     <Tooltip content={t('conversation.metadataDebug', 'View metadata (debug)')}>
                       <Button
+                        id={`${commentId}-metadata-debug-trigger`}
                         type="button"
                         variant="ghost"
                         size="sm"

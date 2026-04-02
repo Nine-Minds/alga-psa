@@ -1,12 +1,39 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { ADD_ONS, tenantHasAddOn, type AddOnKey } from '@alga-psa/types';
-import type {
-  InboundReplyAcknowledgementDecider,
-  InboundReplyAckDeciderInput,
-  InboundReplyAckDeciderResult,
-} from '@alga-psa/shared/services/email/inboundReplyAcknowledgementDecider';
 
 import { resolveChatProvider } from '../chatProviderResolver';
+
+type InboundReplyAckDecision = 'ACK' | 'NOT_ACK';
+
+interface InboundReplyAckDeciderInput {
+  tenantId: string;
+  boardId: string;
+  ticketId: string;
+  subject?: string;
+  text: string;
+}
+
+interface InboundReplyAckDeciderResult {
+  decision: InboundReplyAckDecision;
+  source: 'default' | 'ee_ai';
+  attempted: boolean;
+  reason:
+    | 'default_non_ai'
+    | 'board_suppression_disabled'
+    | 'ai_addon_missing'
+    | 'message_not_candidate'
+    | 'ai_classified'
+    | 'ai_failed'
+    | 'ai_invalid_output'
+    | 'ee_module_unavailable';
+  model?: string | null;
+  rawOutput?: string | null;
+  error?: string | null;
+}
+
+interface InboundReplyAcknowledgementDecider {
+  decide(input: InboundReplyAckDeciderInput): Promise<InboundReplyAckDeciderResult>;
+}
 
 const ACK_PROMPT = [
   'Classify this customer ticket reply.',
