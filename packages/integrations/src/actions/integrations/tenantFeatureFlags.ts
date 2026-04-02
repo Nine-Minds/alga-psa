@@ -4,17 +4,14 @@ import {
   isFeatureFlagEnabled,
   type FeatureFlagContext,
 } from '@alga-psa/core';
+import { FeatureFlags } from '@alga-psa/core/server';
 
-type ServerFeatureFlagsModule = {
-  featureFlags: {
-    isEnabled: (flagKey: string, context?: FeatureFlagContext) => Promise<boolean>;
-  };
-};
+const fallbackFeatureFlags = new FeatureFlags();
 
 /**
  * Server actions can run in an isolated module context before the app-level
- * checker registration has executed. Retry against the server-local feature
- * flag runtime to avoid false negatives in that case.
+ * checker registration has executed. Retry against the shared server-side
+ * feature flag runtime to avoid false negatives in that case.
  */
 export async function evaluateTenantFeatureFlag(
   flagKey: string,
@@ -25,12 +22,5 @@ export async function evaluateTenantFeatureFlag(
     return enabled;
   }
 
-  try {
-    const { featureFlags } = (await import(
-      'server/src/lib/feature-flags/featureFlags'
-    )) as ServerFeatureFlagsModule;
-    return featureFlags.isEnabled(flagKey, context);
-  } catch {
-    return enabled;
-  }
+  return fallbackFeatureFlags.isEnabled(flagKey, context);
 }
