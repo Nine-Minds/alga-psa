@@ -8,7 +8,10 @@ import type {
   UnifiedInboundEmailQueueJob,
 } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
-import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
+import {
+  processInboundEmailInApp,
+  type ProcessInboundEmailInAppDiagnostics,
+} from '@alga-psa/shared/services/email/processInboundEmailInApp';
 import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAdapter';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
@@ -808,7 +811,7 @@ async function updateProcessingRecord(params: {
 function buildProcessingMetadata(params: {
   job: UnifiedInboundEmailQueueJob;
   emailData?: EmailMessageDetails;
-  diagnostics?: Record<string, unknown>;
+  diagnostics?: ProcessInboundEmailInAppDiagnostics | Record<string, unknown>;
 }): Record<string, unknown> {
   return {
     queueJobId: params.job.jobId,
