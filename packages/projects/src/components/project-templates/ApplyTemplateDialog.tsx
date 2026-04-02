@@ -9,13 +9,17 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { IProjectTemplate } from '@alga-psa/types';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { IProjectTemplate, IStatus } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
 import { useToast } from '@alga-psa/ui';
 import { useRouter } from 'next/navigation';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import { getTemplates, applyTemplate } from '../../actions/projectTemplateActions';
-import { getAllClientsForProjects } from '../../actions/projectActions';
+import { getAllClientsForProjects, getProjectStatuses } from '../../actions/projectActions';
+import { createStatus as createStatusAction } from '@alga-psa/reference-data/actions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ApplyTemplateDialogProps {
   open: boolean;
@@ -31,13 +35,19 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
   const { toast } = useToast();
   const [templates, setTemplates] = useState<IProjectTemplate[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
+  const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const pendingStatusSelectRef = React.useRef<string | null>(null);
 
   const [formData, setFormData] = useState({
     template_id: initialTemplateId || '',
     project_name: '',
     client_id: '',
-    assigned_to: ''
+    assigned_to: '',
+    status_id: ''
   });
   const [startDate, setStartDate] = useState<Date | undefined>();
 
@@ -50,6 +60,15 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
     assignmentOption: 'primary' as AssignmentOption
   });
 
+  // Apply pending status selection after statuses array is updated
+  React.useEffect(() => {
+    if (pendingStatusSelectRef.current) {
+      const id = pendingStatusSelectRef.current;
+      pendingStatusSelectRef.current = null;
+      setFormData(prev => ({ ...prev, status_id: id }));
+    }
+  }, [statuses]);
+
   // Client picker filter states
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -61,9 +80,12 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
         template_id: initialTemplateId || '',
         project_name: '',
         client_id: '',
-        assigned_to: ''
+        assigned_to: '',
+        status_id: ''
       });
       setStartDate(undefined);
+      setHasAttemptedSubmit(false);
+      setValidationErrors([]);
       setOptions({
         copyPhases: true,
         copyStatuses: true,
@@ -78,13 +100,17 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
 
   async function loadData() {
     try {
-      const [templatesData, clientsData] = await Promise.all([
+      const [templatesData, clientsData, projectStatusesResult] = await Promise.all([
         getTemplates(),
-        getAllClientsForProjects()
+        getAllClientsForProjects(),
+        getProjectStatuses()
       ]);
 
       setTemplates(templatesData);
       setClients(clientsData);
+      if (!isActionPermissionError(projectStatusesResult)) {
+        setStatuses(projectStatusesResult);
+      }
     } catch (error) {
       console.error('[ApplyTemplateDialog] Failed to load data:', error);
       toast({
@@ -98,14 +124,20 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!formData.template_id || !formData.project_name || !formData.client_id) {
-      toast({
-        title: 'Validation Error',
-        description: 'Template, project name, and client are required',
-        variant: 'destructive'
-      });
+    setHasAttemptedSubmit(true);
+
+    const errors: string[] = [];
+    if (!formData.template_id) errors.push('Template is required');
+    if (!formData.project_name.trim()) errors.push('Project name is required');
+    if (!formData.client_id) errors.push('Client is required');
+    if (!formData.status_id) errors.push('Status is required');
+
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       return;
     }
+
+    setValidationErrors([]);
 
     try {
       setLoading(true);
@@ -113,6 +145,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
       const projectId = await applyTemplate(formData.template_id, {
         project_name: formData.project_name,
         client_id: formData.client_id,
+        status_id: formData.status_id,
         start_date: startDate?.toISOString(),
         assigned_to: formData.assigned_to || undefined,
         options: {
@@ -149,8 +182,21 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
   }
 
   return (
+    <>
     <Dialog isOpen={open} onClose={onClose} title="Create Project from Template" className="max-w-3xl" disableFocusTrap>
       <form onSubmit={handleSubmit} className="space-y-6">
+          {hasAttemptedSubmit && validationErrors.length > 0 && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Please fix the following errors:
+                <ul className="list-disc pl-5 mt-1 text-sm">
+                  {validationErrors.map((err, index) => (
+                    <li key={index}>{err}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
           <div>
             <label className="block text-sm font-medium mb-2">
               Template *
@@ -164,6 +210,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
                 label: t.template_name
               }))}
               placeholder="Select a template"
+              className={hasAttemptedSubmit && !formData.template_id ? 'ring-1 ring-red-500' : ''}
             />
           </div>
 
@@ -176,6 +223,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
               value={formData.project_name}
               onChange={(e) => setFormData({ ...formData, project_name: e.target.value })}
               placeholder="Enter project name"
+              className={hasAttemptedSubmit && !formData.project_name.trim() ? 'ring-1 ring-red-500' : ''}
             />
           </div>
 
@@ -193,6 +241,26 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
               clientTypeFilter={clientTypeFilter}
               onClientTypeFilterChange={setClientTypeFilter}
               placeholder="Select a client"
+              className={hasAttemptedSubmit && !formData.client_id ? 'ring-1 ring-red-500' : ''}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Status *
+            </label>
+            <CustomSelect
+              id="apply-template-status"
+              value={formData.status_id}
+              onValueChange={(value) => setFormData({ ...formData, status_id: value })}
+              options={statuses.map(s => ({
+                value: s.status_id,
+                label: s.name
+              }))}
+              placeholder="Select Status"
+              onAddNew={() => setShowQuickAddStatus(true)}
+              addNewLabel="Add new status"
+              className={hasAttemptedSubmit && !formData.status_id ? 'ring-1 ring-red-500' : ''}
             />
           </div>
 
@@ -303,5 +371,26 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
           </div>
         </form>
     </Dialog>
+    <QuickAddStatus
+      open={showQuickAddStatus}
+      onOpenChange={setShowQuickAddStatus}
+      onStatusCreated={(newStatus) => {
+        pendingStatusSelectRef.current = newStatus.status_id;
+        setStatuses(prev => [...prev, newStatus]);
+      }}
+      statusType="project"
+      showColorPicker={false}
+      createStatus={async ({ name, statusType, isClosed, color }) =>
+        createStatusAction({
+          name,
+          status_type: statusType,
+          item_type: statusType,
+          is_closed: isClosed,
+          color,
+        })
+      }
+      existingStatuses={statuses}
+    />
+    </>
   );
 }

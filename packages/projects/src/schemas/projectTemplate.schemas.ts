@@ -95,6 +95,10 @@ export const applyTemplateSchema = z.object({
     (val) => val === '' || val === null || val === undefined ? undefined : val,
     z.string().uuid().optional()
   ),
+  status_id: z.preprocess(
+    (val) => val === '' || val === null || val === undefined ? undefined : val,
+    z.string().uuid().optional()
+  ),
   options: z.object({
     copyPhases: z.boolean().default(true),
     copyStatuses: z.boolean().default(true),

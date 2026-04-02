@@ -332,6 +332,7 @@ export const applyTemplate = withAuth(async (
   projectData: {
     project_name: string;
     client_id: string;
+    status_id?: string;
     start_date?: string;
     assigned_to?: string;
     options?: {
@@ -391,7 +392,15 @@ export const applyTemplate = withAuth(async (
     if (projectStatuses.length === 0) {
       throw new Error('No project statuses found');
     }
-    const defaultProjectStatus = projectStatuses[0];
+
+    // Use provided status_id or fall back to first available
+    let defaultProjectStatus = projectStatuses[0];
+    if (validatedData.status_id) {
+      const selectedStatus = projectStatuses.find(s => s.status_id === validatedData.status_id);
+      if (selectedStatus) {
+        defaultProjectStatus = selectedStatus;
+      }
+    }
 
     // Generate project number and WBS code
     const projectNumber = await SharedNumberingService.getNextNumber(
