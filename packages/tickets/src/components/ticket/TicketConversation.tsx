@@ -51,6 +51,20 @@ import {
 import { toggleCommentReaction, getCommentsReactionsBatch } from '../../actions/comment-actions/commentReactionActions';
 import type { IAggregatedReaction } from '@alga-psa/types';
 
+interface TicketTimeEntry {
+  entry_id: string;
+  user_id: string;
+  user_name?: string;
+  start_time: string;
+  end_time: string;
+  billable_duration: number;
+  notes: string;
+  created_at: string;
+  work_date?: string;
+  approval_status?: string;
+  service_name?: string;
+}
+
 interface TicketConversationProps {
   id?: string;
   ticket: ITicket;
@@ -58,6 +72,7 @@ interface TicketConversationProps {
   documents: IDocument[];
   userMap: Record<string, CommentUserAuthor>;
   contactMap: Record<string, CommentContactAuthor>;
+  timeEntries?: TicketTimeEntry[];
   currentUser: { id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null | undefined;
   activeTab: string;
   isEditing: boolean;
@@ -112,6 +127,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   closedStatusOptions = [],
   onClipboardImageUploaded,
   defaultNewestFirst = false,
+  timeEntries = [],
 }) => {
   const { t } = useTranslation('features/tickets');
   const { t: tCore } = useTranslation('common');
@@ -470,6 +486,71 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           {renderComments(conversations.filter(conversation =>
             conversation.is_resolution && (!hideInternalTab || !conversation.is_internal)
           ))}
+        </ReflectionContainer>
+      )
+    },
+    {
+      label: t('conversation.timeEntries', 'Time Entries'),
+      content: (
+        <ReflectionContainer id={`${id}-time-entries`} label="Time Entries">
+          {timeEntries.length === 0 ? (
+            <p id={`${compId}-time-entries-empty`} className="text-sm text-gray-500 dark:text-gray-400 py-4">{t('conversation.noTimeEntries', 'No time entries recorded for this ticket.')}</p>
+          ) : (
+            <div id={`${compId}-time-entries-list`} className="space-y-3">
+              {timeEntries.map((entry: TicketTimeEntry) => {
+                const entryUser = userMap[entry.user_id];
+                const userName = entryUser
+                  ? `${entryUser.first_name} ${entryUser.last_name}`.trim()
+                  : (entry.user_name || t('conversation.unknownUser', 'Unknown User'));
+                const hours = Math.floor(entry.billable_duration / 60);
+                const mins = entry.billable_duration % 60;
+                const durationStr = hours > 0
+                  ? `${hours}h ${mins > 0 ? `${mins}m` : ''}`
+                  : `${mins}m`;
+                const isBillable = entry.billable_duration > 0;
+                const entryDate = entry.work_date
+                  ? new Date(entry.work_date + 'T00:00:00').toLocaleDateString()
+                  : new Date(entry.start_time).toLocaleDateString();
+                const approvalLabel = entry.approval_status
+                  ? entry.approval_status.charAt(0) + entry.approval_status.slice(1).toLowerCase()
+                  : '';
+                const approvalColor = entry.approval_status === 'APPROVED'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                  : entry.approval_status === 'SUBMITTED'
+                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                    : entry.approval_status === 'CHANGES_REQUESTED'
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
+                return (
+                  <div key={entry.entry_id} id={`${compId}-time-entry-${entry.entry_id}`} className="border dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{userName}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{entryDate}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{durationStr}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${isBillable ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                        {isBillable ? t('conversation.billable', 'Billable') : t('conversation.nonBillable', 'Non-billable')}
+                      </span>
+                      {approvalLabel && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${approvalColor}`}>
+                          {approvalLabel}
+                        </span>
+                      )}
+                    </div>
+                    {(entry.service_name || entry.notes) && (
+                      <div className="text-sm text-gray-600 dark:text-gray-300">
+                        {entry.service_name && (
+                          <span className="font-medium">{entry.service_name}{entry.notes ? ' — ' : ''}</span>
+                        )}
+                        {entry.notes && <span>{entry.notes}</span>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </ReflectionContainer>
       )
     }

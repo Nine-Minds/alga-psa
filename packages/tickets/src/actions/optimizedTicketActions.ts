@@ -200,7 +200,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       statuses,
       boards,
       priorities,
-      categories
+      categories,
+      timeEntries
     ] = await Promise.all([
       // Comments
       trx('comments')
@@ -209,7 +210,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           tenant: tenant
         })
         .orderBy('created_at', 'asc'),
-      
+
       // Documents
       trx('documents as d')
         .select('d.*')
@@ -222,7 +223,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'da.entity_type': 'ticket',
           'd.tenant': tenant
         }),
-      
+
       trx('clients as c')
         .select(
           'c.*',
@@ -241,13 +242,13 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           ticket_id: ticketId,
           tenant: tenant
         }),
-      
+
       // Users - removed document joins that were causing duplicates
       // Avatar URLs are fetched later using getUserAvatarUrl()
       trx('users')
         .where({ tenant })
         .orderBy('first_name', 'asc'),
-      
+
       // Statuses
       trx('statuses')
         .where({
@@ -256,21 +257,39 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         })
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
-      
+
       // Boards
       trx('boards')
         .where({ tenant })
         .orderBy('board_name', 'asc'),
-      
+
       // Priorities - fetch only tenant-specific ticket priorities
       trx('priorities')
         .where({ tenant, item_type: 'ticket' })
         .orderBy('priority_name', 'asc'),
-      
+
       // Categories
       trx('categories')
         .where({ tenant })
-        .orderBy('category_name', 'asc')
+        .orderBy('category_name', 'asc'),
+
+      // Time entries for this ticket (with service name and user name)
+      trx('time_entries as te')
+        .leftJoin('service_catalog as sc', function() {
+          this.on('te.service_id', 'sc.service_id')
+              .andOn('te.tenant', 'sc.tenant');
+        })
+        .leftJoin('users as teu', function() {
+          this.on('te.user_id', 'teu.user_id')
+              .andOn('te.tenant', 'teu.tenant');
+        })
+        .where({
+          'te.work_item_id': ticketId,
+          'te.work_item_type': 'ticket',
+          'te.tenant': tenant
+        })
+        .select('te.*', 'sc.service_name', trx.raw("concat(teu.first_name, ' ', teu.last_name) as user_name"))
+        .orderBy('te.start_time', 'desc')
     ]);
 
     // --- Add Logo URL Processing for the fetched 'clients' list ---
@@ -698,7 +717,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       categories,
       clients: clientsWithLogos,
       locations,
-      agentSchedules: agentSchedulesList
+      agentSchedules: agentSchedulesList,
+      timeEntries: await hasPermission(user, 'timeentry', 'read', trx) ? timeEntries : []
     };
     } catch (error) {
       console.error('Failed to fetch consolidated ticket data:', error);

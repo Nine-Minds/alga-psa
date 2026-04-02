@@ -251,6 +251,65 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   return attachTimeEntryChangeRequests(entriesWithWorkItems, changeRequestsByEntryId);
 });
 
+const ALLOWED_WORK_ITEM_TYPES = new Set(['ticket', 'project_task', 'non_billable_category', 'ad_hoc', 'interaction']);
+
+export const fetchTimeEntriesForWorkItem = withAuth(async (
+  user,
+  { tenant },
+  workItemId: string,
+  workItemType: string
+): Promise<ITimeEntryWithWorkItem[]> => {
+  const {knex: db} = await createTenantKnex();
+
+  if (!ALLOWED_WORK_ITEM_TYPES.has(workItemType)) {
+    throw new Error(`Invalid work item type: ${workItemType}`);
+  }
+
+  if (!await hasPermission(user, 'timeentry', 'read', db)) {
+    throw new Error('Permission denied: Cannot read time entries');
+  }
+
+  const timeEntries = await db('time_entries')
+    .where({
+      work_item_id: workItemId,
+      work_item_type: workItemType,
+      tenant
+    })
+    .orderBy('start_time', 'desc')
+    .select('*');
+
+  // Fetch user details for each time entry
+  const userIds = [...new Set(timeEntries.map(e => e.user_id).filter(Boolean))];
+  const users = userIds.length > 0
+    ? await db('users').whereIn('user_id', userIds).andWhere({ tenant }).select('user_id', 'first_name', 'last_name')
+    : [];
+  const userMapLocal = new Map(users.map(u => [u.user_id, u]));
+
+  return timeEntries.map((entry): ITimeEntryWithWorkItem => {
+    const entryUser = userMapLocal.get(entry.user_id);
+    return {
+      ...entry,
+      work_item_id: entry.work_item_id,
+      date: new Date(entry.start_time),
+      start_time: formatISO(entry.start_time),
+      end_time: formatISO(entry.end_time),
+      updated_at: formatISO(entry.updated_at),
+      created_at: formatISO(entry.created_at),
+      work_date: entry.work_date instanceof Date
+        ? entry.work_date.toISOString().slice(0, 10)
+        : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
+      workItem: {
+        work_item_id: entry.work_item_id,
+        name: '',
+        description: '',
+        type: entry.work_item_type,
+        is_billable: entry.billable_duration > 0,
+      },
+      user_name: entryUser ? `${entryUser.first_name} ${entryUser.last_name}`.trim() : undefined,
+    };
+  });
+});
+
 export const saveTimeEntry = withAuth(async (
   user,
   { tenant },
