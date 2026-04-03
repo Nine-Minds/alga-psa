@@ -82,6 +82,9 @@ Contact create requires:
 Contact create/update optional fields:
 
 - `email`
+- `primary_email_canonical_type`
+- `primary_email_custom_type`
+- `additional_email_addresses`
 - `client_id`
 - `role`
 - `notes`
@@ -97,6 +100,10 @@ Contact list supports:
 - `is_inactive`
 
 `phone_numbers` is authored as JSON in the first pass and must be an array of objects with a required `phone_number` field.
+
+`additional_email_addresses` is authored as JSON and should be an array of objects with a required `email_address` field plus optional `canonical_type`, `custom_type`, and `display_order`.
+
+Use `primary_email_canonical_type` for canonical labels such as `work`, `personal`, `billing`, or `other`. Use `primary_email_custom_type` when you need a freeform primary label instead.
 
 ## Ticket Comment Operations
 

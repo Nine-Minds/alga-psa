@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ContactPhoneNumberInput, IClient, IClientLocation } from '@alga-psa/types';
+import type { ContactPhoneNumberInput, CreateContactInput, IClient, IClientLocation } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -48,13 +48,20 @@ import ContactPhoneNumbersEditor, {
   compactContactPhoneNumbers,
   validateContactPhoneNumbers,
 } from '../contacts/ContactPhoneNumbersEditor';
+import ContactEmailAddressesEditor, {
+  compactContactEmailAddresses,
+  validateContactEmailAddresses,
+} from '../contacts/ContactEmailAddressesEditor';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type CreateClientData = Omit<IClient, "client_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
 
 type CreateLocationData = Omit<IClientLocation, "location_id" | "tenant" | "created_at" | "updated_at">;
 
-type CreateContactData = Pick<IContact, 'full_name' | 'email' | 'role' | 'notes'> & {
+type CreateContactData = Pick<IContact, 'full_name' | 'email' | 'role' | 'notes'> & Pick<
+  CreateContactInput,
+  'primary_email_canonical_type' | 'primary_email_custom_type' | 'additional_email_addresses'
+> & {
   phone_numbers: ContactPhoneNumberInput[];
 };
 
@@ -118,6 +125,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     full_name: '',
     phone_numbers: [],
     email: '',
+    primary_email_canonical_type: 'work',
+    primary_email_custom_type: null,
+    additional_email_addresses: [],
     role: '',
     notes: '',
   };
@@ -126,6 +136,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   const [locationData, setLocationData] = useState<CreateLocationData>(initialLocationData);
   const [contactData, setContactData] = useState<CreateContactData>(initialContactData);
   const [contactPhoneValidationErrors, setContactPhoneValidationErrors] = useState<string[]>([]);
+  const [contactEmailValidationErrors, setContactEmailValidationErrors] = useState<string[]>([]);
   const [customPhoneTypeSuggestions, setCustomPhoneTypeSuggestions] = useState<string[]>([]);
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
   const [countries, setCountries] = useState<ICountry[]>([]);
@@ -149,6 +160,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     return !!(
       data.full_name.trim() ||
       (data.email ?? '').trim() ||
+      compactContactEmailAddresses(data).additional_email_addresses.length > 0 ||
       compactContactPhoneNumbers(data.phone_numbers).length > 0 ||
       (data.role ?? '').trim()
     );
@@ -206,6 +218,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       setLocationData(initialLocationData);
       setContactData(initialContactData);
       setContactPhoneValidationErrors([]);
+      setContactEmailValidationErrors([]);
       setIsSubmitting(false);
       setError(null);
       setHasAttemptedSubmit(false);
@@ -397,9 +410,11 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         validationResult.isValid = false;
         validationResult.errors.contact_name = 'Full name is required when adding a contact';
       }
-      if (!(contactData.email ?? '').trim()) {
+      const currentContactEmailErrors = validateContactEmailAddresses(contactData);
+      setContactEmailValidationErrors(currentContactEmailErrors);
+      if (currentContactEmailErrors.length > 0) {
         validationResult.isValid = false;
-        validationResult.errors.contact_email = 'Email is required when adding a contact';
+        validationResult.errors.contact_email = currentContactEmailErrors[0]!;
       }
     }
 
@@ -455,12 +470,16 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       }
 
       // Create contact if contact data is provided
-      if (contactData.full_name.trim() || (contactData.email ?? '').trim()) {
+      if (hasAnyContactData(contactData)) {
         try {
+          const sanitizedContactEmails = compactContactEmailAddresses(contactData);
           await createClientContact({
             clientId: newClient.client_id,
             fullName: contactData.full_name,
-            email: contactData.email ?? '',
+            email: sanitizedContactEmails.email ?? '',
+            primaryEmailCanonicalType: sanitizedContactEmails.primary_email_canonical_type,
+            primaryEmailCustomType: sanitizedContactEmails.primary_email_custom_type,
+            additionalEmailAddresses: sanitizedContactEmails.additional_email_addresses,
             phoneNumbers: compactContactPhoneNumbers(contactData.phone_numbers),
             jobTitle: contactData.role ?? undefined,
           });
@@ -560,7 +579,10 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     }
   };
 
-  const handleContactChange = (field: keyof CreateContactData, value: string | ContactPhoneNumberInput[]) => {
+  const handleContactChange = (
+    field: keyof CreateContactData,
+    value: string | ContactPhoneNumberInput[] | CreateContactInput['additional_email_addresses'] | null
+  ) => {
     setContactData(prev => ({
       ...prev,
       [field]: value
@@ -651,17 +673,12 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     // Contact validations - if any contact field is filled, require name and email
     if (hasAnyContactData(contactData)) {
       if (!contactData.full_name.trim()) return false;
-      if (!(contactData.email ?? '').trim()) return false;
+      if (validateContactEmailAddresses(contactData).length > 0) return false;
     }
 
     if (contactData.full_name && contactData.full_name.trim()) {
       const nameError = validateField('contact_name', contactData.full_name, undefined, false);
       if (nameError) return false;
-    }
-
-    if (contactData.email && contactData.email.trim()) {
-      const contactEmailError = validateField('contact_email', contactData.email, undefined, false);
-      if (contactEmailError) return false;
     }
 
     if (contactData.phone_numbers.length > 0) {
@@ -1030,29 +1047,20 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="client-contact-email" className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('quickAddClient.email', { defaultValue: 'Email' })}{hasAnyContactData(contactData) ? ' *' : ''}
-                  </Label>
-                  <Input
+                  <ContactEmailAddressesEditor
                     id="client-contact-email"
-                    data-automation-id="client-contact-email"
-                    type="email"
-                    value={contactData.email ?? ''}
-                    onChange={(e) => {
-                      handleContactChange('email', e.target.value);
-                      if (/^\s+$/.test(e.target.value)) {
-                        setFieldErrors(prev => ({ ...prev, contact_email: 'Email address cannot contain only spaces' }));
+                    value={contactData}
+                    onChange={(value) => {
+                      setContactData(prev => ({ ...prev, ...value }));
+                      if (fieldErrors.contact_email) {
+                        setFieldErrors(prev => ({ ...prev, contact_email: '' }));
                       }
                     }}
-                    onBlur={() => {
-                      validateField('contact_email', contactData.email ?? '');
-                    }}
+                    customTypeSuggestions={[]}
                     disabled={isSubmitting}
-                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.contact_email ? 'border-red-500' : 'border-gray-300'}`}
+                    errorMessages={hasAttemptedSubmit ? contactEmailValidationErrors : undefined}
+                    onValidationChange={setContactEmailValidationErrors}
                   />
-                  {fieldErrors.contact_email && (
-                    <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_email}</p>
-                  )}
                 </div>
 
                 <div className="col-span-2">

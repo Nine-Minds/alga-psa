@@ -402,12 +402,20 @@ const fetchContacts = async (): Promise<void> => {
             }
           } else {
             try {
-              const contact = await addContact({
+              const contactResult = await addContact({
                 full_name: `${newUser.firstName} ${newUser.lastName}`,
                 email: newUser.email,
                 client_id: newUser.clientId || undefined,
                 is_inactive: false
               });
+              if (!contactResult.success) {
+                const errorMsg = normalizeCreateUserError(contactResult.error);
+                handleError(new Error(contactResult.error), errorMsg);
+                setError(errorMsg);
+                return;
+              }
+
+              const contact = contactResult.contact;
               try {
                 const invitationResult = await sendPortalInvitation(contact.contact_name_id);
                 if (invitationResult.success) {

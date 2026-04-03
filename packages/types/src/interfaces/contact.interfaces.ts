@@ -5,6 +5,10 @@ export const CONTACT_PHONE_CANONICAL_TYPES = ['work', 'mobile', 'home', 'fax', '
 
 export type ContactPhoneCanonicalType = typeof CONTACT_PHONE_CANONICAL_TYPES[number];
 
+export const CONTACT_EMAIL_CANONICAL_TYPES = ['work', 'personal', 'billing', 'other'] as const;
+
+export type ContactEmailCanonicalType = typeof CONTACT_EMAIL_CANONICAL_TYPES[number];
+
 export interface IContactPhoneNumber {
   contact_phone_number_id: string;
   phone_number: string;
@@ -16,6 +20,26 @@ export interface IContactPhoneNumber {
   display_order: number;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface IContactEmailAddress {
+  contact_additional_email_address_id: string;
+  email_address: string;
+  normalized_email_address: string;
+  canonical_type: ContactEmailCanonicalType | null;
+  custom_email_type_id?: string | null;
+  custom_type: string | null;
+  display_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ContactEmailAddressInput {
+  contact_additional_email_address_id?: string;
+  email_address: string;
+  canonical_type?: ContactEmailCanonicalType | null;
+  custom_type?: string | null;
+  display_order?: number;
 }
 
 export interface ContactPhoneNumberInput {
@@ -34,6 +58,10 @@ export interface IContact extends TenantEntity, ITaggable {
   phone_numbers: IContactPhoneNumber[];
   default_phone_number?: string | null;
   default_phone_type?: string | null;
+  primary_email_canonical_type?: ContactEmailCanonicalType | null;
+  primary_email_custom_type_id?: string | null;
+  primary_email_type?: string | null;
+  additional_email_addresses?: IContactEmailAddress[];
   email: string | null;
   role: string | null;
   notes: string | null;
@@ -91,6 +119,8 @@ export type MappableField =
   | 'full_name'
   | 'phone_number'
   | 'email'
+  | 'primary_email_type'
+  | 'additional_email_addresses'
   | 'client'
   | 'role'
   | 'notes'
@@ -102,6 +132,10 @@ export type MappableField =
 export interface CreateContactInput {
   full_name: string;
   email?: string;
+  primary_email_canonical_type?: ContactEmailCanonicalType | null;
+  primary_email_custom_type?: string | null;
+  primary_email_custom_type_id?: string | null;
+  additional_email_addresses?: ContactEmailAddressInput[];
   phone_numbers?: ContactPhoneNumberInput[];
   client_id?: string;
   role?: string;
@@ -115,6 +149,10 @@ export interface CreateContactInput {
 export interface UpdateContactInput {
   full_name?: string;
   email?: string;
+  primary_email_canonical_type?: ContactEmailCanonicalType | null;
+  primary_email_custom_type?: string | null;
+  primary_email_custom_type_id?: string | null;
+  additional_email_addresses?: ContactEmailAddressInput[];
   phone_numbers?: ContactPhoneNumberInput[];
   client_id?: string;
   role?: string;

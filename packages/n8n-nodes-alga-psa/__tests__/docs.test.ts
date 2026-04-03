@@ -146,4 +146,27 @@ describe('Documentation coverage', () => {
     expect(releaseNotes).toContain('Delete');
     expect(releaseNotes).toContain('phone_numbers');
   });
+
+  it('T042: contact docs and example workflow show the hybrid email fields', () => {
+    const readme = read('README.md');
+    const example = JSON.parse(read('examples/create-update-contact.workflow.json')) as {
+      nodes: Array<{ parameters?: Record<string, any> }>;
+    };
+
+    expect(readme).toContain('primary_email_canonical_type');
+    expect(readme).toContain('primary_email_custom_type');
+    expect(readme).toContain('additional_email_addresses');
+
+    const createNode = example.nodes.find(
+      (node) => node.parameters?.contactOperation === 'create',
+    );
+    expect(createNode?.parameters?.contactCreateAdditionalFields).toMatchObject({
+      primary_email_canonical_type: 'billing',
+    });
+    expect(
+      String(
+        createNode?.parameters?.contactCreateAdditionalFields?.additional_email_addresses ?? '',
+      ),
+    ).toContain('ada.personal@example.com');
+  });
 });

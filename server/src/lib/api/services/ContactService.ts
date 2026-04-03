@@ -37,6 +37,34 @@ function normalizePhoneForSearch(value: string): string {
   return value.replace(/\D/g, '');
 }
 
+function normalizeEmailForSearch(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function applyEmailSearchClause(
+  query: Knex.QueryBuilder,
+  knex: Knex,
+  value: string,
+  contactAlias = 'c'
+): void {
+  const normalizedEmail = normalizeEmailForSearch(value);
+  query.where(function emailSearch() {
+    this.whereILike(`${contactAlias}.email`, `%${value}%`)
+      .orWhereExists(function existsAdditionalEmail() {
+        this.select(knex.raw('1'))
+          .from('contact_additional_email_addresses as caea')
+          .whereRaw(`caea.tenant = ${contactAlias}.tenant`)
+          .andWhereRaw(`caea.contact_name_id = ${contactAlias}.contact_name_id`)
+          .andWhere(function matchAdditionalEmail() {
+            this.whereILike('caea.email_address', `%${value}%`);
+            if (normalizedEmail) {
+              this.orWhere('caea.normalized_email_address', 'like', `%${normalizedEmail}%`);
+            }
+          });
+      });
+  });
+}
+
 function applyDefaultPhoneJoins(query: Knex.QueryBuilder, knex: Knex, contactAlias = 'c'): Knex.QueryBuilder {
   return query
     .leftJoin('contact_phone_numbers as cpn_default', function joinDefaultPhone() {
@@ -92,8 +120,8 @@ export class ContactService extends BaseService<IContact> {
       knex
     );
 
-    dataQuery = this.applyContactFilters(dataQuery, filters);
-    countQuery = this.applyContactFilters(countQuery, filters);
+    dataQuery = this.applyContactFilters(dataQuery, filters, knex);
+    countQuery = this.applyContactFilters(countQuery, filters, knex);
 
     const sortField = sort || this.defaultSort;
     const sortOrder = order || this.defaultOrder;
@@ -195,6 +223,10 @@ export class ContactService extends BaseService<IContact> {
           client_id: data.client_id ?? undefined,
           phone_numbers: data.phone_numbers ?? [],
           email: data.email ?? undefined,
+          primary_email_canonical_type: data.primary_email_canonical_type ?? undefined,
+          primary_email_custom_type: data.primary_email_custom_type ?? undefined,
+          primary_email_custom_type_id: data.primary_email_custom_type_id ?? undefined,
+          additional_email_addresses: data.additional_email_addresses ?? [],
           role: data.role ?? undefined,
           notes: data.notes ?? undefined,
           is_inactive: data.is_inactive ?? false,
@@ -225,6 +257,10 @@ export class ContactService extends BaseService<IContact> {
           clientId,
           fullName: contact.full_name,
           email: contact.email || undefined,
+          primaryEmailCanonicalType: contact.primary_email_canonical_type ?? null,
+          primaryEmailCustomTypeId: contact.primary_email_custom_type_id ?? null,
+          primaryEmailType: contact.primary_email_type ?? null,
+          additionalEmailAddresses: contact.additional_email_addresses ?? [],
           phoneNumbers: contact.phone_numbers,
           defaultPhoneNumber: contact.default_phone_number || undefined,
           defaultPhoneType: contact.default_phone_type || undefined,
@@ -383,6 +419,10 @@ export class ContactService extends BaseService<IContact> {
                 });
             });
           });
+        } else if (field === 'email') {
+          subQuery[method](function emailSearch() {
+            applyEmailSearchClause(this, knex, searchData.query, 'c');
+          });
         } else {
           subQuery[method](`c.${field}`, 'ilike', `%${searchData.query}%`);
         }
@@ -474,7 +514,7 @@ export class ContactService extends BaseService<IContact> {
     query = this.applyContactFilters(query, {
       is_inactive: false,
       ...filters,
-    });
+    }, knex);
 
     const contacts = await query
       .select(
@@ -516,7 +556,7 @@ export class ContactService extends BaseService<IContact> {
       .join('\n');
   }
 
-  private applyContactFilters(query: Knex.QueryBuilder, filters: ContactFilterData): Knex.QueryBuilder {
+  private applyContactFilters(query: Knex.QueryBuilder, filters: ContactFilterData, knex: Knex): Knex.QueryBuilder {
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
 
@@ -525,13 +565,15 @@ export class ContactService extends BaseService<IContact> {
           query.whereILike('c.full_name', `%${value}%`);
           break;
         case 'email':
-          query.whereILike('c.email', `%${value}%`);
+          query.where((subQuery) => {
+            applyEmailSearchClause(subQuery, knex, String(value), 'c');
+          });
           break;
         case 'phone_number': {
           const normalizedDigits = normalizePhoneForSearch(String(value));
           query.where((subQuery) => {
             subQuery.whereExists(function existsPhone() {
-              this.select(query.client!.raw('1'))
+              this.select(knex.raw('1'))
                 .from('contact_phone_numbers as cpn_filter')
                 .whereRaw('cpn_filter.tenant = c.tenant')
                 .andWhereRaw('cpn_filter.contact_name_id = c.contact_name_id')
@@ -569,11 +611,13 @@ export class ContactService extends BaseService<IContact> {
           query.where((subQuery) => {
             subQuery
               .whereILike('c.full_name', `%${value}%`)
-              .orWhereILike('c.email', `%${value}%`)
+              .orWhere(function emailSearch() {
+                applyEmailSearchClause(this, knex, String(value), 'c');
+              })
               .orWhereILike('c.role', `%${value}%`)
               .orWhereILike('comp.client_name', `%${value}%`)
               .orWhereExists(function existsPhone() {
-                this.select(query.client!.raw('1'))
+                this.select(knex.raw('1'))
                   .from('contact_phone_numbers as cpn_search')
                   .whereRaw('cpn_search.tenant = c.tenant')
                   .andWhereRaw('cpn_search.contact_name_id = c.contact_name_id')

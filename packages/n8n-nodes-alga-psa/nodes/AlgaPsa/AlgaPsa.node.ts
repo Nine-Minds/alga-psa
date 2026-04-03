@@ -1027,6 +1027,31 @@ export class AlgaPsa implements INodeType {
         options: [
           { displayName: 'Email', name: 'email', type: 'string', default: '' },
           {
+            displayName: 'Primary Email Canonical Type',
+            name: 'primary_email_canonical_type',
+            type: 'options',
+            default: '',
+            options: [
+              { name: 'Work', value: 'work' },
+              { name: 'Personal', value: 'personal' },
+              { name: 'Billing', value: 'billing' },
+              { name: 'Other', value: 'other' },
+            ],
+          },
+          {
+            displayName: 'Primary Email Custom Type',
+            name: 'primary_email_custom_type',
+            type: 'string',
+            default: '',
+          },
+          {
+            displayName: 'Additional Email Addresses (JSON)',
+            name: 'additional_email_addresses',
+            type: 'json',
+            default: '[]',
+            description: 'Array of objects with required email_address and optional label metadata',
+          },
+          {
             displayName: 'Client ID',
             name: 'client_id',
             type: 'resourceLocator',
@@ -1088,6 +1113,31 @@ export class AlgaPsa implements INodeType {
         options: [
           { displayName: 'Full Name', name: 'full_name', type: 'string', default: '' },
           { displayName: 'Email', name: 'email', type: 'string', default: '' },
+          {
+            displayName: 'Primary Email Canonical Type',
+            name: 'primary_email_canonical_type',
+            type: 'options',
+            default: '',
+            options: [
+              { name: 'Work', value: 'work' },
+              { name: 'Personal', value: 'personal' },
+              { name: 'Billing', value: 'billing' },
+              { name: 'Other', value: 'other' },
+            ],
+          },
+          {
+            displayName: 'Primary Email Custom Type',
+            name: 'primary_email_custom_type',
+            type: 'string',
+            default: '',
+          },
+          {
+            displayName: 'Additional Email Addresses (JSON)',
+            name: 'additional_email_addresses',
+            type: 'json',
+            default: '[]',
+            description: 'Array of objects with required email_address and optional label metadata',
+          },
           {
             displayName: 'Client ID',
             name: 'client_id',

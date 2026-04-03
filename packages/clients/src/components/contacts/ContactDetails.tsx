@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { ContactPhoneNumberInput, DeletionValidationResult, IContact } from '@alga-psa/types';
+import type { ContactEmailAddressInput, ContactPhoneNumberInput, CreateContactInput, DeletionValidationResult, IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import { IInteraction } from '@alga-psa/types';
@@ -23,7 +23,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { updateContact, deleteContact, listInboundTicketDestinationOptions, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
-import { validateEmailAddress, validateContactName, validateRole } from '@alga-psa/validation';
+import { validateContactName, validateRole } from '@alga-psa/validation';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useToast } from '@alga-psa/ui';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
@@ -41,6 +41,16 @@ import ClientDetails from '../clients/ClientDetails';
 import { ContactPortalTab } from './ContactPortalTab';
 import { ContactNotesPanel } from './panels/ContactNotesPanel';
 import ContactPhoneNumbersEditor, { compactContactPhoneNumbers, validateContactPhoneNumbers } from './ContactPhoneNumbersEditor';
+import ContactEmailAddressesEditor, {
+  compactContactEmailAddresses,
+  validateContactEmailAddresses,
+} from './ContactEmailAddressesEditor';
+
+type EditableContact = Omit<IContact, 'phone_numbers' | 'additional_email_addresses'> & {
+  phone_numbers: ContactPhoneNumberInput[];
+  primary_email_custom_type?: string | null;
+  additional_email_addresses: ContactEmailAddressInput[];
+};
 
 const SwitchDetailItem: React.FC<{
   value: boolean;
@@ -155,7 +165,10 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     canRead: false
   }
 }) => {
-  const [editedContact, setEditedContact] = useState<IContact>(contact);
+  const [editedContact, setEditedContact] = useState<EditableContact>(() => ({
+    ...contact,
+    additional_email_addresses: contact.additional_email_addresses ?? [],
+  }));
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
@@ -180,6 +193,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [customPhoneTypeSuggestions, setCustomPhoneTypeSuggestions] = useState<string[]>([]);
   const [phoneValidationErrors, setPhoneValidationErrors] = useState<string[]>([]);
+  const [emailValidationErrors, setEmailValidationErrors] = useState<string[]>([]);
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<SelectOption[]>([]);
   const [isInboundDestinationOptionsLoading, setIsInboundDestinationOptionsLoading] = useState(false);
   const router = useRouter();
@@ -194,10 +208,14 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   // Initial Load Logic
   useEffect(() => {
-    setEditedContact(contact);
+    setEditedContact({
+      ...contact,
+      additional_email_addresses: contact.additional_email_addresses ?? [],
+    });
     setSelectedClientId(contact.client_id || null);
     setHasUnsavedChanges(false);
     setPhoneValidationErrors([]);
+    setEmailValidationErrors([]);
   }, [contact]);
 
   // Fetch current user
@@ -313,6 +331,17 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     setHasUnsavedChanges(true);
   };
 
+  const handleEmailAddressesChange = (value: Pick<
+    CreateContactInput,
+    'email' | 'primary_email_canonical_type' | 'primary_email_custom_type' | 'additional_email_addresses'
+  >) => {
+    setEditedContact((prev) => ({
+      ...prev,
+      ...value,
+    }));
+    setHasUnsavedChanges(true);
+  };
+
   const runDeleteValidation = useCallback(async () => {
     if (!editedContact.contact_name_id) {
       return;
@@ -404,7 +433,10 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       setIsDeleteDialogOpen(false);
 
       // Update local state immediately
-      setEditedContact(updatedContact);
+      setEditedContact({
+        ...updatedContact,
+        additional_email_addresses: updatedContact.additional_email_addresses ?? [],
+      });
 
       toast({
         title: t('contactDetails.deactivate.successTitle', { defaultValue: 'Contact Deactivated' }),
@@ -426,6 +458,17 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   const handleSave = async () => {
     try {
+      const currentEmailErrors = validateContactEmailAddresses(editedContact);
+      setEmailValidationErrors(currentEmailErrors);
+      if (currentEmailErrors.length > 0) {
+        toast({
+          title: t('contactDetails.saveFailed.title', { defaultValue: 'Save Failed' }),
+          description: currentEmailErrors[0],
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const currentPhoneErrors = validateContactPhoneNumbers(editedContact.phone_numbers);
       setPhoneValidationErrors(currentPhoneErrors);
       if (currentPhoneErrors.length > 0) {
@@ -437,15 +480,21 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         return;
       }
 
+      const compactedEmails = compactContactEmailAddresses(editedContact);
+
       // Make sure contact_name_id is included in the data being sent
       const dataToUpdate = {
         ...editedContact,
+        ...compactedEmails,
         phone_numbers: compactContactPhoneNumbers(editedContact.phone_numbers),
         contact_name_id: editedContact.contact_name_id
       };
 
       const updatedContact = await updateContact(dataToUpdate);
-      setEditedContact(updatedContact);
+      setEditedContact({
+        ...updatedContact,
+        additional_email_addresses: updatedContact.additional_email_addresses ?? [],
+      });
       setHasUnsavedChanges(false);
 
       toast({
@@ -595,13 +644,22 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                 </div>
               )}
             </div>
-            <TextDetailItem
-              label={t('contactDetails.fields.email', { defaultValue: 'Email' })}
-              value={editedContact.email || ''}
-              onEdit={(value) => handleFieldChange('email', value)}
-              automationId="email-field"
-              validate={validateEmailAddress}
+          </div>
+
+          <div className="rounded-xl border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-surface-25,250_250_250))] p-4 shadow-sm">
+            <ContactEmailAddressesEditor
+              id="contact-details-email"
+              primaryEmailInputId="email-field"
+              compactAdditionalRows
+              value={editedContact}
+              onChange={handleEmailAddressesChange}
+              customTypeSuggestions={[]}
+              errorMessages={emailValidationErrors}
+              onValidationChange={setEmailValidationErrors}
             />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <TextDetailItem
               label={t('contactDetails.fields.role', { defaultValue: 'Role' })}
               value={editedContact.role || ''}
@@ -764,7 +822,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       label: t('contactDetails.tabs.portal', { defaultValue: 'Portal' }),
       content: (
         <ContactPortalTab
-          contact={editedContact}
+          contact={editedContact as IContact}
           currentUserPermissions={userPermissions}
         />
       )
