@@ -3,6 +3,8 @@ import Constants from "expo-constants";
 
 const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 
+export const reactNavigationIntegration = Sentry.reactNavigationIntegration();
+
 let initialized = false;
 
 export function initSentry() {
@@ -20,6 +22,7 @@ export function initSentry() {
     enabled: !__DEV__,
     tracesSampleRate: 0.2,
     sendDefaultPii: false,
+    integrations: [reactNavigationIntegration],
   });
 }
 

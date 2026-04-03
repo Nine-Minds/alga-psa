@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, View } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, useNavigationContainerRef } from "@react-navigation/native";
 import type { InitialState } from "@react-navigation/native";
 import { getAppConfig } from "../config/appConfig";
 import { linking } from "../navigation/linking";
@@ -21,7 +21,7 @@ import { getBiometricGateEnabled, BIOMETRIC_GRACE_MS } from "../auth/biometricGa
 import { BiometricLockView } from "./BiometricLockView";
 import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
-import { setUser as setSentryUser } from "../errors/sentry";
+import { setUser as setSentryUser, reactNavigationIntegration } from "../errors/sentry";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { ToastProvider } from "../ui/toast/ToastProvider";
 import { ThemeProvider } from "../ui/ThemeContext";
@@ -47,6 +47,7 @@ export function AppRoot() {
   const lastRevocationCheckAtMs = useRef(0);
   const lastBiometricUnlockAtMs = useRef(0);
 
+  const navigationRef = useNavigationContainerRef();
   const baseUrl = config.ok ? config.baseUrl : null;
 
   const setSession = useCallback(
@@ -333,6 +334,10 @@ export function AppRoot() {
             {isOfflineStatus(network) ? <OfflineBanner onRetry={() => {}} /> : null}
             <View style={{ flex: 1 }}>
               <NavigationContainer
+                ref={navigationRef}
+                onReady={() => {
+                  reactNavigationIntegration.registerNavigationContainer(navigationRef);
+                }}
                 key={session ? "signed-in" : "signed-out"}
                 linking={linking}
                 initialState={session ? navInitialState : undefined}
