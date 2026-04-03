@@ -5,6 +5,10 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
+//
+// Important: for `/api/*` routes, this middleware runs before the route handler. A route can be
+// session-authenticated at the handler level and still fail here with `Unauthorized: API key missing`
+// unless it is explicitly allowlisted below.
 
 // =============================================================================
 // CORS Configuration - Allow all origins
@@ -129,7 +133,9 @@ const _middleware = auth((request) => {
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')) {
     const apiKey = request.headers.get('x-api-key');
 
-    // Skip paths that don't need API authentication
+    // Skip paths that don't need API authentication.
+    // Any session-authenticated `/api/*` route must be added here or middleware will return
+    // `401 Unauthorized: API key missing` before the route handler has a chance to run.
     const skipPaths = [
       '/api/health',
       '/api/healthz',

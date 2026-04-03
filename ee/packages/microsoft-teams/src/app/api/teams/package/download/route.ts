@@ -62,6 +62,9 @@ async function buildPlaceholderOutlineIcon(): Promise<Buffer> {
 }
 
 export async function GET(): Promise<Response> {
+  // This route is intended to use the caller's web session via getTeamsAppPackageStatus().
+  // If `/api/teams/package/download` is not exempted from the global API-key middleware,
+  // requests will fail with `Unauthorized: API key missing` before this handler is reached.
   const result = await getTeamsAppPackageStatus();
 
   if (!result.success || !result.package) {
