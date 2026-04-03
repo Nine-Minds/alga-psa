@@ -72,10 +72,10 @@ db:
   host: "pgbouncer.default.svc.cluster.local"
   port: "6432"
   serverDatabase: "server"
-  user: "app_user"
+  user: "app_user_pgbouncer"
   serverPasswordSecret:
     name: "db-secrets"
-    key: "server-password"
+    key: "pgbouncer-password"
   adminUser: "postgres"
   adminPasswordSecret:
     name: ""

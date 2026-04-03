@@ -12,9 +12,11 @@ import {
   ticketListQuerySchema,
   ticketSearchSchema,
   ticketStatsResponseSchema,
+  createTicketMaterialSchema,
   createTicketCommentSchema,
+  updateTicketCommentSchema,
   updateTicketStatusSchema,
-  updateTicketAssignmentSchema,
+  updateTicketAssignmentSchema,  
   createTicketFromAssetSchema
 } from '../schemas/ticket';
 import { 
@@ -304,7 +306,7 @@ export class ApiTicketController extends ApiBaseController {
             { limit, offset, order }
           );
 
-          return createSuccessResponse(comments);
+          return createSuccessResponse(comments, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -326,7 +328,123 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const documents = await this.ticketService.getTicketDocuments(ticketId, apiRequest.context!);
 
-          return createSuccessResponse(documents);
+          return createSuccessResponse(documents, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Upload a ticket document
+   */
+  uploadDocument() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const formData = await req.formData();
+          const file = formData.get('file');
+
+          if (!(file instanceof File)) {
+            throw new ValidationError('Validation failed', [
+              { path: ['file'], message: 'file is required' },
+            ]);
+          }
+
+          const document = await this.ticketService.uploadTicketDocument(ticketId, file, apiRequest.context!);
+
+          return createSuccessResponse(document, 201, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Download a ticket document
+   */
+  downloadDocument() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+
+          // Extract documentId from the URL path segment after "documents/"
+          const url = new URL(apiRequest.url || req.url);
+          const segments = url.pathname.split('/');
+          const docsIndex = segments.indexOf('documents');
+          const documentId = docsIndex >= 0 ? segments[docsIndex + 1] : undefined;
+
+          if (!documentId) {
+            throw new ValidationError('Validation failed', [
+              { path: ['documentId'], message: 'document ID is required' },
+            ]);
+          }
+
+          const result = await this.ticketService.downloadTicketDocument(ticketId, documentId, apiRequest.context!);
+
+          const headers = new Headers();
+          headers.set('Content-Type', result.mimeType);
+          headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(result.fileName)}"`);
+          headers.set('Cache-Control', 'no-store');
+
+          return new NextResponse(new Uint8Array(result.buffer), { status: 200, headers });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Get ticket materials
+   */
+  getMaterials() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const materials = await this.ticketService.getTicketMaterials(ticketId, apiRequest.context!);
+
+          return createSuccessResponse(materials, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Add a material to a ticket
+   */
+  addMaterial() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        const validatedData = await this.validateData(apiRequest, createTicketMaterialSchema);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const material = await this.ticketService.addTicketMaterial(ticketId, validatedData, apiRequest.context!);
+
+          return createSuccessResponse(material, 201, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -407,6 +525,79 @@ export class ApiTicketController extends ApiBaseController {
           );
 
           return createSuccessResponse(comment, 201);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Update a comment on a ticket
+   */
+  updateComment() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) tenantId = keyRecord.tenant;
+        }
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        const apiRequest = req as AuthenticatedApiRequest;
+        apiRequest.context = {
+          userId: keyRecord.user_id,
+          tenant: keyRecord.tenant,
+          user
+        };
+
+        return await runWithTenant(tenantId!, async () => {
+          const hasAccess = await hasPermission(user, 'ticket', 'update');
+          if (!hasAccess) {
+            throw new ForbiddenError('Permission denied: Cannot update ticket');
+          }
+
+          let validatedData;
+          try {
+            const body = await req.json();
+            validatedData = updateTicketCommentSchema.parse(body);
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Validation failed', error.errors);
+            }
+            throw error;
+          }
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          // Extract commentId from URL: /api/v1/tickets/{id}/comments/{commentId}
+          const url = new URL(req.url);
+          const segments = url.pathname.split('/').filter(Boolean);
+          const commentId = segments[segments.length - 1];
+
+          const comment = await this.ticketService.updateComment(
+            ticketId,
+            commentId,
+            validatedData,
+            apiRequest.context!
+          );
+
+          return createSuccessResponse(comment);
         });
       } catch (error) {
         return handleApiError(error);

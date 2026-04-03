@@ -5,63 +5,25 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import JobDetailsDrawer from './JobDetailsDrawer';
 import { getJobDetailsWithHistory, type JobRecord } from '@alga-psa/jobs/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { CheckCircle2, XCircle, Clock, Activity } from 'lucide-react';
 
-const formatDuration = (startTime?: Date, endTime?: Date): string => {
-  if (!startTime) return '-';
-
-  const start = new Date(startTime).getTime();
-  const end = endTime ? new Date(endTime).getTime() : Date.now();
-  const durationMs = end - start;
-
-  if (durationMs < 1000) return `${durationMs}ms`;
-  if (durationMs < 60000) return `${(durationMs / 1000).toFixed(1)}s`;
-  if (durationMs < 3600000) return `${Math.floor(durationMs / 60000)}m ${Math.floor((durationMs % 60000) / 1000)}s`;
-
-  const hours = Math.floor(durationMs / 3600000);
-  const minutes = Math.floor((durationMs % 3600000) / 60000);
-  return `${hours}h ${minutes}m`;
-};
-
-const formatRelativeTime = (date?: Date): string => {
-  if (!date) return '-';
-
-  const now = Date.now();
-  const time = new Date(date).getTime();
-  const diffMs = now - time;
-
-  if (diffMs < 60000) return 'Just now';
-  if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)}m ago`;
-  if (diffMs < 86400000) return `${Math.floor(diffMs / 3600000)}h ago`;
-
-  return new Date(date).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
-
-const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+const StatusBadge: React.FC<{ status: string; label: string }> = ({ status, label }) => {
   const statusConfig = {
     completed: {
       icon: CheckCircle2,
-      label: 'Completed',
       className: 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] border border-[rgb(var(--color-primary-200))]'
     },
     failed: {
       icon: XCircle,
-      label: 'Failed',
       className: 'bg-[rgb(var(--color-accent-50))] text-[rgb(var(--color-accent-600))] border border-[rgb(var(--color-accent-200))]'
     },
     processing: {
       icon: Activity,
-      label: 'Processing',
       className: 'bg-[rgb(var(--color-secondary-50))] text-[rgb(var(--color-secondary-600))] border border-[rgb(var(--color-secondary-200))]'
     },
     pending: {
       icon: Clock,
-      label: 'Pending',
       className: 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-600))] border border-[rgb(var(--color-border-200))]'
     }
   };
@@ -72,7 +34,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.className}`}>
       <Icon className="h-3.5 w-3.5" />
-      {config.label}
+      {label}
     </span>
   );
 };
@@ -82,6 +44,7 @@ interface RecentJobsDataTableProps {
 }
 
 export default function RecentJobsDataTable({ initialData = [] }: RecentJobsDataTableProps) {
+  const { t } = useTranslation('msp/jobs');
   const [selectedJobId, setSelectedJobId] = React.useState<string | null>(null);
   const [data, setData] = React.useState<JobRecord[]>(initialData);
   const intervalRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
@@ -96,9 +59,76 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
     setCurrentPage(1);
   };
 
+  const getStatusLabel = React.useCallback((status: string) => {
+    const fallback = status.charAt(0).toUpperCase() + status.slice(1);
+    return t(`shared.statusLabels.${status}`, { defaultValue: fallback });
+  }, [t]);
+
+  const formatDuration = React.useCallback((startTime?: Date, endTime?: Date): string => {
+    if (!startTime) return t('shared.fallbacks.empty', { defaultValue: '-' });
+
+    const start = new Date(startTime).getTime();
+    const end = endTime ? new Date(endTime).getTime() : Date.now();
+    const durationMs = end - start;
+
+    if (durationMs < 1000) {
+      return t('recentTable.duration.milliseconds', { defaultValue: '{{count}}ms', count: durationMs });
+    }
+    if (durationMs < 60000) {
+      return t('recentTable.duration.seconds', {
+        defaultValue: '{{count}}s',
+        count: Number((durationMs / 1000).toFixed(1)),
+      });
+    }
+    if (durationMs < 3600000) {
+      return t('recentTable.duration.minutesSeconds', {
+        defaultValue: '{{minutes}}m {{seconds}}s',
+        minutes: Math.floor(durationMs / 60000),
+        seconds: Math.floor((durationMs % 60000) / 1000),
+      });
+    }
+
+    const hours = Math.floor(durationMs / 3600000);
+    const minutes = Math.floor((durationMs % 3600000) / 60000);
+    return t('recentTable.duration.hoursMinutes', {
+      defaultValue: '{{hours}}h {{minutes}}m',
+      hours,
+      minutes,
+    });
+  }, [t]);
+
+  const formatRelativeTime = React.useCallback((date?: Date): string => {
+    if (!date) return t('shared.fallbacks.empty', { defaultValue: '-' });
+
+    const now = Date.now();
+    const time = new Date(date).getTime();
+    const diffMs = now - time;
+
+    if (diffMs < 60000) return t('recentTable.time.justNow', { defaultValue: 'Just now' });
+    if (diffMs < 3600000) {
+      return t('recentTable.time.minutesAgo', {
+        defaultValue: '{{count}}m ago',
+        count: Math.floor(diffMs / 60000),
+      });
+    }
+    if (diffMs < 86400000) {
+      return t('recentTable.time.hoursAgo', {
+        defaultValue: '{{count}}h ago',
+        count: Math.floor(diffMs / 3600000),
+      });
+    }
+
+    return new Date(date).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }, [t]);
+
   const columns = React.useMemo<ColumnDefinition<JobRecord>[]>(() => [
     {
-      title: 'Job Name',
+      title: t('recentTable.columns.jobName', { defaultValue: 'Job Name' }),
       dataIndex: 'type',
       render: (type: string, record: JobRecord) => (
         <div className="flex flex-col">
@@ -112,7 +142,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
       ),
     },
     {
-      title: 'Runner',
+      title: t('recentTable.columns.runner', { defaultValue: 'Runner' }),
       dataIndex: 'runner_type',
       render: (runner: string, record: JobRecord) => (
         <div className="flex flex-col items-start">
@@ -121,23 +151,28 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
               ? 'bg-purple-100 text-purple-700 border border-purple-200' 
               : 'bg-blue-100 text-blue-700 border border-blue-200'
           }`}>
-            {runner === 'temporal' ? 'Temporal' : 'PG Boss'}
+            {runner === 'temporal'
+              ? t('shared.runnerLabels.temporal', { defaultValue: 'Temporal' })
+              : t('shared.runnerLabels.pgboss', { defaultValue: 'PG Boss' })}
           </span>
           {record.external_id && (
             <span className="text-[10px] text-[rgb(var(--color-text-400))] font-mono mt-0.5" title={record.external_id}>
-              ID: {record.external_id.slice(0, 8)}...
+              {t('recentTable.externalId', {
+                defaultValue: 'ID: {{id}}...',
+                id: record.external_id.slice(0, 8),
+              })}
             </span>
           )}
         </div>
       ),
     },
     {
-      title: 'Status',
+      title: t('recentTable.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
-      render: (status: string) => <StatusBadge status={status} />,
+      render: (status: string) => <StatusBadge status={status} label={getStatusLabel(status)} />,
     },
     {
-      title: 'Duration',
+      title: t('recentTable.columns.duration', { defaultValue: 'Duration' }),
       dataIndex: 'processed_at',
       render: (processedAt: Date | undefined, record: JobRecord) => {
         const duration = formatDuration(processedAt, record.updated_at);
@@ -149,7 +184,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
       },
     },
     {
-      title: 'Started',
+      title: t('recentTable.columns.started', { defaultValue: 'Started' }),
       dataIndex: 'processed_at',
       render: (value?: Date) => (
         <span className="text-sm text-[rgb(var(--color-text-700))]">
@@ -158,11 +193,11 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
       ),
     },
     {
-      title: 'Completed',
+      title: t('recentTable.columns.completed', { defaultValue: 'Completed' }),
       dataIndex: 'updated_at',
       render: (value?: Date, record?: JobRecord) => {
         if (record?.status === 'processing' || record?.status === 'pending') {
-          return <span className="text-sm text-[rgb(var(--color-text-400))]">-</span>;
+          return <span className="text-sm text-[rgb(var(--color-text-400))]">{t('shared.fallbacks.empty', { defaultValue: '-' })}</span>;
         }
         return (
           <span className="text-sm text-[rgb(var(--color-text-700))]">
@@ -171,7 +206,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
         );
       },
     },
-  ], []);
+  ], [formatDuration, formatRelativeTime, getStatusLabel, t]);
 
   const hasActiveJobs = React.useCallback((jobs: JobRecord[]) => {
     return jobs.some(job => job.status === 'processing');

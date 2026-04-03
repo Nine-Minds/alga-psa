@@ -2,34 +2,28 @@
   "name": "@alga-psa/onboarding",
   "version": "0.1.0",
   "private": true,
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.mjs",
   "types": "./src/index.ts",
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.mjs"
     },
     "./actions": {
       "types": "./src/actions/index.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "import": "./dist/actions/index.mjs"
     },
     "./components": {
       "types": "./src/components/index.ts",
-      "import": "./dist/components/index.mjs",
-      "require": "./dist/components/index.js"
+      "import": "./dist/components/index.mjs"
     },
     "./hooks": {
       "types": "./src/hooks/index.ts",
-      "import": "./dist/hooks/index.mjs",
-      "require": "./dist/hooks/index.js"
+      "import": "./dist/hooks/index.mjs"
     },
     "./lib": {
       "types": "./src/lib/index.ts",
-      "import": "./dist/lib/index.mjs",
-      "require": "./dist/lib/index.js"
+      "import": "./dist/lib/index.mjs"
     }
   },
   "scripts": {

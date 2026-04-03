@@ -1,37 +1,37 @@
 import type {
-  InvoiceTemplateAggregateTransform,
-  InvoiceTemplateAst,
-  InvoiceTemplateComputationExpression,
-  InvoiceTemplateFilterTransform,
-  InvoiceTemplateGroupTransform,
-  InvoiceTemplatePredicate,
-  InvoiceTemplateSortTransform,
+  TemplateAggregateTransform,
+  TemplateAst,
+  TemplateComputationExpression,
+  TemplateFilterTransform,
+  TemplateGroupTransform,
+  TemplatePredicate,
+  TemplateSortTransform,
 } from '@alga-psa/types';
 import {
-  executeInvoiceTemplateStrategy,
-  isAllowlistedInvoiceTemplateStrategy,
-  resolveInvoiceTemplateStrategy,
+  executeTemplateStrategy,
+  isAllowlistedTemplateStrategy,
+  resolveTemplateStrategy,
 } from './strategies';
-import { validateInvoiceTemplateAst } from './schema';
+import { validateTemplateAst } from './schema';
 
 type UnknownRecord = Record<string, unknown>;
 
-export interface InvoiceTemplateEvaluatedGroup {
+export interface TemplateEvaluatedGroup {
   key: string;
   items: UnknownRecord[];
   aggregates?: Record<string, number>;
 }
 
-export interface InvoiceTemplateEvaluationResult {
+export interface TemplateEvaluationResult {
   sourceCollection: UnknownRecord[];
-  output: UnknownRecord[] | InvoiceTemplateEvaluatedGroup[];
-  groups: InvoiceTemplateEvaluatedGroup[] | null;
+  output: UnknownRecord[] | TemplateEvaluatedGroup[];
+  groups: TemplateEvaluatedGroup[] | null;
   aggregates: Record<string, number>;
   totals: Record<string, number>;
   bindings: Record<string, unknown>;
 }
 
-export interface InvoiceTemplateEvaluationIssue {
+export interface TemplateEvaluationIssue {
   code:
     | 'SCHEMA_VALIDATION_FAILED'
     | 'INVALID_SOURCE_COLLECTION'
@@ -45,19 +45,19 @@ export interface InvoiceTemplateEvaluationIssue {
   operationId?: string;
 }
 
-export class InvoiceTemplateEvaluationError extends Error {
-  public readonly code: InvoiceTemplateEvaluationIssue['code'];
+export class TemplateEvaluationError extends Error {
+  public readonly code: TemplateEvaluationIssue['code'];
   public readonly operationId?: string;
-  public readonly issues: InvoiceTemplateEvaluationIssue[];
+  public readonly issues: TemplateEvaluationIssue[];
 
   constructor(
-    code: InvoiceTemplateEvaluationIssue['code'],
+    code: TemplateEvaluationIssue['code'],
     message: string,
     operationId?: string,
-    issues: InvoiceTemplateEvaluationIssue[] = [{ code, message, operationId }]
+    issues: TemplateEvaluationIssue[] = [{ code, message, operationId }]
   ) {
     super(message);
-    this.name = 'InvoiceTemplateEvaluationError';
+    this.name = 'TemplateEvaluationError';
     this.code = code;
     this.operationId = operationId;
     this.issues = issues;
@@ -129,7 +129,7 @@ const compareValues = (left: unknown, right: unknown): number => {
 };
 
 const resolveBindingValue = (
-  ast: InvoiceTemplateAst,
+  ast: TemplateAst,
   bindingId: string,
   invoiceData: UnknownRecord
 ): unknown => {
@@ -147,10 +147,10 @@ const resolveBindingValue = (
   return getPathValue(invoiceData, bindingId);
 };
 
-const hasBindingReference = (ast: InvoiceTemplateAst, bindingId: string): boolean =>
+const hasBindingReference = (ast: TemplateAst, bindingId: string): boolean =>
   Boolean(ast.bindings?.values?.[bindingId] || ast.bindings?.collections?.[bindingId]);
 
-const evaluatePredicate = (predicate: InvoiceTemplatePredicate, item: UnknownRecord): boolean => {
+const evaluatePredicate = (predicate: TemplatePredicate, item: UnknownRecord): boolean => {
   if (predicate.type === 'comparison') {
     const left = getPathValue(item, predicate.path);
     const right = predicate.value;
@@ -186,12 +186,12 @@ const evaluatePredicate = (predicate: InvoiceTemplatePredicate, item: UnknownRec
 
 const applyFilterTransform = (
   items: UnknownRecord[],
-  operation: InvoiceTemplateFilterTransform
+  operation: TemplateFilterTransform
 ): UnknownRecord[] => items.filter((item) => evaluatePredicate(operation.predicate, item));
 
 const applySortTransform = (
   items: UnknownRecord[],
-  operation: InvoiceTemplateSortTransform
+  operation: TemplateSortTransform
 ): UnknownRecord[] => {
   const indexed = items.map((item, index) => ({ item, index }));
   indexed.sort((leftEntry, rightEntry) => {
@@ -222,25 +222,25 @@ const applySortTransform = (
 
 const applyGroupTransform = (
   items: UnknownRecord[],
-  operation: InvoiceTemplateGroupTransform
-): InvoiceTemplateEvaluatedGroup[] => {
+  operation: TemplateGroupTransform
+): TemplateEvaluatedGroup[] => {
   const groups = new Map<string, UnknownRecord[]>();
 
   for (const item of items) {
     let groupKey: string;
     if (operation.strategyId) {
-      if (!isAllowlistedInvoiceTemplateStrategy(operation.strategyId)) {
-        throw new InvoiceTemplateEvaluationError(
+      if (!isAllowlistedTemplateStrategy(operation.strategyId)) {
+        throw new TemplateEvaluationError(
           'UNKNOWN_STRATEGY',
           `Unknown strategy "${operation.strategyId}" for group operation "${operation.id}".`,
           operation.id
         );
       }
       try {
-        const value = executeInvoiceTemplateStrategy(operation.strategyId, { item, items, keyPath: operation.key });
+        const value = executeTemplateStrategy(operation.strategyId, { item, items, keyPath: operation.key });
         groupKey = String(value ?? 'ungrouped');
       } catch (error) {
-        throw new InvoiceTemplateEvaluationError(
+        throw new TemplateEvaluationError(
           'STRATEGY_EXECUTION_FAILED',
           `Strategy "${operation.strategyId}" failed for group operation "${operation.id}": ${
             error instanceof Error ? error.message : String(error)
@@ -269,28 +269,28 @@ const applyGroupTransform = (
 
 const computeAggregateFromItems = (
   items: UnknownRecord[],
-  operation: InvoiceTemplateAggregateTransform
+  operation: TemplateAggregateTransform
 ): Record<string, number> => {
   const result: Record<string, number> = {};
 
   for (const aggregation of operation.aggregations) {
     if (operation.strategyId) {
-      if (!isAllowlistedInvoiceTemplateStrategy(operation.strategyId)) {
-        throw new InvoiceTemplateEvaluationError(
+      if (!isAllowlistedTemplateStrategy(operation.strategyId)) {
+        throw new TemplateEvaluationError(
           'UNKNOWN_STRATEGY',
           `Unknown strategy "${operation.strategyId}" for aggregate operation "${operation.id}".`,
           operation.id
         );
       }
       try {
-        const value = executeInvoiceTemplateStrategy(operation.strategyId, {
+        const value = executeTemplateStrategy(operation.strategyId, {
           items,
           path: aggregation.path,
           aggregateOp: aggregation.op,
         });
         result[aggregation.id] = safeNumber(value);
       } catch (error) {
-        throw new InvoiceTemplateEvaluationError(
+        throw new TemplateEvaluationError(
           'STRATEGY_EXECUTION_FAILED',
           `Strategy "${operation.strategyId}" failed for aggregate operation "${operation.id}": ${
             error instanceof Error ? error.message : String(error)
@@ -331,7 +331,7 @@ const computeAggregateFromItems = (
 };
 
 const evaluateComputationExpression = (
-  expression: InvoiceTemplateComputationExpression,
+  expression: TemplateComputationExpression,
   context: {
     invoiceData: UnknownRecord;
     item?: UnknownRecord;
@@ -348,7 +348,7 @@ const evaluateComputationExpression = (
     }
     case 'aggregate-ref':
       if (!(expression.aggregateId in context.aggregates)) {
-        throw new InvoiceTemplateEvaluationError(
+        throw new TemplateEvaluationError(
           'INVALID_OPERAND',
           `Aggregate reference "${expression.aggregateId}" was not produced before use.`,
           context.operationId
@@ -376,7 +376,7 @@ const evaluateComputationExpression = (
   }
 };
 
-const flattenGroups = (groups: InvoiceTemplateEvaluatedGroup[]): UnknownRecord[] =>
+const flattenGroups = (groups: TemplateEvaluatedGroup[]): UnknownRecord[] =>
   groups.flatMap((group) => group.items);
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
@@ -401,21 +401,23 @@ const deepSortObjectKeys = (value: unknown): unknown => {
   return Object.fromEntries(sortedEntries);
 };
 
-export const evaluateInvoiceTemplateAst = (
-  ast: InvoiceTemplateAst,
+export const evaluateTemplateAst = (
+  ast: TemplateAst,
   invoiceDataInput: UnknownRecord
-): InvoiceTemplateEvaluationResult => {
-  const astValidation = validateInvoiceTemplateAst(ast);
+): TemplateEvaluationResult => {
+  const astValidation = validateTemplateAst(ast);
   if (!astValidation.success) {
     const validationErrors = 'errors' in astValidation ? astValidation.errors : [];
-    const issues: InvoiceTemplateEvaluationIssue[] = validationErrors.map((error) => ({
+    const issues: TemplateEvaluationIssue[] = validationErrors.map((error) => ({
       code: 'SCHEMA_VALIDATION_FAILED',
       message: error.message,
       path: error.path,
     }));
-    throw new InvoiceTemplateEvaluationError(
+    const details = issues.map((i) => `${i.path ?? '<root>'}: ${i.message}`).join('; ');
+    console.error('[evaluateTemplateAst] Schema validation failed:', details);
+    throw new TemplateEvaluationError(
       'SCHEMA_VALIDATION_FAILED',
-      'Invoice template AST schema validation failed.',
+      `Invoice template AST schema validation failed: ${details}`,
       undefined,
       issues
     );
@@ -446,7 +448,7 @@ export const evaluateInvoiceTemplateAst = (
   }
 
   if (!hasBindingReference(ast, ast.transforms.sourceBindingId) && getPathValue(invoiceData, ast.transforms.sourceBindingId) === undefined) {
-    throw new InvoiceTemplateEvaluationError(
+    throw new TemplateEvaluationError(
       'MISSING_BINDING',
       `Transform source binding "${ast.transforms.sourceBindingId}" is not defined in bindings and did not resolve from invoice data.`
     );
@@ -454,7 +456,7 @@ export const evaluateInvoiceTemplateAst = (
 
   const sourceValue = resolveBindingValue(ast, ast.transforms.sourceBindingId, invoiceData);
   if (!Array.isArray(sourceValue)) {
-    throw new InvoiceTemplateEvaluationError(
+    throw new TemplateEvaluationError(
       'INVALID_SOURCE_COLLECTION',
       `Transform source binding "${ast.transforms.sourceBindingId}" must resolve to an array.`
     );
@@ -462,13 +464,13 @@ export const evaluateInvoiceTemplateAst = (
 
   const sourceCollection = cloneRecordArray(sourceValue);
   let currentItems = sourceCollection;
-  let groups: InvoiceTemplateEvaluatedGroup[] | null = null;
+  let groups: TemplateEvaluatedGroup[] | null = null;
   let aggregates: Record<string, number> = {};
   let totals: Record<string, number> = {};
 
   for (const operation of ast.transforms.operations) {
     if (groups && (operation.type === 'filter' || operation.type === 'sort' || operation.type === 'computed-field')) {
-      throw new InvoiceTemplateEvaluationError(
+      throw new TemplateEvaluationError(
         'INVALID_TRANSFORM_INPUT',
         `Operation "${operation.id}" (${operation.type}) cannot run after grouped output without an ungroup step.`,
         operation.id
@@ -506,7 +508,7 @@ export const evaluateInvoiceTemplateAst = (
       case 'aggregate': {
         const aggregateSource = groups ? flattenGroups(groups) : currentItems;
         if (!Array.isArray(aggregateSource)) {
-          throw new InvoiceTemplateEvaluationError(
+          throw new TemplateEvaluationError(
             'INVALID_TRANSFORM_INPUT',
             `Aggregate operation "${operation.id}" requires array input.`,
             operation.id
@@ -525,15 +527,15 @@ export const evaluateInvoiceTemplateAst = (
         totals = {};
         for (const total of operation.totals) {
           if (operation.strategyId) {
-            if (!isAllowlistedInvoiceTemplateStrategy(operation.strategyId)) {
-              throw new InvoiceTemplateEvaluationError(
+            if (!isAllowlistedTemplateStrategy(operation.strategyId)) {
+              throw new TemplateEvaluationError(
                 'UNKNOWN_STRATEGY',
                 `Unknown strategy "${operation.strategyId}" for totals operation "${operation.id}".`,
                 operation.id
               );
             }
             try {
-              const strategy = resolveInvoiceTemplateStrategy(operation.strategyId);
+              const strategy = resolveTemplateStrategy(operation.strategyId);
               totals[total.id] = safeNumber(
                 strategy({
                   totalId: total.id,
@@ -544,7 +546,7 @@ export const evaluateInvoiceTemplateAst = (
                 })
               );
             } catch (error) {
-              throw new InvoiceTemplateEvaluationError(
+              throw new TemplateEvaluationError(
                 'STRATEGY_EXECUTION_FAILED',
                 `Strategy "${operation.strategyId}" failed for totals operation "${operation.id}": ${
                   error instanceof Error ? error.message : String(error)
@@ -574,12 +576,12 @@ export const evaluateInvoiceTemplateAst = (
 
   const deterministicOutput = deepSortObjectKeys(output) as
     | UnknownRecord[]
-    | InvoiceTemplateEvaluatedGroup[];
+    | TemplateEvaluatedGroup[];
   const deterministicBindings = deepSortObjectKeys(bindings) as Record<string, unknown>;
   const deterministicAggregates = deepSortObjectKeys(aggregates) as Record<string, number>;
   const deterministicTotals = deepSortObjectKeys(totals) as Record<string, number>;
   const deterministicGroups = groups
-    ? (deepSortObjectKeys(groups) as InvoiceTemplateEvaluatedGroup[])
+    ? (deepSortObjectKeys(groups) as TemplateEvaluatedGroup[])
     : null;
 
   return {
@@ -593,6 +595,7 @@ export const evaluateInvoiceTemplateAst = (
 };
 
 export const evaluateAstTransforms = (
-  ast: InvoiceTemplateAst,
+  ast: TemplateAst,
   invoiceData: UnknownRecord
-): InvoiceTemplateEvaluationResult => evaluateInvoiceTemplateAst(ast, invoiceData);
+): TemplateEvaluationResult => evaluateTemplateAst(ast, invoiceData);
+

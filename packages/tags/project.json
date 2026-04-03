@@ -6,8 +6,11 @@
   "tags": ["scope:tags", "type:horizontal"],
   "targets": {
     "build": {
-      "executor": "nx:noop",
-      "dependsOn": []
+      "executor": "nx:run-script",
+      "options": {
+        "script": "build"
+      },
+      "dependsOn": ["^build"]
     },
     "test": {
       "executor": "@nx/vite:test",

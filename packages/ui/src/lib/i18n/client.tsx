@@ -4,7 +4,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import i18next from 'i18next';
 import { initReactI18next, useTranslation as useI18nextTranslation } from 'react-i18next';
 import HttpBackend from 'i18next-http-backend';
@@ -237,7 +237,7 @@ export function detectClientLocale(): SupportedLocale {
 export function useFormatters() {
   const { locale } = useI18n();
 
-  return {
+  return useMemo(() => ({
     formatDate: (
       date: Date | string,
       options?: Intl.DateTimeFormatOptions
@@ -277,5 +277,5 @@ export function useFormatters() {
       if (Math.abs(minutes) > 0) return rtf.format(minutes, 'minute');
       return rtf.format(seconds, 'second');
     },
-  };
+  }), [locale]);
 }

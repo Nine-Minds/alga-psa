@@ -1,10 +1,12 @@
 import type { DateValue, ISO8601String } from '../lib/temporal';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
-import type { InvoiceTemplateAst } from '../lib/invoice-template-ast';
+import type { TemplateAst } from '../lib/invoice-template-ast';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
+export type InvoiceRecurringExecutionWindowKind = 'client_cadence_window' | 'contract_cadence_window';
+export type InvoiceRecurringCadenceSource = 'client_schedule' | 'contract_anniversary';
 
 // Derived tax import state used for UI + workflow gating (separate from invoice status).
 export type TaxImportState = 'not_required' | 'pending' | 'complete';
@@ -45,6 +47,12 @@ export interface IInvoice extends TenantEntity {
   invoice_items?: IInvoiceCharge[];
   /** Source of tax calculation: internal (Alga), external (accounting package), pending_external (awaiting import) */
   tax_source?: TaxSource;
+  recurring_execution_window_kind?: InvoiceRecurringExecutionWindowKind | null;
+  recurring_cadence_source?: InvoiceRecurringCadenceSource | null;
+  recurring_service_period_start?: ISO8601String | null;
+  recurring_service_period_end?: ISO8601String | null;
+  recurring_invoice_window_start?: ISO8601String | null;
+  recurring_invoice_window_end?: ISO8601String | null;
 }
 
 export interface NetAmountItem {
@@ -57,10 +65,26 @@ export interface NetAmountItem {
   applies_to_service_id?: string; // Reference a service instead of an item
 }
 
+export interface IInvoiceChargeRecurringDetailPeriod {
+  service_period_start?: ISO8601String | null;
+  service_period_end?: ISO8601String | null;
+  billing_timing?: 'arrears' | 'advance' | null;
+}
+
 export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   item_id: string;
   invoice_id: string;
   service_id?: string;
+  service_period_start?: ISO8601String | null;
+  service_period_end?: ISO8601String | null;
+  billing_timing?: 'arrears' | 'advance' | null;
+  /**
+   * Canonical recurring detail periods linked to this charge.
+   * When present, these rows are authoritative and the parent service-period
+   * fields are summary values derived from them.
+   * Historical flat invoices and non-recurring charges omit this field.
+   */
+  recurring_detail_periods?: IInvoiceChargeRecurringDetailPeriod[];
   service_item_kind?: 'service' | 'product';
   service_sku?: string | null;
   service_name?: string | null;
@@ -148,7 +172,7 @@ export interface IInvoiceTemplate extends TenantEntity {
   template_id: string;
   name: string;
   version: number;
-  templateAst?: InvoiceTemplateAst | null;
+  templateAst?: TemplateAst | null;
   isStandard?: boolean;
   isClone?: boolean;
   is_default?: boolean; // Legacy flag retained for compatibility
@@ -296,6 +320,7 @@ export type PreviewInvoiceResponse = {
 } | {
   success: false;
   error: string;
+  executionIdentityKey?: string;
 };
 
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'pending' | 'prepayment' | 'partially_applied';
@@ -402,10 +427,18 @@ export interface InvoiceViewModel {
   total: number;
   total_amount: number;
   invoice_charges: IInvoiceCharge[];
+  service_period_start?: DateValue | null;
+  service_period_end?: DateValue | null;
   custom_fields?: Record<string, any>;
   finalized_at?: DateValue;
   credit_applied: number;
   billing_cycle_id?: string;
   is_manual: boolean;
   tax_source?: 'internal' | 'external' | 'pending_external';
+  recurring_execution_window_kind?: InvoiceRecurringExecutionWindowKind | null;
+  recurring_cadence_source?: InvoiceRecurringCadenceSource | null;
+  recurring_service_period_start?: ISO8601String | null;
+  recurring_service_period_end?: ISO8601String | null;
+  recurring_invoice_window_start?: ISO8601String | null;
+  recurring_invoice_window_end?: ISO8601String | null;
 }

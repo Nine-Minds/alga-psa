@@ -1,5 +1,8 @@
+'use client';
+
 import { Card } from '@alga-psa/ui/components/Card';
 import type { JobMetrics } from '@alga-psa/jobs/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { CheckCircle2, XCircle, Clock, ListChecks, Activity } from 'lucide-react';
 
 interface JobMetricsDisplayProps {
@@ -7,16 +10,17 @@ interface JobMetricsDisplayProps {
 }
 
 export default function JobMetricsDisplay({ metrics }: JobMetricsDisplayProps) {
+  const { t } = useTranslation('msp/jobs');
   const successRate = metrics.total > 0
     ? Math.round((metrics.completed / metrics.total) * 100)
     : 0;
 
   const isMixedRunners = metrics.byRunner && metrics.byRunner.pgboss > 0 && metrics.byRunner.temporal > 0;
   
-  let totalLabel = 'Total Jobs';
+  let totalLabel = t('metrics.labels.totalJobs', { defaultValue: 'Total Jobs' });
   if (metrics.byRunner && !isMixedRunners) {
-    if (metrics.byRunner.pgboss > 0) totalLabel = 'Total Jobs (PG Boss)';
-    if (metrics.byRunner.temporal > 0) totalLabel = 'Total Jobs (Temporal)';
+    if (metrics.byRunner.pgboss > 0) totalLabel = t('metrics.labels.totalJobsPgBoss', { defaultValue: 'Total Jobs (PG Boss)' });
+    if (metrics.byRunner.temporal > 0) totalLabel = t('metrics.labels.totalJobsTemporal', { defaultValue: 'Total Jobs (Temporal)' });
   }
 
   const metricsData = [
@@ -31,17 +35,20 @@ export default function JobMetricsDisplay({ metrics }: JobMetricsDisplayProps) {
     },
     {
       id: 'completed-jobs-metric',
-      label: 'Completed',
+      label: t('metrics.labels.completed', { defaultValue: 'Completed' }),
       value: metrics.completed,
       icon: CheckCircle2,
       color: 'text-[rgb(var(--color-primary-600))]',
       bgColor: 'bg-[rgb(var(--color-primary-50))]',
       iconColor: 'text-[rgb(var(--color-primary-500))]',
-      subtext: `${successRate}% success rate`
+      subtext: t('metrics.successRate', {
+        defaultValue: '{{count}}% success rate',
+        count: successRate,
+      })
     },
     {
       id: 'failed-jobs-metric',
-      label: 'Failed',
+      label: t('metrics.labels.failed', { defaultValue: 'Failed' }),
       value: metrics.failed,
       icon: XCircle,
       color: 'text-[rgb(var(--color-accent-600))]',
@@ -50,7 +57,7 @@ export default function JobMetricsDisplay({ metrics }: JobMetricsDisplayProps) {
     },
     {
       id: 'pending-jobs-metric',
-      label: 'Pending',
+      label: t('metrics.labels.pending', { defaultValue: 'Pending' }),
       value: metrics.pending,
       icon: Clock,
       color: 'text-[rgb(var(--color-secondary-600))]',
@@ -60,13 +67,13 @@ export default function JobMetricsDisplay({ metrics }: JobMetricsDisplayProps) {
   ];
 
   const processingJobs = metrics.total - metrics.completed - metrics.failed - metrics.pending;
-  if (processingJobs > 0) {
-    metricsData.push({
-      id: 'processing-jobs-metric',
-      label: 'Processing',
-      value: processingJobs,
-      icon: Activity,
-      color: 'text-[rgb(var(--color-secondary-600))]',
+    if (processingJobs > 0) {
+      metricsData.push({
+        id: 'processing-jobs-metric',
+        label: t('metrics.labels.processing', { defaultValue: 'Processing' }),
+        value: processingJobs,
+        icon: Activity,
+        color: 'text-[rgb(var(--color-secondary-600))]',
       bgColor: 'bg-[rgb(var(--color-secondary-50))]',
       iconColor: 'text-[rgb(var(--color-secondary-500))]'
     });
@@ -76,7 +83,7 @@ export default function JobMetricsDisplay({ metrics }: JobMetricsDisplayProps) {
     if (metrics.byRunner.pgboss > 0) {
       metricsData.push({
         id: 'pgboss-metric',
-        label: 'PG Boss',
+        label: t('metrics.labels.pgboss', { defaultValue: 'PG Boss' }),
         value: metrics.byRunner.pgboss,
         icon: ListChecks,
         color: 'text-blue-600',
@@ -88,7 +95,7 @@ export default function JobMetricsDisplay({ metrics }: JobMetricsDisplayProps) {
     if (metrics.byRunner.temporal > 0) {
       metricsData.push({
         id: 'temporal-metric',
-        label: 'Temporal',
+        label: t('metrics.labels.temporal', { defaultValue: 'Temporal' }),
         value: metrics.byRunner.temporal,
         icon: Activity,
         color: 'text-purple-600',

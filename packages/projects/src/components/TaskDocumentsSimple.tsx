@@ -2,33 +2,19 @@
 
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Paperclip, Plus, Link, FileText, File, Image, Download, X, ChevronRight, ChevronDown, Eye, FileVideo } from 'lucide-react';
+import { Paperclip, Plus, Link, FileText, File, Download, X, ChevronRight, ChevronDown } from 'lucide-react';
 import type { IDocument } from '@alga-psa/types';
-import { 
-  getDocumentsByEntity,
-  removeDocumentAssociations
-} from '@alga-psa/documents/actions/documentActions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { Button } from '@alga-psa/ui/components/Button';
-import DocumentUpload from '@alga-psa/documents/components/DocumentUpload';
-import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from '@alga-psa/ui/components/Input';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
-import {
-  getBlockContent,
-  updateBlockContent,
-  createBlockDocument
-} from '@alga-psa/documents/actions/documentBlockContentActions';
-import { updateDocument } from '@alga-psa/documents/actions/documentActions';
-import { downloadDocumentInBrowser } from '@alga-psa/documents/actions';
-import { downloadDocument } from '@alga-psa/documents/lib/documentUtils';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
-import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';
 
 const DEFAULT_BLOCKS: PartialBlock[] = [{
   type: "paragraph",
@@ -43,16 +29,6 @@ const DEFAULT_BLOCKS: PartialBlock[] = [{
     styles: {}
   }]
 }];
-
-// Check if file type can be previewed inline
-function isViewableType(mimeType: string | undefined): boolean {
-  if (!mimeType) return false;
-  return (
-    mimeType.startsWith('image/') ||
-    mimeType.startsWith('video/') ||
-    mimeType === 'application/pdf'
-  );
-}
 
 // Pending document for create mode (before task is saved)
 export interface PendingTaskDocument {
@@ -82,6 +58,22 @@ export default function TaskDocumentsSimple({
   onPendingDocumentsChange,
   onDocumentAdded
 }: TaskDocumentsSimpleProps) {
+  const {
+    getDocumentsByEntity,
+    removeDocumentAssociations,
+    ensureEntityFolders,
+    getBlockContent,
+    updateBlockContent,
+    createBlockDocument,
+    updateDocument,
+    downloadDocumentInBrowser,
+    downloadDocument,
+    renderDocumentUpload,
+    renderDocumentSelector,
+    renderFolderSelectorModal,
+    renderDocumentStorageCard,
+  } = useDocumentsCrossFeature();
+
   // Pending mode is active when we don't have a taskId yet (task creation)
   const isPendingMode = !taskId;
 
@@ -91,6 +83,13 @@ export default function TaskDocumentsSimple({
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [showSelector, setShowSelector] = useState(false);
+
+  // Ref to avoid stale closures when multi-file uploads call onUploadComplete
+  // sequentially within a single startBulkUpload loop.
+  const pendingDocsRef = useRef<PendingTaskDocument[]>(pendingDocuments || []);
+  useEffect(() => {
+    pendingDocsRef.current = pendingDocuments || [];
+  }, [pendingDocuments]);
   
   // Drawer states for viewing/editing documents
   const [selectedDocument, setSelectedDocument] = useState<IDocument | null>(null);
@@ -111,18 +110,11 @@ export default function TaskDocumentsSimple({
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [selectedFolderPath, setSelectedFolderPath] = useState<string | null>(null);
 
-  // Delete confirmation
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [documentToDelete, setDocumentToDelete] = useState<IDocument | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
   // Unsaved changes confirmation
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
-
-  // Preview modal for images/videos/PDFs
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [previewDocument, setPreviewDocument] = useState<IDocument | null>(null);
 
   const fetchUser = async () => {
     if (currentUser) return currentUser;
@@ -144,6 +136,13 @@ export default function TaskDocumentsSimple({
       setDocumentsLoaded(true);
     }
   }, [initialDocuments]);
+
+  // Ensure entity-scoped default folders exist on first access
+  useEffect(() => {
+    if (taskId) {
+      void ensureEntityFolders(taskId, 'project_task');
+    }
+  }, [taskId]);
 
   // Refetch documents from the server (only in edit mode)
   const refetchDocuments = useCallback(async () => {
@@ -200,24 +199,8 @@ export default function TaskDocumentsSimple({
     }
   }, [isExpanded, taskId, documentsLoaded, initialDocuments, isPendingMode]);
 
-  const getFileIcon = (document: IDocument) => {
-    if (!document.file_id) return <FileText className="h-4 w-4 text-blue-600" />;
-    if (!document.mime_type) return <File className="h-4 w-4" />;
-    if (document.mime_type.includes('pdf')) return <FileText className="h-4 w-4 text-red-600" />;
-    if (document.mime_type.startsWith('image/')) return <Image className="h-4 w-4 text-blue-600" />;
-    if (document.mime_type.startsWith('video/')) return <FileVideo className="h-4 w-4 text-purple-600" />;
-    return <File className="h-4 w-4" />;
-  };
-
   const handleDocumentClick = async (document: IDocument) => {
-    // For uploaded files that are viewable (images, videos, PDFs), open preview modal
-    if (document.file_id && isViewableType(document.mime_type)) {
-      setPreviewDocument(document);
-      setShowPreviewModal(true);
-      return;
-    }
-
-    // For other uploaded files, download directly
+    // For uploaded files, download directly (preview is handled by DocumentStorageCard)
     if (document.file_id) {
       await handleDownload({ stopPropagation: () => {} } as React.MouseEvent, document);
       return;
@@ -268,7 +251,8 @@ export default function TaskDocumentsSimple({
       await fetchDocuments();
     }
 
-    // Show folder selector first
+    // Match the shared ticket documents flow by always selecting a destination
+    // folder before creating a new document.
     setShowFolderModal(true);
   };
 
@@ -375,34 +359,6 @@ export default function TaskDocumentsSimple({
       handleError(error, 'Failed to save document');
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent, document: IDocument) => {
-    e.stopPropagation();
-    if (isPendingMode) {
-      // In pending mode, remove directly from pending list without confirmation
-      const updatedPending = (pendingDocuments || []).filter(d => d.document_id !== document.document_id);
-      onPendingDocumentsChange?.(updatedPending);
-      toast.success('Document removed');
-    } else {
-      setDocumentToDelete(document);
-      setShowDeleteConfirm(true);
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!documentToDelete || isPendingMode) return;
-
-    try {
-      await removeDocumentAssociations(taskId!, 'project_task', [documentToDelete.document_id]);
-      toast.success('Document removed successfully');
-      await handleDocumentMutation();
-    } catch (error) {
-      handleError(error, 'Failed to remove document');
-    } finally {
-      setShowDeleteConfirm(false);
-      setDocumentToDelete(null);
     }
   };
 
@@ -572,17 +528,22 @@ export default function TaskDocumentsSimple({
           <>
             {showUpload && currentUser && (
           <div className="p-3 border border-gray-200 rounded-md bg-gray-50">
-            <DocumentUpload
-              id="task-document-upload"
-              userId={currentUser.user_id}
-              entityId={isPendingMode ? undefined : taskId}
-              entityType={isPendingMode ? undefined : "project_task"}
-              onUploadComplete={async (result) => {
-                setShowUpload(false);
+            {renderDocumentUpload({
+              id: "task-document-upload",
+              userId: currentUser.user_id,
+              entityId: isPendingMode ? undefined : taskId,
+              // Always pass entityType so the folder selector can show default
+              // folder templates even before the task is saved.
+              entityType: "project_task",
+              // Leave folderPath undefined so the shared uploader prompts for a
+              // destination folder, matching the ticket documents flow.
+              folderPath: undefined,
+              onUploadComplete: async (result: any) => {
                 if (result?.success && result.document) {
                   toast.success('Document uploaded successfully');
                   if (isPendingMode) {
-                    // In pending mode, add to pending documents list
+                    // Use ref to get latest pending docs (avoids stale closure
+                    // when multiple files upload sequentially in one loop).
                     const newPendingDoc: PendingTaskDocument = {
                       document_id: result.document.document_id,
                       document_name: result.document.document_name,
@@ -590,7 +551,9 @@ export default function TaskDocumentsSimple({
                       mime_type: result.document.mime_type,
                       file_id: result.document.file_id
                     };
-                    onPendingDocumentsChange?.([...(pendingDocuments || []), newPendingDoc]);
+                    const updated = [...pendingDocsRef.current, newPendingDoc];
+                    pendingDocsRef.current = updated;
+                    onPendingDocumentsChange?.(updated);
                   } else {
                     // In edit mode, notify parent about the new document for session tracking
                     onDocumentAdded?.({
@@ -603,9 +566,10 @@ export default function TaskDocumentsSimple({
                     await handleDocumentMutation();
                   }
                 }
-              }}
-              onCancel={() => setShowUpload(false)}
-            />
+              },
+              onAllUploadsComplete: () => setShowUpload(false),
+              onCancel: () => setShowUpload(false),
+            })}
           </div>
         )}
 
@@ -618,90 +582,58 @@ export default function TaskDocumentsSimple({
           <div className="text-center py-4 text-gray-500 text-sm">
             No documents attached
           </div>
-        ) : (
+        ) : isPendingMode ? (
+          /* Pending mode: simple list (limited IDocument data) */
           <div className="space-y-1">
-            {/* In pending mode, show pending documents; otherwise show actual documents */}
-            {(isPendingMode ? (pendingDocuments || []).map(pd => ({
-              document_id: pd.document_id,
-              document_name: pd.document_name,
-              file_id: pd.file_id,
-              mime_type: pd.mime_type,
-              // Add required IDocument fields with defaults for display purposes
-              user_id: '',
-              created_by: '',
-              order_number: 0,
-              tenant: ''
-            } as IDocument)) : documents).map((doc) => (
+            {(pendingDocuments || []).map(pd => (
               <div
-                key={doc.document_id}
+                key={pd.document_id}
                 className="flex items-center justify-between p-2 hover:bg-gray-50 rounded cursor-pointer group"
-                onClick={() => handleDocumentClick(doc)}
               >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  {/* Show thumbnail for images, icon for others */}
-                  {doc.file_id && doc.mime_type?.startsWith('image/') ? (
-                    <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-gray-100">
-                      <img
-                        src={`/api/documents/view/${doc.file_id}`}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Hide broken image, show icon instead
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
-                          const icon = document.createElement('span');
-                          icon.innerHTML = '<svg class="h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
-                          e.currentTarget.parentElement?.appendChild(icon);
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    getFileIcon(doc)
-                  )}
-                  <span className="text-sm truncate">{doc.document_name}</span>
+                  {pd.file_id ? <File className="h-4 w-4 flex-shrink-0" /> : <FileText className="h-4 w-4 text-blue-600 flex-shrink-0" />}
+                  <span className="text-sm truncate">{pd.document_name}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  {/* View button for viewable file types */}
-                  {doc.file_id && isViewableType(doc.mime_type) && (
-                    <Button
-                      id={`task-document-view-${doc.document_id}`}
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewDocument(doc);
-                        setShowPreviewModal(true);
-                      }}
-                      title="View"
-                    >
-                      <Eye className="h-3 w-3" />
-                    </Button>
-                  )}
-                  <Button
-                    id={`task-document-download-${doc.document_id}`}
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={(e) => handleDownload(e, doc)}
-                    title="Download"
-                  >
-                    <Download className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    id={`task-document-remove-${doc.document_id}`}
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={(e) => handleDeleteClick(e, doc)}
-                    className="text-destructive hover:text-destructive"
-                    title="Remove"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
+                <Button
+                  id={`task-document-remove-${pd.document_id}`}
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    const updatedPending = (pendingDocuments || []).filter(d => d.document_id !== pd.document_id);
+                    onPendingDocumentsChange?.(updatedPending);
+                    toast.success('Document removed');
+                  }}
+                  className="text-destructive hover:text-destructive"
+                  title="Remove"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
               </div>
             ))}
+          </div>
+        ) : (
+          /* Edit mode: card grid with thumbnails, matching ticket/client documents */
+          <div className="grid grid-cols-2 gap-3">
+            {documents.map((doc) =>
+              renderDocumentStorageCard({
+                key: doc.document_id,
+                id: `task-document-card-${doc.document_id}`,
+                document: doc,
+                showDisassociate: true,
+                onDisassociate: async (docToRemove: any) => {
+                  try {
+                    await removeDocumentAssociations(taskId!, 'project_task', [docToRemove.document_id]);
+                    toast.success('Document removed from task');
+                    await handleDocumentMutation();
+                  } catch (error) {
+                    handleError(error, 'Failed to remove document');
+                  }
+                },
+                onClick: () => handleDocumentClick(doc),
+                isContentDocument: !doc.file_id,
+              })
+            )}
           </div>
         )}
           </>
@@ -709,13 +641,12 @@ export default function TaskDocumentsSimple({
       </div>
 
       {/* Document selector modal */}
-      {showSelector && (
-        <DocumentSelector
-          id="task-document-selector"
-          entityId={isPendingMode ? undefined : taskId}
-          entityType={isPendingMode ? undefined : "project_task"}
-          excludeDocumentIds={isPendingMode ? pendingDocuments?.map(d => d.document_id) : undefined}
-          onDocumentsSelected={async (selectedDocs?: IDocument[]) => {
+      {showSelector && renderDocumentSelector({
+          id: "task-document-selector",
+          entityId: isPendingMode ? undefined : taskId,
+          entityType: isPendingMode ? undefined : "project_task",
+          excludeDocumentIds: isPendingMode ? pendingDocuments?.map(d => d.document_id) : undefined,
+          onDocumentsSelected: async (selectedDocs?: IDocument[]) => {
             setShowSelector(false);
             if (isPendingMode && selectedDocs && selectedDocs.length > 0) {
               // In pending mode, add selected documents to pending list
@@ -742,11 +673,10 @@ export default function TaskDocumentsSimple({
               }
               await handleDocumentMutation();
             }
-          }}
-          isOpen={showSelector}
-          onClose={() => setShowSelector(false)}
-        />
-      )}
+          },
+          isOpen: showSelector,
+          onClose: () => setShowSelector(false),
+      })}
 
       {/* Document viewer/editor drawer */}
       <Drawer
@@ -821,7 +751,7 @@ export default function TaskDocumentsSimple({
             {selectedDocument?.file_id ? (
               // File document - show download link
               <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                <div className="mb-4">{getFileIcon(selectedDocument)}</div>
+                <div className="mb-4"><File className="h-12 w-12" /></div>
                 <p className="mb-4">This is a file attachment</p>
                 <Button
                   id="task-document-download-file-btn"
@@ -894,91 +824,16 @@ export default function TaskDocumentsSimple({
         </div>
       </Drawer>
 
-      {/* Preview Modal for images/videos/PDFs */}
-      {showPreviewModal && previewDocument && previewDocument.file_id && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
-          onClick={() => setShowPreviewModal(false)}
-        >
-          <div
-            className="relative max-w-7xl max-h-[90vh] w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button */}
-            <button
-              className="absolute top-4 right-4 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
-              onClick={() => setShowPreviewModal(false)}
-            >
-              <X className="w-6 h-6" />
-            </button>
-
-            {/* Download button in modal */}
-            <button
-              className="absolute top-4 right-16 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
-              onClick={async (e) => {
-                e.stopPropagation();
-                await handleDownload(e, previewDocument);
-              }}
-              title="Download"
-            >
-              <Download className="w-6 h-6" />
-            </button>
-
-            {/* Content based on type */}
-            {previewDocument.mime_type?.startsWith('image/') && (
-              <img
-                src={`/api/documents/view/${previewDocument.file_id}`}
-                alt={previewDocument.document_name}
-                className="max-w-full max-h-[90vh] object-contain mx-auto"
-              />
-            )}
-            {previewDocument.mime_type?.startsWith('video/') && (
-              <video
-                src={`/api/documents/view/${previewDocument.file_id}`}
-                controls
-                className="max-w-full max-h-[90vh] mx-auto"
-              />
-            )}
-            {previewDocument.mime_type === 'application/pdf' && (
-              <iframe
-                src={`/api/documents/view/${previewDocument.file_id}`}
-                className="w-full h-[90vh] bg-white"
-                title={previewDocument.document_name}
-              />
-            )}
-
-            {/* Document name */}
-            <div className="mt-2 text-center text-white">
-              <p className="text-lg font-medium">{previewDocument.document_name}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Folder Selector Modal */}
-      <FolderSelectorModal
-        isOpen={showFolderModal}
-        onClose={() => setShowFolderModal(false)}
-        onSelectFolder={handleFolderSelected}
-        title="Select Folder for New Document"
-        description="Choose where to save this new document"
-        entityId={isPendingMode ? undefined : taskId}
-        entityType={isPendingMode ? undefined : "project_task"}
-      />
-
-      {/* Delete confirmation dialog */}
-      <ConfirmationDialog
-        isOpen={showDeleteConfirm}
-        onClose={() => {
-          setShowDeleteConfirm(false);
-          setDocumentToDelete(null);
-        }}
-        onConfirm={handleDeleteConfirm}
-        title="Remove Document from Task"
-        message={`Are you sure you want to remove "${documentToDelete?.document_name}" from this task? The document will still be available in the Documents section and can be linked to other items.`}
-        confirmLabel="Remove from Task"
-        cancelLabel="Cancel"
-      />
+      {renderFolderSelectorModal({
+        isOpen: showFolderModal,
+        onClose: () => setShowFolderModal(false),
+        onSelectFolder: handleFolderSelected,
+        title: "Select Folder for New Document",
+        description: "Choose where to save this new document",
+        entityId: isPendingMode ? undefined : taskId,
+        entityType: "project_task",
+      })}
 
       {/* Unsaved Changes Confirmation Dialog - portaled to body so it renders above
           the drawer (z-60) and task edit dialog (z-50) */}

@@ -1,13 +1,15 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Linking, Text, View } from "react-native";
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Linking, Platform, Pressable, Text, View } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import {
   TicketMobileEditorBridgeClient,
 } from "./bridge";
 import type {
   TicketMobileEditorCommand,
+  TicketMobileEditorMentionQueryPayload,
   TicketMobileEditorStatePayload,
 } from "./types";
+import { MentionSuggestionList, type MentionSuggestionItem } from "./MentionSuggestionList";
 import { useTheme } from "../../ui/ThemeContext";
 import {
   createTicketRichTextInjectionScript,
@@ -18,6 +20,29 @@ import {
   TICKET_MOBILE_EDITOR_HTML,
 } from "./generatedEditorHtml";
 import { TicketRichTextToolbar } from "./TicketRichTextToolbar";
+
+/**
+ * Build a dark-mode style block to inject into the editor HTML source.
+ * By embedding it directly in the HTML (before `</head>`), we avoid the
+ * flash-of-white that happens when styles are injected asynchronously
+ * via `injectJavaScript` after the WebView finishes loading.
+ */
+function buildDarkModeStyleTag(colors: {
+  card: string;
+  text: string;
+  primary: string;
+  border: string;
+}): string {
+  return `<style id="rn-dark-mode">
+    :root { color-scheme: dark; }
+    html, body, #editor-root { background-color: ${colors.card} !important; color: ${colors.text} !important; }
+    .ProseMirror, .bn-editor, [class*="editor"] { background-color: transparent !important; color: ${colors.text} !important; }
+    a { color: ${colors.primary} !important; }
+    code { background-color: rgba(255,255,255,0.1) !important; }
+    blockquote { border-left-color: ${colors.border} !important; }
+    .mention-badge { background-color: rgba(59,130,246,0.2) !important; color: #93c5fd !important; }
+  </style>`;
+}
 
 const EMPTY_EDITOR_STATE: TicketMobileEditorStatePayload = {
   ready: false,
@@ -66,9 +91,15 @@ export type TicketRichTextEditorProps = {
   onReadyChange?: (ready: boolean) => void;
   onStateChange?: (payload: TicketMobileEditorStatePayload) => void;
   onContentChange?: (payload: { html: string; json: unknown }) => void;
+  onContentHeight?: (payload: { height: number }) => void;
+  scrollEnabled?: boolean;
   onError?: (payload: { code: string; message: string; requestId?: string }) => void;
   onLinkPress?: (url: string) => void;
   qaAutoPressFirstLink?: boolean;
+  imageAuth?: { baseUrl: string; apiKey: string };
+  onMentionSearch?: (query: string, signal: AbortSignal) => Promise<MentionSuggestionItem[]>;
+  mentionBaseUrl?: string | null;
+  mentionAuthToken?: string;
 };
 
 export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRichTextEditorProps>(
@@ -86,9 +117,15 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       onReadyChange,
       onStateChange,
       onContentChange,
+      onContentHeight,
+      scrollEnabled: scrollEnabledProp,
       onError,
       onLinkPress,
       qaAutoPressFirstLink = false,
+      imageAuth,
+      onMentionSearch,
+      mentionBaseUrl,
+      mentionAuthToken,
     },
     ref,
   ) {
@@ -104,22 +141,36 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       onReadyChange,
       onStateChange,
       onContentChange,
+      onContentHeight,
       onError,
       onLinkPress,
+      onMentionSearch,
     });
     callbacksRef.current = {
       onReadyChange,
       onStateChange,
       onContentChange,
+      onContentHeight,
       onError,
       onLinkPress,
+      onMentionSearch,
     };
+    const imageAuthRef = useRef(imageAuth);
+    imageAuthRef.current = imageAuth;
 
     const [ready, setReady] = useState(false);
+    const pendingFocusRef = useRef(false);
     const [state, setState] = useState<TicketMobileEditorStatePayload>({
       ...EMPTY_EDITOR_STATE,
       editable,
     });
+
+    // Mention suggestion state
+    const [mentionState, setMentionState] = useState<TicketMobileEditorMentionQueryPayload | null>(null);
+    const mentionStateRef = useRef<TicketMobileEditorMentionQueryPayload | null>(null);
+    const [mentionResults, setMentionResults] = useState<MentionSuggestionItem[]>([]);
+    const [mentionLoading, setMentionLoading] = useState(false);
+    const mentionAbortRef = useRef<AbortController | null>(null);
 
     const reportError = useMemo(
       () => (payload: { code: string; message: string; requestId?: string }) => {
@@ -142,6 +193,13 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
           setReady(true);
           callbacksRef.current.onReadyChange?.(true);
 
+          // If the user tapped the editor while it was still loading,
+          // replay the focus command now that the bridge is ready.
+          if (pendingFocusRef.current) {
+            pendingFocusRef.current = false;
+            bridgeRef.current?.sendCommand("focus");
+          }
+
           if (isDevEnvironment() && loadStartedAtRef.current !== null) {
             console.info(
               `[TicketRichTextEditor] ready in ${Date.now() - loadStartedAtRef.current}ms (${payload.format})`,
@@ -153,9 +211,77 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
           callbacksRef.current.onStateChange?.(payload);
         },
         onContentChange(payload) {
+          // Update lastContentRef so the content prop effect doesn't
+          // push the same content back into the editor (which would
+          // destroy cursor position and strip trailing whitespace).
+          const serialized = JSON.stringify(payload.json);
+          lastContentRef.current = serialized;
           callbacksRef.current.onContentChange?.(payload);
         },
+        onContentHeight(payload) {
+          callbacksRef.current.onContentHeight?.(payload);
+        },
         onError: reportError,
+        onMentionQuery(payload) {
+          if (!payload.active) {
+            // Delay clearing so a tap on the suggestion list can still
+            // read mentionStateRef before the state is wiped.
+            setTimeout(() => {
+              // Only clear if nothing re-activated in the meantime
+              if (!mentionStateRef.current || !mentionStateRef.current.active) {
+                setMentionState(null);
+                setMentionResults([]);
+              }
+            }, 150);
+            mentionStateRef.current = null;
+            mentionAbortRef.current?.abort();
+            return;
+          }
+          mentionStateRef.current = payload;
+          setMentionState(payload);
+          mentionAbortRef.current?.abort();
+          const searchFn = callbacksRef.current.onMentionSearch;
+          if (!searchFn) return;
+          const controller = new AbortController();
+          mentionAbortRef.current = controller;
+          setMentionLoading(true);
+          searchFn(payload.query, controller.signal)
+            .then((results) => {
+              if (!controller.signal.aborted) {
+                setMentionResults(results);
+                setMentionLoading(false);
+              }
+            })
+            .catch(() => {
+              if (!controller.signal.aborted) {
+                setMentionResults([]);
+                setMentionLoading(false);
+              }
+            });
+        },
+        onImageRequest(payload) {
+          const auth = imageAuthRef.current;
+          if (!auth) return;
+          const fetchUrl = `${auth.baseUrl}${payload.src}`;
+          fetch(fetchUrl, {
+            headers: { "x-api-key": auth.apiKey },
+          })
+            .then(async (resp) => {
+              if (!resp.ok) throw new Error(`Image fetch failed: ${resp.status}`);
+              const contentType = resp.headers.get("content-type") ?? "image/png";
+              const buf = await resp.arrayBuffer();
+              const bytes = new Uint8Array(buf);
+              let binary = "";
+              for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+              }
+              const base64 = btoa(binary);
+              bridgeRef.current?.sendImageData(payload.src, `data:${contentType};base64,${base64}`);
+            })
+            .catch(() => {
+              // Leave the broken image
+            });
+        },
       });
     }
 
@@ -251,16 +377,29 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       loadStartedAtRef.current = Date.now();
     };
 
+    // Pre-build themed HTML so the WebView renders with the correct
+    // background color from the very first paint (no flash of white).
+    const themedHtml = useMemo(() => {
+      if (theme.mode !== "dark") {
+        return TICKET_MOBILE_EDITOR_HTML;
+      }
+
+      const darkStyle = buildDarkModeStyleTag(theme.colors);
+      return TICKET_MOBILE_EDITOR_HTML.replace("</head>", `${darkStyle}\n</head>`);
+    }, [theme.mode, theme.colors]);
+
     const handleLoadEnd = () => {
       hasLoadedRef.current = true;
       lastContentRef.current = content;
       lastEditableRef.current = editable;
+
       bridgeRef.current?.initialize({
         content,
         editable,
         autofocus,
         placeholder,
         debounceMs,
+        imageAuth,
       });
     };
 
@@ -300,6 +439,21 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       return false;
     };
 
+    const handleMentionSelect = useCallback((item: MentionSuggestionItem) => {
+      const ms = mentionState ?? mentionStateRef.current;
+      if (!bridgeRef.current || !ms) return;
+      bridgeRef.current.sendInsertMention({
+        userId: item.user_id,
+        username: item.username,
+        displayName: item.display_name,
+        from: ms.from,
+        to: ms.to,
+      });
+      mentionStateRef.current = null;
+      setMentionState(null);
+      setMentionResults([]);
+    }, [mentionState]);
+
     const toolbarEditable = ready && state.editable;
     const overlayBg = theme.mode === "dark" ? "rgba(0,0,0,0.72)" : "rgba(255,255,255,0.72)";
 
@@ -315,9 +469,19 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
             }}
           />
         ) : null}
+        <View style={{ position: "relative" }}>
+          {mentionState?.active ? (
+            <MentionSuggestionList
+              loading={mentionLoading}
+              users={mentionResults}
+              onSelect={handleMentionSelect}
+              baseUrl={mentionBaseUrl}
+              authToken={mentionAuthToken}
+            />
+          ) : null}
         <View
           style={{
-            minHeight: height,
+            ...(editable ? { minHeight: height } : { height }),
             borderWidth: 1,
             borderColor: theme.colors.border,
             borderRadius: 10,
@@ -330,7 +494,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
             ref={webViewRef}
             originWhitelist={["*"]}
             source={{
-              html: TICKET_MOBILE_EDITOR_HTML,
+              html: themedHtml,
               baseUrl: TICKET_MOBILE_EDITOR_BASE_URL,
             }}
             onLoadStart={handleLoadStart}
@@ -339,16 +503,23 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
             onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
             javaScriptEnabled
             domStorageEnabled
-            scrollEnabled={!editable}
+            scrollEnabled={scrollEnabledProp ?? true}
             setSupportMultipleWindows={false}
             javaScriptCanOpenWindowsAutomatically={false}
+            nestedScrollEnabled={Platform.OS === "android"}
+            {...(Platform.OS === "android" ? { androidLayerType: "hardware" } : {})}
             style={{
               backgroundColor: "transparent",
-              minHeight: height,
+              ...(editable ? { minHeight: height } : { height }),
             }}
           />
           {!ready ? (
-            <View
+            <Pressable
+              onPress={() => {
+                if (editable) {
+                  pendingFocusRef.current = true;
+                }
+              }}
               style={{
                 position: "absolute",
                 inset: 0,
@@ -361,8 +532,9 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
               <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
                 {loadingLabel}
               </Text>
-            </View>
+            </Pressable>
           ) : null}
+        </View>
         </View>
       </View>
     );

@@ -94,9 +94,18 @@ export type TicketMobileEditorCommand =
   | 'toggle-bullet-list'
   | 'toggle-ordered-list'
   | 'undo'
-  | 'redo';
+  | 'redo'
+  | 'insert-mention';
 
 export type TicketMobileEditorRequest = 'get-html' | 'get-json';
+
+export type TicketMobileEditorMentionPayload = {
+  userId: string;
+  username: string;
+  displayName: string;
+  from: number;
+  to: number;
+};
 
 export type TicketMobileEditorToolbarState = {
   bold: boolean;
@@ -121,6 +130,7 @@ export type TicketMobileEditorInitPayload = {
   autofocus?: boolean;
   placeholder?: string;
   debounceMs?: number;
+  imageAuth?: { baseUrl: string; apiKey: string };
 };
 
 export type TicketMobileEditorNativeToWebMessage =
@@ -140,6 +150,13 @@ export type TicketMobileEditorNativeToWebMessage =
       payload: {
         requestId: string;
         request: TicketMobileEditorRequest;
+      };
+    }
+  | {
+      type: 'image-data';
+      payload: {
+        src: string;
+        dataUri: string;
       };
     };
 
@@ -163,6 +180,12 @@ export type TicketMobileEditorWebToNativeMessage =
       };
     }
   | {
+      type: 'content-height';
+      payload: {
+        height: number;
+      };
+    }
+  | {
       type: 'response';
       payload: {
         requestId: string;
@@ -176,6 +199,21 @@ export type TicketMobileEditorWebToNativeMessage =
         code: string;
         message: string;
         requestId?: string;
+      };
+    }
+  | {
+      type: 'image-request';
+      payload: {
+        src: string;
+      };
+    }
+  | {
+      type: 'mention-query';
+      payload: {
+        active: boolean;
+        query: string;
+        from: number;
+        to: number;
       };
     };
 
@@ -197,6 +235,12 @@ function extractTextFromProseMirror(node: unknown): string {
 
   if (record.type === 'text') {
     return typeof record.text === 'string' ? record.text : '';
+  }
+
+  if (record.type === 'mention') {
+    const username = typeof record.attrs?.username === 'string' ? record.attrs.username : '';
+    const displayName = typeof record.attrs?.displayName === 'string' ? record.attrs.displayName : '';
+    return username ? `@${username}` : `@${displayName}`;
   }
 
   if (record.type === 'hardBreak') {
@@ -332,6 +376,16 @@ function convertInlineNodeToBlockNoteContent(
       text,
       styles,
     }];
+  }
+
+  if (node.type === 'mention') {
+    const userId = typeof node.attrs?.userId === 'string' ? node.attrs.userId : '';
+    const username = typeof node.attrs?.username === 'string' ? node.attrs.username : '';
+    const displayName = typeof node.attrs?.displayName === 'string' ? node.attrs.displayName : 'Unknown';
+    return [{
+      type: 'mention' as TicketRichTextInlineContent['type'],
+      props: { userId, username, displayName },
+    } as unknown as TicketRichTextInlineContent];
   }
 
   if (node.type === 'hardBreak') {

@@ -114,7 +114,7 @@ const featureCategories: FeatureCategory[] = [
         category: 'stable',
       },
       {
-        key: 'enable_teams_integration',
+        key: 'teams-integration-ui',
         name: 'Microsoft Teams',
         description: 'Integrate with Microsoft Teams',
         category: 'stable',

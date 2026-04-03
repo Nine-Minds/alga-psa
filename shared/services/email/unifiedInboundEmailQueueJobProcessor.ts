@@ -8,7 +8,10 @@ import type {
   UnifiedInboundEmailQueueJob,
 } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
-import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
+import {
+  processInboundEmailInApp,
+  type ProcessInboundEmailInAppDiagnostics,
+} from '@alga-psa/shared/services/email/processInboundEmailInApp';
 import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAdapter';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
@@ -34,6 +37,8 @@ const DEFAULT_IMAP_CONNECTION_TIMEOUT_MS = 10_000;
 const DEFAULT_IMAP_SOCKET_TIMEOUT_MS = 30_000;
 const DEFAULT_IMAP_FETCH_TIMEOUT_MS = 45_000;
 const DEFAULT_IMAP_PARSE_TIMEOUT_MS = 30_000;
+const DEFAULT_MESSAGE_SOURCE_FETCH_TIMEOUT_MS = 45_000;
+const DEFAULT_MIME_PARSE_TIMEOUT_MS = 30_000;
 const OAUTH_TOKEN_REFRESH_SKEW_MS = 5 * 60 * 1000;
 
 function asNonEmptyString(value: unknown): string | null {
@@ -373,6 +378,118 @@ async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Prom
   return { provider, googleConfig, config };
 }
 
+function mapParsedMimeToEmailMessageDetails(params: {
+  provider: 'microsoft' | 'imap';
+  providerId: string;
+  tenant: string;
+  rawMimeBuffer: Buffer;
+  parsed: any;
+  fallbackMessageId: string;
+}): EmailMessageDetails {
+  const from = params.parsed.from?.value?.[0];
+  const to = params.parsed.to?.value || [];
+  const cc = params.parsed.cc?.value || [];
+  const messageId = asNonEmptyString(params.parsed.messageId) || params.fallbackMessageId;
+  const references = extractMessageIds(params.parsed.references);
+  const inReplyTo = extractMessageIds(params.parsed.inReplyTo)[0];
+  const threadId = references[0] || inReplyTo;
+
+  return {
+    id: messageId,
+    provider: params.provider,
+    providerId: params.providerId,
+    tenant: params.tenant,
+    receivedAt: params.parsed.date ? new Date(params.parsed.date).toISOString() : new Date().toISOString(),
+    from: {
+      email: from?.address || '',
+      name: from?.name || undefined,
+    },
+    to: to.map((item: any) => ({
+      email: item?.address || '',
+      name: item?.name || undefined,
+    })),
+    cc: cc.length
+      ? cc.map((item: any) => ({
+          email: item?.address || '',
+          name: item?.name || undefined,
+        }))
+      : undefined,
+    subject: params.parsed.subject || '',
+    body: {
+      text: params.parsed.text || '',
+      html: params.parsed.html ? String(params.parsed.html) : undefined,
+    },
+    attachments: Array.isArray(params.parsed.attachments)
+      ? params.parsed.attachments.map((attachment: any, index: number) => {
+          const contentBuffer = Buffer.isBuffer(attachment?.content)
+            ? attachment.content
+            : Buffer.from(attachment?.content || '');
+          return {
+            id: String(attachment?.contentId || attachment?.checksum || `${messageId}-att-${index}`),
+            name: String(attachment?.filename || `attachment-${index + 1}`),
+            contentType: String(attachment?.contentType || 'application/octet-stream'),
+            size: Number(attachment?.size || contentBuffer.length || 0),
+            contentId: asNonEmptyString(attachment?.contentId) || undefined,
+            isInline: Boolean(attachment?.contentDisposition === 'inline'),
+            content: contentBuffer.toString('base64'),
+          };
+        })
+      : [],
+    threadId: threadId || undefined,
+    references: references.length ? references : undefined,
+    inReplyTo: inReplyTo || undefined,
+    rawMimeBase64: params.rawMimeBuffer.toString('base64'),
+  };
+}
+
+async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
+  if (job.provider !== 'microsoft') {
+    throw new Error('invalid provider for microsoft fetch');
+  }
+
+  const sourceFetchTimeoutMs = parsePositiveInteger(
+    process.env.INBOUND_EMAIL_SOURCE_FETCH_TIMEOUT_MS,
+    DEFAULT_MESSAGE_SOURCE_FETCH_TIMEOUT_MS
+  );
+  const parseTimeoutMs = parsePositiveInteger(
+    process.env.INBOUND_EMAIL_MIME_PARSE_TIMEOUT_MS,
+    DEFAULT_MIME_PARSE_TIMEOUT_MS
+  );
+
+  const config = await fetchMicrosoftProviderConfig(job);
+  const adapter = new MicrosoftGraphAdapter(config);
+  await adapter.connect();
+
+  let rawMimeBuffer: Buffer;
+  try {
+    rawMimeBuffer = await withTimeout(
+      adapter.downloadMessageSource(job.pointer.messageId),
+      sourceFetchTimeoutMs,
+      'microsoft_message_source'
+    );
+  } catch (error: any) {
+    if (Number(error?.status) === 404) {
+      throw new SourceMessageUnavailableError('microsoft_message_not_found');
+    }
+    throw error;
+  }
+
+  const parsed: any = await withTimeout(
+    simpleParser(rawMimeBuffer),
+    parseTimeoutMs,
+    'microsoft_mime_parse'
+  );
+
+  return mapParsedMimeToEmailMessageDetails({
+    provider: 'microsoft',
+    providerId: config.id,
+    tenant: config.tenant,
+    rawMimeBuffer,
+    parsed,
+    fallbackMessageId: job.pointer.messageId,
+  });
+}
+
 async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
   if (job.provider !== 'imap') {
     throw new Error('invalid provider for imap fetch');
@@ -528,60 +645,14 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
           parseTimeoutMs,
           'imap_mime_parse'
         );
-        const from = parsed.from?.value?.[0];
-        const to = parsed.to?.value || [];
-        const cc = parsed.cc?.value || [];
-        const messageId = asNonEmptyString(parsed.messageId) || `imap-uid-${pointerUid}`;
-        const references = extractMessageIds(parsed.references);
-        const inReplyTo = extractMessageIds(parsed.inReplyTo)[0];
-        const threadId = references[0] || inReplyTo;
-
-        return {
-          id: messageId,
+        return mapParsedMimeToEmailMessageDetails({
           provider: 'imap',
           providerId: provider.id,
           tenant: provider.tenant,
-          receivedAt: parsed.date ? new Date(parsed.date).toISOString() : new Date().toISOString(),
-          from: {
-            email: from?.address || '',
-            name: from?.name || undefined,
-          },
-          to: to.map((item: any) => ({
-            email: item?.address || '',
-            name: item?.name || undefined,
-          })),
-          cc: cc.length
-            ? cc.map((item: any) => ({
-                email: item?.address || '',
-                name: item?.name || undefined,
-              }))
-            : undefined,
-          subject: parsed.subject || '',
-          body: {
-            text: parsed.text || '',
-            html: parsed.html ? String(parsed.html) : undefined,
-          },
-          attachments: Array.isArray(parsed.attachments)
-            ? parsed.attachments.map((attachment: any, index: number) => {
-                const contentBuffer = Buffer.isBuffer(attachment?.content)
-                  ? attachment.content
-                  : Buffer.from(attachment?.content || '');
-                return {
-                  id: String(attachment?.contentId || attachment?.checksum || `${messageId}-att-${index}`),
-                  name: String(attachment?.filename || `attachment-${index + 1}`),
-                  contentType: String(attachment?.contentType || 'application/octet-stream'),
-                  size: Number(attachment?.size || contentBuffer.length || 0),
-                  contentId: asNonEmptyString(attachment?.contentId) || undefined,
-                  isInline: Boolean(attachment?.contentDisposition === 'inline'),
-                  content: contentBuffer.toString('base64'),
-                };
-              })
-            : [],
-          threadId: threadId || undefined,
-          references: references.length ? references : undefined,
-          inReplyTo: inReplyTo || undefined,
-          rawMimeBase64: rawMimeBuffer.toString('base64'),
-        };
+          rawMimeBuffer,
+          parsed,
+          fallbackMessageId: `imap-uid-${pointerUid}`,
+        });
       } finally {
         lock.release();
       }
@@ -625,11 +696,7 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
 
 async function fetchEmailPayloadsForJob(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails[]> {
   if (job.provider === 'microsoft') {
-    const config = await fetchMicrosoftProviderConfig(job);
-    const adapter = new MicrosoftGraphAdapter(config);
-    await adapter.connect();
-    const details = await adapter.getMessageDetails(job.pointer.messageId);
-    return [details];
+    return [await fetchMicrosoftMessageForPointer(job)];
   }
 
   if (job.provider === 'google') {
@@ -676,6 +743,7 @@ async function insertProcessingRecord(params: {
   job: UnifiedInboundEmailQueueJob;
   externalIdentity: string;
   emailData?: EmailMessageDetails;
+  metadata?: Record<string, unknown>;
 }): Promise<boolean> {
   const db = await getAdminConnection();
   try {
@@ -689,11 +757,13 @@ async function insertProcessingRecord(params: {
       subject: params.emailData?.subject || null,
       received_at: params.emailData?.receivedAt ? new Date(params.emailData.receivedAt) : null,
       attachment_count: params.emailData?.attachments?.length || 0,
-      metadata: JSON.stringify({
-        queueJobId: params.job.jobId,
-        queueProvider: params.job.provider,
-        pointer: params.job.pointer,
-      }),
+      metadata: JSON.stringify(
+        params.metadata ?? {
+          queueJobId: params.job.jobId,
+          queueProvider: params.job.provider,
+          pointer: params.job.pointer,
+        }
+      ),
     });
     return true;
   } catch (error: any) {
@@ -711,6 +781,7 @@ async function updateProcessingRecord(params: {
   emailData?: EmailMessageDetails;
   ticketId?: string | null;
   errorMessage?: string | null;
+  metadata?: Record<string, unknown>;
 }): Promise<void> {
   const db = await getAdminConnection();
   await db('email_processed_messages')
@@ -727,7 +798,40 @@ async function updateProcessingRecord(params: {
       received_at: params.emailData?.receivedAt ? new Date(params.emailData.receivedAt) : null,
       attachment_count: params.emailData?.attachments?.length || 0,
       error_message: params.errorMessage || null,
+      metadata: JSON.stringify(
+        params.metadata ?? {
+          queueJobId: params.job.jobId,
+          queueProvider: params.job.provider,
+          pointer: params.job.pointer,
+        }
+      ),
     });
+}
+
+function buildProcessingMetadata(params: {
+  job: UnifiedInboundEmailQueueJob;
+  emailData?: EmailMessageDetails;
+  diagnostics?: ProcessInboundEmailInAppDiagnostics | Record<string, unknown>;
+}): Record<string, unknown> {
+  return {
+    queueJobId: params.job.jobId,
+    queueProvider: params.job.provider,
+    pointer: params.job.pointer,
+    ...(params.emailData
+      ? {
+          headersSnapshot: {
+            messageId: params.emailData.id,
+            threadId: params.emailData.threadId ?? null,
+            inReplyTo: params.emailData.inReplyTo ?? null,
+            references: params.emailData.references ?? [],
+            from: params.emailData.from?.email ?? null,
+            to: (params.emailData.to ?? []).map((recipient) => recipient.email),
+            subject: params.emailData.subject ?? null,
+          },
+        }
+      : {}),
+    ...(params.diagnostics ?? {}),
+  };
 }
 
 export async function processUnifiedInboundEmailQueueJob(
@@ -751,6 +855,15 @@ export async function processUnifiedInboundEmailQueueJob(
       const inserted = await insertProcessingRecord({
         job,
         externalIdentity,
+        metadata: buildProcessingMetadata({
+          job,
+          diagnostics: {
+            outcome: {
+              kind: 'skipped',
+              reason: `source_unavailable:${error.reason}`,
+            },
+          },
+        }),
       });
       if (inserted) {
         await updateProcessingRecord({
@@ -758,6 +871,15 @@ export async function processUnifiedInboundEmailQueueJob(
           externalIdentity,
           status: 'partial',
           errorMessage: `source_unavailable:${error.reason}`,
+          metadata: buildProcessingMetadata({
+            job,
+            diagnostics: {
+              outcome: {
+                kind: 'skipped',
+                reason: `source_unavailable:${error.reason}`,
+              },
+            },
+          }),
         });
       }
       return {
@@ -793,6 +915,7 @@ export async function processUnifiedInboundEmailQueueJob(
       job,
       externalIdentity,
       emailData,
+      metadata: buildProcessingMetadata({ job, emailData }),
     });
     if (!inserted) {
       dedupedCount += 1;
@@ -804,6 +927,8 @@ export async function processUnifiedInboundEmailQueueJob(
         tenantId: job.tenantId,
         providerId: job.providerId,
         emailData,
+      }, {
+        collectDiagnostics: true,
       });
       const status = result.outcome === 'skipped' ? 'partial' : 'success';
       await updateProcessingRecord({
@@ -813,6 +938,11 @@ export async function processUnifiedInboundEmailQueueJob(
         emailData,
         ticketId: result.outcome === 'created' || result.outcome === 'replied' ? result.ticketId : null,
         errorMessage: result.outcome === 'skipped' ? `skipped:${result.reason}` : null,
+        metadata: buildProcessingMetadata({
+          job,
+          emailData,
+          diagnostics: result.diagnostics,
+        }),
       });
       processedCount += 1;
     } catch (error: any) {
@@ -822,6 +952,16 @@ export async function processUnifiedInboundEmailQueueJob(
         status: 'failed',
         emailData,
         errorMessage: error?.message || String(error),
+        metadata: buildProcessingMetadata({
+          job,
+          emailData,
+          diagnostics: {
+            outcome: {
+              kind: 'failed',
+              error: error?.message || String(error),
+            },
+          },
+        }),
       });
       throw error;
     }

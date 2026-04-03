@@ -1,0 +1,427 @@
+{
+  "common": {
+    "loading": "Caricamento..."
+  },
+  "moduleFrame": {
+    "title": "Sondaggi di soddisfazione del cliente",
+    "description": "Monitora la qualità delle risposte, analizza le tendenze di soddisfazione e dai seguito ai feedback.",
+    "badge": "Analisi della soddisfazione",
+    "nav": {
+      "dashboard": "Dashboard",
+      "responses": "Risposte",
+      "analytics": "Analisi",
+      "setup": "Configurazione"
+    }
+  },
+  "settings": {
+    "tabLabel": "Sondaggi",
+    "title": "Sondaggi di soddisfazione del cliente",
+    "subtitle": "Configura modelli, trigger e invio per raccogliere feedback dopo i ticket.",
+    "tabs": {
+      "templates": "Modelli",
+      "triggers": "Trigger"
+    },
+    "templateList": {
+      "title": "Modelli di sondaggio",
+      "description": "Gestisci i prompt e le scale di valutazione inviati ai clienti.",
+      "createButton": "Nuovo modello",
+      "emptyTitle": "Nessun modello di sondaggio",
+      "emptyDescription": "Crea il primo modello per definire il testo del sondaggio e la scala di valutazione.",
+      "defaultBadge": "Predefinito",
+      "table": {
+        "name": "Modello",
+        "rating": "Scala di valutazione",
+        "status": "Stato",
+        "updated": "Aggiornato",
+        "actions": "Azioni"
+      },
+      "status": {
+        "enabled": "Abilitato",
+        "disabled": "Disabilitato"
+      },
+      "actions": {
+        "setDefault": "Imposta come predefinito"
+      },
+      "toasts": {
+        "created": "Modello creato",
+        "updated": "Modello aggiornato",
+        "deleted": "Modello eliminato",
+        "error": "Impossibile salvare il modello",
+        "setDefault": "Modello predefinito aggiornato"
+      },
+      "errors": {
+        "load": "Impossibile caricare i modelli di sondaggio."
+      },
+      "delete": {
+        "validationFailed": "Impossibile convalidare l'eliminazione. Riprovi.",
+        "error": "Impossibile eliminare il modello",
+        "entityFallback": "questo modello di sondaggio"
+      },
+      "actionsMenuAria": "Apri azioni per {{name}}"
+    },
+    "templateForm": {
+      "titleCreate": "Crea modello di sondaggio",
+      "titleEdit": "Modifica modello di sondaggio",
+      "ratingTypes": {
+        "stars": "Stelle",
+        "numbers": "Numeri",
+        "emojis": "Emoji"
+      },
+      "defaults": {
+        "promptText": "Domanda del sondaggio",
+        "commentPrompt": "Commenti aggiuntivi (facoltativo)",
+        "thankYouText": "Grazie!"
+      },
+      "labels": {
+        "name": "Nome del modello",
+        "ratingType": "Tipo di valutazione",
+        "ratingScale": "Scala di valutazione",
+        "ratingLabels": "Etichette di valutazione",
+        "preview": "Anteprima",
+        "promptText": "Domanda del sondaggio",
+        "commentPrompt": "Prompt del commento",
+        "thankYouText": "Messaggio di ringraziamento",
+        "isDefault": "Imposta come modello predefinito",
+        "enabled": "Modello abilitato"
+      },
+      "placeholders": {
+        "ratingLabels": "Esempio:\nMolto scarso\nScarso\nNella media\nBuono\nEccellente"
+      },
+      "help": {
+        "ratingLabels": "Fornisca un'etichetta per riga, in ordine dalla valutazione più bassa a quella più alta."
+      },
+      "actions": {
+        "create": "Crea modello",
+        "save": "Salva modifiche",
+        "delete": "Elimina modello"
+      },
+      "delete": {
+        "validationFailed": "Impossibile convalidare l'eliminazione. Riprovi.",
+        "error": "Impossibile eliminare il modello",
+        "entityFallback": "questo modello di sondaggio"
+      }
+    },
+    "triggerList": {
+      "title": "Trigger di sondaggio",
+      "description": "Invia automaticamente gli inviti quando ticket o progetti vengono completati.",
+      "createButton": "Nuovo trigger",
+      "emptyTitle": "Nessun trigger di sondaggio configurato",
+      "emptyDescription": "Crea un trigger per inviare sondaggi quando i ticket vengono chiusi o i progetti completati.",
+      "table": {
+        "template": "Modello",
+        "type": "Trigger",
+        "conditions": "Condizioni",
+        "status": "Stato",
+        "updated": "Aggiornato",
+        "actions": "Azioni"
+      },
+      "status": {
+        "enabled": "Abilitato",
+        "disabled": "Disabilitato"
+      },
+      "conditions": {
+        "unrestricted": "Si applica a ogni ticket e progetto",
+        "boards": "Board",
+        "statuses": "Stati",
+        "priorities": "Priorità",
+        "any": "Qualsiasi"
+      },
+      "toasts": {
+        "created": "Trigger creato",
+        "updated": "Trigger aggiornato",
+        "deleted": "Trigger eliminato",
+        "error": "Impossibile salvare il trigger",
+        "deleteError": "Impossibile eliminare il trigger"
+      },
+      "errors": {
+        "load": "Impossibile caricare i trigger di sondaggio."
+      },
+      "deleteConfirm": "Eliminare questo trigger? Gli inviti già in coda saranno comunque inviati.",
+      "actionsMenuAria": "Apri azioni per il trigger destinato a {{target}}"
+    },
+    "triggerForm": {
+      "titleCreate": "Crea trigger di sondaggio",
+      "titleEdit": "Modifica trigger di sondaggio",
+      "triggerTypes": {
+        "ticket_closed": "Ticket chiuso",
+        "project_completed": "Progetto completato"
+      },
+      "labels": {
+        "template": "Modello di sondaggio",
+        "triggerType": "Tipo di trigger",
+        "boardIds": "Board",
+        "statusIds": "Stati",
+        "priorities": "Priorità",
+        "enabled": "Trigger abilitato"
+      },
+      "placeholders": {
+        "boardIds": "Seleziona board",
+        "statusIds": "Aggiungi stato",
+        "priorities": "Aggiungi priorità"
+      },
+      "boardFilters": {
+        "active": "Board attive",
+        "inactive": "Board inattive",
+        "all": "Tutte le board"
+      },
+      "help": {
+        "conditions": "Lasci un campo vuoto per farlo corrispondere a qualsiasi valore."
+      },
+      "actions": {
+        "create": "Crea trigger",
+        "save": "Salva modifiche",
+        "delete": "Elimina trigger"
+      },
+      "noTemplates": "Crei un modello di sondaggio prima di aggiungere trigger.",
+      "prioritiesMixed": "Le board selezionate usano tipi di priorità diversi. Vengono mostrate tutte le priorità.",
+      "errors": {
+        "reference": "Impossibile caricare le opzioni del trigger. Riprovi."
+      }
+    }
+  },
+  "response": {
+    "pageTitle": "Sondaggio di soddisfazione del cliente",
+    "invalidTitle": "Sondaggio non disponibile",
+    "invalidMessage": "Questo link di feedback non è più valido oppure è già stato usato.",
+    "ratingPrompt": "Com'è stata la sua esperienza?",
+    "ratingAssistive": "Selezioni un punteggio da 1 a {{scale}}",
+    "commentLabel": "Commenti aggiuntivi (facoltativo)",
+    "submitButton": "Invia feedback",
+    "submitting": "Invio del feedback...",
+    "submittedTitle": "Grazie per la risposta!",
+    "submittedMessage": "{{thankYouText}}",
+    "ratingSubmitted": "Feedback inviato",
+    "retryButton": "Riprova",
+    "selectRatingError": "Selezioni una valutazione prima dell'invio.",
+    "errorMessage": "Non è stato possibile registrare il feedback. Riprovi.",
+    "supportMessage": "Se ha domande, contatti il suo tecnico."
+  },
+  "rating": {
+    "buttonAriaWithLabel": "{{rating}} - {{label}}",
+    "buttonAria": "Valutazione {{rating}} di {{scale}}",
+    "defaults": {
+      "3": {
+        "1": "Scarso",
+        "2": "Buono",
+        "3": "Eccellente"
+      },
+      "5": {
+        "1": "Molto scarso",
+        "2": "Scarso",
+        "3": "Nella media",
+        "4": "Buono",
+        "5": "Eccellente"
+      },
+      "10": {
+        "1": "Pessimo",
+        "2": "Molto scarso",
+        "3": "Scarso",
+        "4": "Sotto la media",
+        "5": "Nella media",
+        "6": "Sopra la media",
+        "7": "Buono",
+        "8": "Molto buono",
+        "9": "Eccellente",
+        "10": "Perfetto"
+      }
+    }
+  },
+  "responses": {
+    "filters": {
+      "labels": {
+        "template": "Modello",
+        "technician": "Tecnico",
+        "client": "Cliente",
+        "dateRange": "Intervallo di date"
+      },
+      "placeholders": {
+        "allTemplates": "Tutti i modelli",
+        "allTechnicians": "Tutti i tecnici",
+        "allClients": "Tutti i clienti"
+      },
+      "actions": {
+        "apply": "Applica",
+        "reset": "Reimposta"
+      }
+    },
+    "page": {
+      "filterTitle": "Filtra risposte",
+      "loading": "Aggiornamento risposte...",
+      "error": "Impossibile caricare le risposte al sondaggio. Riprovi.",
+      "pageSizeOptions": {
+        "10": "10 per pagina",
+        "25": "25 per pagina",
+        "50": "50 per pagina"
+      },
+      "itemLabel": "risposte"
+    },
+    "detail": {
+      "title": "Dettaglio risposta al sondaggio",
+      "empty": "Nessuna risposta selezionata.",
+      "labels": {
+        "submittedAt": "Inviata il",
+        "client": "Cliente",
+        "contact": "Contatto",
+        "technician": "Tecnico",
+        "ticket": "Ticket",
+        "rating": "Valutazione",
+        "comment": "Commento"
+      },
+      "fallbacks": {
+        "unknown": "Sconosciuto",
+        "unassigned": "Non assegnato",
+        "none": "-",
+        "noComment": "Nessun commento fornito."
+      }
+    }
+  },
+  "dashboard": {
+    "loadingInsights": "Caricamento analisi del sondaggio...",
+    "responseMetrics": {
+      "cards": {
+        "sent": "Inviti inviati",
+        "responses": "Risposte ricevute",
+        "responseRate": "Tasso di risposta",
+        "averageRating": "Valutazione media",
+        "outstanding": "Inviti in sospeso",
+        "negative": "Risposte negative (<= 2 stelle)"
+      },
+      "badges": {
+        "awaitingResponses": "In attesa di risposte",
+        "needsReview": "Da rivedere"
+      }
+    },
+    "responseTrend": {
+      "title": "Trend delle risposte",
+      "emptyTitle": "Nessuna risposta registrata per il periodo selezionato.",
+      "emptyDescription": "Torni dopo che i clienti avranno inviato il feedback.",
+      "tooltip": {
+        "averageRating": "Valutazione media",
+        "responses": "Risposte",
+        "date": "Data: {{label}}"
+      }
+    },
+    "responsesList": {
+      "title": "Risposte recenti",
+      "emptyTitle": "Nessuna risposta al sondaggio disponibile.",
+      "emptyDescription": "Inviti i clienti a lasciare feedback per popolare questa vista.",
+      "table": {
+        "submitted": "Inviata",
+        "client": "Cliente",
+        "technician": "Tecnico",
+        "rating": "Valutazione",
+        "comment": "Commento",
+        "ticket": "Ticket"
+      },
+      "fallbacks": {
+        "unknownClient": "Cliente sconosciuto",
+        "unassigned": "Non assegnato",
+        "noComment": "Nessun commento"
+      }
+    },
+    "satisfactionDistribution": {
+      "title": "Distribuzione della soddisfazione",
+      "emptyTitle": "Nessuna valutazione del sondaggio registrata.",
+      "emptyDescription": "La distribuzione apparirà dopo la raccolta del feedback.",
+      "axes": {
+        "rating": "Valutazione",
+        "responses": "Risposte"
+      },
+      "tooltip": {
+        "percent": "Percentuale",
+        "responses": "Risposte",
+        "rating": "Valutazione: {{label}}"
+      }
+    },
+    "topIssues": {
+      "title": "Problemi principali",
+      "emptyTitle": "Nessun feedback negativo registrato per i filtri selezionati.",
+      "emptyDescription": "È un buon segnale. Continui così.",
+      "fallbacks": {
+        "unknownClient": "Cliente sconosciuto",
+        "ticket": "Ticket {{ticket}}",
+        "noComment": "Nessun commento lasciato.",
+        "assignedTo": "Assegnato a: {{name}}"
+      }
+    }
+  },
+  "analytics": {
+    "filters": {
+      "labels": {
+        "customerSegment": "Segmento clienti",
+        "surveyTemplate": "Modello di sondaggio",
+        "timeframe": "Periodo",
+        "calendarView": "Vista calendario"
+      },
+      "defaults": {
+        "segments": {
+          "all": "Tutti i clienti",
+          "managed": "Clienti gestiti",
+          "project": "Clienti solo progetto"
+        },
+        "templates": {
+          "all": "Tutti i modelli",
+          "default": "Modello CSAT fase 1"
+        },
+        "timeframes": {
+          "30d": "Ultimi 30 giorni",
+          "90d": "Ultimi 90 giorni",
+          "365d": "Da inizio anno"
+        }
+      },
+      "actions": {
+        "apply": "Applica filtri",
+        "reset": "Reimposta",
+        "calendar": "In arrivo"
+      }
+    },
+    "page": {
+      "filtersTitle": "Filtri di analisi",
+      "overviewTitle": "Panoramica della soddisfazione",
+      "overviewDescription": "Confronti nel tempo la soddisfazione media e i tassi di risposta. Una segmentazione aggiuntiva arriverà nelle iterazioni successive."
+    },
+    "chart": {
+      "empty": "Selezioni i filtri sopra per esplorare analisi avanzate. (In arrivo)",
+      "tooltip": {
+        "averageRating": "Valutazione media",
+        "responseRate": "Tasso di risposta"
+      },
+      "legend": {
+        "averageRating": "Valutazione media",
+        "responseRate": "Tasso di risposta"
+      }
+    },
+    "export": {
+      "csv": "Esporta CSV",
+      "shareSnapshot": "Condividi istantanea",
+      "emailDigest": "Riepilogo email"
+    }
+  },
+  "clientSummary": {
+    "title": "Riepilogo CSAT",
+    "empty": "Nessun dato del sondaggio è ancora disponibile per questo cliente. I sondaggi inviati dopo la chiusura dei ticket popoleranno questa vista.",
+    "labels": {
+      "averageRating": "Valutazione media",
+      "responseRate": "Tasso di risposta",
+      "totalResponses": "Risposte totali",
+      "lastResponse": "Ultima risposta",
+      "rollingTrend": "Trend progressivo"
+    },
+    "fallbacks": {
+      "none": "-",
+      "noResponsesYet": "Nessuna risposta"
+    }
+  },
+  "ticketSummary": {
+    "title": "Feedback cliente",
+    "empty": "Nessuna risposta al sondaggio ricevuta per questo ticket.",
+    "labels": {
+      "latestRating": "Ultima valutazione",
+      "comment": "Commento",
+      "totalResponses": "Risposte totali"
+    },
+    "fallbacks": {
+      "none": "-"
+    }
+  }
+}

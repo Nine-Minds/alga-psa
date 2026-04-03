@@ -105,6 +105,14 @@ vi.mock("../ui/components/PrimaryButton", () => ({
     React.createElement("MockPrimaryButton", props, props.children as React.ReactNode),
 }));
 
+vi.mock("../features/ticketDetail/components/DocumentsSection", () => ({
+  DocumentsSection: (props: Record<string, unknown>) => React.createElement("MockDocumentsSection", props),
+}));
+
+vi.mock("../features/ticketDetail/components/MaterialsSection", () => ({
+  MaterialsSection: (props: Record<string, unknown>) => React.createElement("MockMaterialsSection", props),
+}));
+
 vi.mock("../features/ticketRichText/TicketRichTextEditor", () => ({
   TicketRichTextEditor: (props: Record<string, unknown>) =>
     React.createElement("MockRichTextEditor", props),
@@ -242,12 +250,11 @@ describe("TicketDetailScreen rich text sections", () => {
         ],
         visibleCount: 20,
         onLoadMore: () => undefined,
-        onJumpToLatest: () => undefined,
-        onJumpToTop: () => undefined,
         error: null,
         onLinkPress: (url: string) => {
           void Linking.openURL(url);
         },
+        ticketId: "test-ticket-1",
       }),
     );
 
@@ -271,10 +278,9 @@ describe("TicketDetailScreen rich text sections", () => {
         ],
         visibleCount: 20,
         onLoadMore: () => undefined,
-        onJumpToLatest: () => undefined,
-        onJumpToTop: () => undefined,
         error: null,
         onLinkPress,
+        ticketId: "test-ticket-1",
       }),
     );
 
@@ -300,9 +306,8 @@ describe("TicketDetailScreen rich text sections", () => {
         ],
         visibleCount: 20,
         onLoadMore: () => undefined,
-        onJumpToLatest: () => undefined,
-        onJumpToTop: () => undefined,
         error: null,
+        ticketId: "test-ticket-1",
       }),
     );
 
@@ -325,9 +330,8 @@ describe("TicketDetailScreen rich text sections", () => {
         ],
         visibleCount: 20,
         onLoadMore: () => undefined,
-        onJumpToLatest: () => undefined,
-        onJumpToTop: () => undefined,
         error: null,
+        ticketId: "test-ticket-1",
       }),
     );
 
@@ -359,8 +363,210 @@ describe("TicketDetailScreen rich text sections", () => {
       renderer.root.find((node) => (node.type as string) === "Pressable" && node.props.accessibilityLabel === "Internal ✓"),
     ).toBeTruthy();
     expect(
-      renderer.root.find((node) => (node.type as string) === "Pressable" && node.props.accessibilityLabel === "Public"),
+      renderer.root.find((node) => (node.type as string) === "Pressable" && node.props.accessibilityLabel === "Client"),
     ).toBeTruthy();
+  });
+
+  it("shows the resolution chip when onChangeIsResolution is provided", () => {
+    const onChangeIsResolution = vi.fn();
+    const renderer = render(
+      React.createElement(CommentComposer, {
+        draftContent: richComment,
+        draftPlainText: "Rich reply",
+        isInternal: false,
+        onChangeIsInternal: () => undefined,
+        isResolution: false,
+        onChangeIsResolution,
+        onSend: () => undefined,
+        sending: false,
+        offline: false,
+        error: null,
+        editorRef: createRef<TicketRichTextEditorRef>(),
+        onDraftChange: () => undefined,
+      }),
+    );
+
+    const resolutionChip = renderer.root.find(
+      (node) => (node.type as string) === "Pressable" && node.props.accessibilityLabel === "Resolution",
+    );
+    expect(resolutionChip).toBeTruthy();
+    act(() => {
+      resolutionChip.props.onPress();
+    });
+    expect(onChangeIsResolution).toHaveBeenCalledWith(true);
+  });
+
+  it("does not show the resolution chip when onChangeIsResolution is not provided", () => {
+    const renderer = render(
+      React.createElement(CommentComposer, {
+        draftContent: richComment,
+        draftPlainText: "Rich reply",
+        isInternal: true,
+        onChangeIsInternal: () => undefined,
+        onSend: () => undefined,
+        sending: false,
+        offline: false,
+        error: null,
+        editorRef: createRef<TicketRichTextEditorRef>(),
+        onDraftChange: () => undefined,
+      }),
+    );
+
+    const resolutionChips = renderer.root.findAll(
+      (node) => (node.type as string) === "Pressable" && node.props.accessibilityLabel === "Resolution",
+    );
+    expect(resolutionChips).toHaveLength(0);
+  });
+
+  it("shows close-status picker when isResolution is true with closedStatuses", () => {
+    const onChangeCloseStatusId = vi.fn();
+    const closedStatuses = [
+      { status_id: "s-closed", board_id: "b-1", name: "Closed", is_closed: true },
+      { status_id: "s-resolved", board_id: "b-1", name: "Resolved", is_closed: true },
+    ];
+    const renderer = render(
+      React.createElement(CommentComposer, {
+        draftContent: richComment,
+        draftPlainText: "Rich reply",
+        isInternal: false,
+        onChangeIsInternal: () => undefined,
+        isResolution: true,
+        onChangeIsResolution: () => undefined,
+        closedStatuses,
+        closeStatusId: null,
+        onChangeCloseStatusId,
+        onSend: () => undefined,
+        sending: false,
+        offline: false,
+        error: null,
+        editorRef: createRef<TicketRichTextEditorRef>(),
+        onDraftChange: () => undefined,
+      }),
+    );
+
+    // "Do not change status" chip should be checked (closeStatusId is null)
+    expect(
+      renderer.root.find((node) => (node.type as string) === "Pressable" && node.props.accessibilityLabel === "Do not change status ✓"),
+    ).toBeTruthy();
+    // Status options rendered
+    const closedChip = renderer.root.find(
+      (node) => (node.type as string) === "Pressable" && node.props.accessibilityLabel === "Closed",
+    );
+    expect(closedChip).toBeTruthy();
+    expect(
+      renderer.root.find((node) => (node.type as string) === "Pressable" && node.props.accessibilityLabel === "Resolved"),
+    ).toBeTruthy();
+
+    // Tapping a status chip calls onChangeCloseStatusId
+    act(() => {
+      closedChip.props.onPress();
+    });
+    expect(onChangeCloseStatusId).toHaveBeenCalledWith("s-closed");
+  });
+
+  it("does not show close-status picker when isResolution is false", () => {
+    const renderer = render(
+      React.createElement(CommentComposer, {
+        draftContent: richComment,
+        draftPlainText: "Rich reply",
+        isInternal: false,
+        onChangeIsInternal: () => undefined,
+        isResolution: false,
+        onChangeIsResolution: () => undefined,
+        closedStatuses: [{ status_id: "s-closed", board_id: "b-1", name: "Closed", is_closed: true }],
+        closeStatusId: null,
+        onChangeCloseStatusId: () => undefined,
+        onSend: () => undefined,
+        sending: false,
+        offline: false,
+        error: null,
+        editorRef: createRef<TicketRichTextEditorRef>(),
+        onDraftChange: () => undefined,
+      }),
+    );
+
+    const statusChips = renderer.root.findAll(
+      (node) => (node.type as string) === "Pressable" && node.props.accessibilityLabel === "Closed",
+    );
+    expect(statusChips).toHaveLength(0);
+  });
+
+  it("renders a resolution badge on comments with is_resolution", () => {
+    const renderer = render(
+      React.createElement(CommentsSection, {
+        comments: [
+          {
+            comment_id: "comment-res",
+            comment_text: richComment,
+            is_internal: false,
+            is_resolution: true,
+            created_by_name: "Bob",
+            created_at: "2026-03-11T00:00:00.000Z",
+          },
+        ],
+        visibleCount: 20,
+        onLoadMore: () => undefined,
+        error: null,
+        ticketId: "test-ticket-1",
+      }),
+    );
+
+    const badges = renderer.root.findAll((node) => (node.type as string) === "MockBadge");
+    const resolutionBadge = badges.find((b) => b.props.label === "Resolution");
+    expect(resolutionBadge).toBeTruthy();
+    expect(resolutionBadge!.props.tone).toBe("success");
+    // Also has a Client badge
+    const clientBadge = badges.find((b) => b.props.label === "Client");
+    expect(clientBadge).toBeTruthy();
+  });
+
+  it("uses Client label instead of Public for non-internal comments", () => {
+    const renderer = render(
+      React.createElement(CommentsSection, {
+        comments: [
+          {
+            comment_id: "comment-pub",
+            comment_text: "Hello",
+            is_internal: false,
+            created_by_name: "Alice",
+            created_at: "2026-03-11T00:00:00.000Z",
+          },
+        ],
+        visibleCount: 20,
+        onLoadMore: () => undefined,
+        error: null,
+        ticketId: "test-ticket-1",
+      }),
+    );
+
+    const badges = renderer.root.findAll((node) => (node.type as string) === "MockBadge");
+    expect(badges.find((b) => b.props.label === "Client")).toBeTruthy();
+    expect(badges.find((b) => b.props.label === "Public")).toBeUndefined();
+  });
+
+  it("does not render a resolution badge for non-resolution comments", () => {
+    const renderer = render(
+      React.createElement(CommentsSection, {
+        comments: [
+          {
+            comment_id: "comment-normal",
+            comment_text: richComment,
+            is_internal: true,
+            is_resolution: false,
+            created_by_name: "Alice",
+            created_at: "2026-03-11T00:00:00.000Z",
+          },
+        ],
+        visibleCount: 20,
+        onLoadMore: () => undefined,
+        error: null,
+        ticketId: "test-ticket-1",
+      }),
+    );
+
+    const badges = renderer.root.findAll((node) => (node.type as string) === "MockBadge");
+    expect(badges.find((b) => b.props.label === "Resolution")).toBeUndefined();
+    expect(badges.find((b) => b.props.label === "Internal")).toBeTruthy();
   });
 
   it("keeps existing saved comments non-editable in v1", () => {
@@ -377,9 +583,8 @@ describe("TicketDetailScreen rich text sections", () => {
         ],
         visibleCount: 20,
         onLoadMore: () => undefined,
-        onJumpToLatest: () => undefined,
-        onJumpToTop: () => undefined,
         error: null,
+        ticketId: "test-ticket-1",
       }),
     );
 

@@ -2145,6 +2145,177 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/quotes",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}",
+    "methods": [
+      "GET",
+      "PUT",
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/activities",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/activities/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/approve",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/approve/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/convert",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/convert/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/convert/preview",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/convert/preview/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/items",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/items/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/items/{itemId}",
+    "methods": [
+      "PUT",
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/items/[itemId]/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/items/reorder",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/items/reorder/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/remind",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/remind/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/request-changes",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/request-changes/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/resend",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/resend/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/revisions",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/revisions/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/send",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/send/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quotes/{id}/submit-for-approval",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quotes/[id]/submit-for-approval/route.ts",
+    "controller": "ApiQuoteController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuoteController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuoteController.ts"
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/v1/meta/docs",
     "methods": [
       "GET"

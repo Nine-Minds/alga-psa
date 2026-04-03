@@ -39,6 +39,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useQuickAddClient } from '@alga-psa/ui/context';
+import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -47,6 +48,7 @@ interface TicketPropertiesProps {
   contactInfo: any;
   createdByUser: any;
   board: any;
+  isLiveTicketTimerEnabled?: boolean;
   elapsedTime: number;
   isRunning: boolean;
   isTimerLocked?: boolean;
@@ -128,6 +130,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   contactInfo,
   createdByUser,
   board,
+  isLiveTicketTimerEnabled,
   elapsedTime,
   isRunning,
   isTimerLocked = false,
@@ -177,6 +180,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const { openDrawer } = useDrawer();
   const { renderQuickAddContact } = useQuickAddClient();
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+  const liveTicketTimerEnabled = isLiveTicketTimerEnabled ?? isBoardLiveTicketTimerEnabled(board);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
@@ -381,48 +385,59 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         headerIcon={<Clock className="w-5 h-5" />}
       >
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span>Ticket Timer - #{ticket.ticket_number}</span>
-          </div>
-          <div className={`${styles['digital-clock']} text-2xl flex items-center justify-between px-4`}>
-            <span>{formatTime(elapsedTime)}</span>
-            <div className='pl-5'>
-              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="21" viewBox="0 0 17 21" fill="none">
-                <path d="M0.625 20.2V1L15.825 10.2571L0.625 20.2Z" fill="#000" stroke="#000" strokeWidth="0.8" />
-              </svg>
-            </div>
-          </div>
-          <div className="flex justify-center space-x-2">
-            {!isRunning ? (
-              <Button
-                {...withDataAutomationId({ id: `${id}-start-timer-btn` })}
-                onClick={onStart}
-                className={`w-24 ${isTimerLocked ? 'opacity-60' : ''}`}
-                variant='soft'
-                aria-disabled={isTimerLocked}
-                title={isTimerLocked ? 'Timer active in another window' : undefined}
-              >
-                <Play className="mr-2 h-4 w-4" /> Start
-              </Button>
-            ) : (
-              <Button {...withDataAutomationId({ id: `${id}-pause-timer-btn` })} onClick={onPause} className={`w-24`} variant='soft'>
-                <Pause className="mr-2 h-4 w-4" /> Pause
-              </Button>
-            )}
-            <Button {...withDataAutomationId({ id: `${id}-stop-timer-btn` })} onClick={onStop} className={`w-24`} variant='soft'>
-              <StopCircle className="mr-2 h-4 w-4" /> Reset
-            </Button>
-          </div>
+          {liveTicketTimerEnabled && (
+            <>
+              <div className="flex items-center justify-between">
+                <span>Ticket Timer - #{ticket.ticket_number}</span>
+              </div>
+              <div className={`${styles['digital-clock']} text-2xl flex items-center justify-between px-4`}>
+                <span>{formatTime(elapsedTime)}</span>
+                <div className='pl-5'>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="17" height="21" viewBox="0 0 17 21" fill="none">
+                    <path d="M0.625 20.2V1L15.825 10.2571L0.625 20.2Z" fill="#000" stroke="#000" strokeWidth="0.8" />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex justify-center space-x-2">
+                {!isRunning ? (
+                  <Button
+                    {...withDataAutomationId({ id: `${id}-start-timer-btn` })}
+                    onClick={onStart}
+                    className={`w-24 ${isTimerLocked ? 'opacity-60' : ''}`}
+                    variant='soft'
+                    aria-disabled={isTimerLocked}
+                    title={isTimerLocked ? 'Timer active in another window' : undefined}
+                  >
+                    <Play className="mr-2 h-4 w-4" /> Start
+                  </Button>
+                ) : (
+                  <Button {...withDataAutomationId({ id: `${id}-pause-timer-btn` })} onClick={onPause} className={`w-24`} variant='soft'>
+                    <Pause className="mr-2 h-4 w-4" /> Pause
+                  </Button>
+                )}
+                <Button {...withDataAutomationId({ id: `${id}-stop-timer-btn` })} onClick={onStop} className={`w-24`} variant='soft'>
+                  <StopCircle className="mr-2 h-4 w-4" /> Reset
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  {...withDataAutomationId({ id: `${id}-description-input` })}
+                  id="description"
+                  value={timeDescription}
+                  onChange={(e) => onTimeDescriptionChange(e.target.value)}
+                  placeholder="Enter work description"
+                  className={styles['custom-input']}
+                />
+              </div>
+            </>
+          )}
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Input
-              {...withDataAutomationId({ id: `${id}-description-input` })}
-              id="description"
-              value={timeDescription}
-              onChange={(e) => onTimeDescriptionChange(e.target.value)}
-              placeholder="Enter work description"
-              className={styles['custom-input']}
-            />
+            {!liveTicketTimerEnabled && (
+              <p className="text-sm text-muted-foreground" data-testid={`${id}-live-timer-disabled-message`}>
+                Live ticket timer is disabled for this board.
+              </p>
+            )}
           </div>
           <Button
             {...withDataAutomationId({ id: `${id}-add-time-entry-btn` })}
@@ -437,7 +452,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           </Button>
 
           {/* Interval Management Section */}
-          {ticket.ticket_id && userId && renderIntervalManagement && (
+          {liveTicketTimerEnabled && ticket.ticket_id && userId && renderIntervalManagement && (
             <div className="mt-2 border-t pt-4" {...withDataAutomationId({ id: `${id}-interval-management` })}>
               <h3 className="text-sm font-medium mb-2">Tracked Intervals</h3>
               {renderIntervalManagement({ ticketId: ticket.ticket_id, userId })}

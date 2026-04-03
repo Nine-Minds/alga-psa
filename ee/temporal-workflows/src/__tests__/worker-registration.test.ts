@@ -7,10 +7,18 @@ describe('temporal worker registration', () => {
     expect(workflows.slaTicketWorkflow).toBeDefined();
   });
 
+  it('exports ninjaOneProactiveTokenRefreshWorkflow from workflow index', () => {
+    expect(workflows.ninjaOneProactiveTokenRefreshWorkflow).toBeDefined();
+  });
+
   it('exports SLA activities from activities index', () => {
     expect(activities.calculateNextWakeTime).toBeDefined();
     expect(activities.sendSlaNotification).toBeDefined();
     expect(activities.checkAndEscalate).toBeDefined();
     expect(activities.updateSlaStatus).toBeDefined();
+  });
+
+  it('exports proactive NinjaOne token refresh activity from activities index', () => {
+    expect(activities.proactiveNinjaOneTokenRefreshActivity).toBeDefined();
   });
 });

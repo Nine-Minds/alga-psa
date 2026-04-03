@@ -10,19 +10,46 @@
     "clients": "Clienti",
     "contacts": "Contatti",
     "documents": "Documenti",
+    "documentsAll": "Tutti i documenti",
+    "knowledgeBase": "Base di conoscenza",
     "assets": "Asset",
     "timeManagement": "Gestione del tempo",
     "timeEntry": "Inserimento ore",
     "approvals": "Approvazioni",
-    "billing": "Fatturazione",
+    "billing": {
+      "label": "Fatturazione",
+      "sections": {
+        "contracts": "Contratti",
+        "invoicing": "Fatturazione",
+        "pricing": "Prezzi",
+        "trackingReports": "Monitoraggio e report"
+      },
+      "contractTemplates": "Modelli di contratto",
+      "clientContracts": "Contratti cliente",
+      "contractLinePresets": "Preimpostazioni righe contratto",
+      "invoicing": "Fatturazione",
+      "invoiceLayouts": "Layout fattura",
+      "billingCycles": "Cicli di fatturazione",
+      "servicePeriods": "Periodi di servizio",
+      "serviceCatalog": "Catalogo servizi",
+      "products": "Prodotti",
+      "taxRates": "Aliquote fiscali",
+      "usageTracking": "Monitoraggio utilizzo",
+      "reports": "Report",
+      "accountingExports": "Esportazioni contabili"
+    },
     "schedule": "Programma",
     "technicianDispatch": "Smistamento tecnici",
     "automationHub": "Hub di automazione",
     "workflows": "Flussi di lavoro",
+    "controlPanel": "Pannello di controllo",
+    "workflowEditor": "Editor dei flussi di lavoro",
     "runs": "Esecuzioni",
     "events": "Eventi",
     "deadLetter": "Dead Letter",
     "systemMonitor": "Monitor di sistema",
+    "systemMonitoring": "Monitoraggio del sistema",
+    "jobMonitoring": "Monitoraggio job",
     "jobs": "Job",
     "emailLogs": "Log email",
     "extensions": "Estensioni"
@@ -31,7 +58,11 @@
     "backToMain": "Torna al principale",
     "searchPlaceholder": "Cerca",
     "settings": "Impostazioni",
-    "support": "Supporto"
+    "support": "Supporto",
+    "goToDashboard": "Vai alla dashboard",
+    "logoAlt": "Logo AlgaPSA",
+    "expandSidebar": "Espandi barra laterale",
+    "collapseSidebar": "Comprimi barra laterale"
   },
   "settings": {
     "sections": {
@@ -46,8 +77,10 @@
       "general": "Generale",
       "users": "Utenti",
       "teams": "Team",
+      "language": "Lingua",
       "clientPortal": "Portale clienti",
       "ticketing": "Ticketing",
+      "sla": "SLA",
       "projects": "Progetti",
       "interactions": "Interazioni",
       "notifications": "Notifiche",
@@ -63,11 +96,129 @@
       "security": "Sicurezza"
     }
   },
+  "dashboard": {
+    "onboardingWizard": "Configurazione guidata"
+  },
   "header": {
     "userFallback": "Utente",
     "quickAccess": "Accesso rapido al profilo e all'account.",
     "profile": "Profilo",
     "account": "Account",
-    "signOut": "Esci"
+    "signOut": "Esci",
+    "quickCreate": {
+      "ariaLabel": "Apri creazione rapida",
+      "title": "Creazione rapida",
+      "heading": "Crea",
+      "options": {
+        "ticket": {
+          "label": "Ticket",
+          "description": "Crea un nuovo ticket di supporto"
+        },
+        "client": {
+          "label": "Cliente",
+          "description": "Aggiungi un nuovo cliente al sistema"
+        },
+        "contact": {
+          "label": "Contatto",
+          "description": "Aggiungi un nuovo contatto"
+        },
+        "project": {
+          "label": "Progetto",
+          "description": "Avvia un nuovo progetto"
+        },
+        "asset": {
+          "label": "Asset",
+          "description": "Aggiungi un nuovo dispositivo all'area di lavoro"
+        },
+        "service": {
+          "label": "Servizio",
+          "description": "Aggiungi un nuovo servizio fatturabile"
+        },
+        "product": {
+          "label": "Prodotto",
+          "description": "Aggiungi un nuovo prodotto al catalogo"
+        }
+      }
+    },
+    "jobs": {
+      "ariaLabel": "Visualizza l'attività dei job in background",
+      "title": "Job in background",
+      "description": "Monitora importazioni, esecuzioni di automazione e lavoro pianificato.",
+      "active": "Job attivi",
+      "queued": "Job in coda",
+      "failedLast24h": "Falliti nelle ultime 24 ore",
+      "openJobCenter": "Apri centro job"
+    },
+    "breadcrumb": {
+      "home": "Home",
+      "dashboard": "Dashboard"
+    },
+    "tenantBadge": {
+      "ariaLabel": "Tenant attivo {{tenant}}"
+    },
+    "themeToggle": {
+      "ariaLabel": "Cambia tema",
+      "light": "Chiaro",
+      "dark": "Scuro",
+      "system": "Sistema",
+      "selected": "Selezionato"
+    }
+  },
+  "dialogs": {
+    "aiInterrupt": {
+      "navigate": {
+        "title": "Lasciare la pagina e annullare la risposta AI?",
+        "message": "Una risposta AI o un'azione strumento è ancora in corso. Se lasci questa pagina ora, verrà annullata.",
+        "confirm": "Lascia la pagina",
+        "cancel": "Resta nella pagina"
+      },
+      "closeChat": {
+        "title": "Chiudere la chat e annullare la risposta AI?",
+        "message": "Una risposta AI o un'azione strumento è ancora in corso. Se chiudi la chat ora, verrà annullata.",
+        "confirm": "Chiudi chat",
+        "cancel": "Mantieni la chat aperta"
+      }
+    }
+  },
+  "banners": {
+    "trial": {
+      "premiumConfirmed": "Premium confermato — inizia nel prossimo ciclo di fatturazione",
+      "dayLeft": "1 giorno rimanente",
+      "daysLeft": "{{count}} giorni rimanenti",
+      "premiumTrial": "Prova Premium: {{daysLabel}} — conferma per mantenerla",
+      "stripeTrial": "Prova {{tier}}: {{daysLabel}}"
+    },
+    "paymentFailed": {
+      "message": "Pagamento non riuscito — aggiorna il metodo di pagamento",
+      "portalError": "Impossibile aprire il portale di fatturazione"
+    },
+    "platformNotification": {
+      "learnMore": "Scopri di più",
+      "dismiss": "Ignora notifica"
+    }
+  },
+  "quickCreate": {
+    "success": {
+      "asset": "Asset creato con successo",
+      "ticket": "Ticket n. {{number}} creato con successo",
+      "client": "Cliente \"{{name}}\" creato con successo",
+      "contact": "{{name}} aggiunto con successo",
+      "project": "Progetto \"{{name}}\" creato con successo",
+      "service": "Servizio creato con successo",
+      "product": "Prodotto creato con successo"
+    },
+    "errors": {
+      "loadClients": "Impossibile caricare i clienti",
+      "loadServiceTypes": "Impossibile caricare i tipi di servizio"
+    },
+    "dialogTitles": {
+      "contact": "Aggiungi nuovo contatto",
+      "project": "Aggiungi nuovo progetto",
+      "service": "Aggiungi nuovo servizio"
+    }
+  },
+  "rightSidebar": {
+    "title": "Chat",
+    "enterpriseOnly": "La funzionalità chat è disponibile solo nell'edizione Enterprise."
   }
 }

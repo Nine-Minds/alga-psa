@@ -1,5 +1,7 @@
 'use server'
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
+
 import { validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
@@ -14,7 +16,10 @@ import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { createTenantKnex, getConnection, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
-import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
+import {
+  getTicketOrigin,
+  parseTicketStatusFilterValue,
+} from '@alga-psa/tickets/lib';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions';
 
 const clientTicketSchema = z.object({
@@ -56,6 +61,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
     console.log('Debug - User ID:', user.user_id);
     console.log('Debug - Tenant:', tenant);
     console.log('Debug - Client user:', user.user_id);
+    const parsedStatusFilter = parseTicketStatusFilterValue(status);
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get user's client_id
@@ -151,15 +157,16 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       });
 
     // Filter by status
-    if (status === 'all') {
+    if (parsedStatusFilter.kind === 'all') {
       // No filter, show all tickets
-    } else if (status === 'open') {
-      query = query.whereNull('t.closed_at');
-    } else if (status === 'closed') {
-      query = query.whereNotNull('t.closed_at');
-    } else if (status) {
-      // Filter by specific status_id
-      query = query.where('t.status_id', status);
+    } else if (parsedStatusFilter.kind === 'open') {
+      query = query.where('s.is_closed', false);
+    } else if (parsedStatusFilter.kind === 'closed') {
+      query = query.where('s.is_closed', true);
+    } else if (parsedStatusFilter.kind === 'name') {
+      query = query.where('s.name', parsedStatusFilter.statusName);
+    } else if (parsedStatusFilter.kind === 'id') {
+      query = query.where('t.status_id', parsedStatusFilter.statusId);
     }
 
       const tickets = await query.orderBy('t.entered_at', 'desc');
@@ -668,6 +675,23 @@ export const updateTicketStatus = withAuth(async (
         throw new Error('Ticket not found');
       }
 
+      if (!ticket.board_id) {
+        throw new Error('Ticket does not have a board');
+      }
+
+      const statusForBoard = await trx('statuses')
+        .where({
+          tenant,
+          status_id: newStatusId,
+          status_type: 'ticket',
+          board_id: ticket.board_id,
+        })
+        .first('status_id');
+
+      if (!statusForBoard) {
+        throw new Error('Selected status is not valid for the ticket board');
+      }
+
       // Get old status for change tracking
       const oldStatusId = ticket.status_id;
 
@@ -918,15 +942,13 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       }
 
       // Fetch default status for tickets
-      const defaultStatus = await trx('statuses')
-        .where({
-          tenant,
-          is_default: true,
-          status_type: 'ticket'
-        })
-        .first();
+      const defaultStatusId = await TicketModel.getDefaultStatusId(
+        tenant,
+        trx,
+        defaultBoard.board_id
+      );
 
-      if (!defaultStatus) {
+      if (!defaultStatusId) {
         throw new Error('No default status configured for tickets');
       }
 
@@ -948,7 +970,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         source: 'client_portal',
         ticket_origin: TICKET_ORIGINS.CLIENT_PORTAL,
         board_id: defaultBoard.board_id,
-        status_id: defaultStatus.status_id,
+        status_id: defaultStatusId,
         // Auto-assign to board's default agent if configured
         assigned_to: defaultBoard.default_assigned_to || undefined
       };

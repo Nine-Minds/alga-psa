@@ -8,13 +8,15 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Eye, EyeOff } from 'lucide-react';
 import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { validateEmailAddress, validateContactName, validateClientName } from '@alga-psa/validation';
+import { validateEmailAddress } from '@alga-psa/validation';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientInfoStepProps extends StepProps {
   isRevisit?: boolean;
 }
 
 export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientInfoStepProps) {
+  const { t } = useTranslation('msp/onboarding');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
@@ -23,6 +25,44 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
   // Use a local variable for cleaner code
   const password = data.newPassword || '';
   const confirmPassword = data.confirmPassword || '';
+
+  const translateEmailValidationMessage = (message: string | null) => {
+    if (!message) return '';
+
+    const validationMessages: Record<string, { key: string; defaultValue: string }> = {
+      'Email address is required': {
+        key: 'clientInfoStep.validation.email.required',
+        defaultValue: 'Email address is required'
+      },
+      'Email address cannot contain only spaces': {
+        key: 'clientInfoStep.validation.email.spacesOnly',
+        defaultValue: 'Email address cannot contain only spaces'
+      },
+      'Email address cannot contain emojis': {
+        key: 'clientInfoStep.validation.email.noEmoji',
+        defaultValue: 'Email address cannot contain emojis'
+      },
+      'Please enter a valid email address': {
+        key: 'clientInfoStep.validation.email.invalid',
+        defaultValue: 'Please enter a valid email address'
+      },
+      'Please use a permanent business email address': {
+        key: 'clientInfoStep.validation.email.permanentBusiness',
+        defaultValue: 'Please use a permanent business email address'
+      },
+      'Please enter a valid business email address': {
+        key: 'clientInfoStep.validation.email.business',
+        defaultValue: 'Please enter a valid business email address'
+      },
+      'Please enter a valid email domain': {
+        key: 'clientInfoStep.validation.email.domain',
+        defaultValue: 'Please enter a valid email domain'
+      }
+    };
+
+    const translation = validationMessages[message];
+    return translation ? t(translation.key, { defaultValue: translation.defaultValue }) : message;
+  };
 
   // Password strength validation
   useEffect(() => {
@@ -50,28 +90,45 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
     return (
       <div className="space-y-6">
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold">Company Information</h2>
+          <h2 className="text-xl font-semibold">
+            {t('clientInfoStep.revisit.title', {
+              defaultValue: 'Company Information'
+            })}
+          </h2>
           <p className="text-sm text-gray-600">
-            Review or update your company details.
+            {t('clientInfoStep.revisit.description', {
+              defaultValue: 'Review or update your company details.'
+            })}
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="clientName">
-            Company Name <span className="text-red-500">*</span>
+          <Label htmlFor="tenantName">
+            {t('clientInfoStep.revisit.fields.companyName.label', {
+              defaultValue: 'Company Name'
+            })} <span className="text-red-500">*</span>
           </Label>
           <Input
-            id="clientName"
-            value={data.clientName}
-            onChange={(e) => updateData({ clientName: e.target.value })}
-            placeholder="Acme IT Solutions"
+            id="tenantName"
+            value={data.tenantName}
+            onChange={(e) => updateData({ tenantName: e.target.value })}
+            placeholder={t('clientInfoStep.revisit.fields.companyName.placeholder', {
+              defaultValue: 'Acme IT Solutions'
+            })}
             required
           />
         </div>
 
         <Alert variant="info">
           <AlertDescription>
-            <span className="font-semibold">Note:</span> You can use this wizard to reconfigure your workspace settings at any time.
+            <span className="font-semibold">
+              {t('clientInfoStep.common.noteLabel', {
+                defaultValue: 'Note:'
+              })}
+            </span>{' '}
+            {t('clientInfoStep.revisit.note', {
+              defaultValue: 'You can use this wizard to reconfigure your workspace settings at any time.'
+            })}
           </AlertDescription>
         </Alert>
       </div>
@@ -82,56 +139,76 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-xl font-semibold">Client Information</h2>
+        <h2 className="text-xl font-semibold">
+          {t('clientInfoStep.header.title', {
+            defaultValue: 'Client Information'
+          })}
+        </h2>
         <p className="text-sm text-gray-600">
-          Let's start by setting up your client profile.
+          {t('clientInfoStep.header.description', {
+            defaultValue: 'Let\'s start by setting up your client profile.'
+          })}
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="firstName">
-            First Name <span className="text-red-500">*</span>
+            {t('clientInfoStep.fields.firstName.label', {
+              defaultValue: 'First Name'
+            })} <span className="text-red-500">*</span>
           </Label>
           <Input
             id="firstName"
             value={data.firstName}
             onChange={(e) => updateData({ firstName: e.target.value })}
-            placeholder="John"
+            placeholder={t('clientInfoStep.fields.firstName.placeholder', {
+              defaultValue: 'John'
+            })}
             required
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="lastName">
-            Last Name <span className="text-red-500">*</span>
+            {t('clientInfoStep.fields.lastName.label', {
+              defaultValue: 'Last Name'
+            })} <span className="text-red-500">*</span>
           </Label>
           <Input
             id="lastName"
             value={data.lastName}
             onChange={(e) => updateData({ lastName: e.target.value })}
-            placeholder="Doe"
+            placeholder={t('clientInfoStep.fields.lastName.placeholder', {
+              defaultValue: 'Doe'
+            })}
             required
           />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="clientName">
-          Client Name <span className="text-red-500">*</span>
+        <Label htmlFor="tenantName">
+          {t('clientInfoStep.fields.companyName.label', {
+            defaultValue: 'Company Name'
+          })} <span className="text-red-500">*</span>
         </Label>
         <Input
-          id="clientName"
-          value={data.clientName}
-          onChange={(e) => updateData({ clientName: e.target.value })}
-          placeholder="Acme IT Solutions"
+          id="tenantName"
+          value={data.tenantName}
+          onChange={(e) => updateData({ tenantName: e.target.value })}
+          placeholder={t('clientInfoStep.fields.companyName.placeholder', {
+            defaultValue: 'Acme IT Solutions'
+          })}
           required
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="email">
-          Email Address <span className="text-red-500">*</span>
+          {t('clientInfoStep.fields.email.label', {
+            defaultValue: 'Email Address'
+          })} <span className="text-red-500">*</span>
         </Label>
         <Input
           id="email"
@@ -146,9 +223,11 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           }}
           onBlur={() => {
             const error = validateEmailAddress(data.email || '');
-            setFieldErrors(prev => ({ ...prev, email: error || '' }));
+            setFieldErrors(prev => ({ ...prev, email: translateEmailValidationMessage(error) }));
           }}
-          placeholder="john@acmeit.com"
+          placeholder={t('clientInfoStep.fields.email.placeholder', {
+            defaultValue: 'john@acmeit.com'
+          })}
           required
           disabled
           className={fieldErrors.email ? 'border-red-500' : ''}
@@ -157,28 +236,46 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           <p className="text-sm text-red-600 mt-1">{fieldErrors.email}</p>
         )}
         <p className="text-xs text-gray-500">
-          This will be used for signing in to your account.
+          {t('clientInfoStep.fields.email.help', {
+            defaultValue: 'This will be used for signing in to your account.'
+          })}
         </p>
       </div>
 
       <div className="space-y-4 pt-4 border-t">
         <Alert variant="warning" className="mb-4">
           <AlertDescription>
-            <p className="font-semibold">Password Reset Required</p>
-            <p className="mt-1 text-sm">You must set a new password to continue with the setup process. This step cannot be skipped.</p>
+            <p className="font-semibold">
+              {t('clientInfoStep.password.resetRequired.title', {
+                defaultValue: 'Password Reset Required'
+              })}
+            </p>
+            <p className="mt-1 text-sm">
+              {t('clientInfoStep.password.resetRequired.description', {
+                defaultValue: 'You must set a new password to continue with the setup process. This step cannot be skipped.'
+              })}
+            </p>
           </AlertDescription>
         </Alert>
 
         <div className="space-y-2">
-          <h3 className="text-lg font-medium">Set Your Password</h3>
+          <h3 className="text-lg font-medium">
+            {t('clientInfoStep.password.title', {
+              defaultValue: 'Set Your Password'
+            })}
+          </h3>
           <p className="text-sm text-gray-600">
-            Please set a new password to replace your temporary password.
+            {t('clientInfoStep.password.description', {
+              defaultValue: 'Please set a new password to replace your temporary password.'
+            })}
           </p>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="newPassword">
-            New Password <span className="text-red-500">*</span>
+            {t('clientInfoStep.password.fields.newPassword.label', {
+              defaultValue: 'New Password'
+            })} <span className="text-red-500">*</span>
           </Label>
           <div className="relative">
             <Input
@@ -186,7 +283,9 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
               type={showNewPassword ? "text" : "password"}
               value={password}
               onChange={(e) => updateData({ newPassword: e.target.value })}
-              placeholder="Create a strong password"
+              placeholder={t('clientInfoStep.password.fields.newPassword.placeholder', {
+                defaultValue: 'Create a strong password'
+              })}
               required
               autoComplete="new-password"
               className="pr-10"
@@ -206,22 +305,36 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           </div>
 
           <div id="password-requirements" className="text-sm mt-1">
-            <p className="text-gray-500">Password must contain:</p>
+            <p className="text-gray-500">
+              {t('clientInfoStep.password.requirements.title', {
+                defaultValue: 'Password must contain:'
+              })}
+            </p>
             <ul className="list-disc list-inside space-y-1">
               <li className={password.length >= 8 ? 'text-green-500' : 'text-gray-500'}>
-                At least 8 characters
+                {t('clientInfoStep.password.requirements.minLength', {
+                  defaultValue: 'At least 8 characters'
+                })}
               </li>
               <li className={/[A-Z]/.test(password) ? 'text-green-500' : 'text-gray-500'}>
-                One uppercase letter
+                {t('clientInfoStep.password.requirements.uppercase', {
+                  defaultValue: 'One uppercase letter'
+                })}
               </li>
               <li className={/[a-z]/.test(password) ? 'text-green-500' : 'text-gray-500'}>
-                One lowercase letter
+                {t('clientInfoStep.password.requirements.lowercase', {
+                  defaultValue: 'One lowercase letter'
+                })}
               </li>
               <li className={/\d/.test(password) ? 'text-green-500' : 'text-gray-500'}>
-                One number
+                {t('clientInfoStep.password.requirements.number', {
+                  defaultValue: 'One number'
+                })}
               </li>
               <li className={/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-500' : 'text-gray-500'}>
-                One special character
+                {t('clientInfoStep.password.requirements.specialCharacter', {
+                  defaultValue: 'One special character'
+                })}
               </li>
             </ul>
             {passwordStrength && (
@@ -230,7 +343,15 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
                 passwordStrength === 'medium' ? 'text-yellow-600' :
                 'text-red-600'
               }`}>
-                Password strength: {passwordStrength.charAt(0).toUpperCase() + passwordStrength.slice(1)}
+                {t('clientInfoStep.password.strength.label', {
+                  defaultValue: 'Password strength: {{strength}}',
+                  strength:
+                    passwordStrength === 'strong'
+                      ? t('clientInfoStep.password.strength.strong', { defaultValue: 'Strong' })
+                      : passwordStrength === 'medium'
+                        ? t('clientInfoStep.password.strength.medium', { defaultValue: 'Medium' })
+                        : t('clientInfoStep.password.strength.weak', { defaultValue: 'Weak' })
+                })}
               </p>
             )}
           </div>
@@ -238,7 +359,9 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
 
         <div className="space-y-2">
           <Label htmlFor="confirmPassword">
-            Confirm Password <span className="text-red-500">*</span>
+            {t('clientInfoStep.password.fields.confirmPassword.label', {
+              defaultValue: 'Confirm Password'
+            })} <span className="text-red-500">*</span>
           </Label>
           <div className="relative">
             <Input
@@ -246,7 +369,9 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
               type={showConfirmPassword ? "text" : "password"}
               value={confirmPassword}
               onChange={(e) => updateData({ confirmPassword: e.target.value })}
-              placeholder="Re-enter your password"
+              placeholder={t('clientInfoStep.password.fields.confirmPassword.placeholder', {
+                defaultValue: 'Re-enter your password'
+              })}
               required
               autoComplete="new-password"
               className={`pr-10 ${
@@ -270,7 +395,13 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
             <p className={`text-sm ${
               confirmPassword === password ? 'text-green-500' : 'text-red-500'
             }`}>
-              {confirmPassword === password ? 'Passwords match' : 'Passwords do not match'}
+              {confirmPassword === password
+                ? t('clientInfoStep.password.fields.confirmPassword.match', {
+                    defaultValue: 'Passwords match'
+                  })
+                : t('clientInfoStep.password.fields.confirmPassword.mismatch', {
+                    defaultValue: 'Passwords do not match'
+                  })}
             </p>
           )}
         </div>
@@ -278,7 +409,14 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
 
       <Alert variant="info">
         <AlertDescription>
-          <span className="font-semibold">Note:</span> All fields on this page are required to proceed.
+          <span className="font-semibold">
+            {t('clientInfoStep.common.noteLabel', {
+              defaultValue: 'Note:'
+            })}
+          </span>{' '}
+          {t('clientInfoStep.footer.note', {
+            defaultValue: 'All fields on this page are required to proceed.'
+          })}
         </AlertDescription>
       </Alert>
     </div>

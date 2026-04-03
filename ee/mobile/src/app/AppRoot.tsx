@@ -15,7 +15,9 @@ import { createApiClient } from "../api";
 import { refreshSession as refreshSessionApi, revokeSession } from "../api/mobileAuth";
 import { logger } from "../logging/logger";
 import { clearPendingMobileAuth, clearReceivedOtt } from "../auth/mobileAuth";
-import { getBiometricGateEnabled } from "../auth/biometricGate";
+import { unregisterPushToken } from "../api/pushToken";
+import { getStableDeviceId } from "../device/clientMetadata";
+import { getBiometricGateEnabled, BIOMETRIC_GRACE_MS } from "../auth/biometricGate";
 import { BiometricLockView } from "./BiometricLockView";
 import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
@@ -37,11 +39,12 @@ export function AppRoot() {
   const [navInitialState, setNavInitialState] = useState<InitialState | undefined>(undefined);
   const [navStateLoaded, setNavStateLoaded] = useState(false);
   const network = useNetworkStatus();
-  const refreshInFlight = useRef(false);
+  const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
   const navPersistHandle = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startupStartedAt = useRef(Date.now());
   const startupReported = useRef(false);
   const lastRevocationCheckAtMs = useRef(0);
+  const lastBiometricUnlockAtMs = useRef(0);
 
   const baseUrl = config.ok ? config.baseUrl : null;
 
@@ -64,10 +67,9 @@ export function AppRoot() {
         return;
       }
 
-      const nowMs = Date.now();
       const stored = await getStoredSession();
       if (stored) {
-        if (isSessionUsable(stored, nowMs)) {
+        if (isSessionUsable(stored)) {
           sessionRef.current = stored;
           if (!canceled) setSessionState(stored);
         } else {
@@ -75,7 +77,7 @@ export function AppRoot() {
         }
       }
 
-      if (stored && isSessionUsable(stored, nowMs)) {
+      if (stored && isSessionUsable(stored)) {
         const biometricEnabled = await getBiometricGateEnabled();
         if (biometricEnabled && !canceled) setIsBiometricLocked(true);
       }
@@ -129,70 +131,84 @@ export function AppRoot() {
     });
   }, [bootStatus, navStateLoaded, session]);
 
-  const refreshSession = useCallback(async (): Promise<string | null> => {
+  const refreshSession = useCallback((): Promise<string | null> => {
     const currentSession = sessionRef.current;
-    if (!baseUrl || !currentSession) return null;
-    if (refreshInFlight.current) return null;
+    if (!baseUrl || !currentSession) return Promise.resolve(null);
 
-    refreshInFlight.current = true;
-    try {
-      const client = createApiClient({
-        baseUrl,
-        getUserAgentTag: () => `mobile/${Platform.OS}`,
-      });
+    // If a refresh is already in flight, return the same promise so all
+    // concurrent callers await a single network request.
+    if (refreshPromiseRef.current) return refreshPromiseRef.current;
 
-      const result = await refreshSessionApi(client, {
-        refreshToken: currentSession.refreshToken,
-        device: { platform: Platform.OS },
-      });
-
-      if (!result.ok) {
-        analytics.trackEvent(MobileAnalyticsEvents.authRefreshFailed, {
-          errorKind: result.error.kind,
-          status: result.status ?? null,
-        });
-        if (
-          result.error.kind === "auth" ||
-          result.error.kind === "permission"
-        ) {
-          analytics.trackEvent(MobileAnalyticsEvents.authRefreshRevoked, { status: result.status });
-          setSession(null);
-        }
-        return null;
-      }
-
-      analytics.trackEvent(MobileAnalyticsEvents.authRefreshSucceeded, { expiresInSec: result.data.expiresInSec });
-
-      const nextAccessToken = result.data.accessToken;
-      const nextRefreshToken = result.data.refreshToken;
-      const expiresAtMs = Date.now() + result.data.expiresInSec * 1000;
-
-      const nextSession: MobileSession = {
-        ...currentSession,
-        accessToken: nextAccessToken,
-        refreshToken: nextRefreshToken,
-        expiresAtMs,
-      };
-
+    const promise = (async (): Promise<string | null> => {
       try {
-        await storeSession(nextSession);
+        const client = createApiClient({
+          baseUrl,
+          getUserAgentTag: () => `mobile/${Platform.OS}`,
+        });
+
+        const result = await refreshSessionApi(client, {
+          refreshToken: currentSession.refreshToken,
+          device: { platform: Platform.OS },
+        });
+
+        if (!result.ok) {
+          analytics.trackEvent(MobileAnalyticsEvents.authRefreshFailed, {
+            errorKind: result.error.kind,
+            status: result.status ?? null,
+          });
+          if (
+            result.error.kind === "auth" ||
+            result.error.kind === "permission"
+          ) {
+            analytics.trackEvent(MobileAnalyticsEvents.authRefreshRevoked, { status: result.status });
+            setSession(null);
+          }
+          return null;
+        }
+
+        analytics.trackEvent(MobileAnalyticsEvents.authRefreshSucceeded, { expiresInSec: result.data.expiresInSec });
+
+        const nextAccessToken = result.data.accessToken;
+        const nextRefreshToken = result.data.refreshToken;
+        const expiresAtMs = Date.now() + result.data.expiresInSec * 1000;
+
+        // Guard: if the session was cleared (logout) or rotated while
+        // the refresh was in flight, discard the result to avoid
+        // overwriting a newer state or re-logging in after logout.
+        if (!sessionRef.current || sessionRef.current.refreshToken !== currentSession.refreshToken) {
+          return null;
+        }
+
+        const nextSession: MobileSession = {
+          ...currentSession,
+          accessToken: nextAccessToken,
+          refreshToken: nextRefreshToken,
+          expiresAtMs,
+        };
+
+        try {
+          await storeSession(nextSession);
+        } catch (e) {
+          logger.error("Failed to persist refreshed session", { error: e });
+          setSession(null);
+          return null;
+        }
+
+        sessionRef.current = nextSession;
+        setSessionState(nextSession);
+
+        return nextAccessToken;
       } catch (e) {
-        logger.error("Failed to persist refreshed session", { error: e });
-        setSession(null);
+        logger.warn("Refresh attempt failed", { error: e });
+        analytics.trackEvent(MobileAnalyticsEvents.authRefreshFailed, { errorKind: "exception" });
         return null;
+      } finally {
+        refreshPromiseRef.current = null;
       }
+    })();
 
-      sessionRef.current = nextSession;
-      setSessionState(nextSession);
-
-      return nextAccessToken;
-    } catch (e) {
-      logger.warn("Refresh attempt failed", { error: e });
-      analytics.trackEvent(MobileAnalyticsEvents.authRefreshFailed, { errorKind: "exception" });
-      return null;
-    } finally {
-      refreshInFlight.current = false;
-    }
+    refreshPromiseRef.current = promise;
+    return promise;
   }, [baseUrl, setSession]);
 
   useEffect(() => {
@@ -207,12 +223,22 @@ export function AppRoot() {
 
   useEffect(() => {
     if (!session) return;
+    // When the access token expires, attempt a refresh instead of
+    // immediately logging the user out.  Only clear the session if
+    // the refresh itself fails (e.g. refresh token also expired).
     const handle = setTimeout(
-      () => setSession(null),
+      () => {
+        void refreshSession().then((token) => {
+          if (!token) {
+            // Refresh failed — session is truly unrecoverable.
+            setSession(null);
+          }
+        });
+      },
       msUntilExpiry(session.expiresAtMs, Date.now()) + 500,
     );
     return () => clearTimeout(handle);
-  }, [session?.expiresAtMs, session?.refreshToken, setSession]);
+  }, [session?.expiresAtMs, session?.refreshToken, setSession, refreshSession]);
 
   useAppResume(() => {
     if (!session) return;
@@ -233,7 +259,10 @@ export function AppRoot() {
     if (!session) return;
     void (async () => {
       const biometricEnabled = await getBiometricGateEnabled();
-      if (biometricEnabled) setIsBiometricLocked(true);
+      if (!biometricEnabled) return;
+      const elapsed = Date.now() - lastBiometricUnlockAtMs.current;
+      if (lastBiometricUnlockAtMs.current > 0 && elapsed < BIOMETRIC_GRACE_MS) return;
+      setIsBiometricLocked(true);
     })();
   });
 
@@ -246,6 +275,15 @@ export function AppRoot() {
           baseUrl,
           getUserAgentTag: () => `mobile/${Platform.OS}`,
         });
+
+        // Unregister push token before revoking session
+        const deviceId = await getStableDeviceId();
+        if (deviceId) {
+          await unregisterPushToken(client, { deviceId }).catch((e) =>
+            logger.warn("Push token unregister failed", { error: e }),
+          );
+        }
+
         await revokeSession(client, { refreshToken: currentSession.refreshToken });
       }
     } catch (e) {
@@ -283,7 +321,10 @@ export function AppRoot() {
         }}
       >
         {session && isBiometricLocked ? (
-          <BiometricLockView onUnlocked={() => setIsBiometricLocked(false)} />
+          <BiometricLockView onUnlocked={() => {
+            lastBiometricUnlockAtMs.current = Date.now();
+            setIsBiometricLocked(false);
+          }} />
         ) : (
           <View style={{ flex: 1 }}>
             {isOfflineStatus(network) ? <OfflineBanner onRetry={() => {}} /> : null}

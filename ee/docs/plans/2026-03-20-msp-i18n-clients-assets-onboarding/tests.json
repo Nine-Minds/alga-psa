@@ -1,0 +1,144 @@
+[
+  {
+    "id": "T001",
+    "description": "validate-translations.cjs passes after 2b-10 (msp/clients keys consistent across all 9 locales)",
+    "implemented": true,
+    "featureIds": ["F001", "F006"]
+  },
+  {
+    "id": "T002",
+    "description": "2b-10: all 31 client files (+panels/) compile with useTranslation — no TypeScript errors",
+    "implemented": true,
+    "featureIds": ["F002", "F003", "F004", "F005"]
+  },
+  {
+    "id": "T003",
+    "description": "2b-10: Italian accent audit passes for it/msp/clients.json",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T004",
+    "description": "2b-10: Visual QA (xx) — client list, client detail, quick-add, import dialog, billing config all show '11111'",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+
+  {
+    "id": "T010",
+    "description": "validate-translations.cjs passes after 2b-11 (msp/contacts keys consistent across all 9 locales)",
+    "implemented": true,
+    "featureIds": ["F010", "F014"]
+  },
+  {
+    "id": "T011",
+    "description": "2b-11: all contact UI files (+ ContactNotesPanel) compile after useTranslation wiring — no TypeScript errors",
+    "implemented": true,
+    "featureIds": ["F011", "F012", "F013"]
+  },
+  {
+    "id": "T012",
+    "description": "2b-11: Italian accent audit passes for it/msp/contacts.json",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T013",
+    "description": "2b-11: Visual QA (xx) — contact list, contact detail, quick-add, phone editor, portal tab all show '11111'",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+
+  {
+    "id": "T020",
+    "description": "validate-translations.cjs passes after 2b-12 (msp/assets keys consistent across all 9 locales)",
+    "implemented": true,
+    "featureIds": ["F020", "F026"]
+  },
+  {
+    "id": "T021",
+    "description": "2b-12: all 41 asset files compile with useTranslation — no TypeScript errors",
+    "implemented": true,
+    "featureIds": ["F021", "F022", "F023", "F024", "F025"]
+  },
+  {
+    "id": "T022",
+    "description": "2b-12: Italian accent audit passes for it/msp/assets.json",
+    "implemented": true,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T023",
+    "description": "2b-12: Visual QA (xx) — asset dashboard, asset form, detail drawer, all tabs/panels show '11111'",
+    "implemented": true,
+    "featureIds": ["F026"]
+  },
+
+  {
+    "id": "T030",
+    "description": "validate-translations.cjs passes after 2b-16 (msp/onboarding keys consistent across all 9 locales)",
+    "implemented": true,
+    "featureIds": ["F030", "F034"]
+  },
+  {
+    "id": "T031",
+    "description": "2b-16: all 8 onboarding wizard files compile with useTranslation — no TypeScript errors",
+    "implemented": true,
+    "featureIds": ["F031", "F032", "F033"]
+  },
+  {
+    "id": "T032",
+    "description": "2b-16: Italian accent audit passes for it/msp/onboarding.json",
+    "implemented": true,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T033",
+    "description": "2b-16: Visual QA (xx) — onboarding wizard all steps show '11111'",
+    "implemented": true,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T034",
+    "description": "2b-16: no key collisions between msp/onboarding.json and existing msp/dashboard.json onboarding keys",
+    "implemented": true,
+    "featureIds": ["F030"]
+  },
+
+  {
+    "id": "T040",
+    "description": "Cross-batch: ROUTE_NAMESPACES updated for all 4 routes",
+    "implemented": true,
+    "featureIds": ["F090"]
+  },
+  {
+    "id": "T041",
+    "description": "Cross-batch: validate-translations.cjs passes for ALL 4 namespaces (0 errors, 0 warnings)",
+    "implemented": true,
+    "featureIds": ["F091"]
+  },
+  {
+    "id": "T042",
+    "description": "Cross-batch: pseudo-locales regenerated for all 4 namespaces",
+    "implemented": true,
+    "featureIds": ["F092"]
+  },
+  {
+    "id": "T043",
+    "description": "Cross-batch: npm run build succeeds with no TypeScript errors",
+    "implemented": true,
+    "featureIds": ["F093"]
+  },
+  {
+    "id": "T044",
+    "description": "Cross-batch: msp-i18n-enabled OFF — clients, contacts, assets, onboarding all show English, no regressions",
+    "implemented": true,
+    "featureIds": ["F093"]
+  },
+  {
+    "id": "T045",
+    "description": "Cross-batch: German (de) — no overflow in client forms, contact phone editor, asset dashboard metrics, onboarding wizard",
+    "implemented": true,
+    "featureIds": ["F006", "F014", "F026", "F034"]
+  }
+]

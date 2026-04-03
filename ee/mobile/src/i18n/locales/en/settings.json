@@ -5,7 +5,8 @@
     "diagnostics": "Diagnostics",
     "security": "Security",
     "data": "Data",
-    "about": "About"
+    "about": "About",
+    "notifications": "Notifications"
   },
   "account": {
     "status": "Status",
@@ -34,6 +35,13 @@
     "biometricNotSetUp": "Biometrics are not set up on this device.",
     "hideSensitiveNotifications": "Hide sensitive notifications",
     "hideSensitiveHint": "Applies to future push notifications."
+  },
+  "notifications": {
+    "pushNotifications": "Push Notifications",
+    "pushHint": "Receive alerts when tickets are assigned, commented on, or updated.",
+    "permissionDeniedTitle": "Notifications Disabled",
+    "permissionDeniedMessage": "Enable notifications in your device settings to receive ticket alerts.",
+    "openSettings": "Open Settings"
   },
   "data": {
     "clearCache": "Clear cache",

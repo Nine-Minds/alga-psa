@@ -114,7 +114,9 @@ jobs:
 
           # Authentication Configuration
           NEXTAUTH_URL=http://localhost:3000
+          NEXTAUTH_SECRET=placeholder-key-32-chars-long-04
           NEXTAUTH_SESSION_EXPIRES=86400
+          AUTH_TRUST_HOST=true
 
           # Optional Configuration
           REQUIRE_HOCUSPOCUS=false

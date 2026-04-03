@@ -49,6 +49,7 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     mapFields: (source: IStandardStatus, tenantId: string, userId: string, options?: any) => ({
       name: source.name,
       status_type: source.item_type,
+      ...(source.item_type === 'ticket' ? { board_id: options?.board_id } : {}),
       order_number: source.display_order,
       is_closed: source.is_closed,
       is_default: source.is_default,
@@ -61,7 +62,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
         .where({
           tenant: tenantId,
           name: data.name,
-          status_type: data.status_type
+          status_type: data.status_type,
+          ...(data.status_type === 'ticket' ? { board_id: data.board_id ?? null } : {})
         })
         .first();
       return !!existing;
@@ -210,9 +212,9 @@ export async function getReferenceData(dataType: ReferenceDataType, filters?: an
   let query = db(config.sourceTable);
   
   if (filters) {
-    // For categories, board_id is only relevant for tenant data, not standard data
+    // board_id is only relevant for tenant data, not standard-library lookups
     const filteredFilters = { ...filters };
-    if (dataType === 'categories' && 'board_id' in filteredFilters) {
+    if ((dataType === 'categories' || dataType === 'statuses') && 'board_id' in filteredFilters) {
       delete filteredFilters.board_id;
     }
     
@@ -365,6 +367,9 @@ export const importReferenceData = withAuth(async (
   if (dataType === 'categories' && !filters?.board_id) {
     throw new Error('Board ID is required when importing categories');
   }
+  if (dataType === 'statuses' && filters?.item_type === 'ticket' && !filters?.board_id) {
+    throw new Error('Board ID is required when importing ticket statuses');
+  }
 
   const config = referenceDataConfigs[dataType];
   const { knex: db } = await createTenantKnex();
@@ -444,6 +449,9 @@ export const importReferenceData = withAuth(async (
         // Add type-specific constraints for order checking
         if (dataType === 'statuses' && mappedData.status_type) {
           orderCheckClause.status_type = mappedData.status_type;
+          if (mappedData.status_type === 'ticket') {
+            orderCheckClause.board_id = mappedData.board_id ?? null;
+          }
         } else if (dataType === 'priorities' && mappedData.item_type) {
           orderCheckClause.item_type = mappedData.item_type;
         } else if (dataType === 'categories') {
@@ -461,6 +469,9 @@ export const importReferenceData = withAuth(async (
           
           if (dataType === 'statuses' && mappedData.status_type) {
             maxOrderWhereClause.status_type = mappedData.status_type;
+            if (mappedData.status_type === 'ticket') {
+              maxOrderWhereClause.board_id = mappedData.board_id ?? null;
+            }
           } else if (dataType === 'priorities' && mappedData.item_type) {
             maxOrderWhereClause.item_type = mappedData.item_type;
           } else if (dataType === 'categories') {
@@ -530,7 +541,8 @@ export const importReferenceData = withAuth(async (
           .where({
             tenant: tenant,
             is_default: true,
-            status_type: mappedData.status_type
+            status_type: mappedData.status_type,
+            ...(mappedData.status_type === 'ticket' ? { board_id: mappedData.board_id ?? null } : {})
           })
           .first();
 

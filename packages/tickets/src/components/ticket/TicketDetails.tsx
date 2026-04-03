@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
+import { utcToLocal, formatDateTime, getUserTimeZone, generateUUID } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import {
@@ -37,9 +37,9 @@ import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHand
 import { useDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser } from "@alga-psa/user-composition/actions";
-import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
+import { findBoardById } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
-import { getDocumentByTicketId } from "@alga-psa/documents/actions/documentActions";
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
 import { updateTicket } from "../../actions/ticketActions";
@@ -84,6 +84,7 @@ import {
     resolveCommentReferencedImageDocuments,
     type CommentImageDocumentReference,
 } from '../../lib/commentImageDocuments';
+import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 
 interface PendingCommentDelete {
     commentId: string;
@@ -110,7 +111,7 @@ interface TicketDetailsProps {
     initialAvailableAgents?: IUserWithRoles[];
     initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
     initialContactMap?: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>;
-    statusOptions?: { value: string; label: string; is_closed?: boolean; className?: string }[];
+    statusOptions?: { value: string; label: string; is_closed?: boolean; className?: string; board_id?: string | null }[];
     agentOptions?: { value: string; label: string }[];
     boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string }[];
@@ -218,6 +219,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
     const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+    const { getDocumentByTicketId, deleteDocument } = useDocumentsCrossFeature();
 
     useEffect(() => {
         setHasHydrated(true);
@@ -236,14 +238,22 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
 
-    const closedStatusOptions = useMemo(
-        () =>
-            (statusOptions || [])
-                .filter((opt) => !!opt.is_closed)
-                .map(({ value, label }) => ({ value, label })),
-        [statusOptions]
-    );
+    const closedStatusOptions = useMemo(() => {
+        const boardId = ticket.board_id;
+        if (!boardId) {
+            return [];
+        }
+        return (statusOptions || [])
+            .filter(
+                (opt) =>
+                    !!opt.is_closed &&
+                    opt.board_id === boardId
+            )
+            .map(({ value, label }) => ({ value, label }));
+    }, [statusOptions, ticket.board_id]);
     const [board, setBoard] = useState<any>(initialBoard);
+    const [savedBoardId, setSavedBoardId] = useState<string | null>(initialBoard?.board_id ?? initialTicket.board_id ?? null);
+    const isLiveTicketTimerEnabled = useMemo(() => isBoardLiveTicketTimerEnabled(board), [board]);
     const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
@@ -280,6 +290,39 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     useEffect(() => {
         setBundle(initialBundle);
     }, [initialBundle]);
+
+    useEffect(() => {
+        setBoard(initialBoard);
+        setSavedBoardId(initialBoard?.board_id ?? initialTicket.board_id ?? null);
+    }, [initialBoard, initialTicket.board_id]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadBoard = async () => {
+            if (!savedBoardId) {
+                if (!cancelled) {
+                    setBoard(null);
+                }
+                return;
+            }
+
+            try {
+                const fetchedBoard = await findBoardById(savedBoardId);
+                if (!cancelled) {
+                    setBoard(fetchedBoard ?? null);
+                }
+            } catch (error) {
+                console.error('Failed to refresh board metadata:', error);
+            }
+        };
+
+        loadBoard();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [savedBoardId]);
 
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
@@ -474,7 +517,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         if (typeof window !== 'undefined') {
             const existing = sessionStorage.getItem('tabHolderId');
             if (existing) return existing;
-            const id = crypto.randomUUID();
+            const id = generateUUID();
             sessionStorage.setItem('tabHolderId', id);
             return id;
         }
@@ -513,6 +556,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (autoStartedRef.current) return;
             if (!initialTicket.ticket_id || !userId) return;
             if (isTracking) return;
+            if (!isLiveTicketTimerEnabled) return;
             console.log('[TicketDetails] auto-start attempt');
             try {
                 const started = await startTrackingRef.current(false);
@@ -527,9 +571,28 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         auto();
         // only attempt once when ids are ready and not already tracking
-    }, [initialTicket.ticket_id, userId, isTracking]);
+    }, [initialTicket.ticket_id, userId, isTracking, isLiveTicketTimerEnabled]);
 
     // New screens start from zero; no seeding from existing intervals
+
+    useEffect(() => {
+        const disableLiveTimerInView = async () => {
+            if (isLiveTicketTimerEnabled) {
+                return;
+            }
+
+            try {
+                await stopTracking();
+            } catch {
+                // Ignore stop errors while enforcing board policy.
+            }
+
+            setIsRunning(false);
+            setElapsedTime(0);
+        };
+
+        disableLiveTimerInView();
+    }, [isLiveTicketTimerEnabled, stopTracking]);
 
     // Poll lock state periodically to update UI lock indicator
     useEffect(() => {
@@ -792,6 +855,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             // Use the optimized handler if provided
             if (onTicketUpdate) {
                 await onTicketUpdate(field, normalizedValue);
+                if (field === 'board_id') {
+                    setSavedBoardId(normalizedValue);
+                }
                 
                 // If we're changing the assigned_to field, we need to handle additional resources
                 // This will be handled by the container component and passed back in props
@@ -801,6 +867,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 
                 if (result === 'success') {
                     console.log(`${field} changed to: ${normalizedValue}`);
+                    if (field === 'board_id') {
+                        setSavedBoardId(normalizedValue);
+                    }
                     
                     // If we're changing the assigned_to field, refresh the additional resources
                     if (field === 'assigned_to') {
@@ -827,18 +896,31 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
     const handleAssignTeam = useCallback(async (teamId: string) => {
+        // Optimistically update UI before server call
+        const previousTicket = ticket;
+        const previousTeam = team;
+        const previousAgents = additionalAgents;
+
+        const teamDetails = teams.find(t => t.team_id === teamId) || null;
+        const assignedTo = ticket.assigned_to || teamDetails?.manager_id || ticket.assigned_to;
+
+        setTicket(prevTicket => ({
+            ...prevTicket,
+            assigned_team_id: teamId,
+            assigned_to: assignedTo
+        }));
+        if (teamDetails) {
+            setTeam(teamDetails);
+        }
+
         try {
             await assignTeamToTicket(ticket.ticket_id || '', teamId);
 
-            const teamDetails = teams.find(t => t.team_id === teamId) || await getTeamById(teamId);
-            const assignedTo = ticket.assigned_to || teamDetails?.manager_id || ticket.assigned_to;
-
-            setTicket(prevTicket => ({
-                ...prevTicket,
-                assigned_team_id: teamId,
-                assigned_to: assignedTo
-            }));
-            setTeam(teamDetails || null);
+            // If we didn't have team details from local state, fetch them
+            if (!teamDetails) {
+                const fetchedTeam = await getTeamById(teamId);
+                setTeam(fetchedTeam || null);
+            }
 
             if (ticket.ticket_id) {
                 const resources = await getTicketResources(ticket.ticket_id);
@@ -848,9 +930,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             toast.success('Team assigned successfully');
         } catch (error) {
             console.error('Error assigning team:', error);
+            // Revert on failure
+            setTicket(previousTicket);
+            setTeam(previousTeam);
+            setAdditionalAgents(previousAgents);
             toast.error('Failed to assign team');
         }
-    }, [ticket.ticket_id, ticket.assigned_to, teams]);
+    }, [ticket, team, additionalAgents, teams]);
 
     const handleRemoveTeamAssignment = useCallback(async (
         mode: 'remove_all' | 'keep_all' | 'selective',
@@ -1446,6 +1532,7 @@ const handleClose = () => {
                     const result = await deleteDraftClipboardImages({
                         ticketId: ticket.ticket_id,
                         documentIds: commentToDelete.imageDocuments.map((document) => document.documentId),
+                        deleteDocumentFn: deleteDocument,
                     });
 
                     const deletedCount = result.deletedDocumentIds.length;
@@ -2023,6 +2110,9 @@ const handleClose = () => {
                                     renderProjectTaskActions={renderCreateProjectTask}
                                     teams={teams}
                                     onAssignTeam={handleAssignTeam}
+                                    onRemoveTeamAssignment={async () => {
+                                        await handleRemoveTeamAssignment('remove_all');
+                                    }}
                                     onClipboardImageUploaded={refreshTicketDocuments}
                                     onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
                                     additionalAgents={additionalAgents.map(a => ({
@@ -2137,6 +2227,7 @@ const handleClose = () => {
                                     renderIntervalManagement={renderIntervalManagement}
                                     onRemoveTeamAssignment={handleRemoveTeamAssignment}
                                     onAssignTeam={handleAssignTeam}
+                                    isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
                                 />
                         </Suspense>
                         

@@ -1,0 +1,80 @@
+{
+  "navigation": {
+    "heading": "Extensiones"
+  },
+  "enterpriseFeature": {
+    "title": "Función empresarial",
+    "description": "La edición Enterprise es necesaria para {{feature}}. Actualice para acceder a esta función."
+  },
+  "settings": {
+    "title": "Gestión de extensiones",
+    "description": "Instale, configure y administre extensiones para ampliar la funcionalidad de Alga PSA.",
+    "tabs": {
+      "manage": "Administrar",
+      "install": "Instalar"
+    },
+    "enterpriseOnly": {
+      "title": "Función empresarial",
+      "description": "Las extensiones están disponibles en la edición Enterprise de Alga PSA."
+    },
+    "links": {
+      "needLogs": "¿Necesita registros de extensiones?",
+      "debugConsole": "Abrir consola de depuración de demostración del proxy de servicio"
+    },
+    "loading": {
+      "extensions": "Cargando extensiones...",
+      "installer": "Cargando instalador..."
+    },
+    "featureNames": {
+      "settings": "configuración de extensiones",
+      "details": "detalles de la extensión",
+      "permissions": "permisos de la extensión",
+      "management": "gestión de extensiones",
+      "installer": "instalador de extensiones"
+    }
+  },
+  "communityEdition": {
+    "listUnavailable": "Las extensiones no están disponibles en esta edición",
+    "dynamicListUnavailable": "Las extensiones no están disponibles en la Community Edition",
+    "dynamicInstallUnavailable": "La instalación de extensiones no está disponible en la Community Edition"
+  },
+  "page": {
+    "metadata": {
+      "title": "Extensiones",
+      "description": "Administrar extensiones"
+    },
+    "title": "Extensiones",
+    "description": "La gestión de extensiones está disponible en la edición Enterprise."
+  },
+  "detail": {
+    "metadataTitle": "Extensiones - Función empresarial",
+    "extensionId": "ID de la extensión: {{id}}"
+  },
+  "detailsPage": {
+    "metadata": {
+      "title": "Detalles de la extensión",
+      "description": "Ver detalles de la extensión"
+    },
+    "title": "Detalles de la extensión",
+    "description": "Los detalles de la extensión están disponibles en la edición Enterprise."
+  },
+  "settingsPage": {
+    "metadata": {
+      "title": "Configuración de extensiones",
+      "description": "Configurar la extensión"
+    },
+    "title": "Configuración de extensiones",
+    "description": "La configuración de extensiones está disponible en la edición Enterprise."
+  },
+  "runtime": {
+    "metadataTitle": "Extensión",
+    "loadError": "No se pudo cargar la información de ejecución de la extensión",
+    "notFoundTitle": "Extensión no encontrada.",
+    "goToExtensions": "Ir a extensiones",
+    "bundleUnavailableTitle": "El paquete de la extensión no está disponible.",
+    "bundleUnavailableDescription": "El paquete de la extensión falta o no se ha cargado.",
+    "goToDetails": "Ir a los detalles de la extensión",
+    "runtimeDomainUnavailableTitle": "El dominio de ejecución de la extensión no está disponible.",
+    "runtimeDomainUnavailableDescription": "Vuelva a aprovisionar la extensión desde Configuración -> Extensiones -> seleccione la extensión -> Aprovisionar."
+  }
+}

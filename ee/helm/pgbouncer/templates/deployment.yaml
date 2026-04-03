@@ -1,0 +1,123 @@
+{{- if .Values.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pgbouncer.fullname" . }}
+  namespace: {{ include "pgbouncer.namespace" . }}
+  labels:
+    {{- include "pgbouncer.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pgbouncer
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "pgbouncer.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: pgbouncer
+  template:
+    metadata:
+      annotations:
+        checksum/bootstrap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "pgbouncer.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: pgbouncer
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: pgbouncer
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "/bootstrap/entrypoint.sh"]
+          env:
+            - name: POSTGRES_HOST
+              value: "{{ .Values.postgres.host }}"
+            - name: POSTGRES_PORT
+              value: "{{ .Values.postgres.port }}"
+            - name: SERVER_DATABASE
+              value: "{{ .Values.postgres.appDatabase }}"
+            - name: ADMIN_DATABASE
+              value: "{{ .Values.postgres.adminDatabase }}"
+            - name: DB_USER_SERVER
+              value: "{{ .Values.postgres.appUser }}"
+            - name: POSTGRES_USER
+              value: "{{ .Values.postgres.adminUser }}"
+            - name: AUTH_TYPE
+              value: "{{ .Values.authType }}"
+            - name: PGBOUNCER_PORT
+              value: "{{ .Values.service.port }}"
+            - name: POOL_MODE
+              value: "{{ .Values.pool.mode }}"
+            - name: MAX_CLIENT_CONN
+              value: "{{ .Values.pool.maxClientConn }}"
+            - name: DEFAULT_POOL_SIZE
+              value: "{{ .Values.pool.defaultPoolSize }}"
+            - name: MIN_POOL_SIZE
+              value: "{{ .Values.pool.minPoolSize }}"
+            - name: RESERVE_POOL_SIZE
+              value: "{{ .Values.pool.reservePoolSize }}"
+            - name: RESERVE_POOL_TIMEOUT
+              value: "{{ .Values.pool.reservePoolTimeout }}"
+            - name: MAX_DB_CONNECTIONS
+              value: "{{ .Values.pool.maxDbConnections }}"
+            - name: MAX_USER_CONNECTIONS
+              value: "{{ .Values.pool.maxUserConnections }}"
+            - name: IDLE_TRANSACTION_TIMEOUT
+              value: "{{ .Values.pool.idleTransactionTimeout }}"
+            - name: SERVER_IDLE_TIMEOUT
+              value: "{{ .Values.pool.serverIdleTimeout }}"
+            - name: DB_PASSWORD_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.appPasswordSecret.name }}
+                  key: {{ .Values.postgres.appPasswordSecret.key }}
+            - name: POSTGRES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.adminPasswordSecret.name }}
+                  key: {{ .Values.postgres.adminPasswordSecret.key }}
+          ports:
+            - name: pgbouncer
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: pgbouncer
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: pgbouncer
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: workdir
+              mountPath: /work
+      volumes:
+        - name: bootstrap
+          configMap:
+            name: {{ include "pgbouncer.fullname" . }}-bootstrap
+            defaultMode: 0755
+        - name: workdir
+          emptyDir: {}
+{{- end }}

@@ -1,0 +1,80 @@
+{
+  "navigation": {
+    "heading": "Rozszerzenia"
+  },
+  "enterpriseFeature": {
+    "title": "Funkcja wersji Enterprise",
+    "description": "Do korzystania z {{feature}} wymagana jest wersja Enterprise. Wykonaj uaktualnienie, aby uzyskać dostęp do tej funkcji."
+  },
+  "settings": {
+    "title": "Zarządzanie rozszerzeniami",
+    "description": "Instalowanie, konfigurowanie i zarządzanie rozszerzeniami w celu rozszerzenia funkcjonalności Alga PSA.",
+    "tabs": {
+      "manage": "Zarządzanie",
+      "install": "Instalacja"
+    },
+    "enterpriseOnly": {
+      "title": "Funkcja wersji Enterprise",
+      "description": "Rozszerzenia są dostępne w wersji Enterprise programu Alga PSA."
+    },
+    "links": {
+      "needLogs": "Potrzebujesz logów rozszerzenia?",
+      "debugConsole": "Otwórz konsolę debugowania Service Proxy Demo"
+    },
+    "loading": {
+      "extensions": "Ładowanie rozszerzeń...",
+      "installer": "Ładowanie instalatora..."
+    },
+    "featureNames": {
+      "settings": "ustawienia rozszerzeń",
+      "details": "szczegóły rozszerzenia",
+      "permissions": "uprawnienia rozszerzenia",
+      "management": "zarządzanie rozszerzeniami",
+      "installer": "instalator rozszerzeń"
+    }
+  },
+  "communityEdition": {
+    "listUnavailable": "Rozszerzenia nie są dostępne w tej edycji",
+    "dynamicListUnavailable": "Rozszerzenia nie są dostępne w wersji Community Edition",
+    "dynamicInstallUnavailable": "Instalacja rozszerzeń nie jest dostępna w wersji Community Edition"
+  },
+  "page": {
+    "metadata": {
+      "title": "Rozszerzenia",
+      "description": "Zarządzaj rozszerzeniami"
+    },
+    "title": "Rozszerzenia",
+    "description": "Zarządzanie rozszerzeniami jest dostępne w wersji Enterprise."
+  },
+  "detail": {
+    "metadataTitle": "Rozszerzenia - Funkcja wersji Enterprise",
+    "extensionId": "Identyfikator rozszerzenia: {{id}}"
+  },
+  "detailsPage": {
+    "metadata": {
+      "title": "Szczegóły rozszerzenia",
+      "description": "Wyświetl szczegóły rozszerzenia"
+    },
+    "title": "Szczegóły rozszerzenia",
+    "description": "Szczegóły rozszerzenia są dostępne w wersji Enterprise."
+  },
+  "settingsPage": {
+    "metadata": {
+      "title": "Ustawienia rozszerzeń",
+      "description": "Skonfiguruj ustawienia rozszerzeń"
+    },
+    "title": "Ustawienia rozszerzeń",
+    "description": "Ustawienia rozszerzeń są dostępne w wersji Enterprise."
+  },
+  "runtime": {
+    "metadataTitle": "Rozszerzenie",
+    "loadError": "Nie udało się załadować informacji o środowisku uruchomieniowym rozszerzenia",
+    "notFoundTitle": "Nie znaleziono rozszerzenia.",
+    "goToExtensions": "Przejdź do rozszerzeń",
+    "bundleUnavailableTitle": "Pakiet rozszerzenia jest niedostępny.",
+    "bundleUnavailableDescription": "Brakuje pakietu rozszerzenia albo nie został przesłany.",
+    "goToDetails": "Przejdź do szczegółów rozszerzenia",
+    "runtimeDomainUnavailableTitle": "Domena środowiska uruchomieniowego rozszerzenia jest niedostępna.",
+    "runtimeDomainUnavailableDescription": "Ponownie przygotuj rozszerzenie z poziomu Ustawienia -> Rozszerzenia -> wybierz rozszerzenie -> Udostępnij."
+  }
+}

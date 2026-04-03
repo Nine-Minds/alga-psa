@@ -5,10 +5,10 @@ import crypto from 'crypto';
 import { withAuth } from '@alga-psa/auth';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
-import { exportWorkspaceToInvoiceTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
-import { evaluateInvoiceTemplateAst, InvoiceTemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
-import { renderEvaluatedInvoiceTemplateAst } from '../lib/invoice-template-ast/react-renderer';
-import { validateInvoiceTemplateAst } from '../lib/invoice-template-ast/schema';
+import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
+import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
+import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
+import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
 
 type AuthoritativePreviewInput = {
   workspace: DesignerWorkspaceSnapshot;
@@ -87,11 +87,11 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
       };
     }
 
-    const ast = exportWorkspaceToInvoiceTemplateAst(input.workspace);
+    const ast = exportWorkspaceToTemplateAst(input.workspace);
     const generatedSource = JSON.stringify(ast, null, 2);
     const sourceHash = crypto.createHash('sha256').update(generatedSource).digest('hex');
 
-    const validation = validateInvoiceTemplateAst(ast);
+    const validation = validateTemplateAst(ast);
     if (!validation.success) {
       return {
         success: false,
@@ -116,8 +116,8 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
     }
 
     try {
-      const evaluation = evaluateInvoiceTemplateAst(validation.ast, input.invoiceData as unknown as Record<string, unknown>);
-      const rendered = await renderEvaluatedInvoiceTemplateAst(validation.ast, evaluation);
+      const evaluation = evaluateTemplateAst(validation.ast, input.invoiceData as unknown as Record<string, unknown>);
+      const rendered = await renderEvaluatedTemplateAst(validation.ast, evaluation);
       return {
         success: true,
         sourceHash,
@@ -138,7 +138,7 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
         },
       };
     } catch (error: any) {
-      const isEvaluationError = error instanceof InvoiceTemplateEvaluationError;
+      const isEvaluationError = error instanceof TemplateEvaluationError;
       return {
         success: false,
         sourceHash,

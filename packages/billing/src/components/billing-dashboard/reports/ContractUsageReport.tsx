@@ -17,6 +17,7 @@ import {
 } from '@alga-psa/billing/actions/billingClientsActions';
 import { IClient } from '@alga-psa/types';
 import Spinner from '@alga-psa/ui/components/Spinner';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContractUsageRecord {
   client_id: string;
@@ -31,6 +32,8 @@ interface ContractUsageRecord {
 }
 
 const ContractUsageReport: React.FC = () => {
+  const { t } = useTranslation('msp/reports');
+  const { formatCurrency, formatDate } = useFormatters();
   const [contracts, setContracts] = useState<IContract[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contractUsage, setContractUsage] = useState<ContractUsageRecord[]>([]);
@@ -73,7 +76,7 @@ const ContractUsageReport: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching initial data:', error);
-      setError('Failed to load initial data');
+      setError(t('contractUsage.errors.loadInitialData', { defaultValue: 'Failed to load initial data' }));
     } finally {
       setIsLoading(false);
     }
@@ -97,7 +100,7 @@ const ContractUsageReport: React.FC = () => {
           if (detailedContract) {
             clientContracts.push({
               client_id: client.client_id,
-              client_name: client.client_name || 'Unknown Client',
+              client_name: client.client_name || t('contractUsage.statusValues.unknownClient', { defaultValue: 'Unknown Client' }),
               contract_id: contractId,
               contract_name: detailedContract.contract_name,
               start_date: matchingContract.start_date,
@@ -113,7 +116,7 @@ const ContractUsageReport: React.FC = () => {
       setContractUsage(clientContracts);
     } catch (error) {
       console.error('Error fetching contract usage:', error);
-      setError('Failed to load contract usage data');
+      setError(t('contractUsage.errors.loadUsageData', { defaultValue: 'Failed to load contract usage data' }));
     } finally {
       setIsLoading(false);
     }
@@ -130,34 +133,40 @@ const ContractUsageReport: React.FC = () => {
     }
   };
 
+  const formatCents = (value: number) => formatCurrency(value / 100, 'USD');
+
   const contractUsageColumns: ColumnDefinition<ContractUsageRecord>[] = [
     {
-      title: 'Client',
+      title: t('contractUsage.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
     },
     {
-      title: 'Start Date',
+      title: t('contractUsage.table.startDate', { defaultValue: 'Start Date' }),
       dataIndex: 'start_date',
-      render: (value) => new Date(value).toLocaleDateString(),
+      render: (value) => formatDate(value),
     },
     {
-      title: 'End Date',
+      title: t('contractUsage.table.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
-      render: (value) => value ? new Date(value).toLocaleDateString() : 'Ongoing',
+      render: (value) => value
+        ? formatDate(value)
+        : t('contractUsage.statusValues.ongoing', { defaultValue: 'Ongoing' }),
     },
     {
-      title: 'Contract Lines',
+      title: t('contractUsage.table.contractLines', { defaultValue: 'Contract Lines' }),
       dataIndex: 'contract_line_count',
     },
     {
-      title: 'Total Billed',
+      title: t('contractUsage.table.totalBilled', { defaultValue: 'Total Billed' }),
       dataIndex: 'total_billed',
-      render: (value) => `$${(value / 100).toFixed(2)}`,
+      render: (value) => formatCents(value),
     },
     {
-      title: 'Status',
+      title: t('contractUsage.table.status', { defaultValue: 'Status' }),
       dataIndex: 'is_active',
-      render: (value) => value ? 'Active' : 'Inactive',
+      render: (value) => value
+        ? t('contractUsage.statusValues.active', { defaultValue: 'Active' })
+        : t('contractUsage.statusValues.inactive', { defaultValue: 'Inactive' }),
     },
   ];
 
@@ -165,7 +174,9 @@ const ContractUsageReport: React.FC = () => {
     <Card size="2">
       <Box p="4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Contract Usage Report</h2>
+          <h2 className="text-xl font-bold">
+            {t('contractUsage.title', { defaultValue: 'Contract Usage Report' })}
+          </h2>
           <div className="flex space-x-4">
             <div className="w-64">
               <CustomSelect
@@ -175,7 +186,7 @@ const ContractUsageReport: React.FC = () => {
                 }))}
                 onValueChange={handleContractChange}
                 value={selectedContract || ''}
-                placeholder="Select contract..."
+                placeholder={t('placeholders.selectContract', { defaultValue: 'Select contract...' })}
               />
             </div>
             <Button
@@ -183,7 +194,7 @@ const ContractUsageReport: React.FC = () => {
               onClick={handleRefresh}
               disabled={!selectedContract}
             >
-              Refresh
+              {t('actions.refresh', { defaultValue: 'Refresh' })}
             </Button>
           </div>
         </div>
@@ -204,7 +215,13 @@ const ContractUsageReport: React.FC = () => {
           
           {contractUsage.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {selectedContract ? 'No clients are using this contract' : 'Select a contract to view usage data'}
+              {selectedContract
+                ? t('contractUsage.empty.noClientsUsingContract', {
+                    defaultValue: 'No clients are using this contract',
+                  })
+                : t('contractUsage.empty.selectContract', {
+                    defaultValue: 'Select a contract to view usage data',
+                  })}
             </div>
           ) : (
             <DataTable
@@ -222,22 +239,30 @@ const ContractUsageReport: React.FC = () => {
         
         {contractUsage.length > 0 && (
           <div className="mt-6">
-            <h3 className="text-lg font-medium mb-2">Summary</h3>
+            <h3 className="text-lg font-medium mb-2">
+              {t('contractUsage.summary.title', { defaultValue: 'Summary' })}
+            </h3>
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-primary/10 p-4 rounded-md">
-                <div className="text-sm text-primary">Total Clients</div>
+                <div className="text-sm text-primary">
+                  {t('contractUsage.summary.totalClients', { defaultValue: 'Total Clients' })}
+                </div>
                 <div className="text-2xl font-bold">{contractUsage.length}</div>
               </div>
               <div className="bg-success/10 p-4 rounded-md">
-                <div className="text-sm text-success">Active Assignments</div>
+                <div className="text-sm text-success">
+                  {t('contractUsage.summary.activeAssignments', { defaultValue: 'Active Assignments' })}
+                </div>
                 <div className="text-2xl font-bold">
                   {contractUsage.filter(entry => entry.is_active).length}
                 </div>
               </div>
               <div className="bg-accent/10 p-4 rounded-md">
-                <div className="text-sm text-accent">Total Billed</div>
+                <div className="text-sm text-accent">
+                  {t('contractUsage.summary.totalBilled', { defaultValue: 'Total Billed' })}
+                </div>
                 <div className="text-2xl font-bold">
-                  ${(contractUsage.reduce((sum, entry) => sum + entry.total_billed, 0) / 100).toFixed(2)}
+                  {formatCents(contractUsage.reduce((sum, entry) => sum + entry.total_billed, 0))}
                 </div>
               </div>
             </div>

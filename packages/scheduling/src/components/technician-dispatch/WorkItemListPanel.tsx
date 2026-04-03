@@ -6,6 +6,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface WorkItemListPanelProps {
   workItems: Omit<IExtendedWorkItem, "tenant">[];
@@ -49,16 +50,20 @@ const WorkItemListPanel: React.FC<WorkItemListPanelProps> = ({
   onWorkItemDrag,
   onWorkItemDragEnd,
 }) => {
+  const { t } = useTranslation('msp/dispatch');
+
   return (
     <div className="w-1/4 p-2 bg-[rgb(var(--color-border-50))] overflow-y-auto">
-      <h2 className="text-xl font-bold mb-4 text-[rgb(var(--color-text-900))]">Work Items</h2>
+      <h2 className="text-xl font-bold mb-4 text-[rgb(var(--color-text-900))]">
+        {t('workItems.title', { defaultValue: 'Work Items' })}
+      </h2>
 
       <div className="space-y-3 mb-4">
         <div className="flex gap-2 justify-between">
           <Input
             id="work-item-search"
             type="text"
-            placeholder="Search work items..."
+            placeholder={t('workItems.searchPlaceholder', { defaultValue: 'Search work items...' })}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="flex-grow mb-0"
@@ -78,12 +83,14 @@ const WorkItemListPanel: React.FC<WorkItemListPanelProps> = ({
             value={selectedStatusFilter}
             onValueChange={onStatusFilterChange}
             options={statusFilterOptions}
-            placeholder="Filter by status..."
+            placeholder={t('workItems.filterPlaceholder', { defaultValue: 'Filter by status...' })}
           />
 
           <div className="flex items-center gap-2">
             <span className={`text-sm`}>
-              {filterUnscheduled ? 'Unscheduled' : 'Scheduled'}
+              {filterUnscheduled
+                ? t('workItems.status.unscheduled', { defaultValue: 'Unscheduled' })
+                : t('workItems.status.scheduled', { defaultValue: 'Scheduled' })}
             </span>
             <Switch
               id="schedule-filter"
@@ -124,23 +131,31 @@ const WorkItemListPanel: React.FC<WorkItemListPanelProps> = ({
             disabled={currentPage === 1}
             className="p-2 border border-[rgb(var(--color-border-200))] rounded bg-white text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-[rgb(var(--color-primary-400))] focus:ring-1 focus:ring-[rgb(var(--color-primary-400))]"
           >
-            Previous
+            {t('workItems.pagination.previous', { defaultValue: 'Previous' })}
           </button>
           <span className="text-[rgb(var(--color-text-700))]">
-            Page {currentPage} of {totalPages}
+            {t('workItems.pagination.pageInfo', {
+              defaultValue: 'Page {{current}} of {{total}}',
+              current: currentPage,
+              total: totalPages,
+            })}
           </span>
           <button
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
             className="p-2 border border-[rgb(var(--color-border-200))] rounded bg-white text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-[rgb(var(--color-primary-400))] focus:ring-1 focus:ring-[rgb(var(--color-primary-400))]"
           >
-            Next
+            {t('workItems.pagination.next', { defaultValue: 'Next' })}
           </button>
         </div>
       )}
 
       <div className="text-sm text-[rgb(var(--color-text-600))] mt-2 text-center">
-        Showing {workItems.length} of {totalItems} items
+        {t('workItems.pagination.showing', {
+          defaultValue: 'Showing {{count}} of {{total}} items',
+          count: workItems.length,
+          total: totalItems,
+        })}
       </div>
     </div>
   );

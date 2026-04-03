@@ -5,6 +5,10 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
+//
+// Important: for `/api/*` routes, this middleware runs before the route handler. A route can be
+// session-authenticated at the handler level and still fail here with `Unauthorized: API key missing`
+// unless it is explicitly allowlisted below.
 
 // =============================================================================
 // CORS Configuration - Allow all origins
@@ -47,6 +51,39 @@ const clientPortalPrefix = '/client-portal';
 // Helper function to get canonical URL (reads env var dynamically for testing)
 function getCanonicalUrl(): URL | null {
   return process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL) : null;
+}
+
+export function getVanityClientPortalInternalRedirectTarget(args: {
+  pathname: string;
+  isAuthPage: boolean;
+  requestHostname: string;
+  canonicalUrlEnv: URL | null;
+  userType?: string | null;
+}): URL | null {
+  const {
+    pathname,
+    isAuthPage,
+    requestHostname,
+    canonicalUrlEnv,
+    userType,
+  } = args;
+
+  if (
+    userType !== 'internal' ||
+    !canonicalUrlEnv ||
+    requestHostname === canonicalUrlEnv.hostname
+  ) {
+    return null;
+  }
+
+  if (
+    pathname === '/auth/client-portal/signin' ||
+    (pathname.startsWith(clientPortalPrefix) && !isAuthPage)
+  ) {
+    return new URL('/msp/dashboard', canonicalUrlEnv.origin);
+  }
+
+  return null;
 }
 
 const _middleware = auth((request) => {
@@ -96,7 +133,9 @@ const _middleware = auth((request) => {
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')) {
     const apiKey = request.headers.get('x-api-key');
 
-    // Skip paths that don't need API authentication
+    // Skip paths that don't need API authentication.
+    // Any session-authenticated `/api/*` route must be added here or middleware will return
+    // `401 Unauthorized: API key missing` before the route handler has a chance to run.
     const skipPaths = [
       '/api/health',
       '/api/healthz',
@@ -125,6 +164,7 @@ const _middleware = auth((request) => {
       '/api/webhooks/stripe',
       '/api/webhooks/ninjaone',
       '/api/webhooks/tacticalrmm',
+      '/api/files/',   // File download routes use session auth
       '/api/share/',  // Public share link routes handle their own auth
       '/api/ext/',  // Extension API routes handle their own auth
       '/api/ext-proxy/',
@@ -133,6 +173,8 @@ const _middleware = auth((request) => {
       '/api/internal/ext-runner/',   // Runner install-config/registry API uses x-runner-auth token
       '/api/internal/ext-scheduler/', // Runner scheduler host API uses x-runner-auth token
       '/api/internal/ext-invoicing/', // Runner invoicing host API uses x-runner-auth token
+      '/api/internal/ext-clients/', // Runner client read host API uses x-runner-auth token
+      '/api/internal/ext-services/', // Runner service read host API uses x-runner-auth token
     ];
 
     // Log for debugging CORS issues
@@ -174,6 +216,19 @@ const _middleware = auth((request) => {
     const canonicalUrlEnv = getCanonicalUrl();
 
     if (canonicalUrlEnv && requestHostname !== canonicalUrlEnv.hostname) {
+      const redirectTarget = getVanityClientPortalInternalRedirectTarget({
+        pathname,
+        isAuthPage,
+        requestHostname,
+        canonicalUrlEnv,
+        userType: request.auth?.user?.user_type,
+      });
+      if (redirectTarget) {
+        const redirectResponse = NextResponse.redirect(redirectTarget);
+        redirectResponse.headers.set('x-pathname', redirectTarget.pathname);
+        return redirectResponse;
+      }
+
       const canonicalLogin = new URL('/auth/client-portal/signin', canonicalUrlEnv.origin);
       const hostHeader = request.headers.get('host') || requestHostname;
 
@@ -299,6 +354,19 @@ const _middleware = auth((request) => {
       redirectResponse.headers.set('x-pathname', loginUrl.pathname);
       return redirectResponse;
     } else if (request.auth.user?.user_type !== 'client') {
+      const redirectTarget = getVanityClientPortalInternalRedirectTarget({
+        pathname,
+        isAuthPage,
+        requestHostname,
+        canonicalUrlEnv: getCanonicalUrl(),
+        userType: request.auth.user?.user_type,
+      });
+      if (redirectTarget) {
+        const redirectResponse = NextResponse.redirect(redirectTarget);
+        redirectResponse.headers.set('x-pathname', redirectTarget.pathname);
+        return redirectResponse;
+      }
+
       // Prevent non-client users (internal) from accessing client portal
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/auth/client-portal/signin';

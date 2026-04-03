@@ -94,7 +94,7 @@ export default [
             "custom-rules/map-return-type": "off",
             "custom-rules/check-required-props": "error",
             "custom-rules/no-legacy-ext-imports": "error",
-            "custom-rules/no-feature-to-feature-imports": "warn",
+            "custom-rules/no-feature-to-feature-imports": "error",
         }
     },
     // Configuration for TypeScript files
@@ -174,7 +174,7 @@ export default [
             "custom-rules/map-return-type": "off",
             "custom-rules/check-required-props": "error",
             "custom-rules/no-legacy-ext-imports": "error",
-            "custom-rules/no-feature-to-feature-imports": "warn",
+            "custom-rules/no-feature-to-feature-imports": "error",
             // Base ESLint rules
             "no-unused-vars": "off", // Turn off in favor of @typescript-eslint/no-unused-vars
             "react/react-in-jsx-scope": "off", // Not needed in Next.js

@@ -10,7 +10,7 @@ import {
 import { format } from 'date-fns';
 import { getDateFnsLocale } from '@alga-psa/ui';
 import { Button } from '@alga-psa/ui/components/Button';
-import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import {
   FileText,
   FileImage,
@@ -28,7 +28,6 @@ import {
   X
 } from 'lucide-react';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';
 
 interface Document {
   document_id: string;
@@ -82,6 +81,7 @@ function getFileExtension(fileName: string, mimeType: string): string {
 }
 
 export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocumentUploadProps) {
+  const { downloadDocument, getDocumentDownloadUrl, renderFolderSelectorModal } = useDocumentsCrossFeature();
   const { t, i18n } = useTranslation('features/documents');
   const { t: tCommon } = useTranslation('common');
   const dateLocale = getDateFnsLocale(i18n.language);
@@ -194,7 +194,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
     }
 
     // For other files, trigger download using the existing utility
-    const downloadUrl = getDocumentDownloadUrl(doc.file_id);
+    const downloadUrl = await getDocumentDownloadUrl(doc.file_id);
     try {
       await downloadDocument(downloadUrl, doc.document_name, true);
     } catch (err) {
@@ -208,7 +208,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
     e.stopPropagation();
     if (!doc.file_id) return;
 
-    const downloadUrl = getDocumentDownloadUrl(doc.file_id);
+    const downloadUrl = await getDocumentDownloadUrl(doc.file_id);
     try {
       await downloadDocument(downloadUrl, doc.document_name, true);
     } catch (err) {
@@ -483,17 +483,17 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
         <PreviewModal />
 
         {/* Folder Selection Modal */}
-        <FolderSelectorModal
-          isOpen={showFolderModal}
-          onClose={() => {
+        {renderFolderSelectorModal({
+          isOpen: showFolderModal,
+          onClose: () => {
             setShowFolderModal(false);
             setPendingFile(null);
-          }}
-          onSelectFolder={handleFolderSelected}
-          entityId={taskId}
-          entityType="project_task"
-          getFoldersFn={getClientFolders}
-        />
+          },
+          onSelectFolder: handleFolderSelected,
+          entityId: taskId,
+          entityType: 'project_task',
+          getFoldersFn: getClientFolders,
+        })}
       </>
     );
   }
@@ -578,17 +578,17 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
       <PreviewModal />
 
       {/* Folder Selection Modal */}
-      <FolderSelectorModal
-        isOpen={showFolderModal}
-        onClose={() => {
+      {renderFolderSelectorModal({
+        isOpen: showFolderModal,
+        onClose: () => {
           setShowFolderModal(false);
           setPendingFile(null);
-        }}
-        onSelectFolder={handleFolderSelected}
-        entityId={taskId}
-        entityType="project_task"
-        getFoldersFn={getClientFolders}
-      />
+        },
+        onSelectFolder: handleFolderSelected,
+        entityId: taskId,
+        entityType: 'project_task',
+        getFoldersFn: getClientFolders,
+      })}
     </>
   );
 }

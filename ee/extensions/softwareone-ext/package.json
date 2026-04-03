@@ -12,18 +12,18 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga/ui-kit": "file:../../server/packages/ui-kit",
     "@radix-ui/react-tabs": "^1.0.4",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-router-dom": "^6.28.0",
-    "@alga/ui-kit": "file:../../server/packages/ui-kit"
+    "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@typescript-eslint/eslint-plugin": "^6.13.0",
-    "@typescript-eslint/parser": "^6.13.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "@vitejs/plugin-react": "^4.2.0",
     "eslint": "^8.55.0",
     "eslint-plugin-react": "^7.33.2",

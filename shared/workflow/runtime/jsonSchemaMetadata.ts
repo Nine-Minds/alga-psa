@@ -13,18 +13,42 @@ export type WorkflowPickerJsonSchemaMetadata = {
   'x-workflow-picker-allow-dynamic-reference'?: boolean;
 };
 
-type WorkflowJsonSchemaMetadata = WorkflowPickerJsonSchemaMetadata & {
+export type WorkflowEditorKind = 'text' | 'picker' | 'color' | 'json' | 'custom';
+export type WorkflowEditorInlineMode = 'input' | 'textarea' | 'picker-summary' | 'swatch';
+export type WorkflowEditorDialogMode = 'large-text';
+
+export type WorkflowEditorJsonSchemaMetadata = {
+  kind: WorkflowEditorKind;
+  inline?: {
+    mode: WorkflowEditorInlineMode;
+  };
+  dialog?: {
+    mode: WorkflowEditorDialogMode;
+  };
+  dependencies?: string[];
+  allowsDynamicReference?: boolean;
+  fixedValueHint?: string;
+  picker?: {
+    resource: string;
+  };
+};
+
+export type WorkflowJsonSchemaMetadata = WorkflowPickerJsonSchemaMetadata & {
+  'x-workflow-editor'?: WorkflowEditorJsonSchemaMetadata;
+};
+
+type WorkflowJsonSchemaDescriptionPayload = WorkflowJsonSchemaMetadata & {
   description?: string;
 };
 
-const hasWorkflowJsonSchemaMetadata = (metadata: WorkflowJsonSchemaMetadata): boolean =>
+const hasWorkflowJsonSchemaMetadata = (metadata: WorkflowJsonSchemaDescriptionPayload): boolean =>
   Object.values(metadata).some((value) => value !== undefined);
 
 export const buildWorkflowJsonDescription = (
   description: string | undefined,
-  metadata: WorkflowPickerJsonSchemaMetadata = {}
+  metadata: WorkflowJsonSchemaMetadata = {}
 ): string => {
-  const payload: WorkflowJsonSchemaMetadata = {
+  const payload: WorkflowJsonSchemaDescriptionPayload = {
     description,
     ...metadata,
   };
@@ -39,7 +63,7 @@ export const buildWorkflowJsonDescription = (
 export const withWorkflowJsonSchemaMetadata = <T extends ZodTypeAny>(
   schema: T,
   description: string,
-  metadata: WorkflowPickerJsonSchemaMetadata = {}
+  metadata: WorkflowJsonSchemaMetadata = {}
 ): T => schema.describe(buildWorkflowJsonDescription(description, metadata)) as T;
 
 export const buildWorkflowJsonSchemaPostProcess = (

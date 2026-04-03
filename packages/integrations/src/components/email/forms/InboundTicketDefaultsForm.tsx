@@ -12,7 +12,7 @@ import {
   createInboundTicketDefaults, 
   updateInboundTicketDefaults 
 } from '@alga-psa/integrations/actions';
-import { getTicketFieldOptions, getCategoriesByBoard } from '@alga-psa/integrations/actions';
+import { getAvailableStatuses, getTicketFieldOptions, getCategoriesByBoard } from '@alga-psa/integrations/actions';
 import type { InboundTicketDefaults, TicketFieldOptions } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { PrioritySelect } from '@alga-psa/ui/components';
@@ -23,6 +23,7 @@ import type { IPriority } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { getIntegrationClients } from '../../../actions/clientLookupActions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export interface InboundTicketDefaultsFormProps {
   defaults?: InboundTicketDefaults | null;
@@ -35,6 +36,7 @@ export function InboundTicketDefaultsForm({
   onSuccess, 
   onCancel 
 }: InboundTicketDefaultsFormProps) {
+  const { t } = useTranslation('msp/email-providers');
   const [formData, setFormData] = useState({
     short_name: '',
     display_name: '',
@@ -62,6 +64,7 @@ export function InboundTicketDefaultsForm({
   
   const [loading, setLoading] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(true);
+  const [loadingStatuses, setLoadingStatuses] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [clients, setClients] = useState<IClient[]>([]);
@@ -94,6 +97,52 @@ export function InboundTicketDefaultsForm({
     loadCategoriesForBoard();
   }, [formData.board_id]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadStatusesForBoard = async () => {
+      if (!formData.board_id) {
+        setFieldOptions(prev => ({ ...prev, statuses: [] }));
+        return;
+      }
+
+      try {
+        setLoadingStatuses(true);
+        const { statuses } = await getAvailableStatuses(formData.board_id);
+        if (!active) {
+          return;
+        }
+
+        setFieldOptions(prev => ({ ...prev, statuses }));
+        setFormData(prev => {
+          if (!prev.status_id) {
+            return prev;
+          }
+
+          const hasSelectedStatus = statuses.some(status => status.id === prev.status_id);
+          return hasSelectedStatus ? prev : { ...prev, status_id: '' };
+        });
+      } catch (_err) {
+        if (!active) {
+          return;
+        }
+
+        setFieldOptions(prev => ({ ...prev, statuses: [] }));
+        setFormData(prev => (prev.status_id ? { ...prev, status_id: '' } : prev));
+      } finally {
+        if (active) {
+          setLoadingStatuses(false);
+        }
+      }
+    };
+
+    loadStatusesForBoard();
+
+    return () => {
+      active = false;
+    };
+  }, [formData.board_id]);
+
   // Populate form when editing
   useEffect(() => {
     if (defaults) {
@@ -118,7 +167,11 @@ export function InboundTicketDefaultsForm({
     try {
       setLoadingOptions(true);
       const data = await getTicketFieldOptions();
-      setFieldOptions(data.options);
+      setFieldOptions({
+        ...data.options,
+        statuses: [],
+        categories: [],
+      });
 
       // Hydrate dedicated pickers with richer datasets
       const [allClients, allPriorities, allUsers] = await Promise.all([
@@ -130,7 +183,9 @@ export function InboundTicketDefaultsForm({
       setPriorities((allPriorities as IPriority[]) || []);
       setUsersWithRoles(allUsers || []);
     } catch (err: any) {
-      setError('Failed to load field options');
+      setError(t('inboundDefaultsForm.feedback.loadOptionsError', {
+        defaultValue: 'Failed to load field options',
+      }));
     } finally {
       setLoadingOptions(false);
     }
@@ -140,28 +195,38 @@ export function InboundTicketDefaultsForm({
     e.preventDefault();
     
     if (!formData.short_name.trim() || !formData.display_name.trim()) {
-      setError('Short name and display name are required');
+      setError(t('inboundDefaultsForm.validation.nameRequired', {
+        defaultValue: 'Short name and display name are required',
+      }));
       return;
     }
 
     if (!formData.board_id) {
-      setError('Board is required');
+      setError(t('inboundDefaultsForm.validation.boardRequired', {
+        defaultValue: 'Board is required',
+      }));
       return;
     }
 
     if (!formData.status_id) {
-      setError('Status is required');
+      setError(t('inboundDefaultsForm.validation.statusRequired', {
+        defaultValue: 'Status is required',
+      }));
       return;
     }
 
     if (!formData.priority_id) {
-      setError('Priority is required');
+      setError(t('inboundDefaultsForm.validation.priorityRequired', {
+        defaultValue: 'Priority is required',
+      }));
       return;
     }
 
     // Client/Company is required
     if (!formData.client_id) {
-      setError('Company is required');
+      setError(t('inboundDefaultsForm.validation.clientRequired', {
+        defaultValue: 'Company is required',
+      }));
       return;
     }
 
@@ -204,6 +269,7 @@ export function InboundTicketDefaultsForm({
       const next = { ...prev, [field]: value } as typeof prev;
       // Clear dependent fields when parents change
       if (field === 'board_id') {
+        next.status_id = '';
         next.category_id = '';
         next.subcategory_id = '';
       }
@@ -222,7 +288,9 @@ export function InboundTicketDefaultsForm({
     return (
       <div className="flex items-center justify-center p-6">
         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-        <span className="ml-2">Loading form options...</span>
+        <span className="ml-2">{t('inboundDefaultsForm.feedback.loading', {
+          defaultValue: 'Loading form options...',
+        })}</span>
       </div>
     );
   }
@@ -244,38 +312,52 @@ export function InboundTicketDefaultsForm({
       {/* Basic Information */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="short_name">Short Name *</Label>
+          <Label htmlFor="short_name">{t('inboundDefaultsForm.fields.shortName.label', {
+            defaultValue: 'Short Name *',
+          })}</Label>
           <Input
             id="short_name"
             value={formData.short_name}
             onChange={(e) => setFormData(prev => ({ ...prev, short_name: e.target.value }))}
-            placeholder="email-general"
+            placeholder={t('inboundDefaultsForm.fields.shortName.placeholder', {
+              defaultValue: 'email-general',
+            })}
             required
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Unique identifier (e.g., email-general, support-billing)
+            {t('inboundDefaultsForm.fields.shortName.help', {
+              defaultValue: 'Unique identifier (e.g., email-general, support-billing)',
+            })}
           </p>
         </div>
 
         <div>
-          <Label htmlFor="display_name">Display Name *</Label>
+          <Label htmlFor="display_name">{t('inboundDefaultsForm.fields.displayName.label', {
+            defaultValue: 'Display Name *',
+          })}</Label>
           <Input
             id="display_name"
             value={formData.display_name}
             onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
-            placeholder="General Email Support"
+            placeholder={t('inboundDefaultsForm.fields.displayName.placeholder', {
+              defaultValue: 'General Email Support',
+            })}
             required
           />
         </div>
       </div>
 
       <div>
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">{t('inboundDefaultsForm.fields.description.label', {
+          defaultValue: 'Description',
+        })}</Label>
         <TextArea
           id="description"
           value={formData.description}
           onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          placeholder="Optional description of when these defaults are used"
+          placeholder={t('inboundDefaultsForm.fields.description.placeholder', {
+            defaultValue: 'Optional description of when these defaults are used',
+          })}
           rows={2}
         />
       </div>
@@ -286,45 +368,74 @@ export function InboundTicketDefaultsForm({
           checked={formData.is_active}
           onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
         />
-        <Label htmlFor="is_active">Active</Label>
+        <Label htmlFor="is_active">{t('inboundDefaultsForm.fields.active.label', {
+          defaultValue: 'Active',
+        })}</Label>
       </div>
 
       {/* Ticket Defaults */}
       <div className="border-t pt-6">
-        <h4 className="text-lg font-medium mb-4">Ticket Defaults</h4>
+        <h4 className="text-lg font-medium mb-4">{t('inboundDefaultsForm.section.ticketDefaults', {
+          defaultValue: 'Ticket Defaults',
+        })}</h4>
         
         <div className="grid grid-cols-2 gap-4">
           {/* Required Fields */}
           <div>
-            <Label htmlFor="board_id">Board *</Label>
+            <Label htmlFor="board_id">{t('inboundDefaultsForm.fields.board.label', {
+              defaultValue: 'Board *',
+            })}</Label>
             <CustomSelect
               id="board_id"
               value={formData.board_id}
               onValueChange={(value) => handleDefaultChange('board_id', value)}
               options={fieldOptions.boards.map((board) => ({
                 value: board.id,
-                label: board.name + (board.is_default ? ' (Default)' : ''),
+                label: board.name + (board.is_default ? ` ${t('inboundDefaultsForm.optionSuffix.default', {
+                  defaultValue: '(Default)',
+                })}` : ''),
               }))}
-              placeholder="Select Board"
+              placeholder={t('inboundDefaultsForm.fields.board.placeholder', {
+                defaultValue: 'Select Board',
+              })}
             />
           </div>
 
           <div>
-            <Label htmlFor="status_id">Status *</Label>
+            <Label htmlFor="status_id">{t('inboundDefaultsForm.fields.status.label', {
+              defaultValue: 'Status *',
+            })}</Label>
             <CustomSelect
               id="status_id"
               value={formData.status_id}
               onValueChange={(value) => handleDefaultChange('status_id', value)}
               options={fieldOptions.statuses.map(s => ({ 
                 value: s.id, 
-                label: s.name + (s.is_default ? ' (Default)' : '') 
+                label: s.name + (s.is_default ? ` ${t('inboundDefaultsForm.optionSuffix.default', {
+                  defaultValue: '(Default)',
+                })}` : '')
               }))}
-              placeholder="Select status"
+              placeholder={
+                !formData.board_id
+                  ? t('inboundDefaultsForm.fields.status.selectBoardFirst', {
+                      defaultValue: 'Select board first',
+                    })
+                  : (loadingStatuses
+                      ? t('inboundDefaultsForm.fields.status.loading', {
+                          defaultValue: 'Loading statuses...',
+                        })
+                      : t('inboundDefaultsForm.fields.status.placeholder', {
+                          defaultValue: 'Select status',
+                        }))
+              }
+              disabled={!formData.board_id || loadingStatuses}
             />
           </div>
 
           <div>
-            <Label htmlFor="priority_id">Priority *</Label>
+            <Label htmlFor="priority_id">{t('inboundDefaultsForm.fields.priority.label', {
+              defaultValue: 'Priority *',
+            })}</Label>
             <PrioritySelect
               id="priority_id"
               value={formData.priority_id}
@@ -334,13 +445,17 @@ export function InboundTicketDefaultsForm({
                 label: p.priority_name, 
                 color: p.color 
               }))}
-              placeholder="Select priority"
+              placeholder={t('inboundDefaultsForm.fields.priority.placeholder', {
+                defaultValue: 'Select priority',
+              })}
             />
           </div>
 
           {/* Optional Fields */}
           <div>
-            <Label htmlFor="client_id">Client *</Label>
+            <Label htmlFor="client_id">{t('inboundDefaultsForm.fields.client.label', {
+              defaultValue: 'Client *',
+            })}</Label>
             <ClientPicker
               id="client_id"
               clients={clients}
@@ -350,15 +465,21 @@ export function InboundTicketDefaultsForm({
               onFilterStateChange={setClientFilterState}
               clientTypeFilter={clientTypeFilter}
               onClientTypeFilterChange={setClientTypeFilter}
-              placeholder="Select Client"
+              placeholder={t('inboundDefaultsForm.fields.client.placeholder', {
+                defaultValue: 'Select Client',
+              })}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Required: used as a catch-all when no client can be matched from the email.
+              {t('inboundDefaultsForm.fields.client.help', {
+                defaultValue: 'Required: used as a catch-all when no client can be matched from the email.',
+              })}
             </p>
           </div>
 
           <div>
-            <Label htmlFor="category_id">Category</Label>
+            <Label htmlFor="category_id">{t('inboundDefaultsForm.fields.category.label', {
+              defaultValue: 'Category',
+            })}</Label>
             <CustomSelect
               id="category_id"
               value={formData.subcategory_id || formData.category_id}
@@ -380,17 +501,27 @@ export function InboundTicketDefaultsForm({
                 }
               }}
               options={categoryOptions}
-              placeholder={formData.board_id ? 'Select category' : 'Select board first'}
+              placeholder={formData.board_id
+                ? t('inboundDefaultsForm.fields.category.placeholder', {
+                  defaultValue: 'Select category',
+                })
+                : t('inboundDefaultsForm.fields.category.placeholderNoBoard', {
+                  defaultValue: 'Select board first',
+                })}
               disabled={!formData.board_id}
               allowClear
             />
             {formData.board_id && (fieldOptions.categories || []).filter(c => !c.parent_id && String(c.board_id || '') === String(formData.board_id)).length === 0 && (
-              <p className="text-xs text-muted-foreground mt-1">No categories found for the selected board.</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('inboundDefaultsForm.fields.category.empty', {
+                defaultValue: 'No categories found for the selected board.',
+              })}</p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="location_id">Location</Label>
+            <Label htmlFor="location_id">{t('inboundDefaultsForm.fields.location.label', {
+              defaultValue: 'Location',
+            })}</Label>
             <CustomSelect
               id="location_id"
               value={formData.location_id}
@@ -398,29 +529,43 @@ export function InboundTicketDefaultsForm({
               options={fieldOptions.locations
                 .filter(l => !formData.client_id || l.client_id === formData.client_id)
                 .map(l => ({ value: l.id, label: l.name }))}
-              placeholder={formData.client_id ? 'Select location' : 'Select client first (optional)'}
+              placeholder={formData.client_id
+                ? t('inboundDefaultsForm.fields.location.placeholder', {
+                  defaultValue: 'Select location',
+                })
+                : t('inboundDefaultsForm.fields.location.placeholderNoClient', {
+                  defaultValue: 'Select client first (optional)',
+                })}
               disabled={!formData.client_id}
               allowClear
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Only applied when the catch-all client is used (no match case).
+              {t('inboundDefaultsForm.fields.location.help', {
+                defaultValue: 'Only applied when the catch-all client is used (no match case).',
+              })}
             </p>
           </div>
 
           <div>
-            <Label htmlFor="entered_by">Entered By</Label>
+            <Label htmlFor="entered_by">{t('inboundDefaultsForm.fields.enteredBy.label', {
+              defaultValue: 'Entered By',
+            })}</Label>
             <UserPicker
               label={undefined}
               value={formData.entered_by || ''}
               onValueChange={(value) => handleDefaultChange('entered_by', value || null)}
               users={usersWithRoles}
               getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-              placeholder="System (null)"
+              placeholder={t('inboundDefaultsForm.fields.enteredBy.placeholder', {
+                defaultValue: 'System (null)',
+              })}
               userTypeFilter="internal"
               buttonWidth="full"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Used only when we cannot match a contact or client. System tickets will show "System" as creator.
+              {t('inboundDefaultsForm.fields.enteredBy.help', {
+                defaultValue: 'Used only when we cannot match a contact or client. System tickets will show "System" as creator.',
+              })}
             </p>
           </div>
         </div>
@@ -429,16 +574,30 @@ export function InboundTicketDefaultsForm({
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-6 border-t">
         <Button id="cancel-button" type="button" variant="outline" onClick={onCancel} disabled={loading}>
-          Cancel
+          {t('inboundDefaultsForm.actions.cancel', {
+            defaultValue: 'Cancel',
+          })}
         </Button>
         <Button id="submit-button" type="submit" disabled={loading}>
           {loading ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              {defaults ? 'Updating...' : 'Creating...'}
+              {defaults
+                ? t('inboundDefaultsForm.actions.updating', {
+                  defaultValue: 'Updating...',
+                })
+                : t('inboundDefaultsForm.actions.creating', {
+                  defaultValue: 'Creating...',
+                })}
             </>
           ) : (
-            defaults ? 'Update Defaults' : 'Create Defaults'
+            defaults
+              ? t('inboundDefaultsForm.actions.update', {
+                defaultValue: 'Update Defaults',
+              })
+              : t('inboundDefaultsForm.actions.create', {
+                defaultValue: 'Create Defaults',
+              })
           )}
         </Button>
       </div>

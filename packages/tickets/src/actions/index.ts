@@ -16,9 +16,12 @@ export {
   addTicketComment,
   deleteTicket,
   deleteTickets,
+  moveTicketsToBoard,
   getScheduledHoursForTicket,
-  getTicketById
+  getTicketById,
+  registerSlaCancellation
 } from './ticketActions';
+export { registerItilSlaConfiguration } from '../services/itilStandardsService';
 export * from './ticketBundleActions';
 export * from './ticketBundleUtils';
 export * from './ticketDisplaySettings';
@@ -31,3 +34,4 @@ export * from './ticketCategoryActions';
 export * from './ticketResourceActions';
 export * from './teamAssignmentActions';
 export * from './materialCatalogActions';
+export * from './ticketExportActions';

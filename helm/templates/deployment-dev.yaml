@@ -437,6 +437,8 @@ spec:
                 key: IMAP_WEBHOOK_SECRET
           - name: NEXTAUTH_SESSION_EXPIRES
             value: "{{ .Values.auth.nextauth_session_expires }}"
+          - name: AUTH_TRUST_HOST
+            value: "true"
 
           # ----------- EXTENSIONS ----------------
           {{- with .Values.config.extensions.domainRoot }}

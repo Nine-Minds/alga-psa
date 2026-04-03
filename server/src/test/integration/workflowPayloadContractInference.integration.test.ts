@@ -14,9 +14,9 @@ import {
   getWorkflowDefinitionAction,
   listWorkflowDefinitionsAction
 } from '@alga-psa/workflows/actions';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
+import WorkflowDefinitionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionModelV2';
+import WorkflowDefinitionVersionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionVersionModelV2';
+import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
   buildWorkflowDefinition,

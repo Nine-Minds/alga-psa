@@ -4,6 +4,26 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { InboundTicketDefaults } from '@alga-psa/types';
 
+const assertTicketStatusBelongsToBoard = async (
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  tenant: string,
+  boardId: string,
+  statusId: string
+): Promise<void> => {
+  const matchingStatus = await knex('statuses')
+    .where({
+      tenant,
+      board_id: boardId,
+      status_id: statusId,
+      status_type: 'ticket',
+    })
+    .first('status_id');
+
+  if (!matchingStatus) {
+    throw new Error('Selected status is not valid for the selected board');
+  }
+};
+
 export const getInboundTicketDefaults = withAuth(async (
   _user,
   { tenant }
@@ -68,6 +88,8 @@ export const createInboundTicketDefaults = withAuth(async (
     if (!data.board_id || !data.status_id || !data.priority_id) {
       throw new Error('Board, status, and priority are required');
     }
+
+    await assertTicketStatusBelongsToBoard(knex, tenant, data.board_id, data.status_id);
 
     const [defaults] = await knex('inbound_ticket_defaults')
       .insert({
@@ -155,6 +177,8 @@ export const updateInboundTicketDefaults = withAuth(async (
       if (!finalBoardId || !finalStatusId || !finalPriorityId) {
         throw new Error('Board, status, and priority are required');
       }
+
+      await assertTicketStatusBelongsToBoard(knex, tenant, finalBoardId, finalStatusId);
     }
 
     const updateData: any = {
@@ -228,25 +252,19 @@ export const deleteInboundTicketDefaults = withAuth(async (
           updated_at: trx.fn.now(),
         });
 
-      const hasClientDestinationColumn = await trx.schema.hasColumn('clients', 'inbound_ticket_defaults_id');
-      if (hasClientDestinationColumn) {
-        await trx('clients')
-          .where({ tenant, inbound_ticket_defaults_id: id })
-          .update({
-            inbound_ticket_defaults_id: null,
-            updated_at: trx.fn.now(),
-          });
-      }
+      await trx('clients')
+        .where({ tenant, inbound_ticket_defaults_id: id })
+        .update({
+          inbound_ticket_defaults_id: null,
+          updated_at: trx.fn.now(),
+        });
 
-      const hasContactDestinationColumn = await trx.schema.hasColumn('contacts', 'inbound_ticket_defaults_id');
-      if (hasContactDestinationColumn) {
-        await trx('contacts')
-          .where({ tenant, inbound_ticket_defaults_id: id })
-          .update({
-            inbound_ticket_defaults_id: null,
-            updated_at: trx.fn.now(),
-          });
-      }
+      await trx('contacts')
+        .where({ tenant, inbound_ticket_defaults_id: id })
+        .update({
+          inbound_ticket_defaults_id: null,
+          updated_at: trx.fn.now(),
+        });
 
       const rowsDeleted = await trx('inbound_ticket_defaults')
         .where({ id, tenant })

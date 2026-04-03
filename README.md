@@ -56,7 +56,7 @@ A comprehensive Professional Services Automation platform designed for Managed S
 
 ## Getting Started
 
-For detailed setup instructions, please refer to our [Complete Setup Guide](docs/getting-started/setup_guide.md). The guide covers:
+For detailed setup instructions, please refer to our [Complete Setup Guide](docs/getting-started/setup_guide.md) or [Setup Guide for Windows](docs/getting-started/setup_guide_windows.md). The guide covers:
 - Prerequisites and system requirements
 - Installation steps for both Community and Enterprise editions
 - Environment configuration
@@ -73,6 +73,7 @@ Note: For production-like persistence, both CE and EE prebuilt compose files def
 - [Development Guide](docs/getting-started/development_guide.md) - Development workflow and best practices
 
 ### Architecture & Components
+- [Package Build System](docs/architecture/package-build-system.md) - How packages are built and resolved
 - [Docker Compose Structure](docs/getting-started/docker_compose.md) - Container orchestration
 - [Secrets Management](docs/security/secrets_management.md) - Secure credentials handling
 - [Configuration Standards](docs/getting-started/configuration_standards.md) - Coding and config standards
@@ -92,25 +93,33 @@ Note: For production-like persistence, both CE and EE prebuilt compose files def
 
 ```
 alga-psa/
-├── docker-compose.yaml     # Base docker configuration
-├── docker-compose.ce.yaml  # Community Edition config
-├── docker-compose.ee.yaml  # Enterprise Edition config
-├── ee/                    # Enterprise Edition
-│   └── setup/
-│       └── docker-compose.yaml
-├── helm/                  # Kubernetes configurations
-├── hocuspocus/           # Real-time collaboration server
-└── server/
-    ├── public/           # Static assets
-    ├── src/
-    │   ├── app/         # Next.js pages
-    │   ├── components/  # React components
-    │   │   ├── ui/     # Shared UI components
-    │   │   └── features/# Feature-specific components
-    │   ├── lib/        # Core business logic
-    │   └── types/      # TypeScript definitions
-    └── migrations/     # Database migrations
+├── server/                  # Next.js application server
+│   ├── src/
+│   │   ├── app/             # Next.js App Router pages
+│   │   ├── components/      # React components
+│   │   └── lib/             # Core business logic
+│   └── migrations/          # Database migrations (CE)
+├── packages/                # Shared @alga-psa/* packages
+│   ├── billing/             # Billing, invoicing, tax
+│   ├── clients/             # Client management
+│   ├── core/                # Logging, encryption, utilities
+│   ├── db/                  # Database connection & tenant context
+│   ├── types/               # Shared TypeScript interfaces
+│   ├── ui/                  # Shared UI component library
+│   ├── build-tools/         # Shared tsup build preset
+│   └── ...                  # ~50 domain & utility packages
+├── ee/                      # Enterprise Edition
+│   ├── server/              # EE server overrides & migrations
+│   └── packages/            # EE-only packages
+├── shared/                  # Legacy shared libraries
+├── hocuspocus/              # Real-time collaboration server
+├── services/
+│   └── workflow-worker/     # Workflow processing service
+├── sdk/                     # Extension SDK & samples
+└── docs/                    # Documentation
 ```
+
+See [Package Build System](docs/architecture/package-build-system.md) for details on how packages are built and resolved.
 
 ## Testing
 

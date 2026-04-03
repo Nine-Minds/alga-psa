@@ -27,6 +27,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Edit2, Trash2, MapPin, Star } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { useToast } from '@alga-psa/ui';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -105,7 +106,7 @@ const LocationDetailField: React.FC<{
 };
 
 const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete, onSetDefault, formatAddress, showActions = true }) => {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('msp/clients');
   const locationLabel = location.location_name || t('clients.locations.card.unnamed', 'Unnamed Location');
   const formattedAddress = formatAddress(location);
 
@@ -283,7 +284,7 @@ const initialFormData: LocationFormData = {
 };
 
 export default function ClientLocations({ clientId, isEditing }: ClientLocationsProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('msp/clients');
   const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [isLocationsLoading, setIsLocationsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -723,6 +724,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
             data-automation-id="add-client-location-button"
             onClick={handleAddLocation} 
             size="sm"
+            disabled={isLocationsLoading}
           >
             <Plus className="h-4 w-4 mr-2" />
             {t('clients.locations.buttons.add', 'Add Location')}
@@ -997,23 +999,38 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
       
       {/* Locations List */}
       <div className="space-y-3">
-        {locations.map((location) => (
-          <LocationCard
-            key={location.location_id}
-            location={location}
-            onEdit={handleEditLocation}
-            onDelete={handleDeleteLocation}
-            onSetDefault={handleSetDefault}
-            formatAddress={formatAddress}
-          />
-        ))}
-        
-        {locations.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>{t('clients.locations.empty.title', 'No locations added yet')}</p>
-            <p className="text-sm">{t('clients.locations.empty.description', 'Click "Add Location" to get started')}</p>
+        {isLocationsLoading ? (
+          <div
+            className="flex flex-col items-center justify-center gap-3 py-12"
+            aria-busy="true"
+            data-automation-id="client-locations-loading"
+          >
+            <Spinner size="sm" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t('clients.locations.loading', 'Loading locations...')}
+            </p>
           </div>
+        ) : (
+          <>
+            {locations.map((location) => (
+              <LocationCard
+                key={location.location_id}
+                location={location}
+                onEdit={handleEditLocation}
+                onDelete={handleDeleteLocation}
+                onSetDefault={handleSetDefault}
+                formatAddress={formatAddress}
+              />
+            ))}
+
+            {locations.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>{t('clients.locations.empty.title', 'No locations added yet')}</p>
+                <p className="text-sm">{t('clients.locations.empty.description', 'Click "Add Location" to get started')}</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </ReflectionContainer>

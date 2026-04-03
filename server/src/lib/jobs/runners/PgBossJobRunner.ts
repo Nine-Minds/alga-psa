@@ -342,6 +342,10 @@ export class PgBossJobRunner implements IJobRunner {
       }
 
       // Use PG Boss schedule() for cron-based recurring jobs.
+      const cronTz =
+        options?.metadata && typeof (options.metadata as Record<string, unknown>).timezone === 'string'
+          ? String((options.metadata as Record<string, unknown>).timezone).trim() || 'UTC'
+          : 'UTC';
       try {
         await this.boss.schedule(
           queueName,
@@ -350,6 +354,7 @@ export class PgBossJobRunner implements IJobRunner {
           {
             retryLimit: 3,
             retryBackoff: true,
+            tz: cronTz,
           }
         );
         externalId = queueName;

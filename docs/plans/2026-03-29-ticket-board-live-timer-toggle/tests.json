@@ -1,0 +1,62 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed integration: boards persist enabled-by-default live timer semantics on create and persist explicit disabled values on update/readback.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "UI test: BoardsSettings renders the live ticket timer toggle in Board Configuration for create and edit flows and sends the field in save payloads.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Ticket details test: a board with live timing disabled hides the live timer controls and skips auto-start behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Ticket properties test: a board with live timing disabled hides tracked intervals while leaving Add Time Entry available.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Ticket details test: after a successful board change to a disabled board, the current view immediately hides the live timer experience and stops the active timer state.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F011"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Regression test: boards with live timing enabled retain current live timer and tracked interval behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F007",
+      "F008",
+      "F009"
+    ]
+  }
+]

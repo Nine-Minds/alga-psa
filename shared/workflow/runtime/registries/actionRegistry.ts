@@ -1,5 +1,6 @@
 import { ZodSchema } from 'zod';
 import type { RetryPolicy } from '../types';
+import type { ExpressionContext } from '../expressionEngine';
 
 export type ActionId = string;
 
@@ -30,6 +31,8 @@ export type ActionDef<I, O> = {
 export type ActionContext = {
   runId: string;
   stepPath: string;
+  stepConfig?: unknown;
+  expressionContext?: ExpressionContext;
   tenantId?: string | null;
   idempotencyKey: string;
   attempt: number;

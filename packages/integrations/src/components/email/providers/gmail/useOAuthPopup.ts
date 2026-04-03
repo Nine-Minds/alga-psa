@@ -7,6 +7,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type OAuthStatus = "idle" | "authorizing" | "success" | "error";
 
@@ -23,6 +24,7 @@ interface OpenOAuthHandlers<T = any> {
 
 export function useOAuthPopup<T = any>(options: UseOAuthPopupOptions) {
   const { provider, countdownSeconds = 10 } = options;
+  const { t } = useTranslation('msp/email-providers');
 
   const [oauthStatus, setOauthStatus] = useState<OAuthStatus>("idle");
   // Track latest status in a ref to avoid stale closures inside intervals
@@ -71,7 +73,9 @@ export function useOAuthPopup<T = any>(options: UseOAuthPopupOptions) {
 
         if (!popup) {
           setOauthStatus("error");
-          handlers.onError?.("Failed to open OAuth popup. Please allow popups for this site.");
+          handlers.onError?.(t('forms.gmail.validation.popupBlocked', {
+            defaultValue: 'Failed to open OAuth popup. Please allow popups for this site.',
+          }));
           return;
         }
 
@@ -85,7 +89,9 @@ export function useOAuthPopup<T = any>(options: UseOAuthPopupOptions) {
             // Use ref to avoid stale state from closure
             if (oauthStatusRef.current === "authorizing") {
               setOauthStatus("idle");
-              handlers.onError?.("Authorization window was closed before completing.");
+              handlers.onError?.(t('forms.gmail.validation.closedEarly', {
+                defaultValue: 'Authorization window was closed before completing.',
+              }));
             }
           }
         }, 1000);
@@ -136,7 +142,9 @@ export function useOAuthPopup<T = any>(options: UseOAuthPopupOptions) {
               const message =
                 event.data.errorDescription ||
                 event.data.error ||
-                "Authorization failed";
+                t('forms.gmail.validation.authorizationFailed', {
+                  defaultValue: 'Authorization failed',
+                });
               handlers.onError?.(message);
             }
 
@@ -147,10 +155,12 @@ export function useOAuthPopup<T = any>(options: UseOAuthPopupOptions) {
         window.addEventListener("message", messageHandler);
       } catch (err: any) {
         setOauthStatus("error");
-        handlers.onError?.(err?.message || "OAuth popup failed");
+        handlers.onError?.(err?.message || t('forms.gmail.validation.popupFailed', {
+          defaultValue: 'OAuth popup failed',
+        }));
       }
     },
-    [provider, countdownSeconds]
+    [provider, countdownSeconds, t]
   );
 
   return {

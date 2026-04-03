@@ -6,12 +6,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { IClient, IService } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Import all the components
 import ContractLinesOverview from './contract-lines/ContractLinesOverview';
 import InvoiceTemplates from './InvoiceTemplates';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import BillingCycles from './BillingCycles';
+import RecurringServicePeriodsTab from './RecurringServicePeriodsTab';
 import TaxRates from './TaxRates';
 import UsageTracking from './UsageTracking';
 import TemplatesTab from './contracts/TemplatesTab';
@@ -25,6 +27,9 @@ import InvoicingHub from './InvoicingHub';
 import ServiceCatalogManager from '../settings/billing/ServiceCatalogManager';
 import ProductsManager from '../settings/billing/ProductsManager';
 import AccountingExportsTab from './accounting/AccountingExportsTab';
+import QuotesTab from './quotes/QuotesTab';
+import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
+import QuoteTemplatesList from './quotes/QuoteTemplatesList';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -50,7 +55,14 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const [isHydrated, setIsHydrated] = useState(false);
   const [error] = useState<string | null>(null);
 
-  const tabDefinitions = useMemo(() => billingTabDefinitions, []);
+  const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
+
+  const tabDefinitions = useMemo(() => {
+    if (isQuotingEnabled) return billingTabDefinitions;
+    return billingTabDefinitions.filter(
+      (tab) => tab.value !== 'quotes' && tab.value !== 'quote-templates' && tab.value !== 'quote-business-templates'
+    );
+  }, [isQuotingEnabled]);
 
   const initialSearchParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -123,7 +135,6 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         onValueChange={handleTabChange}
         className="w-full"
       >
-
         <Tabs.Content value="contract-templates">
           {searchParams?.has('contractId') ? (
             <ContractDetailSwitcher renderClientDetails={renderClientDetails} />
@@ -147,6 +158,31 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         <Tabs.Content value="accounting-exports">
           <AccountingExportsTab />
         </Tabs.Content>
+
+        {isQuotingEnabled && (
+          <Tabs.Content value="quotes">
+            <QuotesTab />
+          </Tabs.Content>
+        )}
+
+        {isQuotingEnabled && (
+          <Tabs.Content value="quote-templates">
+            <QuoteDocumentTemplatesPage />
+          </Tabs.Content>
+        )}
+
+        {isQuotingEnabled && (
+          <Tabs.Content value="quote-business-templates">
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold">Quote Templates</h2>
+              <QuoteTemplatesList
+                onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
+                onCreateFromTemplate={(id) => router.push(`/msp/billing?tab=quotes&quoteId=new&templateId=${id}`)}
+                onNewTemplate={() => router.push('/msp/billing?tab=quotes&quoteId=new&isTemplate=true')}
+              />
+            </div>
+          </Tabs.Content>
+        )}
 
         <Tabs.Content value="reports">
           <ContractReports />
@@ -184,6 +220,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
         <Tabs.Content value="billing-cycles">
           <BillingCycles />
+        </Tabs.Content>
+
+        <Tabs.Content value="service-periods">
+          <RecurringServicePeriodsTab initialScheduleKey={searchParams?.get('scheduleKey') ?? undefined} />
         </Tabs.Content>
 
         <Tabs.Content value="usage-tracking">

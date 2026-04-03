@@ -1,0 +1,1192 @@
+{
+  "common": {
+    "actions": {
+      "add": "55555",
+      "back": "55555",
+      "cancel": "55555",
+      "close": "55555",
+      "copy": "55555",
+      "create": "55555",
+      "delete": "55555",
+      "download": "55555",
+      "edit": "55555",
+      "refresh": "55555",
+      "remove": "55555",
+      "retry": "55555",
+      "save": "55555",
+      "saving": "55555",
+      "search": "55555",
+      "select": "55555",
+      "update": "55555",
+      "view": "55555"
+    },
+    "states": {
+      "active": "55555",
+      "inactive": "55555",
+      "loading": "55555",
+      "na": "55555",
+      "none": "55555"
+    },
+    "no": "55555",
+    "yes": "55555"
+  },
+  "assetAlertsSection": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "assetCommandPalette": {
+    "title": "55555",
+    "description": "55555",
+    "register": {
+      "label": "55555",
+      "title": "55555"
+    },
+    "actions": {
+      "createAsset": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "refreshData": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "reset": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "searchPlaceholder": "55555",
+    "empty": "55555",
+    "groups": {
+      "quickActions": "55555",
+      "assets": "55555",
+      "hints": "55555"
+    },
+    "hint": {
+      "body": "55555",
+      "badge": "55555"
+    },
+    "values": {
+      "unassigned": "55555"
+    }
+  },
+  "assetDashboard": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "assetDashboardClient": {
+    "title": "55555",
+    "description": "55555",
+    "reflection": {
+      "label": "55555"
+    },
+    "errors": {
+      "loadDrawerFailed": "55555"
+    },
+    "details": {
+      "noIp": "55555",
+      "network": "55555",
+      "local": "55555",
+      "noDetails": "55555",
+      "unassigned": "55555"
+    },
+    "selection": {
+      "selectAllVisibleAssets": "55555",
+      "selectAsset": "55555 {{name}} 55555",
+      "selectedAssets": "55555 {{count}} 55555 {{suffix}} 55555",
+      "clearSelection": "55555",
+      "bulkActionsComingSoon": "55555"
+    },
+    "actions": {
+      "openActionsForAsset": "55555 {{name}} 55555",
+      "viewDetails": "55555",
+      "editAsset": "55555",
+      "createTicket": "55555",
+      "refreshData": "55555"
+    },
+    "table": {
+      "name": "55555",
+      "tag": "55555",
+      "type": "55555",
+      "details": "55555",
+      "status": "55555",
+      "agent": "55555",
+      "client": "55555",
+      "location": "55555",
+      "actions": "55555"
+    },
+    "metrics": {
+      "totalAssets": {
+        "title": "55555",
+        "helper": "55555"
+      },
+      "filteredView": {
+        "title": "55555",
+        "helper": "55555"
+      },
+      "automationReady": {
+        "title": "55555",
+        "helper": "55555",
+        "upcoming": "55555 {{count}} 55555",
+        "overdue": "55555 {{count}} 55555"
+      },
+      "activeSchedules": {
+        "title": "55555",
+        "helper": "55555"
+      },
+      "overdueMaintenance": {
+        "title": "55555",
+        "helper": "55555"
+      },
+      "upcomingMaintenance": {
+        "title": "55555",
+        "helper": "55555"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "55555",
+      "reset": "55555",
+      "status": "55555",
+      "type": "55555",
+      "agent": "55555",
+      "columns": "55555",
+      "client": {
+        "loading": "55555",
+        "placeholder": "55555",
+        "clear": "55555"
+      },
+      "rmmManaged": {
+        "managed": "55555",
+        "unmanaged": "55555"
+      },
+      "agentStatuses": {
+        "online": "55555",
+        "offline": "55555",
+        "overdue": "55555",
+        "unknown": "55555"
+      }
+    },
+    "activeFilters": {
+      "status": "55555 {{value}} 55555",
+      "type": "55555 {{value}} 55555",
+      "client": "55555 {{value}} 55555",
+      "agent": "55555 {{value}} 55555"
+    },
+    "statuses": {
+      "active": "55555",
+      "inactive": "55555",
+      "maintenance": "55555"
+    },
+    "types": {
+      "workstation": "55555",
+      "server": "55555",
+      "network_device": "55555",
+      "mobile_device": "55555",
+      "printer": "55555"
+    },
+    "columns": {
+      "select": "55555",
+      "name": "55555",
+      "asset_tag": "55555",
+      "asset_type": "55555",
+      "details": "55555",
+      "status": "55555",
+      "agent_status": "55555",
+      "client_name": "55555",
+      "location": "55555",
+      "actions": "55555"
+    }
+  },
+  "assetDashboardGrid": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "assetDetailDrawer": {
+    "title": "55555",
+    "description": "55555",
+    "label": "55555",
+    "header": {
+      "title": "55555",
+      "subtitle": "55555"
+    },
+    "tabs": {
+      "overview": "55555",
+      "maintenance": "55555",
+      "tickets": "55555",
+      "configuration": "55555",
+      "documents": "55555"
+    },
+    "helper": {
+      "awaitingSelection": "55555",
+      "selectedAsset": "55555 {{name}} 55555 {{tab}} 55555"
+    },
+    "statuses": {
+      "active": "55555",
+      "inactive": "55555",
+      "maintenance": "55555"
+    },
+    "empty": {
+      "selectAsset": "55555",
+      "nothingToDisplay": "55555"
+    },
+    "actions": {
+      "openAssetRecord": "55555",
+      "delete": "55555"
+    },
+    "overview": {
+      "assetTag": "55555 {{tag}} 55555 {{type}} 55555",
+      "client": "55555 {{name}} 55555",
+      "activeSchedules": "55555",
+      "upcomingMaintenance": "55555",
+      "nextOn": "55555 {{date}} 55555",
+      "completedMaintenance": "55555",
+      "compliance": "55555 {{percent}} 55555",
+      "lastMaintenance": "55555",
+      "noHistory": "55555",
+      "maintenanceDataPending": "55555",
+      "assetSummary": "55555",
+      "recentLifecycleEvents": "55555"
+    },
+    "maintenance": {
+      "noSchedules": "55555",
+      "totalSchedules": "55555",
+      "active": "55555",
+      "complianceRate": "55555",
+      "history": "55555",
+      "loggedBy": "55555 {{name}} 55555",
+      "system": "55555",
+      "noLogs": "55555"
+    },
+    "tickets": {
+      "empty": "55555",
+      "linked": "55555 {{date}} 55555",
+      "client": "55555 {{name}} 55555",
+      "assignee": "55555 {{name}} 55555",
+      "openTicket": "55555"
+    },
+    "configuration": {
+      "coreAttributes": "55555",
+      "serialNumber": "55555",
+      "location": "55555",
+      "purchaseDate": "55555",
+      "warrantyEnd": "55555",
+      "notProvided": "55555"
+    },
+    "info": {
+      "client": "55555",
+      "unassigned": "55555",
+      "assetTag": "55555",
+      "status": "55555",
+      "created": "55555",
+      "updated": "55555",
+      "tenant": "55555"
+    },
+    "typeDetails": {
+      "workstation": "55555",
+      "networkDevice": "55555",
+      "server": "55555",
+      "mobileDevice": "55555",
+      "printer": "55555",
+      "operatingSystem": "55555",
+      "cpu": "55555",
+      "ram": "55555",
+      "storage": "55555",
+      "gpu": "55555",
+      "notProvided": "55555",
+      "never": "55555",
+      "deviceType": "55555",
+      "managementIp": "55555",
+      "portCount": "55555",
+      "firmwareVersion": "55555",
+      "poeSupport": "55555",
+      "powerDraw": "55555",
+      "virtualized": "55555",
+      "primaryIp": "55555",
+      "hypervisor": "55555",
+      "os": "55555",
+      "model": "55555",
+      "imei": "55555",
+      "phoneNumber": "55555",
+      "carrier": "55555",
+      "lastLogin": "55555",
+      "lastCheckIn": "55555",
+      "notReported": "55555",
+      "networkPrinter": "55555",
+      "ipAddress": "55555",
+      "supportsColor": "55555",
+      "supportsDuplex": "55555",
+      "monthlyDutyCycle": "55555",
+      "monthlyDutyCycleValue": "55555 {{count}} 55555"
+    },
+    "relative": {
+      "momentsAgo": "55555",
+      "minutesAgo": "55555 {{count}} 55555 {{suffix}} 55555",
+      "hoursAgo": "55555 {{count}} 55555 {{suffix}} 55555",
+      "daysAgo": "55555 {{count}} 55555 {{suffix}} 55555"
+    }
+  },
+  "assetDetailHeader": {
+    "title": "55555",
+    "description": "55555",
+    "backToAssets": "55555",
+    "assetTag": "55555 {{tag}} 55555",
+    "actions": {
+      "createTicket": "55555",
+      "menu": "55555",
+      "refreshing": "55555",
+      "refreshData": "55555",
+      "rebootDevice": "55555",
+      "editAsset": "55555",
+      "deleteAsset": "55555"
+    },
+    "values": {
+      "unknownClient": "55555"
+    }
+  },
+  "assetDetailTabs": {
+    "title": "55555",
+    "description": "55555",
+    "tabs": {
+      "serviceHistory": "55555",
+      "software": "55555",
+      "maintenance": "55555",
+      "relatedAssets": "55555",
+      "documentsPasswords": "55555",
+      "auditLog": "55555"
+    }
+  },
+  "assetDetailView": {
+    "title": "55555",
+    "description": "55555",
+    "loading": "55555",
+    "errors": {
+      "title": "55555",
+      "notFound": "55555"
+    }
+  },
+  "assetDetails": {
+    "title": "55555",
+    "description": "55555",
+    "assetTag": "55555 {{tag}} 55555",
+    "loading": {
+      "details": "55555"
+    },
+    "fields": {
+      "status": "55555",
+      "serialNumber": "55555",
+      "location": "55555",
+      "client": "55555",
+      "purchaseDate": "55555",
+      "warrantyEnd": "55555",
+      "cpu": "55555",
+      "ram": "55555",
+      "storage": "55555",
+      "gpu": "55555",
+      "lastLogin": "55555",
+      "managementIp": "55555",
+      "portCount": "55555",
+      "powerDraw": "55555",
+      "firmwareVersion": "55555",
+      "poeSupport": "55555",
+      "type": "55555",
+      "hypervisor": "55555",
+      "primaryIp": "55555",
+      "operatingSystem": "55555",
+      "imei": "55555",
+      "phoneNumber": "55555",
+      "carrier": "55555",
+      "supervisionStatus": "55555",
+      "ipAddress": "55555",
+      "networkPrinter": "55555",
+      "colorSupport": "55555",
+      "duplexSupport": "55555",
+      "monthlyDutyCycle": "55555"
+    },
+    "sections": {
+      "basicInformation": "55555",
+      "workstation": "55555",
+      "networkDevice": "55555",
+      "server": "55555",
+      "mobileDevice": "55555",
+      "printer": "55555",
+      "relatedAssets": "55555"
+    },
+    "maintenance": {
+      "activeSchedules": "55555",
+      "overdue": "55555",
+      "upcoming": "55555"
+    },
+    "tabs": {
+      "details": "55555",
+      "relatedAssets": "55555",
+      "documents": "55555"
+    },
+    "relationships": {
+      "parentOf": "55555",
+      "childOf": "55555"
+    },
+    "empty": {
+      "notSpecified": "55555",
+      "unassigned": "55555",
+      "never": "55555",
+      "noAdditionalDetails": "55555",
+      "noRelatedAssets": "55555"
+    },
+    "values": {
+      "virtual": "55555",
+      "physical": "55555",
+      "supervised": "55555",
+      "unsupervised": "55555",
+      "pagesUnit": "55555"
+    },
+    "statuses": {
+      "active": "55555",
+      "inactive": "55555",
+      "maintenance": "55555"
+    },
+    "deviceTypes": {
+      "switch": "55555",
+      "router": "55555",
+      "firewall": "55555",
+      "access_point": "55555",
+      "load_balancer": "55555"
+    },
+    "relationshipTypes": {
+      "affected": "55555",
+      "related": "55555"
+    }
+  },
+  "assetDocuments": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "assetForm": {
+    "title": "55555",
+    "description": "55555",
+    "heading": "55555",
+    "loading": {
+      "assetDetails": "55555"
+    },
+    "errors": {
+      "assetNotFound": "55555",
+      "loadFailed": "55555",
+      "clientsLoadFailed": "55555",
+      "locationsLoadFailed": "55555",
+      "updateFailed": "55555"
+    },
+    "actions": {
+      "viewClient": "55555",
+      "manageClientLocations": "55555",
+      "saveChanges": "55555"
+    },
+    "alerts": {
+      "noLocationsSaved": "55555"
+    },
+    "sections": {
+      "basicInformation": "55555",
+      "clientAndLocation": "55555",
+      "assetBasics": "55555"
+    },
+    "fields": {
+      "customLocationOption": "55555",
+      "osType": "55555",
+      "osVersion": "55555",
+      "cpuModel": "55555",
+      "cpuCores": "55555",
+      "ramGb": "55555",
+      "storageType": "55555",
+      "storageCapacityGb": "55555",
+      "gpuModel": "55555",
+      "deviceType": "55555",
+      "managementIp": "55555",
+      "portCount": "55555",
+      "firmwareVersion": "55555",
+      "powerDrawWatts": "55555",
+      "supportsPoe": "55555",
+      "primaryIp": "55555",
+      "raidConfig": "55555",
+      "virtualMachine": "55555",
+      "hypervisor": "55555",
+      "model": "55555",
+      "imei": "55555",
+      "phoneNumber": "55555",
+      "carrier": "55555",
+      "supervisedDevice": "55555",
+      "ipAddress": "55555",
+      "monthlyDutyCycle": "55555",
+      "networkPrinter": "55555",
+      "colorSupport": "55555",
+      "duplexSupport": "55555",
+      "client": "55555",
+      "primaryLocation": "55555",
+      "name": "55555",
+      "assetTag": "55555",
+      "serialNumber": "55555",
+      "status": "55555",
+      "purchaseDate": "55555",
+      "warrantyEndDate": "55555"
+    },
+    "placeholders": {
+      "loadingClients": "55555",
+      "selectClient": "55555",
+      "loadingLocations": "55555",
+      "selectLocation": "55555",
+      "selectClientFirst": "55555",
+      "customLocation": "55555",
+      "selectPurchaseDate": "55555",
+      "selectWarrantyEndDate": "55555"
+    },
+    "statusOptions": {
+      "active": "55555",
+      "inactive": "55555",
+      "maintenance": "55555"
+    },
+    "networkDeviceTypes": {
+      "switch": "55555",
+      "router": "55555",
+      "firewall": "55555",
+      "access_point": "55555",
+      "load_balancer": "55555"
+    },
+    "storageTypes": {
+      "ssd": "55555",
+      "hdd": "55555",
+      "nvme": "55555"
+    },
+    "osTypes": {
+      "windows": "55555",
+      "macos": "55555",
+      "linux": "55555"
+    },
+    "mobileOsTypes": {
+      "ios": "55555",
+      "android": "55555"
+    },
+    "typeDetails": {
+      "workstation": "55555",
+      "networkDevice": "55555",
+      "server": "55555",
+      "mobileDevice": "55555",
+      "printer": "55555"
+    }
+  },
+  "assetFormClient": {
+    "title": "55555",
+    "description": "55555",
+    "loadingTitle": "55555"
+  },
+  "assetMetricsBanner": {
+    "title": "55555",
+    "description": "55555",
+    "labels": {
+      "healthStatus": "55555",
+      "openTickets": "55555",
+      "securityStatus": "55555",
+      "warranty": "55555"
+    },
+    "healthStatuses": {
+      "healthy": "55555",
+      "warning": "55555",
+      "critical": "55555",
+      "unknown": "55555"
+    },
+    "securityStatuses": {
+      "secure": "55555",
+      "missingPatches": "55555 {{count}} 55555",
+      "critical": "55555",
+      "unknown": "55555"
+    },
+    "openTickets": {
+      "active": "55555 {{count}} 55555"
+    },
+    "warrantyStatuses": {
+      "expiresIn": "55555 {{count}} 55555",
+      "expired": "55555",
+      "unknown": "55555"
+    }
+  },
+  "assetPatchStatusSection": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "assetSoftwareInventory": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "associatedAssets": {
+    "title": "55555",
+    "description": "55555",
+    "loading": {
+      "assets": "55555"
+    },
+    "actions": {
+      "addAsset": "55555",
+      "showLess": "55555",
+      "moreAssets": "55555 {{count}} 55555 {{suffix}} 55555"
+    },
+    "errors": {
+      "loadAvailableAssets": "55555",
+      "loadDrawerFailed": "55555",
+      "loadAssociatedAssets": "55555",
+      "selectAtLeastOneAsset": "55555",
+      "associateFailed": "55555",
+      "associationFailed": "55555",
+      "removeFailed": "55555"
+    },
+    "success": {
+      "associated": "55555 {{count}} 55555 {{suffix}} 55555",
+      "associatedPartial": "55555 {{count}} 55555 {{suffix}} 55555 {{failed}} 55555",
+      "removed": "55555"
+    },
+    "empty": {
+      "noneAssociated": "55555",
+      "unknownAsset": "55555"
+    },
+    "dialog": {
+      "title": "55555",
+      "loadingAssets": "55555",
+      "selectedAssetsLabel": "55555",
+      "search": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "empty": {
+        "search": "55555",
+        "available": "55555"
+      },
+      "relationship": {
+        "placeholder": "55555"
+      },
+      "actions": {
+        "addAssets": "55555 {{suffix}} 55555"
+      }
+    },
+    "table": {
+      "name": "55555",
+      "assetTag": "55555",
+      "type": "55555",
+      "status": "55555"
+    },
+    "assetStatuses": {
+      "active": "55555",
+      "inactive": "55555",
+      "maintenance": "55555"
+    },
+    "assetTypes": {
+      "workstation": "55555",
+      "server": "55555",
+      "network_device": "55555",
+      "mobile_device": "55555",
+      "printer": "55555"
+    },
+    "relationshipTypes": {
+      "affected": "55555",
+      "related": "55555"
+    }
+  },
+  "createTicketFromAssetButton": {
+    "title": "55555",
+    "description": "55555",
+    "register": {
+      "label": "55555",
+      "title": "55555"
+    },
+    "defaultTitle": "55555 {{name}} 55555",
+    "actions": {
+      "open": "55555",
+      "create": "55555",
+      "creating": "55555"
+    },
+    "fields": {
+      "title": "55555",
+      "description": "55555",
+      "board": "55555",
+      "status": "55555",
+      "priority": "55555"
+    },
+    "placeholders": {
+      "title": "55555",
+      "description": "55555",
+      "loadingBoards": "55555",
+      "selectBoard": "55555",
+      "selectBoardFirst": "55555",
+      "loadingStatuses": "55555",
+      "selectStatus": "55555",
+      "loadingPriorities": "55555",
+      "selectPriority": "55555"
+    },
+    "errors": {
+      "loadPriorities": "55555",
+      "loadBoards": "55555",
+      "loadStatuses": "55555",
+      "requiredFields": "55555",
+      "createFailed": "55555"
+    },
+    "success": {
+      "created": "55555"
+    }
+  },
+  "deleteAssetButton": {
+    "title": "55555",
+    "description": "55555",
+    "actions": {
+      "removing": "55555"
+    },
+    "entityNameFallback": "55555",
+    "errors": {
+      "validationFailed": "55555",
+      "deleteFailed": "55555"
+    }
+  },
+  "quickAddAsset": {
+    "title": "55555",
+    "description": "55555",
+    "actions": {
+      "addAsset": "55555",
+      "creating": "55555",
+      "createAsset": "55555"
+    },
+    "errors": {
+      "fetchClientsFailed": "55555",
+      "createFailed": "55555"
+    },
+    "validation": {
+      "client": "55555",
+      "assetName": "55555",
+      "assetTag": "55555",
+      "assetType": "55555",
+      "requiredFields": "55555"
+    },
+    "fields": {
+      "osType": "55555",
+      "osVersion": "55555",
+      "deviceType": "55555",
+      "managementIp": "55555",
+      "model": "55555",
+      "clientRequired": "55555",
+      "assetNameRequired": "55555",
+      "assetTagRequired": "55555",
+      "typeRequired": "55555",
+      "status": "55555",
+      "serialNumber": "55555"
+    },
+    "placeholders": {
+      "workstationOsType": "55555",
+      "workstationOsVersion": "55555",
+      "selectDeviceType": "55555",
+      "managementIp": "55555",
+      "serverOsType": "55555",
+      "serverOsVersion": "55555",
+      "selectOsType": "55555",
+      "mobileModel": "55555",
+      "printerModel": "55555",
+      "assetName": "55555",
+      "assetTag": "55555",
+      "selectType": "55555",
+      "selectStatus": "55555",
+      "serialNumber": "55555"
+    },
+    "sections": {
+      "typeSpecificDetails": "55555"
+    },
+    "statusOptions": {
+      "active": "55555",
+      "inactive": "55555",
+      "maintenance": "55555"
+    },
+    "assetTypes": {
+      "workstation": "55555",
+      "network_device": "55555",
+      "server": "55555",
+      "mobile_device": "55555",
+      "printer": "55555"
+    },
+    "networkDeviceTypes": {
+      "switch": "55555",
+      "router": "55555",
+      "firewall": "55555",
+      "accessPoint": "55555",
+      "loadBalancer": "55555"
+    },
+    "mobileOsTypes": {
+      "ios": "55555",
+      "android": "55555"
+    }
+  },
+  "remoteAccessButton": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "rmmStatusIndicator": {
+    "title": "55555",
+    "description": "55555",
+    "titles": {
+      "unknown": "55555",
+      "status": "55555 {{status}} 55555 {{suffix}} 55555",
+      "lastSeen": "55555 {{value}} 55555"
+    },
+    "statuses": {
+      "online": "55555",
+      "offline": "55555",
+      "overdue": "55555",
+      "unknown": "55555"
+    },
+    "relative": {
+      "justNow": "55555",
+      "minutesAgo": "55555 {{count}} 55555",
+      "hoursAgo": "55555 {{count}} 55555",
+      "daysAgo": "55555 {{count}} 55555"
+    }
+  },
+  "assetInfoPanel": {
+    "title": "55555",
+    "description": "55555",
+    "actions": {
+      "copy": "55555",
+      "copied": "55555"
+    },
+    "fields": {
+      "client": "55555",
+      "location": "55555",
+      "model": "55555",
+      "serialNumber": "55555",
+      "purchaseDate": "55555",
+      "warrantyEnd": "55555"
+    },
+    "values": {
+      "unknownClient": "55555",
+      "unassigned": "55555",
+      "unknownModel": "55555"
+    }
+  },
+  "assetNotesPanel": {
+    "title": "55555",
+    "description": "55555",
+    "errors": {
+      "loadTitle": "55555",
+      "unknown": "55555"
+    },
+    "lastUpdated": "55555 {{value}} 55555"
+  },
+  "hardwareSpecsPanel": {
+    "title": "55555",
+    "description": "55555",
+    "fields": {
+      "cpu": "55555",
+      "ram": "55555",
+      "storage": "55555",
+      "utilization": "55555"
+    },
+    "values": {
+      "unknownCpu": "55555",
+      "unknown": "55555",
+      "unifiedMemory": "55555 {{size}} 55555",
+      "memoryUsed": "55555 {{size}} 55555",
+      "freeStorage": "55555 {{size}} 55555"
+    },
+    "empty": "55555",
+    "emptyStorage": "55555"
+  },
+  "rmmVitalsPanel": {
+    "title": "55555",
+    "description": "55555",
+    "actions": {
+      "refresh": "55555"
+    },
+    "fields": {
+      "agentStatus": "55555",
+      "currentUser": "55555",
+      "lastCheckIn": "55555 {{value}} 55555",
+      "uptime": "55555",
+      "lastSync": "55555",
+      "network": "55555",
+      "networkValue": "55555 {{lan}} 55555 {{wan}} 55555"
+    },
+    "values": {
+      "never": "55555"
+    },
+    "empty": {
+      "title": "55555",
+      "notConnected": "55555"
+    },
+    "uptime": "55555 {{days}} 55555 {{hours}} 55555 {{minutes}} 55555"
+  },
+  "securityPatchingPanel": {
+    "title": "55555",
+    "description": "55555",
+    "fields": {
+      "osVersion": "55555",
+      "antivirus": "55555",
+      "patchStatus": "55555",
+      "firewall": "55555"
+    },
+    "values": {
+      "unknown": "55555"
+    },
+    "antivirus": {
+      "running": "55555",
+      "inactive": "55555",
+      "lastScan": "55555"
+    },
+    "patchStatus": {
+      "critical": "55555",
+      "atRisk": "55555",
+      "missingPatches": "55555 {{count}} 55555",
+      "upToDate": "55555"
+    },
+    "firewall": {
+      "on": "55555"
+    }
+  },
+  "copyableField": {
+    "title": "55555",
+    "description": "55555",
+    "actions": {
+      "copy": "55555",
+      "copied": "55555"
+    }
+  },
+  "statusBadge": {
+    "title": "55555",
+    "description": "55555",
+    "statuses": {
+      "online": "55555",
+      "offline": "55555",
+      "overdue": "55555",
+      "healthy": "55555",
+      "warning": "55555",
+      "critical": "55555",
+      "unknown": "55555",
+      "secure": "55555",
+      "at_risk": "55555",
+      "active": "55555",
+      "expiring_soon": "55555",
+      "expired": "55555"
+    }
+  },
+  "utilizationBar": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "auditLogTab": {
+    "title": "55555",
+    "description": "55555",
+    "changedBy": "55555 {{name}} 55555",
+    "userFallback": "55555 {{id}} 55555",
+    "empty": "55555",
+    "changeTypes": {
+      "created": "55555",
+      "updated": "55555"
+    }
+  },
+  "createMaintenanceScheduleDialog": {
+    "title": "55555",
+    "description": "55555",
+    "titles": {
+      "create": "55555",
+      "edit": "55555"
+    },
+    "actions": {
+      "create": "55555",
+      "creating": "55555",
+      "update": "55555",
+      "updating": "55555"
+    },
+    "fields": {
+      "scheduleName": "55555",
+      "description": "55555",
+      "maintenanceType": "55555",
+      "frequency": "55555",
+      "interval": "55555",
+      "nextMaintenanceDate": "55555",
+      "active": "55555"
+    },
+    "placeholders": {
+      "scheduleName": "55555",
+      "description": "55555",
+      "maintenanceType": "55555",
+      "frequency": "55555",
+      "interval": "55555",
+      "nextMaintenanceDate": "55555"
+    },
+    "frequencyOptions": {
+      "daily": "55555",
+      "weekly": "55555",
+      "monthly": "55555",
+      "quarterly": "55555",
+      "yearly": "55555"
+    },
+    "errors": {
+      "scheduleNameRequired": "55555",
+      "maintenanceTypeRequired": "55555",
+      "frequencyRequired": "55555",
+      "nextMaintenanceRequired": "55555",
+      "frequencyIntervalMin": "55555",
+      "saveFailed": "55555"
+    }
+  },
+  "documentsPasswordsTab": {
+    "title": "55555",
+    "description": "55555",
+    "passwords": {
+      "title": "55555",
+      "comingSoon": "55555"
+    }
+  },
+  "maintenanceSchedulesTab": {
+    "title": "55555",
+    "description": "55555",
+    "summary": {
+      "complianceRate": "55555",
+      "nextMaintenance": "55555",
+      "noneScheduled": "55555"
+    },
+    "actions": {
+      "scheduleMaintenance": "55555"
+    },
+    "errors": {
+      "deleteFailed": "55555"
+    },
+    "table": {
+      "scheduleName": "55555",
+      "type": "55555",
+      "frequency": "55555",
+      "nextMaintenance": "55555",
+      "lastMaintenance": "55555",
+      "status": "55555",
+      "actions": "55555"
+    },
+    "frequency": {
+      "every": "55555 {{count}} 55555 {{frequency}} 55555 {{suffix}} 55555",
+      "units": {
+        "daily": "55555",
+        "weekly": "55555",
+        "monthly": "55555",
+        "quarterly": "55555",
+        "yearly": "55555"
+      }
+    },
+    "status": {
+      "active": "55555",
+      "inactive": "55555"
+    },
+    "types": {
+      "preventive": "55555",
+      "inspection": "55555",
+      "calibration": "55555",
+      "replacement": "55555"
+    },
+    "empty": {
+      "schedules": "55555"
+    },
+    "history": {
+      "title": "55555",
+      "performedAt": "55555",
+      "performedBy": "55555",
+      "notes": "55555",
+      "empty": "55555"
+    },
+    "dialog": {
+      "delete": {
+        "title": "55555",
+        "message": "55555 {{name}} 55555"
+      }
+    }
+  },
+  "relatedAssetsTab": {
+    "title": "55555 {{count}} 55555",
+    "description": "55555",
+    "loading": "55555",
+    "actions": {
+      "linkAsset": "55555",
+      "unlink": "55555",
+      "linkEmptyState": "55555"
+    },
+    "success": {
+      "linked": "55555",
+      "unlinked": "55555"
+    },
+    "errors": {
+      "selectAsset": "55555",
+      "linkFailed": "55555",
+      "unlinkFailed": "55555"
+    },
+    "table": {
+      "assetName": "55555",
+      "relationship": "55555",
+      "linkedDate": "55555",
+      "actions": "55555"
+    },
+    "empty": {
+      "linked": "55555"
+    },
+    "dialog": {
+      "title": "55555",
+      "loadingAssets": "55555",
+      "empty": "55555",
+      "search": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "relationshipType": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "table": {
+        "asset": "55555",
+        "select": "55555"
+      },
+      "actions": {
+        "selected": "55555",
+        "linking": "55555",
+        "confirm": "55555"
+      }
+    },
+    "relationshipTypes": {
+      "related": "55555",
+      "affected": "55555"
+    }
+  },
+  "serviceHistoryTab": {
+    "title": "55555",
+    "description": "55555",
+    "actions": {
+      "createTicket": "55555"
+    },
+    "table": {
+      "ticketId": "55555",
+      "subject": "55555",
+      "status": "55555",
+      "priority": "55555",
+      "dateLinked": "55555"
+    },
+    "empty": "55555",
+    "clientFallback": "55555"
+  },
+  "softwareInventoryTab": {
+    "title": "55555",
+    "description": "55555",
+    "searchPlaceholder": "55555",
+    "category": {
+      "placeholder": "55555",
+      "options": {
+        "all": "55555",
+        "browser": "55555",
+        "security": "55555",
+        "productivity": "55555",
+        "development": "55555"
+      }
+    },
+    "table": {
+      "name": "55555",
+      "version": "55555",
+      "publisher": "55555",
+      "installDate": "55555"
+    },
+    "empty": "55555",
+    "totalItems": "55555 {{count}} 55555",
+    "values": {
+      "unknown": "55555"
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "shared": {
+    "fallbacks": {
+      "empty": "-"
+    },
+    "statusLabels": {
+      "completed": "Completed",
+      "failed": "Failed",
+      "processing": "Processing",
+      "pending": "Pending"
+    },
+    "runnerLabels": {
+      "temporal": "Temporal",
+      "pgboss": "PG Boss"
+    }
+  },
+  "recentTable": {
+    "columns": {
+      "jobName": "Job Name",
+      "runner": "Runner",
+      "status": "Status",
+      "duration": "Duration",
+      "started": "Started",
+      "completed": "Completed"
+    },
+    "time": {
+      "justNow": "Just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago"
+    },
+    "duration": {
+      "milliseconds": "{{count}}ms",
+      "seconds": "{{count}}s",
+      "minutesSeconds": "{{minutes}}m {{seconds}}s",
+      "hoursMinutes": "{{hours}}h {{minutes}}m"
+    },
+    "externalId": "ID: {{id}}..."
+  },
+  "metrics": {
+    "labels": {
+      "totalJobs": "Total Jobs",
+      "totalJobsPgBoss": "Total Jobs (PG Boss)",
+      "totalJobsTemporal": "Total Jobs (Temporal)",
+      "completed": "Completed",
+      "failed": "Failed",
+      "pending": "Pending",
+      "processing": "Processing",
+      "pgboss": "PG Boss",
+      "temporal": "Temporal"
+    },
+    "successRate": "{{count}}% success rate"
+  },
+  "historyTable": {
+    "columns": {
+      "jobName": "Job Name",
+      "status": "Status",
+      "created": "Created",
+      "started": "Started",
+      "completed": "Completed"
+    }
+  },
+  "progress": {
+    "loading": "Loading job details...",
+    "labels": {
+      "created": "Created:",
+      "jobData": "Job Data"
+    }
+  },
+  "drawer": {
+    "title": "Job Details",
+    "jobId": "ID: {{id}}",
+    "sections": {
+      "progress": "Job Progress",
+      "metrics": "Job Metrics",
+      "history": "Job History"
+    }
+  },
+  "stepHistory": {
+    "title": "Job Steps",
+    "labels": {
+      "processed": "Processed:",
+      "retries": "Retries:"
+    }
+  }
+}

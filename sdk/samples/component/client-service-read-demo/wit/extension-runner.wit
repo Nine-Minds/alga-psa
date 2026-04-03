@@ -1,0 +1,236 @@
+package alga:extension;
+
+interface types {
+    record context-data {
+        request-id: option<string>,
+        tenant-id: string,
+        extension-id: string,
+        install-id: option<string>,
+        version-id: option<string>,
+    }
+
+    enum secret-error {
+        missing,
+        denied,
+        expired,
+        internal,
+    }
+
+    record http-header {
+        name: string,
+        value: string,
+    }
+
+    record http-request {
+        method: string,
+        url: string,
+        headers: list<http-header>,
+        body: option<list<u8>>,
+    }
+
+    record http-response {
+        status: u16,
+        headers: list<http-header>,
+        body: option<list<u8>>,
+    }
+
+    enum http-error {
+        invalid-url,
+        not-allowed,
+        transport,
+        internal,
+    }
+
+    enum storage-error {
+        missing,
+        conflict,
+        denied,
+        internal,
+    }
+
+    record storage-entry {
+        namespace: string,
+        key: string,
+        value: list<u8>,
+        revision: option<u64>,
+    }
+
+    enum proxy-error {
+        route-not-found,
+        denied,
+        bad-request,
+        internal,
+    }
+
+    record user-data-v2 {
+        tenant-id: string,
+        client-name: string,
+        user-id: string,
+        user-email: string,
+        user-name: string,
+        user-type: string,
+        client-id: option<string>,
+        additional-fields: list<tuple<string, string>>,
+    }
+
+    enum user-error {
+        not-available,
+        not-allowed,
+    }
+
+    enum client-read-error {
+        not-allowed,
+        invalid-input,
+        internal,
+    }
+
+    record client-summary {
+        client-id: string,
+        client-name: string,
+        client-type: option<string>,
+        is-inactive: bool,
+        default-currency-code: option<string>,
+        account-manager-id: option<string>,
+        account-manager-name: option<string>,
+        billing-email: option<string>,
+    }
+
+    record clients-list-input {
+        search: option<string>,
+        include-inactive: option<bool>,
+        page: option<u32>,
+        page-size: option<u32>,
+    }
+
+    record clients-list-result {
+        items: list<client-summary>,
+        total-count: u32,
+        page: u32,
+        page-size: u32,
+    }
+
+    enum service-item-kind {
+        service,
+        product,
+    }
+
+    enum service-billing-method {
+        fixed,
+        hourly,
+        usage,
+    }
+
+    enum service-read-error {
+        not-allowed,
+        invalid-input,
+        internal,
+    }
+
+    record service-summary {
+        service-id: string,
+        service-name: string,
+        item-kind: service-item-kind,
+        billing-method: service-billing-method,
+        service-type-id: option<string>,
+        service-type-name: option<string>,
+        default-rate: f64,
+        unit-of-measure: string,
+        is-active: bool,
+        sku: option<string>,
+    }
+
+    record services-list-input {
+        search: option<string>,
+        item-kind: option<service-item-kind>,
+        is-active: option<bool>,
+        billing-method: option<service-billing-method>,
+        page: option<u32>,
+        page-size: option<u32>,
+    }
+
+    record services-list-result {
+        items: list<service-summary>,
+        total-count: u32,
+        page: u32,
+        page-size: u32,
+    }
+
+    record execute-request {
+        context: context-data,
+        http: http-request,
+    }
+
+    record execute-response {
+        status: u16,
+        headers: list<http-header>,
+        body: option<list<u8>>,
+    }
+}
+
+interface context {
+    use types.{context-data};
+    get-context: func() -> context-data;
+}
+
+interface secrets {
+    use types.{secret-error};
+    get: func(key: string) -> result<string, secret-error>;
+    list-keys: func() -> list<string>;
+}
+
+interface http {
+    use types.{http-request, http-response, http-error};
+    fetch: func(request: http-request) -> result<http-response, http-error>;
+}
+
+interface storage {
+    use types.{storage-entry, storage-error};
+    get: func(namespace: string, key: string) -> result<storage-entry, storage-error>;
+    put: func(entry: storage-entry) -> result<storage-entry, storage-error>;
+    delete: func(namespace: string, key: string) -> result<_, storage-error>;
+    list-entries: func(namespace: string, cursor: option<string>) -> result<list<storage-entry>, storage-error>;
+}
+
+interface logging {
+    log-info: func(message: string);
+    log-warn: func(message: string);
+    log-error: func(message: string);
+}
+
+interface ui-proxy {
+    use types.{proxy-error};
+    call-route: func(route: string, payload: option<list<u8>>) -> result<list<u8>, proxy-error>;
+}
+
+interface user-v2 {
+    use types.{user-data-v2, user-error};
+    get-user: func() -> result<user-data-v2, user-error>;
+}
+
+interface clients {
+    use types.{client-read-error, client-summary, clients-list-input, clients-list-result};
+    list-clients: func(input: clients-list-input) -> result<clients-list-result, client-read-error>;
+    get-client: func(client-id: string) -> result<option<client-summary>, client-read-error>;
+}
+
+interface services {
+    use types.{service-read-error, service-summary, services-list-input, services-list-result};
+    list-services: func(input: services-list-input) -> result<services-list-result, service-read-error>;
+    get-service: func(service-id: string) -> result<option<service-summary>, service-read-error>;
+}
+
+world runner {
+    use types.{execute-request, execute-response};
+
+    import context;
+    import secrets;
+    import http;
+    import storage;
+    import logging;
+    import ui-proxy;
+    import user-v2;
+    import clients;
+    import services;
+
+    export handler: func(request: execute-request) -> execute-response;
+}

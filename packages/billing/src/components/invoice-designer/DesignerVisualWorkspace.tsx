@@ -11,7 +11,7 @@ import { fetchInvoicesPaginated, getInvoiceForRendering } from '@alga-psa/billin
 import { runAuthoritativeInvoiceTemplatePreview } from '@alga-psa/billing/actions/invoiceTemplatePreview';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
 import type { IInvoiceTemplate } from '@alga-psa/types';
-import { exportWorkspaceToInvoiceTemplateAst } from './ast/workspaceAst';
+import { exportWorkspaceToTemplateAst } from './ast/workspaceAst';
 import PaperInvoice from '../billing-dashboard/PaperInvoice';
 import { TemplateRenderer } from '../billing-dashboard/TemplateRenderer';
 import { DesignerShell } from './DesignerShell';
@@ -114,7 +114,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
       return null;
     }
     try {
-      const templateAst = exportWorkspaceToInvoiceTemplateAst(previewWorkspace as any);
+      const templateAst = exportWorkspaceToTemplateAst(previewWorkspace as any);
       return {
         template_id: `designer-preview-${previewWorkspace.rootId ?? 'root'}-${manualRunNonce}`,
         name: 'Designer Preview',

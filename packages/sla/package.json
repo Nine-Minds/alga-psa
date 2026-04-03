@@ -3,38 +3,48 @@
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.js"
     },
     "./actions": {
       "types": "./dist/actions/index.d.ts",
-      "import": "./dist/actions/index.mjs",
+      "import": "./dist/actions/index.js",
       "require": "./dist/actions/index.js"
     },
     "./components": {
       "types": "./dist/components/index.d.ts",
-      "import": "./dist/components/index.mjs",
+      "import": "./dist/components/index.js",
       "require": "./dist/components/index.js"
     },
     "./types": {
       "types": "./dist/types/index.d.ts",
-      "import": "./dist/types/index.mjs",
+      "import": "./dist/types/index.js",
       "require": "./dist/types/index.js"
     },
     "./services": {
       "types": "./dist/services/index.d.ts",
-      "import": "./dist/services/index.mjs",
+      "import": "./dist/services/index.js",
       "require": "./dist/services/index.js"
     },
     "./services/slaNotificationService": {
       "types": "./dist/services/slaNotificationService.d.ts",
-      "import": "./dist/services/slaNotificationService.mjs",
+      "import": "./dist/services/slaNotificationService.js",
       "require": "./dist/services/slaNotificationService.js"
+    },
+    "./services/backends": {
+      "types": "./dist/services/backends/index.d.ts",
+      "import": "./dist/services/backends/index.js",
+      "require": "./dist/services/backends/index.js"
+    },
+    "./services/itilSlaService": {
+      "types": "./dist/services/itilSlaService.d.ts",
+      "import": "./dist/services/itilSlaService.js",
+      "require": "./dist/services/itilSlaService.js"
     }
   },
   "scripts": {

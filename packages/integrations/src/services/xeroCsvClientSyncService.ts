@@ -16,6 +16,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { unparseCSV, parseCSV } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
 import type { IClient, IClientLocation } from '@alga-psa/types';
+import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
 
 const ADAPTER_TYPE = 'xero_csv';
 
@@ -716,6 +717,11 @@ export class XeroCsvClientSyncService {
       billing_cycle: 'monthly',
       created_at: now,
       updated_at: now
+    });
+
+    await ensureDefaultContractForClientIfBillingConfigured(trx, {
+      tenant,
+      clientId,
     });
 
     // Create default location if we have address data

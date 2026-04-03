@@ -47,6 +47,8 @@ export * from './phaseTaskImport.interfaces';
 export * from './project.interfaces';
 export * from './projectTaskComment.interface';
 export * from './projectTemplate.interfaces';
+export * from './quote.interfaces';
+export * from './recurringTiming.interfaces';
 export * from './schedule.interfaces';
 export * from './scheduling.interfaces';
 export * from './serviceTier.interfaces';

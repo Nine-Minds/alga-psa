@@ -10,7 +10,7 @@ const editorSource = fs.readFileSync(
 describe('InvoiceTemplateEditor compiler cutover wiring', () => {
   it('save flow no longer references extractInvoiceDesignerIr', () => {
     expect(editorSource).not.toContain('extractInvoiceDesignerIr');
-    expect(editorSource).toContain('exportWorkspaceToInvoiceTemplateAst');
+    expect(editorSource).toContain('exportWorkspaceToTemplateAst');
   });
 
   it('save flow no longer references generateAssemblyScriptFromIr', () => {

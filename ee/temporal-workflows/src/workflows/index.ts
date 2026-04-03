@@ -8,6 +8,7 @@ export * from './readiness-workflow.js';
 export * from './email-webhook-maintenance-workflow.js';
 export * from './calendar-webhook-maintenance-workflow.js';
 export * from './ninjaone-sync-workflow.js';
+export * from './ninjaone-token-refresh-workflow.js';
 export * from './entra-discovery-workflow.js';
 export * from './entra-initial-sync-workflow.js';
 export * from './entra-tenant-sync-workflow.js';

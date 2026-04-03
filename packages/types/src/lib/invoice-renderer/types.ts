@@ -2,6 +2,29 @@
  * Represents the input data provided to the Wasm template engine.
  * This is a placeholder and should be expanded based on actual invoice data needs.
  */
+export interface WasmInvoiceLineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  taxAmount?: number; // Per-item tax, used for grouped totals
+  // Compatibility summary range for the row. When recurringDetailPeriods is present,
+  // these fields span the earliest start and latest end across the canonical periods.
+  servicePeriodStart?: string | null;
+  servicePeriodEnd?: string | null;
+  // Compatibility summary timing. When recurringDetailPeriods is present,
+  // this stays populated only when every canonical period shares the same timing.
+  billingTiming?: 'arrears' | 'advance' | null;
+  recurringDetailPeriods?: Array<{
+    servicePeriodStart?: string | null;
+    servicePeriodEnd?: string | null;
+    billingTiming?: 'arrears' | 'advance' | null;
+  }>;
+  category?: string; // Optional: For grouping items
+  itemType?: 'service' | 'project' | 'product'; // Optional: For conditional rendering
+}
+
 export interface WasmInvoiceViewModel {
   invoiceNumber: string;
   issueDate: string; // Consider using ISO8601String or a specific date format
@@ -21,20 +44,21 @@ export interface WasmInvoiceViewModel {
       }
     | null;
   clientLogoUrl?: string; // Optional client logo URL - KEEPING FOR NOW, maybe rename/remove later?
-  items: Array<{
-    id: string; // Add an ID for better referencing
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    total: number; // Keep pre-calculated total for now, AS can recalculate/validate
-    category?: string; // Optional: For grouping items
-    itemType?: 'service' | 'project' | 'product'; // Optional: For conditional rendering
-  }>;
+  items: WasmInvoiceLineItem[];
   subtotal: number;
   tax: number;
   total: number;
   taxSource?: 'internal' | 'external' | 'pending_external';
   notes?: string;
+  // Grouped item collections (derived from items, no migration needed)
+  recurringItems?: WasmInvoiceLineItem[];
+  onetimeItems?: WasmInvoiceLineItem[];
+  recurringSubtotal?: number;
+  recurringTax?: number;
+  recurringTotal?: number;
+  onetimeSubtotal?: number;
+  onetimeTax?: number;
+  onetimeTotal?: number;
   // Add sample structure for side report data
   timeEntries?: Array<{
     id: string;

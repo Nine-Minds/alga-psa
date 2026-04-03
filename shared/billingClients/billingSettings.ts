@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { ensureDefaultContractForClient } from './defaultContract';
 
 export type ClientBillingSettings = {
   zeroDollarInvoiceHandling?: 'normal' | 'finalized';
@@ -18,15 +19,18 @@ type DbClientBillingSettings = {
   credit_expiration_notification_days: number[];
 };
 
-async function ensureClientBillingSettingsRow(
+async function ensureClientBillingSettingsRowInTransaction(
   trx: Knex.Transaction,
   params: { tenant: string; clientId: string }
-): Promise<void> {
+): Promise<{ created: boolean }> {
   const existing = await trx('client_billing_settings')
     .where({ tenant: params.tenant, client_id: params.clientId })
-    .first()
-    .select('client_id');
-  if (existing) return;
+    .select('client_id')
+    .first();
+  if (existing) {
+    await ensureDefaultContractForClient(trx, params);
+    return { created: false };
+  }
 
   const defaults = await trx('default_billing_settings')
     .where({ tenant: params.tenant })
@@ -50,6 +54,22 @@ async function ensureClientBillingSettingsRow(
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });
+
+  await ensureDefaultContractForClient(trx, params);
+  return { created: true };
+}
+
+export async function ensureClientBillingSettingsRow(
+  knexOrTrx: Knex | Knex.Transaction,
+  params: { tenant: string; clientId: string }
+): Promise<{ created: boolean }> {
+  if (isKnexTransaction(knexOrTrx)) {
+    return ensureClientBillingSettingsRowInTransaction(knexOrTrx, params);
+  }
+
+  return (knexOrTrx as Knex).transaction(async (trx) =>
+    ensureClientBillingSettingsRowInTransaction(trx, params)
+  );
 }
 
 export async function getClientBillingSettings(
@@ -85,6 +105,13 @@ export async function updateClientBillingSettings(
   clientId: string,
   settings: ClientBillingSettings | null
 ): Promise<void> {
+  if (!isKnexTransaction(knexOrTrx)) {
+    await (knexOrTrx as Knex).transaction(async (trx) => {
+      await updateClientBillingSettings(trx, tenant, clientId, settings);
+    });
+    return;
+  }
+
   if (settings === null) {
     await knexOrTrx('client_billing_settings').where({ tenant, client_id: clientId }).del();
     return;
@@ -107,42 +134,10 @@ export async function updateClientBillingSettings(
     updates.credit_expiration_notification_days = settings.creditExpirationNotificationDays;
   }
 
-  if ('transaction' in knexOrTrx) {
-    // noop: type narrowing aid
-  }
-
-  if (typeof (knexOrTrx as any).transaction === 'function') {
-    // not reliable; skip
-  }
-
-  if (isKnexTransaction(knexOrTrx)) {
-    await ensureClientBillingSettingsRow(knexOrTrx, { tenant, clientId });
-    await knexOrTrx('client_billing_settings')
-      .where({ tenant, client_id: clientId })
-      .update({ ...updates, updated_at: knexOrTrx.fn.now() });
-    return;
-  }
-
-  // If the caller isn't in a transaction, just upsert via a one-off insert/update pattern.
-  const existing = await knexOrTrx('client_billing_settings').where({ tenant, client_id: clientId }).first('client_id');
-  if (!existing) {
-    await knexOrTrx('client_billing_settings').insert({
-      tenant,
-      client_id: clientId,
-      zero_dollar_invoice_handling: updates.zero_dollar_invoice_handling ?? 'normal',
-      suppress_zero_dollar_invoices: updates.suppress_zero_dollar_invoices ?? false,
-      credit_expiration_days: updates.credit_expiration_days ?? 365,
-      credit_expiration_notification_days: updates.credit_expiration_notification_days ?? [30, 7, 1],
-      enable_credit_expiration: updates.enable_credit_expiration ?? true,
-      created_at: (knexOrTrx as any).fn.now(),
-      updated_at: (knexOrTrx as any).fn.now()
-    });
-    return;
-  }
-
+  await ensureClientBillingSettingsRow(knexOrTrx, { tenant, clientId });
   await knexOrTrx('client_billing_settings')
     .where({ tenant, client_id: clientId })
-    .update({ ...updates, updated_at: (knexOrTrx as any).fn.now() });
+    .update({ ...updates, updated_at: knexOrTrx.fn.now() });
 }
 
 function isKnexTransaction(knexOrTrx: Knex | Knex.Transaction): knexOrTrx is Knex.Transaction {

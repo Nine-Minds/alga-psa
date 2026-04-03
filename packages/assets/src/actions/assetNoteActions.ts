@@ -17,7 +17,7 @@ import {
   createBlockDocument,
   getBlockContent,
   updateBlockContent,
-} from '@alga-psa/documents/actions/documentBlockContentActions';
+} from '@alga-psa/block-content/actions';
 import type { IDocument } from '@alga-psa/types';
 
 export interface AssetNoteContent {

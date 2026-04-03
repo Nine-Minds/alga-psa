@@ -3,6 +3,8 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
+import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import type { Knex } from 'knex';
 
 
 // Type definitions for reports
@@ -15,6 +17,7 @@ export interface ContractRevenue {
 }
 
 export interface ContractExpiration {
+  client_contract_id?: string;
   contract_name: string;
   client_name: string;
   end_date: string;
@@ -52,6 +55,137 @@ export interface ContractReportSummary {
   atRiskDecisionCount: number;
 }
 
+type ContractRevenueFactRow = {
+  item_id: string;
+  client_contract_id: string | null;
+  invoice_date: string | Date | null;
+  net_amount: string | number | null;
+  item_detail_id?: string | null;
+  service_period_end?: string | Date | null;
+  allocated_amount?: string | number | null;
+};
+
+const EXCLUDED_INVOICE_STATUSES = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'] as const;
+
+function normalizeDateOnly(value: string | Date | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  return value.slice(0, 10);
+}
+
+function isDateWithinRange(
+  value: string | Date | null | undefined,
+  startInclusive: string,
+  endExclusive: string
+): boolean {
+  const normalized = normalizeDateOnly(value);
+  if (!normalized) {
+    return false;
+  }
+
+  return normalized >= startInclusive && normalized < endExclusive;
+}
+
+async function getContractRevenueYtdByAssignment(
+  knex: Knex,
+  tenant: string,
+  yearStartDateOnly: string,
+  nextYearStartDateOnly: string
+): Promise<Map<string, number>> {
+  // Contract revenue is the report family that intentionally pivots to
+  // canonical recurring service periods when detail rows exist. Expiration and
+  // renewal reporting below stay assignment-date based instead.
+  const revenueFactRows = await knex('invoice_charges as ic')
+    .join('invoices as inv', function joinInvoices() {
+      this.on('ic.invoice_id', '=', 'inv.invoice_id').andOn('ic.tenant', '=', 'inv.tenant');
+    })
+    .leftJoin('invoice_charge_details as iid', function joinChargeDetails() {
+      this.on('ic.item_id', '=', 'iid.item_id').andOn('ic.tenant', '=', 'iid.tenant');
+    })
+    .leftJoin('invoice_charge_fixed_details as iifd', function joinFixedDetails() {
+      this.on('iid.item_detail_id', '=', 'iifd.item_detail_id').andOn('iid.tenant', '=', 'iifd.tenant');
+    })
+    .where({ 'ic.tenant': tenant })
+    .whereNotIn('inv.status', EXCLUDED_INVOICE_STATUSES)
+    .whereNotNull('ic.client_contract_id')
+    .select(
+      'ic.item_id',
+      'ic.client_contract_id',
+      'inv.invoice_date',
+      'ic.net_amount',
+      'iid.item_detail_id',
+      'iid.service_period_end',
+      'iifd.allocated_amount'
+    ) as ContractRevenueFactRow[];
+
+  const rowsByItemId = new Map<string, ContractRevenueFactRow[]>();
+  for (const row of revenueFactRows) {
+    const existing = rowsByItemId.get(row.item_id) ?? [];
+    existing.push(row);
+    rowsByItemId.set(row.item_id, existing);
+  }
+
+  const totalsByAssignment = new Map<string, number>();
+
+  for (const itemRows of rowsByItemId.values()) {
+    const firstRow = itemRows[0];
+    const clientContractId = firstRow?.client_contract_id;
+    if (!clientContractId) {
+      continue;
+    }
+
+    const detailRows = itemRows.filter(
+      (row) => typeof row.item_detail_id === 'string' && row.item_detail_id.length > 0
+    );
+    const hasCanonicalServicePeriods = detailRows.some(
+      (row) => typeof normalizeDateOnly(row.service_period_end) === 'string'
+    );
+
+    let chargeAmount = 0;
+
+    if (hasCanonicalServicePeriods) {
+      const fixedDetailRows = detailRows.filter((row) => row.allocated_amount !== null && row.allocated_amount !== undefined);
+      if (fixedDetailRows.length > 0) {
+        chargeAmount = fixedDetailRows
+          .filter((row) => isDateWithinRange(row.service_period_end, yearStartDateOnly, nextYearStartDateOnly))
+          .reduce((sum, row) => sum + (Number(row.allocated_amount ?? 0) || 0), 0);
+      } else if (
+        detailRows.some((row) => isDateWithinRange(row.service_period_end, yearStartDateOnly, nextYearStartDateOnly))
+      ) {
+        chargeAmount = Number(firstRow.net_amount ?? 0) || 0;
+      }
+    } else if (isDateWithinRange(firstRow.invoice_date, yearStartDateOnly, nextYearStartDateOnly)) {
+      chargeAmount = Number(firstRow.net_amount ?? 0) || 0;
+    }
+
+    if (chargeAmount === 0) {
+      continue;
+    }
+
+    totalsByAssignment.set(clientContractId, (totalsByAssignment.get(clientContractId) ?? 0) + chargeAmount);
+  }
+
+  return totalsByAssignment;
+}
+
+const mapAssignmentStatusToRevenueStatus = (
+  status: ReturnType<typeof deriveClientContractStatus>
+): ContractRevenue['status'] | null => {
+  if (status === 'draft') {
+    return 'upcoming';
+  }
+  if (status === 'terminated') {
+    return null;
+  }
+  return status;
+};
+
 /**
  * Get contract revenue report data
  * Shows monthly recurring revenue and year-to-date billing by contract
@@ -61,114 +195,79 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
     const { knex } = await createTenantKnex();
 
     const today = new Date();
-    // Use a UTC boundary so we don't accidentally exclude invoices at 00:00Z on Jan 1 due to local tz offset.
-    const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0));
-    const excludedInvoiceStatuses = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'];
+    const yearStartDateOnly = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0)).toISOString().slice(0, 10);
+    const nextYearStartDateOnly = new Date(Date.UTC(today.getUTCFullYear() + 1, 0, 1, 0, 0, 0, 0)).toISOString().slice(0, 10);
+    const invoiceMap = await getContractRevenueYtdByAssignment(
+      knex,
+      tenant,
+      yearStartDateOnly,
+      nextYearStartDateOnly
+    );
 
-    // First get aggregated invoice data by client to avoid cartesian product
-    const invoicesByClient = await knex('invoices')
-      .where({ tenant })
-      // Status values are not fully normalized across tenants (some store Title Case like "Unpaid").
-      // Exclude drafts/cancelled rather than whitelisting a brittle list.
-      .whereNotIn('status', excludedInvoiceStatuses)
-      .whereRaw('invoice_date >= ?', [yearStart.toISOString()])
-      .select('client_id')
-      .select(knex.raw('SUM(total_amount) as total_billed_ytd'))
-      .groupBy('client_id');
-
-    // Create a map for quick lookup
-    const invoiceMap = new Map<string, number>();
-    for (const inv of invoicesByClient) {
-      // Postgres returns BIGINT aggregates as strings; if we don't coerce here we can
-      // accidentally concatenate strings later (e.g. in summary reduce), producing absurd values.
-      invoiceMap.set(inv.client_id, Number(inv.total_billed_ytd ?? 0) || 0);
-    }
-
-    // Query to get contract data (without invoices to avoid join issues)
-    const data = await knex('contracts as c')
-      .leftJoin('client_contracts as cc', function joinClientContracts() {
-        this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
+    const data = await knex('client_contracts as cc')
+      .join('contracts as c', function joinContracts() {
+        this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
       })
       .leftJoin('clients as cl', function joinClients() {
         this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
       })
-      .where({ 'c.tenant': tenant })
-      .where(builder => {
-        builder.where('cc.is_active', true).orWhereNull('cc.client_contract_id');
-      })
+      .where({ 'cc.tenant': tenant })
+      .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
+      .whereNotNull('c.owner_client_id')
       .select(
+        'cc.client_contract_id',
+        'cc.client_id',
+        'cc.is_active',
+        'cc.start_date',
+        'cc.end_date',
         'c.contract_id',
         'c.contract_name',
-        'c.is_active',
-        'cl.client_name',
-        'cc.client_id',
-        'cc.client_contract_id',
-        'cc.start_date',
-        'cc.end_date'
+        'cl.client_name'
       );
 
-    // Process data to aggregate by contract-client pair
     const aggregatedMap = new Map<string, any>();
 
     for (const row of data) {
-      const key = `${row.contract_id}-${row.client_name || 'Unknown'}`;
-
-      if (!aggregatedMap.has(key)) {
-        // Determine status based on contract active flag first, then date logic
-        let status: 'active' | 'upcoming' | 'expired' = row.is_active ? 'active' : 'expired';
-
-        // Only apply date logic if contract is still active
-        if (row.is_active) {
-          if (row.start_date) {
-            const startDate = new Date(row.start_date);
-            if (startDate > today) {
-              status = 'upcoming';
-            }
-          }
-          if (row.end_date) {
-            const endDate = new Date(row.end_date);
-            if (endDate < today) {
-              status = 'expired';
-            }
-          }
-        }
-
-        // Look up invoice total from the map using client_id
-        const totalBilledYtd = row.client_id ? (invoiceMap.get(row.client_id) || 0) : 0;
-
-        aggregatedMap.set(key, {
-          contract_name: row.contract_name,
-          client_name: row.client_name || 'Unknown Client',
-          monthly_recurring: 0, // Will be calculated from contract lines
-          total_billed_ytd: totalBilledYtd,
-          status
-        });
+      const assignmentStatus = deriveClientContractStatus({
+        isActive: Boolean(row.is_active),
+        startDate: row.start_date,
+        endDate: row.end_date,
+        now: today,
+      });
+      const status = mapAssignmentStatusToRevenueStatus(assignmentStatus);
+      if (!status) {
+        continue;
       }
+
+      aggregatedMap.set(row.client_contract_id, {
+        client_contract_id: row.client_contract_id,
+        contract_id: row.contract_id,
+        contract_name: row.contract_name,
+        client_name: row.client_name || 'Unknown Client',
+        monthly_recurring: 0,
+        total_billed_ytd: invoiceMap.get(row.client_contract_id) || 0,
+        status,
+      });
     }
 
-    // Query contract lines to get monthly recurring values
     const contractLines = await knex('contract_lines as cl')
       .where({ 'cl.tenant': tenant })
       .select(
         'cl.contract_id',
-        'cl.contract_line_id',
-        'cl.contract_line_name',
         'cl.custom_rate'
       );
 
-    // Add monthly recurring to aggregated data
     for (const contractLine of contractLines) {
-      const keys = Array.from(aggregatedMap.keys()).filter(k => k.startsWith(contractLine.contract_id));
-      // Rates across billing are represented in minor units (cents). `custom_rate` is stored
-      // on `contract_lines` as a numeric/decimal in the DB, but the value itself is cents.
       const rateInCents = Math.round(Number(contractLine.custom_rate) || 0);
-      for (const key of keys) {
-        const item = aggregatedMap.get(key)!;
+      for (const item of aggregatedMap.values()) {
+        if (item.contract_id !== contractLine.contract_id) {
+          continue;
+        }
         item.monthly_recurring += rateInCents;
       }
     }
 
-    return Array.from(aggregatedMap.values());
+    return Array.from(aggregatedMap.values()).map(({ client_contract_id, contract_id, ...rest }) => rest);
   } catch (error) {
     console.error('Error fetching contract revenue report:', error);
     if (error instanceof Error) {
@@ -202,11 +301,16 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         this.on('cc.tenant', '=', 'dbs.tenant');
       })
       .where({ 'c.tenant': tenant, 'cc.is_active': true })
+      .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
+      .whereNotNull('c.owner_client_id')
       .whereNotNull('cc.end_date')
       .select(
+        'cc.client_contract_id',
         'c.contract_id',
         'c.contract_name',
         'cl.client_name',
+        'cc.is_active',
+        'cc.start_date',
         'cc.end_date',
         'cc.decision_due_date',
         'cc.renewal_mode',
@@ -217,7 +321,19 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
       )
       .orderBy('cc.end_date', 'asc');
 
-    const expirations: ContractExpiration[] = data.map((row: any) => {
+    const expirationMap = new Map<string, ContractExpiration>();
+
+    for (const row of data) {
+      const assignmentStatus = deriveClientContractStatus({
+        isActive: Boolean(row.is_active),
+        startDate: row.start_date,
+        endDate: row.end_date,
+        now: today,
+      });
+      if (assignmentStatus !== 'active') {
+        continue;
+      }
+
       const endDate = new Date(row.end_date);
       const daysUntilExpiration = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       const contractRenewalMode = row.renewal_mode === 'none' || row.renewal_mode === 'manual' || row.renewal_mode === 'auto'
@@ -236,7 +352,15 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
           : (contractRenewalMode ?? tenantDefaultRenewalMode))
         ?? 'manual';
 
-      return {
+      const key = row.client_contract_id;
+      const existing = expirationMap.get(key);
+      if (existing) {
+        existing.monthly_value += row.monthly_value || 0;
+        continue;
+      }
+
+      expirationMap.set(key, {
+        client_contract_id: row.client_contract_id,
         contract_name: row.contract_name,
         client_name: row.client_name || 'Unknown Client',
         end_date: endDate.toISOString().split('T')[0],
@@ -246,19 +370,10 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         days_until_expiration: Math.max(0, daysUntilExpiration),
         monthly_value: row.monthly_value || 0,
         auto_renew: effectiveRenewalMode === 'auto'
-      };
-    });
+      });
+    }
 
-    // Remove duplicates and aggregate by contract-client pair
-    const seen = new Set<string>();
-    const unique = expirations.filter(item => {
-      const key = `${item.contract_name}-${item.client_name}-${item.end_date}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
-    return unique;
+    return Array.from(expirationMap.values()).map(({ client_contract_id: _ignored, ...item }) => item);
   } catch (error) {
     console.error('Error fetching contract expiration report:', error);
     if (error instanceof Error) {
@@ -411,26 +526,21 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
     const revenueData = await getContractRevenueReport();
 
     const totalMRR = revenueData.reduce((sum, item) => sum + item.monthly_recurring, 0);
-    // Compute YTD directly from invoices to avoid:
-    // - BIGINT string concatenation bugs when summing in JS
-    // - accidental double-counting when a client's invoices appear across multiple contract rows
     const today = new Date();
-    const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0));
-    const excludedInvoiceStatuses = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'];
-    const ytdResult = await knex('invoices')
-      .where({ tenant })
-      .whereNotIn('status', excludedInvoiceStatuses)
-      .whereRaw('invoice_date >= ?', [yearStart.toISOString()])
-      .select(knex.raw('SUM(total_amount) as total_ytd')) as Array<{ total_ytd: string | number | null }>;
-    const totalYTD = Number(ytdResult[0]?.total_ytd ?? 0) || 0;
+    const yearStartDateOnly = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0)).toISOString().slice(0, 10);
+    const nextYearStartDateOnly = new Date(Date.UTC(today.getUTCFullYear() + 1, 0, 1, 0, 0, 0, 0)).toISOString().slice(0, 10);
+    const totalYTD = Array.from(
+      (
+        await getContractRevenueYtdByAssignment(
+          knex,
+          tenant,
+          yearStartDateOnly,
+          nextYearStartDateOnly
+        )
+      ).values()
+    ).reduce((sum, amount) => sum + amount, 0);
 
-    // Count active contracts
-    const activeContracts = await knex('contracts')
-      .where({ tenant, is_active: true })
-      .count('* as count')
-      .first() as { count: string } | undefined;
-
-    const activeContractCount = Number(activeContracts?.count ?? 0);
+    const activeContractCount = revenueData.filter((item) => item.status === 'active').length;
     const summaryTodayDateOnly = today.toISOString().slice(0, 10);
     const inNinetyDays = new Date(today);
     inNinetyDays.setUTCDate(inNinetyDays.getUTCDate() + 90);
@@ -443,9 +553,16 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
       .where({
         'cc.tenant': tenant,
         'cc.is_active': true,
-        'c.status': 'active',
       })
+      .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
+      .whereNotNull('c.owner_client_id')
       .whereNotNull('cc.decision_due_date')
+      .andWhere((builder) => {
+        builder.whereNull('cc.start_date').orWhere('cc.start_date', '<=', summaryTodayDateOnly);
+      })
+      .andWhere((builder) => {
+        builder.whereNull('cc.end_date').orWhere('cc.end_date', '>=', summaryTodayDateOnly);
+      })
       .andWhere('cc.decision_due_date', '>=', summaryTodayDateOnly)
       .andWhere('cc.decision_due_date', '<=', summaryNinetyDaysDateOnly)
       .countDistinct('cc.client_contract_id as count')

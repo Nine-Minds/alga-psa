@@ -4,7 +4,7 @@
     "libsDir": "packages",
     "appsDir": "."
   },
-  "useDaemonProcess": false,
+  "useDaemonProcess": true,
   "defaultBase": "main",
   "generators": {
     "@alga-psa/generators:alga-module": {
@@ -42,6 +42,7 @@
       "inputs": ["production", "^production"],
       "cache": true
     },
+    "next:dev": {},
     "test": {
       "dependsOn": ["build"],
       "cache": true

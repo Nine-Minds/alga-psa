@@ -34,7 +34,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
-  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('advance');
+  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
 
   // Fixed plan state
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
@@ -221,7 +221,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
     setPlanName('');
     setPlanType(null);
     setBillingFrequency('monthly');
-    setBillingTiming('advance');
+    setBillingTiming('arrears');
     setBaseRate(undefined);
     setBaseRateInput('');
     setEnableProration(false);
@@ -292,7 +292,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       };
                       setFixedServices(next);
                     }}
-                    billingMethods={['fixed', 'per_unit']}
+                    itemKinds={['service', 'product']}
                     placeholder="Select an item"
                     className="w-full"
                   />
@@ -446,7 +446,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                         }));
                       }
                     }}
-                    billingMethods={['hourly']}
+                    itemKinds={['service']}
                     placeholder="Select a service"
                     className="w-full"
                   />
@@ -639,7 +639,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                         }));
                       }
                     }}
-                    billingMethods={['usage']}
+                    itemKinds={['service']}
                     placeholder="Select a service"
                     className="w-full"
                   />
@@ -961,7 +961,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="enable-proration" className="font-medium text-[rgb(var(--color-text-800))]">
-                        Enable Proration
+                        Adjust for Partial Periods
                       </Label>
                       <Switch
                         id="enable-proration"
@@ -970,7 +970,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      When enabled, the recurring fee will be prorated for partial billing periods
+                      When enabled, the recurring fee scales to the covered portion of a service period when the contract starts or ends inside that period.
                     </p>
                   </div>
                 </>

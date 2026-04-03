@@ -9,7 +9,7 @@ import { revalidatePath } from 'next/cache';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermissionAsync } from '../lib/authHelpers';
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTag } from '@alga-psa/tags/actions';
@@ -22,8 +22,9 @@ import {
   buildClientOwnerAssignedPayload,
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
-} from '@alga-psa/shared/workflow/streams/domainEventBuilders/clientEventBuilders';
-import { buildContactPrimarySetPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/contactEventBuilders';
+} from '@alga-psa/workflow-streams';
+import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
+import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
 
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
@@ -371,6 +372,11 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
           updated_at: new Date().toISOString()
         })
         .returning('*');
+
+      await ensureDefaultContractForClientIfBillingConfigured(trx, {
+        tenant,
+        clientId: created.client_id,
+      });
 
       return created;
     });

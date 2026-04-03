@@ -24,7 +24,9 @@ export const planTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage']);
 export const billingFrequencySchema = z.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']);
 export const configurationTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage', 'Bucket']);
 export const billingCycleAlignmentSchema = z.enum(['start', 'end', 'prorated']);
-export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage', 'per_unit']);
+export const cadenceOwnerSchema = z.enum(['client', 'contract']);
+export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage']);
+export const contractStatusSchema = z.enum(['active', 'draft', 'terminated', 'expired', 'published', 'archived']);
 
 // ============================================================================
 // CORE CONTRACT LINE SCHEMAS
@@ -37,6 +39,7 @@ const baseContractLineSchema = z.object({
   is_custom: z.boolean().optional().default(false),
   service_category: z.string().optional(),
   contract_line_type: planTypeSchema,
+  cadence_owner: cadenceOwnerSchema.optional(),
   
   // Hourly plan specific fields (deprecated for Hourly type)
   hourly_rate: z.number().min(0).optional(),
@@ -81,6 +84,7 @@ export const contractLineResponseSchema = z.object({
   is_custom: z.boolean(),
   service_category: z.string().nullable(),
   contract_line_type: planTypeSchema,
+  cadence_owner: cadenceOwnerSchema,
   hourly_rate: z.number().nullable(),
   minimum_billable_time: z.number().nullable(),
   round_up_to_nearest: z.number().nullable(),
@@ -107,7 +111,7 @@ export const contractLineResponseSchema = z.object({
 export const createFixedPlanConfigSchema = z.object({
   base_rate: z.number().min(0).optional(),
   enable_proration: z.boolean().default(false),
-  billing_cycle_alignment: billingCycleAlignmentSchema.default('start')
+  billing_cycle_alignment: billingCycleAlignmentSchema.optional()
 });
 
 export const updateFixedPlanConfigSchema = createUpdateSchema(createFixedPlanConfigSchema);
@@ -320,7 +324,9 @@ export const planServiceWithConfigResponseSchema = z.object({
 export const createContractSchema = z.object({
   contract_name: z.string().min(1, 'Contract name is required').max(255),
   contract_description: z.string().optional(),
+  owner_client_id: uuidSchema,
   billing_frequency: billingFrequencySchema,
+  status: contractStatusSchema.optional(),
   is_active: z.boolean().optional().default(true)
 });
 
@@ -330,8 +336,12 @@ export const contractResponseSchema = z.object({
   contract_id: uuidSchema,
   contract_name: z.string(),
   contract_description: z.string().nullable(),
+  owner_client_id: uuidSchema,
+  owner_client_name: z.string().nullable().optional(),
   billing_frequency: billingFrequencySchema,
+  status: contractStatusSchema,
   is_active: z.boolean(),
+  is_system_managed_default: z.boolean().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,

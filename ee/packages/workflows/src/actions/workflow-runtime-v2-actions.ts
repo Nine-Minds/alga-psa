@@ -21,27 +21,31 @@ import {
   isWorkflowOneTimeScheduleTrigger,
   isWorkflowRecurringScheduleTrigger,
   isWorkflowTimeTrigger,
+  resolveActionCallOutputSchema,
+  buildWorkflowDesignerActionCatalog,
+  zodToWorkflowJsonSchema,
   validateWorkflowDefinition,
   validateInputMapping,
   resolveInputMapping,
   createSecretResolverFromProvider,
+  verifySecretsExist,
   type WorkflowTrigger,
   type PublishError
-} from '@shared/workflow/runtime';
-import { buildWorkflowDesignerActionCatalog } from '@shared/workflow/runtime/designer/actionCatalog';
-import { zodToWorkflowJsonSchema } from '@shared/workflow/runtime/jsonSchemaMetadata';
-import { verifySecretsExist } from '@shared/workflow/runtime/validation/publishValidation';
-import { createTenantSecretProvider } from '@alga-psa/shared/workflow/secrets';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2, { type WorkflowDefinitionVersionRecord } from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
-import WorkflowRunStepModelV2 from '@shared/workflow/persistence/workflowRunStepModelV2';
-import WorkflowRunSnapshotModelV2 from '@shared/workflow/persistence/workflowRunSnapshotModelV2';
-import WorkflowRunWaitModelV2 from '@shared/workflow/persistence/workflowRunWaitModelV2';
-import WorkflowActionInvocationModelV2 from '@shared/workflow/persistence/workflowActionInvocationModelV2';
-import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
-import WorkflowRunLogModelV2 from '@shared/workflow/persistence/workflowRunLogModelV2';
-import type { WorkflowScheduleStateRecord } from '@shared/workflow/persistence/workflowScheduleStateModel';
+} from '@alga-psa/workflows/runtime';
+import { createTenantSecretProvider } from '@alga-psa/workflows/secrets';
+import {
+  WorkflowActionInvocationModelV2,
+  WorkflowDefinitionModelV2,
+  WorkflowDefinitionVersionModelV2,
+  WorkflowRunLogModelV2,
+  WorkflowRunModelV2,
+  WorkflowRunSnapshotModelV2,
+  WorkflowRunStepModelV2,
+  WorkflowRunWaitModelV2,
+  WorkflowRuntimeEventModelV2,
+  type WorkflowDefinitionVersionRecord,
+  type WorkflowScheduleStateRecord,
+} from '@alga-psa/workflows/persistence';
 import { auditLog } from '@alga-psa/db';
 import { analytics } from '@alga-psa/analytics';
 import { EventCatalogModel } from '../models/eventCatalog';
@@ -152,30 +156,11 @@ const loadAvailableWorkflowDesignerAppKeys = async (
     return new Set();
   }
 
-  const [hasInstallEnabledColumn, hasInstallStatusColumn] = await Promise.all([
-    knex.schema.hasColumn('tenant_extension_install', 'is_enabled'),
-    knex.schema.hasColumn('tenant_extension_install', 'status')
-  ]);
-
   const rows = await knex('tenant_extension_install as install')
     .innerJoin('extension_registry as registry', 'registry.id', 'install.registry_id')
     .where('install.tenant_id', tenantId)
-    .modify((query) => {
-      if (hasInstallEnabledColumn && hasInstallStatusColumn) {
-        query.andWhere((builder) => {
-          builder.where('install.is_enabled', true).orWhere('install.status', 'enabled');
-        });
-        return;
-      }
-
-      if (hasInstallEnabledColumn) {
-        query.andWhere('install.is_enabled', true);
-        return;
-      }
-
-      if (hasInstallStatusColumn) {
-        query.andWhere('install.status', 'enabled');
-      }
+    .andWhere((builder) => {
+      builder.where('install.is_enabled', true).orWhere('install.status', 'enabled');
     })
     .select<{ publisher: string | null; name: string | null }[]>([
       'registry.publisher as publisher',
@@ -846,8 +831,7 @@ const computeValidation = async (params: {
           // Track outputs for vars.* typing
           if (saveAs) {
             if (step.type === 'action.call' && actionId) {
-              const defn = registry.get(actionId, actionVersion ?? 1);
-              const out = defn?.outputSchema ? (zodToJsonSchema(defn.outputSchema, { name: `${actionId}@${actionVersion ?? 1}.output` }) as any) : null;
+              const out = resolveActionCallOutputSchema(registry as any, cfg as any);
               if (out) varsSchemas.set(saveAs, out);
             }
           }
@@ -2925,6 +2909,37 @@ export const listWorkflowRegistryNodesAction = withAuth(async (user, { tenant })
   }));
 });
 
+const applyWorkflowDesignerInputPresentationMetadata = (
+  actionId: string,
+  version: number,
+  inputSchema: Record<string, unknown>
+): Record<string, unknown> => {
+  if (actionId !== 'ai.infer' || version !== 1) {
+    return inputSchema;
+  }
+
+  const properties = inputSchema.properties;
+  if (!properties || typeof properties !== 'object' || Array.isArray(properties)) {
+    return inputSchema;
+  }
+
+  const prompt = (properties as Record<string, unknown>).prompt;
+  if (!prompt || typeof prompt !== 'object' || Array.isArray(prompt)) {
+    return inputSchema;
+  }
+
+  return {
+    ...inputSchema,
+    properties: {
+      ...(properties as Record<string, unknown>),
+      prompt: {
+        ...(prompt as Record<string, unknown>),
+        'x-workflow-input-control': 'multiline',
+      },
+    },
+  };
+};
+
 const serializeWorkflowRegistryAction = (
   action: ReturnType<ReturnType<typeof getActionRegistryV2>['list']>[number]
 ) => ({
@@ -2934,7 +2949,11 @@ const serializeWorkflowRegistryAction = (
   retryHint: action.retryHint ?? null,
   idempotency: action.idempotency,
   ui: action.ui,
-  inputSchema: zodToWorkflowJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }),
+  inputSchema: applyWorkflowDesignerInputPresentationMetadata(
+    action.id,
+    action.version,
+    zodToWorkflowJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` })
+  ),
   outputSchema: zodToWorkflowJsonSchema(action.outputSchema, { name: `${action.id}@${action.version}.output` }),
   examples: action.examples ?? null
 });

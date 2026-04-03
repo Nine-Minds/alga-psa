@@ -15,7 +15,7 @@ import { publishWorkflowEvent } from '../lib/eventBus/publishers';
 import {
   buildSurveyReminderSentPayload,
   buildSurveySentPayload,
-} from '@shared/workflow/streams/domainEventBuilders/surveyEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 const SURVEY_TEMPLATE_TABLE = 'survey_templates';
 const SURVEY_INVITATION_TABLE = 'survey_invitations';
@@ -222,8 +222,8 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
     const surveyUrl = buildSurveyUrl(plainToken);
     const ratingLabels = normaliseLabels(template.rating_labels);
     const ratingLinks = buildRatingLinks(plainToken, template.rating_scale, ratingLabels);
-    const ratingButtonsHtml = buildRatingButtonsHtml(ratingLinks);
-    const ratingLinksText = buildRatingLinksText(ratingLinks);
+    const ratingButtonsHtml = buildRatingButtonsHtml(ratingLinks, template.rating_type, template.rating_scale);
+    const ratingLinksText = buildRatingLinksText(ratingLinks, template.rating_type, template.rating_scale);
     const technicianName = formatFullName(ticket.technician_first_name, ticket.technician_last_name);
     const tenantDisplayName = tenant?.client_name || tenant?.name || 'Your Team';
     const locale = params.locale ?? undefined;
@@ -478,8 +478,40 @@ function buildRatingLinks(
   });
 }
 
+const EMAIL_EMOJI_MAP: Record<number, string> = {
+  1: '\u{1F61E}', // 😞
+  2: '\u{1F615}', // 😕
+  3: '\u{1F610}', // 😐
+  4: '\u{1F642}', // 🙂
+  5: '\u{1F600}', // 😀
+  6: '\u{1F603}', // 😃
+  7: '\u{1F604}', // 😄
+  8: '\u{1F601}', // 😁
+  9: '\u{1F60D}', // 😍
+  10: '\u{1F929}', // 🤩
+};
+
+function getEmojiForRating(rating: number, scale: number): string {
+  if (scale === 10) return EMAIL_EMOJI_MAP[rating] ?? '\u{1F610}';
+  if (scale === 5) return EMAIL_EMOJI_MAP[rating] ?? '\u{1F610}';
+  if (scale === 3) {
+    const mapped = rating === 1 ? 1 : rating === 2 ? 3 : 5;
+    return EMAIL_EMOJI_MAP[mapped] ?? '\u{1F610}';
+  }
+  const mapped = Math.round(1 + ((rating - 1) * 9) / (scale - 1));
+  return EMAIL_EMOJI_MAP[Math.max(1, Math.min(10, mapped))] ?? '\u{1F610}';
+}
+
+function getRatingButtonContent(rating: number, ratingType: string, scale: number): string {
+  if (ratingType === 'emojis') return getEmojiForRating(rating, scale);
+  if (ratingType === 'stars') return `${rating} \u2605`;
+  return String(rating);
+}
+
 function buildRatingButtonsHtml(
-  links: Array<{ rating: number; label: string; url: string }>
+  links: Array<{ rating: number; label: string; url: string }>,
+  ratingType: string,
+  scale: number
 ): string {
   return links
     .map(
@@ -497,18 +529,24 @@ function buildRatingButtonsHtml(
           text-decoration:none;
           font-weight:600;
           font-family:Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          font-size:${ratingType === 'emojis' ? '20px' : '14px'};
         "
       >
-        ${rating}
+        ${getRatingButtonContent(rating, ratingType, scale)}
       </a>`
     )
     .join('');
 }
 
 function buildRatingLinksText(
-  links: Array<{ rating: number; label: string; url: string }>
+  links: Array<{ rating: number; label: string; url: string }>,
+  ratingType: string,
+  scale: number
 ): string {
-  return links.map(({ rating, url }) => `${rating} ★: ${url}`).join('\n');
+  return links.map(({ rating, url }) => {
+    const display = getRatingButtonContent(rating, ratingType, scale);
+    return `${display}: ${url}`;
+  }).join('\n');
 }
 
 function normaliseLabels(input: TemplateRow['rating_labels']): Record<string, string> {

@@ -2,10 +2,12 @@
 
 import { getLicenseUsage, type LicenseUsage } from '../license/get-license-usage';
 import { getSession } from '@alga-psa/auth';
+import type { AddOnKey } from '@alga-psa/types';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { getStripeService } from '../stripe/StripeService';
 import { getConnection } from '@/lib/db/db';
 import logger from '@alga-psa/core/logger';
+import { sendCancellationRequestEmail } from '@alga-psa/email/sendCancellationRequestEmail';
 import {
   IGetSubscriptionInfoResponse,
   IGetPaymentMethodResponse,
@@ -245,6 +247,8 @@ export async function createLicenseCheckoutSessionAction(
 
 /**
  * Server action to get license pricing information
+ * Reads from the tenant's actual subscription in stripe_subscriptions + stripe_prices.
+ * Falls back to the STRIPE_LICENSE_PRICE_ID env var for legacy tenants without a subscription row.
  * @returns License price information or error
  */
 export async function getLicensePricingAction(): Promise<{
@@ -258,32 +262,59 @@ export async function getLicensePricingAction(): Promise<{
   error?: string;
 }> {
   try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'Permission denied' };
+    }
+
+    const knex = await getConnection(session.user.tenant);
+
+    // Try to get pricing from the tenant's actual subscription
+    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
+      .where({ tenant: session.user.tenant })
+      .whereIn('status', ['active', 'trialing', 'past_due'])
+      .first();
+
+    if (subscription) {
+      const price = await knex<IStripePrice>('stripe_prices')
+        .where({ stripe_price_id: subscription.stripe_price_id })
+        .first();
+
+      if (price) {
+        return {
+          success: true,
+          data: {
+            priceId: price.stripe_price_external_id,
+            unitAmount: price.unit_amount,
+            currency: price.currency || 'usd',
+            interval: price.recurring_interval || 'month',
+          },
+        };
+      }
+    }
+
+    // Fallback: fetch from Stripe API using legacy env var
     const licensePriceId = process.env.STRIPE_LICENSE_PRICE_ID;
 
     if (!licensePriceId) {
-      return {
-        success: false,
-        error: 'License pricing not configured',
-      };
+      return { success: false, error: 'License pricing not configured' };
     }
 
-    // Fetch pricing from Stripe API using the price ID
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
-      return {
-        success: false,
-        error: 'Stripe billing is not configured',
-      };
+      return { success: false, error: 'Stripe billing is not configured' };
     }
     const stripe = await stripeService.getStripeClient();
-
     const price = await stripe.prices.retrieve(licensePriceId);
 
     if (!price) {
-      return {
-        success: false,
-        error: 'Failed to retrieve price from Stripe',
-      };
+      return { success: false, error: 'Failed to retrieve price from Stripe' };
     }
 
     return {
@@ -756,15 +787,41 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
         updated_at: knex.fn.now(),
       });
 
+    const cancelAtDate = new Date(updatedSubscription.cancel_at * 1000).toISOString();
+
     logger.info(
       `[cancelSubscriptionAction][tenant=${session.user.tenant}] Subscription ${subscription.stripe_subscription_external_id} set to cancel at period end`
     );
+
+    // Send cancellation request received email (fire-and-forget, don't block the response)
+    try {
+      const tenant = await knex('tenants')
+        .select('email', 'client_name', 'company_name')
+        .where({ tenant: session.user.tenant })
+        .first();
+
+      if (tenant?.email) {
+        const tenantName = tenant.company_name || tenant.client_name || 'your organization';
+        await sendCancellationRequestEmail({
+          tenantName,
+          recipientName: tenant.client_name || tenantName,
+          recipientEmail: tenant.email,
+          cancelAtDate,
+        });
+        logger.info(
+          `[cancelSubscriptionAction][tenant=${session.user.tenant}] Cancellation request email sent to ${tenant.email}`
+        );
+      }
+    } catch (emailError) {
+      // Don't fail the cancellation if email fails
+      logger.warn('[cancelSubscriptionAction] Failed to send cancellation request email:', emailError);
+    }
 
     return {
       success: true,
       data: {
         subscription_id: subscription.stripe_subscription_external_id,
-        cancel_at: new Date(updatedSubscription.cancel_at * 1000).toISOString(),
+        cancel_at: cancelAtDate,
       },
     };
   } catch (error) {
@@ -1068,6 +1125,127 @@ export async function upgradeTierAction(
 }
 
 /**
+ * Downgrade the tenant's subscription to Solo.
+ * Validates active user count in the Stripe service before changing pricing.
+ */
+export async function downgradeTierAction(
+  interval: 'month' | 'year' = 'month'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to change the subscription plan' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.downgradeTier(session.user.tenant, interval);
+  } catch (error) {
+    logger.error('[downgradeTierAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to downgrade plan',
+    };
+  }
+}
+
+/**
+ * Create an embedded Stripe checkout session for an add-on purchase.
+ */
+export async function purchaseAddOnAction(
+  addOn: AddOnKey,
+  interval: 'month' | 'year' = 'month'
+): Promise<{
+  success: boolean;
+  data?: {
+    clientSecret: string;
+    sessionId: string;
+    publishableKey: string;
+  };
+  error?: string;
+}> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage add-ons' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    const result = await stripeService.purchaseAddOn(session.user.tenant, addOn, interval);
+    if (!result.success || !result.clientSecret || !result.sessionId) {
+      return { success: false, error: result.error || 'Failed to create add-on checkout session' };
+    }
+
+    return {
+      success: true,
+      data: {
+        clientSecret: result.clientSecret,
+        sessionId: result.sessionId,
+        publishableKey: await stripeService.getPublishableKey(),
+      },
+    };
+  } catch (error) {
+    logger.error('[purchaseAddOnAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to purchase add-on',
+    };
+  }
+}
+
+/**
+ * Cancel an active add-on subscription for the current tenant.
+ */
+export async function cancelAddOnAction(
+  addOn: AddOnKey
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage add-ons' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.cancelAddOn(session.user.tenant, addOn);
+  } catch (error) {
+    logger.error('[cancelAddOnAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to cancel add-on',
+    };
+  }
+}
+
+/**
  * Get a preview of what upgrading to a new tier will cost.
  * Used by the UI to show a confirmation dialog before charging.
  */
@@ -1267,6 +1445,37 @@ export async function startSelfServicePremiumTrialAction(): Promise<{ success: b
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to start Premium trial',
+    };
+  }
+}
+
+/**
+ * Self-service Pro trial for established Solo customers.
+ * Solo trial customers are blocked to prevent stacking free trials.
+ */
+export async function startSoloProTrialAction(): Promise<{ success: boolean; error?: string; trialEnd?: string }> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage the subscription' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.startSoloProTrial(session.user.tenant);
+  } catch (error) {
+    logger.error('[startSoloProTrialAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to start Pro trial',
     };
   }
 }

@@ -1,18 +1,9 @@
 import { defineConfig } from 'tsup';
+import { makeConfig } from '../build-tools/tsup-preset';
 
-export default defineConfig({
-  entry: {
-    'index': 'src/index.ts',
-    'schemas/index': 'src/schemas/index.ts',
-  },
-  format: ['esm', 'cjs'],
-  dts: false,
-  bundle: true,
-  splitting: true,
-  sourcemap: false,
-  clean: true,
-  outDir: 'dist',
-  external: [
-    'zod',
-  ],
-});
+// addJsExtensions: this package is imported directly by the Temporal worker
+// via Node.js ESM (not webpack), which requires .js extensions on relative imports.
+// Other flipped packages are only consumed via webpack and don't need this.
+export default defineConfig(makeConfig({
+  addJsExtensions: true,
+}));

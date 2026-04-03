@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import type { DesignerWorkspaceSnapshot } from '../state/designerStore';
 import {
-  exportWorkspaceToInvoiceTemplateAst,
-  exportWorkspaceToInvoiceTemplateAstJson,
-  importInvoiceTemplateAstToWorkspace,
+  exportWorkspaceToTemplateAst,
+  exportWorkspaceToTemplateAstJson,
+  importTemplateAstToWorkspace,
 } from './workspaceAst';
-import { getStandardInvoiceTemplateAstByCode } from '../../../lib/invoice-template-ast/standardTemplates';
+import { getStandardTemplateAstByCode } from '../../../lib/invoice-template-ast/standardTemplates';
 
 const createWorkspaceWithFieldAndDynamicTable = (): DesignerWorkspaceSnapshot => {
   const base = useInvoiceDesignerStore.getState().exportWorkspace();
@@ -82,10 +82,10 @@ const createWorkspaceWithTransforms = (): DesignerWorkspaceSnapshot => ({
   },
 });
 
-describe('exportWorkspaceToInvoiceTemplateAst', () => {
+describe('exportWorkspaceToTemplateAst', () => {
   it('exports designer workspace to a versioned AST document', () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable();
-    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const ast = exportWorkspaceToTemplateAst(workspace);
 
     expect(ast.kind).toBe('invoice-template-ast');
     expect(ast.version).toBe(1);
@@ -96,8 +96,8 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
 
   it('represents dynamic tables as repeatable regions with required repeat metadata', () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable();
-    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
-    const json = exportWorkspaceToInvoiceTemplateAstJson(workspace);
+    const ast = exportWorkspaceToTemplateAst(workspace);
+    const json = exportWorkspaceToTemplateAstJson(workspace);
 
     const pageSection = ast.layout.children?.find((child) => child.type === 'section');
     expect(pageSection).toBeTruthy();
@@ -119,8 +119,8 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
 
   it('hydrates a designer workspace from persisted AST', () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable();
-    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
-    const hydrated = importInvoiceTemplateAstToWorkspace(ast);
+    const ast = exportWorkspaceToTemplateAst(workspace);
+    const hydrated = importTemplateAstToWorkspace(ast);
 
     expect(Object.values(hydrated.nodesById).some((node) => node.type === 'field')).toBe(true);
     expect(Object.values(hydrated.nodesById).some((node) => node.type === 'dynamic-table')).toBe(true);
@@ -130,8 +130,8 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
 
   it('imports a template with no transforms into an empty transform workspace', () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable();
-    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
-    const hydrated = importInvoiceTemplateAstToWorkspace(ast);
+    const ast = exportWorkspaceToTemplateAst(workspace);
+    const hydrated = importTemplateAstToWorkspace(ast);
 
     expect(hydrated.transforms).toEqual({
       sourceBindingId: '',
@@ -142,8 +142,8 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
 
   it('imports template transforms preserving source, output, ids, and order', () => {
     const workspace = createWorkspaceWithTransforms();
-    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
-    const hydrated = importInvoiceTemplateAstToWorkspace(ast);
+    const ast = exportWorkspaceToTemplateAst(workspace);
+    const hydrated = importTemplateAstToWorkspace(ast);
 
     expect(hydrated.transforms).toMatchObject({
       sourceBindingId: 'collection.items',
@@ -185,7 +185,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       },
     } as const;
 
-    const hydrated = importInvoiceTemplateAstToWorkspace(sourceAst as any);
+    const hydrated = importTemplateAstToWorkspace(sourceAst as any);
     const lineItems = Object.values(hydrated.nodesById).find((node) => node.id === 'line-items') as any;
     expect(lineItems?.type).toBe('dynamic-table');
 
@@ -303,7 +303,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       },
     };
 
-    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const ast = exportWorkspaceToTemplateAst(workspace);
     if (ast.layout.type !== 'document' || !ast.layout.children) return;
 
     const pageSection = ast.layout.children.find((child) => child.type === 'section');
@@ -341,7 +341,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       padding: '2px 0',
     });
 
-    const hydrated = importInvoiceTemplateAstToWorkspace(ast);
+    const hydrated = importTemplateAstToWorkspace(ast);
 
     const hydratedContainer = hydrated.nodesById[containerId];
     expect(hydratedContainer?.type).toBe('container');
@@ -381,7 +381,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       padding: '2px 0',
     });
 
-    const astRoundTrip = exportWorkspaceToInvoiceTemplateAst(hydrated);
+    const astRoundTrip = exportWorkspaceToTemplateAst(hydrated);
     if (astRoundTrip.layout.type !== 'document' || !astRoundTrip.layout.children) return;
 
     const roundTrippedPageSection = astRoundTrip.layout.children.find((child) => child.type === 'section');
@@ -411,22 +411,22 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
 
   it('roundtrips exported AST deterministically (export -> import -> export)', () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable();
-    const ast1 = exportWorkspaceToInvoiceTemplateAst(workspace);
-    const hydrated = importInvoiceTemplateAstToWorkspace(ast1);
-    const ast2 = exportWorkspaceToInvoiceTemplateAst(hydrated);
+    const ast1 = exportWorkspaceToTemplateAst(workspace);
+    const hydrated = importTemplateAstToWorkspace(ast1);
+    const ast2 = exportWorkspaceToTemplateAst(hydrated);
     expect(ast2).toEqual(ast1);
   });
 
   it('omits transforms from generated AST when the workspace has no authored transform pipeline', () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable();
-    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const ast = exportWorkspaceToTemplateAst(workspace);
 
     expect(ast.transforms).toBeUndefined();
   });
 
   it('exports authored transform pipelines into the generated AST', () => {
     const workspace = createWorkspaceWithTransforms();
-    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const ast = exportWorkspaceToTemplateAst(workspace);
 
     expect(ast.transforms).toMatchObject({
       sourceBindingId: 'collection.items',
@@ -440,9 +440,9 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
 
   it('roundtrips transformed AST deterministically (export -> import -> export)', () => {
     const workspace = createWorkspaceWithTransforms();
-    const ast1 = exportWorkspaceToInvoiceTemplateAst(workspace);
-    const hydrated = importInvoiceTemplateAstToWorkspace(ast1);
-    const ast2 = exportWorkspaceToInvoiceTemplateAst(hydrated);
+    const ast1 = exportWorkspaceToTemplateAst(workspace);
+    const hydrated = importTemplateAstToWorkspace(ast1);
+    const ast2 = exportWorkspaceToTemplateAst(hydrated);
 
     expect(ast2).toEqual(ast1);
   });
@@ -527,13 +527,13 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       },
     } as const;
 
-    const hydrated = importInvoiceTemplateAstToWorkspace(sourceAst as any);
+    const hydrated = importTemplateAstToWorkspace(sourceAst as any);
     const hydratedHeader = hydrated.nodesById.header as any;
     expect(hydratedHeader?.type).toBe('container');
     expect(hydratedHeader?.props?.layout?.display).toBe('flex');
     expect(hydratedHeader?.props?.layout?.flexDirection).toBe('row');
 
-    const roundTrippedAst = exportWorkspaceToInvoiceTemplateAst(hydrated);
+    const roundTrippedAst = exportWorkspaceToTemplateAst(hydrated);
     expect(roundTrippedAst.layout.type).toBe('document');
     if (roundTrippedAst.layout.type !== 'document') return;
 
@@ -604,7 +604,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       },
     } as const;
 
-    const hydrated = importInvoiceTemplateAstToWorkspace(sourceAst as any);
+    const hydrated = importTemplateAstToWorkspace(sourceAst as any);
     const fromLabelNode = hydrated.nodesById['from-label'];
     expect(fromLabelNode?.type).toBe('text');
     if (!fromLabelNode) return;
@@ -632,7 +632,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       },
     };
 
-    const exported = exportWorkspaceToInvoiceTemplateAst(editedWorkspace);
+    const exported = exportWorkspaceToTemplateAst(editedWorkspace);
     expect(exported.layout.type).toBe('document');
     if (exported.layout.type !== 'document') return;
 
@@ -673,7 +673,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       },
     } as const;
 
-    const hydrated = importInvoiceTemplateAstToWorkspace(sourceAst as any);
+    const hydrated = importTemplateAstToWorkspace(sourceAst as any);
     const toLabelNode = hydrated.nodesById['to-label'];
     expect(toLabelNode?.type).toBe('text');
     if (!toLabelNode) return;
@@ -701,7 +701,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       },
     };
 
-    const exported = exportWorkspaceToInvoiceTemplateAst(editedWorkspace);
+    const exported = exportWorkspaceToTemplateAst(editedWorkspace);
     expect(exported.layout.type).toBe('document');
     if (exported.layout.type !== 'document') return;
 
@@ -742,7 +742,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       },
     } as const;
 
-    const hydrated = importInvoiceTemplateAstToWorkspace(sourceAst as any);
+    const hydrated = importTemplateAstToWorkspace(sourceAst as any);
     const toLabelNode = hydrated.nodesById['to-label'];
     expect(toLabelNode?.type).toBe('text');
     if (!toLabelNode) return;
@@ -770,7 +770,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       },
     };
 
-    const exported = exportWorkspaceToInvoiceTemplateAst(editedWorkspace);
+    const exported = exportWorkspaceToTemplateAst(editedWorkspace);
     expect(exported.layout.type).toBe('document');
     if (exported.layout.type !== 'document') return;
 
@@ -812,7 +812,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       },
     };
 
-    const exported = exportWorkspaceToInvoiceTemplateAst(withText);
+    const exported = exportWorkspaceToTemplateAst(withText);
     expect(exported.layout.type).toBe('document');
     if (exported.layout.type !== 'document') return;
 
@@ -834,9 +834,9 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
   });
 
   it('preserves standard-detailed template fidelity across import/export round-trip', () => {
-    const sourceAst = getStandardInvoiceTemplateAstByCode('standard-detailed');
-    const hydrated = importInvoiceTemplateAstToWorkspace(sourceAst as any);
-    const roundTrippedAst = exportWorkspaceToInvoiceTemplateAst(hydrated);
+    const sourceAst = getStandardTemplateAstByCode('standard-detailed');
+    const hydrated = importTemplateAstToWorkspace(sourceAst as any);
+    const roundTrippedAst = exportWorkspaceToTemplateAst(hydrated);
 
     expect(roundTrippedAst.layout.type).toBe('document');
     if (roundTrippedAst.layout.type !== 'document') return;

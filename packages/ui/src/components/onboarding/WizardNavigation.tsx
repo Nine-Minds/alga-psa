@@ -18,6 +18,11 @@ interface WizardNavigationProps {
   showSaveDraft?: boolean;
   finishLabel?: string;
   nextLabel?: string;
+  backLabel?: string;
+  skipLabel?: string;
+  saveDraftLabel?: string;
+  savingLabel?: string;
+  completingLabel?: string;
 }
 
 export function WizardNavigation({
@@ -34,6 +39,11 @@ export function WizardNavigation({
   showSaveDraft = false,
   finishLabel = 'Finish Setup',
   nextLabel = 'Next',
+  backLabel = 'Back',
+  skipLabel = 'Skip',
+  saveDraftLabel = 'Save as Draft',
+  savingLabel = 'Saving...',
+  completingLabel = 'Completing...',
 }: WizardNavigationProps) {
   const isLastStep = currentStep === totalSteps - 1;
   const isFirstStep = currentStep === 0;
@@ -50,7 +60,7 @@ export function WizardNavigation({
           className="flex items-center gap-2"
         >
           <ChevronLeft className="w-4 h-4" />
-          Back
+          {backLabel}
         </Button>
 
         {showSaveDraft && onSaveDraft && (
@@ -61,7 +71,7 @@ export function WizardNavigation({
             onClick={onSaveDraft}
             disabled={isLoading}
           >
-            Save as Draft
+            {saveDraftLabel}
           </Button>
         )}
       </div>
@@ -74,7 +84,7 @@ export function WizardNavigation({
             variant="outline"
             onClick={onSkip}
           >
-            Skip
+            {skipLabel}
           </Button>
         )}
         
@@ -85,7 +95,7 @@ export function WizardNavigation({
             onClick={onFinish}
             disabled={isNextDisabled}
           >
-            {isLoading ? 'Completing...' : finishLabel}
+            {isLoading ? completingLabel : finishLabel}
           </Button>
         ) : (
           <Button
@@ -95,7 +105,7 @@ export function WizardNavigation({
             disabled={isNextDisabled}
             className="flex items-center gap-2"
           >
-            {isLoading ? 'Saving...' : nextLabel}
+            {isLoading ? savingLabel : nextLabel}
             {!isLoading && <ChevronRight className="w-4 h-4" />}
           </Button>
         )}

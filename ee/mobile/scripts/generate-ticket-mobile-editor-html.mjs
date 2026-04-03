@@ -49,6 +49,7 @@ const html = `<!doctype html>
         margin: 0;
         padding: 0;
         min-height: 100%;
+        height: 100%;
         background: #ffffff;
       }
 
@@ -59,14 +60,19 @@ const html = `<!doctype html>
       #editor-root {
         box-sizing: border-box;
         min-height: 100%;
+        height: 100%;
         padding: 12px;
+        display: flex;
+        flex-direction: column;
       }
 
       .ProseMirror {
         min-height: 100%;
+        flex: 1;
         outline: none;
         white-space: pre-wrap;
         word-break: break-word;
+        cursor: text;
       }
 
       .ProseMirror p,
@@ -80,6 +86,10 @@ const html = `<!doctype html>
       .ProseMirror h6,
       .ProseMirror blockquote {
         margin: 0 0 8px;
+      }
+
+      .ProseMirror > *:last-child {
+        margin-bottom: 0;
       }
 
       .ProseMirror ul,
@@ -96,11 +106,32 @@ const html = `<!doctype html>
         max-width: 100%;
         height: auto;
       }
+
+      .mention-badge {
+        display: inline;
+        padding: 1px 4px;
+        border-radius: 4px;
+        background-color: #dbeafe;
+        color: #1e40af;
+        font-weight: 500;
+        white-space: nowrap;
+        user-select: none;
+      }
     </style>
   </head>
   <body>
     <div id="editor-root"></div>
     <script>${escapedBundle}</script>
+    <script>
+      document.getElementById('editor-root').addEventListener('click', function(e) {
+        if (e.target === this || e.target === document.body) {
+          var pm = this.querySelector('.ProseMirror');
+          if (pm && pm.getAttribute('contenteditable') === 'true' && !pm.contains(e.target)) {
+            pm.focus();
+          }
+        }
+      });
+    </script>
   </body>
 </html>`;
 

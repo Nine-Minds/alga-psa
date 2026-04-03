@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { workflowDefinitionSchema } from '@shared/workflow/runtime';
+import { workflowDefinitionSchema } from '@alga-psa/workflows/runtime';
 
 const versionNumber = z.preprocess(
   (val) => (typeof val === 'string' ? Number(val) : val),

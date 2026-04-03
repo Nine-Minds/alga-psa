@@ -12,6 +12,7 @@ import { IScheduleEntry } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { CalendarStyleProvider } from '@alga-psa/scheduling/components/schedule/CalendarStyleProvider';
 import { isWorkingHour } from './utils';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const localizer = momentLocalizer(moment);
 
@@ -56,6 +57,8 @@ const TechnicianSidebar = ({
   onResetSelections?: () => void;
   onSelectAll?: () => void;
 }) => {
+  const { t } = useTranslation('msp/dispatch');
+
   return (
     <div className="w-64 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
       <div className="p-2 border-gray-200">
@@ -68,7 +71,7 @@ const TechnicianSidebar = ({
             className="text-xs px-2 py-1 h-7"
           >
             <Layers className="h-4 w-4 mr-1" />
-            Compare All
+            {t('schedule.compareAll', { defaultValue: 'Compare All' })}
           </Button>
           <Button
             id="reset-selections-button"
@@ -79,7 +82,7 @@ const TechnicianSidebar = ({
             disabled={!primaryTechnicianId && comparisonTechnicianIds.length === 0}
           >
             <XCircle className="h-4 w-4 mr-1" />
-            Clear All
+            {t('schedule.clearAll', { defaultValue: 'Clear All' })}
           </Button>
         </div>
       </div>
@@ -110,9 +113,17 @@ const TechnicianSidebar = ({
                       onSetFocus(tech.user_id);
                     }
                   }}
-                  tooltipText="View Week"
+                  tooltipText={t('schedule.viewWeekTooltip', { defaultValue: 'View Week' })}
                   tooltip={true}
-                  aria-label={`View week for ${tech.first_name} ${tech.last_name}${tech.is_inactive ? ' (Inactive)' : ''}`}
+                  aria-label={tech.is_inactive
+                    ? t('schedule.viewWeekAriaInactive', {
+                        defaultValue: 'View week for {{name}} (Inactive)',
+                        name: `${tech.first_name} ${tech.last_name}`,
+                      })
+                    : t('schedule.viewWeekAria', {
+                        defaultValue: 'View week for {{name}}',
+                        name: `${tech.first_name} ${tech.last_name}`,
+                      })}
                 >
                   <CalendarDays className="h-4 w-4" />
                 </Button>
@@ -123,9 +134,19 @@ const TechnicianSidebar = ({
                   variant={isComparing ? "default" : "ghost"}
                   size="sm"
                   onClick={() => onComparisonChange(tech.user_id, !isComparing)}
-                  tooltipText={isComparing ? "Stop Comparing" : "Compare"}
+                  tooltipText={isComparing
+                    ? t('schedule.stopComparing', { defaultValue: 'Stop Comparing' })
+                    : t('schedule.compare', { defaultValue: 'Compare' })}
                   tooltip={true}
-                  aria-label={`Compare ${tech.first_name} ${tech.last_name}${tech.is_inactive ? ' (Inactive)' : ''}`}
+                  aria-label={tech.is_inactive
+                    ? t('schedule.compareAriaInactive', {
+                        defaultValue: 'Compare {{name}} (Inactive)',
+                        name: `${tech.first_name} ${tech.last_name}`,
+                      })
+                    : t('schedule.compareAria', {
+                        defaultValue: 'Compare {{name}}',
+                        name: `${tech.first_name} ${tech.last_name}`,
+                      })}
                 >
                   <Layers2 className="h-4 w-4" />
                 </Button>

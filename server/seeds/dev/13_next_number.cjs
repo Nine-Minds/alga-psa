@@ -4,6 +4,8 @@ exports.seed = function (knex) {
             return knex('next_number').insert([
                 { tenant: knex('tenants').select('tenant').first(), entity_type: 'TICKET', last_number: 1010, initial_value: 1000, prefix: 'TIC' },
                 { tenant: knex('tenants').select('tenant').first(), entity_type: 'PROJECT', last_number: 0, initial_value: 1, prefix: 'PROJECT', padding_length: 4 },
+                { tenant: knex('tenants').select('tenant').first(), entity_type: 'INVOICE', last_number: 0, initial_value: 1, prefix: 'INV-', padding_length: 6 },
+                { tenant: knex('tenants').select('tenant').first(), entity_type: 'QUOTE', last_number: 0, initial_value: 1, prefix: 'QUO-', padding_length: 4 },
             ]);
         });
 };

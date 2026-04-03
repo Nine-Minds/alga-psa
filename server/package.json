@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.0.6-rc4",
+  "version": "1.0.10-rc5",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,8 +8,8 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "cd .. && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NX_DAEMON=false npx nx next:dev server",
-    "dev:turbo": "cd .. && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx nx next:dev server -- --turbo",
+    "dev": "cd .. && npx nx build-deps server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NX_DAEMON=false npx nx next:dev server",
+    "dev:turbo": "cd .. && npx nx build-deps server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx nx next:dev server -- --turbo",
     "dev:express": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon --watch index.ts --watch src/middleware --ext ts --exec tsx index.ts",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",
     "ngrok:start": "ngrok http 3000 --subdomain=alga-psa-dev",
@@ -56,6 +56,7 @@
     "migrate:ee:status": "node scripts/run-ee-migrations.js status"
   },
   "dependencies": {
+    "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "@anthropic-ai/sdk": "^0.36.3",
     "@assemblyscript/loader": "^0.27.36",
@@ -131,6 +132,7 @@
     "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.7",
     "elkjs": "^0.10.0",
+    "expo-server-sdk": "^6.1.0",
     "express": "^5.1.0",
     "file-type": "^20.4.1",
     "fluent-ffmpeg": "^2.1.3",
@@ -139,11 +141,11 @@
     "fzstd": "^0.1.1",
     "google-auth-library": "^10.1.0",
     "googleapis": "^152.0.0",
-    "handlebars": "^4.7.8",
+    "handlebars": "^4.7.9",
     "i18next": "^25.5.2",
     "i18next-browser-languagedetector": "^8.2.0",
     "i18next-http-backend": "^3.0.2",
-    "imapflow": "^1.0.174",
+    "imapflow": "^1.2.18",
     "jsondiffpatch": "^0.7.3",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.23",
@@ -157,7 +159,7 @@
     "next-i18next": "^15.4.2",
     "next-themes": "^0.4.6",
     "node-vault": "^0.10.2",
-    "nodemailer": "^8.0.0",
+    "nodemailer": "^8.0.4",
     "papaparse": "^5.5.3",
     "parsimmon": "^1.18.1",
     "pdf-lib": "^1.17.1",
@@ -196,7 +198,7 @@
     "swr": "^2.2.5",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^3.3.0",
-    "tar": "^7.5.8",
+    "tar": "^7.5.12",
     "tinycolor2": "^1.6.0",
     "ts-morph": "^26.0.0",
     "ua-parser-js": "^2.0.6",
@@ -227,6 +229,7 @@
     "@types/ua-parser-js": "^0.7.39",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
+    "@vitest/coverage-v8": "^4.0.18",
     "as-json": "^1.0.2",
     "assemblyscript": "^0.27.36",
     "copy-webpack-plugin": "^13.0.0",
@@ -239,7 +242,6 @@
     "ts-command-line-args": "^2.5.1",
     "tsx": "^4.20.3",
     "typescript-eslint": "^8.19.1",
-    "@vitest/coverage-v8": "^4.0.18",
     "vitest": "^4.0.18"
   },
   "optionalDependencies": {

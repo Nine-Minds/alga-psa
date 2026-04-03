@@ -1,0 +1,175 @@
+{
+  "page": {
+    "title": "Berichte"
+  },
+  "actions": {
+    "refresh": "Aktualisieren"
+  },
+  "placeholders": {
+    "selectContract": "Vertrag auswählen..."
+  },
+  "units": {
+    "hoursShort": "Std.",
+    "days": "Tage",
+    "percent": "%",
+    "dash": "—"
+  },
+  "reportsPage": {
+    "cards": {
+      "timeUtilization": {
+        "title": "Zeitauslastung",
+        "placeholder": "[Platzhalter für Zeitauslastungsdiagramm]"
+      },
+      "projectProgress": {
+        "title": "Projektfortschritt",
+        "placeholder": "[Platzhalter für Projektfortschrittsdiagramm]"
+      },
+      "revenueByClient": {
+        "title": "Umsatz nach Kunde",
+        "placeholder": "[Platzhalter für Umsatz-nach-Kunde-Diagramm]"
+      },
+      "teamPerformance": {
+        "title": "Teamleistung",
+        "placeholder": "[Platzhalter für Teamleistungsdiagramm]"
+      }
+    }
+  },
+  "contractReports": {
+    "title": "Vertragsberichte",
+    "description": "Analysieren Sie Vertragsleistung, Umsatz und Auslastungskennzahlen",
+    "errors": {
+      "loadingTitle": "Fehler beim Laden der Berichte",
+      "loadData": "Berichtsdaten konnten nicht geladen werden"
+    },
+    "summary": {
+      "totalMRR": {
+        "title": "Gesamter MRR",
+        "subtitle": "Monatlich wiederkehrender Umsatz"
+      },
+      "ytdRevenue": {
+        "title": "Umsatz bis heute",
+        "subtitle": "Seit Jahresbeginn nach abgerechneten Leistungszeiträumen"
+      },
+      "activeContracts": {
+        "title": "Aktive Verträge",
+        "subtitle": "Aktive Zuweisungen"
+      },
+      "renewalDecisions": {
+        "title": "Fällige Verlängerungsentscheidungen",
+        "subtitle": "Entscheidungsfristen in den nächsten 90 Tagen"
+      }
+    },
+    "tabs": {
+      "revenue": "Vertragsumsatz",
+      "expiration": "Ablauf",
+      "bucketUsage": "Stundenkontingent",
+      "profitability": "Rentabilität"
+    },
+    "sections": {
+      "revenue": {
+        "title": "Vertragsumsatzbericht",
+        "description": "Überblick über monatlich wiederkehrenden Umsatz und abgerechnete Leistungszeiträume seit Jahresbeginn nach Vertrag.",
+        "empty": "Keine Vertragsumsatzdaten verfügbar"
+      },
+      "expiration": {
+        "title": "Vertragsablauf und Verlängerungsentscheidungen",
+        "description": "Bevorstehende Vertragsabläufe und Fälligkeiten für Verlängerungsentscheidungen verfolgen.",
+        "empty": "In naher Zukunft keine anstehenden Vertragsabläufe oder Verlängerungsentscheidungen"
+      },
+      "bucketUsage": {
+        "title": "Nutzung der Stundenkontingente",
+        "description": "Verwendung der Stundenkontingente überwachen und Überziehungen erkennen",
+        "empty": "Keine vertragsbasierten Kontingente gefunden"
+      },
+      "profitability": {
+        "title": "Einfacher Rentabilitätsbericht",
+        "description": "Einfache Gewinnmargen sowie Umsatz- vs.-Kosten-Analyse nach Vertrag",
+        "empty": "Keine Rentabilitätsdaten verfügbar"
+      }
+    },
+    "table": {
+      "contract": "Vertrag",
+      "client": "Kunde",
+      "monthlyRecurring": "Monatlich wiederkehrend",
+      "totalBilledYtd": "Insgesamt abgerechnet (YTD)",
+      "status": "Status",
+      "endDate": "Enddatum",
+      "daysUntilExpiration": "Tage bis zum Ablauf",
+      "monthlyValue": "Monatswert",
+      "autoRenew": "Automatische Verlängerung",
+      "totalHours": "Gesamtstunden",
+      "usedHours": "Verwendete Stunden",
+      "remaining": "Verbleibend",
+      "utilization": "Auslastung",
+      "overage": "Überziehung",
+      "revenueYtd": "Umsatz (YTD)",
+      "costYtd": "Kosten (YTD)",
+      "profit": "Gewinn",
+      "margin": "Marge"
+    },
+    "statusValues": {
+      "active": "Aktiv",
+      "upcoming": "Bevorstehend",
+      "yes": "Ja",
+      "no": "Nein"
+    }
+  },
+  "contractPerformance": {
+    "title": "Kennzahlen zur Vertragsleistung",
+    "errors": {
+      "loadData": "Vertragsdaten konnten nicht geladen werden"
+    },
+    "metrics": {
+      "totalClients": "Gesamtkunden",
+      "activeClients": "Aktive Kunden",
+      "totalPlans": "Gesamtpläne",
+      "averagePlansPerClient": "Durchschn. Pläne pro Kunde",
+      "totalRevenue": "Gesamtumsatz",
+      "averageRevenuePerClient": "Durchschn. Umsatz pro Kunde"
+    },
+    "empty": {
+      "selectContract": "Wählen Sie einen Vertrag, um Leistungskennzahlen anzuzeigen",
+      "noContracts": "Keine Verträge verfügbar"
+    },
+    "comparison": {
+      "title": "Vertragsvergleich",
+      "table": {
+        "contract": "Vertrag",
+        "clients": "Kunden",
+        "plans": "Pläne",
+        "revenue": "Umsatz"
+      }
+    }
+  },
+  "contractUsage": {
+    "title": "Vertragsnutzungsbericht",
+    "errors": {
+      "loadInitialData": "Initiale Daten konnten nicht geladen werden",
+      "loadUsageData": "Vertragsnutzungsdaten konnten nicht geladen werden"
+    },
+    "empty": {
+      "noClientsUsingContract": "Kein Kunde nutzt diesen Vertrag",
+      "selectContract": "Wählen Sie einen Vertrag, um Nutzungsdaten anzuzeigen"
+    },
+    "table": {
+      "client": "Kunde",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "contractLines": "Vertragspositionen",
+      "totalBilled": "Insgesamt abgerechnet",
+      "status": "Status"
+    },
+    "statusValues": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "ongoing": "Laufend",
+      "unknownClient": "Unbekannter Kunde"
+    },
+    "summary": {
+      "title": "Zusammenfassung",
+      "totalClients": "Gesamtkunden",
+      "activeAssignments": "Aktive Zuordnungen",
+      "totalBilled": "Insgesamt abgerechnet"
+    }
+  }
+}

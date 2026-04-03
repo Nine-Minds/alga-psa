@@ -54,7 +54,7 @@ import TaskTicketLinks, { TaskTicketLinksRef } from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple, { PendingTaskDocument } from './TaskDocumentsSimple';
 import TaskCommentThread from './TaskCommentThread';
-import { createDocumentAssociations, deleteDocument, removeDocumentAssociations } from '@alga-psa/documents/actions/documentActions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
@@ -90,6 +90,7 @@ interface TaskFormProps {
   inDrawer?: boolean;
   projectTreeData?: any[]; // Add projectTreeData prop
   prefillData?: TaskFormPrefillData;
+  onCommentCountChange?: (taskId: string, count: number) => void;
 }
 
 export default function TaskForm({
@@ -105,8 +106,10 @@ export default function TaskForm({
   onPhaseChange,
   inDrawer = false,
   projectTreeData = [],
-  prefillData
+  prefillData,
+  onCommentCountChange
 }: TaskFormProps): React.JSX.Element {
+  const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
@@ -1221,6 +1224,59 @@ export default function TaskForm({
     }
   };
 
+  // Action buttons used in both dialog footer and drawer inline
+  const renderActionButtons = (outsideForm: boolean) => (
+    <div className="flex justify-between">
+      <div className="flex gap-2">
+        {!inDrawer && (
+          <Button
+            id='cancel-button'
+            type="button"
+            variant="ghost"
+            onClick={handleCancelClick}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+        )}
+        {mode === 'edit' && !inDrawer && (
+          <Button
+            id='delete-button'
+            type="button"
+            variant="destructive"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={isSubmitting}
+          >
+            Delete
+          </Button>
+        )}
+      </div>
+      <div className="flex gap-2">
+        {mode === 'edit' && (
+          <Button
+            id='add-time-entry-button'
+            type="button"
+            variant="soft"
+            onClick={handleAddTimeEntry}
+            disabled={isSubmitting || !task?.task_id}
+          >
+            <Clock className="h-4 w-4 mr-2" />
+            Add Time Entry
+          </Button>
+        )}
+        <Button
+          id='save-button'
+          type={outsideForm ? "button" : "submit"}
+          disabled={isSubmitting}
+          className={!taskName.trim() ? 'opacity-50' : ''}
+          {...(outsideForm ? { onClick: () => (document.getElementById('task-form') as HTMLFormElement | null)?.requestSubmit() } : {})}
+        >
+          {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
+        </Button>
+      </div>
+    </div>
+  );
+
   const renderContent = () => (
     <div className="h-full">
       {mode === 'create' && (
@@ -1231,7 +1287,7 @@ export default function TaskForm({
           users={users}
         />
       )}
-      <form onSubmit={handleSubmit} className="flex flex-col h-full" noValidate>
+      <form id="task-form" onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden" noValidate>
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>
@@ -1244,7 +1300,7 @@ export default function TaskForm({
             </AlertDescription>
           </Alert>
         )}
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 overflow-y-auto">
           {/* Full width Title with Status dropdown */}
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -1775,56 +1831,19 @@ export default function TaskForm({
               <TaskCommentThread
                 taskId={task.task_id}
                 projectId={phase.project_id}
+                onCommentCountChange={onCommentCountChange}
               />
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex justify-between mt-6 pt-4 border-t">
-            <div className="flex gap-2">
-              {/* Only show Cancel button if not in drawer */}
-              {!inDrawer && (
-                <Button
-                  id='cancel-button'
-                  type="button"
-                  variant="ghost"
-                  onClick={handleCancelClick}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-              )}
-              {mode === 'edit' && !inDrawer && (
-                <Button
-                  id='delete-button'
-                  type="button"
-                  variant="destructive"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  disabled={isSubmitting}
-                >
-                  Delete
-                </Button>
-              )}
-            </div>
-            <div className="flex gap-2">
-              {mode === 'edit' && (
-                <Button
-                  id='add-time-entry-button'
-                  type="button"
-                  variant="soft"
-                  onClick={handleAddTimeEntry}
-                  disabled={isSubmitting || !task?.task_id}
-                >
-                  <Clock className="h-4 w-4 mr-2" />
-                  Add Time Entry
-                </Button>
-              )}
-              <Button id='save-button' type="submit" disabled={isSubmitting} className={!taskName.trim() ? 'opacity-50' : ''}>
-                {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
-              </Button>
-            </div>
-          </div>
         </div>
+
+        {/* Action Buttons - only rendered inside form for drawer mode */}
+        {inDrawer && (
+          <div className="pt-4 pb-2 border-t bg-white dark:bg-[rgb(var(--color-bg-1))] flex-shrink-0">
+            {renderActionButtons(false)}
+          </div>
+        )}
       </form>
     </div>
   );
@@ -1840,6 +1859,7 @@ export default function TaskForm({
           className="max-w-3xl"
           title={mode === 'create' ? 'Add New Task' : 'Edit Task'}
           disableFocusTrap
+          footer={renderActionButtons(true)}
         >
           <DialogContent>
             {renderContent()}

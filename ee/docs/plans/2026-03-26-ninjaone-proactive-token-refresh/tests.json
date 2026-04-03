@@ -1,0 +1,80 @@
+[
+  {
+    "id": "T001",
+    "description": "Workflow scheduling: connecting a NinjaOne integration schedules exactly one delayed proactive refresh for that integration before token expiry",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F003", "F010"]
+  },
+  {
+    "id": "T002",
+    "description": "Workflow execution: proactive refresh reloads the latest stored NinjaOne credentials at run time rather than using stale workflow input",
+    "implemented": true,
+    "featureIds": ["F006", "F007"]
+  },
+  {
+    "id": "T003",
+    "description": "Refresh success: proactive refresh persists rotated access token, rotated refresh token, and new expiry timestamp back to tenant secret storage",
+    "implemented": true,
+    "featureIds": ["F007", "F008"]
+  },
+  {
+    "id": "T004",
+    "description": "Rescheduling: successful proactive refresh schedules the next future refresh and leaves only one active future execution for the integration",
+    "implemented": true,
+    "featureIds": ["F004", "F010"]
+  },
+  {
+    "id": "T005",
+    "description": "Lazy fallback integration: a successful on-demand NinjaOne client refresh updates the proactive schedule target for the same integration",
+    "implemented": true,
+    "featureIds": ["F005", "F013"]
+  },
+  {
+    "id": "T006",
+    "description": "Terminal failure handling: NinjaOne refresh response with invalid token marks the integration reconnect-required and does not schedule a further proactive refresh",
+    "implemented": true,
+    "featureIds": ["F011", "F012"]
+  },
+  {
+    "id": "T007",
+    "description": "Guard path: integrations with missing or unreadable NinjaOne credentials are recorded as unschedulable without entering an endless retry or reschedule loop",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T008",
+    "description": "Disconnect flow: disconnecting NinjaOne prevents any previously scheduled proactive refresh from mutating credentials or recreating future refresh executions",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T009",
+    "description": "Reconnect flow: reconnecting NinjaOne replaces prior reconnect-required lifecycle state and creates a fresh proactive refresh schedule",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T010",
+    "description": "DB-backed integration happy path: integration lifecycle metadata in rmm_integrations is updated after a successful proactive refresh and remains free of raw token material",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T011",
+    "description": "DB-backed integration guard path: a terminal proactive refresh failure persists reconnect-required lifecycle state in rmm_integrations for the affected integration",
+    "implemented": true,
+    "featureIds": ["F009", "F011"]
+  },
+  {
+    "id": "T012",
+    "description": "Backfill rollout: existing active NinjaOne integrations with valid stored expiry are seeded into proactive scheduling without requiring reconnect",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T013",
+    "description": "Logs/events: proactive refresh start, success, and reconnect-required failure emit structured records with tenant, integration, expiry, and provider error context",
+    "implemented": true,
+    "featureIds": ["F018", "F019"]
+  }
+]

@@ -6,6 +6,7 @@ import { ChevronLeft, ExternalLink, Search } from 'lucide-react';
 import { getAppVersion } from '@alga-psa/core';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { DynamicNavigationSlot } from '@alga-psa/ui/components/extensions/DynamicNavigationSlot';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   menuItems as defaultMenuItems,
   bottomMenuItems as defaultBottomMenuItems,
@@ -48,11 +49,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   onMenuItemClick
 }): React.JSX.Element => {
   const appVersion = getAppVersion();
+  const { t } = useTranslation('msp/core');
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
+  const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
 
   // Track mode changes for transition animation
   const prevModeRef = useRef<NavMode>(mode);
@@ -133,6 +136,18 @@ const Sidebar: React.FC<SidebarProps> = ({
       router.push('/msp/dashboard');
     }
   };
+
+  const translateMenuItem = (item: MenuItem): MenuItem => ({
+    ...item,
+    name: item.translationKey ? t(item.translationKey, { defaultValue: item.name }) : item.name,
+    subItems: item.subItems?.map(translateMenuItem),
+  });
+
+  const translateSection = (section: NavigationSection): NavigationSection => ({
+    ...section,
+    title: section.translationKey ? t(section.translationKey, { defaultValue: section.title }) : section.title,
+    items: section.items.map(translateMenuItem),
+  });
 
   const renderMenuItem = (item: MenuItem) => {
     if (sidebarOpen) {
@@ -215,16 +230,31 @@ const Sidebar: React.FC<SidebarProps> = ({
     ? settingsNavigationSections
     : settingsNavigationSections.map((section) => ({
         ...section,
-        items: section.items.filter((item) => item.name !== 'Language')
+        items: section.items.filter((item) => item.translationKey !== 'settings.tabs.language')
       })).filter((section) => section.items.length > 0);
 
-  const sectionsToRender: NavigationSection[] = isSettingsMode
+  const billingSections: NavigationSection[] = isQuotingEnabled
+    ? billingNavigationSections
+    : billingNavigationSections.map((section) => ({
+        ...section,
+        items: section.items.filter((item) =>
+          item.translationKey !== 'nav.billing.quotes' &&
+          item.translationKey !== 'nav.billing.quoteBusinessTemplates' &&
+          item.translationKey !== 'nav.billing.quoteLayouts'
+        )
+      })).filter((section) => section.items.length > 0);
+
+  const rawSectionsToRender: NavigationSection[] = isSettingsMode
     ? settingsSections
     : isBillingMode
-      ? billingNavigationSections
+      ? billingSections
       : isExtensionsMode
         ? extensionsNavigationSections
         : (menuSections ?? defaultNavigationSections);
+
+  const sectionsToRender = rawSectionsToRender.map(translateSection);
+  const translatedBottomMenuItems = bottomMenuItems.map(translateMenuItem);
+  const backToMainLabel = t('sidebar.backToMain', { defaultValue: 'Back to Main' });
 
   // Determine automation ID based on mode
   const sidebarAutomationId = isSettingsMode
@@ -246,13 +276,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       <a
         href="/msp/dashboard"
         className="p-4 flex items-center space-x-2 hover:bg-white/10 cursor-pointer"
-        aria-label="Go to dashboard"
+        aria-label={t('sidebar.goToDashboard', { defaultValue: 'Go to dashboard' })}
         id="logo-home-link"
       >
         <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
           <Image
             src="/images/avatar-purple-background.png"
-            alt="AlgaPSA Logo"
+            alt={t('sidebar.logoAlt', { defaultValue: 'AlgaPSA Logo' })}
             width={200}
             height={200}
             className="w-full h-full object-cover"
@@ -279,7 +309,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               className="w-full px-3 py-2 flex items-center gap-2 text-base text-purple-400 hover:text-purple-300 hover:bg-white/10 rounded-md transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
-              <span>Back to Main</span>
+              <span>{backToMainLabel}</span>
             </button>
           ) : (
             <Tooltip.Provider delayDuration={300}>
@@ -299,7 +329,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     side="right"
                     sideOffset={5}
                   >
-                    Back to Main
+                    {backToMainLabel}
                     <Tooltip.Arrow style={{ fill: 'var(--color-submenu-bg)' }} />
                   </Tooltip.Content>
                 </Tooltip.Portal>
@@ -378,7 +408,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <ul className="space-y-1">
-            {bottomMenuItems.map((item): React.JSX.Element => (
+            {translatedBottomMenuItems.map((item): React.JSX.Element => (
               <li key={item.name}>
                 <SidebarMenuItem
                   id={`bottom-menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
@@ -436,8 +466,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       <CollapseToggleButton
         id="sidebar-toggle-button"
         isCollapsed={!sidebarOpen}
-        collapsedLabel="Expand sidebar"
-        expandedLabel="Collapse sidebar"
+        collapsedLabel={t('sidebar.expandSidebar', { defaultValue: 'Expand sidebar' })}
+        expandedLabel={t('sidebar.collapseSidebar', { defaultValue: 'Collapse sidebar' })}
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className="absolute -right-3 top-12 z-10"
       />

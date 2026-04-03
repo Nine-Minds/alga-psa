@@ -239,6 +239,11 @@ export class CategoryService extends BaseService {
         throw new Error('Cannot delete category that is in use by service items');
       }
 
+      // Clear category_id from service_request_definitions (replaces ON DELETE SET NULL)
+      await trx('service_request_definitions')
+        .where({ tenant: context.tenant, category_id: id })
+        .update({ category_id: null, category_name_snapshot: null });
+
       const deleted = await trx('service_categories')
         .where('category_id', id)
         .where('tenant', context.tenant)

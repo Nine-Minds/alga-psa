@@ -171,6 +171,39 @@ describe('WorkflowActionInputSection', () => {
     expect(screen.getByTestId('mapping-panel-app-step')).toHaveTextContent('{"channel":"ops-alerts"}');
   });
 
+  it('T005/T006/T007: AI steps author the prompt through the normal action-input mapping flow', () => {
+    render(
+      <WorkflowActionInputSection
+        stepId="ai-step"
+        inputMapping={{ prompt: { $expr: 'vars.ticketResult.ticket_id' } }}
+        onInputMappingChange={vi.fn()}
+        targetFields={[
+          { name: 'prompt', type: 'string', required: true },
+        ]}
+        dataContext={{
+          payload: [],
+          payloadSchema: undefined,
+          steps: [],
+          globals: {
+            env: [],
+            secrets: [],
+            meta: [],
+            error: [],
+          },
+        }}
+        fieldOptions={[{ value: 'vars.ticketResult.ticket_id', label: 'vars.ticketResult.ticket_id' }]}
+        mappedInputFieldCount={1}
+        requiredActionInputFields={[{ name: 'prompt', type: 'string', required: true }]}
+        unmappedRequiredInputFieldCount={0}
+      />
+    );
+
+    expect(screen.getByText('Action inputs')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-panel-ai-step')).toHaveTextContent(
+      '{"prompt":{"$expr":"vars.ticketResult.ticket_id"}}'
+    );
+  });
+
   it('T295/T296/T320: keeps inline field state visible for read-only grouped steps while disabling edits', () => {
     render(
       <WorkflowActionInputSection

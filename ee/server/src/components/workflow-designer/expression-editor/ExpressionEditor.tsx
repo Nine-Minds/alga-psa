@@ -20,7 +20,7 @@ import { registerCompletionProvider, type ExpressionContext, type JsonSchema } f
 import { registerHoverProvider } from './hoverProvider';
 import { registerSignatureHelpProvider } from './signatureHelpProvider';
 import { createDiagnosticsProvider, validateExpression } from './diagnosticsProvider';
-import { insertTextIntoMonacoEditor } from '@shared/workflow/expression-authoring';
+import { insertTextIntoMonacoEditor } from '@alga-psa/workflows/expression-authoring';
 import { normalizeInsertedText } from './insertionText';
 
 /**
@@ -494,8 +494,8 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
     const wrapperClasses = useMemo(() => {
       const base = 'rounded-md border transition-colors overflow-hidden';
       const focusRing = isFocused ? 'ring-2 ring-primary-500 ring-offset-1' : '';
-      const errorBorder = hasError ? 'border-destructive' : 'border-gray-300 dark:border-[rgb(var(--color-border-200))]';
-      const disabledStyle = disabled ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800';
+      const errorBorder = hasError ? 'border-destructive' : 'border-[rgb(var(--color-border-300))]';
+      const disabledStyle = disabled ? 'opacity-50 cursor-not-allowed bg-[rgb(var(--color-border-50))]' : 'bg-[rgb(var(--color-card))]';
       return `${base} ${focusRing} ${errorBorder} ${disabledStyle} ${className}`.trim();
     }, [isFocused, hasError, disabled, className]);
 

@@ -1,11 +1,11 @@
-import type { InvoiceTemplateNode, InvoiceTemplateTableColumn } from '@alga-psa/types';
+import type { TemplateNode, TemplateTableColumn } from '@alga-psa/types';
 import { describe, expect, it } from 'vitest';
-import { STANDARD_INVOICE_TEMPLATE_ASTS, getStandardInvoiceTemplateAstByCode } from '../../../lib/invoice-template-ast/standardTemplates';
+import { STANDARD_INVOICE_TEMPLATE_ASTS, getStandardTemplateAstByCode } from '../../../lib/invoice-template-ast/standardTemplates';
 import { exportImportExportAst, roundTripAst } from './workspaceAst.roundtrip.helpers';
 
 const hasOwn = (value: object, key: string): boolean => Object.prototype.hasOwnProperty.call(value, key);
 
-const assertColumnSemantics = (source: InvoiceTemplateTableColumn, roundTripped: InvoiceTemplateTableColumn) => {
+const assertColumnSemantics = (source: TemplateTableColumn, roundTripped: TemplateTableColumn) => {
   expect(roundTripped.id).toBe(source.id);
   expect(roundTripped.header).toBe(source.header);
   expect(roundTripped.value).toEqual(source.value);
@@ -20,7 +20,7 @@ const assertColumnSemantics = (source: InvoiceTemplateTableColumn, roundTripped:
   }
 };
 
-const assertNodeSemantics = (source: InvoiceTemplateNode, roundTripped: InvoiceTemplateNode) => {
+const assertNodeSemantics = (source: TemplateNode, roundTripped: TemplateNode) => {
   expect(roundTripped.id).toBe(source.id);
   expect(roundTripped.type).toBe(source.type);
 
@@ -117,7 +117,7 @@ describe('workspaceAst standard template roundtrip coverage', () => {
   });
 
   it.each(templateCodes)('round-trips semantic node fidelity for %s', (templateCode) => {
-    const source = getStandardInvoiceTemplateAstByCode(templateCode);
+    const source = getStandardTemplateAstByCode(templateCode);
     expect(source).toBeTruthy();
     if (!source) return;
 
@@ -146,7 +146,7 @@ describe('workspaceAst standard template roundtrip coverage', () => {
   });
 
   it.each(templateCodes)('is deterministic after repeated export/import cycles for %s', (templateCode) => {
-    const source = getStandardInvoiceTemplateAstByCode(templateCode);
+    const source = getStandardTemplateAstByCode(templateCode);
     expect(source).toBeTruthy();
     if (!source) return;
 

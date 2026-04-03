@@ -10,9 +10,9 @@ import { fetchProjectActivities } from '@alga-psa/workflows/actions';
 import { ProjectSectionFiltersDialog } from './filters/ProjectSectionFiltersDialog';
 import { Filter, XCircle } from 'lucide-react';
 import type { IProject, IProjectPhase } from '@alga-psa/types';
-import { getProjects } from '@alga-psa/projects/actions/projectActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { useActivityDrawer } from './ActivityDrawerProvider';
+import { useActivityCrossFeature } from '@alga-psa/ui/context';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ProjectsSectionProps {
@@ -24,6 +24,7 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
   const [activities, setActivities] = useState<ProjectTaskActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const { openActivityDrawer } = useActivityDrawer();
+  const ctx = useActivityCrossFeature();
   const [error, setError] = useState<string | null>(null);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [projectTaskFilters, setProjectTaskFilters] = useState<Partial<ActivityFilters>>({ isClosed: false });
@@ -77,7 +78,7 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
       try {
         setFilterDataLoading(true);
         const [projectsData, priorityData] = await Promise.all([
-          getProjects(),
+          ctx.getProjects(),
           getAllPriorities('project_task')
         ]);
         if (isActionPermissionError(projectsData)) {
@@ -94,7 +95,7 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
       }
     }
     loadFilterData();
-  }, []);
+  }, [ctx]);
 
   // Load activities initially and when filters change
   useEffect(() => {

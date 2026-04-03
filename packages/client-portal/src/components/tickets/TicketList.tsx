@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket lists intentionally compose ticket feature components/actions for customer support navigation. */
+
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -14,6 +16,7 @@ import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTicketCategories } from '@alga-psa/tickets/actions';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ITicketListItem, ITicketCategory, TicketResponseState } from '@alga-psa/types';
+import type { IStatus } from '@alga-psa/types';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import { CategoryPicker } from '@alga-psa/tickets/components';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
@@ -30,6 +33,13 @@ import { ClientAddTicket } from './ClientAddTicket';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import {
+  buildTicketStatusFilterOptions,
+  TICKET_STATUS_FILTER_ALL,
+  TICKET_STATUS_FILTER_CLOSED,
+  TICKET_STATUS_FILTER_OPEN,
+  type TicketStatusFilterOption,
+} from '@alga-psa/tickets/lib';
 
 const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -54,10 +64,11 @@ export function TicketList() {
   const [pageSize, setPageSize] = useState(10);
   const [sortField, setSortField] = useState<string>('entered_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [statusOptions, setStatusOptions] = useState<SelectOption[]>([]);
+  const [rawStatusOptions, setRawStatusOptions] = useState<TicketStatusFilterOption[]>([]);
+  const [boardStatusOptions, setBoardStatusOptions] = useState<Record<string, SelectOption[]>>({});
   const [priorityOptions, setPriorityOptions] = useState<{ value: string; label: string }[]>([]);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>(TICKET_STATUS_FILTER_ALL);
   const [selectedResponseStatus, setSelectedResponseStatus] = useState<'all' | 'awaiting_client' | 'awaiting_internal' | 'none'>('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -150,21 +161,21 @@ export function TicketList() {
     const loadOptions = async () => {
       try {
         const [statuses, priorities, categories] = await Promise.all([
-          getTicketStatuses(),
+          getTicketStatuses() as Promise<IStatus[]>,
           getAllPriorities('ticket'),
           getTicketCategories()
         ]);
 
-        setStatusOptions([
-          { value: 'all', label: t('filters.allStatuses') },
-          { value: 'open', label: t('filters.allOpen') },
-          { value: 'closed', label: t('filters.allClosed') },
-          ...statuses.map((status: { status_id: string; name: string | null; is_closed: boolean }): SelectOption => ({
+        setRawStatusOptions(
+          statuses.map((status: IStatus): TicketStatusFilterOption => ({
             value: status.status_id!,
             label: status.name ?? "",
-            className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined
+            className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined,
+            statusName: status.name ?? '',
+            boardId: status.board_id ?? null,
+            isClosed: Boolean(status.is_closed),
           }))
-        ]);
+        );
 
         setPriorityOptions([
           { value: 'all', label: t('filters.allPriorities') },
@@ -183,6 +194,73 @@ export function TicketList() {
 
     loadOptions();
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadBoardStatuses = async () => {
+      const uniqueBoardIds = Array.from(
+        new Set(
+          tickets
+            .map((ticket) => ticket.board_id)
+            .filter((boardId): boardId is string => Boolean(boardId))
+        )
+      );
+
+      if (uniqueBoardIds.length === 0) {
+        setBoardStatusOptions({});
+        return;
+      }
+
+      try {
+        const boardStatusEntries = await Promise.all(
+          uniqueBoardIds.map(async (boardId) => {
+            const statuses: IStatus[] = await getTicketStatuses(boardId);
+            return [
+              boardId,
+              statuses.map((status: IStatus): SelectOption => ({
+                value: status.status_id!,
+                label: status.name ?? '',
+                className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined,
+              })),
+            ] as const;
+          })
+        );
+
+        if (!active) {
+          return;
+        }
+
+        setBoardStatusOptions(Object.fromEntries(boardStatusEntries));
+      } catch (error) {
+        console.error('Failed to load board-scoped client portal statuses:', error);
+        if (active) {
+          setBoardStatusOptions({});
+        }
+      }
+    };
+
+    loadBoardStatuses();
+
+    return () => {
+      active = false;
+    };
+  }, [tickets]);
+
+  const statusOptions = useMemo<SelectOption[]>(() => {
+    const groupedOptions = buildTicketStatusFilterOptions(rawStatusOptions, undefined, selectedStatus)
+      .filter((option) =>
+        option.value !== TICKET_STATUS_FILTER_ALL &&
+        option.value !== TICKET_STATUS_FILTER_OPEN
+      );
+
+    return [
+      { value: TICKET_STATUS_FILTER_ALL, label: t('filters.allStatuses') },
+      { value: TICKET_STATUS_FILTER_OPEN, label: t('filters.allOpen') },
+      { value: TICKET_STATUS_FILTER_CLOSED, label: t('filters.allClosed') },
+      ...groupedOptions,
+    ];
+  }, [rawStatusOptions, selectedStatus, t]);
 
   const loadTickets = useCallback(async () => {
     setLoading(true);
@@ -294,7 +372,7 @@ export function TicketList() {
     if (!ticketToUpdateStatus) return;
 
     const { ticketId, newStatus } = ticketToUpdateStatus;
-    const newStatusLabel = statusOptions.find(s => s.value === newStatus)?.label || 'Unknown Status';
+    const newStatusLabel = rawStatusOptions.find(s => s.value === newStatus)?.label || 'Unknown Status';
 
     try {
       await updateTicketStatus(ticketId, newStatus);
@@ -308,7 +386,7 @@ export function TicketList() {
     } finally {
       setTicketToUpdateStatus(null);
     }
-  }, [ticketToUpdateStatus, selectedStatus, loadTickets, statusOptions]); 
+  }, [ticketToUpdateStatus, loadTickets, rawStatusOptions]);
 
   const handleCategorySelect = useCallback((categoryIds: string[], excludedIds: string[]) => {
     setSelectedCategories(categoryIds);
@@ -323,7 +401,7 @@ export function TicketList() {
   };
 
   const isFiltered = useMemo(() => {
-    return selectedStatus !== 'all' ||
+    return selectedStatus !== TICKET_STATUS_FILTER_ALL ||
       selectedResponseStatus !== 'all' ||
       selectedPriority !== 'all' ||
       selectedCategories.length > 0 ||
@@ -332,7 +410,7 @@ export function TicketList() {
   }, [selectedStatus, selectedResponseStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery]);
 
   const handleResetFilters = useCallback(() => {
-    setSelectedStatus('all');
+    setSelectedStatus(TICKET_STATUS_FILTER_ALL);
     setSelectedResponseStatus('all');
     setSelectedPriority('all');
     setSelectedCategories([]);
@@ -395,8 +473,7 @@ export function TicketList() {
               <DropdownMenu.Content
                 className="w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
               >
-                {statusOptions
-                  .filter(option => !['all', 'open', 'closed'].includes(option.value))
+                {(record.board_id ? (boardStatusOptions[record.board_id] ?? []) : [])
                   .map((status) => (
                     <DropdownMenu.Item
                       key={status.value}
@@ -710,7 +787,7 @@ export function TicketList() {
         onClose={() => setTicketToUpdateStatus(null)}
         onConfirm={handleStatusChange}
         title="Update Ticket Status"
-        message={`Are you sure you want to change the status from "${ticketToUpdateStatus?.currentStatus}" to "${statusOptions.find(s => s.value === ticketToUpdateStatus?.newStatus)?.label}"?`}
+        message={`Are you sure you want to change the status from "${ticketToUpdateStatus?.currentStatus}" to "${rawStatusOptions.find(s => s.value === ticketToUpdateStatus?.newStatus)?.label}"?`}
         confirmLabel="Update"
         cancelLabel="Cancel"
       />

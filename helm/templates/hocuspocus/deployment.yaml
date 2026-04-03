@@ -147,6 +147,14 @@ spec:
             value: "{{ .Values.config.db.password }}"
             {{- end }}
           {{- end }}
+          # ----------- AI Document Assist ----------------
+          - name: AI_DOCUMENT_API_URL
+            value: "https://{{ .Values.host }}/api/v1/ai/document-assist"
+          - name: AI_DOCUMENT_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: AI_DOCUMENT_API_KEY
           ports:
             - name: http
               containerPort: {{ .Values.hocuspocus.service.port }}

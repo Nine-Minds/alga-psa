@@ -8,7 +8,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect'
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect'
 import { Switch } from '@alga-psa/ui/components/Switch'
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert'
-import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '@alga-psa/billing/actions'
+import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices, getDefaultBillingSettings } from '@alga-psa/billing/actions'
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core'
 // Import getTaxRates and ITaxRate instead
 import { getTaxRates } from '@alga-psa/billing/actions'; // Removed getActiveTaxRegions
@@ -17,11 +17,11 @@ import { ITaxRate } from '@alga-psa/types'; // Removed ITaxRegion
 import { getServiceCategories } from '@alga-psa/billing/actions'
 import { IService, IServiceCategory, IServiceType } from '@alga-psa/types' // Added IServiceType
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider'
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling'
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling'
 
 interface QuickAddServiceProps {
   onServiceAdded: () => void;
-  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage' }[]; // Updated billing methods
+  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' }[]; // Updated billing methods
   onServiceTypesChange: () => void; // Add callback to refresh service types
   // Optional controlled mode props for quick create integration
   isOpen?: boolean;
@@ -35,7 +35,7 @@ interface QuickAddServiceProps {
 interface ServiceFormData {
   service_name: string;
   custom_service_type_id: string; // Required for form state
-  billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage' | '';
+  billing_method: 'fixed' | 'hourly' | 'usage' | '';
   default_rate: number;
   currency_code: string; // Currency of the default_rate (ISO 4217 code)
   unit_of_measure: string;
@@ -62,7 +62,7 @@ const LICENSE_TERM_OPTIONS = [
 const BILLING_METHOD_OPTIONS = [
   { value: 'fixed', label: 'Fixed Fee' },
   { value: 'hourly', label: 'Hourly' },
-  { value: 'per_unit', label: 'Per Unit' },
+  { value: 'usage', label: 'Usage' },
   { value: 'usage', label: 'Usage Based' }
 ];
 
@@ -70,13 +70,25 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
   // Support both controlled (isOpen/onClose) and uncontrolled (internal state) modes
   const isControlled = isOpen !== undefined;
   const [internalOpen, setInternalOpen] = useState(false)
+  const [defaultCurrency, setDefaultCurrency] = useState('USD');
+
+  useEffect(() => {
+    getDefaultBillingSettings()
+      .then((settings) => {
+        const currency = settings.defaultCurrencyCode || 'USD';
+        setDefaultCurrency(currency);
+        setPrices([{ currency_code: currency, rate: 0 }]);
+        setServiceData((prev) => ({ ...prev, currency_code: currency }));
+      })
+      .catch(() => {});
+  }, []);
 
   // In controlled mode, use external state; in uncontrolled mode, use internal state
   const dialogOpen = isControlled ? isOpen : internalOpen;
 
   // Handler for closing the dialog - resets form state and calls appropriate close handler
   const handleDialogClose = () => {
-    setPrices([{ currency_code: 'USD', rate: 0 }]);
+    setPrices([{ currency_code: defaultCurrency, rate: 0 }]);
     setPriceInputs(['']);
     setHasAttemptedSubmit(false);
     setValidationErrors([]);
@@ -99,7 +111,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
   const tenant = useTenant()
   // State for multi-currency pricing (rate stored in cents)
   const [prices, setPrices] = useState<Array<{ currency_code: string; rate: number }>>([
-    { currency_code: 'USD', rate: 0 }
+    { currency_code: defaultCurrency, rate: 0 }
   ])
   // State for price input display values (allows temporary invalid states during editing)
   const [priceInputs, setPriceInputs] = useState<string[]>([''])
@@ -110,7 +122,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
     custom_service_type_id: '',
     billing_method: '',
     default_rate: 0,
-    currency_code: 'USD', // Default to USD
+    currency_code: defaultCurrency,
     unit_of_measure: '',
     // is_taxable and region_code removed
     tax_rate_id: null, // Added
@@ -258,6 +270,10 @@ if (isActionPermissionError(createdService)) {
   handleError(createdService.permissionError);
   return;
 }
+if (isActionMessageError(createdService)) {
+  setError(getErrorMessage(createdService));
+  return;
+}
 
 // Set all prices for the service (multi-currency support)
 if (createdService?.service_id) {
@@ -277,7 +293,7 @@ if (createdService?.service_id) {
         custom_service_type_id: '',
         billing_method: '',
         default_rate: 0,
-        currency_code: 'USD', // Reset to default USD
+        currency_code: defaultCurrency,
         unit_of_measure: '',
         description: '',
         // is_taxable and region_code removed
@@ -289,7 +305,7 @@ if (createdService?.service_id) {
         seat_limit: 0,
         license_term: 'monthly'
       })
-      setPrices([{ currency_code: 'USD', rate: 0 }])
+      setPrices([{ currency_code: defaultCurrency, rate: 0 }])
       setPriceInputs([''])
       setError(null)
       setHasAttemptedSubmit(false)
@@ -356,22 +372,17 @@ if (createdService?.service_id) {
                 label="Service Type *"
                 value={serviceData.custom_service_type_id}
                 onChange={(value) => {
-                  // Find the selected service type to get its billing method
-                  const selectedType = allServiceTypes.find(t => t.id === value);
-
-                  // Update service data with the selected type ID and its billing method
+                  // Keep service-type taxonomy and billing-mode selection independent.
                   setServiceData({
                     ...serviceData,
                     custom_service_type_id: value,
-                    // Update billing_method based on the selected service type
-                    billing_method: selectedType?.billing_method || serviceData.billing_method,
                   });
                 }}
                 serviceTypes={allServiceTypes}
                 onCreateType={async (name) => {
                   await createServiceTypeInline(
                     name,
-                    (serviceData.billing_method || 'fixed') as 'fixed' | 'hourly' | 'per_unit' | 'usage'
+                    (serviceData.billing_method || 'fixed') as 'fixed' | 'hourly' | 'usage'
                   );
                   onServiceTypesChange(); // Refresh the service types list
                 }}
@@ -393,7 +404,7 @@ if (createdService?.service_id) {
               <CustomSelect
                 options={BILLING_METHOD_OPTIONS}
                 value={serviceData.billing_method}
-                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'hourly' | 'per_unit' | 'usage' | '' })}
+                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'hourly' | 'usage' | '' })}
                 placeholder="Select billing method..."
                 className={`w-full ${hasAttemptedSubmit && !serviceData.billing_method ? 'ring-1 ring-red-500' : ''}`}
               />
@@ -415,7 +426,7 @@ if (createdService?.service_id) {
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                   Pricing *
                   <span className="text-xs font-normal text-muted-foreground ml-2">
-                    ({serviceData.billing_method === 'fixed' ? 'Monthly' : serviceData.billing_method === 'hourly' ? 'Per Hour' : serviceData.billing_method === 'usage' ? 'Per Unit' : 'Rate'})
+                    ({serviceData.billing_method === 'fixed' ? 'Monthly' : serviceData.billing_method === 'hourly' ? 'Per Hour' : serviceData.billing_method === 'usage' ? 'Usage' : 'Rate'})
                   </span>
                 </label>
                 <Button

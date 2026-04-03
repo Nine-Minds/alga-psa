@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION as INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 const getAllTemplatesMock = vi.fn();
 

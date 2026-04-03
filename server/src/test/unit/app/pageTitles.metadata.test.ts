@@ -261,15 +261,17 @@ describe('route title metadata coverage', () => {
   });
 
   it('T015: MSP extension re-export remains metadata-compatible', () => {
-    expect(read('server/src/app/msp/extensions/[id]/page.tsx')).toContain("export { default, metadata } from '@product/extensions/entry';");
+    expect(read('server/src/app/msp/extensions/[id]/page.tsx')).toContain("export { default, generateMetadata } from '@product/extensions/entry';");
     expect(read('packages/product-extensions/oss/entry.tsx')).toContain("title: 'Extensions - Enterprise Feature'");
-    expect(read('packages/product-extensions/ee/entry.tsx')).toContain("title: 'Extension'");
+    expect(read('packages/product-extensions/ee/entry.tsx')).toContain('export async function generateMetadata()');
+    expect(read('packages/product-extensions/ee/entry.tsx')).toContain("defaultValue: 'Extension'");
   });
 
   it('T016: Client Portal extension re-export remains metadata-compatible', () => {
-    expect(read('server/src/app/client-portal/extensions/[id]/page.tsx')).toContain("export { default, metadata } from '@product/extensions/entry';");
+    expect(read('server/src/app/client-portal/extensions/[id]/page.tsx')).toContain("export { default, generateMetadata } from '@product/extensions/entry';");
     expect(read('packages/product-extensions/oss/entry.tsx')).toContain("title: 'Extensions - Enterprise Feature'");
-    expect(read('packages/product-extensions/ee/entry.tsx')).toContain("title: 'Extension'");
+    expect(read('packages/product-extensions/ee/entry.tsx')).toContain('export async function generateMetadata()');
+    expect(read('packages/product-extensions/ee/entry.tsx')).toContain("defaultValue: 'Extension'");
   });
 
   it('T017: survey response metadata returns a string title for the root template', () => {

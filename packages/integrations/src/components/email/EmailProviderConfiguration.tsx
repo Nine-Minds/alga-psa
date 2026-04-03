@@ -23,6 +23,7 @@ import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManag
 import { Microsoft365DiagnosticsDialog } from './admin/Microsoft365DiagnosticsDialog';
 import { DrawerOutlet, DrawerProvider, useDrawer } from '@alga-psa/ui';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getEmailProviders,
   deleteEmailProvider,
@@ -50,6 +51,7 @@ function EmailProviderConfigurationContent({
   onProviderUpdated,
   onProviderDeleted
 }: EmailProviderConfigurationProps) {
+  const { t } = useTranslation('msp/email-providers');
   const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   const [providers, setProviders] = useState<EmailProvider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,16 +132,24 @@ function EmailProviderConfigurationContent({
     try {
       setError(null);
 
-      const toastId = toast.loading(`Testing connection for ${provider.providerName}...`);
+      const toastId = toast.loading(t('configuration.feedback.testingConnection', {
+        defaultValue: 'Testing connection for {{providerName}}...',
+        providerName: provider.providerName,
+      }));
       const result = await testEmailProviderConnection(provider.id);
 
       if (result.success) {
         // Update provider status
         const updatedProvider = { ...provider, status: 'connected' as const };
         handleProviderUpdated(updatedProvider);
-        toast.success(`Connected to ${provider.providerName}.`, { id: toastId });
+        toast.success(t('configuration.feedback.connectionSuccess', {
+          defaultValue: 'Connected to {{providerName}}.',
+          providerName: provider.providerName,
+        }), { id: toastId });
       } else {
-        const message = result.error || 'Connection test failed';
+        const message = result.error || t('configuration.feedback.connectionError', {
+          defaultValue: 'Connection test failed',
+        });
         setError(message);
         toast.error(message, { id: toastId });
       }
@@ -167,7 +177,9 @@ function EmailProviderConfigurationContent({
         // Refresh the providers list to show updated status
         await loadProviders();
       } else {
-        setError(result.error || 'Failed to refresh watch subscription');
+        setError(result.error || t('configuration.feedback.refreshWatchError', {
+          defaultValue: 'Failed to refresh watch subscription',
+        }));
       }
     } catch (err: any) {
       setError(err.message);
@@ -181,7 +193,9 @@ function EmailProviderConfigurationContent({
       if (result.success) {
         await loadProviders();
       } else {
-        setError(result.message || 'Renewal failed');
+        setError(result.message || t('configuration.feedback.renewalError', {
+          defaultValue: 'Renewal failed',
+        }));
       }
     } catch (err: any) {
       setError(err.message);
@@ -198,7 +212,9 @@ function EmailProviderConfigurationContent({
       });
       const result = await response.json();
       if (!response.ok || !result.authUrl) {
-        throw new Error(result.error || 'Failed to initiate IMAP OAuth');
+        throw new Error(result.error || t('configuration.feedback.initiateOauthError', {
+          defaultValue: 'Failed to initiate IMAP OAuth',
+        }));
       }
       window.open(result.authUrl, '_blank', 'width=600,height=700');
     } catch (err: any) {
@@ -209,14 +225,22 @@ function EmailProviderConfigurationContent({
   const handleResyncProvider = async (provider: EmailProvider) => {
     try {
       setError(null);
-      const toastId = toast.loading(`Resyncing ${provider.providerName}...`);
+      const toastId = toast.loading(t('configuration.feedback.resyncing', {
+        defaultValue: 'Resyncing {{providerName}}...',
+        providerName: provider.providerName,
+      }));
       const result = await resyncImapProvider(provider.id);
       if (!result.success) {
-        const message = result.error || 'Failed to resync IMAP provider';
+        const message = result.error || t('configuration.feedback.resyncError', {
+          defaultValue: 'Failed to resync IMAP provider',
+        });
         toast.error(message, { id: toastId });
         throw new Error(message);
       }
-      toast.success(`Resync started for ${provider.providerName}.`, { id: toastId });
+      toast.success(t('configuration.feedback.resyncStarted', {
+        defaultValue: 'Resync started for {{providerName}}.',
+        providerName: provider.providerName,
+      }), { id: toastId });
       await loadProviders();
     } catch (err: any) {
       setError(err.message);
@@ -237,7 +261,9 @@ function EmailProviderConfigurationContent({
 
   const openEditDrawer = (provider: EmailProvider) => {
     if (!isEnterpriseEdition && provider.providerType === 'microsoft') {
-      setError('Microsoft 365 inbound email is only available in Enterprise Edition.');
+      setError(t('configuration.feedback.enterpriseOnly', {
+        defaultValue: 'Microsoft 365 inbound email is only available in Enterprise Edition.',
+      }));
       return;
     }
 
@@ -245,8 +271,13 @@ function EmailProviderConfigurationContent({
       (
         <div className="space-y-4">
           <div>
-            <h2 className="text-xl font-semibold">Edit Email Provider</h2>
-            <p className="text-sm text-muted-foreground">Update configuration for {provider.providerName}</p>
+            <h2 className="text-xl font-semibold">{t('configuration.editDrawer.title', {
+              defaultValue: 'Edit Email Provider',
+            })}</h2>
+            <p className="text-sm text-muted-foreground">{t('configuration.editDrawer.description', {
+              defaultValue: 'Update configuration for {{providerName}}',
+              providerName: provider.providerName,
+            })}</p>
           </div>
           {provider.providerType === 'microsoft' && (
             <MicrosoftProviderForm
@@ -282,7 +313,9 @@ function EmailProviderConfigurationContent({
       <div className="flex items-center justify-center p-8">
         <LoadingIndicator 
           layout="stacked" 
-          text="Loading email providers..."
+          text={t('configuration.loading', {
+            defaultValue: 'Loading email providers...',
+          })}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -306,16 +339,31 @@ function EmailProviderConfigurationContent({
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Email Provider Configuration</h2>
+            <h2 className="text-2xl font-bold tracking-tight">{t('configuration.header.title', {
+              defaultValue: 'Email Provider Configuration',
+            })}</h2>
             <p className="text-muted-foreground">
               {isEnterpriseEdition
-                ? 'Configure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets'
-                : 'Configure Gmail or IMAP providers to receive and process inbound emails as tickets'}
+                ? t('configuration.header.description.enterprise', {
+                  defaultValue: 'Configure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets',
+                })
+                : t('configuration.header.description.standard', {
+                  defaultValue: 'Configure Gmail or IMAP providers to receive and process inbound emails as tickets',
+                })}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {isEnterpriseEdition
-                ? `Gmail: ${providerCounts.google || 0} · Microsoft: ${providerCounts.microsoft || 0} · IMAP: ${providerCounts.imap || 0}`
-                : `Gmail: ${providerCounts.google || 0} · IMAP: ${providerCounts.imap || 0}`}
+                ? t('configuration.header.counts.enterprise', {
+                  defaultValue: 'Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}',
+                  gmail: providerCounts.google || 0,
+                  microsoft: providerCounts.microsoft || 0,
+                  imap: providerCounts.imap || 0,
+                })
+                : t('configuration.header.counts.standard', {
+                  defaultValue: 'Gmail: {{gmail}} · IMAP: {{imap}}',
+                  gmail: providerCounts.google || 0,
+                  imap: providerCounts.imap || 0,
+                })}
             </p>
           </div>
           <Button
@@ -323,7 +371,9 @@ function EmailProviderConfigurationContent({
             onClick={() => setWizardOpen(true)}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Email Provider
+            {t('configuration.actions.addProvider', {
+              defaultValue: 'Add Email Provider',
+            })}
           </Button>
         </div>
 
@@ -351,36 +401,66 @@ function EmailProviderConfigurationContent({
         {/* Help Information */}
         <Card>
           <CardHeader>
-            <CardTitle>Setup Instructions</CardTitle>
+            <CardTitle>{t('configuration.setup.title', {
+              defaultValue: 'Setup Instructions',
+            })}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {isEnterpriseEdition && (
               <div>
-                <h4 className="font-medium mb-2">Microsoft 365 Setup</h4>
+                <h4 className="font-medium mb-2">{t('configuration.setup.microsoft.title', {
+                  defaultValue: 'Microsoft 365 Setup',
+                })}</h4>
                 <p className="text-sm text-muted-foreground">
-                  1. Register an application in Azure AD<br/>
-                  2. Configure API permissions for Mail.Read<br/>
-                  3. Set up the redirect URL in your app registration<br/>
-                  4. Use the Client ID and Client Secret in the form above
+                  1. {t('configuration.setup.microsoft.steps.registerApp', {
+                    defaultValue: 'Register an application in Azure AD',
+                  })}<br/>
+                  2. {t('configuration.setup.microsoft.steps.permissions', {
+                    defaultValue: 'Configure API permissions for Mail.Read',
+                  })}<br/>
+                  3. {t('configuration.setup.microsoft.steps.redirectUrl', {
+                    defaultValue: 'Set up the redirect URL in your app registration',
+                  })}<br/>
+                  4. {t('configuration.setup.microsoft.steps.credentials', {
+                    defaultValue: 'Use the Client ID and Client Secret in the form above',
+                  })}
                 </p>
               </div>
             )}
             <div>
-              <h4 className="font-medium mb-2">Gmail Setup</h4>
+              <h4 className="font-medium mb-2">{t('configuration.setup.gmail.title', {
+                defaultValue: 'Gmail Setup',
+              })}</h4>
               <p className="text-sm text-muted-foreground">
                 {process.env.NEXT_PUBLIC_EDITION === 'enterprise' ? (
                   <>
-                    1. Enter your Gmail address and provider name<br/>
-                    2. Click "Connect Gmail" to authorize access<br/>
-                    3. Configure email processing preferences<br/>
-                    4. Save to complete setup
+                    1. {t('configuration.setup.gmail.enterpriseSteps.enterAddress', {
+                      defaultValue: 'Enter your Gmail address and provider name',
+                    })}<br/>
+                    2. {t('configuration.setup.gmail.enterpriseSteps.connect', {
+                      defaultValue: 'Click "Connect Gmail" to authorize access',
+                    })}<br/>
+                    3. {t('configuration.setup.gmail.enterpriseSteps.preferences', {
+                      defaultValue: 'Configure email processing preferences',
+                    })}<br/>
+                    4. {t('configuration.setup.gmail.enterpriseSteps.save', {
+                      defaultValue: 'Save to complete setup',
+                    })}
                   </>
                 ) : (
                   <>
-                    1. Create a project in Google Cloud Console<br/>
-                    2. Enable Gmail API and create OAuth2 credentials<br/>
-                    3. Set up Pub/Sub topic for push notifications<br/>
-                    4. Configure the OAuth consent screen and add test users
+                    1. {t('configuration.setup.gmail.standardSteps.project', {
+                      defaultValue: 'Create a project in Google Cloud Console',
+                    })}<br/>
+                    2. {t('configuration.setup.gmail.standardSteps.oauth', {
+                      defaultValue: 'Enable Gmail API and create OAuth2 credentials',
+                    })}<br/>
+                    3. {t('configuration.setup.gmail.standardSteps.pubsub', {
+                      defaultValue: 'Set up Pub/Sub topic for push notifications',
+                    })}<br/>
+                    4. {t('configuration.setup.gmail.standardSteps.consent', {
+                      defaultValue: 'Configure the OAuth consent screen and add test users',
+                    })}
                   </>
                 )}
               </p>
@@ -407,7 +487,9 @@ function EmailProviderConfigurationContent({
             }`}
             onClick={() => setActiveSection('providers')}
           >
-            Providers
+            {t('configuration.nav.providers', {
+              defaultValue: 'Providers',
+            })}
           </Button>
           <Button
             id="nav-defaults"
@@ -419,7 +501,9 @@ function EmailProviderConfigurationContent({
             }`}
             onClick={() => setActiveSection('defaults')}
           >
-            Defaults
+            {t('configuration.nav.defaults', {
+              defaultValue: 'Defaults',
+            })}
           </Button>
         </nav>
       </div>

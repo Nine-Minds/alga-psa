@@ -1,8 +1,8 @@
 export interface WizardData {
-  // Client Info
+  // Tenant Info
   firstName: string;
   lastName: string;
-  companyName: string;
+  tenantName: string;
   email: string;
   newPassword?: string;
   confirmPassword?: string;
@@ -28,9 +28,11 @@ export interface WizardData {
   serviceName: string;
   serviceDescription: string;
   servicePrice: string;
+  serviceBillingMode?: 'fixed' | 'hourly' | 'usage';
   contractLineName: string;
   serviceTypeId?: string; // Selected service type
   serviceId?: string; // Track created service
+  currencyCode: string; // Default currency for pricing (e.g. 'USD')
 
   // Ticketing
   boardName: string;
@@ -88,4 +90,3 @@ export const ONBOARDING_WIZARD_STEPS = [
 ];
 
 export const ONBOARDING_WIZARD_REQUIRED_STEP_INDEXES = [0, 5]; // Client Info and Ticketing are required
-

@@ -1,0 +1,259 @@
+{
+  "common": {
+    "actions": {
+      "save": "Enregistrer les paramètres",
+      "saving": "Enregistrement...",
+      "reset": "Réinitialiser",
+      "refresh": "Actualiser",
+      "close": "Fermer",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "deleting": "Suppression…",
+      "verify": "Vérifier"
+    },
+    "states": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "loading": "Chargement..."
+    }
+  },
+  "telemetry": {
+    "loading": {
+      "title": "Paramètres de télémétrie de l'organisation",
+      "description": "Chargement..."
+    },
+    "empty": {
+      "title": "Paramètres de télémétrie de l'organisation",
+      "description": "Erreur lors du chargement des paramètres",
+      "body": "Impossible de charger les paramètres de télémétrie"
+    },
+    "page": {
+      "title": "Télémétrie et analyses de l'organisation",
+      "description": "Configurez les paramètres de télémétrie pour toute votre organisation. La télémétrie est activée par défaut pour améliorer la plateforme, mais les utilisateurs peuvent se désinscrire individuellement sauf si vous désactivez cette option."
+    },
+    "toggles": {
+      "enableTelemetry": {
+        "title": "Activer la télémétrie",
+        "description": "Autoriser la collecte de données d'utilisation anonymes pour améliorer la plateforme (activée par défaut)"
+      },
+      "allowUserOptOut": {
+        "title": "Autoriser le refus utilisateur",
+        "description": "Permettre aux utilisateurs individuels de refuser la collecte de télémétrie"
+      }
+    },
+    "alerts": {
+      "enabled": "✓ Télémétrie activée. Toutes les catégories sont activées par défaut pour les nouveaux utilisateurs, mais ils peuvent se désinscrire individuellement s'ils le souhaitent.",
+      "centralizedControl": "Contrôle centralisé : les utilisateurs ne peuvent pas se désinscrire individuellement. Assurez-vous de respecter les réglementations locales en matière de confidentialité."
+    },
+    "anonymization": {
+      "title": "Niveau d'anonymisation des données",
+      "description": "Choisissez le niveau d'anonymisation des données avant la collecte",
+      "options": {
+        "none": {
+          "title": "Aucune anonymisation",
+          "description": "Collecter les données telles quelles (non recommandé)"
+        },
+        "partial": {
+          "title": "Anonymisation partielle",
+          "description": "Supprimer les données personnelles, conserver les ID de corrélation"
+        },
+        "full": {
+          "title": "Anonymisation complète",
+          "description": "Confidentialité maximale, corrélation minimale"
+        }
+      }
+    },
+    "compliance": {
+      "title": "Notes de conformité"
+    },
+    "privacy": {
+      "collectTitle": "Ce que nous collectons",
+      "collectItems": {
+        "errors": "• Informations sur les erreurs (aucune donnée sensible)",
+        "performance": "• Mesures de performance (temps de chargement des pages, temps de réponse API)",
+        "usage": "• Modèles d'utilisation des fonctionnalités (quelles fonctionnalités sont utilisées)",
+        "system": "• Mesures système (pour l'optimisation de l'infrastructure)"
+      },
+      "excludeTitle": "Ce que nous ne collectons PAS",
+      "excludeItems": {
+        "personalInfo": "• Informations personnelles (noms, e-mails, adresses)",
+        "clientData": "• Données clients ou informations commerciales",
+        "passwords": "• Mots de passe ou jetons d'authentification",
+        "files": "• Contenu des fichiers ou documents"
+      }
+    },
+    "footer": {
+      "lastUpdated": "Dernière mise à jour : {{value}}",
+      "updatedBy": " par {{user}}"
+    },
+    "errors": {
+      "loadTenantTelemetrySettings": "Impossible de charger les paramètres de télémétrie de l'organisation",
+      "loadSettings": "Impossible de charger les paramètres",
+      "saveTelemetrySettings": "Impossible d'enregistrer les paramètres de télémétrie",
+      "saveSettings": "Impossible d'enregistrer les paramètres"
+    }
+  },
+  "email": {
+    "loading": "Chargement des paramètres de messagerie...",
+    "error": "Erreur : {{error}}",
+    "tabs": {
+      "inbound": "E-mail entrant",
+      "outbound": "E-mail sortant"
+    },
+    "descriptions": {
+      "outbound": "Configurez les paramètres SMTP ou API pour envoyer des e-mails depuis votre application",
+      "inbound": "Configurez les fournisseurs de messagerie pour recevoir et traiter les e-mails comme des tickets"
+    },
+    "providerConfig": {
+      "title": "Configuration du fournisseur de messagerie",
+      "providerLabel": "Fournisseur de messagerie",
+      "options": {
+        "smtp": "SMTP (serveur de messagerie traditionnel)",
+        "resend": "Resend (service API moderne)"
+      },
+      "placeholder": "Sélectionner un fournisseur de messagerie",
+      "descriptions": {
+        "smtp": "Configurer les paramètres d'un serveur de messagerie SMTP traditionnel",
+        "resend": "Configurer l'API Resend pour un envoi d'e-mails moderne"
+      },
+      "status": {
+        "provider": "Fournisseur {{provider}}"
+      }
+    },
+    "smtp": {
+      "host": {
+        "label": "Hôte SMTP",
+        "placeholder": "smtp.example.com"
+      },
+      "port": {
+        "label": "Port",
+        "placeholder": "587"
+      },
+      "username": {
+        "label": "Nom d'utilisateur",
+        "placeholder": "votre-email@example.com"
+      },
+      "password": {
+        "label": "Mot de passe",
+        "placeholder": "Saisir le mot de passe"
+      },
+      "fromAddress": {
+        "label": "Adresse d'expéditeur",
+        "placeholder": "noreply@example.com"
+      }
+    },
+    "resend": {
+      "apiKey": {
+        "label": "Clé API Resend",
+        "placeholder": "re_xxxxxxxxxxxxxxxxxx",
+        "helpPrefix": "Obtenez votre clé API sur"
+      },
+      "fromAddress": {
+        "label": "Adresse d'expéditeur",
+        "placeholder": "noreply@yourdomain.com",
+        "help": "Doit provenir d'un domaine vérifié. Utilisez l'onglet Domaines pour ajouter des domaines personnalisés."
+      }
+    },
+    "domains": {
+      "verified": "Vérifié",
+      "failed": "Échec",
+      "pending": "En attente",
+      "requiredDnsRecords": "Enregistrements DNS requis :"
+    },
+    "general": {
+      "title": "Paramètres généraux",
+      "trackingEnabled": "Activer le suivi des e-mails",
+      "dailyLimit": "Limite quotidienne d'e-mails"
+    },
+    "errors": {
+      "loadEmailSettings": "Impossible de charger les paramètres de messagerie",
+      "saveSettings": "Impossible d'enregistrer les paramètres",
+      "addDomain": "Impossible d'ajouter le domaine",
+      "verifyDomain": "Impossible de vérifier le domaine"
+    }
+  },
+  "microsoft365": {
+    "title": {
+      "microsoft": "Diagnostics Microsoft 365",
+      "default": "Diagnostics"
+    },
+    "description": "Exécute une vérification Graph en direct (y compris création + suppression d'abonnement) pour diagnostiquer les problèmes de boîte mail, de dossier et d'autorisations.",
+    "note": {
+      "label": "Remarque :",
+      "body": "Les diagnostics créeront un abonnement Microsoft Graph temporaire puis le supprimeront. Si la suppression échoue, vous devrez peut-être supprimer manuellement l'abonnement dans Microsoft 365."
+    },
+    "labels": {
+      "provider": "Fournisseur :",
+      "mailbox": "Boîte mail :",
+      "overall": "Global :",
+      "resource": "Ressource : {{resource}}",
+      "recommendations": "Recommandations",
+      "error": "Erreur"
+    },
+    "actions": {
+      "copySupportBundle": "Copier l'ensemble de support",
+      "copied": "Copié"
+    },
+    "states": {
+      "running": "Exécution des diagnostics...",
+      "diagnosticsFailed": "Échec des diagnostics"
+    },
+    "statuses": {
+      "pass": "Réussi",
+      "warn": "Avertissement",
+      "fail": "Échec",
+      "skip": "Ignoré"
+    }
+  },
+  "inboundDefaults": {
+    "loading": "Chargement des valeurs par défaut des tickets...",
+    "header": {
+      "title": "Valeurs par défaut des tickets entrants",
+      "description": "Configurez les valeurs par défaut pour les tickets créés à partir du traitement des e-mails"
+    },
+    "actions": {
+      "addDefaults": "Ajouter des valeurs par défaut"
+    },
+    "form": {
+      "editTitle": "Modifier les valeurs par défaut du ticket",
+      "createTitle": "Créer des valeurs par défaut du ticket",
+      "description": "Configurez les valeurs par défaut qui seront appliquées aux tickets créés à partir du traitement des e-mails"
+    },
+    "empty": {
+      "title": "Aucune valeur par défaut de ticket configurée",
+      "description": "Créez votre première configuration pour définir les valeurs par défaut des tickets générés par e-mail"
+    },
+    "badges": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "fields": {
+      "board": "Tableau :",
+      "status": "Statut :",
+      "priority": "Priorité :",
+      "enteredBy": "Saisi par :"
+    },
+    "fallbacks": {
+      "notSet": "Non défini",
+      "system": "Système"
+    },
+    "menu": {
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "deleting": "Suppression…"
+    },
+    "help": {
+      "title": "Fonctionnement",
+      "items": {
+        "providerReference": "• Chaque fournisseur de messagerie peut référencer une configuration de valeurs par défaut de ticket",
+        "requiredValues": "• Lorsqu'un e-mail crée un ticket, ces valeurs par défaut fournissent les champs obligatoires",
+        "systemCreator": "• Les tickets générés par le système afficheront \"Système\" comme créateur lorsque entered_by est nul",
+        "scenarios": "• Vous pouvez créer différentes valeurs par défaut pour différents scénarios d'e-mail (support, facturation, etc.)"
+      }
+    },
+    "errors": {
+      "load": "Impossible de charger les valeurs par défaut des tickets",
+      "delete": "Impossible de supprimer les valeurs par défaut des tickets"
+    }
+  }
+}

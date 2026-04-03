@@ -26,6 +26,8 @@ export interface QuickAddStatusProps {
   existingStatuses?: Array<{ name: string }>;
   /** Optional trigger element to open the dialog */
   trigger?: React.ReactNode;
+  /** Whether to show the color picker (default: true) */
+  showColorPicker?: boolean;
 }
 
 /**
@@ -40,6 +42,7 @@ export function QuickAddStatus({
   createStatus,
   existingStatuses = [],
   trigger,
+  showColorPicker = true,
 }: QuickAddStatusProps) {
   const [statusName, setStatusName] = useState('');
   const [statusColor, setStatusColor] = useState(SOLID_COLORS[0]);
@@ -59,10 +62,7 @@ export function QuickAddStatus({
     }
   }, [open]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  const handleSubmit = async () => {
     const trimmedName = statusName.trim();
 
     if (!trimmedName) {
@@ -111,7 +111,7 @@ export function QuickAddStatus({
       id="quick-add-status-dialog"
     >
       <DialogContent>
-        <form onSubmit={handleSubmit} id="quick-add-status-form">
+        <div id="quick-add-status-form">
           <div className="space-y-4">
             {/* Status Name */}
             <div>
@@ -125,6 +125,12 @@ export function QuickAddStatus({
                   setStatusName(e.target.value);
                   setError(null);
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
                 placeholder="e.g., In Progress, Review, Done"
                 autoFocus
                 disabled={isSubmitting}
@@ -136,6 +142,7 @@ export function QuickAddStatus({
             </div>
 
             {/* Color Picker */}
+            {showColorPicker && (
             <div>
               <Label className="block text-sm font-medium text-gray-700 mb-2">
                 Status Color
@@ -166,6 +173,7 @@ export function QuickAddStatus({
                 <span className="text-xs text-gray-500">{statusColor}</span>
               </div>
             </div>
+            )}
 
             {/* Is Closed Checkbox */}
             <div className="flex items-start gap-2">
@@ -198,13 +206,14 @@ export function QuickAddStatus({
             </Button>
             <Button
               id="quick-add-status-submit"
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               disabled={isSubmitting || !statusName.trim()}
             >
               {isSubmitting ? 'Creating...' : 'Create Status'}
             </Button>
           </DialogFooter>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

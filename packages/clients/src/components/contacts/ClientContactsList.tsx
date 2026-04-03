@@ -16,11 +16,12 @@ import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import type { IClient } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
-import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import QuickAddContact from './QuickAddContact';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientContactsListProps {
   clientId: string;
@@ -41,6 +42,8 @@ const addIdToContacts = (contacts: IContact[]): ContactWithId[] => {
 };
 
 const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clients }) => {
+  const { t } = useTranslation('msp/contacts');
+  const { getDocumentsByEntity } = useDocumentsCrossFeature();
   const [contacts, setContacts] = useState<ContactWithId[]>([]);
   const [loading, setLoading] = useState(true);
   const [documentLoading, setDocumentLoading] = useState<Record<string, boolean>>({});
@@ -72,7 +75,9 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         setContacts(addIdToContacts(fetchedContacts));
       } catch (err) {
         console.error('Error fetching client contacts:', err);
-        setError('Failed to load contacts.');
+        setError(t('clientContactsList.errors.loadFailed', {
+          defaultValue: 'Failed to load contacts.'
+        }));
       } finally {
         setLoading(false);
       }
@@ -91,7 +96,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
 
     fetchContacts();
     fetchUser();
-  }, [clientId, statusFilter]);
+  }, [clientId, statusFilter, t]);
 
   const handleContactClick = (contact: IContact) => {
     // Open quick view drawer (same behavior as dropdown quick view)
@@ -185,7 +190,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
 
   const columns: ColumnDefinition<IContact>[] = [
     {
-      title: 'Name',
+      title: t('clientContactsList.table.name', { defaultValue: 'Name' }),
       dataIndex: 'full_name',
       width: '40%',
       render: (value, record): React.ReactNode => (
@@ -215,22 +220,25 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       ),
     },
     {
-      title: 'Email',
+      title: t('clientContactsList.table.email', { defaultValue: 'Email' }),
       dataIndex: 'email',
       width: '30%',
-      render: (value, record): React.ReactNode => record.email || 'N/A',
+      render: (value, record): React.ReactNode =>
+        record.email || t('common.states.na', { defaultValue: 'N/A' }),
     },
     {
-      title: 'Phone Number',
+      title: t('clientContactsList.table.phoneNumber', {
+        defaultValue: 'Phone Number'
+      }),
       dataIndex: 'default_phone_number',
       width: '30%',
       render: (value, record): React.ReactNode =>
         record.default_phone_number
         || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number
-        || 'N/A',
+        || t('common.states.na', { defaultValue: 'N/A' }),
     },
     {
-      title: 'Actions',
+      title: t('clientContactsList.table.actions', { defaultValue: 'Actions' }),
       dataIndex: 'actions',
       width: '5%',
       render: (value, record): React.ReactNode => (
@@ -243,7 +251,9 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">
+                {t('clientContactsList.actions.openMenu', { defaultValue: 'Open menu' })}
+              </span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenu.Trigger>
@@ -256,14 +266,14 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
               onSelect={() => handleQuickView(record)}
             >
               <ExternalLink size={14} className="mr-2" />
-              Quick View
+              {t('clientContactsList.actions.quickView', { defaultValue: 'Quick View' })}
             </DropdownMenu.Item>
             <DropdownMenu.Item
               className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
               onSelect={() => handleEditContact(record)}
             >
               <Pen size={14} className="mr-2" />
-              Edit
+              {t('common.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Root>
@@ -289,9 +299,13 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
 
   if (error) {
     return (
-      <Alert variant="destructive">
+        <Alert variant="destructive">
         <AlertDescription>
-          <p className="font-semibold">Error loading contacts</p>
+          <p className="font-semibold">
+            {t('clientContactsList.errors.loadingTitle', {
+              defaultValue: 'Error loading contacts'
+            })}
+          </p>
           <p>{error}</p>
           <button
             onClick={() => {
@@ -301,13 +315,15 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
                 .then(data => setContacts(addIdToContacts(data)))
                 .catch(err => {
                   console.error('Error retrying contact fetch:', err);
-                  setError('Failed to load contacts. Please try again.');
+                  setError(t('clientContactsList.errors.retryFailed', {
+                    defaultValue: 'Failed to load contacts. Please try again.'
+                  }));
                 })
                 .finally(() => setLoading(false));
             }}
             className="mt-2 px-4 py-2 bg-destructive/20 hover:bg-destructive/30 rounded-md"
           >
-            Retry
+            {t('common.actions.retry', { defaultValue: 'Retry' })}
           </button>
         </AlertDescription>
       </Alert>
@@ -318,15 +334,32 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Show:</span>
+          <span className="text-sm text-gray-600">
+            {t('clientContactsList.filter.show', { defaultValue: 'Show:' })}
+          </span>
           <CustomSelect
             id="contact-status-filter"
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as 'active' | 'inactive' | 'all')}
             options={[
-              { value: 'active', label: 'Active Contacts' },
-              { value: 'inactive', label: 'Inactive Contacts' },
-              { value: 'all', label: 'All Contacts' }
+              {
+                value: 'active',
+                label: t('clientContactsList.filter.active', {
+                  defaultValue: 'Active Contacts'
+                })
+              },
+              {
+                value: 'inactive',
+                label: t('clientContactsList.filter.inactive', {
+                  defaultValue: 'Inactive Contacts'
+                })
+              },
+              {
+                value: 'all',
+                label: t('clientContactsList.filter.all', {
+                  defaultValue: 'All Contacts'
+                })
+              }
             ]}
           />
         </div>
@@ -334,7 +367,9 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
           id="add-new-contact-btn"
           onClick={() => setIsQuickAddContactOpen(true)}
         >
-          Add New Contact
+          {t('clientContactsList.actions.addNewContact', {
+            defaultValue: 'Add New Contact'
+          })}
         </Button>
       </div>
       <DataTable

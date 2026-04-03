@@ -59,9 +59,10 @@ RUN rm -f /app/server/src/scripts/check-extension.ts
 
 RUN npm install --include=optional
 
-# Build shared module first
-WORKDIR /app/shared
-RUN npm run build
+# Build all upstream packages (shared + pre-built) via Nx (handles dependency ordering)
+WORKDIR /app
+RUN npx nx build-deps server
+ENV USE_PREBUILT="true"
 
 # Increase Node.js memory limit for the build process
 ENV NODE_OPTIONS="--max-old-space-size=8192"

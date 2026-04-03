@@ -1,5 +1,224 @@
 export type BlockContentFormat = 'blocknote' | 'prosemirror' | 'empty' | 'unknown';
 
+// ---------------------------------------------------------------------------
+// Markdown detection & conversion helpers
+// ---------------------------------------------------------------------------
+
+const MARKDOWN_HEADING_PATTERN = /^#{1,6}\s/;
+const MARKDOWN_BLOCK_PATTERNS = [
+  /^#{1,6}\s/,       // headings
+  /^[-*+]\s+/,       // unordered list
+  /^\d+[.)]\s+/,     // ordered list
+  /^```/,            // fenced code block
+  /^>\s/,            // blockquote
+  /^(-{3,}|\*{3,}|_{3,})\s*$/, // horizontal rule
+];
+const MARKDOWN_INLINE_PATTERN = /\*\*[^*]+\*\*|\[.+?\]\(.+?\)/;
+
+/**
+ * Extracts plain text from ProseMirror paragraph nodes, joining with newlines.
+ */
+const extractParagraphTexts = (nodes: ProseMirrorNode[]): string[] =>
+  nodes
+    .filter((n) => n.type === 'paragraph')
+    .map((node) => {
+      if (!node.content) return '';
+      return node.content.map((child) => child.text || '').join('');
+    });
+
+/**
+ * Detects if a ProseMirror document consists solely of paragraph nodes whose
+ * text contains raw markdown syntax (headings, bold, links, etc.).
+ */
+export const isRawMarkdownInProsemirror = (doc: unknown): boolean => {
+  const parsed = parseBlockContent(doc);
+  if (!parsed || typeof parsed !== 'object') return false;
+
+  const maybeDoc = parsed as { type?: string; content?: ProseMirrorNode[] };
+  if (maybeDoc.type !== 'doc' || !Array.isArray(maybeDoc.content)) return false;
+
+  const nodes = maybeDoc.content;
+  if (nodes.length < 2) return false;
+
+  // All content nodes must be paragraphs — presence of structured nodes means
+  // the content is already formatted.
+  if (nodes.some((n) => n.type !== 'paragraph')) return false;
+
+  const texts = extractParagraphTexts(nodes);
+
+  // Count distinct markdown signals
+  let signals = 0;
+  for (const text of texts) {
+    for (const pattern of MARKDOWN_BLOCK_PATTERNS) {
+      if (pattern.test(text)) { signals++; break; }
+    }
+    if (MARKDOWN_INLINE_PATTERN.test(text)) signals++;
+  }
+
+  // Require at least 2 signals to avoid false positives
+  return signals >= 2;
+};
+
+/**
+ * Parses inline markdown (bold, italic, code, links) into BlockNote inline
+ * segments.
+ */
+const parseMarkdownInline = (
+  text: string,
+): BlockNoteInline[] => {
+  const segments: BlockNoteInline[] = [];
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ type: 'text', text: text.slice(lastIndex, match.index) });
+    }
+    if (match[2]) {
+      segments.push({ type: 'text', text: match[2], styles: { bold: true } });
+    } else if (match[3]) {
+      segments.push({ type: 'text', text: match[3], styles: { italic: true } });
+    } else if (match[4]) {
+      segments.push({ type: 'text', text: match[4], styles: { code: true } });
+    } else if (match[5] && match[6]) {
+      segments.push({ type: 'text', text: match[5], styles: { link: { href: match[6] } } });
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({ type: 'text', text: text.slice(lastIndex) });
+  }
+
+  return segments.length > 0 ? segments : [{ type: 'text', text }];
+};
+
+/**
+ * Lightweight markdown parser that converts a markdown string into an array of
+ * BlockNote-style blocks. Handles headings, lists, code fences, blockquotes,
+ * horizontal rules, and inline formatting.
+ */
+const markdownToBlockNoteBlocks = (markdown: string): BlockNoteBlock[] => {
+  const lines = markdown.split('\n');
+  const blocks: BlockNoteBlock[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i]!;
+
+    // Horizontal rule
+    if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+      blocks.push({ type: 'horizontalRule' });
+      i++;
+      continue;
+    }
+
+    // Blockquote
+    if (line.startsWith('> ') || line === '>') {
+      const quoteLines: string[] = [];
+      while (i < lines.length && (lines[i]!.startsWith('> ') || lines[i] === '>')) {
+        quoteLines.push(lines[i]!.replace(/^>\s?/, ''));
+        i++;
+      }
+      blocks.push({
+        type: 'blockquote',
+        content: parseMarkdownInline(quoteLines.join(' ')),
+      });
+      continue;
+    }
+
+    // Fenced code block
+    if (line.startsWith('```')) {
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i]!.startsWith('```')) {
+        codeLines.push(lines[i]!);
+        i++;
+      }
+      i++; // skip closing ```
+      blocks.push({
+        type: 'codeBlock',
+        content: codeLines.join('\n'),
+      });
+      continue;
+    }
+
+    // Headings
+    const headingMatch = line.match(/^(#{1,6})\s+(.*)/);
+    if (headingMatch) {
+      blocks.push({
+        type: 'heading',
+        props: { level: headingMatch[1]!.length },
+        content: parseMarkdownInline(headingMatch[2]!),
+      });
+      i++;
+      continue;
+    }
+
+    // Unordered list items
+    if (/^\s*[-*+]\s+/.test(line)) {
+      while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i]!)) {
+        const text = lines[i]!.replace(/^\s*[-*+]\s+/, '');
+        blocks.push({ type: 'bulletListItem', content: parseMarkdownInline(text) });
+        i++;
+      }
+      continue;
+    }
+
+    // Ordered list items
+    if (/^\s*\d+[.)]\s+/.test(line)) {
+      while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i]!)) {
+        const text = lines[i]!.replace(/^\s*\d+[.)]\s+/, '');
+        blocks.push({ type: 'numberedListItem', content: parseMarkdownInline(text) });
+        i++;
+      }
+      continue;
+    }
+
+    // Blank line
+    if (!line.trim()) {
+      i++;
+      continue;
+    }
+
+    // Regular paragraph — collect consecutive non-blank, non-special lines
+    const paraLines: string[] = [];
+    while (
+      i < lines.length &&
+      lines[i]!.trim() &&
+      !MARKDOWN_HEADING_PATTERN.test(lines[i]!) &&
+      !lines[i]!.startsWith('```') &&
+      !/^\s*[-*+]\s+/.test(lines[i]!) &&
+      !/^\s*\d+[.)]\s+/.test(lines[i]!) &&
+      !/^(-{3,}|\*{3,}|_{3,})\s*$/.test(lines[i]!) &&
+      !lines[i]!.startsWith('> ')
+    ) {
+      paraLines.push(lines[i]!);
+      i++;
+    }
+    blocks.push({
+      type: 'paragraph',
+      content: parseMarkdownInline(paraLines.join(' ')),
+    });
+  }
+
+  return blocks;
+};
+
+/**
+ * Converts a ProseMirror doc whose paragraphs contain raw markdown text into a
+ * properly structured ProseMirror document with headings, lists, bold marks,
+ * link marks, etc.
+ */
+export const convertRawMarkdownProsemirror = (doc: unknown): ProseMirrorDoc => {
+  const parsed = parseBlockContent(doc) as { content?: ProseMirrorNode[] } | null;
+  const texts = extractParagraphTexts(parsed?.content ?? []);
+  const markdownText = texts.join('\n');
+  const blocks = markdownToBlockNoteBlocks(markdownText);
+  return blockNoteJsonToProsemirrorJson(blocks);
+};
+
 export const parseBlockContent = (blockData: unknown): unknown => {
   if (typeof blockData !== 'string') {
     return blockData;
@@ -25,8 +244,14 @@ export const detectBlockContentFormat = (blockData: unknown): BlockContentFormat
     }
 
     const first = parsed[0] as Record<string, unknown> | undefined;
-    if (first && typeof first === 'object' && 'props' in first) {
-      return 'blocknote';
+    if (first && typeof first === 'object') {
+      // BlockNote blocks always have a 'type' field (paragraph, heading, etc.)
+      // and may have 'props'. ProseMirror content is always wrapped in
+      // { type: 'doc', content: [...] }, never a top-level array, so any
+      // array of typed objects is BlockNote.
+      if ('props' in first || 'type' in first) {
+        return 'blocknote';
+      }
     }
     return 'unknown';
   }
@@ -213,20 +438,20 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
     case 'bulletListItem': {
       const content = convertInlineContent(block.content);
       const listItem: ProseMirrorNode = {
-        type: 'list_item',
+        type: 'listItem',
         content: [
           content.length > 0 ? { type: 'paragraph', content } : { type: 'paragraph' },
         ],
       };
       return {
-        type: 'bullet_list',
+        type: 'bulletList',
         content: [listItem],
       };
     }
     case 'numberedListItem': {
       const content = convertInlineContent(block.content);
       const listItem: ProseMirrorNode = {
-        type: 'list_item',
+        type: 'listItem',
         content: [
           content.length > 0 ? { type: 'paragraph', content } : { type: 'paragraph' },
         ],
@@ -234,7 +459,7 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
       const orderRaw = block.props?.number;
       const order = typeof orderRaw === 'number' && orderRaw > 0 ? orderRaw : 1;
       return {
-        type: 'ordered_list',
+        type: 'orderedList',
         attrs: { order },
         content: [listItem],
       };
@@ -248,10 +473,10 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
         ...content,
       ];
       return {
-        type: 'bullet_list',
+        type: 'bulletList',
         content: [
           {
-            type: 'list_item',
+            type: 'listItem',
             content: [
               paragraphContent.length > 0
                 ? { type: 'paragraph', content: paragraphContent }
@@ -264,7 +489,7 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
     case 'codeBlock': {
       const codeText = extractInlineText(block.content);
       return {
-        type: 'code_block',
+        type: 'codeBlock',
         content: codeText ? [{ type: 'text', text: codeText }] : [],
       };
     }
@@ -277,6 +502,8 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
         ],
       };
     }
+    case 'horizontalRule':
+      return { type: 'horizontalRule' };
     case 'table': {
       const tableText = extractTextFromUnknown(block.content);
       const content = tableText ? [{ type: 'text', text: tableText }] : [];
@@ -288,7 +515,7 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
 };
 
 const isListType = (type: string): boolean =>
-  type === 'bullet_list' || type === 'ordered_list';
+  type === 'bulletList' || type === 'orderedList';
 
 const convertBlockNoteBlocks = (blocks: BlockNoteBlock[]): ProseMirrorNode[] => {
   const result: ProseMirrorNode[] = [];
@@ -311,6 +538,38 @@ const convertBlockNoteBlocks = (blocks: BlockNoteBlock[]): ProseMirrorNode[] => 
   }
 
   return result;
+};
+
+/**
+ * Normalizes legacy ProseMirror snake_case node types to TipTap camelCase.
+ * Handles content saved before the naming convention was fixed.
+ */
+const LEGACY_NODE_TYPE_MAP: Record<string, string> = {
+  bullet_list: 'bulletList',
+  ordered_list: 'orderedList',
+  list_item: 'listItem',
+  code_block: 'codeBlock',
+  hard_break: 'hardBreak',
+  horizontal_rule: 'horizontalRule',
+};
+
+const normalizeNodeTypes = (node: ProseMirrorNode): ProseMirrorNode => {
+  const normalizedType = LEGACY_NODE_TYPE_MAP[node.type] || node.type;
+  const result: ProseMirrorNode = { ...node, type: normalizedType };
+  if (result.content) {
+    result.content = result.content.map(normalizeNodeTypes);
+  }
+  return result;
+};
+
+export const normalizeProsemirrorJson = (doc: unknown): unknown => {
+  if (!doc || typeof doc !== 'object') return doc;
+  const maybeDoc = doc as { type?: string; content?: ProseMirrorNode[] };
+  if (maybeDoc.type !== 'doc' || !Array.isArray(maybeDoc.content)) return doc;
+  return {
+    ...maybeDoc,
+    content: maybeDoc.content.map(normalizeNodeTypes),
+  };
 };
 
 export const blockNoteJsonToProsemirrorJson = (blockData: unknown): ProseMirrorDoc => {

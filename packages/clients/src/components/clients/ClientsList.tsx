@@ -16,6 +16,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
  import { useRegisterChild } from '@alga-psa/ui/ui-reflection/useRegisterChild';
  import { FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
  import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';
+ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 
 interface ClientsListProps {
@@ -48,12 +49,13 @@ interface ClientCheckboxProps {
 
 const ClientCheckbox: React.FC<ClientCheckboxProps> = ({ clientId, checked, onChange }) => {
   const checkboxId = `client-checkbox-${clientId}`;
+  const { t } = useTranslation('msp/clients');
 
   // Register as a child of the table for bulk actions to work properly
   useRegisterChild<FormFieldComponent>({
     id: checkboxId,
     type: 'formField',
-    label: 'Select Client',
+    label: t('clientsList.selectClient', { defaultValue: 'Select Client' }),
     value: checked ? 'true' : 'false',
     fieldType: 'checkbox'
   });
@@ -79,13 +81,14 @@ interface ClientLinkProps {
 
 const ClientLink: React.FC<ClientLinkProps> = ({ client, onClick }) => {
   const linkId = `client-link-${client.client_id}`;
+  const { t } = useTranslation('msp/clients');
   const isDefault = (client as any).is_default;
 
    useRegisterChild<ButtonComponent>({
      id: linkId,
      type: 'button',
      label: client.client_name,
-     actions: [CommonActions.click('Click this button')]
+     actions: [CommonActions.click(t('clientsList.clickThisButton', { defaultValue: 'Click this button' }))]
    });
 
   return (
@@ -100,16 +103,16 @@ const ClientLink: React.FC<ClientLinkProps> = ({ client, onClick }) => {
         {client.client_name}
       </a>
       {isDefault && (
-        <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40" title="Default Client">
+        <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40" title={t('clientsList.defaultClient', { defaultValue: 'Default Client' })}>
           <Shield className="h-3 w-3 text-purple-600 dark:text-purple-400 mr-1" />
-          <span className="text-xs text-purple-700 dark:text-purple-300 font-medium">Default</span>
+          <span className="text-xs text-purple-700 dark:text-purple-300 font-medium">{t('clientsList.default', { defaultValue: 'Default' })}</span>
         </div>
       )}
       {client.is_tax_exempt && (
-        <Tooltip content="This client is tax exempt - no taxes will be applied to their invoices">
+        <Tooltip content={t('clientsList.taxExemptTooltip', { defaultValue: 'This client is tax exempt - no taxes will be applied to their invoices' })}>
           <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40">
             <ShieldOff className="h-3 w-3 text-amber-600 dark:text-amber-400 mr-1" />
-            <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">Tax Exempt</span>
+            <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">{t('clientsList.taxExempt', { defaultValue: 'Tax Exempt' })}</span>
           </div>
         </Tooltip>
       )}
@@ -138,6 +141,7 @@ const ClientsList = ({
   onSortChange
 }: ClientsListProps) => {
   const router = useRouter(); // Get router instance
+  const { t } = useTranslation('msp/clients');
 
 
   const handleRowClick = (client: IClient) => {
@@ -160,7 +164,7 @@ const ClientsList = ({
             ),
         },
         {
-            title: 'Name',
+            title: t('clientsList.name', { defaultValue: 'Name' }),
             dataIndex: 'client_name',
             width: '22%',
             render: (text: string, record: IClient) => (
@@ -180,29 +184,29 @@ const ClientsList = ({
             ),
         },
         {
-            title: 'Created',
+            title: t('clientsList.created', { defaultValue: 'Created' }),
             dataIndex: 'created_at',
             width: '12%',
             render: (text: string | null, record: IClient) => {
-                if (!record.created_at) return 'N/A';
+                if (!record.created_at) return t('common.states.na', { defaultValue: 'N/A' });
                 const date = new Date(record.created_at);
                 return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             },
         },
         {
-            title: 'Type',
+            title: t('clientsList.type', { defaultValue: 'Type' }),
             dataIndex: 'client_type',
             width: '8%',
-            render: (text: string | null, record: IClient) => record.client_type || 'N/A',
+            render: (text: string | null, record: IClient) => record.client_type || t('common.states.na', { defaultValue: 'N/A' }),
         },
         {
-            title: 'Phone',
+            title: t('clientsList.phone', { defaultValue: 'Phone' }),
             dataIndex: 'phone_no',
             width: '10%',
-            render: (text: string | null, record: IClient) => (record as any).location_phone || 'N/A',
+            render: (text: string | null, record: IClient) => (record as any).location_phone || t('common.states.na', { defaultValue: 'N/A' }),
         },
         {
-            title: 'Address',
+            title: t('clientsList.address', { defaultValue: 'Address' }),
             dataIndex: 'address',
             width: '15%',
             render: (text: string | null, record: IClient) => {
@@ -213,19 +217,19 @@ const ClientsList = ({
                     client.city,
                     client.state_province
                 ].filter(Boolean);
-                const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
+                const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : t('common.states.na', { defaultValue: 'N/A' });
                 return <span className="break-words" title={fullAddress}>{fullAddress}</span>;
             },
         },
         {
-            title: 'Account Manager',
+            title: t('clientsList.accountManager', { defaultValue: 'Account Manager' }),
             dataIndex: 'account_manager_full_name',
             width: '8%',
             render: (text: string | undefined, record: IClient) =>
-                <span className="break-words" title={record.account_manager_full_name ?? ''}>{record.account_manager_full_name || 'N/A'}</span>,
+                <span className="break-words" title={record.account_manager_full_name ?? ''}>{record.account_manager_full_name || t('common.states.na', { defaultValue: 'N/A' })}</span>,
         },
         {
-            title: 'URL',
+            title: t('clientsList.url', { defaultValue: 'URL' }),
             dataIndex: 'url',
             width: '8%',
             render: (text: string | null, record: IClient) => (
@@ -233,11 +237,11 @@ const ClientsList = ({
                     <a href={record.url.startsWith('http') ? record.url : `https://${record.url}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline whitespace-normal break-words block" title={record.url}>
                         {record.url}
                     </a>
-                ) : 'N/A'
+                ) : t('common.states.na', { defaultValue: 'N/A' })
             ),
         },
         {
-            title: 'Tags',
+            title: t('clientsList.tags', { defaultValue: 'Tags' }),
             dataIndex: 'tags',
             width: '17%',
             render: (value: string, record: IClient) => {
@@ -258,7 +262,7 @@ const ClientsList = ({
             },
         },
         {
-            title: 'Actions',
+            title: t('clientsList.actions', { defaultValue: 'Actions' }),
             dataIndex: 'actions',
             width: '5%',
             render: (value: string, record: IClient) => (
@@ -272,7 +276,7 @@ const ClientsList = ({
                                 size="sm"
                                 className="h-8 w-8 p-0"
                             >
-                                <span className="sr-only">Open menu</span>
+                                <span className="sr-only">{t('clientsList.openMenu', { defaultValue: 'Open menu' })}</span>
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         </DropdownMenu.Trigger>
@@ -286,7 +290,7 @@ const ClientsList = ({
                                     onSelect={() => onQuickView(record)}
                                 >
                                     <ExternalLink size={14} className="mr-2" />
-                                    Quick View
+                                    {t('clientsList.quickView', { defaultValue: 'Quick View' })}
                                 </DropdownMenu.Item>
                             )}
                             <DropdownMenu.Item 
@@ -294,7 +298,7 @@ const ClientsList = ({
                                 onSelect={() => handleEditClient(record.client_id)}
                             >
                                 <Pencil size={14} className="mr-2" />
-                                Edit
+                                {t('common.actions.edit', { defaultValue: 'Edit' })}
                             </DropdownMenu.Item>
                             {!(record as any).is_default && (
                                 <DropdownMenu.Item 
@@ -302,7 +306,7 @@ const ClientsList = ({
                                     onSelect={() => handleDeleteClient(record)}
                                 >
                                     <Trash2 size={14} className="mr-2" />
-                                    Delete
+                                    {t('common.actions.delete', { defaultValue: 'Delete' })}
                                 </DropdownMenu.Item>
                             )}
                         </DropdownMenu.Content>

@@ -21,6 +21,7 @@ function permissionEntityFor(entityType: string): string {
   if (entityType === 'schedule_entry') return 'user_schedule';
   if (entityType === 'survey_template') return 'settings';
   if (entityType === 'role') return 'security_settings';
+  if (entityType === 'invoice_template') return 'invoice';
   return entityType;
 }
 

@@ -10,12 +10,11 @@ import { Button } from "@alga-psa/ui/components/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { TicketCard } from "./ActivityCard";
 import { fetchTicketActivities } from "@alga-psa/workflows/actions";
-import { getAllClients } from "@alga-psa/clients/actions";
-import { getAllContacts } from "@alga-psa/clients/actions";
 import { getTicketStatuses, getAllPriorities } from "@alga-psa/reference-data/actions";
 import { TicketSectionFiltersDialog } from "./filters/TicketSectionFiltersDialog";
 import { Filter, XCircle } from 'lucide-react';
 import { useActivityDrawer } from "./ActivityDrawerProvider";
+import { useActivityCrossFeature } from "@alga-psa/ui/context";
 interface TicketsSectionProps {
   limit?: number;
   onViewAll?: () => void;
@@ -25,6 +24,7 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
   const [activities, setActivities] = useState<TicketActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const { openActivityDrawer } = useActivityDrawer();
+  const ctx = useActivityCrossFeature();
   const [error, setError] = useState<string | null>(null);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [ticketFilters, setTicketFilters] = useState<Partial<ActivityFilters>>({ isClosed: false });
@@ -80,8 +80,8 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
       try {
         setFilterDataLoading(true);
         const [clientData, contactData, statusData, priorityData] = await Promise.all([
-          getAllClients(false),
-          getAllContacts('active'),
+          ctx.getAllClients(false),
+          ctx.getAllContacts('active'),
           getTicketStatuses(),
           getAllPriorities('ticket')
         ]);
@@ -97,7 +97,7 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
       }
     }
     loadFilterData();
-  }, []);
+  }, [ctx]);
 
   // Load activities initially and when filters change
   useEffect(() => {

@@ -24,7 +24,7 @@ import {
   getClientKBArticle,
   recordClientKBFeedback,
 } from '../../actions/client-portal-actions/client-kb';
-import type { IKBArticleWithDocument, ArticleType } from '@alga-psa/documents/actions';
+import type { IKBArticleWithDocument, ArticleType } from '@alga-psa/types';
 
 const TYPE_ICONS: Record<ArticleType, React.ReactNode> = {
   how_to: <BookOpen className="w-5 h-5 text-blue-500" />,
@@ -101,12 +101,16 @@ export default function ClientKBArticleView({
     // Parse block content if it's a string
     let blocks: any[];
     try {
-      blocks = typeof blockContent === 'string' ? JSON.parse(blockContent) : blockContent;
+      const parsed = typeof blockContent === 'string' ? JSON.parse(blockContent) : blockContent;
+      // Handle ProseMirror doc wrapper: { type: 'doc', content: [...] }
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.type === 'doc' && Array.isArray(parsed.content)) {
+        blocks = parsed.content;
+      } else if (Array.isArray(parsed)) {
+        blocks = parsed;
+      } else {
+        return <p className="text-muted-foreground">{String(blockContent)}</p>;
+      }
     } catch {
-      return <p className="text-muted-foreground">{String(blockContent)}</p>;
-    }
-
-    if (!Array.isArray(blocks)) {
       return <p className="text-muted-foreground">{String(blockContent)}</p>;
     }
 
@@ -178,7 +182,12 @@ export default function ClientKBArticleView({
               key={key}
               className="border-l-4 border-primary/30 pl-4 italic my-4 text-muted-foreground"
             >
-              {node.content?.map((child: any, i: number) => renderNode(child, i)) || null}
+              {node.content?.map((child: any, i: number) => {
+                // BlockNote format: inline text nodes directly in content
+                if (child.type === 'text') return renderText(child, i);
+                // ProseMirror format: block nodes (paragraph, etc.) in content
+                return renderNode(child, i);
+              }) || null}
             </blockquote>
           );
         case 'codeBlock':
@@ -208,13 +217,82 @@ export default function ClientKBArticleView({
       }
     };
 
+    // Parse raw markdown inline formatting within a text string
+    const renderInlineMarkdown = (rawText: string, baseKey: string): React.ReactNode[] => {
+      const segments: React.ReactNode[] = [];
+      // Match **bold**, *italic*, `code`, and [text](url)
+      const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
+      let lastIndex = 0;
+      let match: RegExpExecArray | null;
+      let matchIndex = 0;
+
+      while ((match = regex.exec(rawText)) !== null) {
+        if (match.index > lastIndex) {
+          segments.push(<React.Fragment key={`${baseKey}-t-${matchIndex}`}>{rawText.slice(lastIndex, match.index)}</React.Fragment>);
+        }
+        if (match[2]) {
+          segments.push(<strong key={`${baseKey}-b-${matchIndex}`}>{match[2]}</strong>);
+        } else if (match[3]) {
+          segments.push(<em key={`${baseKey}-i-${matchIndex}`}>{match[3]}</em>);
+        } else if (match[4]) {
+          segments.push(<code key={`${baseKey}-c-${matchIndex}`} className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">{match[4]}</code>);
+        } else if (match[5] && match[6]) {
+          const safeHref = /^https?:/i.test(match[6]) ? match[6] : '#';
+          segments.push(
+            <a key={`${baseKey}-a-${matchIndex}`} href={safeHref} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{match[5]}</a>
+          );
+        }
+        lastIndex = match.index + match[0].length;
+        matchIndex++;
+      }
+
+      if (lastIndex < rawText.length) {
+        segments.push(<React.Fragment key={`${baseKey}-t-${matchIndex}`}>{rawText.slice(lastIndex)}</React.Fragment>);
+      }
+
+      return segments.length > 0 ? segments : [<React.Fragment key={`${baseKey}-raw`}>{rawText}</React.Fragment>];
+    };
+
     const renderText = (node: any, index: number): React.ReactNode => {
       if (node.type === 'text') {
         let text: React.ReactNode = node.text || '';
+        let hasFormatting = false;
 
-        // Apply marks
+        // Handle BlockNote styles format
+        if (node.styles && typeof node.styles === 'object') {
+          if (node.styles.bold) {
+            text = <strong key={`bold-${index}`}>{text}</strong>;
+            hasFormatting = true;
+          }
+          if (node.styles.italic) {
+            text = <em key={`italic-${index}`}>{text}</em>;
+            hasFormatting = true;
+          }
+          if (node.styles.underline) {
+            text = <span key={`underline-${index}`} className="underline">{text}</span>;
+            hasFormatting = true;
+          }
+          if (node.styles.code) {
+            text = <code key={`code-${index}`} className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">{text}</code>;
+            hasFormatting = true;
+          }
+          if (node.styles.strike) {
+            text = <s key={`strike-${index}`}>{text}</s>;
+            hasFormatting = true;
+          }
+          const linkStyle = node.styles.link;
+          if (linkStyle) {
+            const rawHref = typeof linkStyle === 'string' ? linkStyle : linkStyle?.href || linkStyle?.url || '';
+            const safeHref = /^(https?:|mailto:)/i.test(rawHref) ? rawHref : '#';
+            text = <a key={`link-${index}`} href={safeHref} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{text}</a>;
+            hasFormatting = true;
+          }
+        }
+
+        // Handle ProseMirror marks format
         if (node.marks) {
           for (const mark of node.marks) {
+            hasFormatting = true;
             switch (mark.type) {
               case 'bold':
                 text = <strong key={`bold-${index}`}>{text}</strong>;
@@ -257,6 +335,12 @@ export default function ClientKBArticleView({
               }
             }
           }
+        }
+
+        // Fallback: if no formatting was applied and text contains raw markdown
+        // syntax, parse it inline
+        if (!hasFormatting && typeof node.text === 'string' && /\*\*|`|\[.+\]\(https?:/.test(node.text)) {
+          return <React.Fragment key={index}>{renderInlineMarkdown(node.text, `md-${index}`)}</React.Fragment>;
         }
 
         return <React.Fragment key={index}>{text}</React.Fragment>;

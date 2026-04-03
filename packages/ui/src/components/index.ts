@@ -150,6 +150,7 @@ export { default as RichTextViewerWidget } from './widgets/RichTextViewerWidget'
 export * from './tags';
 export * from './dashboard';
 export * from './common';
+export * from './sla';
 export * from './tickets/ResponseStateBadge';
 export { default as ResponseStateBadge } from './tickets/ResponseStateBadge';
 export { PrioritySelect } from './tickets/PrioritySelect';

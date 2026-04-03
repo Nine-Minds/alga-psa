@@ -33,7 +33,60 @@
   "phases": {
     "title": "Fazy projektu",
     "completion": "Ukończono",
-    "noPhases": "Brak faz do wyświetlenia"
+    "noPhases": "Brak faz do wyświetlenia",
+    "statusColumns": "Kolumny statusów",
+    "statusColumnsProjectDefaults": "Domyślne ustawienia projektu",
+    "statusColumnsCustom": "Niestandardowe ({{count}} statusów)",
+    "configureStatuses": "Konfiguruj"
+  },
+  "settings": {
+    "statuses": {
+      "project": {
+        "title": "Kolumny statusów zadań",
+        "description": "Skonfiguruj, które kolumny statusów są dostępne dla zadań",
+        "add_from_library": "Dodaj status"
+      },
+      "closed": "Zamknięty",
+      "confirm_delete_title": "Usuń status",
+      "confirm_delete": "Usunąć \"{{statusName}}\"?",
+      "delete_error": "Nie udało się usunąć statusu",
+      "scope_label": "Zakres statusu",
+      "scope_placeholder": "Wybierz zakres statusu",
+      "scope_project_defaults": "Domyślne ustawienia projektu",
+      "use_project_defaults": "Użyj domyślnych ustawień projektu",
+      "custom_statuses": "Niestandardowe statusy",
+      "phase_uses_defaults": "Ta faza używa domyślnych kolumn statusów projektu.",
+      "copy_from_defaults": "Kopiuj z domyślnych ustawień projektu",
+      "add_custom_status": "Dodaj niestandardowy status",
+      "revert_title": "Przywróć domyślne ustawienia projektu",
+      "revert_message": "Usunąć niestandardowe statusy tej fazy i przywrócić domyślne ustawienia projektu?",
+      "revert_confirm": "Przywróć",
+      "copy_failed": "Nie udało się skopiować domyślnych ustawień projektu do tej fazy.",
+      "revert_failed": "Nie udało się przywrócić domyślnych ustawień projektu dla tej fazy.",
+      "delete_has_tasks": "\"{{statusName}}\" ma {{count}} zadań. Przenieś do:",
+      "delete_and_move": "Przenieś i usuń"
+    }
+  },
+  "templates": {
+    "statuses": {
+      "manage_title": "Zarządzaj kolumnami statusów",
+      "manage_description": "Zdefiniuj kolumny statusów dla zadań w tym szablonie. Przeciągnij, aby zmienić kolejność.",
+      "template_defaults": "Domyślne ustawienia szablonu",
+      "added": "Kolumna statusu dodana",
+      "removed": "Kolumna statusu usunięta",
+      "copied_to_phase": "Domyślne ustawienia szablonu skopiowane do fazy",
+      "reverted": "Faza przywrócona do domyślnych ustawień szablonu",
+      "revert_message": "Usunąć niestandardowe kolumny statusów tej fazy i przywrócić domyślne ustawienia szablonu?",
+      "remove_title": "Usuń kolumnę statusu",
+      "remove_message": "Usunąć tę kolumnę statusu? Zadania w tej kolumnie zostaną przeniesione do pierwszej kolumny.",
+      "remove_confirm": "Usuń",
+      "empty": "Brak kolumn statusów",
+      "empty_hint": "Dodaj kolumny statusów, aby uporządkować zadania",
+      "add_title": "Dodaj kolumnę statusu",
+      "select_placeholder": "Wybierz status...",
+      "all_in_use": "Wszystkie dostępne statusy są w użyciu",
+      "create_new": "Utwórz nowy"
+    }
   },
   "documents": {
     "title": "Załączniki",

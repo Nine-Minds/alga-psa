@@ -1,54 +1,62 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.0.6-rc4",
+  "version": "1.0.10-rc5",
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
+      "import": "./src/index.ts",
       "types": "./src/index.ts"
     },
     "./features": {
-      "import": "./dist/lib/features.js",
+      "import": "./src/lib/features.ts",
       "types": "./src/lib/features.ts"
     },
     "./logger": {
-      "import": "./dist/lib/logger.js",
+      "import": "./src/lib/logger.ts",
       "types": "./src/lib/logger.ts"
     },
     "./formatters": {
-      "import": "./dist/lib/formatters.js",
+      "import": "./src/lib/formatters.ts",
       "types": "./src/lib/formatters.ts"
     },
     "./secrets": {
-      "import": "./dist/lib/secrets/index.js",
+      "import": "./src/lib/secrets/index.ts",
       "types": "./src/lib/secrets/index.ts"
     },
     "./events": {
-      "import": "./dist/lib/events/index.js",
+      "import": "./src/lib/events/index.ts",
       "types": "./src/lib/events/index.ts"
     },
     "./encryption": {
-      "import": "./dist/lib/encryption.js",
+      "import": "./src/lib/encryption.ts",
       "types": "./src/lib/encryption.ts"
     },
     "./server": {
-      "import": "./dist/server.js",
+      "import": "./src/server.ts",
       "types": "./src/server.ts"
     },
     "./i18n/config": {
-      "import": "./dist/lib/i18n/config.js",
+      "import": "./src/lib/i18n/config.ts",
       "types": "./src/lib/i18n/config.ts"
     },
     "./config/deletion": {
       "import": "./src/config/deletion/index.ts",
       "types": "./src/config/deletion/index.ts"
+    },
+    "./lib/scheduleEntryRegistry": {
+      "import": "./src/lib/scheduleEntryRegistry.ts",
+      "types": "./src/lib/scheduleEntryRegistry.ts"
+    },
+    "./context/DocumentsCrossFeatureContext": {
+      "import": "./src/context/DocumentsCrossFeatureContext.ts",
+      "types": "./src/context/DocumentsCrossFeatureContext.ts"
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/"

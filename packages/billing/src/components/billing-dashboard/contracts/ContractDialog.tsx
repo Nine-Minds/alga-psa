@@ -9,7 +9,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IContract } from '@alga-psa/types';
 import { IContractLinePreset } from '@alga-psa/types';
-import { createContract, updateContract, checkClientHasActiveContract, fetchClientIdsWithActiveContracts } from '@alga-psa/billing/actions/contractActions';
+import { createContract, updateContract } from '@alga-psa/billing/actions/contractActions';
 import { getContractLinePresets, copyPresetToContractLine } from '@alga-psa/billing/actions/contractLinePresetActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -71,11 +71,8 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const [clientHasActiveContract, setClientHasActiveContract] = useState(false);
-  const [checkingActiveContract, setCheckingActiveContract] = useState(false);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
-  const [disabledClientIds, setDisabledClientIds] = useState<Set<string>>(new Set());
 
   // Contract line presets state
   const [availableContractLinePresets, setAvailableContractLinePresets] = useState<IContractLinePreset[]>([]);
@@ -116,12 +113,8 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
   const loadClients = async () => {
     try {
-      const [fetchedClients, activeContractClientIds] = await Promise.all([
-        getAllClientsForBilling(),
-        fetchClientIdsWithActiveContracts(editingContract?.contract_id),
-      ]);
+      const fetchedClients = await getAllClientsForBilling();
       setClients(fetchedClients);
-      setDisabledClientIds(new Set(activeContractClientIds));
     } catch (error) {
       console.error('Error loading clients:', error);
     } finally {
@@ -167,29 +160,6 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
       setOpen(true);
     }
   }, [editingContract]);
-
-  // Check for active contract when client or status changes
-  useEffect(() => {
-    const checkActiveContract = async () => {
-      if (!clientId || status !== 'active') {
-        setClientHasActiveContract(false);
-        return;
-      }
-
-      setCheckingActiveContract(true);
-      try {
-        const hasActive = await checkClientHasActiveContract(clientId, editingContract?.contract_id);
-        setClientHasActiveContract(hasActive);
-      } catch (error) {
-        console.error('Error checking for active contract:', error);
-        setClientHasActiveContract(false);
-      } finally {
-        setCheckingActiveContract(false);
-      }
-    };
-
-    checkActiveContract();
-  }, [clientId, status, editingContract?.contract_id]);
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
@@ -381,6 +351,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
       const contractData: Omit<IContract, 'contract_id' | 'tenant' | 'created_at' | 'updated_at'> = {
         contract_name: contractName,
         contract_description: contractDescription || undefined,
+        owner_client_id: clientId,
         billing_frequency: billingFrequency,
         is_active: saveAsActive,
         status: (saveAsActive ? 'active' : 'draft') as 'active' | 'draft',
@@ -557,15 +528,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                 onFilterStateChange={setFilterState}
                 clientTypeFilter={clientTypeFilter}
                 onClientTypeFilterChange={setClientTypeFilter}
-                disabledClientIds={disabledClientIds}
                 placeholder="Select a client"
                 className="w-full"
               />
-              {clientHasActiveContract && status === 'active' && (
-                <p className="mt-1 text-sm text-red-600">
-                  This client already has an active contract. To create a new active contract, terminate their current contract or save this contract as a draft.
-                </p>
-              )}
             </div>
 
             {/* Contract Name */}
@@ -1407,8 +1372,8 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
               <Button
                 id="save-contract-btn"
                 type="submit"
-                disabled={!contractName.trim() || !clientId || (clientHasActiveContract && status === 'active')}
-                className={(!contractName.trim() || !clientId || (clientHasActiveContract && status === 'active')) ? 'opacity-50' : ''}
+                disabled={!contractName.trim() || !clientId}
+                className={(!contractName.trim() || !clientId) ? 'opacity-50' : ''}
               >
                 {editingContract ? 'Update Contract' : 'Create Contract'}
               </Button>

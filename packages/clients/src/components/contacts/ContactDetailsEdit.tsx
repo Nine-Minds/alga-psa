@@ -20,11 +20,16 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import ContactAvatarUpload from './ContactAvatarUpload';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
-import ContactPhoneNumbersEditor, { compactContactPhoneNumbers, validateContactPhoneNumbers } from './ContactPhoneNumbersEditor';
+import ContactPhoneNumbersEditor, {
+  compactContactPhoneNumbers,
+  translateContactPhoneValidationErrors,
+  validateContactPhoneNumbers,
+} from './ContactPhoneNumbersEditor';
 import ContactEmailAddressesEditor, {
   compactContactEmailAddresses,
   validateContactEmailAddresses,
 } from './ContactEmailAddressesEditor';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type EditableContact = IContact & {
   primary_email_custom_type?: string | null;
@@ -48,6 +53,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   onCancel,
   isInDrawer = false
 }) => {
+  const { t } = useTranslation('msp/contacts');
   const [contact, setContact] = useState<EditableContact>({
     ...initialContact,
     additional_email_addresses: initialContact.additional_email_addresses ?? [],
@@ -94,7 +100,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             value: row.id,
             label: row.is_active
               ? `${row.display_name} (${row.short_name})`
-              : `${row.display_name} (${row.short_name}) [inactive]`,
+              : `${row.display_name} (${row.short_name}) [${t('contactDetailsEdit.inactiveBadge', { defaultValue: 'inactive' })}]`,
           }))
         );
       } catch (err) {
@@ -111,7 +117,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [contact.contact_name_id, contact.tenant, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,7 +142,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const handleInputChange = <K extends keyof EditableContact,>(field: K, value: EditableContact[K]) => {
     setContact(prev => ({ ...prev, [field]: value }));
@@ -152,14 +158,13 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
       
       // Validate required fields
       if (!contact.full_name?.trim()) {
-        setError('Full name is required');
+        setError(t('contactDetailsEdit.validation.fullNameRequired', { defaultValue: 'Full name is required' }));
         return;
       }
       if (!contact.email?.trim()) {
-        setError('Email address is required');
+        setError(t('contactDetailsEdit.validation.emailRequired', { defaultValue: 'Email address is required' }));
         return;
       }
-
       const currentEmailErrors = validateContactEmailAddresses(contact);
       setEmailValidationErrors(currentEmailErrors);
       if (currentEmailErrors.length > 0) {
@@ -167,7 +172,10 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         return;
       }
 
-      const currentPhoneErrors = validateContactPhoneNumbers(contact.phone_numbers);
+      const currentPhoneErrors = translateContactPhoneValidationErrors(
+        validateContactPhoneNumbers(contact.phone_numbers),
+        t
+      );
       setPhoneValidationErrors(currentPhoneErrors);
       if (currentPhoneErrors.length > 0) {
         setError(currentPhoneErrors[0]);
@@ -197,19 +205,34 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
       if (err instanceof Error) {
         // Handle specific error types with more detailed messages
         if (err.message.includes('VALIDATION_ERROR:')) {
-          setError(err.message.replace('VALIDATION_ERROR:', 'Please fix the following:'));
+          setError(err.message.replace(
+            'VALIDATION_ERROR:',
+            t('contactDetailsEdit.errors.validationPrefix', { defaultValue: 'Please fix the following:' })
+          ));
         } else if (err.message.includes('EMAIL_EXISTS:')) {
-          setError('Email already exists: A contact with this email address already exists in the system');
+          setError(t('contactDetailsEdit.errors.emailExists', {
+            defaultValue: 'Email already exists: A contact with this email address already exists in the system'
+          }));
         } else if (err.message.includes('FOREIGN_KEY_ERROR:')) {
-          setError(err.message.replace('FOREIGN_KEY_ERROR:', 'Invalid reference:'));
+          setError(err.message.replace(
+            'FOREIGN_KEY_ERROR:',
+            t('contactDetailsEdit.errors.invalidReferencePrefix', { defaultValue: 'Invalid reference:' })
+          ));
         } else if (err.message.includes('SYSTEM_ERROR:')) {
-          setError(err.message.replace('SYSTEM_ERROR:', 'System error:'));
+          setError(err.message.replace(
+            'SYSTEM_ERROR:',
+            t('contactDetailsEdit.errors.systemPrefix', { defaultValue: 'System error:' })
+          ));
         } else {
           console.log('Unhandled error:', err.message);
-          setError('An error occurred while saving. Please try again.');
+          setError(t('contactDetailsEdit.errors.saveFailed', {
+            defaultValue: 'An error occurred while saving. Please try again.'
+          }));
         }
       } else {
-        setError('An unexpected error occurred. Please try again.');
+        setError(t('contactDetailsEdit.errors.unexpected', {
+          defaultValue: 'An unexpected error occurred. Please try again.'
+        }));
       }
     }
   };
@@ -233,7 +256,13 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   }, []);
 
   return (
-    <ReflectionContainer id={id} label={`Edit Contact - ${contact.full_name}`}>
+    <ReflectionContainer
+      id={id}
+      label={t('contactDetailsEdit.title', {
+        defaultValue: 'Edit Contact - {{name}}',
+        name: contact.full_name
+      })}
+    >
       <div className="p-6 bg-white shadow rounded-lg">
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -241,7 +270,12 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
           </Alert>
         )}
         <div className="flex justify-between items-center mb-4">
-          <Heading size="6">Edit Contact: {contact.full_name}</Heading>
+          <Heading size="6">
+            {t('contactDetailsEdit.heading', {
+              defaultValue: 'Edit Contact: {{name}}',
+              name: contact.full_name
+            })}
+          </Heading>
         </div>
         
         {/* Contact Avatar Upload */}
@@ -257,12 +291,14 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
           <tbody>
             <TableRow 
               id={`${id}-full-name`}
-              label="Full Name" 
+              label={t('contactDetailsEdit.fields.fullName', { defaultValue: 'Full Name' })} 
               value={contact.full_name} 
               onChange={(value) => handleInputChange('full_name', value)} 
             />
             <tr>
-              <td className="py-2 font-semibold align-top">Email addresses:</td>
+              <td className="py-2 font-semibold align-top">
+                {t('contactDetailsEdit.fields.emailAddresses', { defaultValue: 'Email addresses:' })}
+              </td>
               <td className="py-2">
                 <ContactEmailAddressesEditor
                   id={`${id}-email`}
@@ -276,13 +312,17 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             </tr>
             <TableRow 
               id={`${id}-role`}
-              label="Role" 
+              label={t('contactDetailsEdit.fields.role', { defaultValue: 'Role' })} 
               value={contact.role || ''} 
               onChange={(value) => handleInputChange('role', value)} 
-              placeholder="e.g., Manager, Developer, etc."
+              placeholder={t('contactDetailsEdit.fields.rolePlaceholder', {
+                defaultValue: 'e.g., Manager, Developer, etc.'
+              })}
             />
             <tr>
-              <td className="py-2 font-semibold align-top">Phone numbers:</td>
+              <td className="py-2 font-semibold align-top">
+                {t('contactDetailsEdit.fields.phoneNumbers', { defaultValue: 'Phone numbers:' })}
+              </td>
               <td className="py-2">
                 <ContactPhoneNumbersEditor
                   id={`${id}-phone`}
@@ -298,7 +338,11 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
               </td>
             </tr>
             <tr>
-              <td className="py-2 font-semibold">Inbound ticket destination override:</td>
+              <td className="py-2 font-semibold">
+                {t('contactDetailsEdit.fields.inboundTicketDestinationOverride', {
+                  defaultValue: 'Inbound ticket destination override:'
+                })}
+              </td>
               <td className="py-2">
                 <CustomSelect
                   id={`${id}-inbound-ticket-destination-select`}
@@ -308,18 +352,22 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
                   allowClear={true}
                   placeholder={
                     isInboundDestinationOptionsLoading
-                      ? 'Loading destinations...'
-                      : 'Use client destination'
+                      ? t('contactDetailsEdit.loading.destinations', { defaultValue: 'Loading destinations...' })
+                      : t('contactDetailsEdit.fields.useClientDestination', { defaultValue: 'Use client destination' })
                   }
                   disabled={isInboundDestinationOptionsLoading}
                 />
                 <Text size="1" className="text-gray-500">
-                  Precedence: Contact override -&gt; Client destination -&gt; Provider default.
+                  {t('contactDetailsEdit.fields.inboundTicketDestinationHelp', {
+                    defaultValue: 'Precedence: Contact override -> Client destination -> Provider default.'
+                  })}
                 </Text>
               </td>
             </tr>
             <tr>
-              <td className="py-2 font-semibold">Client:</td>
+              <td className="py-2 font-semibold">
+                {t('contactDetailsEdit.fields.client', { defaultValue: 'Client:' })}
+              </td>
               <td className="py-2">
                 <ClientPicker
                   id={`${id}-client-picker`}
@@ -334,12 +382,16 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
               </td>
             </tr>
             <tr>
-              <td className="py-2 font-semibold">Status:</td>
+              <td className="py-2 font-semibold">
+                {t('contactDetailsEdit.fields.status', { defaultValue: 'Status:' })}
+              </td>
               <td className="py-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-700">
-                      {contact.is_inactive ? 'Inactive' : 'Active'}
+                      {contact.is_inactive
+                        ? t('contactDetailsEdit.status.inactive', { defaultValue: 'Inactive' })
+                        : t('contactDetailsEdit.status.active', { defaultValue: 'Active' })}
                     </span>
                     <Switch
                       checked={!contact.is_inactive}
@@ -351,17 +403,23 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
               </td>
             </tr>
             <tr>
-              <td className="py-2 font-semibold">Notes:</td>
+              <td className="py-2 font-semibold">
+                {t('contactDetailsEdit.fields.notes', { defaultValue: 'Notes:' })}
+              </td>
               <td className="py-2">
                 <TextArea
                   value={contact.notes || ''}
                   onChange={(e) => handleInputChange('notes', e.target.value)}
-                  placeholder="Add any additional notes about the contact..."
+                  placeholder={t('contactDetailsEdit.fields.notesPlaceholder', {
+                    defaultValue: 'Add any additional notes about the contact...'
+                  })}
                 />
               </td>
             </tr>
             <tr>
-              <td className="py-2 font-semibold">Tags:</td>
+              <td className="py-2 font-semibold">
+                {t('contactDetailsEdit.fields.tags', { defaultValue: 'Tags:' })}
+              </td>
               <td className="py-2">
                 <TagManager
                   id={`${id}-tags`}
@@ -381,14 +439,14 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             variant="soft"
             onClick={onCancel}
           >
-            Cancel
+            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button
             id={`${id}-save-button`}
             variant="default"
             onClick={handleSave}
           >
-            Save
+            {t('common.actions.save', { defaultValue: 'Save' })}
           </Button>
         </div>
       </div>

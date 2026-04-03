@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
-import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
-import { createNextBillingCycle } from '@alga-psa/billing/actions';
-import { updateClientBillingCycleAnchor } from '@alga-psa/billing/actions';
-import { updateClientBillingSchedule } from '@alga-psa/billing/actions';
+import { createClientContractLineCycles } from '../../../../../../packages/billing/src/lib/billing/createBillingCycles';
+import { createNextBillingCycle } from '../../../../../../packages/billing/src/actions/billingCycleActions';
+import { updateClientBillingCycleAnchor } from '../../../../../../packages/billing/src/actions/billingCycleAnchorActions';
+import { updateClientBillingSchedule } from '../../../../../../packages/billing/src/actions/billingScheduleActions';
 import { TestContext } from 'server/test-utils/testContext';
 import { Temporal } from '@js-temporal/polyfill';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -15,6 +15,16 @@ let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
 
 vi.mock('@alga-psa/auth', () => ({
+  withAuth: (action: (...args: any[]) => Promise<unknown>) =>
+    (...args: any[]) =>
+      action(
+        {
+          user_id: mockedUserId,
+          tenant: mockedTenantId,
+        },
+        { tenant: mockedTenantId },
+        ...args,
+      ),
   getSession: vi.fn(async () => ({
     user: {
       id: mockedUserId,
@@ -55,6 +65,8 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
+  getSecret: async () => undefined,
+  getAppSecret: async () => undefined,
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -65,6 +77,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 vi.mock('@alga-psa/core', () => ({
+  getSecret: async () => undefined,
+  getAppSecret: async () => undefined,
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -74,13 +88,13 @@ vi.mock('@alga-psa/core', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+vi.mock('@alga-psa/workflows/persistence', () => ({
   WorkflowEventModel: {
     create: vi.fn(),
   },
 }));
 
-vi.mock('@alga-psa/shared/workflow/streams', () => ({
+vi.mock('@alga-psa/workflow-streams', () => ({
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),
@@ -103,6 +117,80 @@ const {
 
 describe('Client Billing Cycle Anchors', () => {
   let context: TestContext;
+
+  async function createClientCadenceRecurringObligation(options?: {
+    startDate?: string;
+    endDate?: string | null;
+    billingTiming?: 'arrears' | 'advance';
+  }) {
+    const contractLineId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Client Cadence Fixed Plan',
+      billing_frequency: 'monthly',
+      billing_timing: options?.billingTiming ?? 'arrears',
+      is_custom: false,
+      contract_line_type: 'Fixed',
+      cadence_owner: 'client',
+    }, 'contract_line_id');
+
+    const clientContractLineId = uuidv4();
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: clientContractLineId,
+      client_id: context.clientId,
+      contract_line_id: contractLineId,
+      start_date: options?.startDate ?? '2025-01-01T00:00:00Z',
+      end_date: options?.endDate ?? null,
+      is_active: true,
+      tenant: context.tenantId,
+    });
+
+    return { contractLineId, clientContractLineId };
+  }
+
+  async function insertRecurringServicePeriod(options: {
+    recordId: string;
+    clientContractLineId: string;
+    servicePeriodStart: string;
+    servicePeriodEnd: string;
+    invoiceWindowStart: string;
+    invoiceWindowEnd: string;
+    lifecycleState?: string;
+    provenanceKind?: string;
+    reasonCode?: string | null;
+    sourceRuleVersion?: string;
+    supersedesRecordId?: string | null;
+  }) {
+    await context.db('recurring_service_periods').insert({
+      record_id: options.recordId,
+      tenant: context.tenantId,
+      schedule_key: `schedule:${context.tenantId}:client_contract_line:${options.clientContractLineId}:client:arrears`,
+      period_key: `period:${options.servicePeriodStart}:${options.servicePeriodEnd}`,
+      revision: 1,
+      obligation_id: options.clientContractLineId,
+      obligation_type: 'client_contract_line',
+      charge_family: 'fixed',
+      cadence_owner: 'client',
+      due_position: 'arrears',
+      lifecycle_state: options.lifecycleState ?? 'generated',
+      service_period_start: options.servicePeriodStart,
+      service_period_end: options.servicePeriodEnd,
+      invoice_window_start: options.invoiceWindowStart,
+      invoice_window_end: options.invoiceWindowEnd,
+      activity_window_start: null,
+      activity_window_end: null,
+      timing_metadata: null,
+      provenance_kind: options.provenanceKind ?? 'generated',
+      source_rule_version: options.sourceRuleVersion ?? 'legacy',
+      reason_code: options.reasonCode ?? 'initial_materialization',
+      source_run_key: 'legacy-run',
+      supersedes_record_id: options.supersedesRecordId ?? null,
+      invoice_id: null,
+      invoice_charge_id: null,
+      invoice_charge_detail_id: null,
+      invoice_linked_at: null,
+      created_at: '2025-12-01T00:00:00Z',
+      updated_at: '2025-12-01T00:00:00Z',
+    });
+  }
 
   beforeAll(async () => {
     context = await setupContext({
@@ -330,7 +418,7 @@ describe('Client Billing Cycle Anchors', () => {
     expect(new Date(cycles[0].period_end_date).toISOString().slice(0, 10)).toBe('2025-07-10');
   });
 
-  it('changing anchor applies after last invoiced cycle and creates a transition period to the next anchor boundary', async () => {
+  it('T083/T086: changing anchor regenerates future client-cadence recurring service periods after the billed boundary while leaving client billing schedule records intact', async () => {
     const { db, client, clientId, tenantId } = context;
 
     await db('clients')
@@ -405,7 +493,20 @@ describe('Client Billing Cycle Anchors', () => {
       tax_source: 'internal'
     });
 
-    // Change anchor to day=10; should deactivate future non-invoiced cycles starting at/after 2026-01-01.
+    const { clientContractLineId } = await createClientCadenceRecurringObligation({
+      startDate: '2025-01-01T00:00:00Z',
+    });
+    const legacyRecurringRecordId = uuidv4();
+    await insertRecurringServicePeriod({
+      recordId: legacyRecurringRecordId,
+      clientContractLineId,
+      servicePeriodStart: '2026-01-01',
+      servicePeriodEnd: '2026-02-01',
+      invoiceWindowStart: '2026-02-01',
+      invoiceWindowEnd: '2026-03-01',
+      sourceRuleVersion: 'client_schedule|monthly|dom:1|moy:none|dow:none|ref:none',
+    });
+
     await updateClientBillingCycleAnchor({
       clientId,
       billingCycle: 'monthly',
@@ -415,30 +516,24 @@ describe('Client Billing Cycle Anchors', () => {
     const futureCycle = await db('client_billing_cycles')
       .where({ tenant: tenantId, billing_cycle_id: futureCycleId })
       .first();
-    expect(futureCycle?.is_active).toBe(false);
+    expect(futureCycle?.is_active).toBe(true);
 
-    // Generate cycles after cutover; the first post-invoice cycle becomes a transition period to the next anchor boundary.
-    await createClientContractLineCycles(db, client);
+    const recurringRows = await db('recurring_service_periods')
+      .where({ tenant: tenantId, obligation_id: clientContractLineId })
+      .orderBy('service_period_start', 'asc')
+      .orderBy('revision', 'asc');
 
-    const activeCycles = await db('client_billing_cycles')
-      .where({ client_id: clientId, tenant: tenantId, is_active: true })
-      .orderBy('period_start_date', 'asc');
+    const legacyRow = recurringRows.find((row: any) => row.record_id === legacyRecurringRecordId);
+    expect(legacyRow?.lifecycle_state).toBe('superseded');
 
-    expect(activeCycles).toHaveLength(2);
-
-    const lastInvoiced = activeCycles[0];
-    const transition = activeCycles[1];
-
-    expect(new Date(lastInvoiced.period_end_date).toISOString()).toBe(new Date(transition.period_start_date).toISOString());
-    expect(new Date(transition.period_start_date).toISOString().slice(0, 10)).toBe('2026-01-01');
-    expect(new Date(transition.period_end_date).toISOString().slice(0, 10)).toBe('2026-01-10');
-
-    // Sanity-check: the transition period is shorter than a canonical month and ends on the anchor boundary.
-    const transitionDays = Temporal.PlainDate.from('2026-01-01').until(Temporal.PlainDate.from('2026-01-10'), { largestUnit: 'days' }).days;
-    expect(transitionDays).toBe(9);
+    const regeneratedRow = recurringRows.find((row: any) => row.supersedes_record_id === legacyRecurringRecordId);
+    expect(regeneratedRow).toBeTruthy();
+    expect(regeneratedRow?.provenance_kind).toBe('regenerated');
+    expect(regeneratedRow?.reason_code).toBe('billing_schedule_changed');
+    expect(regeneratedRow?.source_rule_version).toContain('client_schedule|monthly|dom:10');
   });
 
-  it('changing billing cycle type applies after last invoiced cycle and creates a transition period under the new schedule', async () => {
+  it('T083/T086: changing billing cycle type updates the client schedule and regenerates client-cadence recurring service periods without deactivating future client billing cycles', async () => {
     const { db, clientId, tenantId } = context;
 
     await db('clients')
@@ -511,6 +606,20 @@ describe('Client Billing Cycle Anchors', () => {
       tax_source: 'internal'
     });
 
+    const { clientContractLineId } = await createClientCadenceRecurringObligation({
+      startDate: '2025-01-01T00:00:00Z',
+    });
+    const legacyRecurringRecordId = uuidv4();
+    await insertRecurringServicePeriod({
+      recordId: legacyRecurringRecordId,
+      clientContractLineId,
+      servicePeriodStart: '2026-01-01',
+      servicePeriodEnd: '2026-02-01',
+      invoiceWindowStart: '2026-02-01',
+      invoiceWindowEnd: '2026-03-01',
+      sourceRuleVersion: 'client_schedule|monthly|dom:1|moy:none|dow:none|ref:none',
+    });
+
     await updateClientBillingSchedule({
       clientId,
       billingCycle: 'quarterly',
@@ -523,26 +632,24 @@ describe('Client Billing Cycle Anchors', () => {
     const futureCycle = await db('client_billing_cycles')
       .where({ tenant: tenantId, billing_cycle_id: futureCycleId })
       .first();
-    expect(futureCycle?.is_active).toBe(false);
+    expect(futureCycle?.is_active).toBe(true);
 
-    // Generate cycles after cutover; first post-invoice cycle becomes a transition period to the next quarterly boundary (Jan 10).
-    await createClientContractLineCycles(db, updatedClient as any);
+    const recurringRows = await db('recurring_service_periods')
+      .where({ tenant: tenantId, obligation_id: clientContractLineId })
+      .orderBy('service_period_start', 'asc')
+      .orderBy('revision', 'asc');
 
-    const activeCycles = await db('client_billing_cycles')
-      .where({ client_id: clientId, tenant: tenantId, is_active: true })
-      .orderBy('period_start_date', 'asc');
+    const legacyRow = recurringRows.find((row: any) => row.record_id === legacyRecurringRecordId);
+    expect(legacyRow?.lifecycle_state).toBe('superseded');
 
-    expect(activeCycles).toHaveLength(2);
-
-    const lastInvoiced = activeCycles[0];
-    const transition = activeCycles[1];
-
-    expect(new Date(lastInvoiced.period_end_date).toISOString()).toBe(new Date(transition.period_start_date).toISOString());
-    expect(new Date(transition.period_start_date).toISOString().slice(0, 10)).toBe('2026-01-01');
-    expect(new Date(transition.period_end_date).toISOString().slice(0, 10)).toBe('2026-01-10');
+    const regeneratedRow = recurringRows.find((row: any) => row.supersedes_record_id === legacyRecurringRecordId);
+    expect(regeneratedRow).toBeTruthy();
+    expect(regeneratedRow?.provenance_kind).toBe('regenerated');
+    expect(regeneratedRow?.reason_code).toBe('billing_schedule_changed');
+    expect(regeneratedRow?.source_rule_version).toContain('client_schedule|quarterly|dom:10|moy:1');
   });
 
-  it('unified billing schedule update is atomic (updates cycle type + anchor) and uses cutover semantics', async () => {
+  it('T083: unified billing schedule updates remain available for client cadence administration while recurring execution continues through regenerated service periods', async () => {
     const { db, clientId, tenantId } = context;
 
     await db('clients')
@@ -553,7 +660,11 @@ describe('Client Billing Cycle Anchors', () => {
       .where({ tenant: tenantId, client_id: clientId })
       .del();
 
-    // Seed a future non-invoiced cycle that should be invalidated by schedule changes.
+    const { clientContractLineId } = await createClientCadenceRecurringObligation({
+      startDate: '2025-01-01T00:00:00Z',
+    });
+
+    // Seed a future client billing cycle to prove schedule management records remain available.
     const futureCycleId = uuidv4();
     await db('client_billing_cycles').insert({
       billing_cycle_id: futureCycleId,
@@ -583,6 +694,18 @@ describe('Client Billing Cycle Anchors', () => {
     const futureCycle = await db('client_billing_cycles')
       .where({ tenant: tenantId, billing_cycle_id: futureCycleId })
       .first();
-    expect(futureCycle?.is_active).toBe(false);
+    expect(futureCycle?.is_active).toBe(true);
+
+    const recurringRows = await db('recurring_service_periods')
+      .where({ tenant: tenantId, obligation_id: clientContractLineId })
+      .orderBy('service_period_start', 'asc');
+    expect(recurringRows.length).toBeGreaterThan(0);
+    expect(
+      recurringRows.some((row: any) =>
+        row.provenance_kind === 'generated'
+        && row.reason_code === 'backfill_materialization'
+        && String(row.source_rule_version).includes('client_schedule|monthly|dom:10'),
+      ),
+    ).toBe(true);
   });
 });

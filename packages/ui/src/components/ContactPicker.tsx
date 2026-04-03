@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Input } from './Input';
+import { Button } from './Button';
 import { ChevronDown, Plus, Search } from 'lucide-react';
 import ContactAvatar from './ContactAvatar';
 import type { IContact } from '@alga-psa/types';
@@ -372,14 +373,17 @@ export const ContactPicker = ({
               {onAddNew && (
                 <>
                   <div className="border-t border-gray-200" />
-                  <button
+                  <Button
+                    id="contact-picker-add-new-btn"
                     type="button"
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 cursor-pointer"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start gap-2 rounded-none text-primary"
                     onClick={handleAddNew}
                   >
                     <Plus className="h-4 w-4" />
                     Add new contact
-                  </button>
+                  </Button>
                 </>
               )}
             </div>,

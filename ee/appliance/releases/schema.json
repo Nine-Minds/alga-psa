@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Nine-Minds/alga-psa/ee/appliance/releases/schema.json",
+  "title": "Alga Talos Appliance Release Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "releaseVersion",
+    "generatedAt",
+    "talos",
+    "kubernetes",
+    "os",
+    "app",
+    "channel"
+  ],
+  "properties": {
+    "releaseVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "talos": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "schematicId", "schematicPath"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "schematicId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "schematicPath": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "kubernetes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+        }
+      }
+    },
+    "os": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "architecture", "iso", "installer"],
+      "properties": {
+        "platform": {
+          "type": "string",
+          "const": "metal"
+        },
+        "architecture": {
+          "type": "string",
+          "const": "amd64"
+        },
+        "iso": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["url", "localPath", "sha256"],
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "localPath": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "installer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["image"],
+          "properties": {
+            "image": {
+              "type": "string",
+              "pattern": "^factory\\.talos\\.dev/metal-installer/[a-f0-9]{64}:v[0-9]+\\.[0-9]+\\.[0-9]+$"
+            },
+            "digest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "app": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "releaseBranch", "valuesProfile", "images"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "releaseBranch": {
+          "type": "string",
+          "pattern": "^release/.+$"
+        },
+        "valuesProfile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "images": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algaCore", "workflowWorker", "emailService", "temporalWorker"],
+          "properties": {
+            "algaCore": {
+              "type": "string",
+              "minLength": 1
+            },
+            "workflowWorker": {
+              "type": "string",
+              "minLength": 1
+            },
+            "emailService": {
+              "type": "string",
+              "minLength": 1
+            },
+            "temporalWorker": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "channel": {
+      "type": "string",
+      "enum": ["candidate", "stable"]
+    }
+  }
+}

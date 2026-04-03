@@ -10,10 +10,9 @@ import { TagManager } from '@alga-psa/tags/components';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/tags/context';
 import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
-import { getSlaPolicies } from '@alga-psa/sla/actions';
-import { ISlaPolicy } from '@alga-psa/sla/types';
+import type { ISlaPolicy } from '@alga-psa/types';
 import { BillingCycleType } from '@alga-psa/types';
-import Documents from '@alga-psa/documents/components/Documents';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
@@ -60,7 +59,6 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
-import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
 import ClientContractLineDashboard from './ClientContractLineDashboard';
 import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { toast } from 'react-hot-toast';
@@ -86,26 +84,30 @@ const SwitchDetailItem: React.FC<{
   value: boolean;
   onEdit: (value: boolean) => void;
   automationId?: string;
-}> = ({ value, onEdit, automationId }) => {
+  statusLabel: string;
+  helperLabel: string;
+  activeLabel: string;
+  inactiveLabel: string;
+}> = ({ value, onEdit, automationId, statusLabel, helperLabel, activeLabel, inactiveLabel }) => {
   // Register for UI automation with meaningful label
   const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: automationId,
     type: 'formField',
     fieldType: 'checkbox',
-    label: 'Client Status',
-    value: value ? 'Active' : 'Inactive',
-    helperText: 'Set client status as active or inactive'
+    label: statusLabel,
+    value: value ? activeLabel : inactiveLabel,
+    helperText: helperLabel
   });
 
   return (
     <div className="flex items-center justify-between py-3" {...automationIdProps}>
       <div>
-        <div className="text-gray-900 font-medium">Status</div>
-        <div className="text-sm text-gray-500">Set client status as active or inactive</div>
+        <div className="text-gray-900 font-medium">{statusLabel}</div>
+        <div className="text-sm text-gray-500">{helperLabel}</div>
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-700">
-          {value ? 'Active' : 'Inactive'}
+          {value ? activeLabel : inactiveLabel}
         </span>
         <Switch
           checked={value}
@@ -205,8 +207,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   quickView = false,
   surveySummary = null
 }) => {
-  const { t } = useTranslation('common');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets } = useClientCrossFeature();
+  const { t } = useTranslation('msp/clients');
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets, getSlaPolicies } = useClientCrossFeature();
+  const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
@@ -329,7 +332,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('clientDetails.deleteValidationError', {
+          defaultValue: 'Failed to validate deletion. Please try again.',
+        }),
         dependencies: [],
         alternatives: []
       });
@@ -354,7 +359,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
 
       resetDeleteState();
-      toast.success("Client has been deleted successfully.");
+      toast.success(t('clientDetails.deleteSuccess', {
+        defaultValue: 'Client has been deleted successfully.',
+      }));
 
       if (isInDrawer) {
         drawer.closeDrawer();
@@ -398,9 +405,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setEditedClient(prev => ({ ...prev, is_inactive: true }));
 
       if (result.contactsDeactivated > 0) {
-        toast.success(`Client and ${result.contactsDeactivated} contact${result.contactsDeactivated !== 1 ? 's' : ''} have been deactivated successfully.`);
+        toast.success(t('clientDetails.deactivateWithContactsSuccess', {
+          defaultValue: 'Client and {{count}} contact(s) have been deactivated successfully.',
+          count: result.contactsDeactivated,
+        }));
       } else {
-        toast.success("Client has been marked as inactive successfully.");
+        toast.success(t('clientDetails.inactiveSuccess', {
+          defaultValue: 'Client has been marked as inactive successfully.',
+        }));
       }
 
       // Close dialog first, then refresh in background
@@ -426,7 +438,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       // Update local state immediately
       setEditedClient(prev => ({ ...prev, is_inactive: true }));
-      toast.success("Client has been marked as inactive successfully.");
+      toast.success(t('clientDetails.inactiveSuccess', {
+        defaultValue: 'Client has been marked as inactive successfully.',
+      }));
 
       // Close dialog first, then refresh in background
       resetDeleteState();
@@ -458,7 +472,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
         // Update local state immediately
         setEditedClient(prev => ({ ...prev, is_inactive: true }));
-        toast.success("Client has been marked as inactive successfully.");
+        toast.success(t('clientDetails.inactiveSuccess', {
+          defaultValue: 'Client has been marked as inactive successfully.',
+        }));
         router.refresh();
       }
     } catch (error: any) {
@@ -487,7 +503,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
         // Update local state immediately
         setEditedClient(prev => ({ ...prev, is_inactive: false }));
-        toast.success("Client has been reactivated successfully.");
+        toast.success(t('clientDetails.reactivateSuccess', {
+          defaultValue: 'Client has been reactivated successfully.',
+        }));
         router.refresh();
       }
     } catch (error: any) {
@@ -511,9 +529,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setHasUnsavedChanges(false);
 
       if (reactivateContacts && result.contactsReactivated > 0) {
-        toast.success(`Client and ${result.contactsReactivated} contact(s) have been reactivated successfully.`);
+        toast.success(t('clientDetails.reactivateWithContactsSuccess', {
+          defaultValue: 'Client and {{count}} contact(s) have been reactivated successfully.',
+          count: result.contactsReactivated,
+        }));
       } else {
-        toast.success('Client has been reactivated successfully.');
+        toast.success(t('clientDetails.reactivateSuccess', {
+          defaultValue: 'Client has been reactivated successfully.',
+        }));
       }
 
       setIsReactivateDialogOpen(false);
@@ -544,9 +567,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setHasUnsavedChanges(false);
 
       if (deactivateContacts && result.contactsDeactivated > 0) {
-        toast.success(`Client and ${result.contactsDeactivated} contact(s) have been deactivated successfully.`);
+        toast.success(t('clientDetails.deactivateWithContactsSuccess', {
+          defaultValue: 'Client and {{count}} contact(s) have been deactivated successfully.',
+          count: result.contactsDeactivated,
+        }));
       } else {
-        toast.success('Client has been marked as inactive successfully.');
+        toast.success(t('clientDetails.inactiveSuccess', {
+          defaultValue: 'Client has been marked as inactive successfully.',
+        }));
       }
 
       setIsDeactivateDialogOpen(false);
@@ -581,7 +609,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
     } catch (error) {
       console.error('Error refreshing client data:', error);
-      toast.error("Could not fetch latest client data.");
+      toast.error(t('clientDetails.refreshError', {
+        defaultValue: 'Could not fetch latest client data.',
+      }));
     }
   }, [client?.client_id]);
 
@@ -826,10 +856,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setEditedClient(updatedClient);
       setHasUnsavedChanges(false);
       setHasAttemptedSubmit(false);
-      toast.success("Client details saved successfully.");
+      toast.success(t('clientDetails.saveSuccess', {
+        defaultValue: 'Client details saved successfully.',
+      }));
     } catch (error) {
       console.error('Error saving client:', error);
-      toast.error("Failed to save client details. Please try again.");
+      toast.error(t('clientDetails.saveError', {
+        defaultValue: 'Failed to save client details. Please try again.',
+      }));
     } finally {
       setIsSaving(false);
     }
@@ -845,12 +879,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       });
 
       if ('error' in result) {
-        toast.error(result.error || 'Failed to start Entra sync.');
+        toast.error(result.error || t('clientDetails.entraSyncError', {
+          defaultValue: 'Failed to start Entra sync.',
+        }));
         return;
       }
 
       if (!result.success) {
-        toast.error('Failed to start Entra sync.');
+        toast.error(t('clientDetails.entraSyncError', {
+          defaultValue: 'Failed to start Entra sync.',
+        }));
         return;
       }
 
@@ -864,7 +902,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         toast.success(syncState.statusMessage);
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to start Entra sync.';
+      const message = error instanceof Error
+        ? error.message
+        : t('clientDetails.entraSyncError', { defaultValue: 'Failed to start Entra sync.' });
       toast.error(message);
     } finally {
       setIsSyncingEntra(false);
@@ -1038,14 +1078,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const tabContent = useMemo(() => [
     {
       id: 'details',
-      label: "Details",
+      label: t('clientDetails.details', { defaultValue: 'Details' }),
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left Column - All Form Fields */}
             <div className="space-y-6">
               <TextDetailItem
-                label="Client Name"
+                label={t('clientDetails.clientName', { defaultValue: 'Client Name' })}
                 value={editedClient.client_name}
                 onEdit={(value) => handleFieldChange('client_name', value)}
                 automationId="client-name-field"
@@ -1053,40 +1093,48 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               />
                            
               <FieldContainer
-                label="Account Manager"
+                label={t('clientDetails.accountManager', { defaultValue: 'Account Manager' })}
                 fieldType="select"
                 value={editedClient.account_manager_full_name || ''}
                 helperText="Select the account manager for this client"
                 automationId="account-manager-field"
               >
-                <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">
+                  {t('clientDetails.accountManager', { defaultValue: 'Account Manager' })}
+                </Text>
                 <UserPicker
                   value={editedClient.account_manager_id || ''}
                   onValueChange={(value) => handleFieldChange('account_manager_id', value)}
                   users={internalUsers}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   disabled={isLoadingUsers}
-                  placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
+                  placeholder={isLoadingUsers
+                    ? t('clientDetails.loadingUsers', { defaultValue: 'Loading users...' })
+                    : t('quickAddClient.selectAccountManager', { defaultValue: 'Select Account Manager' })}
                   buttonWidth="full"
                 />
               </FieldContainer>
 
               <FieldContainer
-                label="Default contact"
+                label={t('clientDetails.defaultContact', { defaultValue: 'Default contact' })}
                 fieldType="select"
                 value={editedClient.properties?.primary_contact_id || ''}
                 helperText="Used when inbound email sender is not a known contact but matches this client by configured inbound email domain."
                 automationId="default-contact-field"
               >
-                <Text as="label" size="2" className="text-gray-700 font-medium">Default contact</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">
+                  {t('clientDetails.defaultContact', { defaultValue: 'Default contact' })}
+                </Text>
                 <ContactPicker
                   id="client-default-contact-select"
                   contacts={clientActiveContacts}
                   value={editedClient.properties?.primary_contact_id || ''}
                   onValueChange={handleDefaultContactChange}
                   clientId={editedClient.client_id}
-                  label="Default contact"
-                  placeholder={clientActiveContacts.length ? "Select default contact" : "No active contacts"}
+                  label={t('clientDetails.defaultContact', { defaultValue: 'Default contact' })}
+                  placeholder={clientActiveContacts.length
+                    ? t('clientDetails.selectDefaultContact', { defaultValue: 'Select default contact' })
+                    : t('clientDetails.noActiveContacts', { defaultValue: 'No active contacts' })}
                   onAddNew={() => setIsQuickAddContactOpen(true)}
                 />
                 <QuickAddContact
@@ -1111,13 +1159,17 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               </FieldContainer>
 
               <FieldContainer
-                label="Inbound ticket destination"
+                label={t('clientDetails.inboundTicketDestination', { defaultValue: 'Inbound ticket destination' })}
                 fieldType="select"
                 value={editedClient.inbound_ticket_defaults_id || ''}
-                helperText="Used for inbound senders that map to this client and have no contact override. Precedence: Contact override -> Client destination -> Provider default."
+                helperText={t('clientDetails.inboundDestinationPrecedence', {
+                  defaultValue: 'Precedence: Contact override -> Client destination -> Provider default.',
+                })}
                 automationId="client-inbound-ticket-destination-field"
               >
-                <Text as="label" size="2" className="text-gray-700 font-medium">Inbound ticket destination</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">
+                  {t('clientDetails.inboundTicketDestination', { defaultValue: 'Inbound ticket destination' })}
+                </Text>
                 <CustomSelect
                   id="client-inbound-ticket-destination-select"
                   value={editedClient.inbound_ticket_defaults_id || ''}
@@ -1126,24 +1178,28 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   allowClear={true}
                   placeholder={
                     isInboundDestinationOptionsLoading
-                      ? 'Loading destinations...'
-                      : 'Provider default'
+                      ? t('clientDetails.loadingDestinations', { defaultValue: 'Loading destinations...' })
+                      : t('clientDetails.providerDefault', { defaultValue: 'Provider default' })
                   }
                   disabled={isInboundDestinationOptionsLoading}
                 />
                 <Text size="1" className="text-gray-500">
-                  Precedence: Contact override -&gt; Client destination -&gt; Provider default.
+                  {t('clientDetails.inboundDestinationPrecedence', {
+                    defaultValue: 'Precedence: Contact override -> Client destination -> Provider default.',
+                  })}
                 </Text>
               </FieldContainer>
 
               <FieldContainer
-                label="Inbound email domains"
+                label={t('clientDetails.inboundEmailDomains', { defaultValue: 'Inbound email domains' })}
                 fieldType="textField"
                 value={inboundEmailDomains.map((d) => d.domain).join(', ')}
                 helperText="Only these domains will be used for inbound email domain matching (e.g. acme.com). Domains must be unique across clients."
                 automationId="client-inbound-email-domains-field"
               >
-                <Text as="label" size="2" className="text-gray-700 font-medium">Inbound email domains</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">
+                  {t('clientDetails.inboundEmailDomains', { defaultValue: 'Inbound email domains' })}
+                </Text>
                 <div className="space-y-3">
                   <div className="flex gap-2">
                     <Input
@@ -1184,38 +1240,49 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                     </div>
                   ) : (
                     <Text size="1" className="text-gray-500">
-                      No inbound email domains configured. Domain matching will not be used.
+                      {t('clientDetails.noInboundDomains', {
+                        defaultValue: 'No inbound email domains configured. Domain matching will not be used.',
+                      })}
                     </Text>
                   )}
                 </div>
               </FieldContainer>
 
               <FieldContainer
-                label="SLA Policy"
+                label={t('clientDetails.slaPolicy', { defaultValue: 'SLA Policy' })}
                 fieldType="select"
                 value={slaPolicies.find(p => p.sla_policy_id === editedClient.sla_policy_id)?.policy_name || ''}
                 helperText="Select the SLA policy for this client"
                 automationId="sla-policy-field"
               >
-                <Text as="label" size="2" className="text-gray-700 font-medium">SLA Policy</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">
+                  {t('clientDetails.slaPolicy', { defaultValue: 'SLA Policy' })}
+                </Text>
                 <CustomSelect
                   id="sla-policy-select"
                   value={editedClient.sla_policy_id || ''}
                   onValueChange={(value) => handleFieldChange('sla_policy_id', value === '' ? null : value)}
                   options={[
-                    { value: '', label: 'None' },
+                    { value: '', label: t('common.states.none', { defaultValue: 'None' }) },
                     ...slaPolicies.map((policy) => ({
                       value: policy.sla_policy_id,
-                      label: policy.is_default ? `${policy.policy_name} (Default)` : policy.policy_name
+                      label: policy.is_default
+                        ? t('clientDetails.defaultPolicy', {
+                            defaultValue: '{{name}} (Default)',
+                            name: policy.policy_name,
+                          })
+                        : policy.policy_name
                     }))
                   ]}
                   disabled={isLoadingSlaPolicies}
-                  placeholder={isLoadingSlaPolicies ? "Loading policies..." : "Select SLA Policy"}
+                  placeholder={isLoadingSlaPolicies
+                    ? t('clientDetails.loadingPolicies', { defaultValue: 'Loading policies...' })
+                    : t('clientDetails.selectSlaPolicy', { defaultValue: 'Select SLA Policy' })}
                 />
               </FieldContainer>
 
               <TextDetailItem
-                label="Website"
+                label={t('quickAddClient.websiteUrl', { defaultValue: 'Website URL' })}
                 value={editedClient.properties?.website || ''}
                 onEdit={(value) => handleFieldChange('properties.website', value)}
                 automationId="website-field"
@@ -1223,7 +1290,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               />
 
               <TextDetailItem
-                label="Industry"
+                label={t('clientDetails.industry', { defaultValue: 'Industry' })}
                 value={editedClient.properties?.industry || ''}
                 onEdit={(value) => handleFieldChange('properties.industry', value)}
                 automationId="industry-field"
@@ -1231,7 +1298,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               />
 
               <TextDetailItem
-                label="Company Size"
+                label={t('clientDetails.companySize', { defaultValue: 'Company Size' })}
                 value={editedClient.properties?.company_size || ''}
                 onEdit={(value) => handleFieldChange('properties.company_size', value)}
                 automationId="company-size-field"
@@ -1239,7 +1306,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               />
               
               <TextDetailItem
-                label="Annual Revenue"
+                label={t('clientDetails.annualRevenue', { defaultValue: 'Annual Revenue' })}
                 value={editedClient.properties?.annual_revenue || ''}
                 onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
                 automationId="annual-revenue-field"
@@ -1260,16 +1327,18 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
                 {/* Client Type */}
                 <div className="space-y-2 col-span-2">
-                  <Text as="label" size="2" className="text-gray-700 font-medium">Client Type</Text>
+                  <Text as="label" size="2" className="text-gray-700 font-medium">
+                    {t('clientDetails.clientType', { defaultValue: 'Client Type' })}
+                  </Text>
                   <CustomSelect
                     id="client-type-select"
                     value={editedClient.client_type || 'company'}
                     onValueChange={(value) => handleFieldChange('client_type', value)}
                     options={[
-                      { value: 'company', label: 'Company' },
-                      { value: 'individual', label: 'Individual' }
+                      { value: 'company', label: t('quickAddClient.company', { defaultValue: 'Company' }) },
+                      { value: 'individual', label: t('quickAddClient.individual', { defaultValue: 'Individual' }) }
                     ]}
-                    placeholder="Select client type"
+                    placeholder={t('clientDetails.selectClientType', { defaultValue: 'Select client type' })}
                     className="!w-fit"
                   />
                 </div>
@@ -1278,6 +1347,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                     value={!editedClient.is_inactive || false}
                     onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
                     automationId="client-status-field"
+                    statusLabel={t('clientDetails.status.label', { defaultValue: 'Status' })}
+                    helperLabel={t('clientDetails.status.helper', {
+                      defaultValue: 'Set client status as active or inactive',
+                    })}
+                    activeLabel={t('common.states.active', { defaultValue: 'Active' })}
+                    inactiveLabel={t('common.states.inactive', { defaultValue: 'Inactive' })}
                   />
                 </div>
               </div>
@@ -1299,7 +1374,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             {/* Right Column - Client Locations Only */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Text as="label" size="2" className="text-gray-700 font-medium">{t('clients.locations.sectionTitle', 'Client Locations')}</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">
+                  {t('clientDetails.clientLocations', { defaultValue: 'Client Locations' })}
+                </Text>
                 <Button
                   id="locations-button"
                   size="sm"
@@ -1307,7 +1384,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   onClick={() => setIsLocationsDialogOpen(true)}
                   className="text-sm"
                 >
-                  {t('clients.locations.manageButton', 'Manage Locations')}
+                  {t('clientDetails.manageLocations', { defaultValue: 'Manage Locations' })}
                 </Button>
               </div>
               <div>
@@ -1324,7 +1401,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           <Flex gap="4" justify="end" align="center" className="pt-6">
             {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
               <Text size="2" className="text-red-600 mr-2" role="alert">
-                Please fill in all required fields
+                {t('clientDetails.requiredFields', { defaultValue: 'Please fill in all required fields' })}
               </Text>
             )}
             <Button
@@ -1333,14 +1410,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               disabled={isSaving}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving
+                ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                : t('clientDetails.saveChanges', { defaultValue: 'Save Changes' })}
             </Button>
             <Button
               id="add-ticket-btn"
               onClick={() => setIsQuickAddTicketOpen(true)}
               variant="default"
             >
-              Add Ticket
+              {t('clientDetails.addTicket', { defaultValue: 'Add Ticket' })}
             </Button>
           </Flex>
         </div>
@@ -1348,7 +1427,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       id: 'tickets',
-      label: "Tickets",
+      label: t('clientDetails.tickets', { defaultValue: 'Tickets' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           {ticketFormOptions ? (
@@ -1364,7 +1443,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             })
           ) : (
             <div className="flex justify-center items-center h-32">
-              <span>Loading ticket filters...</span>
+              <span>{t('clientDetails.loadingTicketFilters', { defaultValue: 'Loading ticket filters...' })}</span>
             </div>
           )}
         </div>
@@ -1372,12 +1451,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       id: 'assets',
-      label: "Assets",
+      label: t('clientDetails.assets', { defaultValue: 'Assets' }),
       content: renderClientAssets({ clientId: client.client_id }),
     },
     {
       id: 'billing',
-      label: "Billing",
+      label: t('clientDetails.billing', { defaultValue: 'Billing' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <BillingConfiguration
@@ -1390,7 +1469,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       id: 'billing-dashboard',
-      label: "Billing Dashboard",
+      label: t('clientDetails.billingDashboard', { defaultValue: 'Billing Dashboard' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ClientContractLineDashboard clientId={client.client_id} />
@@ -1399,7 +1478,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       id: 'contacts',
-      label: "Contacts",
+      label: t('clientDetails.contacts', { defaultValue: 'Contacts' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ClientContactsList
@@ -1411,33 +1490,31 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       id: 'documents',
-      label: "Documents",
+      label: t('clientDetails.documents', { defaultValue: 'Documents' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          {currentUser ? (
-            <Documents
-              id={`${id}-documents`}
-              documents={documents}
-              gridColumns={3}
-              userId={currentUser.user_id}
-              entityId={client.client_id}
-              entityType="client"
-              onDocumentCreated={async () => {
+          {currentUser ? renderDocuments({
+              id: `${id}-documents`,
+              documents,
+              gridColumns: 3,
+              userId: currentUser.user_id,
+              entityId: client.client_id,
+              entityType: 'client',
+              onDocumentCreated: async () => {
                 memoizedRouter.refresh();
-              }}
-            />
-          ) : (
-            <div>Loading...</div>
+              },
+          }) : (
+            <div>{t('common.states.loading', { defaultValue: 'Loading...' })}</div>
           )}
         </div>
       )
     },
     {
       id: 'tax-settings',
-      label: "Tax Settings",
+      label: t('clientDetails.taxSettings', { defaultValue: 'Tax Settings' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          <Suspense fallback={<div>Loading tax settings...</div>}>
+          <Suspense fallback={<div>{t('clientDetails.loadingTaxSettings', { defaultValue: 'Loading tax settings...' })}</div>}>
             <TaxSettingsForm clientId={client.client_id} />
           </Suspense>
         </div>
@@ -1445,7 +1522,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       id: 'additional-info',
-      label: "Additional Info",
+      label: t('clientDetails.additionalInfo', { defaultValue: 'Additional Info' }),
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="grid grid-cols-2 gap-4">
@@ -1456,32 +1533,36 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               automationId="tax-id-field"
             />
             <TextDetailItem
-              label="Payment Terms"
+              label={t('clientDetails.paymentTerms', { defaultValue: 'Payment Terms' })}
               value={editedClient.properties?.payment_terms ?? ""}
               onEdit={(value) => handleFieldChange('properties.payment_terms', value)}
               automationId="payment-terms-field"
             />
             <TextDetailItem
-              label="Parent Client"
+              label={t('clientDetails.parentClient', { defaultValue: 'Parent Client' })}
               value={editedClient.properties?.parent_client_name ?? ""}
               onEdit={(value) => handleFieldChange('properties.parent_client_name', value)}
               automationId="parent-client-field"
             />
             <FieldContainer
-              label="Timezone"
+              label={t('clientDetails.timezone', { defaultValue: 'Timezone' })}
               fieldType="select"
               value={editedClient.timezone || ''}
-              helperText="Select the timezone for this client"
+              helperText={t('clientDetails.timezoneHelper', {
+                defaultValue: 'Select the timezone for this client',
+              })}
               automationId="timezone-field"
             >
-              <Text as="label" size="2" className="text-gray-700 font-medium">Timezone</Text>
+              <Text as="label" size="2" className="text-gray-700 font-medium">
+                {t('clientDetails.timezone', { defaultValue: 'Timezone' })}
+              </Text>
               <TimezonePicker
                 value={editedClient.timezone ?? ""}
                 onValueChange={(value) => handleFieldChange('timezone', value)}
               />
             </FieldContainer>
             <TextDetailItem
-              label="Last Contact Date"
+              label={t('clientDetails.lastContactDate', { defaultValue: 'Last Contact Date' })}
               value={editedClient.properties?.last_contact_date ?? ""}
               onEdit={(value) => handleFieldChange('properties.last_contact_date', value)}
               automationId="last-contact-date-field"
@@ -1491,7 +1572,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           <Flex gap="4" justify="end" align="center">
             {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
               <Text size="2" className="text-red-600 mr-2" role="alert">
-                Please fill in all required fields
+                {t('clientDetails.requiredFields', { defaultValue: 'Please fill in all required fields' })}
               </Text>
             )}
             <Button
@@ -1500,7 +1581,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               disabled={isSaving}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving
+                ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                : t('clientDetails.saveChanges', { defaultValue: 'Save Changes' })}
             </Button>
           </Flex>
         </div>
@@ -1508,7 +1591,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       id: 'notes',
-      label: "Notes",
+      label: t('clientDetails.notes', { defaultValue: 'Notes' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ClientNotesPanel
@@ -1520,7 +1603,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       id: 'interactions',
-      label: "Interactions",
+      label: t('clientDetails.interactions', { defaultValue: 'Interactions' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <InteractionsFeed
@@ -1565,11 +1648,13 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   ]);
 
   return (
-    <ReflectionContainer id={id} label="Client Details">
+    <ReflectionContainer id={id} label={t('clientDetails.title', { defaultValue: 'Client Details' })}>
       <div className="flex items-center space-x-5 mb-4 pt-2">
         {!quickView && (
           <BackNav href="/msp/clients">
-            {isInDrawer ? 'Back' : '← Back to Clients'}
+            {isInDrawer
+              ? t('common.actions.back', { defaultValue: 'Back' })
+              : t('clientDetails.backToClients', { defaultValue: 'Back to Clients' })}
           </BackNav>
         )}
         
@@ -1614,7 +1699,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               className="flex items-center ml-4 mr-2"
             >
               <ExternalLink className="h-4 w-4 mr-2" />
-              Open in new tab
+              {t('clientDetails.openInNewTab', { defaultValue: 'Open in new tab' })}
             </Button>
           )}
 
@@ -1634,7 +1719,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   ) : (
                     <RefreshCw className="h-4 w-4 mr-2" />
                   )}
-                  Sync Entra Now
+                  {t('clientDetails.syncEntraNow', { defaultValue: 'Sync Entra Now' })}
                 </Button>
                 {entraSyncStatus ? (
                   <p className="text-xs text-muted-foreground" id={`${id}-sync-entra-status`}>
@@ -1651,7 +1736,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               className="flex items-center"
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Delete
+              {t('common.actions.delete', { defaultValue: 'Delete' })}
             </Button>
           </div>
         </div>
@@ -1684,7 +1769,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             setIsLocationsDialogOpen(false);
             setLocationsRefreshKey(prev => prev + 1);
           }}
-          title={t('clients.locations.dialogTitle', 'Manage Locations', { client: editedClient.client_name })}
+          title={t('clientDetails.manageLocations', { defaultValue: 'Manage Locations' })}
         >
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <ClientLocations 
@@ -1713,15 +1798,20 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           isOpen={isDeactivateDialogOpen}
           onClose={handleCancelDeactivation}
           onConfirm={() => handleDeactivateClient(true)}
-          title="Deactivate Client"
+          title={t('clientDetails.deactivateClient', { defaultValue: 'Deactivate Client' })}
           message={
             <div className="space-y-3">
               <p>
-                This client has {activeContactsToDeactivate.length} active contact{activeContactsToDeactivate.length !== 1 ? 's' : ''}. Would you like to deactivate {activeContactsToDeactivate.length === 1 ? 'this contact' : 'all these contacts'} as well?
+                {t('clientDetails.deactivatePrompt', {
+                  defaultValue: 'This client has {{count}} active contact(s). Would you like to deactivate them as well?',
+                  count: activeContactsToDeactivate.length,
+                })}
               </p>
               {activeContactsToDeactivate.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Active contacts:</p>
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    {t('clientDetails.activeContacts', { defaultValue: 'Active contacts:' })}
+                  </p>
                   <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 max-h-40 overflow-y-auto">
                     {activeContactsToDeactivate.map((contact) => (
                       <li key={contact.contact_name_id}>
@@ -1733,14 +1823,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 </div>
               )}
               <p className="text-sm text-gray-500 mt-2">
-                Deactivated users will not be able to log into the client portal.
+                {t('clientDetails.deactivatePortalWarning', {
+                  defaultValue: 'Deactivated users will not be able to log into the client portal.',
+                })}
               </p>
             </div>
           }
-          confirmLabel="Client & Contacts"
-          cancelLabel="Cancel"
+          confirmLabel={t('clientDetails.clientAndContacts', { defaultValue: 'Client & Contacts' })}
+          cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
           onCancel={() => handleDeactivateClient(false)}
-          thirdButtonLabel="Client Only"
+          thirdButtonLabel={t('clientDetails.clientOnly', { defaultValue: 'Client Only' })}
           isConfirming={false}
         />
 
@@ -1750,15 +1842,20 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           isOpen={isReactivateDialogOpen}
           onClose={handleCancelReactivation}
           onConfirm={() => handleReactivateClient(true)}
-          title="Reactivate Client"
+          title={t('clientDetails.reactivateClient', { defaultValue: 'Reactivate Client' })}
           message={
             <div className="space-y-3">
               <p>
-                This client has {inactiveContactsToReactivate.length} inactive contact{inactiveContactsToReactivate.length !== 1 ? 's' : ''}. Would you like to reactivate {inactiveContactsToReactivate.length === 1 ? 'this contact' : 'all these contacts'} as well?
+                {t('clientDetails.reactivatePrompt', {
+                  defaultValue: 'This client has {{count}} inactive contact(s). Would you like to reactivate them as well?',
+                  count: inactiveContactsToReactivate.length,
+                })}
               </p>
               {inactiveContactsToReactivate.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Inactive contacts:</p>
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    {t('clientDetails.inactiveContacts', { defaultValue: 'Inactive contacts:' })}
+                  </p>
                   <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 max-h-40 overflow-y-auto">
                     {inactiveContactsToReactivate.map((contact) => (
                       <li key={contact.contact_name_id}>
@@ -1771,10 +1868,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               )}
             </div>
           }
-          confirmLabel="Client & Contacts"
-          cancelLabel="Cancel"
+          confirmLabel={t('clientDetails.clientAndContacts', { defaultValue: 'Client & Contacts' })}
+          cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
           onCancel={() => handleReactivateClient(false)}
-          thirdButtonLabel="Client Only"
+          thirdButtonLabel={t('clientDetails.clientOnly', { defaultValue: 'Client Only' })}
           isConfirming={false}
         />
       </div>

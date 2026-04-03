@@ -1,4 +1,5 @@
-import WorkflowScheduleStateModel from '@shared/workflow/persistence/workflowScheduleStateModel';
+import { WorkflowScheduleStateModel } from '@alga-psa/workflows/persistence';
+import { computeNextFireAtForSchedule } from '@alga-psa/workflows/lib/computeNextFireAt';
 import { createTenantKnex } from 'server/src/lib/db';
 import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
 import type { BaseJobData } from '../interfaces';
@@ -109,7 +110,8 @@ async function runScheduledWorkflow(
           next_fire_at: null
         }
       : {
-          status: schedule.status
+          status: schedule.status,
+          next_fire_at: computeNextFireAtForSchedule(schedule)
         };
 
     await WorkflowScheduleStateModel.update(knex, schedule.id, {

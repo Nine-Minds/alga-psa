@@ -1,0 +1,856 @@
+{
+  "common": {
+    "actions": {
+      "back": "55555",
+      "cancel": "55555",
+      "close": "55555",
+      "continue": "55555",
+      "finish": "55555",
+      "invite": "55555",
+      "next": "55555",
+      "retry": "55555",
+      "save": "55555",
+      "saving": "55555",
+      "skip": "55555",
+      "submit": "55555"
+    },
+    "states": {
+      "loading": "55555",
+      "optional": "55555",
+      "required": "55555"
+    },
+    "no": "55555",
+    "yes": "55555"
+  },
+  "onboardingProvider": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "onboardingWizard": {
+    "title": "55555",
+    "description": "55555",
+    "steps": {
+      "clientInfo": "55555",
+      "teamMembers": "55555",
+      "addClient": "55555",
+      "clientContact": "55555",
+      "billing": "55555",
+      "ticketing": "55555"
+    },
+    "errors": {
+      "saveClientInfo": "55555",
+      "addTeamMembers": "55555",
+      "saveClient": "55555",
+      "addContact": "55555",
+      "setupBilling": "55555",
+      "unknown": "55555",
+      "validationFailed": "55555",
+      "configureTicketing": "55555",
+      "completeOnboarding": "55555"
+    },
+    "debug": {
+      "title": "55555",
+      "currentStep": "55555 {{stepIndex}} 55555 {{stepName}} 55555",
+      "isValid": "55555 {{value}} 55555",
+      "isRequired": "55555 {{value}} 55555",
+      "viewData": "55555"
+    },
+    "actions": {
+      "finish": "55555",
+      "saving": "55555",
+      "completing": "55555"
+    },
+    "shell": {
+      "title": "55555",
+      "description": "55555"
+    }
+  },
+  "addClientStep": {
+    "title": "55555",
+    "description": "55555",
+    "validation": {
+      "email": {
+        "invalid": "55555"
+      },
+      "website": {
+        "example": "55555",
+        "format": "55555"
+      },
+      "phone": {
+        "tooShort": "55555",
+        "tooLong": "55555",
+        "invalidCharacters": "55555"
+      }
+    },
+    "header": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "created": {
+      "title": "55555",
+      "description": "55555 {{clientName}} 55555"
+    },
+    "fields": {
+      "clientName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "clientEmail": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "clientPhone": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "website": {
+        "label": "55555",
+        "placeholder": "55555"
+      }
+    },
+    "common": {
+      "noteLabel": "55555",
+      "optionalLabel": "55555"
+    },
+    "note": {
+      "defaultTaxSettings": "55555",
+      "optional": "55555"
+    }
+  },
+  "billingSetupStep": {
+    "title": "55555",
+    "description": "55555",
+    "serviceTypes": {
+      "toasts": {
+        "deleted": "55555"
+      },
+      "errors": {
+        "delete": "55555",
+        "nameRequired": "55555",
+        "duplicate": "55555",
+        "create": "55555",
+        "createRetry": "55555"
+      },
+      "actions": {
+        "manage": "55555",
+        "import": "55555",
+        "add": "55555",
+        "confirmAdd": "55555"
+      },
+      "noteLabel": "55555",
+      "description": "55555",
+      "addForm": {
+        "title": "55555",
+        "fields": {
+          "name": {
+            "label": "55555",
+            "placeholder": "55555"
+          },
+          "description": {
+            "label": "55555",
+            "placeholder": "55555"
+          },
+          "billingMethod": {
+            "label": "55555"
+          },
+          "displayOrder": {
+            "label": "55555",
+            "placeholder": "55555",
+            "help": "55555"
+          }
+        }
+      },
+      "import": {
+        "title": "55555",
+        "description": "55555",
+        "success": {
+          "titleOne": "55555",
+          "titleOther": "55555",
+          "description": "55555 {{count}} 55555 {{suffix}} 55555",
+          "skipped": "55555 {{count}} 55555"
+        },
+        "actions": {
+          "importing": "55555",
+          "importSelected": "55555 {{count}} 55555"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "55555",
+          "billingMethod": "55555",
+          "order": "55555",
+          "actions": "55555"
+        }
+      },
+      "current": {
+        "title": "55555",
+        "removeTitle": "55555"
+      }
+    },
+    "header": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "created": {
+      "title": "55555",
+      "description": "55555 {{serviceName}} 55555"
+    },
+    "fields": {
+      "serviceName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "serviceDescription": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "serviceType": {
+        "label": "55555",
+        "required": "55555",
+        "emptyPlaceholder": "55555",
+        "placeholder": "55555",
+        "emptyHelp": "55555"
+      },
+      "billingMode": {
+        "label": "55555"
+      },
+      "defaultRate": {
+        "label": "55555",
+        "placeholder": "55555"
+      }
+    },
+    "billingMethods": {
+      "fixed": "55555",
+      "hourly": "55555",
+      "usageBased": "55555",
+      "usage": "55555"
+    },
+    "validation": {
+      "actionRequiredLabel": "55555",
+      "actionRequiredDescription": "55555"
+    }
+  },
+  "clientContactStep": {
+    "title": "55555",
+    "description": "55555",
+    "validation": {
+      "email": {
+        "invalid": "55555"
+      }
+    },
+    "empty": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "header": {
+      "title": "55555 {{clientName}} 55555",
+      "clientFallback": "55555",
+      "description": "55555"
+    },
+    "created": {
+      "title": "55555",
+      "description": "55555 {{contactName}} 55555 {{clientName}} 55555",
+      "contactFallback": "55555",
+      "clientFallback": "55555"
+    },
+    "fields": {
+      "contactName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "contactEmail": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "contactRole": {
+        "label": "55555",
+        "placeholder": "55555"
+      }
+    },
+    "common": {
+      "optionalLabel": "55555"
+    },
+    "footer": {
+      "optional": "55555"
+    }
+  },
+  "clientInfoStep": {
+    "title": "55555",
+    "description": "55555",
+    "revisit": {
+      "title": "55555",
+      "description": "55555",
+      "fields": {
+        "companyName": {
+          "label": "55555",
+          "placeholder": "55555"
+        }
+      },
+      "note": "55555"
+    },
+    "common": {
+      "noteLabel": "55555"
+    },
+    "header": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "fields": {
+      "firstName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "lastName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "companyName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "email": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
+      }
+    },
+    "password": {
+      "resetRequired": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "title": "55555",
+      "description": "55555",
+      "fields": {
+        "newPassword": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "confirmPassword": {
+          "label": "55555",
+          "placeholder": "55555",
+          "match": "55555",
+          "mismatch": "55555"
+        }
+      },
+      "requirements": {
+        "title": "55555",
+        "minLength": "55555",
+        "uppercase": "55555",
+        "lowercase": "55555",
+        "number": "55555",
+        "specialCharacter": "55555"
+      },
+      "strength": {
+        "label": "55555 {{strength}} 55555",
+        "strong": "55555",
+        "medium": "55555",
+        "weak": "55555"
+      }
+    },
+    "footer": {
+      "note": "55555"
+    }
+  },
+  "teamMembersStep": {
+    "title": "55555",
+    "description": "55555",
+    "license": {
+      "limitReached": "55555 {{current}} 55555 {{limit}} 55555",
+      "remaining": {
+        "one": "55555",
+        "other": "55555 {{count}} 55555"
+      },
+      "summary": {
+        "noLimit": "55555 {{count}} 55555",
+        "limited": "55555 {{current}} 55555 {{limit}} 55555"
+      }
+    },
+    "errors": {
+      "requiredFields": "55555",
+      "invalidEmail": "55555",
+      "passwordLength": "55555",
+      "saveFailed": "55555",
+      "generic": "55555"
+    },
+    "header": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "created": {
+      "titleOne": "55555",
+      "titleOther": "55555 {{count}} 55555",
+      "users": "55555 {{users}} 55555"
+    },
+    "member": {
+      "title": "55555 {{index}} 55555",
+      "createdBadge": "55555",
+      "actions": {
+        "saving": "55555",
+        "save": "55555"
+      }
+    },
+    "fields": {
+      "firstName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "lastName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "email": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "role": {
+        "label": "55555"
+      },
+      "password": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
+      }
+    },
+    "roles": {
+      "admin": "55555",
+      "technician": "55555",
+      "manager": "55555",
+      "user": "55555"
+    },
+    "actions": {
+      "saveCurrentFirst": "55555",
+      "addAnother": "55555"
+    },
+    "unsaved": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "limitReached": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "optional": {
+      "label": "55555",
+      "description": "55555"
+    }
+  },
+  "ticketingConfigStep": {
+    "title": "55555",
+    "description": "55555",
+    "boards": {
+      "toasts": {
+        "firstDefaultSet": "55555",
+        "deleted": "55555",
+        "defaultUpdated": "55555"
+      },
+      "errors": {
+        "import": "55555",
+        "delete": "55555",
+        "defaultRequired": "55555",
+        "defaultUpdate": "55555",
+        "duplicate": "55555",
+        "create": "55555"
+      },
+      "delete": {
+        "fallbackEntity": "55555"
+      },
+      "title": "55555",
+      "description": "55555",
+      "tip": "55555",
+      "actions": {
+        "import": "55555",
+        "add": "55555",
+        "confirmAdd": "55555"
+      },
+      "addForm": {
+        "title": "55555",
+        "fields": {
+          "name": {
+            "label": "55555",
+            "placeholder": "55555"
+          },
+          "description": {
+            "label": "55555",
+            "placeholder": "55555"
+          },
+          "displayOrder": {
+            "label": "55555",
+            "placeholder": "55555",
+            "help": "55555"
+          },
+          "itil": {
+            "label": "55555"
+          }
+        },
+        "configurationTitle": "55555"
+      },
+      "import": {
+        "title": "55555",
+        "success": {
+          "one": "55555",
+          "other": "55555 {{count}} 55555"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "55555",
+          "default": "55555",
+          "order": "55555",
+          "itil": "55555"
+        }
+      },
+      "current": {
+        "title": "55555",
+        "defaultTitle": "55555",
+        "setDefaultTitle": "55555",
+        "removeTitle": "55555"
+      }
+    },
+    "categories": {
+      "import": {
+        "unknownParent": "55555",
+        "title": "55555",
+        "success": {
+          "one": "55555",
+          "other": "55555 {{count}} 55555"
+        },
+        "targetBoard": {
+          "label": "55555",
+          "placeholder": "55555",
+          "help": "55555"
+        },
+        "parentAutoSelectTitle": "55555"
+      },
+      "errors": {
+        "missingParents": "55555 {{parents}} 55555",
+        "duplicate": "55555",
+        "create": "55555",
+        "delete": "55555"
+      },
+      "delete": {
+        "fallbackEntity": "55555"
+      },
+      "toasts": {
+        "deleted": "55555"
+      },
+      "title": "55555",
+      "requiresBoard": "55555",
+      "description": "55555",
+      "actions": {
+        "import": "55555",
+        "add": "55555",
+        "confirmAdd": "55555"
+      },
+      "addForm": {
+        "title": "55555",
+        "fields": {
+          "name": {
+            "label": "55555",
+            "placeholder": "55555"
+          },
+          "board": {
+            "label": "55555",
+            "placeholder": "55555"
+          },
+          "parent": {
+            "label": "55555",
+            "noneOption": "55555",
+            "placeholder": "55555"
+          },
+          "displayOrder": {
+            "label": "55555",
+            "placeholder": "55555",
+            "help": "55555"
+          }
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "55555",
+          "order": "55555"
+        }
+      },
+      "current": {
+        "title": "55555 {{count}} 55555",
+        "removeTitle": "55555"
+      }
+    },
+    "statuses": {
+      "toasts": {
+        "firstDefaultSet": "55555",
+        "deleted": "55555",
+        "defaultUpdated": "55555"
+      },
+      "delete": {
+        "fallbackEntity": "55555"
+      },
+      "errors": {
+        "delete": "55555",
+        "defaultRequired": "55555",
+        "closedCannotBeDefault": "55555",
+        "selectBoardForDefault": "55555",
+        "defaultUpdate": "55555",
+        "duplicate": "55555",
+        "selectBoardForAdd": "55555",
+        "create": "55555"
+      },
+      "title": "55555",
+      "description": "55555",
+      "tip": "55555",
+      "fields": {
+        "board": {
+          "label": "55555",
+          "placeholder": "55555"
+        }
+      },
+      "noBoardWarning": "55555",
+      "actions": {
+        "import": "55555",
+        "add": "55555",
+        "confirmAdd": "55555"
+      },
+      "addForm": {
+        "title": "55555",
+        "fields": {
+          "name": {
+            "label": "55555",
+            "placeholder": "55555"
+          },
+          "displayOrder": {
+            "label": "55555",
+            "placeholder": "55555",
+            "help": "55555"
+          },
+          "state": {
+            "closedLabel": "55555",
+            "openLabel": "55555",
+            "closedHelp": "55555",
+            "openHelp": "55555"
+          }
+        }
+      },
+      "import": {
+        "title": "55555",
+        "targetBoard": "55555 {{boardName}} 55555",
+        "success": {
+          "one": "55555",
+          "other": "55555 {{count}} 55555"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "55555",
+          "type": "55555",
+          "default": "55555",
+          "order": "55555"
+        }
+      },
+      "types": {
+        "closed": "55555",
+        "open": "55555"
+      },
+      "current": {
+        "title": "55555",
+        "titleWithBoard": "55555 {{boardName}} 55555",
+        "defaultTitle": "55555",
+        "setDefaultTitle": "55555",
+        "removeTitle": "55555"
+      },
+      "empty": {
+        "forBoard": "55555 {{boardName}} 55555",
+        "noBoardSelected": "55555"
+      }
+    },
+    "priorities": {
+      "errors": {
+        "duplicate": "55555",
+        "missingSession": "55555",
+        "create": "55555",
+        "delete": "55555"
+      },
+      "delete": {
+        "fallbackEntity": "55555"
+      },
+      "toasts": {
+        "deleted": "55555"
+      },
+      "title": "55555",
+      "description": "55555",
+      "actions": {
+        "import": "55555",
+        "add": "55555",
+        "confirmAdd": "55555"
+      },
+      "addForm": {
+        "title": "55555",
+        "fields": {
+          "name": {
+            "label": "55555",
+            "placeholder": "55555"
+          },
+          "displayOrder": {
+            "label": "55555",
+            "placeholder": "55555",
+            "help": "55555"
+          },
+          "color": {
+            "label": "55555",
+            "choose": "55555"
+          }
+        }
+      },
+      "import": {
+        "title": "55555",
+        "success": {
+          "one": "55555",
+          "other": "55555 {{count}} 55555"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "55555",
+          "color": "55555",
+          "order": "55555"
+        }
+      },
+      "current": {
+        "title": "55555",
+        "removeTitle": "55555"
+      }
+    },
+    "common": {
+      "errors": {
+        "validateDeletion": "55555"
+      },
+      "noteLabel": "55555",
+      "tipLabel": "55555",
+      "actions": {
+        "importing": "55555",
+        "importCount": "55555 {{count}} 55555"
+      },
+      "table": {
+        "actions": "55555"
+      }
+    },
+    "header": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "loading": {
+      "description": "55555"
+    },
+    "numbering": {
+      "title": "55555",
+      "description": "55555",
+      "fields": {
+        "prefix": {
+          "label": "55555",
+          "placeholder": "55555",
+          "help": "55555"
+        },
+        "paddingLength": {
+          "label": "55555",
+          "help": "55555"
+        },
+        "startNumber": {
+          "label": "55555"
+        }
+      },
+      "example": "55555 {{value}} 55555"
+    },
+    "itil": {
+      "actions": {
+        "openReference": "55555"
+      },
+      "title": "55555",
+      "categories": {
+        "title": "55555",
+        "hardware": {
+          "title": "55555",
+          "server": "55555",
+          "desktopLaptop": "55555",
+          "networkEquipment": "55555",
+          "printer": "55555",
+          "storage": "55555",
+          "mobileDevice": "55555"
+        },
+        "software": {
+          "title": "55555",
+          "operatingSystem": "55555",
+          "businessApplication": "55555",
+          "database": "55555",
+          "emailCollaboration": "55555",
+          "securitySoftware": "55555",
+          "customApplication": "55555"
+        },
+        "network": {
+          "title": "55555",
+          "connectivity": "55555",
+          "vpn": "55555",
+          "wifi": "55555",
+          "internetAccess": "55555",
+          "lanWan": "55555",
+          "firewall": "55555"
+        },
+        "security": {
+          "title": "55555",
+          "malwareVirus": "55555",
+          "unauthorizedAccess": "55555",
+          "dataBreach": "55555",
+          "phishingSpam": "55555",
+          "policyViolation": "55555",
+          "accountLockout": "55555"
+        },
+        "serviceRequest": {
+          "title": "55555",
+          "accessRequest": "55555",
+          "newUserSetup": "55555",
+          "softwareInstallation": "55555",
+          "equipmentRequest": "55555",
+          "informationRequest": "55555",
+          "changeRequest": "55555"
+        }
+      },
+      "matrix": {
+        "title": "55555",
+        "urgency": {
+          "high": "55555",
+          "label": "55555",
+          "mediumHigh": "55555",
+          "medium": "55555",
+          "mediumLow": "55555",
+          "low": "55555"
+        },
+        "impact": {
+          "high": "55555",
+          "mediumHigh": "55555",
+          "medium": "55555",
+          "mediumLow": "55555",
+          "low": "55555"
+        },
+        "priority": {
+          "critical": "55555",
+          "high": "55555",
+          "medium": "55555",
+          "low": "55555",
+          "planning": "55555"
+        },
+        "explanation": {
+          "impact": "55555",
+          "urgency": "55555",
+          "priority": "55555"
+        }
+      }
+    },
+    "supportEmail": {
+      "label": "55555",
+      "placeholder": "55555",
+      "help": "55555"
+    },
+    "finalRequirement": {
+      "label": "55555",
+      "description": "55555"
+    }
+  }
+}

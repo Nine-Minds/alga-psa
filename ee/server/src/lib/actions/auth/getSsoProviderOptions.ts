@@ -2,7 +2,9 @@
 
 import { getSsoProviderOptions, SsoProviderOption } from "@ee/lib/auth/providerConfig";
 import logger from "@alga-psa/core/logger";
+import { TIER_FEATURES } from "@alga-psa/types";
 import { ensureSsoSettingsPermission } from "@ee/lib/actions/auth/ssoPermissions";
+import { assertTierAccess } from "server/src/lib/tier-gating/assertTierAccess";
 
 export interface GetSsoProviderOptionsResult {
   options: SsoProviderOption[];
@@ -18,6 +20,8 @@ export async function getSsoProviderOptionsAction(
   args: GetSsoProviderOptionsArgs = {}
 ): Promise<GetSsoProviderOptionsResult> {
   try {
+    await assertTierAccess(TIER_FEATURES.SSO);
+
     const scope = args.scope ?? "public";
     if (scope === "settings") {
       await ensureSsoSettingsPermission();

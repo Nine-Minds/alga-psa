@@ -19,6 +19,7 @@ import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions'
 import { IUserWithRoles } from '@alga-psa/types';
 import type { ITeam } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
+import { getEffectiveTemplateStatusMappings } from '../../../lib/templateStatusMappingUtils';
 
 interface TemplateTasksStepProps {
   data: TemplateWizardData;
@@ -71,13 +72,17 @@ export function TemplateTasksStep({
 
   const selectedPhase = data.phases.find((p) => p.temp_id === selectedPhaseId);
   const phaseTasks = data.tasks.filter((t) => t.phase_temp_id === selectedPhaseId);
+  const effectiveStatusMappings = React.useMemo(
+    () => getEffectiveTemplateStatusMappings(data.status_mappings, selectedPhaseId),
+    [data.status_mappings, selectedPhaseId]
+  );
 
   const addTask = () => {
     if (!selectedPhaseId) return;
 
     // Default to first status mapping if available
-    const defaultStatusMappingId = data.status_mappings.length > 0
-      ? data.status_mappings[0].temp_id
+    const defaultStatusMappingId = effectiveStatusMappings.length > 0
+      ? effectiveStatusMappings[0].temp_id
       : undefined;
 
     const newTask: TemplateTask = {
@@ -372,7 +377,7 @@ export function TemplateTasksStep({
                                 template_status_mapping_id: value || undefined
                               })
                             }
-                            options={data.status_mappings.map((s, i) => {
+                            options={effectiveStatusMappings.map((s, i) => {
                               const statusName = s.status_id
                                 ? availableStatuses.find(st => st.status_id === s.status_id)?.name
                                 : s.custom_status_name;

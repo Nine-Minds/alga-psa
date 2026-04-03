@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import type { IScheduleEntry } from '@alga-psa/types';
 import { publishWorkflowEvent as publishWorkflowEventDefault } from '@alga-psa/event-bus/publishers';
-import { buildCapacityThresholdReachedPayload } from '@shared/workflow/streams/domainEventBuilders/capacityThresholdEventBuilders';
+import { buildCapacityThresholdReachedPayload } from '@alga-psa/workflow-streams';
 import { didCrossThreshold, getOverlapHoursForUtcDate, getUtcDatesOverlappedByInterval, utcStartOfDayIso } from './capacityThresholdMath';
 
 function round2(value: number): number {

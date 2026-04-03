@@ -5,7 +5,6 @@
  * The integrations package registers its implementation at startup.
  */
 
-import type { Knex } from 'knex';
 import type { DnsLookupResult } from '@alga-psa/types';
 
 export interface ManagedDomainServiceLike {
@@ -25,7 +24,9 @@ export interface ManagedDomainServiceLike {
 }
 
 export interface ManagedDomainServiceFactory {
-  forTenant: (options: { tenantId: string; knex: Knex }) => ManagedDomainServiceLike;
+  // Use `any` for knex to avoid type conflicts from duplicate knex installations
+  // across packages (e.g. root node_modules vs packages/integrations/node_modules)
+  forTenant: (options: { tenantId: string; knex: any }) => ManagedDomainServiceLike;
 }
 
 let registeredFactory: ManagedDomainServiceFactory | null = null;

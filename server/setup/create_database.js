@@ -137,9 +137,6 @@ async function setupHocuspocusDatabase(client, postgresPassword) {
     });
 
     await hocuspocusClient.connect();
-    await hocuspocusClient.query("SET password_encryption = 'md5';");
-    // Ensure PgBouncer (md5 auth) can connect to hocuspocus database by storing md5 hashes
-    await hocuspocusClient.query("SET password_encryption = 'md5';");
 
     // Check if hocuspocus user exists
     const userCheckResult = await hocuspocusClient.query(
@@ -169,6 +166,32 @@ async function setupHocuspocusDatabase(client, postgresPassword) {
   }
 }
 
+async function ensureLoginRole(client, username, password) {
+  const roleResult = await client.query(
+    "SELECT 1 FROM pg_roles WHERE rolname = $1",
+    [username]
+  );
+
+  if (roleResult.rows.length > 0) {
+    console.log(`User ${username} already exists`);
+    await client.query(`ALTER USER ${username} WITH PASSWORD '${password}'`);
+    console.log(`Updated password for user ${username}`);
+    return;
+  }
+
+  await client.query(`CREATE USER ${username} WITH PASSWORD '${password}'`);
+  console.log(`User ${username} created successfully`);
+}
+
+async function grantServerDatabasePrivileges(client, username) {
+  await client.query(`GRANT CONNECT ON DATABASE ${process.env.DB_NAME_SERVER} TO ${username}`);
+  await client.query(`GRANT USAGE ON SCHEMA public TO ${username}`);
+  await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${username}`);
+  await client.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${username}`);
+  await client.query(`GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO ${username}`);
+  await client.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES TO ${username}`);
+}
+
 /**
  * Creates database and users with appropriate permissions and RLS policies
  * @param {number} retryCount - Number of retry attempts
@@ -195,6 +218,11 @@ async function createDatabase(retryCount = 0) {
     console.error('Error: No server password available');
     process.exit(1);
   }
+
+  const pgbouncerUser = process.env.DB_USER_PGBOUNCER || '';
+  const pgbouncerPassword = pgbouncerUser
+    ? await getSecret('db_password_pgbouncer', 'DB_PASSWORD_PGBOUNCER', serverPassword)
+    : '';
 
   const client = new Client({
     host: process.env.DB_HOST,
@@ -240,13 +268,9 @@ async function createDatabase(retryCount = 0) {
     });
 
     await dbClient.connect();
-    await dbClient.query("SET password_encryption = 'md5';");
-    // Ensure PgBouncer (md5 auth) can connect by storing md5 hashes for app users
-    await dbClient.query("SET password_encryption = 'md5';");
 
     // Note: The postgres superuser password is already set via POSTGRES_PASSWORD_FILE during container initialization.
     // We do NOT re-set it here to avoid authentication issues with concurrent connections.
-    // The password is already in MD5 format as required by PgBouncer.
 
     let skipDbSetup = false;
     try {
@@ -262,6 +286,9 @@ async function createDatabase(retryCount = 0) {
     if (!skipDbSetup) {
       try {
         await dbClient.query(`ALTER USER ${process.env.DB_USER_SERVER} WITH PASSWORD 'placeholder'`);
+        if (pgbouncerUser && pgbouncerUser !== process.env.DB_USER_SERVER) {
+          await dbClient.query(`ALTER USER ${pgbouncerUser} WITH PASSWORD 'placeholder'`);
+        }
       } catch (error) {
         if (error?.code === '42704') {
           console.log(`User ${process.env.DB_USER_SERVER} does not exist yet, skipping placeholder password reset.`);
@@ -287,19 +314,9 @@ async function createDatabase(retryCount = 0) {
 
     console.log('Database extensions created successfully');
 
-    // Check if app_user exists
-    const userCheckResult = await dbClient.query(
-      "SELECT 1 FROM pg_roles WHERE rolname = $1",
-      [process.env.DB_USER_SERVER]
-    );
-
-    if (userCheckResult.rows.length > 0) {
-      console.log(`User ${process.env.DB_USER_SERVER} already exists`);
-      await dbClient.query(`ALTER USER ${process.env.DB_USER_SERVER} WITH PASSWORD '${serverPassword}'`);
-      console.log(`Updated password for user ${process.env.DB_USER_SERVER}`);
-    } else {
-      await dbClient.query(`CREATE USER ${process.env.DB_USER_SERVER} WITH PASSWORD '${serverPassword}'`);
-      console.log(`User ${process.env.DB_USER_SERVER} created successfully`);
+    await ensureLoginRole(dbClient, process.env.DB_USER_SERVER, serverPassword);
+    if (pgbouncerUser && pgbouncerPassword && pgbouncerUser !== process.env.DB_USER_SERVER) {
+      await ensureLoginRole(dbClient, pgbouncerUser, pgbouncerPassword);
     }
 
     // Configure database
@@ -317,19 +334,10 @@ async function createDatabase(retryCount = 0) {
     // Set up RLS and permissions
     console.log('Setting up Row Level Security...');
 
-    // Grant connect permission
-    await dbClient.query(`GRANT CONNECT ON DATABASE ${process.env.DB_NAME_SERVER} TO ${process.env.DB_USER_SERVER}`);
-
-    // Grant usage on schema
-    await dbClient.query(`GRANT USAGE ON SCHEMA public TO ${process.env.DB_USER_SERVER}`);
-
-    // Grant basic table permissions (but not ALL)
-    await dbClient.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${process.env.DB_USER_SERVER}`);
-    await dbClient.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${process.env.DB_USER_SERVER}`);
-
-    // Grant sequence permissions
-    await dbClient.query(`GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO ${process.env.DB_USER_SERVER}`);
-    await dbClient.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES TO ${process.env.DB_USER_SERVER}`);
+    await grantServerDatabasePrivileges(dbClient, process.env.DB_USER_SERVER);
+    if (pgbouncerUser && pgbouncerUser !== process.env.DB_USER_SERVER) {
+      await grantServerDatabasePrivileges(dbClient, pgbouncerUser);
+    }
 
     console.log('Database setup completed successfully');
     await dbClient.end();
@@ -350,9 +358,9 @@ async function createDatabase(retryCount = 0) {
       console.error(`  - DB_PASSWORD_ADMIN: ${process.env.DB_PASSWORD_ADMIN ? 'Set' : 'Not set'}`);
       console.error(`  - DB_HOST: ${process.env.DB_HOST || 'Not set'}`);
       console.error(`  - DB_PORT: ${process.env.DB_PORT || 'Not set'}`);
-      console.error('Tip: If using PgBouncer and seeing SCRAM/wrong password type, Postgres likely needs md5 hashes.');
-      console.error("Run in Postgres:  SET password_encryption = 'md5'; ALTER ROLE postgres WITH PASSWORD '<admin secret>';\nThen ensure app_user password matches the db_password_server secret.");
-      console.error('For setup, prefer direct Postgres by setting DB_HOST_ADMIN=postgres and DB_PORT_ADMIN=5432.');
+      console.error('Tip: For appliance installs, keep alga-core on direct Postgres and use a separate PgBouncer role for pooled services.');
+      console.error('If direct app auth fails, ensure DB_PASSWORD_SERVER matches the direct runtime role password and DB_PASSWORD_PGBOUNCER is only used by PgBouncer-backed services.');
+      console.error('For setup, prefer direct Postgres by setting DB_HOST_ADMIN=db and DB_PORT_ADMIN=5432.');
       console.error('See docs/setup_guide.md → Troubleshooting → Postgres authentication loop.');
       console.error('=======================================');
     }

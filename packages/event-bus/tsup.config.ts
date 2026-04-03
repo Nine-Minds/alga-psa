@@ -9,12 +9,7 @@ export default defineConfig({
     'src/publishers/index.ts',
     'src/publishers/*.ts',
   ],
-  format: ['esm', 'cjs'],
-  // Prefer `.mjs` for ESM to match other workspace packages, and `.js` for CJS.
-  // (This repo's packages commonly publish `.mjs` for import and `.js` for require.)
-  outExtension({ format }) {
-    return { js: format === 'esm' ? '.mjs' : '.js' };
-  },
+  format: ['esm'],
   dts: false,
   bundle: true,
   splitting: true,

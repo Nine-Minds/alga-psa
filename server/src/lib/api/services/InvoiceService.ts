@@ -20,24 +20,31 @@ import {
   buildInvoiceSentPayload,
   buildInvoiceStatusChangedPayload,
   buildInvoiceWrittenOffPayload,
+  summarizeInvoiceRecurringProvenance,
   inferInvoiceDeliveryMethod,
   toIsoDateString,
 } from './invoiceWorkflowEvents';
 import { buildPaymentAppliedPayload, buildPaymentRecordedPayload, buildPaymentRefundedPayload } from './paymentWorkflowEvents';
 
 // Import existing service functions
-import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
+import {
+  generateInvoiceForSelectionInput,
+  generateInvoiceNumber,
+  previewInvoiceForSelectionInput,
+} from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
-import { PDFGenerationService, createPDFGenerationService } from '../../../services/pdf-generation.service';
+import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
 import { StorageService } from '../../storage/StorageService';
+import InvoiceModel from '@alga-psa/billing/models/invoice';
 
 // Import schemas and interfaces
 import {
   CreateInvoice,
   UpdateInvoice,
   ManualInvoiceRequest,
+  GenerateInvoice,
   FinalizeInvoice,
   SendInvoice,
   ApplyCredit,
@@ -54,7 +61,6 @@ import {
   CreateRecurringInvoiceTemplate,
   UpdateRecurringInvoiceTemplate,
   InvoicePreviewRequest,
-  InvoicePreviewResponse
 } from '../schemas/invoiceSchemas';
 
 import {
@@ -167,6 +173,25 @@ export class InvoiceService extends BaseService<IInvoice> {
     return Math.max(0, amountDue);
   }
 
+  private async getInvoiceRecurringProvenance(trx: Knex.Transaction, tenant: string, invoiceId: string) {
+    const charges = await InvoiceModel.getInvoiceCharges(trx, tenant, invoiceId);
+    return summarizeInvoiceRecurringProvenance(charges);
+  }
+
+  private buildRecurringInvoiceSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
+    return trx('recurring_service_periods as rsp')
+      .where('rsp.tenant', context.tenant)
+      .whereNotNull('rsp.invoice_id')
+      .select('rsp.invoice_id')
+      .min('rsp.service_period_start as recurring_service_period_start')
+      .max('rsp.service_period_end as recurring_service_period_end')
+      .min('rsp.invoice_window_start as recurring_invoice_window_start')
+      .max('rsp.invoice_window_end as recurring_invoice_window_end')
+      .max('rsp.cadence_owner as recurring_cadence_owner')
+      .groupBy('rsp.invoice_id')
+      .as('recurring_invoice_summary');
+  }
+
   // ============================================================================
   // CRUD Operations
   // ============================================================================
@@ -228,8 +253,12 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       if ((options as any).include_billing_cycle) {
-        query = query.leftJoin('client_billing_cycles', 'invoices.billing_cycle_id', 'client_billing_cycles.cycle_id')
-          .select('client_billing_cycles.period_start', 'client_billing_cycles.period_end');
+        query = query
+          .leftJoin('client_billing_cycles', 'invoices.billing_cycle_id', 'client_billing_cycles.billing_cycle_id')
+          .select(
+            'client_billing_cycles.period_start_date as period_start',
+            'client_billing_cycles.period_end_date as period_end',
+          );
       }
 
       if ((options as any).include_tax_details) {
@@ -247,9 +276,10 @@ export class InvoiceService extends BaseService<IInvoice> {
       query.orderBy(`invoices.${sortField}`, sortOrder);
       query.limit(limit).offset(offset);
 
-      // Get total count - use a separate query without SELECT columns to avoid GROUP BY issues
-      const countQuery = trx('invoices')
-        .where('invoices.tenant', context.tenant);
+      // Get total count using the same recurring summary join so execution-window filters stay consistent.
+      const countQuery = this.buildBaseQuery(trx, context)
+        .clearSelect()
+        .clearOrder();
 
       if (filters) {
         this.applyInvoiceFilters(countQuery, filters);
@@ -257,7 +287,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       const [data, [{ count }]] = await Promise.all([
         query,
-        countQuery.count('* as count')
+        countQuery.countDistinct('invoices.invoice_id as count')
       ]);
 
       // Add HATEOAS links
@@ -464,6 +494,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       await this.createInvoiceLineItems(id, normalizedItems, trx, context);
       }
 
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
+
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
@@ -471,7 +503,10 @@ export class InvoiceService extends BaseService<IInvoice> {
         tableName: 'invoices',
         recordId: id,
         changedData: data,
-        details: { action: 'invoice.updated' }
+        details: {
+          action: 'invoice.updated',
+          ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+        }
       });
 
       const occurredAt = new Date().toISOString();
@@ -489,6 +524,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             previousStatus,
             newStatus,
             changedAt: occurredAt,
+            recurringProvenance,
           }),
           ctx: {
             tenantId: context.tenant,
@@ -506,6 +542,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             previousDueDate,
             newDueDate: nextDueDate,
             changedAt: occurredAt,
+            recurringProvenance,
           }),
           ctx: {
             tenantId: context.tenant,
@@ -534,6 +571,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             dueDate: nextDueDate || previousDueDate,
             amountDue,
             currency: String(updateData.currency_code ?? existing.currency_code ?? 'USD'),
+            recurringProvenance,
           }),
           ctx: {
             tenantId: context.tenant,
@@ -561,6 +599,7 @@ export class InvoiceService extends BaseService<IInvoice> {
               writtenOffAt: occurredAt,
               amountWrittenOff: amountDue,
               currency: String(updateData.currency_code ?? existing.currency_code ?? 'USD'),
+              recurringProvenance,
             }),
             ctx: {
               tenantId: context.tenant,
@@ -592,15 +631,24 @@ export class InvoiceService extends BaseService<IInvoice> {
         throw new Error('Invoice not found');
       }
 
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
+      const hasCanonicalRecurringDetailPeriods =
+        recurringProvenance?.authoritativePeriodSource === 'canonical_detail_rows' &&
+        (recurringProvenance.detailPeriodCount ?? 0) > 0;
+
       // Check if invoice has payments
 	      const hasPayments = await trx('invoice_payments')
 	        .where({ invoice_id: id, tenant: context.tenant })
 	        .first();
 
 	      const occurredAt = new Date().toISOString();
-	      const softCancelled = Boolean(hasPayments || invoice.status === 'paid');
+	      const softCancelled = Boolean(
+          hasPayments ||
+          invoice.status === 'paid' ||
+          hasCanonicalRecurringDetailPeriods
+        );
 
-	      if (hasPayments || invoice.status === 'paid') {
+	      if (softCancelled) {
 	        // Soft delete - mark as cancelled
 	        await trx('invoices')
 	          .where({ invoice_id: id, tenant: context.tenant })
@@ -627,7 +675,10 @@ export class InvoiceService extends BaseService<IInvoice> {
 	        tableName: 'invoices',
 	        recordId: id,
 	        changedData: {},
-	        details: { action: 'invoice.deleted' }
+	        details: {
+            action: 'invoice.deleted',
+            ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+          }
 	      });
 
 	      if (softCancelled && String(invoice.status) !== 'cancelled') {
@@ -638,6 +689,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            previousStatus: String(invoice.status),
 	            newStatus: 'cancelled',
 	            changedAt: occurredAt,
+              recurringProvenance,
 	          }),
 	          ctx: {
 	            tenantId: context.tenant,
@@ -711,6 +763,8 @@ export class InvoiceService extends BaseService<IInvoice> {
           updated_at: new Date()
         });
 
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
+
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
@@ -718,7 +772,10 @@ export class InvoiceService extends BaseService<IInvoice> {
         tableName: 'invoices',
         recordId: data.invoice_id,
         changedData: { status: 'finalized', subtotal, tax_amount: taxAmount, total_amount: totalAmount },
-        details: { action: 'invoice.finalized' }
+        details: {
+          action: 'invoice.finalized',
+          ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+        }
       });
 
       // Publish event
@@ -740,6 +797,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           previousStatus: String(invoice.status),
           newStatus: 'sent',
           changedAt: new Date().toISOString(),
+          recurringProvenance,
         }),
         ctx: {
           tenantId: context.tenant,
@@ -800,6 +858,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         );
       }
 
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
+
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
@@ -807,7 +867,11 @@ export class InvoiceService extends BaseService<IInvoice> {
         tableName: 'invoices',
         recordId: data.invoice_id,
         changedData: { status: 'sent', sent_at: new Date() },
-        details: { action: 'invoice.sent', recipients: data.email_addresses }
+        details: {
+          action: 'invoice.sent',
+          recipients: data.email_addresses,
+          ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+        }
       });
 
       // Publish event
@@ -823,6 +887,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             emailRecipientCount: data.email_addresses?.length,
             includePdf: data.include_pdf,
           }),
+          recurringProvenance,
         }),
         ctx: {
           tenantId: context.tenant,
@@ -839,6 +904,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             previousStatus: String(invoice.status),
             newStatus: 'sent',
             changedAt: sentAt,
+            recurringProvenance,
           }),
           ctx: {
             tenantId: context.tenant,
@@ -954,6 +1020,8 @@ export class InvoiceService extends BaseService<IInvoice> {
           updated_at: new Date()
         });
 
+        const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
+
 	      // Audit log
 	      await auditLog(trx, {
 	        userId: context.userId,
@@ -961,7 +1029,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 	        tableName: 'invoices',
 	        recordId: data.invoice_id,
 	        changedData: { status: newStatus, total_paid: totalPaid },
-	        details: { action: 'invoice.payment_recorded', payment_amount: data.payment_amount }
+	        details: {
+            action: 'invoice.payment_recorded',
+            payment_amount: data.payment_amount,
+            ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+          }
 	      });
 
 	      if (String(newStatus) !== String(invoice.status)) {
@@ -972,6 +1044,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            previousStatus: String(invoice.status),
 	            newStatus: String(newStatus),
 	            changedAt: occurredAt,
+              recurringProvenance,
 	          }),
 	          ctx: {
 	            tenantId: context.tenant,
@@ -1071,6 +1144,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Calculate remaining balance after credit application
       const remainingBalance = invoice.total_amount - totalPaid;
 
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
+
 	      // Audit log
 	      await auditLog(trx, {
 	        userId: context.userId,
@@ -1081,7 +1156,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 	          credit_applied: newCreditApplied,
 	          status: newStatus
 	        },
-	        details: { action: 'invoice.credit_applied', credit_amount: data.credit_amount }
+	        details: {
+            action: 'invoice.credit_applied',
+            credit_amount: data.credit_amount,
+            ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+          }
 	      });
 
 	      if (String(newStatus) !== String(invoice.status)) {
@@ -1093,6 +1172,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            previousStatus: String(invoice.status),
 	            newStatus: String(newStatus),
 	            changedAt: occurredAt,
+              recurringProvenance,
 	          }),
 	          ctx: {
 	            tenantId: context.tenant,
@@ -1219,6 +1299,8 @@ export class InvoiceService extends BaseService<IInvoice> {
           updated_at: new Date()
         });
 
+        const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
+
 	      // Audit log
 	      await auditLog(trx, {
 	        userId: context.userId,
@@ -1226,7 +1308,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 	        tableName: 'invoices',
 	        recordId: data.invoice_id,
 	        changedData: { status: newStatus, refund_amount: data.refund_amount },
-	        details: { action: 'invoice.refund_recorded', reason: data.reason }
+	        details: {
+            action: 'invoice.refund_recorded',
+            reason: data.reason,
+            ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+          }
 	      });
 
 	      if (String(newStatus) !== String(invoice.status)) {
@@ -1237,6 +1323,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            previousStatus: String(invoice.status),
 	            newStatus: String(newStatus),
 	            changedAt: occurredAt,
+              recurringProvenance,
 	          }),
 	          ctx: {
 	            tenantId: context.tenant,
@@ -1297,16 +1384,17 @@ export class InvoiceService extends BaseService<IInvoice> {
             continue;
           }
 
-          await trx('invoices')
-            .where({ invoice_id: invoiceId, tenant: context.tenant })
-            .update({
-              status: data.status,
+	          await trx('invoices')
+	            .where({ invoice_id: invoiceId, tenant: context.tenant })
+	            .update({
+	              status: data.status,
               finalized_at: data.finalized_at,
               updated_by: context.userId,
               updated_at: new Date()
             });
 
-          results.updated_count++;
+	          results.updated_count++;
+            const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, invoiceId);
 
 	          // Audit log
 	          await auditLog(trx, {
@@ -1315,7 +1403,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            tableName: 'invoices',
 	            recordId: invoiceId,
 	            changedData: { status: data.status },
-	            details: { action: 'invoice.bulk_status_update', old_status: invoice.status }
+	            details: {
+                action: 'invoice.bulk_status_update',
+                old_status: invoice.status,
+                ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+              }
 	          });
 
 	          const occurredAt = new Date().toISOString();
@@ -1330,6 +1422,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	                previousStatus,
 	                newStatus,
 	                changedAt: occurredAt,
+                  recurringProvenance,
 	              }),
 	              ctx: {
 	                tenantId: context.tenant,
@@ -1356,6 +1449,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	                dueDate: toIsoDateString(invoice.due_date),
 	                amountDue,
 	                currency: String(invoice.currency_code ?? 'USD'),
+                  recurringProvenance,
 	              }),
 	              ctx: {
 	                tenantId: context.tenant,
@@ -1381,6 +1475,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	                  writtenOffAt: occurredAt,
 	                  amountWrittenOff: amountDue,
 	                  currency: String(invoice.currency_code ?? 'USD'),
+                    recurringProvenance,
 	                }),
 	                ctx: {
 	                  tenantId: context.tenant,
@@ -1523,8 +1618,28 @@ export class InvoiceService extends BaseService<IInvoice> {
   // Missing Methods - Stub Implementations  
   // ============================================================================
 
-  async generateFromBillingCycle(data: any, context: InvoiceServiceContext): Promise<IInvoice> {
-    throw new Error('generateFromBillingCycle not yet implemented');
+  private requireRecurringSelectorInput<T extends { selector_input?: GenerateInvoice['selector_input'] | InvoicePreviewRequest['selector_input'] }>(
+    data: T,
+    action: 'generate' | 'preview',
+  ) {
+    if (!data.selector_input) {
+      throw new Error(`Recurring invoice ${action} requires selector_input.`);
+    }
+
+    return data.selector_input;
+  }
+
+  async generateRecurringInvoice(data: GenerateInvoice, context: InvoiceServiceContext): Promise<IInvoice> {
+    await this.validatePermissions(context, 'invoice', 'create');
+
+    const selectorInput = this.requireRecurringSelectorInput(data, 'generate');
+    const invoice = await generateInvoiceForSelectionInput(selectorInput);
+
+    if (!invoice) {
+      throw new Error('Failed to generate invoice');
+    }
+
+    return invoice as unknown as IInvoice;
   }
 
   async generateManualInvoice(data: ManualInvoiceRequest, context: InvoiceServiceContext): Promise<IInvoice> {
@@ -1685,101 +1800,12 @@ export class InvoiceService extends BaseService<IInvoice> {
   /**
    * Generate invoice preview
    */
-  async generatePreview(data: InvoicePreviewRequest, context: ServiceContext): Promise<InvoicePreviewResponse> {
+  async generatePreview(data: InvoicePreviewRequest, context: ServiceContext): Promise<PreviewInvoiceResponse> {
     await this.validatePermissions(context, 'invoice', 'preview');
 
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      // Get billing cycle details
-      const billingCycle = await trx('client_billing_cycles')
-        .where({ cycle_id: data.billing_cycle_id, tenant: context.tenant })
-        .first();
-
-      if (!billingCycle) {
-        return {
-          success: false,
-          error: 'Billing cycle not found'
-        };
-      }
-
-      // Get client details with location
-      const client = await trx('clients as c')
-        .leftJoin('client_locations as cl', function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
-        })
-        .select(
-          'c.*',
-          'cl.address_line1 as location_address'
-        )
-        .where({ 'c.client_id': billingCycle.client_id, 'c.tenant': context.tenant })
-        .first();
-
-      if (!client) {
-        return {
-          success: false,
-          error: 'Client not found'
-        };
-      }
-
-      // Get tenant client details with location
-      const tenantClient = await trx('clients as c')
-        .leftJoin('client_locations as cl', function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
-        })
-        .select(
-          'c.*',
-          'cl.address_line1 as location_address'
-        )
-        .where({ 'c.tenant': context.tenant, 'c.is_tenant_client': true })
-        .first();
-
-      // Generate preview data
-      const invoiceNumber = 'PREVIEW-' + Date.now();
-      const issueDate = new Date().toISOString().split('T')[0];
-      const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-      // Mock line items - would be calculated from billing cycle
-      const items = [
-        {
-          id: '1',
-          description: 'Service Fee',
-          quantity: 1,
-          unitPrice: 100,
-          total: 100
-        }
-      ];
-
-      const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-      const tax = Math.round(subtotal * 0.08);
-      const total = subtotal + tax;
-
-      return {
-        success: true,
-        data: {
-          invoiceNumber,
-          issueDate,
-          dueDate,
-          customer: {
-            name: client.client_name,
-            address: client.location_address || ''
-          },
-          tenantClient: tenantClient ? {
-            name: tenantClient.client_name,
-            address: tenantClient.location_address || '',
-            logoUrl: tenantClient.logo_url || null
-          } : null,
-          items,
-          subtotal,
-          tax,
-          total
-        }
-      };
-    });
+    return previewInvoiceForSelectionInput(
+      this.requireRecurringSelectorInput(data, 'preview'),
+    );
   }
 
   // ============================================================================
@@ -1787,12 +1813,33 @@ export class InvoiceService extends BaseService<IInvoice> {
   // ============================================================================
 
   protected buildBaseQuery(trx: Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
+    const recurringInvoiceSummary = this.buildRecurringInvoiceSummaryQuery(trx, context);
+
     return trx('invoices')
+      .leftJoin(recurringInvoiceSummary, 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id')
       .where('invoices.tenant', context.tenant)
       .select(
         'invoices.*',
         trx.raw('COALESCE(invoices.credit_applied, 0) as credit_applied'),
-        trx.raw('(invoices.total_amount - COALESCE(invoices.credit_applied, 0)) as balance_due')
+        trx.raw('(invoices.total_amount - COALESCE(invoices.credit_applied, 0)) as balance_due'),
+        'recurring_invoice_summary.recurring_service_period_start',
+        'recurring_invoice_summary.recurring_service_period_end',
+        'recurring_invoice_summary.recurring_invoice_window_start',
+        'recurring_invoice_summary.recurring_invoice_window_end',
+        trx.raw(`
+          CASE
+            WHEN recurring_invoice_summary.recurring_cadence_owner = 'contract' THEN 'contract_cadence_window'
+            WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' THEN 'client_cadence_window'
+            ELSE NULL
+          END as recurring_execution_window_kind
+        `),
+        trx.raw(`
+          CASE
+            WHEN recurring_invoice_summary.recurring_cadence_owner = 'contract' THEN 'contract_anniversary'
+            WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' THEN 'client_schedule'
+            ELSE NULL
+          END as recurring_cadence_source
+        `)
       );
   }
 
@@ -1852,6 +1899,20 @@ export class InvoiceService extends BaseService<IInvoice> {
         case 'billing_cycle_id':
           query.where('invoices.billing_cycle_id', value);
           break;
+        case 'execution_window_kind':
+          if (value === 'contract_cadence_window') {
+            query.where('recurring_invoice_summary.recurring_cadence_owner', 'contract');
+          } else if (value === 'client_cadence_window') {
+            query.where('recurring_invoice_summary.recurring_cadence_owner', 'client');
+          }
+          break;
+        case 'cadence_source':
+          if (value === 'contract_anniversary') {
+            query.where('recurring_invoice_summary.recurring_cadence_owner', 'contract');
+          } else if (value === 'client_schedule') {
+            query.where('recurring_invoice_summary.recurring_cadence_owner', 'client');
+          }
+          break;
         case 'has_credit_applied':
           if (value) {
             query.where('invoices.credit_applied', '>', 0);
@@ -1902,10 +1963,12 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   // Additional helper methods...
-  private async getInvoiceLineItems(invoiceId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any[]> {
-    return trx('invoice_line_items')
-      .where({ invoice_id: invoiceId, tenant: context.tenant })
-      .orderBy('line_number');
+  private async getInvoiceLineItems(
+    invoiceId: string,
+    trx: Knex.Transaction,
+    context: ServiceContext
+  ): Promise<IInvoiceCharge[]> {
+    return InvoiceModel.getInvoiceCharges(trx, context.tenant, invoiceId);
   }
 
   private async getInvoiceClient(clientId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
@@ -1917,7 +1980,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
   private async getBillingCycle(cycleId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
     return trx('client_billing_cycles')
-      .where({ cycle_id: cycleId, tenant: context.tenant })
+      .where({ billing_cycle_id: cycleId, tenant: context.tenant })
       .first();
   }
 
@@ -2051,7 +2114,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     return this.getStatistics(context, dateRange) as Promise<InvoiceAnalytics>;
   }
 
-  async previewInvoice(request: InvoicePreviewRequest, context: InvoiceServiceContext): Promise<InvoicePreviewResponse> {
+  async previewInvoice(request: InvoicePreviewRequest, context: InvoiceServiceContext): Promise<PreviewInvoiceResponse> {
     return this.generatePreview(request, context);
   }
 

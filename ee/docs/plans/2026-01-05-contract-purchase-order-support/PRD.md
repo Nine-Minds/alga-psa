@@ -63,7 +63,7 @@ MSPs frequently must include customer PO numbers on invoices to avoid AP rejecti
 
 - Invoice PO snapshot
   - Add `invoices.po_number` populated at invoice creation time from the associated `client_contracts.po_number`.
-  - Add `invoices.client_contract_id` populated for invoices created from contract billing (single-contract assumption).
+  - Add `invoices.client_contract_id` populated for invoices created from contract billing (single-assignment invoice scope; independent of whether the client has other active assignments).
   - Invoices created without contract context (pure manual, etc.) may leave these fields null.
 - PO-required behavior
   - If `client_contracts.po_required = true`, invoice generation remains blocked when `po_number` is missing.

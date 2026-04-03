@@ -35,7 +35,7 @@ import { SharedNumberingService } from '@shared/services/numberingService';
 import {
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
+} from '@alga-psa/workflow-streams';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -942,19 +942,30 @@ async function getAllClientsForProjectsInternal(tenant: string): Promise<IClient
 }
 
 // Internal helper for getProjectTaskStatuses
-async function getProjectTaskStatusesInternal2(tenant: string, projectId: string, user: IUser): Promise<ProjectStatus[]> {
+async function getProjectTaskStatusesInternal2(
+    tenant: string,
+    projectId: string,
+    user: IUser,
+    phaseId?: string | null
+): Promise<ProjectStatus[]> {
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await getProjectTaskStatusesInternal(trx, tenant, projectId, user);
+        return await getProjectTaskStatusesInternal(trx, tenant, projectId, user, phaseId);
     });
 }
 
 // Internal function to get project task statuses within transaction
-async function getProjectTaskStatusesInternal(trx: Knex.Transaction, tenant: string, projectId: string, user: IUser): Promise<ProjectStatus[]> {
+async function getProjectTaskStatusesInternal(
+    trx: Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    user: IUser,
+    phaseId?: string | null
+): Promise<ProjectStatus[]> {
     if (!await hasPermission(user, 'project', 'read', trx)) {
         throw new Error('Permission denied: Cannot read project');
     }
-    const statusMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId);
+    const statusMappings = await ProjectModel.getEffectiveStatusMappings(trx, tenant, projectId, phaseId);
     if (!statusMappings || statusMappings.length === 0) {
         console.warn(`No status mappings found for project ${projectId}`);
         return [];
@@ -991,6 +1002,7 @@ async function getProjectTaskStatusesInternal(trx: Knex.Transaction, tenant: str
                 ...standardStatus,
                 project_status_mapping_id: mapping.project_status_mapping_id,
                 status_id: standardStatus.standard_status_id,
+                phase_id: mapping.phase_id,
                 custom_name: mapping.custom_name,
                 display_order: mapping.display_order,
                 is_visible: mapping.is_visible,
@@ -1007,6 +1019,7 @@ async function getProjectTaskStatusesInternal(trx: Knex.Transaction, tenant: str
                 ...customStatus,
                 project_status_mapping_id: mapping.project_status_mapping_id,
                 status_id: customStatus.status_id,
+                phase_id: mapping.phase_id,
                 custom_name: mapping.custom_name,
                 display_order: mapping.display_order,
                 is_visible: mapping.is_visible,
@@ -1120,12 +1133,17 @@ export const updateProjectStructure = withAuth(async (user, { tenant }, projectI
     }
 });
 
-export const getProjectTaskStatuses = withAuth(async (user, { tenant }, projectId: string): Promise<ProjectStatus[]> => {
+export const getProjectTaskStatuses = withAuth(async (
+    user,
+    { tenant },
+    projectId: string,
+    phaseId?: string | null
+): Promise<ProjectStatus[]> => {
     try {
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await getProjectTaskStatusesInternal(trx, tenant, projectId, user);
+            return await getProjectTaskStatusesInternal(trx, tenant, projectId, user, phaseId);
         });
     } catch (error) {
         console.error('Error fetching project statuses:', error);

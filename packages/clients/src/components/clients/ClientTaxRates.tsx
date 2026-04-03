@@ -8,6 +8,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import Drawer from '@alga-psa/ui/components/Drawer'; // Correct: Use default import
 import TaxRateCreateForm from './TaxRateCreateForm';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientTaxRatesProps {
     clientId: string;
@@ -26,6 +27,7 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
     onChangeDefault,
     onTaxRateCreated
 }) => {
+    const { t } = useTranslation('msp/clients');
     const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
     const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true);
     const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null);
@@ -45,14 +47,14 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
                 setErrorTaxRegions(null);
             } catch (error) {
                 console.error('Error loading tax regions:', error);
-                setErrorTaxRegions('Failed to load tax regions.');
+                setErrorTaxRegions(t('clientTaxRates.loadTaxRegionsError', { defaultValue: 'Failed to load tax regions.' }));
                 setTaxRegions([]);
             } finally {
                 setIsLoadingTaxRegions(false);
             }
         };
         fetchTaxRegions();
-    }, []);
+    }, [t]);
 
     const defaultTaxRateDetails = clientTaxRate
         ? taxRates.find(tr => tr.tax_rate_id === clientTaxRate.tax_rate_id)
@@ -62,16 +64,21 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
         ? taxRegions.find(reg => reg.region_code === defaultTaxRateDetails.region_code)
         : null;
 
-    const regionName = defaultTaxRegion?.region_name || defaultTaxRateDetails?.region_code || 'N/A';
+    const regionName = defaultTaxRegion?.region_name || defaultTaxRateDetails?.region_code || t('clientTaxRates.na', { defaultValue: 'N/A' });
     const taxPercentage = defaultTaxRateDetails?.tax_percentage;
     const description = defaultTaxRateDetails?.description;
 
     const taxRateOptions = isLoadingTaxRegions ? [] : taxRates.map((taxRate): { value: string; label: string } => {
         const taxRegion = taxRegions.find(reg => reg.region_code === taxRate.region_code);
-        const regionLabel = taxRegion?.region_name || taxRate.region_code || 'Unknown Region';
+        const regionLabel = taxRegion?.region_name || taxRate.region_code || t('clientTaxRates.unknownRegion', { defaultValue: 'Unknown Region' });
         return {
-            value: taxRate.tax_rate_id!,
-            label: `${regionLabel} - ${taxRate.tax_percentage}% (${taxRate.description || 'No Description'})`
+            value: taxRate.tax_rate_id || '',
+            label: t('clientTaxRates.taxRateOption', {
+                defaultValue: '{{regionLabel}} - {{percentage}}% ({{description}})',
+                regionLabel,
+                percentage: taxRate.tax_percentage,
+                description: taxRate.description || t('clientTaxRates.noDescription', { defaultValue: 'No Description' })
+            })
         };
     });
 
@@ -103,30 +110,30 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
 
     const handleCreateSuccess = async () => {
         setIsCreateDrawerOpen(false);
-        toast.success('Tax rate created successfully.');
+        toast.success(t('clientTaxRates.taxRateCreatedSuccess', { defaultValue: 'Tax rate created successfully.' }));
         await onTaxRateCreated();
     };
 
     const handleCreateError = (error: Error) => {
         console.error("Failed to create tax rate:", error);
-        toast.error(`Failed to create tax rate: ${error.message}`);
+        toast.error(t('clientTaxRates.taxRateCreateError', { defaultValue: 'Failed to create tax rate: {{message}}', message: error.message }));
     };
 
     return (
-        <Card>
+        <Card data-client-id={clientId}>
             <CardHeader>
                 <CardTitle className="flex justify-between items-center">
-                    <span>Default Client Tax Rate</span>
+                    <span>{t('clientTaxRates.title', { defaultValue: 'Default Client Tax Rate' })}</span>
                     {defaultTaxRateDetails && !isEditing && (
                         <Button id="change-default-tax-rate-button" variant="outline" size="sm" onClick={() => { setSelectedRateToChange(clientTaxRate?.tax_rate_id || ''); setIsEditing(true); }}>
-                            Change
+                            {t('clientTaxRates.change', { defaultValue: 'Change' })}
                         </Button>
                     )}
                 </CardTitle>
             </CardHeader>
             <CardContent>
                 {isLoadingTaxRegions ? (
-                    <p>Loading tax details...</p>
+                    <p>{t('clientTaxRates.loadingTaxDetails', { defaultValue: 'Loading tax details...' })}</p>
                 ) : errorTaxRegions ? (
                     <p className="text-red-600">{errorTaxRegions}</p>
                 ) : defaultTaxRateDetails ? (
@@ -137,16 +144,16 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
                                 value={selectedRateToChange}
                                 onValueChange={setSelectedRateToChange}
                                 options={taxRateOptions}
-                                placeholder="Select New Default Rate"
+                                placeholder={t('clientTaxRates.selectNewDefaultRate', { defaultValue: 'Select New Default Rate' })}
                                 disabled={isSavingChange}
                             />
                             <div className="flex justify-end gap-2">
                                 {/* Removed DrawerTrigger wrapper */}
                                 <Button id="create-new-tax-rate-button-editing" variant="outline" size="sm" onClick={() => setIsCreateDrawerOpen(true)}>
-                                    Create New Rate
+                                    {t('clientTaxRates.createNewRate', { defaultValue: 'Create New Rate' })}
                                 </Button>
                                 <Button id="cancel-change-tax-rate-button" variant="ghost" size="sm" onClick={() => setIsEditing(false)} disabled={isSavingChange}>
-                                    Cancel
+                                    {t('clientTaxRates.cancel', { defaultValue: 'Cancel' })}
                                 </Button>
                                 <Button
                                     id="save-change-tax-rate-button"
@@ -154,7 +161,7 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
                                     onClick={handleSaveChangesClick}
                                     disabled={!selectedRateToChange || selectedRateToChange === clientTaxRate?.tax_rate_id || isSavingChange}
                                 >
-                                    {isSavingChange ? 'Saving...' : 'Save Change'}
+                                    {isSavingChange ? t('clientTaxRates.saving', { defaultValue: 'Saving...' }) : t('clientTaxRates.saveChange', { defaultValue: 'Save Change' })}
                                 </Button>
                             </div>
                         </div>
@@ -162,30 +169,30 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
                         // Display Mode
                         <div className="space-y-2">
                             <div>
-                                <span className="font-semibold text-sm text-gray-600">Region:</span>
+                                <span className="font-semibold text-sm text-gray-600">{t('clientTaxRates.region', { defaultValue: 'Region:' })}</span>
                                 <span className="ml-2 text-sm">{regionName}</span>
                             </div>
                             <div>
-                                <span className="font-semibold text-sm text-gray-600">Tax Percentage:</span>
-                                <span className="ml-2 text-sm">{taxPercentage !== undefined ? `${taxPercentage}%` : 'N/A'}</span>
+                                <span className="font-semibold text-sm text-gray-600">{t('clientTaxRates.taxPercentage', { defaultValue: 'Tax Percentage:' })}</span>
+                                <span className="ml-2 text-sm">{taxPercentage !== undefined ? `${taxPercentage}%` : t('clientTaxRates.na', { defaultValue: 'N/A' })}</span>
                             </div>
                             <div>
-                                <span className="font-semibold text-sm text-gray-600">Description:</span>
-                                <span className="ml-2 text-sm">{description || 'N/A'}</span>
+                                <span className="font-semibold text-sm text-gray-600">{t('clientTaxRates.description', { defaultValue: 'Description:' })}</span>
+                                <span className="ml-2 text-sm">{description || t('clientTaxRates.na', { defaultValue: 'N/A' })}</span>
                             </div>
                         </div>
                     )
                 ) : (
                     // Assigning Mode
                     <div className="space-y-4">
-                        <p className="mb-4">No default tax rate assigned.</p>
+                        <p className="mb-4">{t('clientTaxRates.noDefaultAssigned', { defaultValue: 'No default tax rate assigned.' })}</p>
                         <div className="flex items-center gap-4">
                             <div className="flex-1">
                                 <CustomSelect
                                     value={selectedRateToAdd}
                                     onValueChange={setSelectedRateToAdd}
                                     options={taxRateOptions}
-                                    placeholder={isLoadingTaxRegions ? "Loading rates..." : "Select Tax Rate to Assign"}
+                                    placeholder={isLoadingTaxRegions ? t('clientTaxRates.loadingRates', { defaultValue: 'Loading rates...' }) : t('clientTaxRates.selectRateToAssign', { defaultValue: 'Select Tax Rate to Assign' })}
                                     disabled={isLoadingTaxRegions || isAssigning}
                                 />
                             </div>
@@ -195,13 +202,13 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
                                 disabled={!selectedRateToAdd || isAssigning}
                                 size="default"
                             >
-                                {isAssigning ? 'Assigning...' : 'Assign Default Rate'}
+                                {isAssigning ? t('clientTaxRates.assigning', { defaultValue: 'Assigning...' }) : t('clientTaxRates.assignDefaultRate', { defaultValue: 'Assign Default Rate' })}
                             </Button>
                         </div>
                         <div className="flex justify-start">
                              {/* Removed DrawerTrigger wrapper */}
                             <Button id="create-new-tax-rate-button-assigning" variant="outline" size="sm" onClick={() => setIsCreateDrawerOpen(true)}>
-                                Create New Rate
+                                {t('clientTaxRates.createNewRate', { defaultValue: 'Create New Rate' })}
                             </Button>
                         </div>
                     </div>
@@ -212,8 +219,8 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
             <Drawer isOpen={isCreateDrawerOpen} onClose={() => setIsCreateDrawerOpen(false)} id="create-tax-rate-drawer">
                  {/* Use standard elements for header */}
                  <div className="p-4 border-b"> {/* Added padding and border */}
-                    <h2 className="text-lg font-semibold">Create New Tax Rate</h2>
-                    <p className="text-sm text-muted-foreground">Enter the details for the new tax rate.</p>
+                    <h2 className="text-lg font-semibold">{t('clientTaxRates.createDrawerTitle', { defaultValue: 'Create New Tax Rate' })}</h2>
+                    <p className="text-sm text-muted-foreground">{t('clientTaxRates.createDrawerDescription', { defaultValue: 'Enter the details for the new tax rate.' })}</p>
                  </div>
                 <TaxRateCreateForm onSuccess={handleCreateSuccess} onError={handleCreateError} />
             </Drawer>

@@ -13,14 +13,15 @@ import {
   setServicePrices,
   createServiceTypeInline,
   updateServiceTypeInline,
-  deleteServiceTypeInline
+  deleteServiceTypeInline,
+  getDefaultBillingSettings,
 } from '@alga-psa/billing/actions';
 import { getTaxRates } from '@alga-psa/billing/actions';
 import { ITaxRate } from '@alga-psa/types';
 import { IService, IServiceCategory } from '@alga-psa/types';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { getServiceCategories } from '@alga-psa/billing/actions';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const LICENSE_TERM_OPTIONS = [
   { value: 'monthly', label: 'Monthly' },
@@ -29,7 +30,7 @@ const LICENSE_TERM_OPTIONS = [
 ];
 
 const BILLING_METHOD_OPTIONS = [
-  { value: 'per_unit', label: 'Per Unit' },
+  { value: 'usage', label: 'Usage' },
 ];
 
 type PriceDraft = { currency_code: string; rate: number };
@@ -45,6 +46,18 @@ interface QuickAddProductProps {
 export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: QuickAddProductProps) {
   const isEditMode = !!product;
   const [error, setError] = useState<string | null>(null);
+  const [defaultCurrency, setDefaultCurrency] = useState('USD');
+
+  useEffect(() => {
+    getDefaultBillingSettings()
+      .then((settings) => {
+        const currency = settings.defaultCurrencyCode || 'USD';
+        setDefaultCurrency(currency);
+        setFormProduct((prev) => ({ ...prev, cost_currency: currency }));
+        setFormPrices([{ currency_code: currency, rate: 0 }]);
+      })
+      .catch(() => {});
+  }, []);
 
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
   const [isLoadingTaxRates, setIsLoadingTaxRates] = useState(true);
@@ -53,22 +66,22 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
   const [allServiceTypes, setAllServiceTypes] = useState<
-    { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }[]
+    { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]
   >([]);
 
   const getInitialProductState = (): Partial<IService> => ({
     item_kind: 'product',
     is_active: true,
-    billing_method: 'per_unit',
+    billing_method: 'usage',
     unit_of_measure: '',
-    cost_currency: 'USD',
+    cost_currency: defaultCurrency,
     is_license: false,
     license_term: 'monthly',
     license_billing_cadence: 'monthly'
   });
 
   const [formProduct, setFormProduct] = useState<Partial<IService>>(getInitialProductState());
-  const [formPrices, setFormPrices] = useState<PriceDraft[]>([{ currency_code: 'USD', rate: 0 }]);
+  const [formPrices, setFormPrices] = useState<PriceDraft[]>([{ currency_code: defaultCurrency, rate: 0 }]);
   const [priceInput, setPriceInput] = useState<string>('');
   const [costInput, setCostInput] = useState<string>('');
 
@@ -85,22 +98,22 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       setCostInput(product.cost != null ? (product.cost / 100).toFixed(2) : '');
     } else if (isOpen && !product) {
       setFormProduct(getInitialProductState());
-      setFormPrices([{ currency_code: 'USD', rate: 0 }]);
+      setFormPrices([{ currency_code: defaultCurrency, rate: 0 }]);
       setPriceInput('');
       setCostInput('');
     }
   }, [isOpen, product]);
 
   const productServiceTypes = useMemo(() => {
-    const perUnitTypes = allServiceTypes.filter((t) => t.billing_method === 'per_unit');
+    const usageTypes = allServiceTypes.filter((t) => t.billing_method === 'usage');
     const selectedTypeId = formProduct.custom_service_type_id || null;
 
-    if (selectedTypeId && !perUnitTypes.some((t) => t.id === selectedTypeId)) {
+    if (selectedTypeId && !usageTypes.some((t) => t.id === selectedTypeId)) {
       const selected = allServiceTypes.find((t) => t.id === selectedTypeId);
-      if (selected) return [...perUnitTypes, selected];
+      if (selected) return [...usageTypes, selected];
     }
 
-    return perUnitTypes;
+    return usageTypes;
   }, [allServiceTypes, formProduct.custom_service_type_id]);
 
   const fetchServiceTypes = async () => {
@@ -167,7 +180,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
 
   const resetForm = () => {
     setFormProduct(getInitialProductState());
-    setFormPrices([{ currency_code: 'USD', rate: 0 }]);
+    setFormPrices([{ currency_code: defaultCurrency, rate: 0 }]);
     setPriceInput('');
     setCostInput('');
     setError(null);
@@ -212,7 +225,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
         const created = await createService({
           service_name: formProduct.service_name!.trim(),
           custom_service_type_id: formProduct.custom_service_type_id!,
-          billing_method: (formProduct.billing_method || 'per_unit') as any,
+          billing_method: (formProduct.billing_method || 'usage') as any,
           default_rate: primary.rate,
           unit_of_measure: formProduct.unit_of_measure!.trim(),
           description: formProduct.description ?? null,
@@ -233,6 +246,10 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
 
         if (isActionPermissionError(created)) {
           handleError(created.permissionError);
+          return;
+        }
+        if (isActionMessageError(created)) {
+          setError(getErrorMessage(created));
           return;
         }
         await setServicePrices(created.service_id, formPrices);
@@ -386,7 +403,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               onChange={(value) => setFormProduct({ ...formProduct, custom_service_type_id: value })}
               serviceTypes={productServiceTypes}
               onCreateType={async (name) => {
-                await createServiceTypeInline(name, 'per_unit');
+                await createServiceTypeInline(name, 'usage');
                 await fetchServiceTypes();
               }}
               onUpdateType={async (id, name) => {
@@ -501,7 +518,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Billing Method</label>
               <CustomSelect
                 options={BILLING_METHOD_OPTIONS}
-                value={(formProduct.billing_method as string) || 'per_unit'}
+                value={(formProduct.billing_method as string) || 'usage'}
                 onValueChange={(v) => setFormProduct({ ...formProduct, billing_method: v as any })}
               />
             </div>

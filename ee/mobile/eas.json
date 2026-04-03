@@ -3,6 +3,16 @@
     "version": ">= 8.0.0"
   },
   "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_PHASE2_NOTIFICATIONS": "true"
+      }
+    },
     "testflight": {
       "ios": {
         "distribution": "store"
@@ -22,7 +32,9 @@
     },
     "playInternal": {
       "android": {
-        "track": "internal"
+        "track": "internal",
+        "releaseStatus": "draft",
+        "serviceAccountKeyPath": "./google-service-account.json"
       }
     }
   }

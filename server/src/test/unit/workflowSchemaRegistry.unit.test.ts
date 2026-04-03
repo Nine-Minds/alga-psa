@@ -12,8 +12,8 @@ vi.mock('server/src/lib/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} as any, tenant: 'tenant_1' })),
 }));
 
-vi.mock('@shared/workflow/runtime', async () => {
-  const actual = await vi.importActual<any>('@shared/workflow/runtime');
+vi.mock('@alga-psa/workflows/runtime', async () => {
+  const actual = await vi.importActual<any>('@alga-psa/workflows/runtime');
   return {
     ...actual,
     initializeWorkflowRuntimeV2: vi.fn(),
@@ -27,7 +27,7 @@ vi.mock('@shared/workflow/runtime', async () => {
 
 import { listWorkflowSchemaRefsAction } from '@alga-psa/workflows/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
-import { getSchemaRegistry } from '@shared/workflow/runtime';
+import { getSchemaRegistry } from '@alga-psa/workflows/runtime';
 
 describe('workflow schema registry actions', () => {
   beforeEach(() => {

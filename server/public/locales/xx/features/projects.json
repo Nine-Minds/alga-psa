@@ -33,7 +33,60 @@
   "phases": {
     "title": "11111",
     "completion": "11111",
-    "noPhases": "11111"
+    "noPhases": "11111",
+    "statusColumns": "11111",
+    "statusColumnsProjectDefaults": "11111",
+    "statusColumnsCustom": "11111 {{count}} 11111",
+    "configureStatuses": "11111"
+  },
+  "settings": {
+    "statuses": {
+      "project": {
+        "title": "11111",
+        "description": "11111",
+        "add_from_library": "11111"
+      },
+      "closed": "11111",
+      "confirm_delete_title": "11111",
+      "confirm_delete": "11111 {{statusName}} 11111",
+      "delete_error": "11111",
+      "scope_label": "11111",
+      "scope_placeholder": "11111",
+      "scope_project_defaults": "11111",
+      "use_project_defaults": "11111",
+      "custom_statuses": "11111",
+      "phase_uses_defaults": "11111",
+      "copy_from_defaults": "11111",
+      "add_custom_status": "11111",
+      "revert_title": "11111",
+      "revert_message": "11111",
+      "revert_confirm": "11111",
+      "copy_failed": "11111",
+      "revert_failed": "11111",
+      "delete_has_tasks": "11111 {{statusName}} 11111 {{count}} 11111",
+      "delete_and_move": "11111"
+    }
+  },
+  "templates": {
+    "statuses": {
+      "manage_title": "11111",
+      "manage_description": "11111",
+      "template_defaults": "11111",
+      "added": "11111",
+      "removed": "11111",
+      "copied_to_phase": "11111",
+      "reverted": "11111",
+      "revert_message": "11111",
+      "remove_title": "11111",
+      "remove_message": "11111",
+      "remove_confirm": "11111",
+      "empty": "11111",
+      "empty_hint": "11111",
+      "add_title": "11111",
+      "select_placeholder": "11111",
+      "all_in_use": "11111",
+      "create_new": "11111"
+    }
   },
   "documents": {
     "title": "11111",

@@ -20,6 +20,7 @@ import {
 } from '@alga-psa/billing/actions/contractWizardActions';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getUnsupportedRecurringAuthoringCombinationMessage } from '@shared/billingClients/recurringAuthoringValidation';
 
 const STEPS = [
   'Contract Basics',
@@ -96,6 +97,8 @@ export interface ContractWizardData {
   renewal_term_months?: number;
   use_tenant_renewal_defaults?: boolean;
   description?: string;
+  cadence_owner?: 'client' | 'contract';
+  billing_timing?: 'arrears' | 'advance';
   billing_frequency: string;
   currency_code: string;
   po_number?: string;
@@ -149,6 +152,8 @@ export const createDefaultContractWizardData = (): ContractWizardData => ({
   renewal_term_months: undefined,
   use_tenant_renewal_defaults: true,
   description: '',
+  cadence_owner: 'client',
+  billing_timing: 'arrears',
   billing_frequency: 'monthly',
   currency_code: 'USD',
   fixed_services: [],
@@ -281,6 +286,19 @@ export function ContractWizard({
       .finally(() => {
         setIsLoadingTemplates(false);
       });
+
+    // Apply tenant default currency for new contracts
+    if (!editingContract) {
+      getDefaultBillingSettings()
+        .then((settings) => {
+          const currency = settings.defaultCurrencyCode || 'USD';
+          setWizardData((prev) => ({
+            ...prev,
+            currency_code: currency,
+          }));
+        })
+        .catch(() => {});
+    }
   }, [open, editingContract]);
 
   const resetWizard = () => {
@@ -316,6 +334,8 @@ export function ContractWizard({
       contract_name: snapshot.contract_name ?? prev.contract_name,
       description: snapshot.description ?? prev.description,
       billing_frequency: snapshot.billing_frequency ?? prev.billing_frequency,
+      cadence_owner: snapshot.cadence_owner ?? prev.cadence_owner,
+      billing_timing: snapshot.billing_timing ?? prev.billing_timing,
       // currency_code is inherited from client, not from template (templates are currency-neutral)
       fixed_services: snapshot.fixed_services ?? [],
       product_services: snapshot.product_services ?? [],
@@ -384,6 +404,8 @@ export function ContractWizard({
       notice_period_days: resolvedNoticePeriodDays,
       renewal_term_months: wizardData.renewal_term_months,
       use_tenant_renewal_defaults: useTenantDefaults,
+      cadence_owner: wizardData.cadence_owner ?? 'client',
+      billing_timing: wizardData.billing_timing ?? 'arrears',
       end_date: wizardData.end_date,
       po_required: wizardData.po_required,
       po_number: wizardData.po_number,
@@ -403,6 +425,45 @@ export function ContractWizard({
       currency_code: wizardData.currency_code,
       template_id: wizardData.template_id,
     };
+  };
+
+  const getRecurringAuthoringValidationError = (): string | null => {
+    const combinations = [
+      wizardData.fixed_services.length > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Fixed',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.fixed_billing_frequency ?? wizardData.billing_frequency,
+          })
+        : null,
+      wizardData.product_services.length > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Product',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.billing_frequency,
+          })
+        : null,
+      wizardData.hourly_services.length > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Hourly',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.hourly_billing_frequency ?? wizardData.billing_frequency,
+          })
+        : null,
+      (wizardData.usage_services?.length ?? 0) > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Usage',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.usage_billing_frequency ?? wizardData.billing_frequency,
+          })
+        : null,
+    ];
+
+    return combinations.find((message): message is string => Boolean(message)) ?? null;
   };
 
   const validateStep = (stepIndex: number): boolean => {
@@ -497,6 +558,14 @@ export function ContractWizard({
           }));
           return false;
         }
+        const recurringAuthoringError = getRecurringAuthoringValidationError();
+        if (recurringAuthoringError) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: recurringAuthoringError,
+          }));
+          return false;
+        }
         return true;
       }
       default:
@@ -542,6 +611,15 @@ export function ContractWizard({
       return;
     }
 
+    const recurringAuthoringError = getRecurringAuthoringValidationError();
+    if (recurringAuthoringError) {
+      setErrors((prev) => ({
+        ...prev,
+        [currentStep]: recurringAuthoringError,
+      }));
+      return;
+    }
+
     setIsLoading(true);
     try {
       const submission = await buildSubmissionData();
@@ -583,6 +661,15 @@ export function ContractWizard({
         [currentStep]: 'Select a client before saving as draft',
       }));
       setCurrentStep(0);
+      return;
+    }
+
+    const recurringAuthoringError = getRecurringAuthoringValidationError();
+    if (recurringAuthoringError) {
+      setErrors((prev) => ({
+        ...prev,
+        [currentStep]: recurringAuthoringError,
+      }));
       return;
     }
 

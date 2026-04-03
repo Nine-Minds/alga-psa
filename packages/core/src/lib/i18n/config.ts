@@ -1,3 +1,5 @@
+/* global process */
+
 /**
  * Central configuration for internationalization (i18n) support
  * This config drives all language-related functionality in the application
@@ -129,12 +131,30 @@ export const ROUTE_NAMESPACES = {
   '/client-portal/documents': ['common', 'client-portal', 'features/documents'],
   '/client-portal/kb': ['common', 'client-portal', 'features/documents'],
   '/client-portal/appointments': ['common', 'client-portal', 'features/appointments'],
-  '/msp': ['common', 'msp/core'],
-  '/msp/knowledge-base': ['common', 'msp/core', 'features/documents'],
+  '/msp': ['common', 'msp/core', 'msp/dashboard'],
+  '/msp/dashboard': ['common', 'msp/core', 'msp/dashboard'],
+  '/msp/surveys': ['common', 'msp/core', 'msp/surveys'],
+  '/msp/schedule': ['common', 'msp/core', 'msp/schedule'],
+  '/msp/knowledge-base': ['common', 'msp/core', 'features/documents', 'msp/knowledge-base'],
+  '/msp/jobs': ['common', 'msp/core', 'msp/jobs'],
   '/msp/tickets': ['common', 'msp/core', 'features/tickets'],
-  '/msp/settings': ['common', 'msp/core', 'msp/settings'],
-  '/msp/profile': ['common', 'msp/core', 'msp/settings'],
-  '/msp/security-settings': ['common', 'msp/core', 'msp/settings'],
+  '/msp/projects': ['common', 'msp/core', 'features/projects'],
+  '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/reports'],
+  '/msp/clients': ['common', 'msp/core', 'msp/clients'],
+  '/msp/contacts': ['common', 'msp/core', 'msp/contacts'],
+  '/msp/assets': ['common', 'msp/core', 'msp/assets'],
+  '/msp/onboarding': ['common', 'msp/core', 'msp/onboarding'],
+  '/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch'],
+  '/msp/time-entry': ['common', 'msp/core', 'msp/time-entry'],
+  '/msp/time-sheet-approvals': ['common', 'msp/core', 'msp/time-entry'],
+  '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],
+  '/msp/settings/extensions': ['common', 'msp/core', 'msp/settings', 'msp/extensions'],
+  '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects'],
+  '/msp/profile': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
+  '/msp/security-settings': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
+  '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],
+  '/msp/extensions': ['common', 'msp/core', 'msp/extensions'],
+  '/msp/licenses': ['common', 'msp/core', 'msp/licensing'],
 } as const;
 
 /**

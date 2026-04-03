@@ -52,6 +52,7 @@ import ContactEmailAddressesEditor, {
   compactContactEmailAddresses,
   validateContactEmailAddresses,
 } from '../contacts/ContactEmailAddressesEditor';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type CreateClientData = Omit<IClient, "client_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
 
@@ -79,6 +80,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   trigger,
   skipSuccessDialog = false,
 }) => {
+  const { t } = useTranslation('msp/clients');
   const initialFormData: CreateClientData = {
     client_name: '',
     client_type: 'company',
@@ -173,7 +175,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
           const users = await getAllUsersBasicAsync();
           setInternalUsers(users);
         } catch (error: any) {
-          handleError(error, "Failed to load users for Account Manager selection.");
+          handleError(error, t('quickAddClient.usersLoadError', {
+            defaultValue: 'Failed to load users for Account Manager selection.',
+          }));
         } finally {
           setIsLoadingUsers(false);
         }
@@ -186,7 +190,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
           const countriesData = await getAllCountries();
           setCountries(countriesData);
         } catch (error: any) {
-          handleError(error, "Failed to load countries.");
+          handleError(error, t('quickAddClient.countriesLoadError', {
+            defaultValue: 'Failed to load countries.',
+          }));
         } finally {
           setIsLoadingCountries(false);
         }
@@ -197,7 +203,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
           const labels = await listContactPhoneTypeSuggestions();
           setCustomPhoneTypeSuggestions(labels);
         } catch (error: any) {
-          handleError(error, 'Failed to load contact phone type suggestions.');
+          handleError(error, t('quickAddClient.phoneTypeSuggestionsError', {
+            defaultValue: 'Failed to load contact phone type suggestions.',
+          }));
         }
       };
 
@@ -693,7 +701,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       id="quick-add-client-dialog"
       isOpen={open}
       onClose={() => onOpenChange(false)}
-      title="Add New Client"
+      title={t('quickAddClient.title', { defaultValue: 'Add New Client' })}
       disableFocusTrap>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
@@ -704,7 +712,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>
-                  <p className="font-medium mb-2">Please correct the following errors:</p>
+                  <p className="font-medium mb-2">
+                    {t('quickAddClient.validationHeader', { defaultValue: 'Please correct the following errors:' })}
+                  </p>
                   <ul className="list-disc list-inside space-y-1">
                     {validationErrors.map((err, index) => (
                       <li key={index}>{err}</li>
@@ -726,12 +736,12 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
             {/* Client Details Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
-                Client Details
+                {t('quickAddClient.clientDetails', { defaultValue: 'Client Details' })}
               </h3>
               
               <div>
                 <Label htmlFor="client_name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Client Name *
+                  {t('quickAddClient.clientName', { defaultValue: 'Client Name *' })}
                 </Label>
                 <Input
                   id="client-name"
@@ -743,7 +753,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   onBlur={() => {
                     validateField('client_name', formData.client_name);
                   }}
-                  placeholder="Enter client name"
+                  placeholder={t('quickAddClient.enterClientName', { defaultValue: 'Enter client name' })}
                   disabled={isSubmitting}
                   className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.client_name ? 'border-red-500' : 'border-gray-300'}`}
                 />
@@ -755,14 +765,14 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="client-type-select" className="block text-sm font-medium text-gray-700 mb-1">
-                    Client Type
+                    {t('quickAddClient.clientType', { defaultValue: 'Client Type' })}
                   </Label>
                   <CustomSelect
                     id="client-type-select"
                     data-automation-id="client-type-select"
                     options={[
-                      { value: 'company', label: 'Company' },
-                      { value: 'individual', label: 'Individual' }
+                      { value: 'company', label: t('quickAddClient.company', { defaultValue: 'Company' }) },
+                      { value: 'individual', label: t('quickAddClient.individual', { defaultValue: 'Individual' }) }
                     ]}
                     value={formData.client_type}
                     onValueChange={(value) => handleClientChange('client_type', value)}
@@ -772,7 +782,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
                 <div>
                   <Label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1">
-                    Industry
+                    {t('quickAddClient.industry', { defaultValue: 'Industry' })}
                   </Label>
                   <Input
                     id="industry"
@@ -794,7 +804,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
-                    Website URL
+                    {t('quickAddClient.websiteUrl', { defaultValue: 'Website URL' })}
                   </Label>
                   <Input
                     id="url"
@@ -815,7 +825,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
                 <div>
                   <Label htmlFor="account-manager-picker" className="block text-sm font-medium text-gray-700 mb-1">
-                    Account Manager
+                    {t('quickAddClient.accountManager', { defaultValue: 'Account Manager' })}
                   </Label>
                   <UserPicker
                     id="account-manager-picker"
@@ -825,7 +835,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     users={internalUsers}
                     getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                     disabled={isLoadingUsers || isSubmitting}
-                    placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
+                    placeholder={isLoadingUsers
+                      ? t('quickAddClient.loadingUsers', { defaultValue: 'Loading users...' })
+                      : t('quickAddClient.selectAccountManager', { defaultValue: 'Select Account Manager' })}
                     buttonWidth="full"
                   />
                 </div>
@@ -844,12 +856,12 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
             {/* Client Location Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
-                Client Location
+                {t('quickAddClient.clientLocation', { defaultValue: 'Client Location' })}
               </h3>
               
               <div>
                 <Label htmlFor="address-line-1" className="block text-sm font-medium text-gray-700 mb-1">
-                  Street Address
+                  {t('quickAddClient.streetAddress', { defaultValue: 'Street Address' })}
                 </Label>
                 <Input
                   id="address-line-1"
@@ -870,7 +882,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                    City
+                    {t('quickAddClient.city', { defaultValue: 'City' })}
                   </Label>
                   <Input
                     id="city"
@@ -890,7 +902,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
                 <div>
                   <Label htmlFor="state-province" className="block text-sm font-medium text-gray-700 mb-1">
-                    State
+                    {t('quickAddClient.state', { defaultValue: 'State' })}
                   </Label>
                   <Input
                     id="state-province"
@@ -910,7 +922,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
                 <div>
                   <Label htmlFor="client-postal-code" className="block text-sm font-medium text-gray-700 mb-1">
-                    Zip Code
+                    {t('quickAddClient.zipCode', { defaultValue: 'Zip Code' })}
                   </Label>
                   <Input
                     id="client-postal-code"
@@ -930,7 +942,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
                 <div>
                   <Label htmlFor="country-picker" className="block text-sm font-medium text-gray-700 mb-1">
-                    Country
+                    {t('quickAddClient.country', { defaultValue: 'Country' })}
                   </Label>
                   <CountryPicker
                     id="country-picker"
@@ -939,7 +951,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     onValueChange={handleCountryChange}
                     countries={countries}
                     disabled={isLoadingCountries || isSubmitting}
-                    placeholder={isLoadingCountries ? "Loading countries..." : "Select Country"}
+                    placeholder={isLoadingCountries
+                      ? t('quickAddClient.loadingCountries', { defaultValue: 'Loading countries...' })
+                      : t('quickAddClient.selectCountry', { defaultValue: 'Select Country' })}
                     buttonWidth="full"
                   />
                 </div>
@@ -947,7 +961,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                 <div>
                   <PhoneInput
                     id="client-location-phone"
-                    label="Phone"
+                    label={t('quickAddClient.phone', { defaultValue: 'Phone' })}
                     value={locationData.phone || ''}
                     onChange={(value) => {
                       handleLocationChange('phone', value);
@@ -977,7 +991,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
                 <div>
                   <Label htmlFor="client-location-email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
+                    {t('quickAddClient.email', { defaultValue: 'Email' })}
                   </Label>
                   <Input
                     id="client-location-email"
@@ -1008,7 +1022,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
             {/* Contact Information Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
-                Contact Information
+                {t('quickAddClient.contactInformation', { defaultValue: 'Contact Information' })}
               </h3>
               
               <div>
@@ -1074,7 +1088,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
             <div className="space-y-4">
               <div>
                 <Label htmlFor="client-notes-input" className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
+                  {t('quickAddClient.notes', { defaultValue: 'Notes' })}
                 </Label>
                 <TextArea
                   id="client-notes-input"
@@ -1084,7 +1098,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   onBlur={() => {
                     validateField('notes', formData.notes || '');
                   }}
-                  placeholder="Add any initial notes (optional)"
+                  placeholder={t('quickAddClient.notesPlaceholder', {
+                    defaultValue: 'Add any initial notes (optional)',
+                  })}
                   disabled={isSubmitting}
                   className={`w-full p-2 border rounded-md resize-none focus:outline-none focus:ring-2 ${fieldErrors.notes ? 'border-red-500' : 'border-gray-300'} ${fieldErrors.notes ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
                   rows={3}
@@ -1111,7 +1127,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                 onOpenChange(false);
               }}
             >
-              Cancel
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               id="create-client-btn"
@@ -1120,7 +1136,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
               disabled={isSubmitting || !formData.client_name.trim()}
               className={(!formData.client_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
             >
-              {isSubmitting ? 'Creating...' : 'Create Client'}
+              {isSubmitting
+                ? t('quickAddClient.creating', { defaultValue: 'Creating...' })
+                : t('quickAddClient.createClient', { defaultValue: 'Create Client' })}
             </Button>
           </div>
         </DialogFooter>

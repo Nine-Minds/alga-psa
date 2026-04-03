@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import QuickAddContact from '../contacts/QuickAddContact';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface BillingConfigFormProps {
     billingConfig: {
@@ -33,6 +34,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
     clientId,
     contacts
 }) => {
+    const { t } = useTranslation('msp/clients');
     const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
     const [defaultTemplate, setDefaultTemplate] = useState<IInvoiceTemplate | null>(null);
     const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
@@ -72,7 +74,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                setErrorTaxRegions(null);
            } catch (error) {
                console.error('Error loading tax regions:', error);
-               setErrorTaxRegions('Failed to load tax regions.');
+               setErrorTaxRegions(t('billingConfigForm.taxRegionsLoadError', { defaultValue: 'Failed to load tax regions.' }));
                setTaxRegions([]); // Clear regions on error
            } finally {
                setIsLoadingTaxRegions(false);
@@ -81,7 +83,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
 
         loadTemplateData(); // Call renamed function
         loadTaxRegions(); // Call new function
-    }, []);
+    }, [t]);
 
     const templateOptions = templates.map(template => ({
         value: template.template_id,
@@ -91,14 +93,14 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                     <div className="flex items-center gap-1">
                         <FileText className="w-4 h-4" /> 
                         {template.name} 
-                        <span className="text-gray-500">(Standard)</span>
-                        {template.isTenantDefault && <span className="text-blue-500">(Default)</span>}
+                        <span className="text-gray-500">{t('billingConfigForm.standardTemplateLabel', { defaultValue: '(Standard)' })}</span>
+                        {template.isTenantDefault && <span className="text-blue-500">{t('billingConfigForm.defaultTemplateLabel', { defaultValue: '(Default)' })}</span>}
                     </div>
                 ) : (
                     <div className="flex items-center gap-1">
                         <Settings className="w-4 h-4" /> 
                         {template.name}
-                        {template.isTenantDefault && <span className="text-blue-500">(Default)</span>}
+                        {template.isTenantDefault && <span className="text-blue-500">{t('billingConfigForm.defaultTemplateLabel', { defaultValue: '(Default)' })}</span>}
                     </div>
                 )}
             </div>
@@ -106,21 +108,21 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
     }));
 
     const paymentTermsOptions = [
-        { value: 'net_30', label: 'Net 30' },
-        { value: 'net_15', label: 'Net 15' },
-        { value: 'due_on_receipt', label: 'Due on Receipt' }
+        { value: 'net_30', label: t('billingConfigForm.paymentTerms.net30', { defaultValue: 'Net 30' }) },
+        { value: 'net_15', label: t('billingConfigForm.paymentTerms.net15', { defaultValue: 'Net 15' }) },
+        { value: 'due_on_receipt', label: t('billingConfigForm.paymentTerms.dueOnReceipt', { defaultValue: 'Due on Receipt' }) }
     ];
 
     const paymentMethodOptions = [
-        { value: 'credit_card', label: 'Credit Card' },
-        { value: 'bank_transfer', label: 'Bank Transfer' },
-        { value: 'check', label: 'Check' }
+        { value: 'credit_card', label: t('billingConfigForm.paymentMethods.creditCard', { defaultValue: 'Credit Card' }) },
+        { value: 'bank_transfer', label: t('billingConfigForm.paymentMethods.bankTransfer', { defaultValue: 'Bank Transfer' }) },
+        { value: 'check', label: t('billingConfigForm.paymentMethods.check', { defaultValue: 'Check' }) }
     ];
 
     const deliveryMethodOptions = [
-        { value: 'email', label: 'Email' },
-        { value: 'mail', label: 'Mail' },
-        { value: 'both', label: 'Both' }
+        { value: 'email', label: t('billingConfigForm.deliveryMethods.email', { defaultValue: 'Email' }) },
+        { value: 'mail', label: t('billingConfigForm.deliveryMethods.mail', { defaultValue: 'Mail' }) },
+        { value: 'both', label: t('billingConfigForm.deliveryMethods.both', { defaultValue: 'Both' }) }
     ];
 
     const taxRegionOptions = taxRegions.map(region => ({
@@ -132,12 +134,12 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="col-span-2">
                 <Text as="div" size="3" mb="4" weight="medium" className="text-gray-900">
-                    Billing Contact Information
+                    {t('billingConfigForm.billingContactInformation', { defaultValue: 'Billing Contact Information' })}
                 </Text>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <label className="block text-sm font-medium mb-1 text-gray-700">
-                            Billing Contact
+                            {t('billingConfigForm.billingContact', { defaultValue: 'Billing Contact' })}
                         </label>
                         <ContactPicker
                             id="client-billing-contact-select"
@@ -178,7 +180,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                     <div className="space-y-2">
                         <Input
                             id="client-billing-email-input"
-                            label="Alternative Billing Email"
+                            label={t('billingConfigForm.alternativeBillingEmail', { defaultValue: 'Alternative Billing Email' })}
                             type="email"
                             value={billingConfig.billing_email || ''}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,7 +191,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                                     handleSelectChange('billing_contact_id')('');
                                 }
                             }}
-                            placeholder="Or enter a specific billing email"
+                            placeholder={t('billingConfigForm.alternativeBillingEmailHelp', { defaultValue: 'Or enter a specific billing email' })}
                         />
                     </div>
                 </div>
@@ -198,11 +200,11 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
             <div className="space-y-2">
                 <CustomSelect
                     id="client-invoice-template-select"
-                    label="Invoice Template"
+                    label={t('billingConfigForm.invoiceTemplate', { defaultValue: 'Invoice Template' })}
                     value={billingConfig.invoice_template_id || (defaultTemplate?.template_id || '')}
                     placeholder={!billingConfig.invoice_template_id && defaultTemplate 
-                        ? `Using default template: ${defaultTemplate.name}`
-                        : 'Select a template or use default'}
+                        ? t('billingConfigForm.usingDefaultTemplate', { defaultValue: 'Using default template: {{name}}', name: defaultTemplate.name })
+                        : t('billingConfigForm.invoiceTemplateHelp', { defaultValue: 'Select a template or use default' })}
                     onValueChange={handleSelectChange('invoice_template_id')}
                     options={templateOptions}
                     disabled={isLoadingTemplates} // Use renamed state
@@ -211,7 +213,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
 
             <div className="space-y-2">
                 <CustomSelect
-                    label="Default Currency"
+                    label={t('billingConfigForm.defaultCurrency', { defaultValue: 'Default Currency' })}
                     value={billingConfig.default_currency_code || 'USD'}
                     onValueChange={handleSelectChange('default_currency_code')}
                     options={CURRENCY_OPTIONS}
@@ -220,7 +222,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
 
             <div className="space-y-2">
                 <CustomSelect
-                    label="Payment Terms"
+                    label={t('billingConfigForm.paymentTermsLabel', { defaultValue: 'Payment Terms' })}
                     value={billingConfig.payment_terms}
                     onValueChange={handleSelectChange('payment_terms')}
                     options={paymentTermsOptions}
@@ -229,7 +231,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
 
             <div className="space-y-2">
                 <CustomSelect
-                    label="Preferred Payment Method"
+                    label={t('billingConfigForm.preferredPaymentMethod', { defaultValue: 'Preferred Payment Method' })}
                     value={billingConfig.preferred_payment_method}
                     onValueChange={handleSelectChange('preferred_payment_method')}
                     options={paymentMethodOptions}
@@ -238,7 +240,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
 
             <div className="space-y-2">
                 <CustomSelect
-                    label="Invoice Delivery Method"
+                    label={t('billingConfigForm.invoiceDeliveryMethod', { defaultValue: 'Invoice Delivery Method' })}
                     value={billingConfig.invoice_delivery_method}
                     onValueChange={handleSelectChange('invoice_delivery_method')}
                     options={deliveryMethodOptions}
@@ -249,9 +251,9 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
            <div className="space-y-2">
                <CustomSelect
                    id="client-tax-region-select"
-                   label="Default Tax Region"
+                   label={t('billingConfigForm.defaultTaxRegion', { defaultValue: 'Default Tax Region' })}
                    value={billingConfig.region_code || ''}
-                   placeholder={isLoadingTaxRegions ? "Loading regions..." : "Select Tax Region (Optional)"}
+                   placeholder={isLoadingTaxRegions ? t('billingConfigForm.loadingRegions', { defaultValue: 'Loading regions...' }) : t('billingConfigForm.selectTaxRegion', { defaultValue: 'Select Tax Region (Optional)' })}
                    onValueChange={handleSelectChange('region_code')}
                    options={taxRegionOptions}
                    disabled={isLoadingTaxRegions}

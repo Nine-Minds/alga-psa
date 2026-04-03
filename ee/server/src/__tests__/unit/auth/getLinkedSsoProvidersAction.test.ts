@@ -87,8 +87,12 @@ vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: getAdminConnectionMock,
 }));
 
-vi.mock('server/src/lib/actions/tenant-actions/tenantSlugActions', () => ({
+vi.mock('@alga-psa/db', () => ({
   getTenantIdBySlug: getTenantIdBySlugMock,
+}));
+
+vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
+  assertTenantTierAccess: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({

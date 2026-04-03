@@ -3,6 +3,7 @@
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
 
 export const assignTeamToTicket = withAuth(async (
@@ -100,6 +101,9 @@ export const assignTeamToTicket = withAuth(async (
       changes: { assigned_team_id: teamId }
     }
   });
+
+  // Invalidate ticket list cache so team badge appears on navigation back
+  revalidatePath('/msp/tickets');
 });
 
 export type RemoveTeamFromTicketMode = 'remove_all' | 'keep_all' | 'selective';
@@ -152,4 +156,7 @@ export const removeTeamFromTicket = withAuth(async (
         updated_at: new Date()
       });
   });
+
+  // Invalidate ticket list cache so team badge removal is reflected
+  revalidatePath('/msp/tickets');
 });

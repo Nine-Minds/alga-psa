@@ -4,6 +4,7 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IClientContractLine } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
+import { resolveDeterministicContractLineSelection } from './contractLineDisambiguation.shared';
 
 type EligibleContractLine = IClientContractLine & {
   contract_line_type: string;
@@ -15,6 +16,42 @@ type EligibleContractLine = IClientContractLine & {
   };
 };
 
+const resolveEffectiveDateRange = (
+  effectiveDate?: string | Date
+): { rangeStart: string; rangeEnd: string } => {
+  const source =
+    effectiveDate instanceof Date
+      ? effectiveDate.toISOString()
+      : typeof effectiveDate === 'string' && effectiveDate.trim().length > 0
+        ? effectiveDate
+        : new Date().toISOString();
+  const normalizedDate = source.slice(0, 10);
+  return {
+    rangeStart: `${normalizedDate}T00:00:00.000Z`,
+    rangeEnd: `${normalizedDate}T23:59:59.999Z`,
+  };
+};
+
+const logResolverDecision = (payload: {
+  tenant: string;
+  clientId: string;
+  serviceId: string;
+  effectiveDate?: string | Date;
+  eligibleCount: number;
+  overlayCount: number;
+  decision: 'explicit' | 'default' | 'ambiguous_or_unresolved';
+  selectedContractLineId: string | null;
+}): void => {
+  console.info('[contract_line_resolver.routing]', {
+    event: 'contract_line_resolver.routing',
+    ...payload,
+    metric:
+      payload.decision === 'ambiguous_or_unresolved'
+        ? { name: 'unresolved_ambiguous_count', value: 1 }
+        : undefined,
+  });
+};
+
 /**
  * Determines the default contract line for a time entry or usage record
  * @param clientId The client ID
@@ -23,7 +60,8 @@ type EligibleContractLine = IClientContractLine & {
  */
 export async function determineDefaultContractLine(
   clientId: string,
-  serviceId: string
+  serviceId: string,
+  effectiveDate?: string | Date
 ): Promise<string | null> {
   const { knex, tenant } = await createTenantKnex();
   
@@ -32,27 +70,20 @@ export async function determineDefaultContractLine(
   }
 
   try {
-    // Get all contract lines for the client that include this service
-    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
+    const resolution = resolveDeterministicContractLineSelection(eligibleContractLines);
 
-    // If only one contract line exists, use it
-    if (eligibleContractLines.length === 1) {
-      return eligibleContractLines[0].client_contract_line_id;
-    }
-
-    // If no contract lines exist, return null
-    if (eligibleContractLines.length === 0) {
-      return null;
-    }
-
-    // Prefer contract lines that have a bucket overlay configuration
-    const overlayContractLines = eligibleContractLines.filter(contractLine => contractLine.bucket_overlay?.config_id);
-    if (overlayContractLines.length === 1) {
-      return overlayContractLines[0].client_contract_line_id;
-    }
-
-    // If we have multiple contract lines and no clear default, return null to require explicit selection
-    return null;
+    logResolverDecision({
+      tenant,
+      clientId,
+      serviceId,
+      effectiveDate,
+      eligibleCount: eligibleContractLines.length,
+      overlayCount: resolution.overlayCount,
+      decision: resolution.decision,
+      selectedContractLineId: resolution.selectedContractLineId,
+    });
+    return resolution.selectedContractLineId;
   } catch (error) {
     console.error('Error determining default contract line:', error);
     return null;
@@ -71,8 +102,11 @@ export async function getEligibleContractLines(
   knex: Knex,
   tenant: string,
   clientId: string,
-  serviceId: string
+  serviceId: string,
+  effectiveDate?: string | Date
 ): Promise<EligibleContractLine[]> {
+  const { rangeStart, rangeEnd } = resolveEffectiveDateRange(effectiveDate);
+
   // First, get the service category for the given service
   const serviceInfo = await knex('service_catalog')
     .where({
@@ -119,8 +153,15 @@ export async function getEligibleContractLines(
       'contract_line_services.service_id': serviceId
     })
     .where(function(this: Knex.QueryBuilder) {
+      this.where('client_contracts.start_date', '<=', rangeEnd);
+    })
+    .where(function(this: Knex.QueryBuilder) {
       this.whereNull('client_contracts.end_date')
-        .orWhere('client_contracts.end_date', '>', new Date().toISOString());
+        .orWhere('client_contracts.end_date', '>=', rangeStart);
+    })
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('contracts.is_system_managed_default')
+        .orWhere('contracts.is_system_managed_default', false);
     });
 
   // Execute the query and return the results
@@ -186,7 +227,8 @@ export async function getEligibleContractLines(
 export async function validateContractLineForService(
   clientId: string,
   serviceId: string,
-  contractLineId: string
+  contractLineId: string,
+  effectiveDate?: string | Date
 ): Promise<boolean> {
   const { knex, tenant } = await createTenantKnex();
   
@@ -195,7 +237,7 @@ export async function validateContractLineForService(
   }
 
   try {
-    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
     return eligibleContractLines.some(contractLine => contractLine.client_contract_line_id === contractLineId);
   } catch (error) {
     console.error('Error validating contract line for service:', error);
@@ -213,7 +255,8 @@ export async function validateContractLineForService(
 export async function shouldAllocateUnassignedEntry(
   clientId: string,
   serviceId: string,
-  contractLineId: string
+  contractLineId: string,
+  effectiveDate?: string | Date
 ): Promise<boolean> {
   const { knex, tenant } = await createTenantKnex();
 
@@ -222,7 +265,7 @@ export async function shouldAllocateUnassignedEntry(
   }
 
   try {
-    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
 
     // If this is the only eligible contract line, allocate to it
     if (eligibleContractLines.length === 1 && eligibleContractLines[0].client_contract_line_id === contractLineId) {
@@ -251,7 +294,8 @@ export async function shouldAllocateUnassignedEntry(
  */
 export async function getEligibleContractLinesForUI(
   clientId: string,
-  serviceId: string
+  serviceId: string,
+  effectiveDate?: string | Date
 ): Promise<Array<{
   client_contract_line_id: string;
   contract_line_name: string;
@@ -269,7 +313,7 @@ export async function getEligibleContractLinesForUI(
   }
 
   try {
-    const contractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+    const contractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
 
     // Transform to a simpler structure for UI
     // Transform to the structure expected by the UI, including dates

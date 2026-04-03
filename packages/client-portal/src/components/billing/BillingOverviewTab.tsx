@@ -3,16 +3,18 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
-import { Package, FileText, AlertCircle } from 'lucide-react';
+import { Package, FileText, AlertCircle, ScrollText } from 'lucide-react';
 import BucketUsageChart from './BucketUsageChart';
 import type {
-  IClientContractLine
+  IClientContractLine,
+  IQuoteWithClient,
 } from '@alga-psa/types';
 import type { InvoiceViewModel } from '@alga-psa/types';
 import type { ClientBucketUsageResult } from '@alga-psa/client-portal/actions';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import PlanDetailsDialog from './PlanDetailsDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getRecurringServicePeriodSummary } from './recurringServicePeriodSummary';
 
 // Flag to control visibility of bucket usage metrics
 const SHOW_USAGE_FEATURES = true;
@@ -20,27 +22,40 @@ const SHOW_USAGE_FEATURES = true;
 interface BillingOverviewTabProps {
   contractLine: IClientContractLine | null;
   invoices: InvoiceViewModel[];
+  quotes: IQuoteWithClient[];
   bucketUsage: ClientBucketUsageResult[];
   isBucketUsageLoading: boolean;
   isLoading: boolean;
   formatCurrency: (amount: number, currencyCode?: string) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
   onViewAllInvoices?: () => void;
+  onViewAllQuotes?: () => void;
 }
 
 const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
   contractLine,
   invoices,
+  quotes,
   bucketUsage,
   isBucketUsageLoading,
   isLoading,
   formatCurrency,
   formatDate,
-  onViewAllInvoices
+  onViewAllInvoices,
+  onViewAllQuotes,
 }) => {
   const { t } = useTranslation('features/billing');
   // State for plan details dialog
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+  const cadenceOwnerDescription = contractLine?.cadence_owner === 'contract'
+    ? t(
+      'contractLine.cadenceOwnerContractDescription',
+      'Recurring service periods follow the contract anniversary cadence for this line.'
+    )
+    : t(
+      'contractLine.cadenceOwnerClientDescription',
+      'Recurring service periods follow the client billing schedule for this line.'
+    );
   
   // Memoize the plan card to prevent unnecessary re-renders
   const planCard = useMemo(() => (
@@ -52,6 +67,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
             <>
               <p className="mt-2 text-3xl font-semibold">{contractLine.contract_line_name}</p>
               <p className="mt-1 text-sm text-gray-500">{t(`frequency.${contractLine.billing_frequency?.toLowerCase() || 'monthly'}`)}</p>
+              <p className="mt-2 text-sm text-gray-500">{cadenceOwnerDescription}</p>
             </>
           ) : (
             <>
@@ -71,7 +87,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         {t('viewContractLineDetails')}
       </Button>
     </Card>
-  ), [contractLine]);
+  ), [cadenceOwnerDescription, contractLine, t]);
 
   // Find the most recent unpaid invoice for the "Next Invoice" card
   const nextInvoice = useMemo(() => {
@@ -90,6 +106,27 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
       return dateA - dateB;
     })[0];
   }, [invoices]);
+  const nextInvoiceServicePeriodSummary = useMemo(() => {
+    if (!nextInvoice) {
+      return null;
+    }
+
+    return getRecurringServicePeriodSummary(nextInvoice, formatDate);
+  }, [formatDate, nextInvoice]);
+  const nextInvoiceFinancialArtifactSummary = useMemo(() => {
+    if (!nextInvoice || nextInvoiceServicePeriodSummary) {
+      return null;
+    }
+
+    if (nextInvoice.is_manual || Number(nextInvoice.credit_applied ?? 0) > 0) {
+      return t(
+        'invoice.financialArtifactSummary',
+        'Financial-only invoice. Recurring service periods appear only on recurring detail lines.'
+      );
+    }
+
+    return null;
+  }, [nextInvoice, nextInvoiceServicePeriodSummary, t]);
 
   // Memoize the invoice card to prevent unnecessary re-renders
   const invoiceCard = useMemo(() => (
@@ -105,6 +142,13 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
               <p className="mt-1 text-sm text-gray-500">
                 {nextInvoice.due_date ? t('invoice.dueDateText', { date: formatDate(nextInvoice.due_date) }) : t('invoice.noDueDate')}
               </p>
+              {nextInvoiceServicePeriodSummary ? (
+                <p className="mt-2 text-sm text-gray-500">
+                  {t('invoice.servicePeriod', 'Service Period')}: {nextInvoiceServicePeriodSummary}
+                </p>
+              ) : nextInvoiceFinancialArtifactSummary ? (
+                <p className="mt-2 text-sm text-gray-500">{nextInvoiceFinancialArtifactSummary}</p>
+              ) : null}
             </>
           ) : invoices.length > 0 ? (
             // All invoices are paid/cancelled
@@ -131,14 +175,69 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         {t('viewAllInvoices')}
       </Button>
     </Card>
-  ), [nextInvoice, invoices.length, formatCurrency, formatDate, onViewAllInvoices, t]);
+  ), [nextInvoice, nextInvoiceFinancialArtifactSummary, nextInvoiceServicePeriodSummary, invoices.length, formatCurrency, formatDate, onViewAllInvoices, t]);
+
+  const pendingQuotes = useMemo(
+    () => quotes.filter((q) => q.status === 'sent' || q.status === 'approved'),
+    [quotes]
+  );
+
+  const quotesCard = useMemo(() => (
+    <Card className="p-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-500">{t('quotes.pendingQuotes', 'Pending Quotes')}</p>
+          {isLoading ? (
+            <>
+              <Skeleton className="mt-2 h-8 w-3/4" />
+              <Skeleton className="mt-1 h-4 w-1/2" />
+            </>
+          ) : pendingQuotes.length > 0 ? (
+            <>
+              <p className="mt-2 text-3xl font-semibold">{pendingQuotes.length}</p>
+              <p className="mt-1 text-sm text-gray-500">
+                {t('quotes.awaitingResponse', {
+                  count: pendingQuotes.length,
+                  defaultValue: '{{count}} quote(s) awaiting your response',
+                })}
+              </p>
+              {pendingQuotes[0] && (
+                <p className="mt-2 text-sm text-gray-500 truncate">
+                  {pendingQuotes[0].title || pendingQuotes[0].quote_number}
+                  {pendingQuotes[0].total_amount != null
+                    ? ` — ${formatCurrency(pendingQuotes[0].total_amount, pendingQuotes[0].currency_code || 'USD')}`
+                    : ''}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="mt-2 text-lg text-gray-500">{t('quotes.noPending', 'No pending quotes')}</p>
+          )}
+        </div>
+        <ScrollText className="h-5 w-5 text-gray-400" />
+      </div>
+      <Button
+        id="view-all-quotes-button"
+        className="mt-4 w-full"
+        variant="outline"
+        onClick={() => {
+          if (onViewAllQuotes) {
+            onViewAllQuotes();
+          }
+        }}
+      >
+        {t('quotes.viewAll', 'View All Quotes')}
+      </Button>
+    </Card>
+  ), [pendingQuotes, isLoading, formatCurrency, onViewAllQuotes, t]);
 
   return (
     <>
       <div id="billing-overview-content" className="space-y-6 py-4">
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {planCard}
           {invoiceCard}
+          {quotesCard}
         </div>
 
         {/* Enhanced Bucket Usage Visualization - optionally hidden */}

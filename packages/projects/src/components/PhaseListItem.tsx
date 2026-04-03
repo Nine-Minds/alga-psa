@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IProjectPhase } from '@alga-psa/types';
-import { Pencil, Trash2, GripVertical } from 'lucide-react';
+import { Pencil, Trash2, GripVertical, Columns3 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
+import { getProjectStatusMappings } from '../actions/projectTaskStatusActions';
 import styles from './ProjectDetail.module.css';
 
 interface PhaseListItemProps {
   phase: IProjectPhase;
+  projectId: string;
   isSelected: boolean;
   isEditing: boolean;
   isAnimating: boolean;
@@ -27,17 +33,19 @@ interface PhaseListItemProps {
   onDescriptionChange: (description: string | null) => void;
   onStartDateChange?: (date: Date | undefined) => void;
   onEndDateChange?: (date: Date | undefined) => void;
-  taskDraggingOverPhaseId?: string | null; // Added prop
-  onDragOver: (e: React.DragEvent, phaseId: string, dropPosition: 'before' | 'after' | '', isOverPhaseItemBody?: boolean) => void; // Updated signature
+  taskDraggingOverPhaseId?: string | null;
+  onDragOver: (e: React.DragEvent, phaseId: string, dropPosition: 'before' | 'after' | '', isOverPhaseItemBody?: boolean) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent, phase: IProjectPhase, beforePhaseId: string | null, afterPhaseId: string | null) => void;
   onDragStart: (e: React.DragEvent, phaseId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
-  phases: IProjectPhase[]; // Need all phases to calculate before/after
+  onStatusesChanged?: () => void;
+  phases: IProjectPhase[];
 }
 
 export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   phase,
+  projectId,
   isSelected,
   isEditing,
   isAnimating,
@@ -60,11 +68,41 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   onDrop,
   onDragStart,
   onDragEnd,
+  onStatusesChanged,
   phases,
-  taskDraggingOverPhaseId, // Destructure new prop
+  taskDraggingOverPhaseId,
 }) => {
+  const { t } = useTranslation('features/projects');
   const [isDragging, setIsDragging] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [customStatusCount, setCustomStatusCount] = useState<number | null>(null);
   const itemRef = useRef<HTMLLIElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load phase custom status count when entering edit mode or after dialog closes
+  useEffect(() => {
+    if (!isEditing && !showStatusDialog) return;
+    let cancelled = false;
+    getProjectStatusMappings(projectId, phase.phase_id)
+      .then((mappings) => { if (!cancelled) setCustomStatusCount(mappings.length); })
+      .catch(() => { if (!cancelled) setCustomStatusCount(null); });
+    return () => { cancelled = true; };
+  }, [isEditing, showStatusDialog, projectId, phase.phase_id]);
+
+  // Auto-scroll the editing form into view when editing starts
+  useEffect(() => {
+    if (isEditing && itemRef.current) {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      requestAnimationFrame(() => {
+        const target = actionsRef.current ?? itemRef.current;
+        target?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+
+        try { nameInputRef.current?.focus({ preventScroll: true }); }
+        catch { nameInputRef.current?.focus(); }
+      });
+    }
+  }, [isEditing]);
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -116,16 +154,10 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    console.log('PhaseListItem handleDrop called for phase:', phase.phase_name);
-    
+
     const draggedPhaseId = e.dataTransfer.getData('text/plain');
-    const dropData = e.dataTransfer.getData('application/json');
-    
-    console.log('PhaseListItem drop data:', { draggedPhaseId, dropData });
-    
+
     if (draggedPhaseId === phase.phase_id) {
-      console.log('Cannot drop phase on itself');
       return; // Can't drop on itself
     }
     
@@ -237,14 +269,14 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Name</label>
               <TextArea
+                ref={nameInputRef}
                 value={editingName}
                 onChange={(e) => onNameChange(e.target.value)}
                 className="w-full px-3 py-1 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                 onClick={(e) => e.stopPropagation()}
-                autoFocus
               />
             </div>
-            {/* Description Input - Added */}
+            {/* Description Input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Description</label>
               <TextArea
@@ -278,45 +310,72 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 clearable={true}
               />
             </div>
-          </div>
-          {/* Action Buttons  */}
-          <div className="flex justify-end gap-2 mt-3">
-            <Button
-              id={`cancel-edit-phase-${phase.phase_id}`}
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCancel();
-              }}
-              title="Cancel editing"
-            >
-              Cancel
-            </Button>
-            <Button
-              id={`save-edit-phase-${phase.phase_id}`}
-              variant="default"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSave(phase);
-              }}
-              title="Save changes"
-            >
-              Save
-            </Button>
+            {/* Status columns indicator */}
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+              <Tooltip content={`${t('phases.statusColumns')}: ${
+                customStatusCount != null && customStatusCount > 0
+                  ? t('phases.statusColumnsCustom', { count: customStatusCount })
+                  : t('phases.statusColumnsProjectDefaults')
+              }`}>
+                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  <Columns3 className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    {customStatusCount != null && customStatusCount > 0
+                      ? t('phases.statusColumnsCustom', { count: customStatusCount })
+                      : t('phases.statusColumnsProjectDefaults')}
+                  </span>
+                </div>
+              </Tooltip>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowStatusDialog(true);
+                }}
+                className="text-xs text-primary hover:underline shrink-0"
+                id={`configure-phase-statuses-${phase.phase_id}`}
+              >
+                {t('phases.configureStatuses')}
+              </button>
+            </div>
+            <div ref={actionsRef} className={styles.phaseEditActions}>
+              <Button
+                id={`cancel-edit-phase-${phase.phase_id}`}
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCancel();
+                }}
+                title="Cancel editing"
+              >
+                Cancel
+              </Button>
+              <Button
+                id={`save-edit-phase-${phase.phase_id}`}
+                variant="default"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSave(phase);
+                }}
+                title="Save changes"
+              >
+                Save
+              </Button>
+            </div>
           </div>
         </div>
       ) : (
         <>
-          {/* Drag Handle */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab pr-2">
+          {/* Drag Handle — absolutely positioned so it doesn't consume layout space */}
+          <div className="absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab">
             <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           </div>
           {/* Display View */}
-          <div className="flex flex-col flex-1 min-w-0">
+          <div className="flex flex-col w-full min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{phase.phase_name}</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-gray-100 min-w-0 break-words">{phase.phase_name}</span>
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 shrink-0">
                 {taskCount ?? 0} {(taskCount ?? 0) === 1 ? 'task' : 'tasks'}
               </span>
@@ -337,8 +396,8 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
               </div>
             </div>
           </div>
-          {/* Hover Action Buttons */}
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 shrink-0">
+          {/* Hover Action Buttons — absolutely positioned so they don't consume layout space */}
+          <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-inherit rounded">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -361,6 +420,31 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             </button>
           </div>
         </>
+      )}
+
+      {showStatusDialog && (
+        <Dialog
+          isOpen
+          onClose={() => { setShowStatusDialog(false); onStatusesChanged?.(); }}
+          title={`${t('settings.statuses.project.title')} — ${phase.phase_name}`}
+        >
+          <ProjectTaskStatusSettings
+            projectId={projectId}
+            initialPhaseId={phase.phase_id}
+          />
+          <div className="flex justify-end pt-3 mt-3 border-t">
+            <Button
+              id={`close-phase-statuses-dialog-${phase.phase_id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowStatusDialog(false);
+                onStatusesChanged?.();
+              }}
+            >
+              {t('common:actions.done', { defaultValue: 'Done' })}
+            </Button>
+          </div>
+        </Dialog>
       )}
     </li>
   );

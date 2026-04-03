@@ -14,6 +14,7 @@ import { updateEmailProvider } from '@alga-psa/integrations/actions';
 import type { EmailProvider } from './types';
 import { EmailProviderCard, EmptyProviderPlaceholder } from './EmailProviderCard';
 import { RefreshCw } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface EmailProviderListProps {
   providers: EmailProvider[];
@@ -42,6 +43,7 @@ export function EmailProviderList({
   onRunDiagnostics,
   onAddClick
 }: EmailProviderListProps) {
+  const { t } = useTranslation('msp/email-providers');
   const [defaultsOptions, setDefaultsOptions] = React.useState<{ value: string; label: string }[]>([]);
   const [updatingProviderId, setUpdatingProviderId] = React.useState<string | null>(null);
   const [busyProviderId, setBusyProviderId] = React.useState<string | null>(null);
@@ -121,11 +123,16 @@ export function EmailProviderList({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h3 className="text-lg font-medium">Email Providers ({filteredProviders.length})</h3>
+        <h3 className="text-lg font-medium">{t('list.header.title', {
+          defaultValue: 'Email Providers ({{count}})',
+          count: filteredProviders.length,
+        })}</h3>
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
           <Input
             id="provider-search"
-            placeholder="Search providers..."
+            placeholder={t('list.filters.searchPlaceholder', {
+              defaultValue: 'Search providers...',
+            })}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -134,16 +141,16 @@ export function EmailProviderList({
             value={providerFilter}
             onValueChange={(v) => setProviderFilter(v as any)}
             options={[
-              { value: 'all', label: 'All Providers' },
-              { value: 'google', label: 'Gmail' },
-              { value: 'microsoft', label: 'Microsoft 365' },
-              { value: 'imap', label: 'IMAP' },
+              { value: 'all', label: t('list.filters.allProviders', { defaultValue: 'All Providers' }) },
+              { value: 'google', label: t('providerCard.types.google', { defaultValue: 'Gmail' }) },
+              { value: 'microsoft', label: t('providerCard.types.microsoft', { defaultValue: 'Microsoft 365' }) },
+              { value: 'imap', label: t('providerCard.types.imap', { defaultValue: 'IMAP' }) },
             ]}
           />
           <Button id="refresh-providers" variant="outline" size="sm" onClick={onRefresh}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            {t('list.actions.refresh', { defaultValue: 'Refresh' })}
+          </Button>
         </div>
       </div>
 

@@ -1,10 +1,11 @@
 import { create } from 'zustand';
+import { generateUUID } from '@alga-psa/core';
 import { devtools } from 'zustand/middleware';
 import {
   DEFAULT_INVOICE_PRINT_SETTINGS,
-  resolveInvoiceTemplatePrintSettings,
-  type InvoiceTemplatePrintSettings,
-  type InvoiceTemplateTransformOperation,
+  resolveTemplatePrintSettings,
+  type TemplatePrintSettings,
+  type TemplateTransformOperation,
 } from '@alga-psa/types';
 
 import {
@@ -207,7 +208,7 @@ export interface DesignerWorkspaceSnapshot {
 export interface DesignerTransformWorkspace {
   sourceBindingId: string;
   outputBindingId: string;
-  operations: InvoiceTemplateTransformOperation[];
+  operations: TemplateTransformOperation[];
 }
 
 interface DesignerState {
@@ -234,7 +235,7 @@ interface DesignerState {
     options?: { defaults?: DesignerNodeDefaults; parentId?: string }
   ) => void;
   insertPreset: (presetId: string, dropPoint?: Point, parentId?: string) => void;
-  applyPrintSettings: (settings: Partial<InvoiceTemplatePrintSettings>) => void;
+  applyPrintSettings: (settings: Partial<TemplatePrintSettings>) => void;
   // Generic patch API (primary path going forward).
   setNodeProp: (nodeId: string, path: string, value: unknown, commit?: boolean) => void;
   unsetNodeProp: (nodeId: string, path: string, commit?: boolean) => void;
@@ -270,10 +271,7 @@ const DEFAULT_SIZE: Size = { width: 160, height: 64 };
 export const DOCUMENT_NODE_ID = 'designer-document-root';
 const DEFAULT_PAGE_NODE_ID = 'designer-page-default';
 
-const generateId = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2);
+const generateId = () => generateUUID();
 
 const deepCloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
@@ -356,9 +354,9 @@ const resolveCurrentWorkspacePrintSettings = (nodes: DesignerNode[]) => {
   const pageStyle = getNodeStyle(pageNode);
   const pageLayout = getNodeLayout(pageNode);
 
-  return resolveInvoiceTemplatePrintSettings({
+  return resolveTemplatePrintSettings({
     printSettings: isPlainObject(documentMetadata.printSettings)
-      ? (documentMetadata.printSettings as Partial<InvoiceTemplatePrintSettings>)
+      ? (documentMetadata.printSettings as Partial<TemplatePrintSettings>)
       : undefined,
     pageWidthPx:
       pageNode?.size.width ??
@@ -380,10 +378,10 @@ const resolveCurrentWorkspacePrintSettings = (nodes: DesignerNode[]) => {
 
 const applyResolvedPrintSettingsToNodes = (
   nodes: DesignerNode[],
-  settings: Partial<InvoiceTemplatePrintSettings>
+  settings: Partial<TemplatePrintSettings>
 ): DesignerNode[] => {
   const current = resolveCurrentWorkspacePrintSettings(nodes);
-  const resolved = resolveInvoiceTemplatePrintSettings({
+  const resolved = resolveTemplatePrintSettings({
     printSettings: {
       paperPreset: settings.paperPreset ?? current.paperPreset,
       marginMm: typeof settings.marginMm === 'number' ? settings.marginMm : current.marginMm,
@@ -482,7 +480,7 @@ const sanitizeTransformWorkspace = (value: unknown): DesignerTransformWorkspace 
   const operations = Array.isArray(value.operations)
     ? deepCloneJson(
         value.operations.filter(
-          (operation): operation is InvoiceTemplateTransformOperation =>
+          (operation): operation is TemplateTransformOperation =>
             isPlainObject(operation) &&
             typeof operation.id === 'string' &&
             operation.id.trim().length > 0 &&
@@ -786,7 +784,7 @@ const mapLegacyPresetLayoutToCss = (layout: LegacyLayoutPresetLayout): DesignerC
 };
 
 const createDocumentNode = (): DesignerNode => {
-  const resolvedPrintSettings = resolveInvoiceTemplatePrintSettings({
+  const resolvedPrintSettings = resolveTemplatePrintSettings({
     printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   });
 
@@ -832,7 +830,7 @@ const createDocumentNode = (): DesignerNode => {
 };
 
 const createPageNode = (parentId: string, index = 1): DesignerNode => {
-  const resolvedPrintSettings = resolveInvoiceTemplatePrintSettings({
+  const resolvedPrintSettings = resolveTemplatePrintSettings({
     printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   });
 

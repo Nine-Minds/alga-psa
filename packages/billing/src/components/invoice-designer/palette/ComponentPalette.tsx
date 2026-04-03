@@ -1,13 +1,16 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Invoice designer palette uses shared expression-authoring utilities to enumerate available template fields */
 import React, { useMemo, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import {
   buildInvoiceExpressionPathOptions,
   type SharedExpressionPathOption,
-} from '@shared/workflow/expression-authoring';
+} from '@alga-psa/workflows/expression-authoring';
 import { COMPONENT_CATALOG, ComponentDefinition } from '../constants/componentCatalog';
 import { LAYOUT_PRESETS } from '../constants/presets';
 import { OutlineView } from './OutlineView';
 import clsx from 'clsx';
+import { useInvoiceDesignerStore } from '../state/designerStore';
+import { resolveDesignerDocumentKind } from '../utils/documentKind';
 
 interface PaletteProps {
   onSearch?: (query: string) => void;
@@ -28,7 +31,15 @@ const groupByCategory = (components: ComponentDefinition[]) => {
 
 const paletteGroups = groupByCategory(COMPONENT_CATALOG);
 
-type InvoiceFieldCategory = 'Invoice' | 'Customer' | 'Tenant' | 'Line Item';
+type InvoiceFieldCategory =
+  | 'Invoice'
+  | 'Customer'
+  | 'Tenant'
+  | 'Line Item'
+  | 'Quote'
+  | 'Quote Totals'
+  | 'Client'
+  | 'Contact';
 
 type TemplateVariableOption = {
   path: string;
@@ -40,6 +51,10 @@ type TemplateVariableOption = {
 const categoryLabelByRoot: Record<string, InvoiceFieldCategory> = {
   invoice: 'Invoice',
   customer: 'Customer',
+  quote: 'Quote',
+  quoteTotals: 'Quote Totals',
+  client: 'Client',
+  contact: 'Contact',
   tenant: 'Tenant',
   item: 'Line Item',
 };
@@ -195,6 +210,8 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
   onInsertPreset,
   onInsertTemplateVariable,
 }) => {
+  const nodes = useInvoiceDesignerStore((state) => state.nodes);
+  const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
   const [activeTab, setActiveTab] = useState<'blocks' | 'presets' | 'fields' | 'outline'>('blocks');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -229,6 +246,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
     const pathOptions = buildInvoiceExpressionPathOptions({
       mode: 'template',
       includeRootPaths: false,
+      documentKind,
     });
 
     const variables = pathOptions
@@ -236,7 +254,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
       .filter((option): option is TemplateVariableOption => option !== null);
 
     return groupTemplateVariablesByCategory(variables);
-  }, []);
+  }, [documentKind]);
 
   const filteredTemplateVariableGroups = useMemo<Record<string, TemplateVariableOption[]>>(() => {
     if (!normalizedQuery) {

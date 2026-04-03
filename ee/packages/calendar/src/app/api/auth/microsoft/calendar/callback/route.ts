@@ -6,7 +6,8 @@ import { MicrosoftCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/cal
 import { resolveMicrosoftConsumerProfileConfig } from '../../../../../../lib/microsoftConsumerProfileResolution';
 import { consumeCalendarOAuthState } from '../../../../../../lib/utils/calendar/oauthStateStore';
 import { decodeCalendarState } from '../../../../../../lib/utils/calendar/oauthHelpers';
-import type { CalendarProviderConfig } from '@alga-psa/types';
+import { TIER_FEATURES, FEATURE_MINIMUM_TIER, TIER_LABELS, resolveTier, tierHasFeature, type CalendarProviderConfig } from '@alga-psa/types';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { getWebhookBaseUrl } from '../../../../../../lib/utils/email/webhookHelpers';
 import axios from 'axios';
 import { randomBytes } from 'crypto';
@@ -208,6 +209,31 @@ export async function GET(request: NextRequest) {
     }
 
     const stateData = storedState;
+
+    // Tier gate: EE calendar requires INTEGRATIONS feature
+    {
+      const knex = await getAdminConnection();
+      const tenantRecord = await knex('tenants')
+        .where({ tenant: stateData.tenant })
+        .select('plan')
+        .first();
+      const { tier } = resolveTier(tenantRecord?.plan);
+      if (!tierHasFeature(tier, TIER_FEATURES.INTEGRATIONS)) {
+        const requiredLabel = TIER_LABELS[FEATURE_MINIMUM_TIER[TIER_FEATURES.INTEGRATIONS] as keyof typeof TIER_LABELS];
+        const errorMessage = `This feature requires the ${requiredLabel} plan or higher.`;
+        if (isPopup) {
+          return respondWithPostMessage({
+            type: 'oauth-callback',
+            provider: 'microsoft',
+            resource: 'calendar',
+            success: false,
+            error: 'tier_access_denied',
+            errorDescription: errorMessage,
+          });
+        }
+        return redirectToSettings(false, errorMessage);
+      }
+    }
 
     // Get OAuth client credentials
     const secretProvider = await getSecretProviderInstance();

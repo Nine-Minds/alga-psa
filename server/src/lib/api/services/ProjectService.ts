@@ -36,13 +36,13 @@ import { SharedNumberingService } from '@shared/services/numberingService';
 import {
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
+} from '@alga-psa/workflow-streams';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCompletedPayload,
   buildProjectTaskCreatedPayload,
   buildProjectTaskStatusChangedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 async function resolveUserName(
   trx: Knex.Transaction,

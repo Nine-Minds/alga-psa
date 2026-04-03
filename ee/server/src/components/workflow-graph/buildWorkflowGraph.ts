@@ -1,5 +1,5 @@
 import ELK from 'elkjs/lib/elk.bundled';
-import type { Step, IfBlock, ForEachBlock, TryCatchBlock } from '@shared/workflow/runtime/client';
+import type { Step, IfBlock, ForEachBlock, TryCatchBlock } from '@alga-psa/workflows/runtime';
 import type { Edge, Node } from 'reactflow';
 
 export type WorkflowGraphNodeKind = 'start' | 'step' | 'join' | 'insert';
@@ -33,6 +33,7 @@ const JOIN_SIZE = 34;
 const START_SIZE = 52;
 const INSERT_SIZE = 30;
 const EDGE_TYPE: Edge['type'] = 'step';
+const STRAIGHT_EDGE_TYPE: Edge['type'] = 'workflowAlignedVertical';
 const EXCLUDE_FROM_LAYOUT = { excludeFromLayout: true } as const;
 const NODE_WRAPPER_STYLE = { padding: 0, border: 'none', background: 'transparent', boxShadow: 'none' } as const;
 
@@ -534,16 +535,45 @@ export async function buildWorkflowGraph(
 
   alignStraightChains();
 
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const getRenderedNodeX = (id: string) => {
+    const node = nodeById.get(id);
+    const pos = positions.get(id) ?? { x: 0, y: 0 };
+    return node?.type === 'workflowInsert' ? pos.x + 1 : pos.x;
+  };
+  const getRenderedNodeCenterX = (id: string) => {
+    const node = nodeById.get(id);
+    const width = node?.width ?? STEP_WIDTH;
+    return getRenderedNodeX(id) + width / 2;
+  };
+
   const laidOutNodes: Node<WorkflowGraphNodeData>[] = nodes.map((node) => {
-    const pos = positions.get(node.id) ?? { x: 0, y: 0 };
     return {
       ...node,
       position: {
-        x: node.type === 'workflowInsert' ? pos.x + 1 : pos.x,
-        y: pos.y
+        x: getRenderedNodeX(node.id),
+        y: positions.get(node.id)?.y ?? 0
       }
     };
   });
 
-  return { nodes: laidOutNodes, edges };
+  const laidOutEdges = edges.map((edge) => {
+    if (edge.type !== EDGE_TYPE) return edge;
+    if (edge.label) return edge;
+    if ((edge.data as any)?.excludeFromLayout) return edge;
+
+    const sourceCenterX = getRenderedNodeCenterX(edge.source);
+    const targetCenterX = getRenderedNodeCenterX(edge.target);
+
+    if (Math.abs(sourceCenterX - targetCenterX) <= 0.75) {
+      return {
+        ...edge,
+        type: STRAIGHT_EDGE_TYPE
+      };
+    }
+
+    return edge;
+  });
+
+  return { nodes: laidOutNodes, edges: laidOutEdges };
 }

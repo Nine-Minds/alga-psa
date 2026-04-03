@@ -1,0 +1,176 @@
+[
+  {
+    "id": "T001",
+    "description": "generatePDF with invoiceId calls getInvoiceHtml and returns PDF buffer",
+    "implemented": false,
+    "featureIds": ["F004", "F005"]
+  },
+  {
+    "id": "T002",
+    "description": "generatePDF with quoteId calls getQuoteHtml and returns PDF buffer",
+    "implemented": false,
+    "featureIds": ["F004", "F006"]
+  },
+  {
+    "id": "T003",
+    "description": "generatePDF with documentId calls getDocumentHtml and returns PDF buffer",
+    "implemented": false,
+    "featureIds": ["F004", "F007"]
+  },
+  {
+    "id": "T004",
+    "description": "generatePDF throws when no id provided",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T005",
+    "description": "generateAndStore with invoiceId persists PDF and publishes DOCUMENT_GENERATED event",
+    "implemented": false,
+    "featureIds": ["F003", "F009"]
+  },
+  {
+    "id": "T006",
+    "description": "generateAndStore with quoteId persists PDF and publishes DOCUMENT_GENERATED event",
+    "implemented": false,
+    "featureIds": ["F003", "F009"]
+  },
+  {
+    "id": "T007",
+    "description": "generateAndStore with documentId persists PDF and publishes DOCUMENT_GENERATED event",
+    "implemented": false,
+    "featureIds": ["F003", "F009"]
+  },
+  {
+    "id": "T008",
+    "description": "generateAndStore uses invoiceNumber/quoteNumber for file naming",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T009",
+    "description": "generatePDFBuffer acquires and releases browser from pool",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T010",
+    "description": "generatePDFBuffer uses template print options when templateAst provided",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T011",
+    "description": "generatePDFBuffer uses default A4 options when no templateAst",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T012",
+    "description": "getInvoiceHtml resolves template from client → tenant default → first available",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T013",
+    "description": "getInvoiceHtml enriches data with tenant client (logo, address)",
+    "implemented": false,
+    "featureIds": ["F005", "F010"]
+  },
+  {
+    "id": "T014",
+    "description": "getInvoiceHtml throws when invoice not found",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T015",
+    "description": "getQuoteHtml uses explicit templateAst when provided",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T016",
+    "description": "getQuoteHtml resolves standard template by code",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T017",
+    "description": "getQuoteHtml falls back to resolveQuoteTemplateAst when no explicit template",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T018",
+    "description": "getQuoteHtml throws when quote not found",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T019",
+    "description": "getDocumentHtml renders block content via convertBlockContentToHTML",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T020",
+    "description": "getDocumentHtml renders markdown content via marked",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T021",
+    "description": "getDocumentHtml renders plain text with HTML escaping",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T022",
+    "description": "renderQuotePreview returns HTML and CSS for quote",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T023",
+    "description": "renderQuotePreview throws when quote not found",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T024",
+    "description": "server-render inlines document images as base64 when knex provided",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T025",
+    "description": "server-render adds base href tag from NEXTAUTH_URL",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T026",
+    "description": "AST wiring test: consolidated service imports evaluator and renderer",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T027",
+    "description": "Print settings test: resolves print options from AST correctly",
+    "implemented": true,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T028",
+    "description": "Constructor throws when tenant is empty",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T029",
+    "description": "Build compiles with no TypeScript errors in PDF generation paths",
+    "implemented": false,
+    "featureIds": ["F027"]
+  }
+]

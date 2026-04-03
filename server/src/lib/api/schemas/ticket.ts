@@ -55,6 +55,14 @@ export const updateTicketAssignmentSchema = z.object({
   assigned_to: uuidSchema.nullable().optional()
 });
 
+export const createTicketMaterialSchema = z.object({
+  service_id: uuidSchema,
+  quantity: z.number().positive('Quantity must be greater than 0'),
+  rate: z.number().min(0, 'Rate must be 0 or greater'),
+  currency_code: z.string().trim().min(3).max(3).transform((value) => value.toUpperCase()),
+  description: z.string().trim().max(1000).nullable().optional(),
+});
+
 // Ticket filter schema
 export const ticketFilterSchema = baseFilterSchema.extend({
   title: z.string().optional(),
@@ -181,9 +189,23 @@ export const createTicketCommentSchema = z.object({
       `Comment text is too long (max ${MAX_TICKET_COMMENT_LENGTH} characters)`
     ),
   is_internal: z.boolean().optional().default(false),
+  is_resolution: z.boolean().optional().default(false),
   time_spent: z.number().min(0).optional(),
   metadata: z.record(z.unknown()).optional(),
 });
+
+export const updateTicketCommentSchema = z.object({
+  comment_text: z.string()
+    .min(1, 'Comment text is required')
+    .refine((value) => getVisibleCommentLength(value) > 0, 'Comment text is required')
+    .refine(
+      (value) => getVisibleCommentLength(value) <= MAX_TICKET_COMMENT_LENGTH,
+      `Comment text is too long (max ${MAX_TICKET_COMMENT_LENGTH} characters)`
+    ),
+});
+
+export type UpdateTicketCommentData = z.infer<typeof updateTicketCommentSchema>;
+export type CreateTicketMaterialData = z.infer<typeof createTicketMaterialSchema>;
 
 export const ticketCommentResponseSchema = z.object({
   comment_id: uuidSchema,

@@ -1,4 +1,4 @@
-import { buildExternalMappingChangedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/externalMappingEventBuilders';
+import { buildExternalMappingChangedPayload } from '@alga-psa/workflow-streams';
 
 export type TenantExternalEntityMappingRow = {
   id: string;
@@ -60,4 +60,3 @@ export function buildExternalMappingChangedPublishParams(params: {
     idempotencyKey: `external_mapping_changed:${mapping.id}:${params.changedAt}`,
   };
 }
-

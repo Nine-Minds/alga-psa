@@ -6,12 +6,13 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Card } from '@alga-psa/ui/components/Card';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import type { WorkflowDesignerCatalogRecord } from '@shared/workflow/runtime/designer/actionCatalog';
+import type { WorkflowDesignerCatalogRecord } from '@alga-psa/workflows/runtime';
 
 const TILE_KIND_LABELS: Record<WorkflowDesignerCatalogRecord['tileKind'], string> = {
   'core-object': 'Core',
   transform: 'Transform',
   app: 'App',
+  ai: 'AI',
 };
 
 export const buildGroupedActionSelectOptions = (
@@ -41,13 +42,13 @@ export const GroupedActionConfigSection: React.FC<{
   const helperText = selectedActionDescription?.trim() || record.description?.trim();
 
   return (
-    <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/70 p-3">
+    <div className="space-y-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3">
       <div className="space-y-1">
-        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Group</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--color-text-500))]">Group</div>
         <div className="flex items-center gap-2">
           <div
             id={`workflow-step-group-label-${stepId}`}
-            className="text-sm font-semibold text-gray-900"
+            className="text-sm font-semibold text-[rgb(var(--color-text-900))]"
           >
             {record.label}
           </div>
@@ -56,7 +57,7 @@ export const GroupedActionConfigSection: React.FC<{
         {helperText && (
           <p
             id={`workflow-step-action-description-${stepId}`}
-            className="text-xs text-gray-600"
+            className="text-xs text-[rgb(var(--color-text-600))]"
           >
             {helperText}
           </p>

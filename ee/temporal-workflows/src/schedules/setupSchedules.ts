@@ -1,6 +1,7 @@
 import { Client, Connection, ScheduleOverlapPolicy } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { seedNinjaOneProactiveRefreshFromStoredCredentials } from '@ee/lib/integrations/ninjaone/proactiveRefresh';
 import {
   calendarWebhookMaintenanceWorkflow,
   emailWebhookMaintenanceWorkflow,
@@ -36,6 +37,12 @@ interface EntraScheduleConfigRow {
   hasActiveConnection: boolean;
 }
 
+interface NinjaOneBackfillRow {
+  tenantId: string;
+  integrationId: string;
+  settings: unknown;
+}
+
 function isAlreadyExistsError(error: any): boolean {
   return Boolean(
     error?.code === 6 || error?.name === 'ScheduleAlreadyRunning' || error?.message?.includes('AlreadyExists')
@@ -53,6 +60,98 @@ function normalizeIntervalMinutes(rawValue: unknown): number {
   }
 
   return Math.max(5, Math.floor(parsed));
+}
+
+function parseSettings(value: unknown): Record<string, unknown> {
+  if (!value) return {};
+  if (typeof value === 'object') return value as Record<string, unknown>;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === 'object') {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // ignored
+    }
+  }
+  return {};
+}
+
+async function loadNinjaOneBackfillCandidates(): Promise<NinjaOneBackfillRow[]> {
+  const knex = await getAdminConnection();
+  const rows = await knex('rmm_integrations')
+    .where({ provider: 'ninjaone', is_active: true })
+    .select([
+      'tenant as tenantId',
+      'integration_id as integrationId',
+      'settings',
+    ]);
+
+  return rows.map((row: any) => ({
+    tenantId: String(row.tenantId),
+    integrationId: String(row.integrationId),
+    settings: row.settings,
+  }));
+}
+
+function shouldBackfillNinjaOneIntegration(row: NinjaOneBackfillRow): boolean {
+  const settings = parseSettings(row.settings);
+  const lifecycle = (settings.tokenLifecycle || {}) as {
+    reconnectRequired?: boolean;
+  };
+
+  if (lifecycle.reconnectRequired) {
+    return false;
+  }
+
+  return true;
+}
+
+async function backfillNinjaOneProactiveSchedules(): Promise<void> {
+  const rows = await loadNinjaOneBackfillCandidates();
+  if (rows.length === 0) {
+    return;
+  }
+
+  let seeded = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const row of rows) {
+    if (!shouldBackfillNinjaOneIntegration(row)) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      const result = await seedNinjaOneProactiveRefreshFromStoredCredentials({
+        tenantId: row.tenantId,
+        integrationId: row.integrationId,
+        source: 'backfill',
+      });
+
+      if (result.scheduled) {
+        seeded++;
+      } else {
+        skipped++;
+      }
+    } catch (error: any) {
+      failed++;
+      logger.warn('Failed NinjaOne proactive refresh backfill for integration', {
+        tenantId: row.tenantId,
+        integrationId: row.integrationId,
+        error: error?.message || 'Unknown error',
+      });
+    }
+  }
+
+  logger.info('NinjaOne proactive refresh backfill completed', {
+    total: rows.length,
+    seeded,
+    skipped,
+    failed,
+  });
 }
 
 async function upsertSchedule(client: Client, scheduleId: string, input: any): Promise<void> {
@@ -212,6 +311,8 @@ export async function setupSchedules() {
         },
       });
     }
+
+    await backfillNinjaOneProactiveSchedules();
 
   } catch (error) {
     logger.error('Failed to connect to Temporal for schedule setup', error);

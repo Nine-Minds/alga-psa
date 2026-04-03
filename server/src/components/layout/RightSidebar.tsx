@@ -2,10 +2,12 @@
 
 import React, { useEffect, Suspense, lazy, useState } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface RightSidebarProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  onRequestClose?: () => void;
   clientUrl: string;
   accountId: string;
   messages: any[];
@@ -18,6 +20,8 @@ interface RightSidebarProps {
   isTitleLocked: boolean;
   handoffChatId?: string | null;
   handoffNonce?: number;
+  onInterruptibleStateChange?: (isInterruptible: boolean) => void;
+  onRegisterCancelHandler?: (cancelHandler: (() => void) | null) => void;
 }
 
 const resolvedEdition =
@@ -33,6 +37,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   setIsOpen,
   ...props
 }) => {
+  const { t } = useTranslation('msp/core');
   const [shouldUseEnterpriseSidebar, setShouldUseEnterpriseSidebar] = useState(
     isEnterpriseEditionEnv
   );
@@ -53,7 +58,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     return (
       <Suspense
         fallback={
-          <div className="fixed top-0 right-0 h-full bg-gray-50 w-96 shadow-xl">
+          <div className="fixed top-0 right-0 z-[45] h-full bg-gray-50 w-96 shadow-xl">
             <div className="flex items-center justify-center h-full">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
             </div>
@@ -69,13 +74,17 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     <Collapsible.Root open={isOpen} onOpenChange={setIsOpen}>
       <Collapsible.Content
         id="right-sidebar-content"
-        className={`fixed top-0 right-0 h-full bg-gray-50 w-96 shadow-xl overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 z-[45] h-full bg-gray-50 w-96 shadow-xl overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="flex flex-col h-full border-l-2 border-gray-200 dark:border-[rgb(var(--color-border-200))]">
           <div className="p-4">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-[rgb(var(--color-text-800))] mb-4">Chat</h2>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-[rgb(var(--color-text-800))] mb-4">
+              {t('rightSidebar.title', { defaultValue: 'Chat' })}
+            </h2>
             <p className="text-gray-600 dark:text-[rgb(var(--color-text-500))]">
-              The chat feature is only available in the Enterprise Edition.
+              {t('rightSidebar.enterpriseOnly', {
+                defaultValue: 'The chat feature is only available in the Enterprise Edition.',
+              })}
             </p>
           </div>
         </div>

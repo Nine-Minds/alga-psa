@@ -7,7 +7,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
-import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '@alga-psa/billing/actions';
+import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices, getDefaultBillingSettings } from '@alga-psa/billing/actions';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { getServiceCategories } from '@alga-psa/billing/actions';
@@ -36,7 +36,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 const BILLING_METHOD_OPTIONS = [
   { value: 'fixed', label: 'Fixed Fee' },
   { value: 'hourly', label: 'Hourly' },
-  { value: 'per_unit', label: 'Per Unit' },
+  { value: 'usage', label: 'Usage' },
   { value: 'usage', label: 'Usage Based' }
 ];
 
@@ -49,11 +49,12 @@ const LICENSE_TERM_OPTIONS = [
 ];
 
 const ServiceCatalogManager: React.FC = () => {
+  const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [services, setServices] = useState<IService[]>([]);
   // Note: Categories are currently hidden in favor of using Service Types for organization
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
   // Update state type to match what getServiceTypesForSelection returns
-  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }[]>([]);
+  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]);
   const [editingService, setEditingService] = useState<(IService & {
     inventory_count?: number;
     seat_limit?: number;
@@ -121,6 +122,9 @@ const ServiceCatalogManager: React.FC = () => {
     fetchCategories();
     fetchAllServiceTypes(); // Fetch service types
     fetchTaxRates(); // Fetch tax rates instead of regions
+    getDefaultBillingSettings()
+      .then((settings) => setDefaultCurrency(settings.defaultCurrencyCode || 'USD'))
+      .catch(() => {});
   }, []);
 
   // Function to fetch all service types
@@ -528,10 +532,10 @@ const ServiceCatalogManager: React.FC = () => {
               id={`edit-service-${record.service_id}`}
               onClick={() => {
                 setEditingService(record);
-                // Initialize editingPrices from service prices or create default USD entry
+                // Initialize editingPrices from service prices or create default entry with tenant currency
                 const prices = record.prices && record.prices.length > 0
                   ? record.prices.map(p => ({ currency_code: p.currency_code, rate: p.rate }))
-                  : [{ currency_code: 'USD', rate: record.default_rate }];
+                  : [{ currency_code: defaultCurrency, rate: record.default_rate }];
                 setEditingPrices(prices);
                 // Set rate input for the first/primary price
                 const primaryRate = prices.length > 0 ? prices[0].rate : record.default_rate;
@@ -628,10 +632,10 @@ const ServiceCatalogManager: React.FC = () => {
                     ...record,
                     // sku: record.sku || '', // Example if sku was fetched
                   });
-                  // Initialize editingPrices from service prices or create default USD entry
+                  // Initialize editingPrices from service prices or create default entry with tenant currency
                   const prices = record.prices && record.prices.length > 0
                     ? record.prices.map(p => ({ currency_code: p.currency_code, rate: p.rate }))
-                    : [{ currency_code: 'USD', rate: record.default_rate }];
+                    : [{ currency_code: defaultCurrency, rate: record.default_rate }];
                   setEditingPrices(prices);
                   // Set rate input for the first/primary price
                   const primaryRate = prices.length > 0 ? prices[0].rate : record.default_rate;
@@ -678,7 +682,7 @@ const ServiceCatalogManager: React.FC = () => {
                 onCreateType={async (name) => {
                   await createServiceTypeInline(
                     name,
-                    ((editingService?.billing_method as 'fixed' | 'hourly' | 'per_unit' | 'usage') ?? 'fixed')
+                    ((editingService?.billing_method as 'fixed' | 'hourly' | 'usage') ?? 'fixed')
                   );
                   fetchAllServiceTypes(); // Refresh the service types list
                 }}
@@ -700,7 +704,7 @@ const ServiceCatalogManager: React.FC = () => {
                 id="billing-method"
                 options={BILLING_METHOD_OPTIONS}
                 value={editingService?.billing_method || 'fixed'}
-                onValueChange={(value) => setEditingService({ ...editingService!, billing_method: value as 'fixed' | 'hourly' | 'per_unit' | 'usage' })}
+                onValueChange={(value) => setEditingService({ ...editingService!, billing_method: value as 'fixed' | 'hourly' | 'usage' })}
                 placeholder="Select billing method..."
               />
             </div>
@@ -720,7 +724,7 @@ const ServiceCatalogManager: React.FC = () => {
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                   Pricing *
                   <span className="text-xs font-normal text-muted-foreground ml-2">
-                    ({editingService?.billing_method === 'fixed' ? 'Monthly' : editingService?.billing_method === 'hourly' ? 'Per Hour' : 'Per Unit'})
+                    ({editingService?.billing_method === 'fixed' ? 'Monthly' : editingService?.billing_method === 'hourly' ? 'Per Hour' : 'Usage'})
                   </span>
                 </label>
                 <Button

@@ -6,6 +6,7 @@ import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySumm
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
+import { getSlaPolicies } from '@alga-psa/sla/actions';
 import ClientAssets from './MspClientAssets';
 import MspClientTickets from './MspClientTickets';
 import MspContactTickets from './MspContactTickets';
@@ -82,6 +83,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       renderClientAssets,
       renderClientTickets,
       renderContactTickets,
+      getSlaPolicies,
     }),
     [renderQuickAddTicket, renderSurveySummaryCard, renderClientAssets, renderClientTickets, renderContactTickets]
   );

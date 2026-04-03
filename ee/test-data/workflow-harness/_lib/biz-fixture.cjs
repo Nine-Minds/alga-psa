@@ -130,8 +130,8 @@ async function createTicket(ctx, { tenantId, apiKey }) {
   });
   const status = await pickOne(ctx, {
     label: 'a ticket status',
-    sql: `select status_id from statuses where tenant = $1 and status_type = 'ticket' order by is_default desc, order_number asc limit 1`,
-    params: [tenantId]
+    sql: `select status_id from statuses where tenant = $1 and board_id = $2 and status_type = 'ticket' order by is_default desc, order_number asc limit 1`,
+    params: [tenantId, board.board_id]
   });
   const priority = await pickOne(ctx, {
     label: 'a ticket priority',

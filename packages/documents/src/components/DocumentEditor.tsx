@@ -12,6 +12,9 @@ import {
   detectBlockContentFormat,
   blockNoteJsonToProsemirrorJson,
   parseBlockContent,
+  normalizeProsemirrorJson,
+  isRawMarkdownInProsemirror,
+  convertRawMarkdownProsemirror,
 } from '../lib/blockContentFormat';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -27,6 +30,8 @@ interface DocumentEditorProps {
   onContentChange?: (content: Record<string, any>) => void;
   onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
   hideSaveButton?: boolean;
+  /** Pre-loaded block_data. When provided (even as null), skips the getBlockContent fetch. */
+  initialContent?: unknown;
 }
 
 export function DocumentEditor({
@@ -37,6 +42,7 @@ export function DocumentEditor({
   onContentChange,
   onUnsavedChangesChange,
   hideSaveButton = false,
+  initialContent,
 }: DocumentEditorProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,21 +120,34 @@ export function DocumentEditor({
   });
 
   // Load the document content when component mounts
+  const initialContentRef = useRef(initialContent);
   useEffect(() => {
     const loadContent = async () => {
       try {
         contentLoadedRef.current = false;
         setHasUnsavedChanges(false);
         setIsLoading(true);
-        const content = await getBlockContent(documentId);
-        if (content?.block_data) {
+
+        // Use pre-loaded content when available; otherwise fetch from DB
+        let blockData: unknown = null;
+        if (initialContentRef.current !== undefined) {
+          blockData = initialContentRef.current;
+        } else {
+          const content = await getBlockContent(documentId);
+          blockData = content?.block_data ?? null;
+        }
+
+        if (blockData) {
           try {
-            const format = detectBlockContentFormat(content.block_data);
+            const format = detectBlockContentFormat(blockData);
             let parsedContent: unknown;
             if (format === 'blocknote') {
-              parsedContent = blockNoteJsonToProsemirrorJson(content.block_data);
+              parsedContent = blockNoteJsonToProsemirrorJson(blockData);
             } else {
-              parsedContent = parseBlockContent(content.block_data);
+              parsedContent = normalizeProsemirrorJson(parseBlockContent(blockData));
+              if (isRawMarkdownInProsemirror(parsedContent)) {
+                parsedContent = convertRawMarkdownProsemirror(parsedContent);
+              }
             }
             if (editor && !editor.isDestroyed) {
               editor.commands.setContent(parsedContent as Parameters<typeof editor.commands.setContent>[0]);

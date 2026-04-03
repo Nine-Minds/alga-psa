@@ -1,0 +1,157 @@
+{
+  "welcome": {
+    "title": "Willkommen in Ihrer MSP-Kommandozentrale",
+    "description": "Verfolgen Sie den Onboarding-Fortschritt, konfigurieren Sie kritische Services und sorgen Sie für ein konsistentes Kundenerlebnis.",
+    "titleCommunity": "Willkommen zurück",
+    "descriptionCommunity": "Springen Sie von Ihrem Dashboard direkt zu Tickets, Planung, Projekten und Berichten."
+  },
+  "features": {
+    "heading": "Plattformfunktionen",
+    "comingSoon": "Demnächst verfügbar!",
+    "tickets": {
+      "title": "Ticket-Management",
+      "description": "Optimieren Sie den Support mit Routing, SLA-Verfolgung und geführten Workflows."
+    },
+    "monitoring": {
+      "title": "Systemüberwachung",
+      "description": "Beobachten Sie kritische Signale über Kunden hinweg und lösen Sie bei Bedarf Automatisierung aus."
+    },
+    "security": {
+      "title": "Sicherheitsmanagement",
+      "description": "Verwalten Sie Richtlinien, Genehmigungen und Audit-Reaktionen an einem Ort."
+    },
+    "projects": {
+      "title": "Projektmanagement",
+      "description": "Organisieren Sie Lieferpläne, Aufgaben und Meilensteine für jedes Engagement."
+    },
+    "reports": {
+      "title": "Berichte & Analysen",
+      "description": "Erstellen Sie Übersichten zu Auslastung, SLA-Erfüllung und Rentabilität."
+    },
+    "schedule": {
+      "title": "Terminmanagement",
+      "description": "Koordinieren Sie Vor-Ort-Besuche und Remote-Sitzungen mit bidirektionaler Synchronisierung."
+    }
+  },
+  "knowledgeBase": {
+    "title": "Brauchen Sie mehr Details?",
+    "description": "Entdecken Sie Deployment-Runbooks und Best Practices in der Wissensdatenbank.",
+    "cta": "Ressourcen ansehen"
+  },
+  "onboarding": {
+    "completeTitle": "Onboarding abgeschlossen",
+    "incompleteTitle": "Schließen Sie Ihre Einrichtung ab",
+    "completeDescription": "Sie können jetzt das vollständige MSP-Dashboard-Erlebnis nutzen.",
+    "incompleteDescription": "Arbeiten Sie jeden Schritt ab, um das vollständige MSP-Dashboard-Erlebnis freizuschalten.",
+    "stepLabel": "SCHRITT {{index}}",
+    "badges": {
+      "complete": "Abgeschlossen",
+      "notStarted": "Nicht begonnen",
+      "inProgress": "In Arbeit",
+      "blocked": "Blockiert"
+    },
+    "progress": {
+      "label": "FORTSCHRITT",
+      "steps": "{{completed}} von {{total}} Schritten",
+      "messageStart": "Gerade erst gestartet!",
+      "messageComplete": "Alles bereit - tolle Arbeit!",
+      "messageInProgress": "Weiter so - Sie sind auf dem richtigen Weg!"
+    },
+    "substeps": {
+      "dataImport": "Schließen Sie Ihren ersten Import ab ODER erstellen Sie 5 Kontakte",
+      "identity": {
+        "addProvider": "Einen SSO-Anbieter hinzufügen",
+        "linkTeamMember": "Das erste Teammitglied verknüpfen"
+      },
+      "portal": {
+        "customDomain": "Benutzerdefinierte Portal-Domain",
+        "branding": "Portal-Farb- und Logoanpassungen",
+        "inviteFirstContact": "Laden Sie Ihren ersten Kontakt ins Portal ein"
+      },
+      "createContacts": "Erstellen Sie Ihre ersten 5 Kontakte",
+      "calendar": {
+        "addProvider": "Einen Kalenderanbieter hinzufügen",
+        "connectAuthorize": "Anbieter verbinden und autorisieren"
+      },
+      "email": {
+        "configureInbound": "Eingehende E-Mail konfigurieren",
+        "configureOutboundDomain": "Benutzerdefinierte ausgehende E-Mail-Domain konfigurieren"
+      }
+    },
+    "cta": {
+      "completed": "Abgeschlossen",
+      "hiding": "Wird ausgeblendet...",
+      "hide": "Ausblenden",
+      "dismiss": "Ausblenden {{title}}",
+      "restoring": "Wird wiederhergestellt..."
+    },
+    "hidden": {
+      "title": "Ausgeblendete Setup-Karten ({{count}})",
+      "subtitle": "Stellen Sie eine Karte wieder her, wenn Sie sie später benötigen."
+    },
+    "checklist": {
+      "title": "Onboarding-Checkliste",
+      "progress": "{{completed}} von {{total}} Aufgaben abgeschlossen",
+      "completeTitle": "Konfiguration abgeschlossen",
+      "completeDescription": "Laden Sie Kunden ein, Ihr gebrandetes Portal zu erleben.",
+      "inviteCta": "Kunden einladen",
+      "viewButton": "Onboarding-Checkliste anzeigen"
+    },
+    "steps": {
+      "identity": {
+        "title": "Identität und SSO absichern",
+        "description": "Verbinden Sie Google Workspace oder Microsoft 365, damit sich Administratoren mit verwalteten Identitäten anmelden.",
+        "cta": "SSO verbinden"
+      },
+      "portal": {
+        "title": "Kundenportal einrichten",
+        "description": "Konfigurieren Sie Ihr Portal, damit sich Kunden auf Ihrer Domain mit Ihrem Branding anmelden können.",
+        "cta": "Portaleinstellungen öffnen"
+      },
+      "dataImport": {
+        "title": "Kerndaten importieren",
+        "description": "Fügen Sie Kontakte hinzu, damit Sie für Kunden arbeiten und Workflows in Bewegung halten können.",
+        "cta": "Kontakte erstellen"
+      },
+      "calendar": {
+        "title": "Kalendersynchronisierung",
+        "description": "Verbinden Sie Google- oder Outlook-Kalender, damit Einsatzplanung und Kundentermine abgestimmt bleiben.",
+        "cta": "Kalender konfigurieren"
+      },
+      "email": {
+        "title": "E-Mail konfigurieren",
+        "description": "Richten Sie eingehende Ticket-E-Mails ein und verifizieren Sie eine ausgehende Versanddomain für zuverlässige Zustellung.",
+        "cta": "E-Mail konfigurieren"
+      }
+    },
+    "blockers": {
+      "identity": {
+        "linkedAccountsUnavailable": "Verknüpfte Teammitglieder können derzeit nicht überprüft werden.",
+        "noLinkedUsers": "Es sind noch keine Benutzer mit einem Identitätsanbieter verknüpft. Bitten Sie einen MSP-Administrator, Google oder Microsoft zu verbinden.",
+        "addProviderCredentials": "Fügen Sie Google-Workspace- oder Microsoft-365-Zugangsdaten hinzu, um SSO für Ihr Team zu aktivieren.",
+        "configurationUnavailable": "Die SSO-Anbieterkonfiguration ist in dieser Umgebung nicht verfügbar.",
+        "loadFailed": "Der Status der SSO-Konfiguration konnte nicht geladen werden."
+      },
+      "portal": {
+        "loadFailed": "Der Status der Kundenportal-Domain konnte nicht geladen werden."
+      },
+      "import": {
+        "loadFailed": "Die Importhistorie konnte nicht geladen werden."
+      },
+      "calendar": {
+        "providerAttention": "{{provider}} erfordert Aufmerksamkeit, bevor die Synchronisierung fortgesetzt werden kann.",
+        "loadFailed": "Die Kalenderintegrationen konnten nicht geladen werden."
+      },
+      "email": {
+        "enterpriseOnly": "Verwaltete E-Mail-Domains sind nur in der Enterprise-Edition verfügbar.",
+        "tenantRequired": "Ein Tenant-Kontext ist erforderlich, um den E-Mail-Onboarding-Status zu laden.",
+        "loadFailed": "Die verwalteten E-Mail-Domains konnten nicht geladen werden.",
+        "verificationFailed": "Die Verifizierung für {{domain}} ist fehlgeschlagen."
+      }
+    },
+    "errors": {
+      "dismissFailed": "Onboarding-Schritt konnte nicht ausgeblendet werden.",
+      "restoreFailed": "Onboarding-Schritt konnte nicht wiederhergestellt werden."
+    }
+  }
+}

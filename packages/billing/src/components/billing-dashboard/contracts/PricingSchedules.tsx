@@ -26,9 +26,10 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 interface PricingSchedulesProps {
   contractId: string;
+  isReadOnly?: boolean;
 }
 
-const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
+const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadOnly = false }) => {
   const [schedules, setSchedules] = useState<IContractPricingSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +58,9 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
   };
 
   const handleDelete = async (scheduleId: string) => {
+    if (isReadOnly) {
+      return;
+    }
     if (!confirm('Are you sure you want to delete this pricing schedule?')) {
       return;
     }
@@ -71,11 +75,17 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
   };
 
   const handleEdit = (schedule: IContractPricingSchedule) => {
+    if (isReadOnly) {
+      return;
+    }
     setEditingSchedule(schedule);
     setShowDialog(true);
   };
 
   const handleAddNew = () => {
+    if (isReadOnly) {
+      return;
+    }
     setEditingSchedule(null);
     setShowDialog(true);
   };
@@ -124,6 +134,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
               variant="ghost"
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
+              disabled={isReadOnly}
             >
               <span className="sr-only">Open menu</span>
               <MoreVertical className="h-4 w-4" />
@@ -133,6 +144,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
             <DropdownMenuItem
               id={`edit-pricing-schedule-${value}`}
               onClick={() => handleEdit(record)}
+              disabled={isReadOnly}
             >
               Edit Schedule
             </DropdownMenuItem>
@@ -140,6 +152,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
               id={`delete-pricing-schedule-${value}`}
               className="text-red-600 focus:text-red-600"
               onClick={(e) => { e.stopPropagation(); handleDelete(value as string); }}
+              disabled={isReadOnly}
             >
               Delete Schedule
             </DropdownMenuItem>
@@ -155,9 +168,13 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
         <Box p="4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium">Pricing Schedules</h3>
+            {isReadOnly ? (
+              <p className="text-sm text-muted-foreground">This system-managed default contract is attribution-only. Pricing schedule authoring is disabled.</p>
+            ) : null}
             <Button
               id="add-pricing-schedule-button"
               onClick={handleAddNew}
+              disabled={isReadOnly}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Schedule
@@ -246,7 +263,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
                     columns={scheduleColumns}
                     pagination={false}
                     onRowClick={handleEdit}
-                    rowClassName={() => 'cursor-pointer'}
+                    rowClassName={() => (isReadOnly ? '' : 'cursor-pointer')}
                   />
                 </>
               )}
@@ -255,7 +272,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
         </Box>
       </Card>
 
-      {showDialog && (
+      {showDialog && !isReadOnly && (
           <PricingScheduleDialog 
             contractId={contractId}
             schedule={editingSchedule}

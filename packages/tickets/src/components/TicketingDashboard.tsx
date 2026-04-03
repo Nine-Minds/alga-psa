@@ -25,10 +25,14 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ColumnDefinition } from '@alga-psa/types';
-import { deleteTicket, deleteTickets } from '../actions/ticketActions';
+import { deleteTicket, deleteTickets, moveTicketsToBoard } from '../actions/ticketActions';
+import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { bundleTicketsAction } from '../actions/ticketBundleActions';
-import { fetchBundleChildrenForMaster } from '../actions/optimizedTicketActions';
-import { XCircle, Clock } from 'lucide-react';
+import { fetchBundleChildrenForMaster, getAllMatchingTicketIds } from '../actions/optimizedTicketActions';
+import TicketExportDialog from './TicketExportDialog';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { XCircle, Clock, Download, ChevronDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useIntervalTracking } from '@alga-psa/ui/hooks';
@@ -46,12 +50,18 @@ import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import { useDrawer } from '@alga-psa/ui';
 import { getClientById } from '../actions/clientLookupActions';
+import {
+  buildTicketStatusFilterOptions,
+  isTicketStatusOpenFilter,
+  TICKET_STATUS_FILTER_OPEN,
+  type TicketStatusFilterOption,
+} from '../lib/ticketStatusFilter';
 
 interface TicketingDashboardProps {
   id?: string;
   initialTickets: ITicketListItem[];
   initialBoards: IBoard[];
-  initialStatuses: SelectOption[];
+  initialStatuses: TicketStatusFilterOption[];
   initialPriorities: SelectOption[];
   initialCategories: ITicketCategory[];
   initialClients: IClient[];
@@ -93,6 +103,17 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 
 const TICKET_LIST_DENSITY_STORAGE_KEY = 'ticket_list_density_level';
 const EMPTY_STRING_ARRAY: string[] = [];
+const TICKET_LIST_DENSITY_PRESETS = [0, 25, 50, 75, 100] as const;
+
+type TicketListDensityPreset = (typeof TICKET_LIST_DENSITY_PRESETS)[number];
+
+const normalizeTicketListDensityLevel = (value: number): TicketListDensityPreset => {
+  const clamped = Math.min(100, Math.max(0, value));
+
+  return TICKET_LIST_DENSITY_PRESETS.reduce((closest, preset) => {
+    return Math.abs(preset - clamped) < Math.abs(closest - clamped) ? preset : closest;
+  }, TICKET_LIST_DENSITY_PRESETS[0]);
+};
 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
@@ -131,6 +152,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
+  const [allMatchingMode, setAllMatchingMode] = useState(false);
   const [visibleTicketIds, setVisibleTicketIds] = useState<string[]>([]);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
@@ -142,6 +164,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [isBulkMoveDialogOpen, setIsBulkMoveDialogOpen] = useState(false);
+  const [isBulkMoving, setIsBulkMoving] = useState(false);
+  const [bulkMoveErrors, setBulkMoveErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [selectedDestinationBoardId, setSelectedDestinationBoardId] = useState<string>('');
+  const [destinationBoardStatuses, setDestinationBoardStatuses] = useState<SelectOption[]>([]);
+  const [selectedDestinationStatusId, setSelectedDestinationStatusId] = useState<string>('');
+  const [isLoadingDestinationStatuses, setIsLoadingDestinationStatuses] = useState(false);
+  const [destinationStatusError, setDestinationStatusError] = useState<string>('');
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>(initialAgentAvatarUrls);
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>(initialTeamAvatarUrls);
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
@@ -149,17 +179,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [bundleSyncUpdates, setBundleSyncUpdates] = useState(true);
   const [bundleError, setBundleError] = useState<string | null>(null);
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
-  const [statusOptions] = useState<SelectOption[]>(initialStatuses);
+  const [rawStatusOptions] = useState<TicketStatusFilterOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
   // Filter values derived from props (single source of truth is Container's activeFilters)
   const selectedBoard = filterValues.boardId ?? null;
   const selectedClient = filterValues.clientId ?? null;
-  const selectedStatus = filterValues.statusId ?? 'open';
+  const selectedStatus = filterValues.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const selectedPriority = filterValues.priorityId ?? 'all';
   const selectedCategories = useMemo(() =>
     filterValues.categoryId ? [filterValues.categoryId] : EMPTY_STRING_ARRAY,
@@ -187,7 +218,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const selectedResponseState = (filterValues.responseState ?? 'all') as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   const selectedSlaStatus = filterValues.slaStatusFilter ?? 'all';
   const bundleView = (filterValues.bundleView ?? 'bundled') as 'bundled' | 'individual';
-  const [ticketListDensityLevel, setTicketListDensityLevel] = useState<number>(50);
+  const [ticketListDensityLevel, setTicketListDensityLevel] = useState<TicketListDensityPreset>(50);
 
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -203,7 +234,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const isFiltered = useMemo(() => {
     return selectedBoard !== null ||
       selectedClient !== null ||
-      selectedStatus !== 'open' ||
+      selectedStatus !== TICKET_STATUS_FILTER_OPEN ||
       selectedPriority !== 'all' ||
       selectedCategories.length > 0 ||
       searchQuery !== '' ||
@@ -299,7 +330,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (typeof window === 'undefined') return;
     const stored = Number(window.localStorage.getItem(TICKET_LIST_DENSITY_STORAGE_KEY));
     if (Number.isFinite(stored) && stored >= 0 && stored <= 100) {
-      setTicketListDensityLevel(stored);
+      setTicketListDensityLevel(normalizeTicketListDensityLevel(stored));
     }
   }, []);
 
@@ -308,32 +339,56 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     window.localStorage.setItem(TICKET_LIST_DENSITY_STORAGE_KEY, String(ticketListDensityLevel));
   }, [ticketListDensityLevel]);
 
+  const handleTicketListDensityChange = useCallback((value: number) => {
+    setTicketListDensityLevel(normalizeTicketListDensityLevel(value));
+  }, []);
+
   const densityClasses = useMemo(() => {
-    if (ticketListDensityLevel <= 15) {
-      return {
+    const densityPresetClasses: Record<TicketListDensityPreset, {
+      filterPadding: string;
+      filterGap: string;
+      bodyPadding: string;
+      tableRowDensity: string;
+    }> = {
+      0: {
+        filterPadding: 'p-3',
+        filterGap: 'gap-2',
+        bodyPadding: 'p-3',
+        tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px]',
+      },
+      25: {
         filterPadding: 'p-4',
-        filterGap: 'gap-4',
+        filterGap: 'gap-3',
         bodyPadding: 'p-4',
         tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[13px]',
-      };
-    }
-
-    if (ticketListDensityLevel >= 85) {
-      return {
-        filterPadding: 'p-6',
+      },
+      50: {
+        filterPadding: 'p-5',
         filterGap: 'gap-4',
+        bodyPadding: 'p-5',
+        tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[14px]',
+      },
+      75: {
+        filterPadding: 'p-6',
+        filterGap: 'gap-5',
         bodyPadding: 'p-7',
-        tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px]',
-      };
-    }
-
-    return {
-      filterPadding: 'p-6',
-      filterGap: 'gap-4',
-      bodyPadding: 'p-6',
-      tableRowDensity: '',
+        tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[15px]',
+      },
+      100: {
+        filterPadding: 'p-8',
+        filterGap: 'gap-6',
+        bodyPadding: 'p-9',
+        tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[16px]',
+      },
     };
+
+    return densityPresetClasses[ticketListDensityLevel];
   }, [ticketListDensityLevel]);
+
+  const statusOptions = useMemo(
+    () => buildTicketStatusFilterOptions(rawStatusOptions, selectedBoard, selectedStatus),
+    [rawStatusOptions, selectedBoard, selectedStatus]
+  );
 
   // Helper function to generate URL with current filter state
   const getCurrentFiltersQuery = useCallback(() => {
@@ -343,7 +398,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     // Only add non-default/non-empty values to URL
     if (f.boardId) params.set('boardId', f.boardId);
     if (f.clientId) params.set('clientId', f.clientId);
-    if (f.statusId && f.statusId !== 'open') params.set('statusId', f.statusId);
+    if (f.statusId && f.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', f.statusId);
     if (f.priorityId && f.priorityId !== 'all') params.set('priorityId', f.priorityId);
     if (f.categoryId) params.set('categoryId', f.categoryId);
     if (f.searchQuery) params.set('searchQuery', f.searchQuery);
@@ -654,6 +709,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [selectableTicketIds]);
 
   const handleTicketSelectionChange = useCallback((ticketId: string, isChecked: boolean) => {
+    if (!isChecked) {
+      setAllMatchingMode(false);
+    }
     setSelectedTicketIds(prev => {
       const alreadySelected = prev.has(ticketId);
 
@@ -678,6 +736,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, []);
 
   const handleSelectAllVisibleTickets = useCallback((shouldSelect: boolean) => {
+    if (!shouldSelect) {
+      setAllMatchingMode(false);
+    }
     const visibleIds = visibleTicketIds.filter((id): id is string => !!id);
 
     setSelectedTicketIds(prev => {
@@ -708,17 +769,82 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [visibleTicketIds]);
 
-  const handleSelectAllMatchingTickets = useCallback(() => {
-    // For now, only select current page tickets
-    // TODO: Implement server-side select all for all matching tickets
-    if (selectableTicketIds.length === 0) {
+  const handleSelectAllMatchingTickets = useCallback(async () => {
+    try {
+      const filters: ITicketListFilters = {
+        boardId: selectedBoard ?? undefined,
+        statusId: selectedStatus,
+        priorityId: selectedPriority,
+        categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
+        clientId: selectedClient ?? undefined,
+        searchQuery: debouncedSearchQuery,
+        boardFilterState: boardFilterState,
+        showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
+        tags: selectedTags.length > 0 ? selectedTags : undefined,
+        assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
+        assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
+        includeUnassigned: includeUnassigned || undefined,
+        dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
+        responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
+        slaStatusFilter: selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
+        bundleView,
+      };
+      const allIds = await getAllMatchingTicketIds(filters);
+      setSelectedTicketIds(new Set(allIds));
+      setAllMatchingMode(true);
+    } catch (error) {
+      console.error('Failed to fetch all matching ticket IDs:', error);
+      // Fall back to selecting current page only
+      setSelectedTicketIds(new Set(selectableTicketIds));
+      setAllMatchingMode(true);
+    }
+  }, [
+    selectedBoard, selectedStatus, selectedPriority, selectedCategories,
+    selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
+    selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
+    selectedResponseState, selectedSlaStatus, bundleView, selectableTicketIds,
+  ]);
+
+  const handleBulkMoveBoardChange = useCallback(async (boardId: string) => {
+    setSelectedDestinationBoardId(boardId);
+    setDestinationStatusError('');
+    setSelectedDestinationStatusId('');
+    setDestinationBoardStatuses([]);
+
+    if (!boardId) {
       return;
     }
-    setSelectedTicketIds(new Set(selectableTicketIds));
-  }, [selectableTicketIds]);
+
+    setIsLoadingDestinationStatuses(true);
+    try {
+      const statuses = await getBoardTicketStatuses(boardId);
+      const boardStatusOptions = statuses.map((status) => ({
+        value: status.status_id as string,
+        label: status.name,
+      }));
+      const defaultStatus = statuses.find((status) => status.is_default);
+
+      setDestinationBoardStatuses(boardStatusOptions);
+
+      if (defaultStatus) {
+        setSelectedDestinationStatusId(defaultStatus.status_id);
+      } else {
+        setSelectedDestinationStatusId(boardStatusOptions[0]?.value || '');
+      }
+
+      if (boardStatusOptions.length === 0) {
+        setDestinationStatusError('This board has no ticket statuses configured for selection.');
+      }
+    } catch (error: unknown) {
+      setDestinationStatusError(error instanceof Error ? error.message : 'Failed to load board statuses');
+    } finally {
+      setIsLoadingDestinationStatuses(false);
+    }
+  }, []);
 
   const clearSelection = useCallback(() => {
     setSelectedTicketIds(prev => (prev.size === 0 ? prev : new Set<string>()));
+    setAllMatchingMode(false);
   }, []);
 
   const visibleTicketIdSet = useMemo(() => new Set(visibleTicketIds.filter((id): id is string => !!id)), [visibleTicketIds]);
@@ -728,8 +854,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     () => selectedTicketIdsArray.some(id => !visibleTicketIdSet.has(id)),
     [selectedTicketIdsArray, visibleTicketIdSet]
   );
-  // For server-side pagination, we show "select all on page" vs "select all matching filters"
-  const allCurrentPageSelected = selectableTicketIds.length > 0 && selectableTicketIds.every(id => selectedTicketIds.has(id));
   const isSelectionIndeterminate = selectedTicketIds.size > 0 && !allVisibleTicketsSelected;
   const selectedTicketDetails = useMemo(() => {
     if (selectedTicketIds.size === 0) {
@@ -768,8 +892,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [selectedTicketDetails]);
 
   const hasSelection = selectedTicketIds.size > 0;
-  const showSelectAllBanner = allVisibleTicketsSelected && !hasHiddenSelections && totalCount > visibleTicketIds.length && visibleTicketIds.length > 0;
-  const showAllSelectedBanner = false; // Disable "all selected" banner for now until we implement server-side select all
+  const showSelectAllBanner = allVisibleTicketsSelected && !hasHiddenSelections && !allMatchingMode && totalCount > visibleTicketIds.length && visibleTicketIds.length > 0;
 
   const handleVisibleRowsChange = useCallback((rows: ITicketListItem[]) => {
     const ids = rows
@@ -804,7 +927,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
       title: (
         <div
-          className="flex justify-center"
+          className="flex items-center justify-center gap-0"
           onClick={(event) => event.stopPropagation()}
           onMouseDown={(event) => event.stopPropagation()}
         >
@@ -814,12 +937,34 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             indeterminate={isSelectionIndeterminate}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
               event.stopPropagation();
-              handleSelectAllVisibleTickets(event.target.checked);
+              if (!event.target.checked && allMatchingMode) {
+                clearSelection();
+              } else {
+                handleSelectAllVisibleTickets(event.target.checked);
+              }
             }}
             containerClassName="mb-0"
             className="m-0"
             skipRegistration
           />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center p-0 ml-0.5 text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] focus:outline-none"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[6rem]">
+              <DropdownMenuItem onSelect={() => void handleSelectAllMatchingTickets()}>
+                All
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={clearSelection}>
+                None
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
       dataIndex: 'selection',
@@ -873,6 +1018,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleSelectAllVisibleTickets,
     handleTicketSelectionChange,
     selectedTicketIds,
+    clearSelection,
+    handleSelectAllMatchingTickets,
+    allMatchingMode,
     additionalAgentAvatarUrls,
     teamAvatarUrls,
     isBundleExpanded,
@@ -887,6 +1035,75 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setIsBulkDeleteDialogOpen(false);
     setBulkDeleteErrors([]);
   }, [isBulkDeleting]);
+
+  const handleBulkMoveClose = useCallback(() => {
+    if (isBulkMoving) {
+      return;
+    }
+    setIsBulkMoveDialogOpen(false);
+    setBulkMoveErrors([]);
+    setSelectedDestinationBoardId('');
+    setDestinationBoardStatuses([]);
+    setSelectedDestinationStatusId('');
+    setDestinationStatusError('');
+    setIsLoadingDestinationStatuses(false);
+  }, [isBulkMoving]);
+
+  const handleConfirmBulkMove = useCallback(async () => {
+    if (selectedTicketIdsArray.length === 0) {
+      return;
+    }
+
+    if (!currentUser) {
+      toast.error('You must be logged in to move tickets');
+      return;
+    }
+
+    if (!selectedDestinationBoardId || !selectedDestinationStatusId || destinationBoardStatuses.length === 0) {
+      return;
+    }
+
+    setIsBulkMoving(true);
+    setBulkMoveErrors([]);
+
+    try {
+      const result = await moveTicketsToBoard(
+        selectedTicketIdsArray,
+        selectedDestinationBoardId,
+        selectedDestinationStatusId
+      );
+
+      if (result.movedIds.length > 0) {
+        const movedSet = new Set(result.movedIds);
+        setTickets(prev => prev.filter(ticket => {
+          if (!ticket.ticket_id) {
+            return true;
+          }
+          return !movedSet.has(ticket.ticket_id);
+        }));
+        onFilterChange({});
+      }
+
+      if (result.failed.length > 0) {
+        setBulkMoveErrors(result.failed);
+        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
+        toast.error('Some tickets could not be moved');
+        if (result.movedIds.length > 0) {
+          toast.success(`${result.movedIds.length} ticket${result.movedIds.length === 1 ? '' : 's'} moved`);
+        }
+      } else {
+        if (result.movedIds.length > 0) {
+          toast.success(`${result.movedIds.length} ticket${result.movedIds.length === 1 ? '' : 's'} moved`);
+        }
+        clearSelection();
+        setIsBulkMoveDialogOpen(false);
+      }
+    } catch (error) {
+      handleError(error, 'Failed to move selected tickets');
+    } finally {
+      setIsBulkMoving(false);
+    }
+  }, [clearSelection, currentUser, onFilterChange, selectedDestinationBoardId, selectedDestinationStatusId, selectedTicketIdsArray, destinationBoardStatuses.length]);
 
   const handleConfirmBulkDelete = useCallback(async () => {
     if (selectedTicketIdsArray.length === 0) {
@@ -981,6 +1198,31 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     void performBundleTickets();
   }, [isSelectedBundleMultiClient, performBundleTickets]);
 
+  const exportFilters = useMemo((): ITicketListFilters => ({
+    boardId: selectedBoard ?? undefined,
+    statusId: selectedStatus,
+    priorityId: selectedPriority,
+    categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
+    clientId: selectedClient ?? undefined,
+    searchQuery: debouncedSearchQuery,
+    boardFilterState: boardFilterState,
+    showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
+    tags: selectedTags.length > 0 ? selectedTags : undefined,
+    assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
+    assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
+    includeUnassigned: includeUnassigned || undefined,
+    dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
+    responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
+    slaStatusFilter: selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
+    sortBy,
+    sortDirection,
+    bundleView,
+  }), [
+    selectedBoard, selectedStatus, selectedPriority, selectedCategories,
+    selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
+    selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
+    selectedResponseState, selectedSlaStatus, sortBy, sortDirection, bundleView,
+  ]);
 
   const handleTicketAdded = useCallback((newTicket: ITicket) => {
     // Store tags for the new ticket if provided
@@ -1000,7 +1242,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     // Add the new ticket to the local state
     setTickets(prevTickets => {
-      const status = statusOptions.find(s => s.value === newTicket.status_id);
+      const status = rawStatusOptions.find(s => s.value === newTicket.status_id);
       const priority = priorityOptions.find(p => p.value === newTicket.priority_id);
       const board = boards.find(c => c.board_id === newTicket.board_id);
 
@@ -1053,11 +1295,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     // Close the quick add dialog
     setIsQuickAddOpen(false);
-  }, [statusOptions, priorityOptions, boards, categories, currentUser]);
+  }, [rawStatusOptions, priorityOptions, boards, categories, currentUser]);
 
   const handleBoardSelect = useCallback((boardId: string) => {
-    onFilterChange({ boardId: boardId || undefined });
-  }, [onFilterChange]);
+    const nextBoardId = boardId || undefined;
+    const nextStatusOptions = buildTicketStatusFilterOptions(rawStatusOptions, nextBoardId, selectedStatus);
+    const statusStillAvailable = nextStatusOptions.some(option => option.value === selectedStatus);
+
+    onFilterChange({
+      boardId: nextBoardId,
+      statusId: statusStillAvailable ? selectedStatus : TICKET_STATUS_FILTER_OPEN,
+      showOpenOnly: statusStillAvailable ? isTicketStatusOpenFilter(selectedStatus) : true,
+    });
+  }, [onFilterChange, rawStatusOptions, selectedStatus]);
 
   const handleCategorySelect = useCallback((newSelectedCategories: string[], newExcludedCategories: string[]) => {
     setExcludedCategories(newExcludedCategories);
@@ -1087,7 +1337,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     onFilterChange({
       boardId: undefined,
       clientId: undefined,
-      statusId: 'open',
+      statusId: TICKET_STATUS_FILTER_OPEN,
       priorityId: 'all',
       categoryId: undefined,
       searchQuery: '',
@@ -1111,6 +1361,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Ticketing Dashboard</h1>
         <div className="flex items-center gap-3">
+          {hasSelection && canUpdateTickets && (
+            <Button
+              id={`${id}-bulk-move-button`}
+              onClick={() => {
+                setBulkMoveErrors([]);
+                setSelectedDestinationBoardId('');
+                setDestinationBoardStatuses([]);
+                setSelectedDestinationStatusId('');
+                setDestinationStatusError('');
+                setIsBulkMoveDialogOpen(true);
+              }}
+              className="flex items-center gap-2"
+            >
+              Move to Board
+            </Button>
+          )}
           {hasSelection && (
             <Button
               id={`${id}-bulk-delete-button`}
@@ -1140,6 +1406,23 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               Bundle Tickets
             </Button>
           )}
+          <Tooltip content={hasSelection
+            ? `Export ${selectedTicketIds.size} selected ticket${selectedTicketIds.size === 1 ? '' : 's'} to CSV`
+            : 'Select ticket(s) to export'
+          }>
+            <span>
+              <Button
+                id={`${id}-export-csv-button`}
+                variant="outline"
+                onClick={() => setIsExportDialogOpen(true)}
+                disabled={!hasSelection}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+            </span>
+          </Tooltip>
           <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
         </div>
       </div>
@@ -1190,7 +1473,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   data-automation-id={`${id}-status-select`}
                   options={statusOptions}
                   value={selectedStatus}
-                  onValueChange={(value) => onFilterChange({ statusId: value, showOpenOnly: value === 'open' })}
+                  onValueChange={(value) => onFilterChange({ statusId: value, showOpenOnly: isTicketStatusOpenFilter(value) })}
                   placeholder="Select Status"
                 />
                 {displaySettings?.responseStateTrackingEnabled !== false && (
@@ -1357,8 +1640,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   <ViewDensityControl
                     idPrefix={`${id}-list-density`}
                     value={ticketListDensityLevel}
-                    onChange={setTicketListDensityLevel}
-                    step={50}
+                    onChange={handleTicketListDensityChange}
+                    step={25}
                     compactLabel="Compact"
                     spaciousLabel="Spacious"
                     decreaseTitle="Decrease ticket list spacing"
@@ -1377,25 +1660,30 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           <Spinner size="md" className="h-32 w-full" />
         ) : (
           <>
-            {showSelectAllBanner && (
+            {(showSelectAllBanner || allMatchingMode) && (
               <Alert variant="info" className="mb-3">
-                <AlertDescription className="flex items-center justify-between w-full">
-                  <span>
-                    All {visibleTicketIds.length} ticket{visibleTicketIds.length === 1 ? '' : 's'} on this page are selected.
-                  </span>
-                  <div className="flex items-center gap-2">
+                <AlertDescription className="flex items-center w-full">
+                  {allMatchingMode ? (
                     <span className="text-sm">
-                      {totalCount} total ticket{totalCount === 1 ? '' : 's'} match your filters
+                      All {totalCount} ticket{totalCount === 1 ? '' : 's'} matching your filters are selected.{' '}
+                      <button
+                        onClick={clearSelection}
+                        className="font-semibold text-primary-600 hover:text-primary-700 hover:underline cursor-pointer bg-transparent border-none p-0"
+                      >
+                        Clear selection
+                      </button>
                     </span>
-                    <Button
-                      id={`${id}-clear-visible-selection`}
-                      variant="link"
-                      onClick={clearSelection}
-                      className="p-0"
-                    >
-                      Clear selection
-                    </Button>
-                  </div>
+                  ) : (
+                    <span className="text-sm">
+                      All {visibleTicketIds.length} ticket{visibleTicketIds.length === 1 ? '' : 's'} on this page are selected.{' '}
+                      <button
+                        onClick={handleSelectAllMatchingTickets}
+                        className="font-semibold text-primary-600 hover:text-primary-700 hover:underline cursor-pointer bg-transparent border-none p-0"
+                      >
+                        Select all {totalCount} ticket{totalCount === 1 ? '' : 's'} matching your filters
+                      </button>
+                    </span>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
@@ -1460,6 +1748,116 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         confirmLabel="Proceed"
         cancelLabel="Cancel"
       />
+      <Dialog
+        isOpen={isBulkMoveDialogOpen && hasSelection}
+        onClose={handleBulkMoveClose}
+        id={`${id}-bulk-move-dialog`}
+        title="Move Selected Tickets"
+      >
+        <DialogContent>
+          {bulkMoveErrors.length > 0 && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                <p className="font-medium">The following tickets could not be moved:</p>
+                <ul className="mt-2 space-y-1">
+                  {bulkMoveErrors.map(error => {
+                    const detail = selectedTicketDetails.find(item => item.ticket_id === error.ticketId);
+                    const label = detail?.ticket_number || detail?.title || error.ticketId;
+                    return (
+                      <li key={error.ticketId}>
+                        <span className="font-medium">{label}</span>: {error.message}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+          {destinationStatusError && (
+            <Alert variant="warning" className="mb-4">
+              <AlertDescription>
+                {destinationStatusError}
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="mb-4 space-y-1">
+            <p className="text-gray-600">
+              Select a destination board and status, then confirm moving the selected tickets.
+            </p>
+          </div>
+          <div className="mb-4 space-y-3">
+            <div>
+              <div className="text-sm font-medium text-gray-700 mb-1">Destination Board</div>
+              <CustomSelect
+                id={`${id}-bulk-move-board`}
+                value={selectedDestinationBoardId}
+                options={boards
+                  .filter((board): board is IBoard & { board_id: string } => typeof board.board_id === 'string')
+                  .map((board) => ({
+                    value: board.board_id,
+                    label: board.board_name ?? 'Unnamed board',
+                  }))}
+                onValueChange={(value) => void handleBulkMoveBoardChange(value)}
+                placeholder="Select destination board..."
+              />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-700 mb-1">Destination Status</div>
+              <CustomSelect
+                id={`${id}-bulk-move-status`}
+                value={selectedDestinationStatusId}
+                options={destinationBoardStatuses}
+                onValueChange={(value) => setSelectedDestinationStatusId(value)}
+                disabled={isLoadingDestinationStatuses || destinationBoardStatuses.length === 0}
+                placeholder="Select destination status..."
+              />
+            </div>
+          </div>
+          <div className="max-h-60 overflow-y-auto rounded-md border border-gray-200">
+            {selectedTicketDetails.length > 0 ? (
+              <ul>
+                {selectedTicketDetails.map(detail => (
+                  <li key={detail.ticket_id} className="border-b border-gray-200 px-4 py-2 last:border-b-0">
+                    <span className="font-medium text-gray-700">
+                      {detail.ticket_number || detail.title || detail.ticket_id}
+                    </span>
+                    {detail.title && detail.ticket_number && (
+                      <span className="ml-2 text-sm text-gray-500">{detail.title}</span>
+                    )}
+                    {detail.client_name && (
+                      <span className="ml-2 text-sm text-gray-400">· {detail.client_name}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="px-4 py-3 text-sm text-gray-500">
+                No tickets selected.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id={`${id}-bulk-move-cancel`}
+            variant="outline"
+            onClick={handleBulkMoveClose}
+            disabled={isBulkMoving}
+          >
+            Cancel
+          </Button>
+          <Button
+            id={`${id}-bulk-move-confirm`}
+            onClick={handleConfirmBulkMove}
+            disabled={isBulkMoving || isLoadingDestinationStatuses || !selectedDestinationBoardId || !selectedDestinationStatusId || destinationBoardStatuses.length === 0 || destinationStatusError.length > 0}
+          >
+            {isBulkMoving
+              ? 'Moving...'
+              : `Move ${selectedTicketIdsArray.length} Ticket${selectedTicketIdsArray.length === 1 ? '' : 's'}`}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
       <Dialog
         isOpen={isBulkDeleteDialogOpen && hasSelection}
         onClose={handleBulkDeleteClose}
@@ -1612,6 +2010,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           </Button>
         </DialogFooter>
       </Dialog>
+      <TicketExportDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+        filters={exportFilters}
+        totalCount={totalCount}
+        selectedTicketIds={selectedTicketIdsArray}
+      />
     </ReflectionContainer>
   );
 };

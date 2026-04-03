@@ -620,7 +620,8 @@ export class ChatCompletionsService {
             properties: {
               query: {
                 type: 'string',
-                description: 'Natural language description of what you want to do (e.g., "list active service categories").',
+                description:
+                  'Natural language description of what you want to do (e.g., "list active service categories" or "get ticket by id").',
               },
               limit: {
                 type: isVertex ? 'number' : 'integer',
@@ -636,7 +637,7 @@ export class ChatCompletionsService {
         function: {
           name: EXECUTE_TOOL_NAME,
           description:
-            'Invoke a documented API endpoint by its registry identifier. Include any path, query, header, or body parameters required by that endpoint.',
+            'Invoke a documented API endpoint by its registry identifier. Include any path, query, header, or body parameters required by that endpoint. Prefer narrow list calls with limit/fields, then use detail endpoints when you have an ID. For large text fields, request byte windows with query parameters such as field_ranges[comment_text]=0-4095.',
           parameters: {
             type: 'object',
             properties: {
@@ -747,35 +748,47 @@ export class ChatCompletionsService {
     const limit = Math.max(1, Math.min(typeof limitValue === 'number' ? limitValue : parseInt(String(limitValue ?? ''), 10) || 5, 25));
     const terms = text.toLowerCase().split(/\s+/).filter(Boolean);
     const registry = getRegistry();
+    const mentionsIdLookup = /\b(by id|id|details?|detail|single)\b/.test(text);
+    const mentionsList = /\b(list|search|find|all|recent|latest)\b/.test(text);
 
     const scored = registry
       .map((entry, index) => {
         const haystack = [
           entry.displayName,
+          entry.summary,
           entry.description,
           entry.path,
           entry.tags?.join(' '),
           entry.id,
+          entry.parameters?.map((param) => `${param.name} ${param.in}`).join(' '),
         ]
           .join(' ')
           .toLowerCase();
+        const hasPathId = entry.parameters?.some((param) => param.in === 'path' && param.name === 'id') ?? false;
+        const isGetById = entry.method === 'get' && /\{id\}/.test(entry.path);
+        const isListEndpoint = entry.method === 'get' && !/\{[^}]+\}/.test(entry.path);
         const score =
           terms.reduce((acc, term) => (haystack.includes(term) ? acc + 2 : acc), 0) +
+          (mentionsIdLookup && hasPathId ? 8 : 0) +
+          (mentionsIdLookup && isGetById ? 6 : 0) +
+          (mentionsList && isListEndpoint ? 4 : 0) +
           (entry.playbooks?.length ?? 0) +
           Math.max(0, 3 - index * 0.1);
         return { entry, score };
       })
       .sort((a, b) => b.score - a.score);
 
-    const top = scored.slice(0, limit).map(({ entry }) => ({
-      id: entry.id,
-      displayName: entry.displayName,
-      description: entry.description,
-      method: entry.method.toUpperCase(),
-      path: entry.path,
-      approvalRequired: entry.approvalRequired,
-      tags: entry.tags ?? [],
-    }));
+      const top = scored.slice(0, limit).map(({ entry }) => ({
+        id: entry.id,
+        displayName: entry.displayName,
+        description: entry.description,
+        method: entry.method.toUpperCase(),
+        path: entry.path,
+        approvalRequired: entry.approvalRequired,
+        tags: entry.tags ?? [],
+        parameters: entry.parameters ?? [],
+        examples: entry.examples?.slice(0, 1) ?? [],
+      }));
 
     return top;
   }
@@ -1418,11 +1431,15 @@ export class ChatCompletionsService {
         'Always consult the enterprise API registry before executing actions so you understand every required parameter. ' +
         'When the registry or endpoint descriptions mention prerequisite data (such as IDs for boards, clients, categories, priorities, or other related resources), proactively call the appropriate lookup endpoints to gather that information instead of asking the user. ' +
         'For ticket-creation calls, first use search_api_registry to locate the list endpoints you need, gather current data (e.g. call GET /api/v1/tickets to sample board_id/status_id/priority_id combinations and GET /api/v1/clients to confirm client_id), and do not proceed until you have concrete UUIDs for board_id, client_id, status_id, and priority_id collected from prior API responses. When sampling GET /api/v1/tickets, pick the first record with non-null board_id, status_id, and priority_id and reuse those UUIDs unless the user specifies different values. ' +
+        'Never invent field names for a fields query parameter. Only send fields values that are explicitly documented in the registry description, parameters, or examples for that exact endpoint. If the registry does not enumerate exact field names, omit fields entirely. For GET /api/v1/tickets specifically, the only valid fields values are ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, and mobile_list. Do not use aliases like id, subject, status, priority, client, created_at, or description. ' +
+        'When you only need discovery data, prefer list endpoints with small limits and explicit fields instead of full payloads. Once you have a resource ID, prefer the detail endpoint over repeatedly expanding list responses. ' +
+        'Some GET endpoints support field-scoped range retrieval for large text fields. When an endpoint description mentions field_ranges support or a response meta.truncated_fields map indicates truncation, continue fetching with query parameters like field_ranges[comment_text]=0-4095 or field=description_html&range=4096-8191. Treat those ranges as UTF-8 byte windows and use the returned meta.truncated_fields metadata to continue from the correct byte offsets. ' +
         'Clearly explain the plan before each tool call, execute the necessary lookup calls to satisfy all requirements, then call the target endpoint once the inputs are ready. ' +
         'Use the documented request schemas exactly as written—populate *_id fields with the UUIDs you retrieved (never human-friendly names), and skip optional fields when you do not have authoritative values. ' +
         'Never include properties that are not defined for the selected endpoint; if the user mentions data that cannot be expressed with the documented schema (for example a project name when the ticket create payload does not accept project_id), acknowledge it in the natural-language response but leave it out of the API request. ' +
         'When handling documents, do not assume null file_id means empty content; in-app documents may store content in document_block_content or document_content. Call GET /api/documents/{documentId}/content to retrieve readable content before concluding the document has no data. ' +
         'Do not create or modify unrelated master data (such as categories, boards, or projects) unless the user explicitly asks for that; prefer reusing existing records you just looked up. ' +
+        'When users ask questions that could be answered by internal documentation (e.g. how-to questions, troubleshooting, process questions), proactively search the knowledge base using GET /api/v1/kb-articles with a relevant search query. If matching articles are found, read their content with GET /api/v1/kb-articles/{id}/content and use that information in your response. When creating KB articles from resolved tickets, use POST /api/v1/kb-articles/from-ticket/{ticketId} and then review the generated content. ' +
         'After a function result is provided, summarize the outcome for the user and outline any follow-up you will handle automatically.' +
         (promptContext ? `\n\n${promptContext}` : ''),
     };

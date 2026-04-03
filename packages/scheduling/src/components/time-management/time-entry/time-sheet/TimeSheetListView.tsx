@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useRef } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import TimeSheetListViewSkeleton from '@alga-psa/ui/components/skeletons/TimeSheetListViewSkeleton';
@@ -62,6 +63,7 @@ export function TimeSheetListView({
     onWorkItemClick,
     onDeleteWorkItem
 }: TimeSheetListViewProps): React.JSX.Element {
+    const { t } = useTranslation('msp/time-entry');
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
     const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
     const previousDayLayoutSignatureRef = useRef<string>('');
@@ -246,9 +248,11 @@ export function TimeSheetListView({
                             }
                         }}
                         onClose={() => setSelectedWorkItemToDelete(null)}
-                        title="Delete Work Item"
-                        message="This will permanently delete all time entries for this work item. This action cannot be undone."
-                        confirmLabel="Delete"
+                        title={t('timeSheetList.delete.title', { defaultValue: 'Delete Work Item' })}
+                        message={t('timeSheetList.delete.message', {
+                            defaultValue: 'This will permanently delete all time entries for this work item. This action cannot be undone.'
+                        })}
+                        confirmLabel={t('common.actions.delete', { defaultValue: 'Delete' })}
                     />
 
                     <div className="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-md" {...listProps}>
@@ -263,17 +267,21 @@ export function TimeSheetListView({
                                         onClick={() => onAddWorkItem()}
                                     >
                                         <Plus className="h-4 w-4 mr-1.5" />
-                                        Add Item
+                                        {t('common.actions.addItem', { defaultValue: 'Add Item' })}
                                     </Button>
                                 )}
                             </div>
                             <div className="flex items-center gap-4 text-sm text-gray-500">
-                                <span>{flattenedEntries.length} {flattenedEntries.length === 1 ? 'entry' : 'entries'}</span>
+                                <span>
+                                    {flattenedEntries.length} {flattenedEntries.length === 1
+                                        ? t('timeSheetList.summary.entryOne', { defaultValue: 'entry' })
+                                        : t('timeSheetList.summary.entryOther', { defaultValue: 'entries' })}
+                                </span>
                                 <span className="font-medium text-gray-700">
-                                    Total: {formatDuration(totals.totalDuration)}
+                                    {t('timeSheetList.summary.total', { defaultValue: 'Total: {{value}}', value: formatDuration(totals.totalDuration) })}
                                 </span>
                                 <span className="font-medium text-[rgb(var(--color-primary-600))]">
-                                    Billable: {formatDuration(totals.totalBillable)}
+                                    {t('timeSheetList.summary.billable', { defaultValue: 'Billable: {{value}}', value: formatDuration(totals.totalBillable) })}
                                 </span>
                             </div>
                         </div>
@@ -287,10 +295,12 @@ export function TimeSheetListView({
                                         <ClipboardList className="w-6 h-6 text-gray-400" />
                                     </div>
                                     <h3 className="text-base font-semibold text-gray-900 mb-1">
-                                        No time entries yet
+                                        {t('timeSheetList.empty.title', { defaultValue: 'No time entries yet' })}
                                     </h3>
                                     <p className="text-gray-500 text-sm mb-3">
-                                        Add a work item and start tracking your time.
+                                        {t('timeSheetList.empty.description', {
+                                            defaultValue: 'Add a work item and start tracking your time.'
+                                        })}
                                     </p>
                                     <Button
                                         id="get-started-button-list"
@@ -298,7 +308,7 @@ export function TimeSheetListView({
                                         onClick={() => onAddWorkItem()}
                                         disabled={!isEditable}
                                     >
-                                        Get Started
+                                        {t('common.actions.getStarted', { defaultValue: 'Get Started' })}
                                         <ArrowRight className="w-4 h-4 ml-1" />
                                     </Button>
                                 </div>
@@ -317,19 +327,19 @@ export function TimeSheetListView({
                                             <tr>
                                                 <th className="pl-3" />
                                                 <th className="py-2 pr-3 text-left text-xs font-medium text-gray-500 tracking-wider">
-                                                    Work Item
+                                                    {t('timeSheetList.columns.workItem', { defaultValue: 'Work Item' })}
                                                 </th>
                                                 <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 tracking-wider">
-                                                    Time Entry
+                                                    {t('timeSheetList.columns.timeEntry', { defaultValue: 'Time Entry' })}
                                                 </th>
                                                 <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 tracking-wider">
-                                                    Duration
+                                                    {t('timeSheetList.columns.duration', { defaultValue: 'Duration' })}
                                                 </th>
                                                 <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 tracking-wider">
-                                                    Billable Duration
+                                                    {t('timeSheetList.columns.billableDuration', { defaultValue: 'Billable Duration' })}
                                                 </th>
                                                 <th className="py-2 px-3 text-right text-xs font-medium text-gray-500 tracking-wider">
-                                                    Actions
+                                                    {t('timeSheetList.columns.actions', { defaultValue: 'Actions' })}
                                                 </th>
                                                 <th className="py-2 px-3" />
                                             </tr>
@@ -377,9 +387,13 @@ export function TimeSheetListView({
                                                         </td>
                                                         <td className="py-2 px-3 text-sm text-gray-500">
                                                             {hasEntries ? (
-                                                                `${group.entries.length} ${group.entries.length === 1 ? 'entry' : 'entries'}`
+                                                                `${group.entries.length} ${group.entries.length === 1
+                                                                    ? t('timeSheetList.summary.entryOne', { defaultValue: 'entry' })
+                                                                    : t('timeSheetList.summary.entryOther', { defaultValue: 'entries' })}`
                                                             ) : (
-                                                                <span className="text-gray-400 italic">No entries</span>
+                                                                <span className="text-gray-400 italic">
+                                                                    {t('timeSheetList.empty.noEntries', { defaultValue: 'No entries' })}
+                                                                </span>
                                                             )}
                                                         </td>
                                                         <td className="py-2 px-3 text-sm font-medium text-gray-700">
@@ -401,7 +415,7 @@ export function TimeSheetListView({
                                                                     className="inline-flex items-center gap-1.5"
                                                                 >
                                                                     <Plus className="h-4 w-4" />
-                                                                    Entry
+                                                                    {t('common.actions.addEntry', { defaultValue: 'Entry' })}
                                                                 </Button>
                                                             )}
                                                         </td>
@@ -487,7 +501,10 @@ export function TimeSheetListView({
                                                                                 backgroundColor: colors.background,
                                                                                 color: colors.text
                                                                             }}
-                                                                            title={`${billabilityPercentage}% billable`}
+                                                                            title={t('common.units.percentBillable', {
+                                                                                defaultValue: '{{value}}% billable',
+                                                                                value: billabilityPercentage
+                                                                            })}
                                                                         >
                                                                             {formatDuration(entry.billable_duration)}
                                                                         </div>
@@ -518,7 +535,7 @@ export function TimeSheetListView({
                                                                                             defaultEndTime: entry.end_time
                                                                                         });
                                                                                     }}
-                                                                                    title="Copy to another day"
+                                                                                    title={t('common.actions.copyToAnotherDay', { defaultValue: 'Copy to another day' })}
                                                                                 >
                                                                                     <Copy className="h-4 w-4" />
                                                                                 </Button>
@@ -530,7 +547,7 @@ export function TimeSheetListView({
                                                                                         e.stopPropagation();
                                                                                         onWorkItemClick(workItem);
                                                                                     }}
-                                                                                    title="View details"
+                                                                                    title={t('common.actions.viewDetails', { defaultValue: 'View details' })}
                                                                                 >
                                                                                     <ExternalLink className="h-4 w-4" />
                                                                                 </Button>

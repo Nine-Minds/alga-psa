@@ -7,6 +7,13 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
+import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
+import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
+import {
+  DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+  resolveRecurringAuthoringPolicy,
+} from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
+import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -17,6 +24,42 @@ async function isTemplateContract(knex: Knex, tenant: string, contractId: string
     .first();
   return Boolean(record);
 }
+
+async function assertContractIsAuthorable(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractId: string,
+): Promise<void> {
+  const contract = await trx('contracts')
+    .where({ tenant, contract_id: contractId })
+    .first('is_system_managed_default');
+  if (contract?.is_system_managed_default === true) {
+    throw new Error('System-managed default contracts are attribution-only; contract-line authoring is disabled.');
+  }
+}
+
+function normalizeContractLineMapping<T extends Partial<IContractLineMapping>>(
+  line: T,
+): T & Pick<IContractLineMapping, 'cadence_owner' | 'billing_timing'> {
+  return normalizeLiveRecurringStorage(line);
+}
+
+function normalizeDetailedContractLine<
+  T extends {
+    cadence_owner?: IContractLineMapping['cadence_owner'] | null;
+    billing_timing?: IContractLineMapping['billing_timing'] | null;
+  },
+>(
+  line: T,
+): T & Pick<IContractLineMapping, 'cadence_owner' | 'billing_timing'> {
+  return normalizeLiveRecurringStorage(line);
+}
+
+type DetailedContractLineResultRow =
+  Record<string, unknown> & {
+    cadence_owner?: IContractLineMapping['cadence_owner'] | null;
+    billing_timing?: IContractLineMapping['billing_timing'] | null;
+  };
 
 export async function ensureTemplateLineSnapshot(
   knex: Knex,
@@ -34,6 +77,7 @@ export async function ensureTemplateLineSnapshot(
   }
 
   const now = knex.fn.now();
+  const contractRecurringStorage = normalizeLiveRecurringStorage(contractLine);
 
   // All terms columns are now stored directly on contract_lines
   await knex('contract_template_lines')
@@ -54,6 +98,8 @@ export async function ensureTemplateLineSnapshot(
       after_hours_multiplier: contractLine.after_hours_multiplier ?? null,
       minimum_billable_time: contractLine.minimum_billable_time ?? null,
       round_up_to_nearest: contractLine.round_up_to_nearest ?? null,
+      billing_timing: contractRecurringStorage.billing_timing,
+      cadence_owner: contractRecurringStorage.cadence_owner,
       created_at: contractLine.created_at ?? now,
       updated_at: now,
     })
@@ -73,6 +119,8 @@ export async function ensureTemplateLineSnapshot(
       after_hours_multiplier: contractLine.after_hours_multiplier ?? null,
       minimum_billable_time: contractLine.minimum_billable_time ?? null,
       round_up_to_nearest: contractLine.round_up_to_nearest ?? null,
+      billing_timing: contractRecurringStorage.billing_timing,
+      cadence_owner: contractRecurringStorage.cadence_owner,
       updated_at: now,
     });
 
@@ -257,7 +305,10 @@ export async function ensureTemplateLineSnapshot(
         template_line_id: contractLineId,
         base_rate: contractLine.custom_rate ?? null,
         enable_proration: contractLine.enable_proration ?? false,
-        billing_cycle_alignment: contractLine.billing_cycle_alignment ?? 'start',
+        billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+          billingCycleAlignment: contractLine.billing_cycle_alignment,
+          enableProration: contractLine.enable_proration,
+        }),
         created_at: contractLine.created_at ?? now,
         updated_at: now,
       })
@@ -265,7 +316,10 @@ export async function ensureTemplateLineSnapshot(
       .merge({
         base_rate: contractLine.custom_rate ?? null,
         enable_proration: contractLine.enable_proration ?? false,
-        billing_cycle_alignment: contractLine.billing_cycle_alignment ?? 'start',
+        billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+          billingCycleAlignment: contractLine.billing_cycle_alignment,
+          enableProration: contractLine.enable_proration,
+        }),
         updated_at: now,
       });
   }
@@ -298,13 +352,15 @@ export const getContractLineMappings = withAuth(async (user, { tenant }, contrac
             contract_line_id: 'template_line_id',
             display_order: 'display_order',
             custom_rate: 'custom_rate',
+            cadence_owner: 'cadence_owner',
             created_at: 'created_at',
           });
 
-        return rows as unknown as IContractLineMapping[];
+        return rows.map((row) => normalizeContractLineMapping(row as IContractLineMapping));
       }
 
-      return await ContractLineMapping.getByContractId(contractId);
+      const rows = await ContractLineMapping.getByContractId(contractId);
+      return rows.map((row) => normalizeContractLineMapping(row));
     });
   } catch (error) {
     console.error(`Error fetching contract line mappings for contract ${contractId}:`, error);
@@ -346,6 +402,7 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
             'lines.template_line_id as contract_line_id',
             'lines.display_order',
             'lines.custom_rate',
+            'lines.cadence_owner',
             'lines.created_at',
             'lines.template_line_name as contract_line_name',
             'lines.billing_frequency',
@@ -355,12 +412,13 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
             'lines.round_up_to_nearest',
             'tfc.base_rate as default_rate',
           ])
-          .orderBy('lines.display_order', 'asc');
+          .orderBy('lines.display_order', 'asc') as unknown as DetailedContractLineResultRow[];
 
-        return rows;
+        return rows.map((row) => normalizeDetailedContractLine(row));
       }
 
-      return await ContractLineMapping.getDetailedContractLines(contractId);
+      const rows = await ContractLineMapping.getDetailedContractLines(contractId) as unknown as DetailedContractLineResultRow[];
+      return rows.map((row) => normalizeDetailedContractLine(row));
     });
   } catch (error) {
     console.error(`Error fetching detailed contract line mappings for contract ${contractId}:`, error);
@@ -436,10 +494,15 @@ export const addContractLine = withAuth(async (
           display_order: row.display_order,
           custom_rate: row.custom_rate,
           created_at: row.created_at,
+          cadence_owner: resolveCadenceOwner(row.cadence_owner),
         };
       }
 
-      return await ContractLineMapping.addContractLine(contractId, contractLineId, customRate);
+      await assertContractIsAuthorable(trx, tenant, contractId);
+
+      return normalizeContractLineMapping(
+        await ContractLineMapping.addContractLine(contractId, contractLineId, customRate),
+      );
     });
   } catch (error) {
     console.error(`Error adding contract line ${contractLineId} to contract ${contractId}:`, error);
@@ -478,6 +541,8 @@ export const removeContractLine = withAuth(async (user, { tenant }, contractId: 
           });
         return;
       }
+
+      await assertContractIsAuthorable(trx, tenant, contractId);
 
       await ContractLineMapping.removeContractLine(contractId, contractLineId);
     });
@@ -523,6 +588,20 @@ export const updateContractLineAssociation = withAuth(async (
 
       const template = await isTemplateContract(trx, tenant, contractId);
       if (template) {
+        const existingTemplateLine = await trx('contract_template_lines')
+          .where({
+            tenant,
+            template_id: contractId,
+            template_line_id: contractLineId,
+          })
+          .first(['cadence_owner', 'billing_timing']);
+        const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          cadenceOwner: dbUpdateData.cadence_owner,
+          fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+          billingTiming: dbUpdateData.billing_timing,
+          fallbackBillingTiming: existingTemplateLine?.billing_timing,
+        });
+
         // Update contract_template_lines directly (mapping data now inlined)
         await trx('contract_template_lines')
           .where({
@@ -532,6 +611,8 @@ export const updateContractLineAssociation = withAuth(async (
           })
           .update({
             custom_rate: dbUpdateData.custom_rate ?? null,
+            billing_timing: recurringAuthoringPolicy.billingTiming,
+            cadence_owner: recurringAuthoringPolicy.cadenceOwner,
             updated_at: trx.fn.now(),
           });
 
@@ -550,10 +631,16 @@ export const updateContractLineAssociation = withAuth(async (
           display_order: row.display_order,
           custom_rate: row.custom_rate,
           created_at: row.created_at,
+          billing_timing: row.billing_timing,
+          cadence_owner: resolveCadenceOwner(row.cadence_owner),
         };
       }
 
-      return await ContractLineMapping.updateContractLineAssociation(contractId, contractLineId, dbUpdateData);
+      await assertContractIsAuthorable(trx, tenant, contractId);
+
+      return normalizeContractLineMapping(
+        await ContractLineMapping.updateContractLineAssociation(contractId, contractLineId, dbUpdateData),
+      );
     });
   } catch (error) {
     console.error(`Error updating contract line ${contractLineId} for contract ${contractId}:`, error);

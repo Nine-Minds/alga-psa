@@ -11,6 +11,7 @@ import { getContracts, getContractLinesForContract } from '@alga-psa/billing/act
 import { getClientContractsForBilling, getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { IClient } from '@alga-psa/types';
 import Spinner from '@alga-psa/ui/components/Spinner';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContractMetrics {
   contractId: string;
@@ -24,6 +25,8 @@ interface ContractMetrics {
 }
 
 const ContractPerformance: React.FC = () => {
+  const { t } = useTranslation('msp/reports');
+  const { formatCurrency } = useFormatters();
   const [contracts, setContracts] = useState<IContract[]>([]);
   const [contractMetrics, setContractMetrics] = useState<ContractMetrics[]>([]);
   const [selectedContract, setSelectedContract] = useState<string | null>(null);
@@ -55,11 +58,13 @@ const ContractPerformance: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching contracts:', error);
-      setError('Failed to load contract data');
+      setError(t('contractPerformance.errors.loadData', { defaultValue: 'Failed to load contract data' }));
     } finally {
       setIsLoading(false);
     }
   };
+
+  const formatCents = (value: number) => formatCurrency(value / 100, 'USD');
 
   const calculateContractMetrics = async (contract: IContract): Promise<ContractMetrics> => {
     try {
@@ -133,7 +138,9 @@ const ContractPerformance: React.FC = () => {
     <Card size="2">
       <Box p="4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Contract Performance Metrics</h2>
+          <h2 className="text-xl font-bold">
+            {t('contractPerformance.title', { defaultValue: 'Contract Performance Metrics' })}
+          </h2>
           <div className="flex space-x-4">
             <div className="w-64">
               <CustomSelect
@@ -143,14 +150,14 @@ const ContractPerformance: React.FC = () => {
                 }))}
                 onValueChange={handleContractChange}
                 value={selectedContract || ''}
-                placeholder="Select contract..."
+                placeholder={t('placeholders.selectContract', { defaultValue: 'Select contract...' })}
               />
             </div>
             <Button
               id="refresh-contract-metrics-btn"
               onClick={handleRefresh}
             >
-              Refresh
+              {t('actions.refresh', { defaultValue: 'Refresh' })}
             </Button>
           </div>
         </div>
@@ -173,56 +180,82 @@ const ContractPerformance: React.FC = () => {
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-6">
                 <div className="bg-primary/10 p-4 rounded-md">
-                  <div className="text-sm text-primary">Total Clients</div>
+                  <div className="text-sm text-primary">
+                    {t('contractPerformance.metrics.totalClients', { defaultValue: 'Total Clients' })}
+                  </div>
                   <div className="text-2xl font-bold">{selectedMetrics.totalClients}</div>
                 </div>
                 
                 <div className="bg-success/10 p-4 rounded-md">
-                  <div className="text-sm text-success">Active Clients</div>
+                  <div className="text-sm text-success">
+                    {t('contractPerformance.metrics.activeClients', { defaultValue: 'Active Clients' })}
+                  </div>
                   <div className="text-2xl font-bold">{selectedMetrics.activeClients}</div>
                 </div>
                 
                 <div className="bg-accent/10 p-4 rounded-md">
-                  <div className="text-sm text-accent">Total Plans</div>
+                  <div className="text-sm text-accent">
+                    {t('contractPerformance.metrics.totalPlans', { defaultValue: 'Total Plans' })}
+                  </div>
                   <div className="text-2xl font-bold">{selectedMetrics.totalPlans}</div>
                 </div>
               </div>
               
               <div className="space-y-6">
                 <div className="bg-warning/10 p-4 rounded-md">
-                  <div className="text-sm text-warning">Avg. Plans Per Client</div>
+                  <div className="text-sm text-warning">
+                    {t('contractPerformance.metrics.averagePlansPerClient', { defaultValue: 'Avg. Plans Per Client' })}
+                  </div>
                   <div className="text-2xl font-bold">{selectedMetrics.averagePlansPerClient.toFixed(2)}</div>
                 </div>
                 
                 <div className="bg-destructive/10 p-4 rounded-md">
-                  <div className="text-sm text-destructive">Total Revenue</div>
-                  <div className="text-2xl font-bold">${(selectedMetrics.totalRevenue / 100).toFixed(2)}</div>
+                  <div className="text-sm text-destructive">
+                    {t('contractPerformance.metrics.totalRevenue', { defaultValue: 'Total Revenue' })}
+                  </div>
+                  <div className="text-2xl font-bold">{formatCents(selectedMetrics.totalRevenue)}</div>
                 </div>
                 
                 <div className="bg-primary/10 p-4 rounded-md">
-                  <div className="text-sm text-primary">Avg. Revenue Per Client</div>
-                  <div className="text-2xl font-bold">${(selectedMetrics.averageRevenuePerClient / 100).toFixed(2)}</div>
+                  <div className="text-sm text-primary">
+                    {t('contractPerformance.metrics.averageRevenuePerClient', { defaultValue: 'Avg. Revenue Per Client' })}
+                  </div>
+                  <div className="text-2xl font-bold">{formatCents(selectedMetrics.averageRevenuePerClient)}</div>
                 </div>
               </div>
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              {contracts.length > 0 ? 'Select a contract to view performance metrics' : 'No contracts available'}
+              {contracts.length > 0
+                ? t('contractPerformance.empty.selectContract', {
+                    defaultValue: 'Select a contract to view performance metrics',
+                  })
+                : t('contractPerformance.empty.noContracts', { defaultValue: 'No contracts available' })}
             </div>
           )}
         </div>
         
         {contractMetrics.length > 0 && (
           <div className="mt-8">
-            <h3 className="text-lg font-medium mb-4">Contract Comparison</h3>
+            <h3 className="text-lg font-medium mb-4">
+              {t('contractPerformance.comparison.title', { defaultValue: 'Contract Comparison' })}
+            </h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-muted">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Contract</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Clients</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Plans</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Revenue</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      {t('contractPerformance.comparison.table.contract', { defaultValue: 'Contract' })}
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      {t('contractPerformance.comparison.table.clients', { defaultValue: 'Clients' })}
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      {t('contractPerformance.comparison.table.plans', { defaultValue: 'Plans' })}
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      {t('contractPerformance.comparison.table.revenue', { defaultValue: 'Revenue' })}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-card divide-y divide-[rgb(var(--color-border-200))]">
@@ -234,7 +267,7 @@ const ContractPerformance: React.FC = () => {
                       <td className="px-4 py-2 whitespace-nowrap">{metric.contractName}</td>
                       <td className="px-4 py-2 text-right whitespace-nowrap">{metric.totalClients}</td>
                       <td className="px-4 py-2 text-right whitespace-nowrap">{metric.totalPlans}</td>
-                      <td className="px-4 py-2 text-right whitespace-nowrap">${(metric.totalRevenue / 100).toFixed(2)}</td>
+                      <td className="px-4 py-2 text-right whitespace-nowrap">{formatCents(metric.totalRevenue)}</td>
                     </tr>
                   ))}
                 </tbody>

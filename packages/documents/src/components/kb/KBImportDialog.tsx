@@ -42,7 +42,7 @@ const ARTICLE_TYPE_OPTIONS = [
 ];
 
 export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KBImportDialogProps) {
-  const { t } = useTranslation('features/documents');
+  const { t } = useTranslation('msp/knowledge-base');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [audience, setAudience] = useState<ArticleAudience>('internal');
@@ -50,6 +50,16 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<IImportResult | null>(null);
   const [dragActive, setDragActive] = useState(false);
+
+  const audienceOptions = AUDIENCE_OPTIONS.map((option) => ({
+    ...option,
+    label: t(`shared.audienceLabels.${option.value}`, { defaultValue: option.label }),
+  }));
+
+  const articleTypeOptions = ARTICLE_TYPE_OPTIONS.map((option) => ({
+    ...option,
+    label: t(`shared.typeLabels.${option.value}`, { defaultValue: option.label }),
+  }));
 
   const reset = useCallback(() => {
     setFiles([]);
@@ -69,7 +79,10 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
     for (const file of Array.from(fileList)) {
       const ext = '.' + file.name.split('.').pop()?.toLowerCase();
       if (!ACCEPTED_EXTENSIONS.includes(ext)) {
-        toast.error(`${file.name}: unsupported file type. Use .md or .html`);
+        toast.error(t('importDialog.feedback.unsupportedFileType', {
+          defaultValue: '{{fileName}}: unsupported file type. Use .md or .html',
+          fileName: file.name,
+        }));
         continue;
       }
       const content = await file.text();
@@ -126,24 +139,26 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
       });
 
       if (isActionPermissionError(importResult)) {
-        toast.error('Permission denied');
+        toast.error(t('importDialog.feedback.permissionDenied', { defaultValue: 'Permission denied' }));
         return;
       }
 
       setResult(importResult);
 
       if (importResult.imported > 0) {
-        toast.success(
-          `Imported ${importResult.imported} of ${importResult.total} article${importResult.total !== 1 ? 's' : ''}`
-        );
+        toast.success(t('importDialog.feedback.importSuccess', {
+          defaultValue: 'Imported {{imported}} of {{total}} article(s)',
+          imported: importResult.imported,
+          total: importResult.total,
+        }));
         onImportComplete();
       }
 
       if (importResult.failed.length > 0 && importResult.imported === 0) {
-        toast.error('All imports failed');
+        toast.error(t('importDialog.feedback.allFailed', { defaultValue: 'All imports failed' }));
       }
     } catch (error) {
-      handleError(error, 'Import failed');
+      handleError(error, t('importDialog.feedback.importError', { defaultValue: 'Import failed' }));
     } finally {
       setImporting(false);
     }
@@ -153,7 +168,7 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
     <Dialog
       isOpen={isOpen}
       onClose={handleClose}
-      title={t('kb.importTitle', 'Import Articles')}
+      title={t('importDialog.title', { defaultValue: 'Import Articles' })}
       className="max-w-lg"
       id="kb-import-dialog"
     >
@@ -163,14 +178,21 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
           <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300">
             <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
             <span className="text-sm font-medium">
-              {result.imported} of {result.total} article{result.total !== 1 ? 's' : ''} imported
+              {t('importDialog.results.summary', {
+                defaultValue: '{{imported}} of {{total}} article(s) imported',
+                imported: result.imported,
+                total: result.total,
+              })}
             </span>
           </div>
 
           {result.failed.length > 0 && (
             <div className="space-y-2">
               <p className="text-sm font-medium text-destructive">
-                {result.failed.length} failed:
+                {t('importDialog.results.failedCount', {
+                  defaultValue: '{{count}} failed:',
+                  count: result.failed.length,
+                })}
               </p>
               <div className="max-h-40 overflow-y-auto space-y-1">
                 {result.failed.map((f, i) => (
@@ -211,10 +233,10 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
           >
             <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm font-medium">
-              {t('kb.importDropzone', 'Drop files here or click to browse')}
+              {t('importDialog.dropzone.title', { defaultValue: 'Drop files here or click to browse' })}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {t('kb.importFormats', 'Supports .md and .html files')}
+              {t('importDialog.dropzone.formats', { defaultValue: 'Supports .md and .html files' })}
             </p>
             <input
               ref={fileInputRef}
@@ -251,20 +273,20 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                {t('kb.audience', 'Audience')}
+                {t('importDialog.fields.audience', { defaultValue: 'Audience' })}
               </label>
               <CustomSelect
-                options={AUDIENCE_OPTIONS}
+                options={audienceOptions}
                 value={audience}
                 onValueChange={(val) => setAudience(val as ArticleAudience)}
               />
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                {t('kb.articleType', 'Article Type')}
+                {t('importDialog.fields.articleType', { defaultValue: 'Article Type' })}
               </label>
               <CustomSelect
-                options={ARTICLE_TYPE_OPTIONS}
+                options={articleTypeOptions}
                 value={articleType}
                 onValueChange={(val) => setArticleType(val as ArticleType)}
               />
@@ -281,8 +303,11 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
               disabled={files.length === 0 || importing}
             >
               {importing
-                ? t('kb.importing', 'Importing...')
-                : t('kb.importCount', `Import ${files.length} file${files.length !== 1 ? 's' : ''}`)}
+                ? t('importDialog.actions.importing', { defaultValue: 'Importing...' })
+                : t('importDialog.actions.import', {
+                    defaultValue: 'Import {{count}} file(s)',
+                    count: files.length,
+                  })}
             </Button>
           </DialogFooter>
         </div>

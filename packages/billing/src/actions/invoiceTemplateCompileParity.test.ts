@@ -17,8 +17,8 @@ describe('invoice template AST cutover wiring', () => {
   it('keeps preview action on AST evaluate/render path only', () => {
     const previewSource = readRepoFile('packages/billing/src/actions/invoiceTemplatePreview.ts');
 
-    expect(previewSource).toContain('evaluateInvoiceTemplateAst');
-    expect(previewSource).toContain('renderEvaluatedInvoiceTemplateAst');
+    expect(previewSource).toContain('evaluateTemplateAst');
+    expect(previewSource).toContain('renderEvaluatedTemplateAst');
     expect(previewSource).not.toContain('compilePreviewAssemblyScript');
     expect(previewSource).not.toContain('temp_compile');
   });

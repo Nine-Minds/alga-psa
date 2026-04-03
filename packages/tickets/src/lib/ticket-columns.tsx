@@ -10,8 +10,8 @@ import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { MoreVertical, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
-import { SlaIndicator } from '@alga-psa/sla/components';
-import type { SlaTimerStatus } from '@alga-psa/sla/types';
+import { SlaIndicator } from '@alga-psa/ui/components/sla';
+import type { SlaTimerStatus } from '@alga-psa/types';
 
 /**
  * Calculate SLA status from ticket data
@@ -350,7 +350,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           return (
             <SlaIndicator
               status={slaStatus.status}
-              remainingMinutes={slaStatus.remainingMinutes}
+              remainingMinutes={slaStatus.remainingMinutes!}
               isPaused={slaStatus.isPaused}
             />
           );

@@ -1,0 +1,266 @@
+[
+  {
+    "id": "F001",
+    "description": "Add board ownership to ticket statuses in the existing statuses schema while leaving non-ticket statuses unchanged.",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F002",
+    "description": "Add data constraints and indexes that support board-scoped ticket status uniqueness and lookup performance.",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F003",
+    "description": "Clone current tenant-wide ticket statuses once per board during migration, preserving metadata and assigning new status ids.",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F004",
+    "description": "Build a deterministic migration remap from old global ticket status ids to new board-owned ticket status ids by board.",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F005",
+    "description": "Remap existing ticket rows to the new board-owned ticket status ids during migration.",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F006",
+    "description": "Remap inbound ticket default status references using board context during migration.",
+    "implemented": true,
+    "prdRefs": ["FR2", "FR5"]
+  },
+  {
+    "id": "F007",
+    "description": "Remap billing renewal default ticket status references using board context during migration.",
+    "implemented": true,
+    "prdRefs": ["FR2", "FR5"]
+  },
+  {
+    "id": "F008",
+    "description": "Remap per-contract renewal ticket status references using board context during migration.",
+    "implemented": true,
+    "prdRefs": ["FR2", "FR5"]
+  },
+  {
+    "id": "F009",
+    "description": "Remap saved workflow ticket status references when board context exists in the stored configuration or action payload.",
+    "implemented": true,
+    "prdRefs": ["FR2", "FR6"]
+  },
+  {
+    "id": "F010",
+    "description": "Detect and explicitly surface persisted ticket status references that cannot be remapped safely because board context is missing.",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F011",
+    "description": "Make ticket default status resolution board-aware everywhere new tickets are created.",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F012",
+    "description": "Validate board and status compatibility on ticket creation paths.",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F013",
+    "description": "Validate board and status compatibility on ticket update paths.",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F014",
+    "description": "Require explicit destination-board status selection whenever a ticket board is changed.",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F015",
+    "description": "Extend board creation to support seeding statuses by copying from an existing board.",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F016",
+    "description": "Extend board creation to support creating board-local statuses inline.",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F017",
+    "description": "Enforce board-local status rules during board create/edit, including at least one valid open default status.",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F018",
+    "description": "Embed a board-local ticket status manager into board editing.",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F019",
+    "description": "Retire the central ticket status settings surface as the source of truth for ticket statuses.",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F020",
+    "description": "Scope ticket status CRUD actions and models by board for ticket status operations.",
+    "implemented": true,
+    "prdRefs": ["FR3", "FR7"]
+  },
+  {
+    "id": "F021",
+    "description": "Support board-local ticket status reorder, default, open/closed, and delete rules without affecting other boards.",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F022",
+    "description": "Make ticket status picker components board-dependent instead of tenant-global.",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F023",
+    "description": "Update ticket create flows so status options remain empty or disabled until a board is chosen.",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F024",
+    "description": "Update ticket edit flows to reload valid statuses for the selected board and clear invalid status selections on board change.",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F025",
+    "description": "Update the quick-add ticket flow to use board-scoped statuses.",
+    "implemented": true,
+    "prdRefs": ["FR4", "FR5"]
+  },
+  {
+    "id": "F026",
+    "description": "Make inbound ticket defaults choose ticket statuses from the selected board only.",
+    "implemented": true,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F027",
+    "description": "Make billing renewal settings choose ticket statuses from the selected board only.",
+    "implemented": true,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F028",
+    "description": "Make workflow ticket action authoring use board-aware ticket status pickers and dependencies.",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F029",
+    "description": "Enforce board/status compatibility in workflow runtime ticket create and update operations.",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F030",
+    "description": "Make workflow ticket close/default/open status resolution use board-owned ticket statuses.",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F031",
+    "description": "Make client portal ticket create and update flows use board-scoped ticket statuses.",
+    "implemented": true,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F032",
+    "description": "Convert ticket status lookup APIs into board-scoped ticket status lookups.",
+    "implemented": true,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F033",
+    "description": "Update generic status APIs and shared status actions so ticket statuses are no longer treated as tenant-global.",
+    "implemented": true,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F034",
+    "description": "Update ticket list, search, reporting, and join-heavy ticket read paths to resolve board-owned ticket statuses correctly.",
+    "implemented": true,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F035",
+    "description": "Update SLA pause configuration and SLA ticket reporting to use board-owned ticket statuses without behavior regression.",
+    "implemented": true,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F036",
+    "description": "Update notification, survey, and other ticket event subscribers to resolve remapped board-owned ticket statuses correctly.",
+    "implemented": true,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F037",
+    "description": "Update onboarding and import flows so new ticket statuses are created as board-owned records.",
+    "implemented": true,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F038",
+    "description": "Update seeds, fixtures, and workflow harness setup to create board-owned ticket statuses.",
+    "implemented": true,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F039",
+    "description": "Add DB-backed migration coverage proving status clone/remap correctness for tickets and board-context configuration.",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F040",
+    "description": "Add UI and integration coverage for board create/edit status management and required status reselection on board change.",
+    "implemented": true,
+    "prdRefs": ["FR3", "FR4"]
+  },
+  {
+    "id": "F041",
+    "description": "Add workflow and billing regression coverage proving saved ticket-status configuration still resolves after migration remap.",
+    "implemented": true,
+    "prdRefs": ["FR5", "FR6"]
+  },
+  {
+    "id": "F042",
+    "description": "Add API and client portal regression coverage for board-scoped ticket status lookup and validation behavior.",
+    "implemented": true,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F043",
+    "description": "Update any bulk ticket update surfaces to validate board-scoped status selections.",
+    "implemented": true,
+    "prdRefs": ["FR4", "FR5"]
+  },
+  {
+    "id": "F044",
+    "description": "Update auxiliary board-aware ticket creation helpers such as asset or project-linked ticket creation to use board-scoped statuses.",
+    "implemented": true,
+    "prdRefs": ["FR4", "FR5"]
+  }
+]

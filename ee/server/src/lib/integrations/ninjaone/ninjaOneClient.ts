@@ -14,7 +14,8 @@ import {
   buildIntegrationTokenExpiringPayload,
   buildIntegrationTokenRefreshFailedPayload,
   getIntegrationTokenExpiringStatus,
-} from '@shared/workflow/streams/domainEventBuilders/integrationTokenEventBuilders';
+} from '@alga-psa/workflow-streams';
+import { scheduleNinjaOneProactiveRefresh } from './proactiveRefresh';
 import type {
   NinjaOneOAuthCredentials,
   NinjaOneOAuthTokenResponse,
@@ -81,6 +82,14 @@ const resolveNinjaOneClientCredentials = async (
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const TOKEN_REFRESH_BUFFER = 300; // 5 minutes before expiry
 
+function buildNinjaOneApiBaseUrl(instanceUrl: string): string {
+  const normalizedBase = instanceUrl
+    .replace(/\/+$/, '')
+    .replace(/\/api(?:\/v2)?$/, '');
+
+  return `${normalizedBase}/api/v2`;
+}
+
 /**
  * Extract safe error info for logging (avoids circular reference issues with axios errors)
  */
@@ -129,7 +138,7 @@ export class NinjaOneClient {
     this.workflowContext = config.workflowContext;
 
     this.axiosInstance = axios.create({
-      baseURL: `${this.instanceUrl}/v2`,
+      baseURL: buildNinjaOneApiBaseUrl(this.instanceUrl),
       timeout: DEFAULT_TIMEOUT,
       headers: {
         'Accept': 'application/json',
@@ -340,6 +349,15 @@ export class NinjaOneClient {
         logger.info('[NinjaOneClient] Successfully refreshed access token', {
           tenantId: this.tenantId,
         });
+
+        if (this.workflowContext?.integrationId) {
+          await scheduleNinjaOneProactiveRefresh({
+            tenantId: this.tenantId,
+            integrationId: this.workflowContext.integrationId,
+            expiresAtMs: newCredentials.expires_at,
+            source: 'lazy_refresh_success',
+          });
+        }
       } catch (error) {
         logger.error('[NinjaOneClient] Failed to refresh access token:', extractErrorInfo(error));
         void this.maybePublishTokenRefreshFailed(error).catch((publishError) => {

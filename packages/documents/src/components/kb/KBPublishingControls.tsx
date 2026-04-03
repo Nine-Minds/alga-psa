@@ -47,24 +47,30 @@ export default function KBPublishingControls({
   onStatusChange,
   onSubmitForReview,
 }: KBPublishingControlsProps) {
-  const { t } = useTranslation('features/documents');
+  const { t } = useTranslation('msp/knowledge-base');
   const [isPublishing, setIsPublishing] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+
+  const getStatusLabel = (status: ArticleStatus) =>
+    t(`shared.statusLabels.${status}`, { defaultValue: STATUS_LABELS[status] });
+
+  const getAudienceLabel = (audience: IKBArticleWithDocument['audience']) =>
+    t(`shared.audienceLabels.${audience}`, { defaultValue: audience });
 
   const handlePublish = async () => {
     setIsPublishing(true);
     try {
       const result = await publishArticle(article.article_id);
       if (typeof result === 'object' && 'code' in result) {
-        toast.error(t('kb.publishError', 'Failed to publish article'));
+        toast.error(t('publishing.feedback.publishError', { defaultValue: 'Failed to publish article' }));
         return;
       }
-      toast.success(t('kb.publishSuccess', 'Article published successfully'));
+      toast.success(t('publishing.feedback.publishSuccess', { defaultValue: 'Article published successfully' }));
       onStatusChange?.();
     } catch (error) {
-      handleError(error, t('kb.publishError', 'Failed to publish article'));
+      handleError(error, t('publishing.feedback.publishError', { defaultValue: 'Failed to publish article' }));
     } finally {
       setIsPublishing(false);
       setPublishDialogOpen(false);
@@ -76,13 +82,13 @@ export default function KBPublishingControls({
     try {
       const result = await archiveArticle(article.article_id);
       if (typeof result === 'object' && 'code' in result) {
-        toast.error(t('kb.archiveError', 'Failed to archive article'));
+        toast.error(t('publishing.feedback.archiveError', { defaultValue: 'Failed to archive article' }));
         return;
       }
-      toast.success(t('kb.archiveSuccess', 'Article archived'));
+      toast.success(t('publishing.feedback.archiveSuccess', { defaultValue: 'Article archived' }));
       onStatusChange?.();
     } catch (error) {
-      handleError(error, t('kb.archiveError', 'Failed to archive article'));
+      handleError(error, t('publishing.feedback.archiveError', { defaultValue: 'Failed to archive article' }));
     } finally {
       setIsArchiving(false);
       setArchiveDialogOpen(false);
@@ -109,7 +115,7 @@ export default function KBPublishingControls({
         if (onSubmitForReview) {
           transitions.push({
             action: 'submit_review',
-            label: t('kb.submitForReview', 'Submit for Review'),
+            label: t('publishing.actions.submitForReview', { defaultValue: 'Submit for Review' }),
             icon: <Send className="w-4 h-4 mr-2" />,
             variant: 'outline',
             targetStatus: 'review',
@@ -117,7 +123,7 @@ export default function KBPublishingControls({
         }
         transitions.push({
           action: 'publish',
-          label: t('kb.publish', 'Publish'),
+          label: t('publishing.actions.publish', { defaultValue: 'Publish' }),
           icon: <CheckCircle className="w-4 h-4 mr-2" />,
           variant: 'default',
           targetStatus: 'published',
@@ -126,7 +132,7 @@ export default function KBPublishingControls({
       case 'review':
         transitions.push({
           action: 'publish',
-          label: t('kb.approveAndPublish', 'Approve & Publish'),
+          label: t('publishing.actions.approveAndPublish', { defaultValue: 'Approve & Publish' }),
           icon: <CheckCircle className="w-4 h-4 mr-2" />,
           variant: 'default',
           targetStatus: 'published',
@@ -135,7 +141,7 @@ export default function KBPublishingControls({
       case 'published':
         transitions.push({
           action: 'archive',
-          label: t('kb.archive', 'Archive'),
+          label: t('publishing.actions.archive', { defaultValue: 'Archive' }),
           icon: <Archive className="w-4 h-4 mr-2" />,
           variant: 'destructive',
           targetStatus: 'archived',
@@ -145,7 +151,7 @@ export default function KBPublishingControls({
         // Can republish an archived article
         transitions.push({
           action: 'publish',
-          label: t('kb.republish', 'Republish'),
+          label: t('publishing.actions.republish', { defaultValue: 'Republish' }),
           icon: <CheckCircle className="w-4 h-4 mr-2" />,
           variant: 'default',
           targetStatus: 'published',
@@ -157,7 +163,7 @@ export default function KBPublishingControls({
     if (article.status !== 'archived' && article.status !== 'published') {
       transitions.push({
         action: 'archive',
-        label: t('kb.archive', 'Archive'),
+        label: t('publishing.actions.archive', { defaultValue: 'Archive' }),
         icon: <Archive className="w-4 h-4 mr-2" />,
         variant: 'destructive',
         targetStatus: 'archived',
@@ -186,29 +192,29 @@ export default function KBPublishingControls({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">{t('kb.publishing', 'Publishing')}</CardTitle>
+        <CardTitle className="text-sm font-medium">{t('publishing.title', { defaultValue: 'Publishing' })}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Current Status */}
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">{t('kb.currentStatus', 'Current Status')}</span>
+          <span className="text-sm text-muted-foreground">{t('publishing.currentStatus', { defaultValue: 'Current Status' })}</span>
           <Badge className={STATUS_COLORS[article.status]}>
-            {STATUS_LABELS[article.status]}
+            {getStatusLabel(article.status)}
           </Badge>
         </div>
 
         {/* Status Flow Visualization */}
         <div className="flex items-center justify-center gap-1 py-2 text-xs text-muted-foreground">
           <span className={article.status === 'draft' ? 'font-bold text-gray-700' : ''}>
-            Draft
+            {t('publishing.flow.draft', { defaultValue: 'Draft' })}
           </span>
           <ArrowRight className="w-3 h-3" />
           <span className={article.status === 'review' ? 'font-bold text-yellow-700' : ''}>
-            Review
+            {t('publishing.flow.review', { defaultValue: 'Review' })}
           </span>
           <ArrowRight className="w-3 h-3" />
           <span className={article.status === 'published' ? 'font-bold text-green-700' : ''}>
-            Published
+            {t('publishing.flow.published', { defaultValue: 'Published' })}
           </span>
         </div>
 
@@ -232,11 +238,10 @@ export default function KBPublishingControls({
         {/* Audience Warning */}
         {article.status !== 'published' && (article.audience === 'client' || article.audience === 'public') && (
           <p className="text-xs text-muted-foreground">
-            {t(
-              'kb.audienceWarning',
-              'Publishing will make this article visible to {{audience}} users.',
-              { audience: article.audience }
-            )}
+            {t('publishing.warnings.audience', {
+              defaultValue: 'Publishing will make this article visible to {{audience}} users.',
+              audience: getAudienceLabel(article.audience),
+            })}
           </p>
         )}
       </CardContent>
@@ -246,16 +251,16 @@ export default function KBPublishingControls({
         isOpen={publishDialogOpen}
         onClose={() => setPublishDialogOpen(false)}
         onConfirm={handlePublish}
-        title={t('kb.confirmPublish', 'Publish Article')}
+        title={t('publishing.dialogs.publish.title', { defaultValue: 'Publish Article' })}
         message={
           article.audience === 'client' || article.audience === 'public'
-            ? t(
-                'kb.publishMessageAudience',
-                `This will publish the article and make it visible to ${article.audience} users. Are you sure?`
-              )
-            : t('kb.publishMessage', 'Are you sure you want to publish this article?')
+            ? t('publishing.dialogs.publish.messageWithAudience', {
+                defaultValue: 'This will publish the article and make it visible to {{audience}} users. Are you sure?',
+                audience: getAudienceLabel(article.audience),
+              })
+            : t('publishing.dialogs.publish.message', { defaultValue: 'Are you sure you want to publish this article?' })
         }
-        confirmLabel={t('kb.publish', 'Publish')}
+        confirmLabel={t('publishing.actions.publish', { defaultValue: 'Publish' })}
         isConfirming={isPublishing}
       />
 
@@ -264,12 +269,11 @@ export default function KBPublishingControls({
         isOpen={archiveDialogOpen}
         onClose={() => setArchiveDialogOpen(false)}
         onConfirm={handleArchive}
-        title={t('kb.confirmArchive', 'Archive Article')}
-        message={t(
-          'kb.archiveMessage',
-          'This will archive the article and remove it from client visibility. Are you sure?'
-        )}
-        confirmLabel={t('kb.archive', 'Archive')}
+        title={t('publishing.dialogs.archive.title', { defaultValue: 'Archive Article' })}
+        message={t('publishing.dialogs.archive.message', {
+          defaultValue: 'This will archive the article and remove it from client visibility. Are you sure?',
+        })}
+        confirmLabel={t('publishing.actions.archive', { defaultValue: 'Archive' })}
         isConfirming={isArchiving}
       />
     </Card>

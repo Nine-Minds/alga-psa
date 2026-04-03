@@ -9,12 +9,14 @@ import { useAssetDetail } from '@alga-psa/assets/hooks/useAssetDetail';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AssetDetailViewProps {
   assetId: string;
 }
 
 export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => {
+  const { t } = useTranslation('msp/assets');
   const { 
     asset, 
     metrics, 
@@ -27,7 +29,9 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
   if (isLoading && !asset) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <LoadingIndicator text="Loading asset details..." />
+        <LoadingIndicator text={t('assetDetailView.loading', {
+          defaultValue: 'Loading asset details...'
+        })} />
       </div>
     );
   }
@@ -37,9 +41,11 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t('assetDetailView.errors.title', { defaultValue: 'Error' })}</AlertTitle>
           <AlertDescription>
-            Asset not found or you do not have permission to view it.
+            {t('assetDetailView.errors.notFound', {
+              defaultValue: 'Asset not found or you do not have permission to view it.'
+            })}
           </AlertDescription>
         </Alert>
       </div>

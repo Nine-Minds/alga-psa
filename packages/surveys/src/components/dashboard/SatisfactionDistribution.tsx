@@ -5,6 +5,7 @@ import { Gauge } from 'lucide-react';
 
 import type { SurveyDistributionBucket } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type SatisfactionDistributionProps = {
   distribution: SurveyDistributionBucket[];
@@ -16,10 +17,16 @@ const percentFormatter = new Intl.NumberFormat(undefined, {
 });
 
 export default function SatisfactionDistribution({ distribution }: SatisfactionDistributionProps) {
+  const { t } = useTranslation('msp/surveys');
+
   return (
-    <Card className="col-span-1 flex flex-col border-border-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+    <Card className="col-span-1 flex flex-col border-border-200 shadow-sm transition-shadow duration-200 hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-base font-semibold text-text-900">Satisfaction Distribution</CardTitle>
+        <CardTitle className="text-base font-semibold text-text-900">
+          {t('dashboard.satisfactionDistribution.title', {
+            defaultValue: 'Satisfaction Distribution',
+          })}
+        </CardTitle>
         <div className="rounded-lg bg-emerald-500/10 p-2 shadow-sm">
           <Gauge className="h-4 w-4 text-emerald-500" />
         </div>
@@ -31,10 +38,14 @@ export default function SatisfactionDistribution({ distribution }: SatisfactionD
               <Gauge className="h-6 w-6 text-emerald-500" />
             </div>
             <p className="text-center text-sm font-medium text-text-600">
-              No survey ratings recorded yet.
+              {t('dashboard.satisfactionDistribution.emptyTitle', {
+                defaultValue: 'No survey ratings recorded yet.',
+              })}
             </p>
             <p className="text-center text-xs text-text-500">
-              Distribution will appear after feedback is collected.
+              {t('dashboard.satisfactionDistribution.emptyDescription', {
+                defaultValue: 'Distribution will appear after feedback is collected.',
+              })}
             </p>
           </div>
         ) : (
@@ -47,14 +58,26 @@ export default function SatisfactionDistribution({ distribution }: SatisfactionD
                   stroke="currentColor"
                   fontSize={12}
                   tickLine={false}
-                  label={{ value: 'Rating', position: 'insideBottom', offset: -4 }}
+                  label={{
+                    value: t('dashboard.satisfactionDistribution.axes.rating', {
+                      defaultValue: 'Rating',
+                    }),
+                    position: 'insideBottom',
+                    offset: -4,
+                  }}
                 />
                 <YAxis
                   stroke="currentColor"
                   fontSize={12}
                   tickLine={false}
                   allowDecimals={false}
-                  label={{ value: 'Responses', angle: -90, position: 'insideLeft' }}
+                  label={{
+                    value: t('dashboard.satisfactionDistribution.axes.responses', {
+                      defaultValue: 'Responses',
+                    }),
+                    angle: -90,
+                    position: 'insideLeft',
+                  }}
                 />
                 <Tooltip
                   cursor={{ fill: 'rgba(79, 70, 229, 0.05)' }}
@@ -64,16 +87,31 @@ export default function SatisfactionDistribution({ distribution }: SatisfactionD
                     borderRadius: '0.5rem',
                     color: 'rgb(var(--color-text-900))',
                   }}
-                  formatter={(value: number, name: string, payload) => {
+                  formatter={(value: number, name: string) => {
                     if (name === 'percentage') {
-                      return [percentFormatter.format(value / 100), 'Percent'];
+                      return [
+                        percentFormatter.format(value / 100),
+                        t('dashboard.satisfactionDistribution.tooltip.percent', {
+                          defaultValue: 'Percent',
+                        }),
+                      ];
                     }
                     if (name === 'count') {
-                      return [value, 'Responses'];
+                      return [
+                        value,
+                        t('dashboard.satisfactionDistribution.tooltip.responses', {
+                          defaultValue: 'Responses',
+                        }),
+                      ];
                     }
                     return [value, name];
                   }}
-                  labelFormatter={(label) => `Rating: ${label}`}
+                  labelFormatter={(label) =>
+                    t('dashboard.satisfactionDistribution.tooltip.rating', {
+                      defaultValue: 'Rating: {{label}}',
+                      label,
+                    })
+                  }
                 />
                 <Bar
                   dataKey="count"

@@ -1,0 +1,53 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pgbouncer.fullname" . }}-bootstrap
+  namespace: {{ include "pgbouncer.namespace" . }}
+  labels:
+    {{- include "pgbouncer.labels" . | nindent 4 }}
+data:
+  entrypoint.sh: |
+    #!/bin/sh
+    set -eu
+
+    POSTGRES_HOST="${POSTGRES_HOST:?POSTGRES_HOST is required}"
+    POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+    PGBOUNCER_PORT="${PGBOUNCER_PORT:-6432}"
+    POSTGRES_SUPERUSER_NAME="${POSTGRES_USER:-postgres}"
+    DB_USER_SERVER_NAME="${DB_USER_SERVER:-app_user}"
+    SERVER_DATABASE="${SERVER_DATABASE:-server}"
+    ADMIN_DATABASE="${ADMIN_DATABASE:-postgres}"
+
+    cat > /work/pgbouncer.ini <<EOF
+    [databases]
+    ${SERVER_DATABASE} = host=${POSTGRES_HOST} port=${POSTGRES_PORT} dbname=${SERVER_DATABASE}
+    ${ADMIN_DATABASE} = host=${POSTGRES_HOST} port=${POSTGRES_PORT} dbname=${ADMIN_DATABASE}
+
+    [pgbouncer]
+    listen_addr = 0.0.0.0
+    listen_port = ${PGBOUNCER_PORT}
+    auth_type = ${AUTH_TYPE:-scram-sha-256}
+    auth_file = /work/userlist.txt
+    pool_mode = ${POOL_MODE:-transaction}
+    max_client_conn = ${MAX_CLIENT_CONN:-1000}
+    default_pool_size = ${DEFAULT_POOL_SIZE:-20}
+    min_pool_size = ${MIN_POOL_SIZE:-10}
+    reserve_pool_size = ${RESERVE_POOL_SIZE:-10}
+    reserve_pool_timeout = ${RESERVE_POOL_TIMEOUT:-5}
+    max_db_connections = ${MAX_DB_CONNECTIONS:-100}
+    max_user_connections = ${MAX_USER_CONNECTIONS:-100}
+    server_reset_query = DISCARD ALL
+    ignore_startup_parameters = extra_float_digits
+    idle_transaction_timeout = ${IDLE_TRANSACTION_TIMEOUT:-300}
+    server_idle_timeout = ${SERVER_IDLE_TIMEOUT:-600}
+    EOF
+
+    {
+      printf '"%s" "%s"\n' "$DB_USER_SERVER_NAME" "$DB_PASSWORD_SERVER"
+      printf '"%s" "%s"\n' "$POSTGRES_SUPERUSER_NAME" "$POSTGRES_PWD"
+    } > /work/userlist.txt
+
+    chmod 600 /work/userlist.txt
+    exec pgbouncer /work/pgbouncer.ini
+{{- end }}

@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, memo, useEffect } from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import { formatISO, parseISO } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { generateUUID } from '@alga-psa/core';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -162,7 +163,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       
       // Local state fields (not sent to server)
       isNew: true,
-      tempId: crypto.randomUUID(),
+      tempId: generateUUID(),
     };
 
     updateEntry(entries.length, newEntry);

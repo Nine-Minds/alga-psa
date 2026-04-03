@@ -9,7 +9,8 @@ import {
   getAllBoards,
   createBoard,
   updateBoard,
-  deleteBoard
+  deleteBoard,
+  getBoardTicketStatuses,
 } from '@alga-psa/tickets/actions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
@@ -31,6 +32,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
@@ -40,8 +42,109 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
+type TicketStatusSeedMode = 'copy_existing' | 'create_inline';
+type ManagedTicketStatus = {
+  status_id?: string;
+  temp_id: string;
+  name: string;
+  is_closed: boolean;
+  is_default: boolean;
+  order_number: number;
+  color?: string | null;
+  icon?: string | null;
+};
+
+function createManagedTicketStatus(index: number): ManagedTicketStatus {
+  return {
+    temp_id: `inline-status-${Date.now()}-${index}`,
+    name: index === 0 ? 'New' : '',
+    is_closed: false,
+    is_default: index === 0,
+    order_number: (index + 1) * 10,
+    color: null,
+    icon: null,
+  };
+}
+
+function mapBoardStatusesToManagedStatuses(
+  statuses: Array<{
+    status_id?: string;
+    name: string;
+    is_closed: boolean;
+    is_default?: boolean;
+    order_number?: number;
+    color?: string | null;
+    icon?: string | null;
+  }>
+): ManagedTicketStatus[] {
+  return statuses.map((status, index) => ({
+    status_id: status.status_id,
+    temp_id: status.status_id || `board-status-${Date.now()}-${index}`,
+    name: status.name,
+    is_closed: status.is_closed,
+    is_default: Boolean(status.is_default),
+    order_number: status.order_number || ((index + 1) * 10),
+    color: status.color || null,
+    icon: status.icon || null,
+  }));
+}
+
+function normalizeManagedTicketStatuses(statuses: ManagedTicketStatus[]) {
+  return statuses
+    .map((status, index) => ({
+      status_id: status.status_id,
+      name: status.name.trim(),
+      is_closed: status.is_closed,
+      is_default: status.is_default,
+      order_number: (index + 1) * 10,
+      color: status.color || null,
+      icon: status.icon || null,
+    }))
+    .filter((status) => status.name.length > 0);
+}
+
+function getManagedTicketStatusValidationError(statuses: ManagedTicketStatus[]): string | null {
+  const normalizedStatuses = normalizeManagedTicketStatuses(statuses);
+
+  if (normalizedStatuses.length === 0) {
+    return 'Add at least one ticket status before saving the board.';
+  }
+
+  const duplicateName = normalizedStatuses.find((status, index) =>
+    normalizedStatuses.findIndex((candidate) => candidate.name.toLowerCase() === status.name.toLowerCase()) !== index
+  );
+  if (duplicateName) {
+    return 'Ticket status names must be unique within a board.';
+  }
+
+  const openDefaultStatuses = normalizedStatuses.filter((status) => status.is_default && !status.is_closed);
+  if (openDefaultStatuses.length !== 1 || normalizedStatuses.some((status) => status.is_default && status.is_closed)) {
+    return 'Select exactly one open default ticket status before saving the board.';
+  }
+
+  return null;
+}
+
 const BoardsSettings: React.FC = () => {
   const { t } = useTranslation('msp/settings');
+  const createEmptyFormData = () => ({
+    board_name: '',
+    description: '',
+    display_order: 0,
+    is_inactive: false,
+    category_type: 'custom' as CategoryType,
+    priority_type: 'custom' as PriorityType,
+    is_itil_compliant: false,
+    default_assigned_to: '',
+    default_assigned_team_id: '',
+    default_priority_id: '',
+    manager_user_id: '',
+    sla_policy_id: '',
+    enable_live_ticket_timer: true,
+    status_seed_mode: 'copy_existing' as TicketStatusSeedMode,
+    copy_ticket_statuses_from_board_id: '',
+    ticket_statuses: [] as ManagedTicketStatus[],
+  });
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [teams, setTeams] = useState<ITeam[]>([]);
@@ -110,20 +213,8 @@ const BoardsSettings: React.FC = () => {
   // State for Add/Edit Dialog
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
   const [editingBoard, setEditingBoard] = useState<IBoard | null>(null);
-  const [formData, setFormData] = useState({
-    board_name: '',
-    description: '',
-    display_order: 0,
-    is_inactive: false,
-    category_type: 'custom' as CategoryType,
-    priority_type: 'custom' as PriorityType,
-    is_itil_compliant: false,
-    default_assigned_to: '',
-    default_assigned_team_id: '',
-    default_priority_id: '',
-    manager_user_id: '',
-    sla_policy_id: ''
-  });
+  const [formData, setFormData] = useState(createEmptyFormData);
+  const [isLoadingBoardStatuses, setIsLoadingBoardStatuses] = useState(false);
   
   // State for Import Dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -211,9 +302,27 @@ const BoardsSettings: React.FC = () => {
     }
   };
 
-  const startEditing = (board: IBoard) => {
+  const loadManagedTicketStatusesFromBoard = async (boardId: string) => {
+    setIsLoadingBoardStatuses(true);
+
+    try {
+      const boardStatuses = await getBoardTicketStatuses(boardId);
+      setFormData((prev) => ({
+        ...prev,
+        ticket_statuses: mapBoardStatusesToManagedStatuses(boardStatuses),
+      }));
+    } catch (loadError) {
+      console.error('Error loading board ticket statuses:', loadError);
+      setError(loadError instanceof Error ? loadError.message : 'Failed to load board ticket statuses.');
+    } finally {
+      setIsLoadingBoardStatuses(false);
+    }
+  };
+
+  const startEditing = async (board: IBoard) => {
     setEditingBoard(board);
     setFormData({
+      ...createEmptyFormData(),
       board_name: board.board_name || '',
       description: board.description || '',
       display_order: board.display_order || 0,
@@ -225,10 +334,87 @@ const BoardsSettings: React.FC = () => {
       default_assigned_team_id: board.default_assigned_team_id || '',
       default_priority_id: board.default_priority_id || '',
       manager_user_id: board.manager_user_id || '',
-      sla_policy_id: board.sla_policy_id || ''
+      sla_policy_id: board.sla_policy_id || '',
+      enable_live_ticket_timer: board.enable_live_ticket_timer ?? true,
+      ticket_statuses: [],
     });
     setShowAddEditDialog(true);
     setError(null);
+    setIsLoadingBoardStatuses(true);
+
+    await loadManagedTicketStatusesFromBoard(board.board_id!);
+  };
+
+  const updateManagedTicketStatus = (tempId: string, updates: Partial<ManagedTicketStatus>) => {
+    setFormData((prev) => ({
+      ...prev,
+      ticket_statuses: prev.ticket_statuses.map((status) =>
+        status.temp_id === tempId ? { ...status, ...updates } : status
+      ),
+    }));
+  };
+
+  const setManagedDefaultStatus = (tempId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      ticket_statuses: prev.ticket_statuses.map((status) => ({
+        ...status,
+        is_default: status.temp_id === tempId,
+      })),
+    }));
+  };
+
+  const addManagedTicketStatus = () => {
+    setFormData((prev) => ({
+      ...prev,
+      ticket_statuses: [
+        ...prev.ticket_statuses,
+        createManagedTicketStatus(prev.ticket_statuses.length),
+      ],
+    }));
+  };
+
+  const removeManagedTicketStatus = (tempId: string) => {
+    setFormData((prev) => {
+      const remainingStatuses = prev.ticket_statuses.filter((status) => status.temp_id !== tempId);
+      if (remainingStatuses.length > 0 && !remainingStatuses.some((status) => status.is_default)) {
+        remainingStatuses[0] = { ...remainingStatuses[0], is_default: true };
+      }
+
+      return {
+        ...prev,
+        ticket_statuses: remainingStatuses.map((status, index) => ({
+          ...status,
+          order_number: (index + 1) * 10,
+        })),
+      };
+    });
+  };
+
+  const moveManagedTicketStatus = (tempId: string, direction: 'up' | 'down') => {
+    setFormData((prev) => {
+      const currentIndex = prev.ticket_statuses.findIndex((status) => status.temp_id === tempId);
+      if (currentIndex === -1) {
+        return prev;
+      }
+
+      const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      if (targetIndex < 0 || targetIndex >= prev.ticket_statuses.length) {
+        return prev;
+      }
+
+      const nextStatuses = [...prev.ticket_statuses];
+      const [movedStatus] = nextStatuses.splice(currentIndex, 1);
+      nextStatuses.splice(targetIndex, 0, movedStatus);
+
+      return {
+        ...prev,
+        ticket_statuses: nextStatuses.map((status, index) => ({
+          ...status,
+          order_number: (index + 1) * 10,
+        })),
+      };
+    });
   };
 
   const handleDeleteBoard = async (force = false, cleanupItil = false) => {
@@ -291,8 +477,18 @@ const BoardsSettings: React.FC = () => {
     }
   };
 
+  const shouldManageTicketStatuses =
+    Boolean(editingBoard) ||
+    formData.status_seed_mode === 'create_inline' ||
+    (formData.status_seed_mode === 'copy_existing' && Boolean(formData.copy_ticket_statuses_from_board_id));
+  const ticketStatusValidationError = useMemo(() => (
+    shouldManageTicketStatuses ? getManagedTicketStatusValidationError(formData.ticket_statuses) : null
+  ), [formData.ticket_statuses, shouldManageTicketStatuses]);
+
   const handleSaveBoard = async () => {
     try {
+      setError(null);
+
       if (!formData.board_name.trim()) {
         setError(t('ticketing.boards.messages.error.nameRequired'));
         return;
@@ -301,6 +497,22 @@ const BoardsSettings: React.FC = () => {
       // For new boards, set category_type and priority_type based on ITIL compliance
       const categoryType = editingBoard ? formData.category_type : (formData.is_itil_compliant ? 'itil' : 'custom');
       const priorityType = editingBoard ? formData.priority_type : (formData.is_itil_compliant ? 'itil' : 'custom');
+      const isCreatingBoard = !editingBoard;
+      const shouldPersistManagedStatuses = isCreatingBoard && shouldManageTicketStatuses;
+      const normalizedTicketStatuses = normalizeManagedTicketStatuses(formData.ticket_statuses);
+      const shouldRequireStatusCopySource =
+        isCreatingBoard &&
+        formData.status_seed_mode === 'copy_existing';
+
+      if (shouldRequireStatusCopySource && !formData.copy_ticket_statuses_from_board_id) {
+        setError('Select an existing board to copy ticket statuses from.');
+        return;
+      }
+
+      if (shouldManageTicketStatuses && ticketStatusValidationError) {
+        setError(ticketStatusValidationError);
+        return;
+      }
 
       if (editingBoard) {
         await updateBoard(editingBoard.board_id!, {
@@ -314,7 +526,9 @@ const BoardsSettings: React.FC = () => {
           default_assigned_team_id: formData.default_assigned_team_id || null,
           default_priority_id: formData.default_priority_id || null,
           manager_user_id: formData.manager_user_id || null,
-          sla_policy_id: formData.sla_policy_id || null
+          sla_policy_id: formData.sla_policy_id || null,
+          enable_live_ticket_timer: formData.enable_live_ticket_timer,
+          ticket_statuses: normalizedTicketStatuses,
         });
         toast.success(t('ticketing.boards.messages.success.updated'));
       } else {
@@ -329,14 +543,19 @@ const BoardsSettings: React.FC = () => {
           default_assigned_team_id: formData.default_assigned_team_id || null,
           default_priority_id: formData.default_priority_id || null,
           manager_user_id: formData.manager_user_id || null,
-          sla_policy_id: formData.sla_policy_id || null
+          sla_policy_id: formData.sla_policy_id || null,
+          enable_live_ticket_timer: formData.enable_live_ticket_timer,
+          copy_ticket_statuses_from_board_id: formData.status_seed_mode === 'copy_existing'
+            ? (formData.copy_ticket_statuses_from_board_id || null)
+            : null,
+          ticket_statuses: shouldPersistManagedStatuses ? normalizedTicketStatuses : undefined,
         });
         toast.success(t('ticketing.boards.messages.success.created'));
       }
 
       setShowAddEditDialog(false);
       setEditingBoard(null);
-      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
+      setFormData(createEmptyFormData());
       await fetchBoards();
     } catch (error) {
       console.error('Error saving board:', error);
@@ -397,7 +616,8 @@ const BoardsSettings: React.FC = () => {
             display_order: displayOrder,
             is_inactive: board.is_inactive || false,
             category_type: 'itil',
-            priority_type: 'itil'
+            priority_type: 'itil',
+            enable_live_ticket_timer: true,
           });
 
           allResults.imported.push({
@@ -619,8 +839,19 @@ const BoardsSettings: React.FC = () => {
             id="add-board-button"
             onClick={() => {
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
+              setFormData(() => {
+                const nextFormData = createEmptyFormData();
+                if (boards.length === 0) {
+                  return {
+                    ...nextFormData,
+                    status_seed_mode: 'create_inline' as TicketStatusSeedMode,
+                    ticket_statuses: [createManagedTicketStatus(0)],
+                  };
+                }
+                return nextFormData;
+              });
               setShowAddEditDialog(true);
+              setIsLoadingBoardStatuses(false);
             }}
             className="bg-primary-500 text-white hover:bg-primary-600"
           >
@@ -695,8 +926,9 @@ const BoardsSettings: React.FC = () => {
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingBoard(null);
-          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
+          setFormData(createEmptyFormData());
           setError(null);
+          setIsLoadingBoardStatuses(false);
         }}
         title={editingBoard ? t('ticketing.boards.dialog.editBoard') : t('ticketing.boards.dialog.addBoard')}
       >
@@ -856,11 +1088,204 @@ const BoardsSettings: React.FC = () => {
               </p>
             </div>
 
-            {/* ITIL Configuration - Only show for new boards */}
             {!editingBoard && (
-              <div className="border-t pt-4 space-y-4">
-                <h4 className="font-medium text-gray-800">{t('ticketing.boards.fields.boardConfiguration')}</h4>
+              <div>
+                <Label>Ticket status setup</Label>
+                <ToggleGroup
+                  type="single"
+                  value={formData.status_seed_mode}
+                  onValueChange={(value) => {
+                    if (value !== 'copy_existing' && value !== 'create_inline') {
+                      return;
+                    }
+                    const nextMode = value as TicketStatusSeedMode;
+                    setFormData((prev) => ({
+                      ...prev,
+                      status_seed_mode: nextMode,
+                      ticket_statuses: nextMode === 'create_inline' && prev.ticket_statuses.length === 0
+                        ? [createManagedTicketStatus(0)]
+                        : prev.ticket_statuses,
+                    }));
+                  }}
+                  aria-label="Ticket status setup"
+                  className="mt-2 w-full"
+                >
+                  <ToggleGroupItem
+                    id="ticket-status-seed-mode-copy-existing"
+                    value="copy_existing"
+                    className="flex-1 min-w-0"
+                  >
+                    Copy from existing board
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    id="ticket-status-seed-mode-create-inline"
+                    value="create_inline"
+                    className="flex-1 min-w-0"
+                  >
+                    Create statuses inline
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Choose whether this board starts from an existing lifecycle or a new inline status list.
+                </p>
+              </div>
+            )}
 
+            {!editingBoard && formData.status_seed_mode === 'copy_existing' && (
+              <div>
+                <Label htmlFor="copy-ticket-statuses-select">Copy ticket statuses from</Label>
+                <CustomSelect
+                  id="copy-ticket-statuses-select"
+                  value={formData.copy_ticket_statuses_from_board_id}
+                  onValueChange={async (value) => {
+                    setError(null);
+                    setFormData((prev) => ({
+                      ...prev,
+                      copy_ticket_statuses_from_board_id: value,
+                      ticket_statuses: value ? prev.ticket_statuses : [],
+                    }));
+
+                    if (!value) {
+                      return;
+                    }
+
+                    await loadManagedTicketStatusesFromBoard(value);
+                  }}
+                  options={[
+                    { value: '', label: boards.length > 0 ? 'Select a source board' : 'No source boards available' },
+                    ...boards
+                      .slice()
+                      .sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || (a.board_name || '').localeCompare(b.board_name || ''))
+                      .map((board): SelectOption => ({
+                        value: board.board_id || '',
+                        label: board.board_name || 'Unnamed board'
+                      }))
+                  ]}
+                  placeholder="Select a source board"
+                  disabled={boards.length === 0}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  New boards clone their ticket lifecycle from an existing board.
+                </p>
+              </div>
+            )}
+
+            {shouldManageTicketStatuses && (
+              <div className="space-y-3 rounded-md border border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>
+                      {editingBoard
+                        ? 'Board ticket statuses'
+                        : formData.status_seed_mode === 'copy_existing'
+                          ? 'Copied ticket statuses'
+                          : 'Inline ticket statuses'}
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {editingBoard
+                        ? 'Edit the ticket lifecycle for this board only.'
+                        : formData.status_seed_mode === 'copy_existing'
+                          ? 'Review and adjust the copied lifecycle before saving the new board.'
+                          : 'Author the board&apos;s initial ticket lifecycle before saving.'}
+                    </p>
+                  </div>
+                  <Button id="add-inline-ticket-status-button" type="button" variant="outline" onClick={addManagedTicketStatus}>
+                    Add Status
+                  </Button>
+                </div>
+
+                {isLoadingBoardStatuses ? (
+                  <p className="text-sm text-muted-foreground">Loading board ticket statuses…</p>
+                ) : formData.ticket_statuses.map((status, index) => (
+                  <div key={status.temp_id} className="grid gap-3 rounded-md border border-gray-200 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-center">
+                    <div>
+                      <Label htmlFor={`inline-ticket-status-name-${index}`}>Status name</Label>
+                      <Input
+                        id={`inline-ticket-status-name-${index}`}
+                        value={status.name}
+                        onChange={(event) => updateManagedTicketStatus(status.temp_id, { name: event.target.value })}
+                        placeholder="Status name"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`inline-ticket-status-closed-${index}`}>Closed</Label>
+                      <Switch
+                        id={`inline-ticket-status-closed-${index}`}
+                        checked={status.is_closed}
+                        onCheckedChange={(checked) => updateManagedTicketStatus(status.temp_id, { is_closed: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`inline-ticket-status-default-${index}`}>Default</Label>
+                      <Switch
+                        id={`inline-ticket-status-default-${index}`}
+                        checked={status.is_default}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setManagedDefaultStatus(status.temp_id);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        id={`move-inline-ticket-status-up-${index}`}
+                        type="button"
+                        variant="ghost"
+                        onClick={() => moveManagedTicketStatus(status.temp_id, 'up')}
+                        disabled={index === 0}
+                      >
+                        Up
+                      </Button>
+                      <Button
+                        id={`move-inline-ticket-status-down-${index}`}
+                        type="button"
+                        variant="ghost"
+                        onClick={() => moveManagedTicketStatus(status.temp_id, 'down')}
+                        disabled={index === formData.ticket_statuses.length - 1}
+                      >
+                        Down
+                      </Button>
+                      <Button
+                        id={`remove-inline-ticket-status-${index}`}
+                        type="button"
+                        variant="ghost"
+                        onClick={() => removeManagedTicketStatus(status.temp_id)}
+                        disabled={formData.ticket_statuses.length === 1}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                {ticketStatusValidationError && !isLoadingBoardStatuses && (
+                  <p className="text-sm text-red-600" data-testid="ticket-status-validation-error">
+                    {ticketStatusValidationError}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="border-t pt-4 space-y-4">
+              <h4 className="font-medium text-gray-800">{t('ticketing.boards.fields.boardConfiguration')}</h4>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="enable_live_ticket_timer">Enable live ticket timer</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available.
+                  </p>
+                </div>
+                <Switch
+                  id="enable_live_ticket_timer"
+                  checked={formData.enable_live_ticket_timer}
+                  onCheckedChange={(checked) => setFormData({ ...formData, enable_live_ticket_timer: checked })}
+                />
+              </div>
+
+              {/* ITIL Configuration - Only show for new boards */}
+              {!editingBoard && (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="is_itil_compliant">{t('ticketing.boards.fields.itilCompliant')}</Label>
@@ -879,9 +1304,8 @@ const BoardsSettings: React.FC = () => {
                     onCheckedChange={(checked) => setFormData({ ...formData, is_itil_compliant: checked })}
                   />
                 </div>
-
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </DialogContent>
         <DialogFooter>
@@ -891,13 +1315,18 @@ const BoardsSettings: React.FC = () => {
             onClick={() => {
               setShowAddEditDialog(false);
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
+              setFormData(createEmptyFormData());
               setError(null);
+              setIsLoadingBoardStatuses(false);
             }}
           >
             {t('ticketing.boards.actions.cancel')}
           </Button>
-          <Button id="save-board-button" onClick={handleSaveBoard}>
+          <Button
+            id="save-board-button"
+            onClick={handleSaveBoard}
+            disabled={isLoadingBoardStatuses || (shouldManageTicketStatuses && Boolean(ticketStatusValidationError))}
+          >
             {editingBoard ? t('ticketing.boards.actions.update') : t('ticketing.boards.actions.create')}
           </Button>
         </DialogFooter>

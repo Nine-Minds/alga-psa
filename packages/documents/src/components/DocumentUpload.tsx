@@ -18,6 +18,8 @@ interface DocumentUploadProps {
     entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
     folderPath?: string | null;
     onUploadComplete: (result: { success: boolean; document: IDocument }) => void;
+    /** Called after all files in a multi-file upload have been processed */
+    onAllUploadsComplete?: () => void;
     onCancel: () => void;
     /** Override the default folder-fetching function (e.g. for client portal) */
     getFoldersFn?: () => Promise<string[]>;
@@ -48,6 +50,7 @@ export default function DocumentUpload({
     entityType,
     folderPath,
     onUploadComplete,
+    onAllUploadsComplete,
     onCancel,
     getFoldersFn
 }: DocumentUploadProps): React.JSX.Element {
@@ -129,6 +132,7 @@ export default function DocumentUpload({
         }
 
         setIsUploading(false);
+        onAllUploadsComplete?.();
     };
 
     const processFileUpload = async (index: number, file: File, targetFolderPath: string | null | undefined) => {
@@ -328,6 +332,10 @@ export default function DocumentUpload({
             onClose={() => {
                 setShowFolderModal(false);
                 setPendingFiles([]);
+                // Reset file input so the same file can be re-selected
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
             }}
             onSelectFolder={handleFolderSelected}
             title={t('documents.folderSelector.defaultTitle', 'Select Destination Folder')}

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { handleWorkflowV2ApiError } from 'server/src/lib/api/workflowRuntimeV2Api';
 import { exportWorkflowBundleV1Action } from 'server/src/lib/actions/workflow-bundle-v1-actions';
-import { stringifyCanonicalJson } from '@shared/workflow/bundle/canonicalJson';
+import { stringifyCanonicalJson } from '@alga-psa/workflows/bundle';
 
 export async function GET(_: Request, { params }: { params: Promise<{ workflowId: string }> }) {
   try {

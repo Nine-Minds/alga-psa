@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
-import { Switch } from '@alga-psa/ui/components/Switch';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface Props {
   form: any; // react-hook-form UseFormReturn
@@ -13,6 +13,8 @@ interface Props {
 }
 
 export function ProcessingSettingsCard({ form, title, description }: Props) {
+  const { t } = useTranslation('msp/email-providers');
+
   return (
     <Card>
       <CardHeader>
@@ -22,14 +24,20 @@ export function ProcessingSettingsCard({ form, title, description }: Props) {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="labelFilters">Gmail Labels to Monitor</Label>
+            <Label htmlFor="labelFilters">{t('forms.gmail.processing.labelFiltersLabel', {
+              defaultValue: 'Gmail Labels to Monitor',
+            })}</Label>
             <Input
               id="labelFilters"
               {...form.register('labelFilters')}
-              placeholder="INBOX, Support, Custom Label"
+              placeholder={t('forms.gmail.processing.labelFiltersPlaceholder', {
+                defaultValue: 'INBOX, Support, Custom Label',
+              })}
             />
             <p className="text-xs text-muted-foreground">
-              Comma-separated list of Gmail labels to monitor (default: INBOX)
+              {t('forms.gmail.processing.labelFiltersHelp', {
+                defaultValue: 'Comma-separated list of Gmail labels to monitor (default: INBOX)',
+              })}
             </p>
           </div>
         </div>

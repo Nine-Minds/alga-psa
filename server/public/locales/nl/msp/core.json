@@ -10,19 +10,46 @@
     "clients": "Klanten",
     "contacts": "Contacten",
     "documents": "Documenten",
+    "documentsAll": "Alle documenten",
+    "knowledgeBase": "Kennisbank",
     "assets": "Assets",
     "timeManagement": "Tijdbeheer",
     "timeEntry": "Tijdregistratie",
     "approvals": "Goedkeuringen",
-    "billing": "Facturatie",
+    "billing": {
+      "label": "Facturatie",
+      "sections": {
+        "contracts": "Contracten",
+        "invoicing": "Facturatie",
+        "pricing": "Prijzen",
+        "trackingReports": "Tracking en rapportage"
+      },
+      "contractTemplates": "Contractsjablonen",
+      "clientContracts": "Klantcontracten",
+      "contractLinePresets": "Voorinstellingen voor contractregels",
+      "invoicing": "Facturatie",
+      "invoiceLayouts": "Factuurlay-outs",
+      "billingCycles": "Facturatiecycli",
+      "servicePeriods": "Serviceperioden",
+      "serviceCatalog": "Dienstencatalogus",
+      "products": "Producten",
+      "taxRates": "Belastingtarieven",
+      "usageTracking": "Gebruikstracking",
+      "reports": "Rapporten",
+      "accountingExports": "Boekhoudexports"
+    },
     "schedule": "Planning",
     "technicianDispatch": "Technicus-dispatch",
     "automationHub": "Automatiseringshub",
     "workflows": "Workflows",
+    "controlPanel": "Beheerpaneel",
+    "workflowEditor": "Workflow-editor",
     "runs": "Uitvoeringen",
     "events": "Gebeurtenissen",
     "deadLetter": "Dead Letter",
     "systemMonitor": "Systeemmonitor",
+    "systemMonitoring": "Systeembewaking",
+    "jobMonitoring": "Jobbewaking",
     "jobs": "Taken",
     "emailLogs": "E-maillogs",
     "extensions": "Extensies"
@@ -31,7 +58,11 @@
     "backToMain": "Terug naar hoofd",
     "searchPlaceholder": "Zoeken",
     "settings": "Instellingen",
-    "support": "Support"
+    "support": "Support",
+    "goToDashboard": "Ga naar dashboard",
+    "logoAlt": "AlgaPSA-logo",
+    "expandSidebar": "Zijbalk uitklappen",
+    "collapseSidebar": "Zijbalk inklappen"
   },
   "settings": {
     "sections": {
@@ -46,8 +77,10 @@
       "general": "Algemeen",
       "users": "Gebruikers",
       "teams": "Teams",
+      "language": "Taal",
       "clientPortal": "Klantenportaal",
       "ticketing": "Ticketing",
+      "sla": "SLA",
       "projects": "Projecten",
       "interactions": "Interacties",
       "notifications": "Meldingen",
@@ -63,11 +96,129 @@
       "security": "Beveiliging"
     }
   },
+  "dashboard": {
+    "onboardingWizard": "Installatiewizard"
+  },
   "header": {
     "userFallback": "Gebruiker",
     "quickAccess": "Snelle toegang tot profiel en account.",
     "profile": "Profiel",
     "account": "Account",
-    "signOut": "Afmelden"
+    "signOut": "Afmelden",
+    "quickCreate": {
+      "ariaLabel": "Snel aanmaken openen",
+      "title": "Snel aanmaken",
+      "heading": "Aanmaken",
+      "options": {
+        "ticket": {
+          "label": "Ticket",
+          "description": "Maak een nieuw supportticket aan"
+        },
+        "client": {
+          "label": "Klant",
+          "description": "Voeg een nieuwe klant toe aan je systeem"
+        },
+        "contact": {
+          "label": "Contact",
+          "description": "Voeg een nieuwe contactpersoon toe"
+        },
+        "project": {
+          "label": "Project",
+          "description": "Start een nieuw project"
+        },
+        "asset": {
+          "label": "Asset",
+          "description": "Voeg een nieuw apparaat toe aan je werkruimte"
+        },
+        "service": {
+          "label": "Dienst",
+          "description": "Voeg een nieuwe factureerbare dienst toe"
+        },
+        "product": {
+          "label": "Product",
+          "description": "Voeg een nieuw product toe aan je catalogus"
+        }
+      }
+    },
+    "jobs": {
+      "ariaLabel": "Activiteit van achtergrondtaken bekijken",
+      "title": "Achtergrondtaken",
+      "description": "Volg importen, automatiseringsruns en gepland werk.",
+      "active": "Actieve taken",
+      "queued": "Wachtrijtaken",
+      "failedLast24h": "Mislukt in afgelopen 24 uur",
+      "openJobCenter": "Jobcentrum openen"
+    },
+    "breadcrumb": {
+      "home": "Start",
+      "dashboard": "Dashboard"
+    },
+    "tenantBadge": {
+      "ariaLabel": "Actieve tenant {{tenant}}"
+    },
+    "themeToggle": {
+      "ariaLabel": "Thema wisselen",
+      "light": "Licht",
+      "dark": "Donker",
+      "system": "Systeem",
+      "selected": "Geselecteerd"
+    }
+  },
+  "dialogs": {
+    "aiInterrupt": {
+      "navigate": {
+        "title": "Pagina verlaten en AI-antwoord annuleren?",
+        "message": "Er is nog een AI-antwoord of toolactie bezig. Als je deze pagina nu verlaat, wordt die geannuleerd.",
+        "confirm": "Pagina verlaten",
+        "cancel": "Op pagina blijven"
+      },
+      "closeChat": {
+        "title": "Chat sluiten en AI-antwoord annuleren?",
+        "message": "Er is nog een AI-antwoord of toolactie bezig. Als je de chat nu sluit, wordt die geannuleerd.",
+        "confirm": "Chat sluiten",
+        "cancel": "Chat open houden"
+      }
+    }
+  },
+  "banners": {
+    "trial": {
+      "premiumConfirmed": "Premium bevestigd — start in de volgende facturatiecyclus",
+      "dayLeft": "1 dag resterend",
+      "daysLeft": "{{count}} dagen resterend",
+      "premiumTrial": "Premium-proefperiode: {{daysLabel}} — bevestig om te behouden",
+      "stripeTrial": "{{tier}}-proefperiode: {{daysLabel}}"
+    },
+    "paymentFailed": {
+      "message": "Betaling mislukt — werk betaalmethode bij",
+      "portalError": "Kan facturatieportaal niet openen"
+    },
+    "platformNotification": {
+      "learnMore": "Meer informatie",
+      "dismiss": "Melding sluiten"
+    }
+  },
+  "quickCreate": {
+    "success": {
+      "asset": "Asset succesvol aangemaakt",
+      "ticket": "Ticket #{{number}} succesvol aangemaakt",
+      "client": "Klant \"{{name}}\" succesvol aangemaakt",
+      "contact": "{{name}} succesvol toegevoegd",
+      "project": "Project \"{{name}}\" succesvol aangemaakt",
+      "service": "Dienst succesvol aangemaakt",
+      "product": "Product succesvol aangemaakt"
+    },
+    "errors": {
+      "loadClients": "Klanten konden niet worden geladen",
+      "loadServiceTypes": "Servicetypen konden niet worden geladen"
+    },
+    "dialogTitles": {
+      "contact": "Nieuw contact toevoegen",
+      "project": "Nieuw project toevoegen",
+      "service": "Nieuwe dienst toevoegen"
+    }
+  },
+  "rightSidebar": {
+    "title": "Chat",
+    "enterpriseOnly": "De chatfunctie is alleen beschikbaar in de Enterprise Edition."
   }
 }

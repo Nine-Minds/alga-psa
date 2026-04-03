@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useId, useRef } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React, { useEffect, useMemo, useId, useRef } from 'react';
+import { ChevronDown, Plus } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
+import { Button } from './Button';
 import { useModality } from './ModalityContext';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
@@ -12,6 +13,8 @@ export interface SelectOption {
   label: string | React.JSX.Element;
   /** Plain-text value used by Radix for the trigger display when label is JSX */
   textValue?: string;
+  /** Additional content shown only in the dropdown, not in the trigger */
+  dropdownHint?: string | React.JSX.Element;
   className?: string;
   is_inactive?: boolean;
 }
@@ -52,6 +55,10 @@ interface CustomSelectProps {
   showPlaceholderInDropdown?: boolean;
   /** Size variant for the select trigger */
   size?: SelectSize;
+  /** Callback to add a new item - renders a sticky button at the bottom of the dropdown */
+  onAddNew?: () => void;
+  /** Label for the add new button (default: "Add new") */
+  addNewLabel?: string;
 }
 
 const PLACEHOLDER_VALUE = '__SELECT_PLACEHOLDER__';
@@ -92,6 +99,8 @@ const CustomSelect = ({
   modal,
   showPlaceholderInDropdown = true,
   size = 'md',
+  onAddNew,
+  addNewLabel = 'Add new',
   ...props
 }: CustomSelectProps & AutomationProps) => {
   const { modal: parentModal } = useModality();
@@ -203,6 +212,8 @@ const CustomSelect = ({
   // Explicit prop overrides parent modality context
   const isModal = modal !== undefined ? modal : parentModal;
 
+  const selectTriggerRef = useRef<HTMLButtonElement>(null);
+
   const containerId = finalAutomationProps.id ? `${finalAutomationProps.id}-container` : undefined;
 
   return (
@@ -241,6 +252,7 @@ const CustomSelect = ({
         }}
       >
       <RadixSelect.Trigger
+          ref={selectTriggerRef}
           {...finalAutomationProps}
           data-automation-type={dataAutomationType}
           className={`
@@ -254,6 +266,7 @@ const CustomSelect = ({
             disabled:pointer-events-none disabled:cursor-not-allowed
             disabled:bg-muted disabled:text-muted-foreground disabled:border-border
             disabled:hover:bg-muted disabled:hover:text-muted-foreground
+            overflow-hidden
             ${className}
             ${customStyles?.trigger || ''}
           `}
@@ -268,9 +281,9 @@ const CustomSelect = ({
         >
           <RadixSelect.Value
             placeholder={placeholder}
-            className="flex-1 text-left"
+            className="flex-1 text-left min-w-0 overflow-hidden"
           >
-            <span className={!selectedOption || disabled ? 'text-muted-foreground' : ''}>
+            <span className={`block truncate ${!selectedOption || disabled ? 'text-muted-foreground' : ''}`}>
               {selectedOption?.label || placeholder}
             </span>
           </RadixSelect.Value>
@@ -334,15 +347,19 @@ const CustomSelect = ({
                   value={option.radixValue}
                   textValue={option.textValue ?? (typeof option.label === 'string' ? option.label : undefined)}
                   className={`
-                    relative flex items-center px-3 py-2 text-sm rounded text-foreground
+                    relative flex px-3 py-2 text-sm rounded text-foreground
                     cursor-pointer hover:bg-muted focus:bg-muted
-                    focus:outline-none select-none whitespace-nowrap
+                    focus:outline-none select-none
                     data-[highlighted]:bg-muted
+                    ${option.dropdownHint ? 'flex-col items-start' : 'items-center whitespace-nowrap'}
                     ${option.className || 'bg-background'}
                     ${customStyles?.item || ''}
                   `}
                 >
                   <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
+                  {option.dropdownHint && (
+                    <div className="text-[11px] text-gray-500 mt-0.5 whitespace-normal">{option.dropdownHint}</div>
+                  )}
                   {customStyles?.itemIndicator && (
                     <RadixSelect.ItemIndicator className={customStyles.itemIndicator}>
                       <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -355,6 +372,32 @@ const CustomSelect = ({
             <RadixSelect.ScrollDownButton className="flex items-center justify-center h-6 bg-background dark:bg-[rgb(var(--color-card))] text-foreground cursor-default">
               <ChevronDown className="w-4 h-4" />
             </RadixSelect.ScrollDownButton>
+            {onAddNew && (
+              <>
+                <div className="border-t border-border" />
+                <Button
+                  id="custom-select-add-new-btn"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 rounded-none text-primary"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    // Close dropdown by dispatching Escape on the trigger, then open the add-new UI
+                    selectTriggerRef.current?.dispatchEvent(
+                      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+                    );
+                    // Small delay to let Radix unmount the dropdown before opening the dialog
+                    requestAnimationFrame(() => {
+                      onAddNew?.();
+                    });
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  {addNewLabel}
+                </Button>
+              </>
+            )}
           </RadixSelect.Content>
         </RadixSelect.Portal>
       </RadixSelect.Root>

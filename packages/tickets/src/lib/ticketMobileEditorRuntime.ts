@@ -1,10 +1,13 @@
-import { Editor, type Content } from '@tiptap/core';
+import { Editor, Extension, Node, mergeAttributes, type AnyExtension, type Content } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
 import StarterKit from '@tiptap/starter-kit';
+import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
+import type { EditorView } from '@tiptap/pm/view';
 import { convertBlockContentToHTML } from '../../../formatting/src/blocknoteUtils';
 import type {
   TicketMobileEditorCommand,
   TicketMobileEditorInitPayload,
+  TicketMobileEditorMentionPayload,
   TicketMobileEditorNativeToWebMessage,
   TicketMobileEditorRequest,
   TicketMobileEditorWebToNativeMessage,
@@ -28,6 +31,60 @@ const blockStateTypes = new Set([
   'blockquote',
   'code_block',
 ]);
+
+const MobileMentionNode = Node.create({
+  name: 'mention',
+  group: 'inline',
+  inline: true,
+  selectable: false,
+  atom: true,
+
+  addAttributes() {
+    return {
+      userId: { default: '' },
+      username: { default: '' },
+      displayName: { default: 'Unknown' },
+    };
+  },
+
+  parseHTML() {
+    return [{
+      tag: 'span[data-mention]',
+      getAttrs(node) {
+        const el = node as HTMLElement;
+        return {
+          userId: el.getAttribute('data-user-id') || '',
+          username: el.getAttribute('data-username') || '',
+          displayName: el.textContent?.replace(/^@/, '') || 'Unknown',
+        };
+      },
+    }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    const { userId, username, displayName } = HTMLAttributes;
+    const displayText = username ? `@${username}` : `@${displayName}`;
+    return [
+      'span',
+      mergeAttributes({
+        'data-mention': '',
+        'data-user-id': userId,
+        'data-username': username,
+        class: 'mention-badge',
+      }),
+      displayText,
+    ];
+  },
+});
+
+const MENTION_PLUGIN_KEY = new PluginKey('mobileMentionSuggestion');
+
+type MentionQueryState = {
+  active: boolean;
+  query: string;
+  from: number;
+  to: number;
+} | null;
 
 type TimerId = ReturnType<typeof setTimeout>;
 
@@ -56,6 +113,16 @@ export class TicketMobileEditorRuntime {
   private ready = false;
 
   private currentFormat: TicketMobileRichTextFormat = 'blocknote';
+
+  private imageAuth: { baseUrl: string; apiKey: string } | null = null;
+
+  private imageObserver: MutationObserver | null = null;
+
+  private resizeObserver: ResizeObserver | null = null;
+
+  private pendingImageRewrites = new Set<string>();
+
+  private lastMentionQuery: string | null = null;
 
   constructor(options: TicketMobileEditorRuntimeOptions) {
     const timerHost = globalThis as typeof globalThis & {
@@ -86,6 +153,9 @@ export class TicketMobileEditorRuntime {
       case 'request':
         this.handleRequest(message.payload.requestId, message.payload.request);
         break;
+      case 'image-data':
+        this.applyImageData(message.payload.src, message.payload.dataUri);
+        break;
     }
 
     return message;
@@ -93,6 +163,8 @@ export class TicketMobileEditorRuntime {
 
   destroy(): void {
     this.clearContentChangeTimer();
+    this.stopImageObserver();
+    this.stopResizeObserver();
     this.ready = false;
     this.editor?.destroy();
     this.editor = null;
@@ -127,7 +199,9 @@ export class TicketMobileEditorRuntime {
           Image.configure({
             inline: false,
             allowBase64: false,
-          }),
+          }) as AnyExtension,
+          MobileMentionNode,
+          this.createMentionSuggestionExtension(),
         ],
         content: initialContent,
         editorProps: {
@@ -177,6 +251,11 @@ export class TicketMobileEditorRuntime {
     }
 
     this.ready = true;
+
+    if (payload.imageAuth) {
+      this.imageAuth = payload.imageAuth;
+    }
+
     this.emitMessage({
       type: 'editor-ready',
       payload: {
@@ -185,6 +264,10 @@ export class TicketMobileEditorRuntime {
       },
     });
     this.emitStateChange();
+    this.emitContentHeight();
+    this.rewriteImageUrls();
+    this.startImageObserver();
+    this.startResizeObserver();
   }
 
   private executeCommand(command: TicketMobileEditorCommand, value?: unknown): boolean {
@@ -237,6 +320,29 @@ export class TicketMobileEditorRuntime {
         return this.runEditableCommand(editor, (currentEditor) =>
           currentEditor.chain().focus().redo().run()
         );
+      case 'insert-mention': {
+        if (!this.isValidMentionPayload(value)) {
+          this.emitError('invalid-command', 'insert-mention requires a mention payload');
+          return false;
+        }
+        return this.runEditableCommand(editor, (currentEditor) =>
+          currentEditor.chain()
+            .focus()
+            .deleteRange({ from: value.from, to: value.to })
+            .insertContent([
+              {
+                type: 'mention',
+                attrs: {
+                  userId: value.userId,
+                  username: value.username,
+                  displayName: value.displayName,
+                },
+              },
+              { type: 'text', text: ' ' },
+            ])
+            .run()
+        );
+      }
       default:
         this.emitError('unknown-command', `Unsupported editor command: ${String(command)}`);
         return false;
@@ -290,6 +396,7 @@ export class TicketMobileEditorRuntime {
     const nextContent = this.toEditorContent(nextDocument);
     editor.commands.setContent(nextContent, { emitUpdate: true });
     this.emitStateChange();
+    this.rewriteImageUrls();
     return true;
   }
 
@@ -363,6 +470,7 @@ export class TicketMobileEditorRuntime {
         json: this.getNormalizedJsonValue(),
       },
     });
+    this.emitContentHeight();
   }
 
   private clearContentChangeTimer(): void {
@@ -372,6 +480,26 @@ export class TicketMobileEditorRuntime {
 
     this.clearTimeoutFn(this.contentChangeTimer);
     this.contentChangeTimer = null;
+  }
+
+  private emitContentHeight(): void {
+    // Temporarily remove min-height from the element, body, and html so
+    // scrollHeight reflects actual content rather than the WebView viewport.
+    const doc = this.element.ownerDocument;
+    const prevEl = this.element.style.minHeight;
+    const prevBody = doc.body.style.minHeight;
+    const prevHtml = doc.documentElement.style.minHeight;
+    this.element.style.minHeight = '0';
+    doc.body.style.minHeight = '0';
+    doc.documentElement.style.minHeight = '0';
+    const height = this.element.scrollHeight;
+    this.element.style.minHeight = prevEl;
+    doc.body.style.minHeight = prevBody;
+    doc.documentElement.style.minHeight = prevHtml;
+    this.emitMessage({
+      type: 'content-height',
+      payload: { height },
+    });
   }
 
   private emitError(code: string, message: string): void {
@@ -385,6 +513,10 @@ export class TicketMobileEditorRuntime {
   }
 
   private toEditorContent(document: TicketMobileRichTextDocument): Content {
+    if (document.sourceFormat === 'empty') {
+      return null;
+    }
+
     if (document.format === 'prosemirror') {
       return document.content as Content;
     }
@@ -450,5 +582,187 @@ export class TicketMobileEditorRuntime {
 
     const candidate = value as { type?: unknown; content?: unknown };
     return candidate.type === 'doc' && Array.isArray(candidate.content);
+  }
+
+  // --- Authenticated image URL rewriting ---
+
+  private rewriteImageUrls(): void {
+    if (!this.imageAuth) {
+      return;
+    }
+
+    const images = this.element.querySelectorAll('img[src]');
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i] as HTMLImageElement;
+      this.rewriteSingleImage(img);
+    }
+  }
+
+  private rewriteSingleImage(img: HTMLImageElement): void {
+    const src = img.getAttribute('src');
+    if (!src || !this.imageAuth) {
+      return;
+    }
+
+    // Only rewrite relative /api/documents/ URLs — skip already-rewritten data: URLs and external URLs
+    if (!src.startsWith('/api/documents/')) {
+      return;
+    }
+
+    // Avoid duplicate requests for the same src
+    if (this.pendingImageRewrites.has(src)) {
+      return;
+    }
+
+    this.pendingImageRewrites.add(src);
+
+    // Ask React Native to fetch the image (bypasses CORS)
+    this.emitMessage({
+      type: 'image-request',
+      payload: { src },
+    });
+  }
+
+  private applyImageData(src: string, dataUri: string): void {
+    this.pendingImageRewrites.delete(src);
+
+    const allImages = this.element.querySelectorAll('img[src]');
+    for (let i = 0; i < allImages.length; i++) {
+      const img = allImages[i] as HTMLImageElement;
+      if (img.getAttribute('src') === src) {
+        img.src = dataUri;
+        // Wait for image decode + layout before re-measuring height
+        img.addEventListener('load', () => {
+          requestAnimationFrame(() => {
+            this.emitContentHeight();
+          });
+        }, { once: true });
+      }
+    }
+  }
+
+  private startImageObserver(): void {
+    this.stopImageObserver();
+    if (!this.imageAuth) {
+      return;
+    }
+
+    this.imageObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (let i = 0; i < mutation.addedNodes.length; i++) {
+          const node = mutation.addedNodes[i];
+          if (node instanceof HTMLImageElement) {
+            this.rewriteSingleImage(node);
+          } else if (node instanceof HTMLElement) {
+            const images = node.querySelectorAll('img[src]');
+            for (let j = 0; j < images.length; j++) {
+              this.rewriteSingleImage(images[j] as HTMLImageElement);
+            }
+          }
+        }
+      }
+    });
+
+    this.imageObserver.observe(this.element, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  private stopImageObserver(): void {
+    this.imageObserver?.disconnect();
+    this.imageObserver = null;
+  }
+
+  private startResizeObserver(): void {
+    this.stopResizeObserver();
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    this.resizeObserver = new ResizeObserver(() => {
+      if (this.ready) {
+        this.emitContentHeight();
+      }
+    });
+    this.resizeObserver.observe(this.element);
+  }
+
+  private stopResizeObserver(): void {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+  }
+
+  // --- Mention suggestion support ---
+
+  private createMentionSuggestionExtension(): AnyExtension {
+    const runtime = this;
+    return Extension.create({
+      name: 'mobileMentionSuggestion',
+      addProseMirrorPlugins() {
+        return [
+          new Plugin({
+            key: MENTION_PLUGIN_KEY,
+            state: {
+              init: (): MentionQueryState => null,
+              apply(_tr: Transaction, _prev: MentionQueryState, _oldState: EditorState, newState: EditorState): MentionQueryState {
+                const { selection } = newState;
+                if (!selection.empty) {
+                  return null;
+                }
+
+                const pos = selection.$head;
+                const textBefore = pos.parent.textBetween(0, pos.parentOffset, undefined, '\ufffc');
+                const match = textBefore.match(/(?:^|\s)@([a-zA-Z0-9_ ]{0,30})$/);
+                if (!match) {
+                  return null;
+                }
+
+                const query = match[1];
+                const matchStart = match[0].startsWith(' ') ? match.index! + 1 : match.index!;
+                return {
+                  active: true,
+                  query,
+                  from: pos.start() + matchStart,
+                  to: pos.start() + pos.parentOffset,
+                };
+              },
+            },
+            view() {
+              return {
+                update(view: EditorView) {
+                  const state = MENTION_PLUGIN_KEY.getState(view.state) as MentionQueryState;
+                  runtime.emitMentionQuery(state);
+                },
+              };
+            },
+          }),
+        ];
+      },
+    }) as AnyExtension;
+  }
+
+  private emitMentionQuery(state: MentionQueryState): void {
+    const serialized = state ? JSON.stringify(state) : null;
+    if (serialized === this.lastMentionQuery) {
+      return;
+    }
+    this.lastMentionQuery = serialized;
+    this.emitMessage({
+      type: 'mention-query',
+      payload: state ?? { active: false, query: '', from: 0, to: 0 },
+    });
+  }
+
+  private isValidMentionPayload(value: unknown): value is TicketMobileEditorMentionPayload {
+    if (!value || typeof value !== 'object') {
+      return false;
+    }
+    const v = value as Record<string, unknown>;
+    return typeof v.userId === 'string'
+      && typeof v.username === 'string'
+      && typeof v.displayName === 'string'
+      && typeof v.from === 'number'
+      && typeof v.to === 'number';
   }
 }

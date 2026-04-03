@@ -2,24 +2,20 @@
   "name": "@alga-psa/reference-data",
   "version": "0.1.0",
   "private": true,
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.mjs"
     },
     "./actions": {
       "types": "./dist/actions/index.d.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "import": "./dist/actions/index.mjs"
     },
     "./components": {
       "types": "./dist/components/index.d.ts",
-      "import": "./dist/components/index.mjs",
-      "require": "./dist/components/index.js"
+      "import": "./dist/components/index.mjs"
     }
   },
   "scripts": {
@@ -27,6 +23,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/shared": "*",

@@ -1,0 +1,856 @@
+{
+  "common": {
+    "actions": {
+      "back": "Retour",
+      "cancel": "Annuler",
+      "close": "Fermer",
+      "continue": "Continuer",
+      "finish": "Terminer",
+      "invite": "Inviter",
+      "next": "Suivant",
+      "retry": "Réessayer",
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "skip": "Passer",
+      "submit": "Envoyer"
+    },
+    "states": {
+      "loading": "Chargement...",
+      "optional": "Optionnel",
+      "required": "Obligatoire"
+    },
+    "no": "Non",
+    "yes": "Oui"
+  },
+  "onboardingProvider": {
+    "title": "Fournisseur d'intégration",
+    "description": "Portail d'intégration au niveau de la route qui vérifie l'état d'avancement du tenant et redirige les tenants incomplets vers l'assistant"
+  },
+  "onboardingWizard": {
+    "title": "Assistant d'intégration",
+    "description": "Interface d'assistant pour la configuration du tenant MSP avec présentation en dialogue/page complète, progression, validation et flux de finalisation",
+    "steps": {
+      "clientInfo": "Informations client",
+      "teamMembers": "Membres de l'équipe",
+      "addClient": "Ajouter un client",
+      "clientContact": "Contact client",
+      "billing": "Facturation",
+      "ticketing": "Gestion des tickets"
+    },
+    "errors": {
+      "saveClientInfo": "Impossible d'enregistrer les informations client",
+      "addTeamMembers": "Impossible d'ajouter les membres de l'équipe",
+      "saveClient": "Impossible d'enregistrer le client",
+      "addContact": "Impossible d'ajouter le contact",
+      "setupBilling": "Impossible de configurer la facturation",
+      "unknown": "Erreur inconnue",
+      "validationFailed": "La validation a échoué",
+      "configureTicketing": "Impossible de configurer la gestion des tickets",
+      "completeOnboarding": "Impossible de terminer l'intégration"
+    },
+    "debug": {
+      "title": "Informations de débogage :",
+      "currentStep": "Étape actuelle : {{stepIndex}} ({{stepName}})",
+      "isValid": "Valide : {{value}}",
+      "isRequired": "Obligatoire : {{value}}",
+      "viewData": "Voir les données"
+    },
+    "actions": {
+      "finish": "Terminer la configuration",
+      "saving": "Enregistrement...",
+      "completing": "Finalisation..."
+    },
+    "shell": {
+      "title": "Configurez votre système",
+      "description": "Configurons votre espace de travail et préparons-le à l'utilisation."
+    }
+  },
+  "addClientStep": {
+    "title": "Étape d'ajout d'un client",
+    "description": "Étape de l'assistant pour créer ou revisiter l'enregistrement client principal pendant l'intégration",
+    "validation": {
+      "email": {
+        "invalid": "Veuillez saisir une adresse e-mail valide"
+      },
+      "website": {
+        "example": "Veuillez saisir un site web valide (ex. : example.com)",
+        "format": "Veuillez saisir un format de site web valide"
+      },
+      "phone": {
+        "tooShort": "Le numéro de téléphone semble trop court",
+        "tooLong": "Le numéro de téléphone semble trop long",
+        "invalidCharacters": "Le numéro de téléphone contient des caractères non valides"
+      }
+    },
+    "header": {
+      "title": "Ajoutez votre premier client",
+      "description": "Ajoutons votre premier client pour commencer. Vous pouvez ignorer cette étape et ajouter des clients plus tard."
+    },
+    "created": {
+      "title": "Client créé avec succès !",
+      "description": "{{clientName}} a été ajouté à votre liste de clients."
+    },
+    "fields": {
+      "clientName": {
+        "label": "Nom du client",
+        "placeholder": "Exemple Corp"
+      },
+      "clientEmail": {
+        "label": "E-mail du client",
+        "placeholder": "contact@example.com"
+      },
+      "clientPhone": {
+        "label": "Numéro de téléphone",
+        "placeholder": "+1 (555) 123-4567"
+      },
+      "website": {
+        "label": "Site web",
+        "placeholder": "https://example.com"
+      }
+    },
+    "common": {
+      "noteLabel": "Note :",
+      "optionalLabel": "Optionnel :"
+    },
+    "note": {
+      "defaultTaxSettings": "Le client sera créé avec les paramètres fiscaux par défaut non imposables (0 %). Vous pourrez configurer les taux de taxe plus tard dans les paramètres client.",
+      "optional": "Vous pouvez ignorer cette étape et ajouter des clients plus tard depuis votre tableau de bord."
+    }
+  },
+  "billingSetupStep": {
+    "title": "Étape de configuration de la facturation",
+    "description": "Étape de l'assistant pour définir le service initial, la tarification, le mode de facturation et les valeurs par défaut des lignes de contrat",
+    "serviceTypes": {
+      "toasts": {
+        "deleted": "Type de service supprimé avec succès"
+      },
+      "errors": {
+        "delete": "Impossible de supprimer le type de service",
+        "nameRequired": "Le nom du type de service est requis",
+        "duplicate": "Un type de service portant ce nom existe déjà",
+        "create": "Impossible de créer le type de service",
+        "createRetry": "Impossible de créer le type de service. Veuillez réessayer."
+      },
+      "actions": {
+        "manage": "Gérer les types de service",
+        "import": "Importer depuis le standard",
+        "add": "Ajouter un nouveau",
+        "confirmAdd": "Ajouter le type de service"
+      },
+      "noteLabel": "Note :",
+      "description": "Les types de service sont des étiquettes taxonomiques pour l'organisation et le filtrage. Le mode de facturation est configuré séparément sur chaque service.",
+      "addForm": {
+        "title": "Ajouter un nouveau type de service",
+        "fields": {
+          "name": {
+            "label": "Nom *",
+            "placeholder": "ex. : Support Premium"
+          },
+          "description": {
+            "label": "Description",
+            "placeholder": "Décrivez ce type de service..."
+          },
+          "billingMethod": {
+            "label": "Méthode de facturation *"
+          },
+          "displayOrder": {
+            "label": "Ordre d'affichage",
+            "placeholder": "Laisser vide pour générer automatiquement",
+            "help": "Contrôle l'ordre dans lequel les types de service apparaissent dans les menus déroulants de la plateforme. Les nombres les plus faibles apparaissent en premier."
+          }
+        }
+      },
+      "import": {
+        "title": "Importer les types de service standard",
+        "description": "Sélectionnez les types de service standard à importer dans votre système :",
+        "success": {
+          "titleOne": "Type de service importé avec succès !",
+          "titleOther": "Types de service importés avec succès !",
+          "description": "{{count}} type{{suffix}} ajouté(s) à votre catalogue.",
+          "skipped": "{{count}} ignoré(s)."
+        },
+        "actions": {
+          "importing": "Importation...",
+          "importSelected": "Importer la sélection ({{count}})"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Nom",
+          "billingMethod": "Méthode de facturation",
+          "order": "Ordre",
+          "actions": "Actions"
+        }
+      },
+      "current": {
+        "title": "Types de service actuels",
+        "removeTitle": "Supprimer le type de service"
+      }
+    },
+    "header": {
+      "title": "Créez votre premier service",
+      "description": "Ajoutez un service et choisissez comment il doit être facturé. Le type de service identifie la catégorie du service, tandis que le mode de facturation contrôle le comportement tarifaire."
+    },
+    "created": {
+      "title": "Service créé avec succès !",
+      "description": "{{serviceName}} a été ajouté à votre catalogue de services."
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Nom du service *",
+        "placeholder": "Services informatiques gérés"
+      },
+      "serviceDescription": {
+        "label": "Description du service",
+        "placeholder": "Services complets de support et de gestion informatique..."
+      },
+      "serviceType": {
+        "label": "Type de service *",
+        "required": "(Obligatoire)",
+        "emptyPlaceholder": "Créer ou importer des types de service",
+        "placeholder": "Sélectionnez un type de service",
+        "emptyHelp": "Cliquez sur « Gérer les types de service » pour créer ou importer des types de service"
+      },
+      "billingMode": {
+        "label": "Mode de facturation"
+      },
+      "defaultRate": {
+        "label": "Tarif par défaut",
+        "placeholder": "150"
+      }
+    },
+    "billingMethods": {
+      "fixed": "Forfait",
+      "hourly": "Horaire",
+      "usageBased": "Basé sur l'utilisation",
+      "usage": "Utilisation"
+    },
+    "validation": {
+      "actionRequiredLabel": "Action requise :",
+      "actionRequiredDescription": "Cliquez sur « Gérer les types de service » ci-dessus pour créer ou importer au moins un type de service avant de créer un service."
+    }
+  },
+  "clientContactStep": {
+    "title": "Étape du contact client",
+    "description": "Étape de l'assistant pour recueillir les coordonnées du contact principal du client",
+    "validation": {
+      "email": {
+        "invalid": "Veuillez saisir une adresse e-mail valide"
+      }
+    },
+    "empty": {
+      "title": "Contact client",
+      "description": "Aucune information client n'a été fournie. Ignorez cette étape ou revenez en arrière pour ajouter d'abord un client."
+    },
+    "header": {
+      "title": "Ajouter un contact pour {{clientName}}",
+      "clientFallback": "Client",
+      "description": "Ajoutez une personne de contact principale pour ce client."
+    },
+    "created": {
+      "title": "Contact créé avec succès !",
+      "description": "{{contactName}} a été ajouté à {{clientName}}.",
+      "contactFallback": "Le contact",
+      "clientFallback": "le client"
+    },
+    "fields": {
+      "contactName": {
+        "label": "Nom du contact",
+        "placeholder": "John Smith"
+      },
+      "contactEmail": {
+        "label": "E-mail du contact",
+        "placeholder": "john.smith@example.com"
+      },
+      "contactRole": {
+        "label": "Rôle/Titre",
+        "placeholder": "Responsable informatique"
+      }
+    },
+    "common": {
+      "optionalLabel": "Optionnel :"
+    },
+    "footer": {
+      "optional": "Vous pouvez ignorer cette étape et ajouter des contacts plus tard depuis le profil du client."
+    }
+  },
+  "clientInfoStep": {
+    "title": "Étape des informations client",
+    "description": "Étape de l'assistant pour collecter l'identité de l'opérateur MSP, les informations de l'entreprise et les bases du client initial",
+    "revisit": {
+      "title": "Informations sur l'entreprise",
+      "description": "Vérifiez ou mettez à jour les informations de votre entreprise.",
+      "fields": {
+        "companyName": {
+          "label": "Nom de l'entreprise",
+          "placeholder": "Acme IT Solutions"
+        }
+      },
+      "note": "Vous pouvez utiliser cet assistant pour reconfigurer les paramètres de votre espace de travail à tout moment."
+    },
+    "common": {
+      "noteLabel": "Note :"
+    },
+    "header": {
+      "title": "Informations client",
+      "description": "Commençons par configurer le profil de votre client."
+    },
+    "fields": {
+      "firstName": {
+        "label": "Prénom",
+        "placeholder": "John"
+      },
+      "lastName": {
+        "label": "Nom",
+        "placeholder": "Doe"
+      },
+      "companyName": {
+        "label": "Nom de l'entreprise",
+        "placeholder": "Acme IT Solutions"
+      },
+      "email": {
+        "label": "Adresse e-mail",
+        "placeholder": "john@acmeit.com",
+        "help": "Cela sera utilisé pour vous connecter à votre compte."
+      }
+    },
+    "password": {
+      "resetRequired": {
+        "title": "Réinitialisation du mot de passe requise",
+        "description": "Vous devez définir un nouveau mot de passe pour continuer le processus de configuration. Cette étape ne peut pas être ignorée."
+      },
+      "title": "Définissez votre mot de passe",
+      "description": "Veuillez définir un nouveau mot de passe pour remplacer votre mot de passe temporaire.",
+      "fields": {
+        "newPassword": {
+          "label": "Nouveau mot de passe",
+          "placeholder": "Créez un mot de passe fort"
+        },
+        "confirmPassword": {
+          "label": "Confirmer le mot de passe",
+          "placeholder": "Saisissez à nouveau votre mot de passe",
+          "match": "Les mots de passe correspondent",
+          "mismatch": "Les mots de passe ne correspondent pas"
+        }
+      },
+      "requirements": {
+        "title": "Le mot de passe doit contenir :",
+        "minLength": "Au moins 8 caractères",
+        "uppercase": "Une lettre majuscule",
+        "lowercase": "Une lettre minuscule",
+        "number": "Un chiffre",
+        "specialCharacter": "Un caractère spécial"
+      },
+      "strength": {
+        "label": "Robustesse du mot de passe : {{strength}}",
+        "strong": "Fort",
+        "medium": "Moyen",
+        "weak": "Faible"
+      }
+    },
+    "footer": {
+      "note": "Tous les champs de cette page sont obligatoires pour continuer."
+    }
+  },
+  "teamMembersStep": {
+    "title": "Étape des membres de l'équipe",
+    "description": "Étape de l'assistant pour inviter les membres initiaux de l'équipe et attribuer les rôles d'intégration",
+    "license": {
+      "limitReached": "Limite de licence atteinte ({{current}}/{{limit}}). Contactez le support pour augmenter votre limite.",
+      "remaining": {
+        "one": "Vous pouvez ajouter 1 membre d'équipe supplémentaire.",
+        "other": "Vous pouvez ajouter {{count}} membres d'équipe supplémentaires."
+      },
+      "summary": {
+        "noLimit": "Utilisateurs : {{count}} (sans limite)",
+        "limited": "Utilisateurs : {{current}}/{{limit}}"
+      }
+    },
+    "errors": {
+      "requiredFields": "Veuillez remplir tous les champs obligatoires, y compris le mot de passe",
+      "invalidEmail": "Veuillez saisir une adresse e-mail valide",
+      "passwordLength": "Le mot de passe doit contenir au moins 8 caractères",
+      "saveFailed": "Impossible d'enregistrer le membre de l'équipe",
+      "generic": "Une erreur s'est produite"
+    },
+    "header": {
+      "title": "Inviter des membres de l'équipe",
+      "description": "Ajoutez les membres de votre équipe pour qu'ils puissent commencer. Vous pouvez ignorer cette étape et les ajouter plus tard."
+    },
+    "created": {
+      "titleOne": "1 membre de l'équipe créé avec succès !",
+      "titleOther": "{{count}} membres de l'équipe créés avec succès !",
+      "users": "Utilisateurs créés : {{users}}"
+    },
+    "member": {
+      "title": "Membre de l'équipe {{index}}",
+      "createdBadge": "Créé",
+      "actions": {
+        "saving": "Enregistrement...",
+        "save": "Enregistrer"
+      }
+    },
+    "fields": {
+      "firstName": {
+        "label": "Prénom",
+        "placeholder": "Jane"
+      },
+      "lastName": {
+        "label": "Nom",
+        "placeholder": "Smith"
+      },
+      "email": {
+        "label": "E-mail",
+        "placeholder": "jane@client.com"
+      },
+      "role": {
+        "label": "Rôle"
+      },
+      "password": {
+        "label": "Mot de passe temporaire",
+        "placeholder": "Définir un mot de passe temporaire",
+        "help": "L'utilisateur devra changer ce mot de passe lors de sa première connexion"
+      }
+    },
+    "roles": {
+      "admin": "Administrateur",
+      "technician": "Technicien",
+      "manager": "Responsable",
+      "user": "Utilisateur"
+    },
+    "actions": {
+      "saveCurrentFirst": "Enregistrer d'abord le membre d'équipe actuel",
+      "addAnother": "Ajouter un autre membre d'équipe"
+    },
+    "unsaved": {
+      "title": "Membre d'équipe non enregistré",
+      "description": "Veuillez enregistrer le membre d'équipe actuel avant d'en ajouter un nouveau."
+    },
+    "limitReached": {
+      "title": "Limite d'utilisateurs atteinte",
+      "description": "Vous avez atteint le nombre maximal d'utilisateurs de votre forfait actuel. Contactez le support pour augmenter votre limite."
+    },
+    "optional": {
+      "label": "Optionnel :",
+      "description": "Vous pouvez ignorer cette étape et inviter des membres de l'équipe plus tard depuis la page des paramètres."
+    }
+  },
+  "ticketingConfigStep": {
+    "title": "Étape de configuration de la gestion des tickets",
+    "description": "Étape de l'assistant pour configurer les tableaux, statuts, priorités, catégories et valeurs par défaut de SLA pendant l'intégration",
+    "boards": {
+      "toasts": {
+        "firstDefaultSet": "Le premier tableau a été défini automatiquement comme tableau par défaut",
+        "deleted": "Tableau supprimé avec succès",
+        "defaultUpdated": "Tableau par défaut mis à jour avec succès"
+      },
+      "errors": {
+        "import": "Impossible d'importer les tableaux",
+        "delete": "Impossible de supprimer le tableau.",
+        "defaultRequired": "Au moins un tableau doit être défini par défaut",
+        "defaultUpdate": "Impossible de définir le tableau par défaut",
+        "duplicate": "Le tableau existe déjà",
+        "create": "Impossible de créer le tableau. Veuillez réessayer."
+      },
+      "delete": {
+        "fallbackEntity": "ce tableau"
+      },
+      "title": "Tableaux",
+      "description": "Les tableaux aident à organiser les tickets par département, équipe ou type de flux de travail. Lorsque les clients créent des tickets via le portail client, ils seront automatiquement affectés au tableau marqué comme défaut.",
+      "tip": "Cliquez sur l'étoile dans la colonne Par défaut pour modifier le tableau par défaut.",
+      "actions": {
+        "import": "Importer depuis le standard",
+        "add": "Ajouter un nouveau tableau",
+        "confirmAdd": "Ajouter le tableau"
+      },
+      "addForm": {
+        "title": "Ajouter un nouveau tableau",
+        "fields": {
+          "name": {
+            "label": "Nom du tableau *",
+            "placeholder": "Saisissez le nom du tableau"
+          },
+          "description": {
+            "label": "Description",
+            "placeholder": "Saisissez une description"
+          },
+          "displayOrder": {
+            "label": "Ordre d'affichage",
+            "placeholder": "Laisser vide pour générer automatiquement",
+            "help": "Contrôle l'ordre dans lequel les tableaux apparaissent dans les menus déroulants de la plateforme. Les nombres les plus faibles apparaissent en premier."
+          },
+          "itil": {
+            "label": "Rendre ce tableau conforme ITIL"
+          }
+        },
+        "configurationTitle": "Configuration du tableau"
+      },
+      "import": {
+        "title": "Importer les tableaux standard",
+        "success": {
+          "one": "1 tableau importé avec succès.",
+          "other": "{{count}} tableaux importés avec succès."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Nom",
+          "default": "Par défaut",
+          "order": "Ordre",
+          "itil": "ITIL"
+        }
+      },
+      "current": {
+        "title": "Tableaux actuels",
+        "defaultTitle": "Tableau par défaut",
+        "setDefaultTitle": "Définir comme tableau par défaut",
+        "removeTitle": "Supprimer le tableau"
+      }
+    },
+    "categories": {
+      "import": {
+        "unknownParent": "Parent inconnu",
+        "title": "Importer les catégories standard",
+        "success": {
+          "one": "1 catégorie importée avec succès.",
+          "other": "{{count}} catégories importées avec succès."
+        },
+        "targetBoard": {
+          "label": "Tableau cible *",
+          "placeholder": "Sélectionnez un tableau pour les catégories importées",
+          "help": "Toutes les catégories importées seront assignées à ce tableau"
+        },
+        "parentAutoSelectTitle": "La catégorie parente sera sélectionnée automatiquement"
+      },
+      "errors": {
+        "missingParents": "Impossible d'importer les sous-catégories sans leurs catégories parentes. Veuillez également sélectionner : {{parents}}",
+        "duplicate": "La catégorie existe déjà dans ce tableau",
+        "create": "Impossible de créer la catégorie. Veuillez réessayer.",
+        "delete": "Impossible de supprimer la catégorie."
+      },
+      "delete": {
+        "fallbackEntity": "cette catégorie"
+      },
+      "toasts": {
+        "deleted": "Catégorie supprimée avec succès"
+      },
+      "title": "Catégories",
+      "requiresBoard": "(tableau requis)",
+      "description": "Les catégories aident à organiser les tickets par type de problème ou de demande. Vous pouvez créer des catégories parentes avec des sous-catégories pour une meilleure organisation. Les exemples incluent le support technique (avec des sous-catégories comme matériel, logiciel, réseau) ou les demandes de service.",
+      "actions": {
+        "import": "Importer depuis le standard",
+        "add": "Ajouter une nouvelle catégorie",
+        "confirmAdd": "Ajouter la catégorie"
+      },
+      "addForm": {
+        "title": "Ajouter une nouvelle catégorie",
+        "fields": {
+          "name": {
+            "label": "Nom de la catégorie *",
+            "placeholder": "Saisissez le nom de la catégorie"
+          },
+          "board": {
+            "label": "Tableau cible *",
+            "placeholder": "Sélectionnez un tableau"
+          },
+          "parent": {
+            "label": "Catégorie parente",
+            "noneOption": "Aucune (catégorie de niveau supérieur)",
+            "placeholder": "Sélectionnez une catégorie parente"
+          },
+          "displayOrder": {
+            "label": "Ordre d'affichage",
+            "placeholder": "Laisser vide pour générer automatiquement",
+            "help": "Contrôle l'ordre dans lequel les catégories apparaissent dans les menus déroulants de la plateforme. Les nombres les plus faibles apparaissent en premier."
+          }
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Nom",
+          "order": "Ordre"
+        }
+      },
+      "current": {
+        "title": "Catégories actuelles ({{count}} au total)",
+        "removeTitle": "Supprimer la catégorie"
+      }
+    },
+    "statuses": {
+      "toasts": {
+        "firstDefaultSet": "Le premier statut ouvert a été défini automatiquement comme valeur par défaut",
+        "deleted": "Statut supprimé avec succès",
+        "defaultUpdated": "Statut par défaut mis à jour avec succès"
+      },
+      "delete": {
+        "fallbackEntity": "ce statut"
+      },
+      "errors": {
+        "delete": "Impossible de supprimer le statut.",
+        "defaultRequired": "Au moins un statut doit être défini par défaut",
+        "closedCannotBeDefault": "Les statuts fermés ne peuvent pas être définis par défaut",
+        "selectBoardForDefault": "Sélectionnez ou créez un tableau avant de modifier les statuts par défaut.",
+        "defaultUpdate": "Impossible de définir le statut par défaut",
+        "duplicate": "Le statut existe déjà",
+        "selectBoardForAdd": "Sélectionnez ou créez un tableau avant d'ajouter des statuts.",
+        "create": "Impossible de créer le statut. Veuillez réessayer."
+      },
+      "title": "Statuts",
+      "description": "Les statuts sont configurés par tableau. Sélectionnez un tableau ci-dessous pour définir le cycle de vie des tickets sur ce tableau. Le statut ouvert par défaut du tableau sélectionné est automatiquement attribué aux nouveaux tickets créés sur ce tableau.",
+      "tip": "Les tableaux ne partagent pas leurs statuts. Changez de tableau ici pour examiner ou modifier l'ensemble des statuts de chaque tableau.",
+      "fields": {
+        "board": {
+          "label": "Tableau",
+          "placeholder": "Sélectionnez un tableau"
+        }
+      },
+      "noBoardWarning": "Créez ou importez d'abord un tableau avant de configurer les statuts. Chaque tableau a besoin de son propre statut ouvert par défaut.",
+      "actions": {
+        "import": "Importer depuis le standard",
+        "add": "Ajouter un nouveau statut",
+        "confirmAdd": "Ajouter le statut"
+      },
+      "addForm": {
+        "title": "Ajouter un nouveau statut",
+        "fields": {
+          "name": {
+            "label": "Nom du statut *",
+            "placeholder": "Saisissez le nom du statut"
+          },
+          "displayOrder": {
+            "label": "Ordre d'affichage",
+            "placeholder": "Laisser vide pour générer automatiquement",
+            "help": "Contrôle l'ordre dans lequel les statuts apparaissent dans les menus déroulants de la plateforme. Les nombres les plus faibles apparaissent en premier."
+          },
+          "state": {
+            "closedLabel": "Statut fermé",
+            "openLabel": "Statut ouvert",
+            "closedHelp": "Ce statut indique que le ticket est résolu et fermé",
+            "openHelp": "Ce statut indique que le ticket est encore ouvert et nécessite une attention"
+          }
+        }
+      },
+      "import": {
+        "title": "Importer les statuts standard",
+        "targetBoard": "Importation vers {{boardName}}.",
+        "success": {
+          "one": "1 statut importé avec succès.",
+          "other": "{{count}} statuts importés avec succès."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Nom",
+          "type": "Type",
+          "default": "Par défaut",
+          "order": "Ordre"
+        }
+      },
+      "types": {
+        "closed": "Fermé",
+        "open": "Ouvert"
+      },
+      "current": {
+        "title": "Statuts actuels",
+        "titleWithBoard": "Statuts actuels pour {{boardName}}",
+        "defaultTitle": "Statut par défaut",
+        "setDefaultTitle": "Définir comme statut par défaut",
+        "removeTitle": "Supprimer le statut"
+      },
+      "empty": {
+        "forBoard": "{{boardName}} n'a encore aucun statut. Ajoutez ou importez au moins un statut ouvert par défaut avant de terminer l'intégration.",
+        "noBoardSelected": "Sélectionnez un tableau pour configurer ses statuts."
+      }
+    },
+    "priorities": {
+      "errors": {
+        "duplicate": "La priorité existe déjà",
+        "missingSession": "Session utilisateur introuvable. Veuillez actualiser et réessayer.",
+        "create": "Impossible de créer la priorité. Veuillez réessayer.",
+        "delete": "Impossible de supprimer la priorité."
+      },
+      "delete": {
+        "fallbackEntity": "cette priorité"
+      },
+      "toasts": {
+        "deleted": "Priorité supprimée avec succès"
+      },
+      "title": "Priorités",
+      "description": "Les priorités aident à déterminer l'urgence des tickets et des accords de niveau de service (SLA). Chaque priorité a une couleur pour une identification visuelle rapide. Les priorités typiques incluent Critique (rouge), Élevée (orange), Moyenne (bleu) et Faible (vert).",
+      "actions": {
+        "import": "Importer depuis le standard",
+        "add": "Ajouter une nouvelle priorité",
+        "confirmAdd": "Ajouter la priorité"
+      },
+      "addForm": {
+        "title": "Ajouter une nouvelle priorité",
+        "fields": {
+          "name": {
+            "label": "Nom de la priorité *",
+            "placeholder": "Saisissez le nom de la priorité"
+          },
+          "displayOrder": {
+            "label": "Ordre d'affichage",
+            "placeholder": "Laisser vide pour générer automatiquement",
+            "help": "Contrôle l'ordre dans lequel les priorités apparaissent dans les menus déroulants de la plateforme. Les nombres les plus faibles apparaissent en premier."
+          },
+          "color": {
+            "label": "Couleur de la priorité",
+            "choose": "Choisir une couleur"
+          }
+        }
+      },
+      "import": {
+        "title": "Importer les priorités standard",
+        "success": {
+          "one": "1 priorité importée avec succès.",
+          "other": "{{count}} priorités importées avec succès."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Nom",
+          "color": "Couleur",
+          "order": "Ordre"
+        }
+      },
+      "current": {
+        "title": "Priorités actuelles",
+        "removeTitle": "Supprimer la priorité"
+      }
+    },
+    "common": {
+      "errors": {
+        "validateDeletion": "Impossible de valider la suppression. Veuillez réessayer."
+      },
+      "noteLabel": "Note :",
+      "tipLabel": "Astuce :",
+      "actions": {
+        "importing": "Importation...",
+        "importCount": "Importer ({{count}})"
+      },
+      "table": {
+        "actions": "Actions"
+      }
+    },
+    "header": {
+      "title": "Configurer le système de tickets",
+      "description": "Configurez votre système de tickets de support. Importez des configurations standard ou créez les vôtres."
+    },
+    "loading": {
+      "description": "Chargement de la configuration existante..."
+    },
+    "numbering": {
+      "title": "Numérotation des tickets",
+      "description": "Configurez la génération des numéros de ticket. Chaque ticket aura un identifiant unique composé d'un préfixe optionnel et d'un numéro séquentiel avec remplissage de zéros optionnel.",
+      "fields": {
+        "prefix": {
+          "label": "Préfixe du ticket",
+          "placeholder": "TK-",
+          "help": "Optionnel. Laissez vide pour aucun préfixe ou saisissez un préfixe personnalisé (par ex. : \"TK-\", \"TICKET-\")"
+        },
+        "paddingLength": {
+          "label": "Longueur du remplissage",
+          "help": "Nombre minimal total de chiffres. Par exemple, 6 transforme \"1\" en \"000001\""
+        },
+        "startNumber": {
+          "label": "Numéro de départ"
+        }
+      },
+      "example": "Exemple : {{value}}"
+    },
+    "itil": {
+      "actions": {
+        "openReference": "Voir les catégories ITIL et la matrice de priorité"
+      },
+      "title": "Référence des normes ITIL",
+      "categories": {
+        "title": "Catégories et sous-catégories standard ITIL",
+        "hardware": {
+          "title": "Matériel",
+          "server": "• Serveur",
+          "desktopLaptop": "• Poste de travail/ordinateur portable",
+          "networkEquipment": "• Équipement réseau",
+          "printer": "• Imprimante",
+          "storage": "• Stockage",
+          "mobileDevice": "• Appareil mobile"
+        },
+        "software": {
+          "title": "Logiciel",
+          "operatingSystem": "• Système d'exploitation",
+          "businessApplication": "• Application métier",
+          "database": "• Base de données",
+          "emailCollaboration": "• Messagerie/Collaboration",
+          "securitySoftware": "• Logiciel de sécurité",
+          "customApplication": "• Application personnalisée"
+        },
+        "network": {
+          "title": "Réseau",
+          "connectivity": "• Connectivité",
+          "vpn": "• VPN",
+          "wifi": "• Wi-Fi",
+          "internetAccess": "• Accès Internet",
+          "lanWan": "• LAN/WAN",
+          "firewall": "• Pare-feu"
+        },
+        "security": {
+          "title": "Sécurité",
+          "malwareVirus": "• Logiciel malveillant/Virus",
+          "unauthorizedAccess": "• Accès non autorisé",
+          "dataBreach": "• Fuite de données",
+          "phishingSpam": "• Hameçonnage/Spam",
+          "policyViolation": "• Violation de politique",
+          "accountLockout": "• Verrouillage de compte"
+        },
+        "serviceRequest": {
+          "title": "Demande de service",
+          "accessRequest": "• Demande d'accès",
+          "newUserSetup": "• Création d'un nouvel utilisateur",
+          "softwareInstallation": "• Installation de logiciel",
+          "equipmentRequest": "• Demande d'équipement",
+          "informationRequest": "• Demande d'information",
+          "changeRequest": "• Demande de changement"
+        }
+      },
+      "matrix": {
+        "title": "Matrice de priorité ITIL (impact × urgence)",
+        "urgency": {
+          "high": "Élevée",
+          "label": "Urgence",
+          "mediumHigh": "Moyenne-élevée",
+          "medium": "Moyenne",
+          "mediumLow": "Moyenne-faible",
+          "low": "Faible"
+        },
+        "impact": {
+          "high": "Impact élevé (1)",
+          "mediumHigh": "Impact moyen-élevé (2)",
+          "medium": "Impact moyen (3)",
+          "mediumLow": "Impact moyen-faible (4)",
+          "low": "Faible impact (5)"
+        },
+        "priority": {
+          "critical": "Critique (1)",
+          "high": "Élevée (2)",
+          "medium": "Moyenne (3)",
+          "low": "Faible (4)",
+          "planning": "Planification (5)"
+        },
+        "explanation": {
+          "impact": "Impact : combien d'utilisateurs ou de fonctions métier sont affectés ?",
+          "urgency": "Urgence : à quelle vitesse cela doit-il être résolu ?",
+          "priority": "Priorité : calculée automatiquement à partir de la matrice Impact × Urgence ci-dessus."
+        }
+      }
+    },
+    "supportEmail": {
+      "label": "E-mail de support",
+      "placeholder": "support@yourclient.com",
+      "help": "Cette adresse e-mail sera utilisée pour créer des tickets de support. Les e-mails envoyés à cette adresse généreront automatiquement des tickets dans votre système."
+    },
+    "finalRequirement": {
+      "label": "Obligatoire :",
+      "description": "Veuillez configurer au moins un tableau et une priorité pour terminer la configuration. Importez les configurations standard pour mettre rapidement en place votre système de tickets."
+    }
+  }
+}

@@ -9,48 +9,83 @@ import { useSearchParams } from 'next/navigation';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
+function RoleManagementLoading() {
+  const { t } = useTranslation('msp/profile');
+  return <SettingsTabSkeleton title={t('security.tabs.roles', { defaultValue: 'Roles' })} description={t('security.loading.roles', { defaultValue: 'Loading role configuration...' })} />;
+}
+
 // Dynamic imports for heavy settings components
 const RoleManagement = dynamic(() => import('@alga-psa/auth/components/settings/policy/RoleManagement'), {
-  loading: () => <SettingsTabSkeleton title="Role Management" description="Loading role configuration..." />,
+  loading: RoleManagementLoading,
   ssr: false
 });
+
+function PermissionsLoading() {
+  const { t } = useTranslation('msp/profile');
+  return <SettingsTabSkeleton title={t('security.tabs.permissions', { defaultValue: 'Permissions' })} description={t('security.loading.permissions', { defaultValue: 'Loading permissions configuration...' })} showTable={true} showForm={false} />;
+}
 
 const PermissionsMatrix = dynamic(() => import('@alga-psa/auth/components/settings/policy/PermissionsMatrix'), {
-  loading: () => <SettingsTabSkeleton title="Permissions Matrix" description="Loading permissions configuration..." showTable={true} showForm={false} />,
+  loading: PermissionsLoading,
   ssr: false
 });
+
+function UserRolesLoading() {
+  const { t } = useTranslation('msp/profile');
+  return <SettingsTabSkeleton title={t('security.tabs.userRoles', { defaultValue: 'User Roles' })} description={t('security.loading.userRoles', { defaultValue: 'Loading user role configuration...' })} showDropdowns={true} />;
+}
 
 const UserRoleAssignment = dynamic(() => import('./UserRoleAssignment'), {
-  loading: () => <SettingsTabSkeleton title="User Role Assignment" description="Loading user role configuration..." showDropdowns={true} />,
+  loading: UserRolesLoading,
   ssr: false
 });
+
+function PoliciesLoading() {
+  const { t } = useTranslation('msp/profile');
+  return <SettingsTabSkeleton title={t('security.tabs.policies', { defaultValue: 'Policies' })} description={t('security.loading.policies', { defaultValue: 'Loading policy configuration...' })} showTextArea={true} showTable={true} noCard={true} />;
+}
 
 const PolicyManagement = dynamic(() => import('@alga-psa/auth/components/settings/policy/PolicyManagement'), {
-  loading: () => <SettingsTabSkeleton title="Policy Management" description="Loading policy configuration..." showTextArea={true} showTable={true} noCard={true} />,
+  loading: PoliciesLoading,
   ssr: false
 });
 
+function ApiKeysLoading() {
+  const { t } = useTranslation('msp/profile');
+  return <SettingsTabSkeleton title={t('security.tabs.apiKeys', { defaultValue: 'API Keys' })} description={t('security.loading.apiKeys', { defaultValue: 'Loading API key configuration...' })} />;
+}
+
 const AdminApiKeysSetup = dynamic(() => import('@alga-psa/auth/components/settings/api/AdminApiKeysSetup'), {
-  loading: () => <SettingsTabSkeleton title="API Keys" description="Loading API key configuration..." />,
+  loading: ApiKeysLoading,
   ssr: false
 });
+
+function SsoLoading() {
+  const { t } = useTranslation('msp/profile');
+  return (
+    <SettingsTabSkeleton
+      title={t('security.tabs.sso', { defaultValue: 'Single Sign-On' })}
+      description={t('security.loading.sso', { defaultValue: 'Loading SSO management tools...' })}
+      showTable
+    />
+  );
+}
 
 const SsoBulkAssignment = dynamic(
   () => import('@enterprise/components/settings/security/SsoBulkAssignment'),
   {
-    loading: () => (
-      <SettingsTabSkeleton
-        title="Single Sign-On"
-        description="Loading SSO management tools..."
-        showTable
-      />
-    ),
+    loading: SsoLoading,
     ssr: false,
   },
 );
 
+function SessionsLoading() {
+  const { t } = useTranslation('msp/profile');
+  return <SettingsTabSkeleton title={t('security.tabs.sessions', { defaultValue: 'Sessions' })} description={t('security.loading.sessions', { defaultValue: 'Loading active sessions...' })} showTable={true} />;
+}
+
 const AdminSessionManagement = dynamic(() => import('./AdminSessionManagement'), {
-  loading: () => <SettingsTabSkeleton title="Sessions" description="Loading active sessions..." showTable={true} />,
+  loading: SessionsLoading,
   ssr: false
 });
 
@@ -58,7 +93,7 @@ const SECURITY_TAB_IDS = ['roles', 'sessions', 'single-sign-on', 'permissions', 
 const DEFAULT_SECURITY_TAB = 'roles';
 
 const SecuritySettingsPage = (): React.JSX.Element => {
-  const { t } = useTranslation('msp/settings');
+  const { t } = useTranslation('msp/profile');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
 
@@ -85,63 +120,63 @@ const SecuritySettingsPage = (): React.JSX.Element => {
   const tabContent: TabContent[] = [
     {
       id: 'roles',
-      label: "Roles",
+      label: t('security.tabs.roles', { defaultValue: 'Roles' }),
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Roles" description="Loading role configuration..." />}>
+        <Suspense fallback={<RoleManagementLoading />}>
           <RoleManagement />
         </Suspense>
       ),
     },
     {
       id: 'sessions',
-      label: "Sessions",
+      label: t('security.tabs.sessions', { defaultValue: 'Sessions' }),
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Sessions" description="Loading active sessions..." />}>
+        <Suspense fallback={<SessionsLoading />}>
           <AdminSessionManagement />
         </Suspense>
       ),
     },
     {
       id: 'single-sign-on',
-      label: "Single Sign-On",
+      label: t('security.tabs.sso', { defaultValue: 'Single Sign-On' }),
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Single Sign-On" description="Loading SSO management tools..." />}>
+        <Suspense fallback={<SsoLoading />}>
           <SsoBulkAssignment />
         </Suspense>
       ),
     },
     {
       id: 'permissions',
-      label: "Permissions",
+      label: t('security.tabs.permissions', { defaultValue: 'Permissions' }),
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Permissions" description="Loading permissions configuration..." />}>
+        <Suspense fallback={<PermissionsLoading />}>
           <PermissionsMatrix />
         </Suspense>
       ),
     },
     {
       id: 'user-roles',
-      label: "User Roles",
+      label: t('security.tabs.userRoles', { defaultValue: 'User Roles' }),
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="User Roles" description="Loading user role configuration..." />}>
+        <Suspense fallback={<UserRolesLoading />}>
           <UserRoleAssignment />
         </Suspense>
       ),
     },
     {
       id: 'policies',
-      label: "Policies",
+      label: t('security.tabs.policies', { defaultValue: 'Policies' }),
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Policies" description="Loading policy configuration..." />}>
+        <Suspense fallback={<PoliciesLoading />}>
           <PolicyManagement />
         </Suspense>
       ),
     },
     {
       id: 'api-keys',
-      label: "API Keys",
+      label: t('security.tabs.apiKeys', { defaultValue: 'API Keys' }),
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="API Keys" description="Loading API key configuration..." />}>
+        <Suspense fallback={<ApiKeysLoading />}>
           <AdminApiKeysSetup />
         </Suspense>
       ),

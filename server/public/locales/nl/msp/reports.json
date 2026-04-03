@@ -1,0 +1,175 @@
+{
+  "page": {
+    "title": "Rapporten"
+  },
+  "actions": {
+    "refresh": "Vernieuwen"
+  },
+  "placeholders": {
+    "selectContract": "Contract selecteren..."
+  },
+  "units": {
+    "hoursShort": "u",
+    "days": "dagen",
+    "percent": "%",
+    "dash": "—"
+  },
+  "reportsPage": {
+    "cards": {
+      "timeUtilization": {
+        "title": "Tijdsbesteding",
+        "placeholder": "[Tijdsbesteding grafiekplaceholder]"
+      },
+      "projectProgress": {
+        "title": "Projectvoortgang",
+        "placeholder": "[Projectvoortgang grafiekplaceholder]"
+      },
+      "revenueByClient": {
+        "title": "Omzet per klant",
+        "placeholder": "[Omzet-per-klant grafiekplaceholder]"
+      },
+      "teamPerformance": {
+        "title": "Teamprestaties",
+        "placeholder": "[Teamprestaties grafiekplaceholder]"
+      }
+    }
+  },
+  "contractReports": {
+    "title": "Contractrapporten",
+    "description": "Analyseer contractprestaties, omzet en benuttingscijfers",
+    "errors": {
+      "loadingTitle": "Fout bij het laden van rapporten",
+      "loadData": "Rapportgegevens konden niet worden geladen"
+    },
+    "summary": {
+      "totalMRR": {
+        "title": "Totale MRR",
+        "subtitle": "Maandelijks terugkerende omzet"
+      },
+      "ytdRevenue": {
+        "title": "Omzet t/m heden",
+        "subtitle": "Jaar tot op heden per gefactureerde serviceperioden"
+      },
+      "activeContracts": {
+        "title": "Actieve contracten",
+        "subtitle": "Actieve toewijzingen"
+      },
+      "renewalDecisions": {
+        "title": "Openstaande verlengingsbeslissingen",
+        "subtitle": "Beslissingsdeadlines in de komende 90 dagen"
+      }
+    },
+    "tabs": {
+      "revenue": "Contractomzet",
+      "expiration": "Vervaldatum",
+      "bucketUsage": "Urenbundel",
+      "profitability": "Winstgevendheid"
+    },
+    "sections": {
+      "revenue": {
+        "title": "Contractomzetrapport",
+        "description": "Overzicht van maandelijks terugkerende omzet en gefactureerde serviceperioden t/m heden per contract.",
+        "empty": "Geen contractomzetgegevens beschikbaar"
+      },
+      "expiration": {
+        "title": "Contractverloop en verlengingsbeslissingen",
+        "description": "Volg aankomende contractverlopen en vervaldatums voor verlengingsbeslissingen.",
+        "empty": "Geen aankomende contractverlopen of verlengingsbeslissingen op korte termijn"
+      },
+      "bucketUsage": {
+        "title": "Gebruik van urenbundels",
+        "description": "Gebruik van urenbundels bewaken en overgebruik herkennen",
+        "empty": "Geen op bundels gebaseerde contracten gevonden"
+      },
+      "profitability": {
+        "title": "Eenvoudig winstgevendheidsrapport",
+        "description": "Basis winstmarges en omzet versus kostenanalyse per contract",
+        "empty": "Geen winstgevendheidsgegevens beschikbaar"
+      }
+    },
+    "table": {
+      "contract": "Contract",
+      "client": "Klant",
+      "monthlyRecurring": "Maandelijks terugkerend",
+      "totalBilledYtd": "Totaal gefactureerd (YTD)",
+      "status": "Status",
+      "endDate": "Einddatum",
+      "daysUntilExpiration": "Dagen tot vervaldatum",
+      "monthlyValue": "Maandwaarde",
+      "autoRenew": "Automatisch verlengen",
+      "totalHours": "Totale uren",
+      "usedHours": "Gebruikte uren",
+      "remaining": "Resterend",
+      "utilization": "Benutting",
+      "overage": "Overschrijding",
+      "revenueYtd": "Omzet (YTD)",
+      "costYtd": "Kosten (YTD)",
+      "profit": "Winst",
+      "margin": "Marge"
+    },
+    "statusValues": {
+      "active": "Actief",
+      "upcoming": "Binnenkort",
+      "yes": "Ja",
+      "no": "Nee"
+    }
+  },
+  "contractPerformance": {
+    "title": "Prestatiestatistieken van contracten",
+    "errors": {
+      "loadData": "Contractgegevens konden niet worden geladen"
+    },
+    "metrics": {
+      "totalClients": "Totale klanten",
+      "activeClients": "Actieve klanten",
+      "totalPlans": "Totale plannen",
+      "averagePlansPerClient": "Gem. plannen per klant",
+      "totalRevenue": "Totale omzet",
+      "averageRevenuePerClient": "Gem. omzet per klant"
+    },
+    "empty": {
+      "selectContract": "Selecteer een contract om prestatiestatistieken te bekijken",
+      "noContracts": "Geen contracten beschikbaar"
+    },
+    "comparison": {
+      "title": "Contractvergelijking",
+      "table": {
+        "contract": "Contract",
+        "clients": "Klanten",
+        "plans": "Plannen",
+        "revenue": "Omzet"
+      }
+    }
+  },
+  "contractUsage": {
+    "title": "Contractgebruikrapport",
+    "errors": {
+      "loadInitialData": "Initiële gegevens konden niet worden geladen",
+      "loadUsageData": "Contractgebruiksgegevens konden niet worden geladen"
+    },
+    "empty": {
+      "noClientsUsingContract": "Geen klanten gebruiken dit contract",
+      "selectContract": "Selecteer een contract om gebruiksgegevens te bekijken"
+    },
+    "table": {
+      "client": "Klant",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "contractLines": "Contractregels",
+      "totalBilled": "Totaal gefactureerd",
+      "status": "Status"
+    },
+    "statusValues": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "ongoing": "Doorlopend",
+      "unknownClient": "Onbekende klant"
+    },
+    "summary": {
+      "title": "Samenvatting",
+      "totalClients": "Totale klanten",
+      "activeAssignments": "Actieve toewijzingen",
+      "totalBilled": "Totaal gefactureerd"
+    }
+  }
+}

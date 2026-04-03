@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -25,10 +25,12 @@ import { Upload, AlertTriangle, Check, Download } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { parseCSV, unparseCSV } from '@alga-psa/core';
 import {
+  formatContactCsvAdditionalEmailAddresses,
   isValidContactCsvEmailValue,
   parseContactCsvAdditionalEmailAddresses,
   parseContactCsvEmailType,
 } from '../../lib/contactCsvEmailFields';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContactsImportDialogProps {
   isOpen: boolean;
@@ -37,26 +39,9 @@ interface ContactsImportDialogProps {
   clients: { client_id: string; client_name: string; }[];
 }
 
-const CONTACT_FIELDS = {
-  full_name: 'Name *',
-  email: 'Email *',
-  primary_email_type: 'Primary Email Label',
-  additional_email_addresses: 'Additional Email Addresses',
-  phone_number: 'Default Phone Number',
-  client: 'Client',
-  tags: 'Tags',
-  role: 'Role',
-  notes: 'Notes'
-} as const;
-
 interface ImportOptionsProps {
   importOptions: ICSVImportOptions;
   onOptionsChange: (options: ICSVImportOptions) => void;
-}
-
-interface FieldOption {
-  value: string;
-  label: string;
 }
 
 type ContactCsvRecord = Partial<Record<MappableField, string>>;
@@ -72,13 +57,12 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   onImportComplete,
   clients
 }) => {
+  const { t } = useTranslation('msp/contacts');
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'importing' | 'results' | 'complete'>('upload');
-  const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<ICSVPreviewData | null>(null);
   const [fullCSVData, setFullCSVData] = useState<string[][] | null>(null);
   const [columnMappings, setColumnMappings] = useState<ICSVColumnMapping[]>([]);
   const [validationResults, setValidationResults] = useState<ICSVValidationResult[]>([]);
-  const [importProgress, setImportProgress] = useState<number>(0);
   const [errors, setErrors] = useState<string[]>([]);
   const [importOptions, setImportOptions] = useState<ICSVImportOptions>({
     updateExisting: false,
@@ -86,7 +70,6 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     dryRun: false
   });
   const [importResults, setImportResults] = useState<ImportContactResult[]>([]);
-  const [isImporting, setIsImporting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showUpdateConfirmation, setShowUpdateConfirmation] = useState(false);
   const [existingContactsCount, setExistingContactsCount] = useState(0);
@@ -101,6 +84,18 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  const contactFields = useMemo(() => ({
+    full_name: t('contactsImportDialog.fields.name', { defaultValue: 'Name *' }),
+    email: t('contactsImportDialog.fields.email', { defaultValue: 'Email *' }),
+    primary_email_type: t('contactsImportDialog.fields.primaryEmailLabel', { defaultValue: 'Primary Email Label' }),
+    additional_email_addresses: t('contactsImportDialog.fields.additionalEmails', { defaultValue: 'Additional Email Addresses' }),
+    phone_number: t('contactsImportDialog.fields.defaultPhoneNumber', { defaultValue: 'Default Phone Number' }),
+    client: t('contactsImportDialog.fields.client', { defaultValue: 'Client' }),
+    tags: t('contactsImportDialog.fields.tags', { defaultValue: 'Tags' }),
+    role: t('contactsImportDialog.fields.role', { defaultValue: 'Role' }),
+    notes: t('contactsImportDialog.fields.notes', { defaultValue: 'Notes' })
+  } as const), [t]);
+
   // Handle page size change - reset to page 1
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
@@ -111,12 +106,10 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   useEffect(() => {
     if (isOpen) {
       setStep('upload');
-      setFile(null);
       setPreviewData(null);
       setFullCSVData(null);
       setColumnMappings([]);
       setValidationResults([]);
-      setImportProgress(0);
       setErrors([]);
       setImportOptions({
         updateExisting: false,
@@ -124,7 +117,6 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         dryRun: false
       });
       setImportResults([]);
-      setIsImporting(false);
       setIsProcessing(false);
       setShowUpdateConfirmation(false);
       setExistingContactsCount(0);
@@ -135,28 +127,10 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     }
   }, [isOpen]);
 
-  const getFieldOptions = useCallback((currentMappingValue: string | null) => {
-    // Get all currently mapped fields except the current one
-    const mappedFields = columnMappings
-      .filter(m => m.contactField && m.contactField !== currentMappingValue)
-      .map(m => m.contactField);
-    
-    return [
-      { value: 'unassigned', label: 'Select field' },
-      ...Object.entries(CONTACT_FIELDS)
-        .filter(([value]) => !mappedFields.includes(value as MappableField))
-        .map(([value, label]: [string, string]): FieldOption => ({
-          value,
-          label,
-        })),
-    ];
-  }, [columnMappings]);
-
-  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = event.target.files?.[0];
     if (!uploadedFile) return;
 
-    setFile(uploadedFile);
     setErrors([]);
 
     try {
@@ -164,7 +138,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       const rows = parseCSV(text) as string[][];
       
       if (rows.length < 2) {
-        throw new Error('CSV file is empty or invalid');
+        throw new Error(t('contactsImportDialog.errors.emptyCsv', { defaultValue: 'CSV file is empty or invalid' }));
       }
 
       const headers = rows[0];
@@ -205,9 +179,12 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       setColumnMappings(autoMappings);
       setStep('mapping');
     } catch (error) {
-      setErrors([`Error reading CSV file: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+      setErrors([t('contactsImportDialog.errors.readingCsv', {
+        defaultValue: 'Error reading CSV file: {{message}}',
+        message: error instanceof Error ? error.message : t('contactsImportDialog.errors.unknownError', { defaultValue: 'Unknown error' })
+      })]);
     }
-  }, []);
+  };
 
   const handleMapColumn = (csvHeader: string, value: string) => {
     setColumnMappings(prev =>
@@ -225,7 +202,10 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
 
     for (const requiredField of requiredFields) {
       if (!columnMappings.some((mapping: ICSVColumnMapping): boolean => mapping.contactField === requiredField)) {
-        errors.push(`Required field "${CONTACT_FIELDS[requiredField]}" is not mapped`);
+        errors.push(t('contactsImportDialog.errors.requiredFieldNotMapped', {
+          defaultValue: `Required field "${contactFields[requiredField]}" is not mapped`,
+          field: contactFields[requiredField]
+        }));
       }
     }
 
@@ -256,11 +236,11 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
             }
           });
 
-          if (!mappedData.full_name) errors.push('Name is required');
+          if (!mappedData.full_name) errors.push(t('contactsImportDialog.errors.nameRequired', { defaultValue: 'Name is required' }));
           if (!mappedData.email) {
-            errors.push('Email is required');
+            errors.push(t('contactsImportDialog.errors.emailRequired', { defaultValue: 'Email is required' }));
           } else if (!isValidContactCsvEmailValue(mappedData.email)) {
-            errors.push('Invalid email format');
+            errors.push(t('contactsImportDialog.errors.invalidEmail', { defaultValue: 'Invalid email format' }));
           }
 
           const additionalEmailParse = parseContactCsvAdditionalEmailAddresses(
@@ -315,7 +295,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         setValidationResults(resultsWithExisting);
         setStep('preview');
       } catch (error) {
-        setErrors([error instanceof Error ? error.message : 'Error processing CSV data']);
+        setErrors([error instanceof Error ? error.message : t('contactsImportDialog.errors.processingCsv', { defaultValue: 'Error processing CSV data' })]);
       } finally {
         setIsProcessing(false);
       }
@@ -359,7 +339,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   };
 
   const processImport = async (data: ContactCsvRecord[]) => {
-    setIsImporting(true);
+    setStep('importing');
     setProcessingDetails({ current: 0, total: data.length });
     
     try {
@@ -389,14 +369,14 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         setStep('results');
       }
     } catch (error) {
-      setErrors([error instanceof Error ? error.message : 'Import failed']);
+      setErrors([error instanceof Error ? error.message : t('contactsImportDialog.errors.importFailed', { defaultValue: 'Import failed' })]);
+      setStep('results');
     } finally {
-      setIsImporting(false);
     }
   };
 
   const handleImport = async () => {
-      const validData = validationResults
+    const validData = validationResults
       .filter((result: ICSVValidationResult): boolean => result.isValid || importOptions.skipInvalid)
       .map((result: ICSVValidationResult): ContactCsvRecord => result.data);
 
@@ -404,7 +384,17 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   };
 
   const handleDownloadFailedRecords = () => {
-    const fields = Object.keys(CONTACT_FIELDS);
+    const fields = [
+      'full_name',
+      'email',
+      'primary_email_type',
+      'additional_email_addresses',
+      'phone_number',
+      'client',
+      'tags',
+      'role',
+      'notes',
+    ];
     const csvContent = unparseCSV(
       failedRecords.map((record): Record<string, string> => ({
         full_name: record.originalData.full_name || '',
@@ -443,12 +433,12 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     <div className="mb-6 space-y-4">
       <div className="flex items-center justify-between py-3">
         <div>
-          <div className="text-gray-900 font-medium">Update existing contacts</div>
-          <div className="text-sm text-gray-500">Replace data for existing contacts</div>
+          <div className="text-gray-900 font-medium">{t('contactsImportDialog.importOptions.updateExisting.title', { defaultValue: 'Update existing contacts' })}</div>
+          <div className="text-sm text-gray-500">{t('contactsImportDialog.importOptions.updateExisting.description', { defaultValue: 'Replace data for existing contacts' })}</div>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-700">
-            {importOptions.updateExisting ? 'Yes' : 'No'}
+            {importOptions.updateExisting ? t('common.yes', { defaultValue: 'Yes' }) : t('common.no', { defaultValue: 'No' })}
           </span>
           <Switch
             checked={importOptions.updateExisting}
@@ -462,12 +452,12 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   
       <div className="flex items-center justify-between py-3">
         <div>
-          <div className="text-gray-900 font-medium">Skip invalid records</div>
-          <div className="text-sm text-gray-500">Continue import even if some records have validation errors</div>
+          <div className="text-gray-900 font-medium">{t('contactsImportDialog.importOptions.skipInvalid.title', { defaultValue: 'Skip invalid records' })}</div>
+          <div className="text-sm text-gray-500">{t('contactsImportDialog.importOptions.skipInvalid.description', { defaultValue: 'Continue import even if some records have validation errors' })}</div>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-700">
-            {importOptions.skipInvalid ? 'Yes' : 'No'}
+            {importOptions.skipInvalid ? t('common.yes', { defaultValue: 'Yes' }) : t('common.no', { defaultValue: 'No' })}
           </span>
           <Switch
             checked={importOptions.skipInvalid}
@@ -484,7 +474,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   const ResultsView = () => (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">Import Results</h3>
+        <h3 className="text-lg font-medium">{t('contactsImportDialog.results.title', { defaultValue: 'Import Results' })}</h3>
         {failedRecords.length > 0 && (
           <Button
             id="download-failed-records"
@@ -493,7 +483,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
             className="flex items-center gap-2"
           >
             <Download size={16} />
-            Download Failed Records
+            {t('contactsImportDialog.results.downloadFailedRecords', { defaultValue: 'Download Failed Records' })}
           </Button>
         )}
       </div>
@@ -508,34 +498,34 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         onItemsPerPageChange={handlePageSizeChange}
         columns={[
           {
-            title: 'Status',
+            title: t('contactsImportDialog.table.status', { defaultValue: 'Status' }),
             dataIndex: 'success',
             render: (value: boolean) => value ? (
               <div className="flex justify-center">
-                <Tooltip content="Import successful">
+                <Tooltip content={t('contactsImportDialog.tooltips.importSuccessful', { defaultValue: 'Import successful' })}>
                   <Check className="h-5 w-5 text-green-500 cursor-help" />
                 </Tooltip>
               </div>
             ) : (
               <div className="flex justify-center">
-                <Tooltip content="Import failed">
+                <Tooltip content={t('contactsImportDialog.tooltips.importFailed', { defaultValue: 'Import failed' })}>
                   <AlertTriangle className="h-5 w-5 text-red-500 cursor-help" />
                 </Tooltip>
               </div>
             ),
           },
           {
-            title: 'Name',
+            title: t('contactsImportDialog.table.name', { defaultValue: 'Name' }),
             dataIndex: 'originalData',
             render: (value: Record<string, string>) => value.full_name,
           },
           {
-            title: 'Email',
+            title: t('contactsImportDialog.table.email', { defaultValue: 'Email' }),
             dataIndex: 'originalData',
             render: (value: Record<string, string>) => value.email,
           },
           {
-            title: 'Message',
+            title: t('contactsImportDialog.table.message', { defaultValue: 'Message' }),
             dataIndex: 'message',
             width: '40%',
             render: (value: string) => (
@@ -547,7 +537,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         ] as ColumnDefinition<ImportContactResult>[]}
       />
       <DialogFooter>
-        <Button id='close-import-dialog' onClick={onClose}>Close</Button>
+        <Button id='close-import-dialog' onClick={onClose}>{t('common.actions.close', { defaultValue: 'Close' })}</Button>
       </DialogFooter>
     </div>
   );
@@ -557,7 +547,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       <Dialog
         isOpen={isOpen}
         onClose={onClose}
-        title="Import Contacts"
+        title={t('contactsImportDialog.title', { defaultValue: 'Import Contacts' })}
         className="max-w-5xl"
       >
         <DialogContent>
@@ -577,13 +567,24 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
             <div>
               <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
                 <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="mt-2 text-sm text-gray-600">Upload a CSV file with contact data</p>
+                <p className="mt-2 text-sm text-gray-600">{t('contactsImportDialog.upload.help', { defaultValue: 'Upload a CSV file with contact data' })}</p>
                 <p className="mt-1 text-xs text-gray-500">
-                  <strong>Required:</strong> full_name, email<br />
-                  <strong>Email fields:</strong> primary_email_type (work/personal/billing/other or a custom label), additional_email_addresses (use `label:email@example.com | label:email@example.com`)<br />
-                  <strong>Contact fields:</strong> phone_number (imports as the default work phone), role, notes, tags<br />
-                  <strong>Client field:</strong> client (matches existing clients by name)<br />
-                  <strong>Note:</strong> CSV import/export keeps `email` as the primary/default contact email. Tags should be comma-separated values.
+                  <strong>{t('contactsImportDialog.upload.requiredLabel', { defaultValue: 'Required:' })}</strong> full_name, email<br />
+                  <strong>{t('contactsImportDialog.upload.emailFieldsLabel', { defaultValue: 'Email fields:' })}</strong>{' '}
+                  {t('contactsImportDialog.upload.emailFieldsDescription', {
+                    defaultValue: 'primary_email_type (work/personal/billing/other or a custom label), additional_email_addresses (use `label:email@example.com | label:email@example.com`)',
+                  })}
+                  <br />
+                  <strong>{t('contactsImportDialog.upload.contactFieldsLabel', { defaultValue: 'Contact fields:' })}</strong>{' '}
+                  {t('contactsImportDialog.upload.contactFieldsDescription', { defaultValue: 'phone_number (imports as the default work phone), role, notes, tags' })}
+                  <br />
+                  <strong>{t('contactsImportDialog.upload.clientFieldLabel', { defaultValue: 'Client field:' })}</strong>{' '}
+                  {t('contactsImportDialog.upload.clientFieldDescription', { defaultValue: 'client (matches existing clients by name)' })}
+                  <br />
+                  <strong>{t('contactsImportDialog.upload.noteLabel', { defaultValue: 'Note:' })}</strong>{' '}
+                  {t('contactsImportDialog.upload.hybridEmailNote', {
+                    defaultValue: 'CSV import/export keeps `email` as the primary/default contact email. Tags should be comma-separated values.',
+                  })}
                 </p>
                 <Input
                   type="file"
@@ -610,7 +611,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                   }}
                   className="w-full"
                 >
-                  Download CSV Template
+                  {t('contactsImportDialog.upload.downloadTemplate', { defaultValue: 'Download CSV Template' })}
                 </Button>
               </div>
             </div>
@@ -618,17 +619,17 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
 
           {step === 'mapping' && previewData && (
             <div>
-              <h3 className="text-lg font-medium mb-4">Map Contact Fields to CSV Columns</h3>
+              <h3 className="text-lg font-medium mb-4">{t('contactsImportDialog.mapping.title', { defaultValue: 'Map Contact Fields to CSV Columns' })}</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Select which CSV column contains the data for each contact field. Fields marked with * are required.
+                {t('contactsImportDialog.mapping.description', { defaultValue: 'Select which CSV column contains the data for each contact field. Fields marked with * are required.' })}
               </p>
               <div className="max-h-[60vh] overflow-y-auto pr-2">
                 <div className="mb-2 flex items-center gap-4 text-sm font-semibold text-gray-700">
-                  <span className="w-1/3">Contact Field</span>
-                  <span className="w-2/3">Select CSV Column</span>
+                  <span className="w-1/3">{t('contactsImportDialog.mapping.contactFieldHeader', { defaultValue: 'Contact Field' })}</span>
+                  <span className="w-2/3">{t('contactsImportDialog.mapping.csvColumnHeader', { defaultValue: 'Select CSV Column' })}</span>
                 </div>
                 <div className="border-t pt-4 space-y-3">
-                  {Object.entries(CONTACT_FIELDS).map(([fieldKey, fieldLabel]: [string, string]): React.JSX.Element => {
+                  {Object.entries(contactFields).map(([fieldKey, fieldLabel]: [string, string]): React.JSX.Element => {
                     const currentMapping = columnMappings.find(m => m.contactField === fieldKey);
                     const csvHeader = currentMapping?.csvHeader || 'unassigned';
                     
@@ -643,7 +644,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                         <span className="text-gray-400">←</span>
                         <CustomSelect
                           options={[
-                            { value: 'unassigned', label: 'Not mapped' },
+                            { value: 'unassigned', label: t('contactsImportDialog.mapping.notMapped', { defaultValue: 'Not mapped' }) },
                             ...previewData.headers
                               .filter(header => !mappedHeaders.includes(header))
                               .map(header => ({
@@ -679,20 +680,23 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                 </div>
               </div>
               <div className="mt-6 text-xs text-gray-500">
-                <p>* Required fields must be mapped for import to proceed</p>
+                <p>{t('contactsImportDialog.mapping.requiredFieldsNote', { defaultValue: '* Required fields must be mapped for import to proceed' })}</p>
               </div>
               {fullCSVData && fullCSVData.length > 100 && (
                 <Alert variant="warning" className="mt-4">
                   <AlertDescription>
-                    You are importing {fullCSVData.length} records. Processing may take a moment.
+                    {t('contactsImportDialog.mapping.largeImportWarning', {
+                      defaultValue: 'You are importing {{count}} records. Processing may take a moment.',
+                      count: fullCSVData.length
+                    })}
                   </AlertDescription>
                 </Alert>
               )}
               <div className="mt-4">
                 <DialogFooter>
-                  <Button id='back-to-upload' variant="outline" onClick={() => setStep('upload')} disabled={isProcessing}>Back</Button>
+                  <Button id='back-to-upload' variant="outline" onClick={() => setStep('upload')} disabled={isProcessing}>{t('common.actions.back', { defaultValue: 'Back' })}</Button>
                   <Button id='preview-import' onClick={handlePreview} disabled={isProcessing}>
-                    {isProcessing ? 'Processing...' : 'Preview'}
+                    {isProcessing ? t('contactsImportDialog.mapping.processing', { defaultValue: 'Processing...' }) : t('contactsImportDialog.mapping.preview', { defaultValue: 'Preview' })}
                   </Button>
                 </DialogFooter>
               </div>
@@ -701,12 +705,12 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
 
           {step === 'preview' && validationResults.length > 0 && (
             <div>
-              <h3 className="text-lg font-medium mb-4">Preview Import</h3>
+              <h3 className="text-lg font-medium mb-4">{t('contactsImportDialog.preview.title', { defaultValue: 'Preview Import' })}</h3>
               <Alert variant="info" className="mb-4">
                 <AlertDescription>
-                  <strong>Total records:</strong> {validationResults.length} |
-                  <strong className="ml-2">Valid:</strong> {validationResults.filter(r => r.isValid).length} |
-                  <strong className="ml-2">Invalid:</strong> {validationResults.filter(r => !r.isValid).length}
+                  <strong>{t('contactsImportDialog.preview.totalRecords', { defaultValue: 'Total records:' })}</strong> {validationResults.length} |
+                  <strong className="ml-2">{t('contactsImportDialog.preview.valid', { defaultValue: 'Valid:' })}</strong> {validationResults.filter(r => r.isValid).length} |
+                  <strong className="ml-2">{t('contactsImportDialog.preview.invalid', { defaultValue: 'Invalid:' })}</strong> {validationResults.filter(r => !r.isValid).length}
                 </AlertDescription>
               </Alert>
               <ImportOptions
@@ -739,43 +743,43 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                       status: result.isValid,
                       full_name: rowData.full_name || '',
                       email: rowData.email || '',
-                      exists: (result as any).isExisting ? 'Yes' : 'No',
+                      exists: (result as any).isExisting ? t('common.yes', { defaultValue: 'Yes' }) : t('common.no', { defaultValue: 'No' }),
                       errors: result.errors,
                       warnings: result.warnings
                     };
                   })}
                   columns={[
                     {
-                      title: 'Status',
+                      title: t('contactsImportDialog.table.status', { defaultValue: 'Status' }),
                       dataIndex: 'status',
                       render: (value: boolean) => value ? (
                         <div className="flex justify-center">
-                          <Tooltip content="Valid - Ready to import">
+                          <Tooltip content={t('contactsImportDialog.tooltips.validReady', { defaultValue: 'Valid - Ready to import' })}>
                             <Check className="h-5 w-5 text-green-500 cursor-help" />
                           </Tooltip>
                         </div>
                       ) : (
                         <div className="flex justify-center">
-                          <Tooltip content="Invalid - Has errors">
+                          <Tooltip content={t('contactsImportDialog.tooltips.invalidHasErrors', { defaultValue: 'Invalid - Has errors' })}>
                             <AlertTriangle className="h-5 w-5 text-red-500 cursor-help" />
                           </Tooltip>
                         </div>
                       ),
                     },
                     {
-                      title: 'Name',
+                      title: t('contactsImportDialog.table.name', { defaultValue: 'Name' }),
                       dataIndex: 'full_name',
                     },
                     {
-                      title: 'Email',
+                      title: t('contactsImportDialog.table.email', { defaultValue: 'Email' }),
                       dataIndex: 'email',
                     },
                     {
-                      title: 'Exists',
+                      title: t('contactsImportDialog.table.exists', { defaultValue: 'Exists' }),
                       dataIndex: 'exists',
                     },
                     {
-                      title: 'Issues',
+                      title: t('contactsImportDialog.table.issues', { defaultValue: 'Issues' }),
                       dataIndex: 'issues',
                       width: '40%',
                       render: (value: any, record: any) => {
@@ -810,13 +814,13 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                 />
               </div>
               <DialogFooter>
-                <Button id='back-to-mapping' variant="outline" onClick={() => setStep('mapping')}>Back</Button>
+                <Button id='back-to-mapping' variant="outline" onClick={() => setStep('mapping')}>{t('common.actions.back', { defaultValue: 'Back' })}</Button>
                 <Button
                   id='import-contacts'
                   onClick={handleImport}
                   disabled={validationResults.every(result => !result.isValid)}
                 >
-                  Import
+                  {t('common.actions.import', { defaultValue: 'Import' })}
                 </Button>
               </DialogFooter>
             </div>
@@ -824,10 +828,10 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
 
           {step === 'importing' && (
             <div>
-              <h3 className="text-lg font-medium mb-4">Importing Contacts</h3>
+              <h3 className="text-lg font-medium mb-4">{t('contactsImportDialog.importing.title', { defaultValue: 'Importing Contacts' })}</h3>
               <div className="mb-4">
                 <div className="flex justify-between text-sm text-gray-600 mb-1">
-                  <span>Processing: {processingDetails.current} of {processingDetails.total}</span>
+                  <span>{t('contactsImportDialog.importing.processing', { defaultValue: 'Processing: {{current}} of {{total}}', current: processingDetails.current, total: processingDetails.total })}</span>
                   <span>{Math.round((processingDetails.current / processingDetails.total) * 100)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -839,7 +843,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
               </div>
               {processingDetails.currentItem && (
                 <p className="text-sm text-gray-600">
-                  Currently processing: {processingDetails.currentItem}
+                  {t('contactsImportDialog.importing.currentItem', { defaultValue: 'Currently processing: {{item}}', item: processingDetails.currentItem })}
                 </p>
               )}
             </div>
@@ -850,12 +854,15 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
           {step === 'complete' && (
             <div className="text-center">
               <Check className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Import Complete</h3>
+              <h3 className="text-lg font-medium mb-2">{t('contactsImportDialog.complete.title', { defaultValue: 'Import Complete' })}</h3>
               <p className="text-gray-600 mb-4">
-                Successfully imported {importResults.filter((r: ImportContactResult): boolean => r.success).length} contacts
+                {t('contactsImportDialog.complete.successMessage', {
+                  defaultValue: 'Successfully imported {{count}} contacts',
+                  count: importResults.filter((r: ImportContactResult): boolean => r.success).length
+                })}
               </p>
               <DialogFooter>
-                <Button id='close-import-complete' onClick={onClose}>Close</Button>
+                <Button id='close-import-complete' onClick={onClose}>{t('common.actions.close', { defaultValue: 'Close' })}</Button>
               </DialogFooter>
             </div>
           )}
@@ -869,10 +876,13 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
           setShowUpdateConfirmation(false);
           setImportOptions(prev => ({ ...prev, updateExisting: true }));
         }}
-        title="Update Existing Contacts"
-        message={`${existingContactsCount} contacts already exist. Do you want to update them with the new data?`}
-        confirmLabel="Update"
-        cancelLabel="Cancel"
+        title={t('contactsImportDialog.confirmUpdate.title', { defaultValue: 'Update Existing Contacts' })}
+        message={t('contactsImportDialog.confirmUpdate.message', {
+          defaultValue: '{{count}} contacts already exist. Do you want to update them with the new data?',
+          count: existingContactsCount
+        })}
+        confirmLabel={t('common.actions.update', { defaultValue: 'Update' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
       />
     </>
   );

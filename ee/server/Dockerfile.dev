@@ -52,7 +52,12 @@ WORKDIR /app/server
 
 # Copy server source code
 COPY server/ ./
+COPY packages/ /app/packages/
 COPY scripts/ ./scripts/
+
+# Build all upstream packages (shared + pre-built) via Nx (handles dependency ordering)
+RUN cd /app && npx nx build-deps server
+ENV USE_PREBUILT="true"
 
 # Clean any existing build artifacts and build the Next.js application with conditional env var
 RUN rm -rf .next && \

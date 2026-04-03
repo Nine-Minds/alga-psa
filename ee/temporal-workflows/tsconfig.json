@@ -62,7 +62,9 @@
       "@temporalio/testing": ["../../node_modules/@temporalio/testing"],
       "@kubernetes/client-node": ["../../node_modules/@kubernetes/client-node"],
       "resend": ["../../node_modules/resend"],
-      "js-yaml": ["../../node_modules/@types/js-yaml", "../../node_modules/js-yaml"]
+      "js-yaml": ["../../node_modules/@types/js-yaml", "../../node_modules/js-yaml"],
+      "@alga-psa/workflow-streams": ["../../packages/workflow-streams/src/streams"],
+      "@alga-psa/workflow-streams/*": ["../../packages/workflow-streams/src/streams/*"]
     },
     "typeRoots": ["../../node_modules/@types", "./node_modules/@types"]
   },

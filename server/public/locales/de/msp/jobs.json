@@ -1,0 +1,85 @@
+{
+  "shared": {
+    "fallbacks": {
+      "empty": "-"
+    },
+    "statusLabels": {
+      "completed": "Vollendet",
+      "failed": "Fehlgeschlagen",
+      "processing": "Verarbeitung",
+      "pending": "Ausstehend"
+    },
+    "runnerLabels": {
+      "temporal": "Zeitlich",
+      "pgboss": "PG-Chef"
+    }
+  },
+  "recentTable": {
+    "columns": {
+      "jobName": "Jobname",
+      "runner": "Läufer",
+      "status": "Status",
+      "duration": "Dauer",
+      "started": "Begonnen",
+      "completed": "Vollendet"
+    },
+    "time": {
+      "justNow": "Soeben",
+      "minutesAgo": "Vor {{count}}m",
+      "hoursAgo": "Vor {{count}}h"
+    },
+    "duration": {
+      "milliseconds": "{{count}}ms",
+      "seconds": "{{count}}s",
+      "minutesSeconds": "{{minutes}}m {{seconds}}s",
+      "hoursMinutes": "{{hours}}h {{minutes}}m"
+    },
+    "externalId": "ID: {{id}}..."
+  },
+  "metrics": {
+    "labels": {
+      "totalJobs": "Gesamtzahl der Jobs",
+      "totalJobsPgBoss": "Gesamtzahl der Jobs (PG Boss)",
+      "totalJobsTemporal": "Gesamtjobs (zeitlich)",
+      "completed": "Vollendet",
+      "failed": "Fehlgeschlagen",
+      "pending": "Ausstehend",
+      "processing": "Verarbeitung",
+      "pgboss": "PG-Chef",
+      "temporal": "Zeitlich"
+    },
+    "successRate": "{{count}} % Erfolgsquote"
+  },
+  "historyTable": {
+    "columns": {
+      "jobName": "Jobname",
+      "status": "Status",
+      "created": "Erstellt",
+      "started": "Begonnen",
+      "completed": "Vollendet"
+    }
+  },
+  "progress": {
+    "loading": "Jobdetails werden geladen...",
+    "labels": {
+      "created": "Erstellt:",
+      "jobData": "Jobdaten"
+    }
+  },
+  "drawer": {
+    "title": "Jobdetails",
+    "jobId": "ID: {{id}}",
+    "sections": {
+      "progress": "Arbeitsfortschritt",
+      "metrics": "Jobkennzahlen",
+      "history": "Berufsverlauf"
+    }
+  },
+  "stepHistory": {
+    "title": "Arbeitsschritte",
+    "labels": {
+      "processed": "Verarbeitet:",
+      "retries": "Wiederholungen:"
+    }
+  }
+}

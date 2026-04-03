@@ -1,0 +1,175 @@
+{
+  "page": {
+    "title": "55555"
+  },
+  "actions": {
+    "refresh": "55555"
+  },
+  "placeholders": {
+    "selectContract": "55555"
+  },
+  "units": {
+    "hoursShort": "55555",
+    "days": "55555",
+    "percent": "55555",
+    "dash": "55555"
+  },
+  "reportsPage": {
+    "cards": {
+      "timeUtilization": {
+        "title": "55555",
+        "placeholder": "55555"
+      },
+      "projectProgress": {
+        "title": "55555",
+        "placeholder": "55555"
+      },
+      "revenueByClient": {
+        "title": "55555",
+        "placeholder": "55555"
+      },
+      "teamPerformance": {
+        "title": "55555",
+        "placeholder": "55555"
+      }
+    }
+  },
+  "contractReports": {
+    "title": "55555",
+    "description": "55555",
+    "errors": {
+      "loadingTitle": "55555",
+      "loadData": "55555"
+    },
+    "summary": {
+      "totalMRR": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "ytdRevenue": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "activeContracts": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "renewalDecisions": {
+        "title": "55555",
+        "subtitle": "55555"
+      }
+    },
+    "tabs": {
+      "revenue": "55555",
+      "expiration": "55555",
+      "bucketUsage": "55555",
+      "profitability": "55555"
+    },
+    "sections": {
+      "revenue": {
+        "title": "55555",
+        "description": "55555",
+        "empty": "55555"
+      },
+      "expiration": {
+        "title": "55555",
+        "description": "55555",
+        "empty": "55555"
+      },
+      "bucketUsage": {
+        "title": "55555",
+        "description": "55555",
+        "empty": "55555"
+      },
+      "profitability": {
+        "title": "55555",
+        "description": "55555",
+        "empty": "55555"
+      }
+    },
+    "table": {
+      "contract": "55555",
+      "client": "55555",
+      "monthlyRecurring": "55555",
+      "totalBilledYtd": "55555",
+      "status": "55555",
+      "endDate": "55555",
+      "daysUntilExpiration": "55555",
+      "monthlyValue": "55555",
+      "autoRenew": "55555",
+      "totalHours": "55555",
+      "usedHours": "55555",
+      "remaining": "55555",
+      "utilization": "55555",
+      "overage": "55555",
+      "revenueYtd": "55555",
+      "costYtd": "55555",
+      "profit": "55555",
+      "margin": "55555"
+    },
+    "statusValues": {
+      "active": "55555",
+      "upcoming": "55555",
+      "yes": "55555",
+      "no": "55555"
+    }
+  },
+  "contractPerformance": {
+    "title": "55555",
+    "errors": {
+      "loadData": "55555"
+    },
+    "metrics": {
+      "totalClients": "55555",
+      "activeClients": "55555",
+      "totalPlans": "55555",
+      "averagePlansPerClient": "55555",
+      "totalRevenue": "55555",
+      "averageRevenuePerClient": "55555"
+    },
+    "empty": {
+      "selectContract": "55555",
+      "noContracts": "55555"
+    },
+    "comparison": {
+      "title": "55555",
+      "table": {
+        "contract": "55555",
+        "clients": "55555",
+        "plans": "55555",
+        "revenue": "55555"
+      }
+    }
+  },
+  "contractUsage": {
+    "title": "55555",
+    "errors": {
+      "loadInitialData": "55555",
+      "loadUsageData": "55555"
+    },
+    "empty": {
+      "noClientsUsingContract": "55555",
+      "selectContract": "55555"
+    },
+    "table": {
+      "client": "55555",
+      "startDate": "55555",
+      "endDate": "55555",
+      "contractLines": "55555",
+      "totalBilled": "55555",
+      "status": "55555"
+    },
+    "statusValues": {
+      "active": "55555",
+      "inactive": "55555",
+      "ongoing": "55555",
+      "unknownClient": "55555"
+    },
+    "summary": {
+      "title": "55555",
+      "totalClients": "55555",
+      "activeAssignments": "55555",
+      "totalBilled": "55555"
+    }
+  }
+}

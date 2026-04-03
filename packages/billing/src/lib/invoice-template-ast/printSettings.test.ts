@@ -4,9 +4,9 @@ import {
   listInvoicePaperPresets,
   millimetersToPixels,
   pixelsToMillimeters,
-  type InvoiceTemplateAst,
+  type TemplateAst,
 } from '@alga-psa/types';
-import { resolveInvoicePdfPrintOptionsFromAst } from './printSettings';
+import { resolvePdfPrintOptionsFromAst } from './printSettings';
 
 const buildTemplateAst = ({
   paperPreset,
@@ -20,7 +20,7 @@ const buildTemplateAst = ({
   widthPx: number;
   heightPx: number;
   paddingPx: number;
-}): InvoiceTemplateAst => ({
+}): TemplateAst => ({
   kind: 'invoice-template-ast',
   version: 1,
   metadata: paperPreset && typeof marginMm === 'number' ? { printSettings: { paperPreset, marginMm } } : undefined,
@@ -93,7 +93,7 @@ describe('invoice print preset registry', () => {
       paddingPx: 45,
     });
 
-    expect(resolveInvoicePdfPrintOptionsFromAst(templateAst)).toEqual({
+    expect(resolvePdfPrintOptionsFromAst(templateAst)).toEqual({
       format: 'A4',
       printBackground: true,
       margin: {
@@ -112,7 +112,7 @@ describe('invoice print preset registry', () => {
       paddingPx: 40,
     });
 
-    expect(resolveInvoicePdfPrintOptionsFromAst(legacyTemplateAst)).toEqual({
+    expect(resolvePdfPrintOptionsFromAst(legacyTemplateAst)).toEqual({
       format: 'Letter',
       printBackground: true,
       margin: {

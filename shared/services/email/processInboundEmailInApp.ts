@@ -1,4 +1,5 @@
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
+import { createHash } from 'node:crypto';
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
 import {
@@ -18,7 +19,66 @@ export interface ProcessInboundEmailInAppInput {
   emailData: EmailMessageDetails;
 }
 
-export type ProcessInboundEmailInAppResult =
+export interface ProcessInboundEmailInAppOptions {
+  collectDiagnostics?: boolean;
+}
+
+export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unknown> {
+  parser: {
+    confidence: number | null;
+    strategy: string | null;
+    heuristics: string[];
+    warnings: string[];
+    parseError: string | null;
+    tokenPresent: boolean;
+    replyTokenHash: string | null;
+    replyTokenSuffix: string | null;
+  };
+  headersSnapshot: {
+    messageId: string;
+    threadId: string | null;
+    inReplyTo: string | null;
+    references: string[];
+    from: string | null;
+    to: string[];
+    subject: string | null;
+  };
+  threading: {
+    tokenLookupAttempted: boolean;
+    tokenLookupMatched: boolean;
+    tokenLookupMissReason: 'token_missing' | 'token_not_found' | 'token_lookup_error' | null;
+    tokenLookupError: string | null;
+    headerLookupAttempted: boolean;
+    headerLookupMatched: boolean;
+    headerLookupMissReason: 'header_no_match' | 'header_lookup_error' | null;
+    headerLookupError: string | null;
+    matchedBy: 'reply_token' | 'thread_headers' | null;
+    matchedTicketId: string | null;
+    matchedCommentId: string | null;
+    threadId: string | null;
+    inReplyTo: string | null;
+    references: string[];
+    originalMessageIdCandidate: string | null;
+    failureReason:
+      | 'invalid_email_data'
+      | 'missing_defaults'
+      | 'self_notification'
+      | 'new_ticket_created'
+      | 'deduped'
+      | null;
+  };
+  outcome?: {
+    kind: 'skipped' | 'deduped' | 'replied' | 'created';
+    matchedBy?: 'reply_token' | 'thread_headers';
+    ticketId?: string;
+    ticketNumber?: string;
+    commentId?: string;
+    dedupeKey?: string;
+    reason?: 'missing_defaults' | 'invalid_email_data' | 'self_notification';
+  };
+}
+
+type ProcessInboundEmailInAppBaseResult =
   | {
       outcome: 'skipped';
       reason: 'missing_defaults' | 'invalid_email_data' | 'self_notification';
@@ -41,6 +101,125 @@ export type ProcessInboundEmailInAppResult =
       ticketNumber?: string;
       commentId: string;
     };
+
+export type ProcessInboundEmailInAppResult = ProcessInboundEmailInAppBaseResult & {
+  diagnostics?: ProcessInboundEmailInAppDiagnostics;
+};
+
+const REPLY_TOKEN_SUFFIX_LENGTH = 8;
+
+function getReplyTokenFingerprint(token?: string): {
+  replyTokenHash: string | null;
+  replyTokenSuffix: string | null;
+} {
+  const trimmedToken = typeof token === 'string' ? token.trim() : '';
+  if (!trimmedToken) {
+    return {
+      replyTokenHash: null,
+      replyTokenSuffix: null,
+    };
+  }
+
+  return {
+    replyTokenHash: createHash('sha256').update(trimmedToken).digest('hex'),
+    replyTokenSuffix: trimmedToken.slice(-REPLY_TOKEN_SUFFIX_LENGTH),
+  };
+}
+
+function buildDiagnostics(params: {
+  emailData: EmailMessageDetails;
+  senderEmail: string | null;
+  parsedEmail?: any | null;
+  parseError?: string | null;
+  conversationToken?: string;
+}): ProcessInboundEmailInAppDiagnostics {
+  const fingerprint = getReplyTokenFingerprint(params.conversationToken);
+
+  return {
+    parser: {
+      confidence: typeof params.parsedEmail?.confidence === 'number' ? params.parsedEmail.confidence : null,
+      strategy:
+        typeof params.parsedEmail?.strategy === 'string' && params.parsedEmail.strategy.trim()
+          ? params.parsedEmail.strategy.trim()
+          : null,
+      heuristics: Array.isArray(params.parsedEmail?.appliedHeuristics)
+        ? params.parsedEmail.appliedHeuristics.filter((value: unknown): value is string => typeof value === 'string')
+        : [],
+      warnings: Array.isArray(params.parsedEmail?.warnings)
+        ? params.parsedEmail.warnings.filter((value: unknown): value is string => typeof value === 'string')
+        : [],
+      parseError: params.parseError ?? null,
+      tokenPresent: Boolean(params.conversationToken),
+      replyTokenHash: fingerprint.replyTokenHash,
+      replyTokenSuffix: fingerprint.replyTokenSuffix,
+    },
+    headersSnapshot: {
+      messageId: params.emailData.id,
+      threadId: params.emailData.threadId ?? null,
+      inReplyTo: params.emailData.inReplyTo ?? null,
+      references: params.emailData.references ?? [],
+      from: params.senderEmail,
+      to: (params.emailData.to ?? []).map((recipient) => recipient.email),
+      subject: params.emailData.subject ?? null,
+    },
+    threading: {
+      tokenLookupAttempted: Boolean(params.conversationToken),
+      tokenLookupMatched: false,
+      tokenLookupMissReason: params.conversationToken ? null : 'token_missing',
+      tokenLookupError: null,
+      headerLookupAttempted: false,
+      headerLookupMatched: false,
+      headerLookupMissReason: null,
+      headerLookupError: null,
+      matchedBy: null,
+      matchedTicketId: null,
+      matchedCommentId: null,
+      threadId: params.emailData.threadId ?? null,
+      inReplyTo: params.emailData.inReplyTo ?? null,
+      references: params.emailData.references ?? [],
+      originalMessageIdCandidate: params.emailData.inReplyTo ?? params.emailData.id ?? null,
+      failureReason: null,
+    },
+  };
+}
+
+function withDiagnostics<T extends ProcessInboundEmailInAppBaseResult>(
+  result: T,
+  diagnostics?: ProcessInboundEmailInAppDiagnostics
+): ProcessInboundEmailInAppResult {
+  if (!diagnostics) {
+    return result;
+  }
+
+  diagnostics.outcome =
+    result.outcome === 'skipped'
+      ? { kind: result.outcome, reason: result.reason }
+      : result.outcome === 'deduped'
+        ? {
+            kind: result.outcome,
+            dedupeKey: result.dedupeKey,
+            ticketId: result.ticketId,
+            commentId: result.commentId,
+          }
+        : result.outcome === 'replied'
+          ? {
+              kind: result.outcome,
+              matchedBy: result.matchedBy,
+              ticketId: result.ticketId,
+              commentId: result.commentId,
+            }
+          : {
+              kind: result.outcome,
+              ticketId: result.ticketId,
+              ticketNumber: result.ticketNumber,
+              commentId: result.commentId,
+            };
+
+  return {
+    ...result,
+    diagnostics,
+  };
+}
 
 function extractConversationToken(parsedEmail: any): string | undefined {
   const direct = parsedEmail?.tokens?.conversationToken;
@@ -257,16 +436,37 @@ async function maybeRewriteCommentWithEmbeddedAttachmentUrls(args: {
 }
 
 export async function processInboundEmailInApp(
-  input: ProcessInboundEmailInAppInput
+  input: ProcessInboundEmailInAppInput,
+  options: ProcessInboundEmailInAppOptions = {}
 ): Promise<ProcessInboundEmailInAppResult> {
   if (!input?.tenantId || !input?.providerId || !input?.emailData?.id) {
-    return { outcome: 'skipped', reason: 'invalid_email_data' };
+    const diagnostics = options.collectDiagnostics
+      ? buildDiagnostics({
+          emailData: input?.emailData ?? ({
+            id: '',
+            provider: 'imap',
+            providerId: input?.providerId ?? '',
+            tenant: input?.tenantId ?? '',
+            receivedAt: '',
+            from: { email: '' },
+            to: [],
+            subject: '',
+            body: { text: '' },
+          } as EmailMessageDetails),
+          senderEmail: null,
+        })
+      : undefined;
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'invalid_email_data';
+    }
+    return withDiagnostics({ outcome: 'skipped', reason: 'invalid_email_data' }, diagnostics);
   }
 
   const tenantId = input.tenantId;
   const providerId = input.providerId;
   const emailData = input.emailData;
   const dedupeKey = buildDedupeKey(input);
+  const senderEmail = normalizeEmailAddress(emailData.from?.email);
 
   // Fast-path: if we've already created a ticket for this email, never create a second one.
   const existingTicket = await findExistingEmailTicket({
@@ -275,11 +475,21 @@ export async function processInboundEmailInApp(
     messageId: emailData.id,
   });
   if (existingTicket) {
-    return {
+    const diagnostics = options.collectDiagnostics
+      ? buildDiagnostics({
+          emailData,
+          senderEmail,
+        })
+      : undefined;
+    if (diagnostics) {
+      diagnostics.threading.matchedTicketId = existingTicket.ticketId;
+      diagnostics.threading.failureReason = 'deduped';
+    }
+    return withDiagnostics({
       outcome: 'deduped',
       dedupeKey,
       ticketId: existingTicket.ticketId,
-    };
+    }, diagnostics);
   }
 
   const {
@@ -298,21 +508,21 @@ export async function processInboundEmailInApp(
   } = await import('../../workflow/actions/emailWorkflowActions');
 
   let parsedEmail: any | null = null;
+  let parseError: string | null = null;
   try {
     parsedEmail = await parseEmailReplyBody({
       text: emailData.body?.text,
       html: emailData.body?.html,
     });
   } catch (error) {
+    parseError = error instanceof Error ? error.message : String(error);
     console.warn('processInboundEmailInApp: parseEmailReplyBody failed (continuing)', {
       tenantId,
       providerId,
       emailId: emailData.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: parseError,
     });
   }
-
-  const senderEmail = normalizeEmailAddress(emailData.from?.email);
   const resolveSenderContact = async (context: {
     ticketId?: string;
     defaultClientId?: string | null;
@@ -354,6 +564,15 @@ export async function processInboundEmailInApp(
   }
 
   const conversationToken = extractConversationToken(parsedEmail);
+  const diagnostics = options.collectDiagnostics
+    ? buildDiagnostics({
+        emailData,
+        senderEmail,
+        parsedEmail,
+        parseError,
+        conversationToken,
+      })
+    : undefined;
 
   if (conversationToken && !hasSubstantiveReplyContent(parsedEmail, emailData)) {
     console.info('processInboundEmailInApp: skipping token-only inbound email with no reply content', {
@@ -362,7 +581,10 @@ export async function processInboundEmailInApp(
       emailId: emailData.id,
       hasConversationToken: true,
     });
-    return { outcome: 'skipped', reason: 'self_notification' };
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'self_notification';
+    }
+    return withDiagnostics({ outcome: 'skipped', reason: 'self_notification' }, diagnostics);
   }
 
   const senderIsProviderMailbox =
@@ -389,7 +611,10 @@ export async function processInboundEmailInApp(
       hasThreadId: Boolean(emailData.threadId),
       hasReferences: Boolean(emailData.references?.length),
     });
-    return { outcome: 'skipped', reason: 'self_notification' };
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'self_notification';
+    }
+    return withDiagnostics({ outcome: 'skipped', reason: 'self_notification' }, diagnostics);
   }
 
   const buildCommentEmailMetadata = (options: {
@@ -460,18 +685,28 @@ export async function processInboundEmailInApp(
     try {
       const match = await findTicketByReplyToken(String(token), tenantId);
       if (match?.ticketId) {
+        if (diagnostics) {
+          diagnostics.threading.tokenLookupMatched = true;
+          diagnostics.threading.tokenLookupMissReason = null;
+          diagnostics.threading.matchedBy = 'reply_token';
+          diagnostics.threading.matchedTicketId = match.ticketId;
+        }
         const existingCommentId = await findExistingEmailComment({
           tenantId,
           ticketId: match.ticketId,
           messageId: emailData.id,
         });
         if (existingCommentId) {
-          return {
+          if (diagnostics) {
+            diagnostics.threading.matchedCommentId = existingCommentId;
+            diagnostics.threading.failureReason = 'deduped';
+          }
+          return withDiagnostics({
             outcome: 'deduped',
             dedupeKey,
             ticketId: match.ticketId,
             commentId: existingCommentId,
-          };
+          }, diagnostics);
         }
 
         const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
@@ -540,25 +775,39 @@ export async function processInboundEmailInApp(
 
         await upsertWatchListBestEffort(match.ticketId, watchListRecipients);
 
-        return {
+        if (diagnostics) {
+          diagnostics.threading.matchedCommentId = commentId;
+        }
+        return withDiagnostics({
           outcome: 'replied',
           matchedBy: 'reply_token',
           ticketId: match.ticketId,
           commentId,
-        };
+        }, diagnostics);
+      }
+      if (diagnostics) {
+        diagnostics.threading.tokenLookupMissReason = 'token_not_found';
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.warn('processInboundEmailInApp: reply-token threading failed (continuing)', {
         tenantId,
         providerId,
         emailId: emailData.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
       });
+      if (diagnostics) {
+        diagnostics.threading.tokenLookupMissReason = 'token_lookup_error';
+        diagnostics.threading.tokenLookupError = errorMessage;
+      }
     }
   }
 
   // Thread headers fallback.
   let threadedTicketId: string | null = null;
+  if (diagnostics) {
+    diagnostics.threading.headerLookupAttempted = true;
+  }
   try {
     const ticket = await findTicketByEmailThread(
       {
@@ -571,14 +820,27 @@ export async function processInboundEmailInApp(
     );
     if (ticket?.ticketId) {
       threadedTicketId = ticket.ticketId;
+      if (diagnostics) {
+        diagnostics.threading.headerLookupMatched = true;
+        diagnostics.threading.headerLookupMissReason = null;
+        diagnostics.threading.matchedBy = 'thread_headers';
+        diagnostics.threading.matchedTicketId = ticket.ticketId;
+      }
+    } else if (diagnostics) {
+      diagnostics.threading.headerLookupMissReason = 'header_no_match';
     }
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.warn('processInboundEmailInApp: header threading failed (continuing)', {
       tenantId,
       providerId,
       emailId: emailData.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage,
     });
+    if (diagnostics) {
+      diagnostics.threading.headerLookupMissReason = 'header_lookup_error';
+      diagnostics.threading.headerLookupError = errorMessage;
+    }
   }
 
   if (threadedTicketId) {
@@ -588,12 +850,16 @@ export async function processInboundEmailInApp(
       messageId: emailData.id,
     });
     if (existingCommentId) {
-      return {
+      if (diagnostics) {
+        diagnostics.threading.matchedCommentId = existingCommentId;
+        diagnostics.threading.failureReason = 'deduped';
+      }
+      return withDiagnostics({
         outcome: 'deduped',
         dedupeKey,
         ticketId: threadedTicketId,
         commentId: existingCommentId,
-      };
+      }, diagnostics);
     }
 
     const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
@@ -662,12 +928,15 @@ export async function processInboundEmailInApp(
 
     await upsertWatchListBestEffort(threadedTicketId, watchListRecipients);
 
-    return {
+    if (diagnostics) {
+      diagnostics.threading.matchedCommentId = commentId;
+    }
+    return withDiagnostics({
       outcome: 'replied',
       matchedBy: 'thread_headers',
       ticketId: threadedTicketId,
       commentId,
-    };
+    }, diagnostics);
   }
 
   // New ticket path.
@@ -678,7 +947,10 @@ export async function processInboundEmailInApp(
       providerId,
       emailId: emailData.id,
     });
-    return { outcome: 'skipped', reason: 'missing_defaults' };
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'missing_defaults';
+    }
+    return withDiagnostics({ outcome: 'skipped', reason: 'missing_defaults' }, diagnostics);
   }
 
   const matchedSenderContact = await resolveSenderContact({
@@ -718,7 +990,10 @@ export async function processInboundEmailInApp(
       source: destinationResolution.source,
       fallbackReason: destinationResolution.fallbackReason ?? null,
     });
-    return { outcome: 'skipped', reason: 'missing_defaults' };
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'missing_defaults';
+    }
+    return withDiagnostics({ outcome: 'skipped', reason: 'missing_defaults' }, diagnostics);
   }
 
   console.debug('processInboundEmailInApp: resolved inbound destination source', {
@@ -752,7 +1027,10 @@ export async function processInboundEmailInApp(
       emailId: emailData.id,
       senderEmail,
     });
-    return { outcome: 'skipped', reason: 'missing_defaults' };
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'missing_defaults';
+    }
+    return withDiagnostics({ outcome: 'skipped', reason: 'missing_defaults' }, diagnostics);
   }
 
   // New-ticket idempotency: ticket could have been created in another parallel process.
@@ -762,11 +1040,15 @@ export async function processInboundEmailInApp(
     messageId: emailData.id,
   });
   if (existingTicketAfterDefaults) {
-    return {
+    if (diagnostics) {
+      diagnostics.threading.matchedTicketId = existingTicketAfterDefaults.ticketId;
+      diagnostics.threading.failureReason = 'deduped';
+    }
+    return withDiagnostics({
       outcome: 'deduped',
       dedupeKey,
       ticketId: existingTicketAfterDefaults.ticketId,
-    };
+    }, diagnostics);
   }
 
   const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
@@ -853,10 +1135,13 @@ export async function processInboundEmailInApp(
     artifactsResult,
   });
 
-  return {
+  if (diagnostics) {
+    diagnostics.threading.failureReason = 'new_ticket_created';
+  }
+  return withDiagnostics({
     outcome: 'created',
     ticketId: ticketResult.ticket_id,
     ticketNumber: ticketResult.ticket_number,
     commentId,
-  };
+  }, diagnostics);
 }

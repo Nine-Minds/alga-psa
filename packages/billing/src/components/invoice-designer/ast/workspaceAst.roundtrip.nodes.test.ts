@@ -1,10 +1,10 @@
-import type { InvoiceTemplateValueExpression } from '@alga-psa/types';
+import type { TemplateValueExpression } from '@alga-psa/types';
 import { describe, expect, it } from 'vitest';
 import { createAstDocument, findNodeById, getDocumentNode, roundTripAst } from './workspaceAst.roundtrip.helpers';
 
 describe('workspaceAst roundtrip node/property matrix', () => {
   it('round-trips all text expression variants', () => {
-    const expressionMatrix: Array<{ id: string; expression: InvoiceTemplateValueExpression }> = [
+    const expressionMatrix: Array<{ id: string; expression: TemplateValueExpression }> = [
       { id: 'text-literal-string', expression: { type: 'literal', value: 'Invoice' } },
       { id: 'text-literal-number', expression: { type: 'literal', value: 42 } },
       { id: 'text-literal-bool', expression: { type: 'literal', value: true } },

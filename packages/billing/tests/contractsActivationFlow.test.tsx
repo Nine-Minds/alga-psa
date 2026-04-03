@@ -74,7 +74,6 @@ vi.mock('../src/components/billing-dashboard/contracts/ContractWizard', () => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/contractActions', () => ({
-  checkClientHasActiveContract: vi.fn(async () => false),
   deleteContract: vi.fn(async () => undefined),
   getContractTemplates: vi.fn(async () => []),
   getContractsWithClients: vi.fn(async () => mockClientContracts),

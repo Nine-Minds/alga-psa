@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import {
   createEmptyDesignerTransformWorkspace,
   type DesignerWorkspaceSnapshot,
@@ -148,7 +148,7 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
   });
 
   it('surfaces structured schema diagnostics with AST context', async () => {
-    const schemaSpy = vi.spyOn(schemaModule, 'validateInvoiceTemplateAst').mockReturnValueOnce({
+    const schemaSpy = vi.spyOn(schemaModule, 'validateTemplateAst').mockReturnValueOnce({
       success: false,
       errors: [
         {
@@ -186,9 +186,9 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
 
   it('surfaces structured evaluator diagnostics with operation context', async () => {
     const evaluationSpy = vi
-      .spyOn(evaluatorModule, 'evaluateInvoiceTemplateAst')
+      .spyOn(evaluatorModule, 'evaluateTemplateAst')
       .mockImplementationOnce(() => {
-        throw new evaluatorModule.InvoiceTemplateEvaluationError(
+        throw new evaluatorModule.TemplateEvaluationError(
           'MISSING_BINDING',
           'Missing transform binding.',
           'op-filter-1',
@@ -230,10 +230,10 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
 
   it('rejects non-allowlisted strategy ids at runtime', async () => {
     const astExportSpy = vi
-      .spyOn(workspaceAstModule, 'exportWorkspaceToInvoiceTemplateAst')
+      .spyOn(workspaceAstModule, 'exportWorkspaceToTemplateAst')
       .mockReturnValueOnce({
         kind: 'invoice-template-ast',
-        version: INVOICE_TEMPLATE_AST_VERSION,
+        version: TEMPLATE_AST_VERSION,
         bindings: {
           values: {},
           collections: {

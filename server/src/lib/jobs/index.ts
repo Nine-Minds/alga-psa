@@ -6,6 +6,7 @@ import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipH
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
 import { expiredCreditsHandler, ExpiredCreditsJobData } from './handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData } from './handlers/expiringCreditsNotificationHandler';
+import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
 import { creditReconciliationHandler, CreditReconciliationJobData } from './handlers/creditReconciliationHandler';
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handlers/reconcileBucketUsageHandler';
@@ -26,6 +27,8 @@ import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
 import logger from '@alga-psa/core/logger';
+import type { IRecurringRunExecutionWindowIdentity } from '@alga-psa/types';
+import type { IRecurringDueSelectionInput } from '@alga-psa/types';
 
 // =============================================================================
 // NEW JOB RUNNER ABSTRACTION EXPORTS
@@ -90,6 +93,10 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await expiringCreditsNotificationHandler(job.data);
     });
     
+    jobScheduler.registerJobHandler<ExpireQuotesJobData>('expire-quotes', async (job: Job<ExpireQuotesJobData>) => {
+      await expireQuotesHandler(job.data);
+    });
+
     // Register credit reconciliation handler
     jobScheduler.registerJobHandler<CreditReconciliationJobData>('credit-reconciliation', async (job: Job<CreditReconciliationJobData>) => {
       await creditReconciliationHandler(job.data);
@@ -202,11 +209,36 @@ export const scheduleInvoiceGeneration = async (
   runAt: Date,
   tenantId: string
 ): Promise<string | null> => {
+  throw new Error(
+    `Recurring invoice scheduling no longer accepts billingCycleId ${billingCycleId}. Use scheduleRecurringWindowInvoiceGeneration with canonical selectorInput.`,
+  );
+};
+
+export const scheduleRecurringWindowInvoiceGeneration = async (input: {
+  clientId: string;
+  runAt: Date;
+  tenantId: string;
+  executionWindow?: IRecurringRunExecutionWindowIdentity;
+  selectorInput: IRecurringDueSelectionInput;
+}): Promise<string | null> => {
   const scheduler = await initializeScheduler();
+  const executionWindow = input.executionWindow ?? input.selectorInput.executionWindow;
+
+  if (executionWindow.identityKey !== input.selectorInput.executionWindow.identityKey) {
+    throw new Error(
+      `Recurring invoice job execution window ${executionWindow.identityKey} does not match selectorInput ${input.selectorInput.executionWindow.identityKey}.`,
+    );
+  }
+
   return await scheduler.scheduleScheduledJob<GenerateInvoiceData>(
     'generate-invoice',
-    runAt,
-    { clientId, billingCycleId, tenantId }
+    input.runAt,
+    {
+      clientId: input.clientId,
+      executionWindow,
+      selectorInput: input.selectorInput,
+      tenantId: input.tenantId,
+    }
   );
 };
 
@@ -277,6 +309,18 @@ export const scheduleExpiringCreditsNotificationJob = async (
     'expiring-credits-notification',
     cronExpression,
     { tenantId, clientId }
+  );
+};
+
+export const scheduleQuoteAutoExpirationJob = async (
+  tenantId: string,
+  cronExpression: string = '0 6 * * *'
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ExpireQuotesJobData>(
+    'expire-quotes',
+    cronExpression,
+    { tenantId }
   );
 };
 

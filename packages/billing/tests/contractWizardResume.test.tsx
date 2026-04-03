@@ -9,6 +9,10 @@ import userEvent from '@testing-library/user-event';
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
     isOpen ? <div data-testid="dialog">{children}</div> : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('@alga-psa/ui/components/onboarding/WizardProgress', () => ({
@@ -47,20 +51,67 @@ vi.mock('@alga-psa/ui/components/onboarding/WizardNavigation', () => ({
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep', () => ({
-  ContractBasicsStep: ({ data }: { data: any }) => (
+  ContractBasicsStep: ({
+    data,
+    updateData,
+    onTemplateSelect,
+  }: {
+    data: any;
+    updateData: (next: Record<string, unknown>) => void;
+    onTemplateSelect?: (templateId: string | null) => void;
+  }) => (
     <div
       data-testid="step-contract-basics"
       data-client-id={data.client_id ?? ''}
       data-contract-name={data.contract_name ?? ''}
       data-start-date={data.start_date ?? ''}
       data-end-date={data.end_date ?? ''}
-    />
+    >
+      <button
+        type="button"
+        onClick={() =>
+          updateData({
+            client_id: 'client-1',
+            contract_name: 'Seeded Contract',
+            start_date: '2026-01-01',
+            billing_frequency: 'monthly',
+            currency_code: 'USD',
+            fixed_base_rate: 10000,
+            fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          })
+        }
+      >
+        Seed valid basics
+      </button>
+      <button type="button" onClick={() => onTemplateSelect?.('template-1')}>
+        Apply Template
+      </button>
+    </div>
   ),
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep', () => ({
-  FixedFeeServicesStep: ({ data }: { data: any }) => (
-    <div data-testid="step-fixed-fee" data-fixed-services-count={String((data.fixed_services ?? []).length)} />
+  FixedFeeServicesStep: ({
+    data,
+    updateData,
+  }: {
+    data: any;
+    updateData: (next: Record<string, unknown>) => void;
+  }) => (
+    <div
+      data-testid="step-fixed-fee"
+      data-fixed-services-count={String((data.fixed_services ?? []).length)}
+      data-cadence-owner={data.cadence_owner ?? 'client'}
+      data-billing-timing={data.billing_timing ?? 'arrears'}
+      data-enable-proration={String(Boolean(data.enable_proration))}
+    >
+      <button
+        type="button"
+        onClick={() => updateData({ enable_proration: !data.enable_proration })}
+      >
+        Toggle Partial-Period Adjustment
+      </button>
+    </div>
   ),
 }));
 
@@ -91,6 +142,8 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ReviewContra
       data-product-services-count={String((data.product_services ?? []).length)}
       data-hourly-services-count={String((data.hourly_services ?? []).length)}
       data-usage-services-count={String((data.usage_services ?? []).length)}
+      data-cadence-owner={data.cadence_owner ?? 'client'}
+      data-billing-timing={data.billing_timing ?? 'arrears'}
     />
   ),
 }));
@@ -99,6 +152,13 @@ vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
   createClientContractFromWizard: vi.fn(),
   listContractTemplatesForWizard: vi.fn(async () => []),
   getContractTemplateSnapshotForClientWizard: vi.fn(),
+}));
+
+vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
+  getDefaultBillingSettings: vi.fn(async () => ({
+    defaultRenewalMode: 'manual',
+    defaultNoticePeriodDays: 30,
+  })),
 }));
 
 describe('ContractWizard resume behavior', () => {
@@ -256,6 +316,51 @@ describe('ContractWizard resume behavior', () => {
 
     const step = await screen.findByTestId('step-fixed-fee');
     expect(step).toHaveAttribute('data-fixed-services-count', '2');
+  });
+
+  it('preserves cadence_owner from resumed drafts across fixed-fee step transitions (T113)', async () => {
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          cadence_owner: 'contract',
+          billing_timing: 'advance',
+          enable_proration: false,
+          fixed_base_rate: 10000,
+          fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          product_services: [],
+          hourly_services: [],
+          usage_services: [],
+        }}
+      />,
+    );
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Next'));
+    });
+
+    const fixedStep = await screen.findByTestId('step-fixed-fee');
+    expect(fixedStep).toHaveAttribute('data-cadence-owner', 'contract');
+
+    await act(async () => {
+      await user.click(screen.getByText('Next'));
+    });
+    await act(async () => {
+      await user.click(screen.getByText('Back'));
+    });
+
+    expect(await screen.findByTestId('step-fixed-fee')).toHaveAttribute('data-cadence-owner', 'contract');
   });
 
   it('step 3 (Products) shows pre-populated products from draft (T038)', async () => {
@@ -459,6 +564,124 @@ describe('ContractWizard resume behavior', () => {
     expect(options).toEqual({ isDraft: true });
   });
 
+  it('resaving a resumed draft preserves cadence_owner and partial-period defaults in the emitted draft payload', async () => {
+    const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
+    (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-1' });
+
+    const onComplete = vi.fn();
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        onComplete={onComplete}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          cadence_owner: 'contract',
+          billing_timing: 'advance',
+          enable_proration: false,
+          fixed_base_rate: 10000,
+          fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          product_services: [],
+          hourly_services: [],
+          usage_services: [],
+        }}
+      />,
+    );
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Next'));
+    });
+
+    const fixedStep = await screen.findByTestId('step-fixed-fee');
+    expect(fixedStep).toHaveAttribute('data-cadence-owner', 'contract');
+    expect(fixedStep).toHaveAttribute('data-billing-timing', 'advance');
+    expect(fixedStep).toHaveAttribute('data-enable-proration', 'false');
+
+    await act(async () => {
+      await user.click(screen.getByText('Toggle Partial-Period Adjustment'));
+      await user.click(screen.getByText('Save Draft'));
+    });
+
+    await waitFor(() => {
+      expect(onComplete).toHaveBeenCalled();
+    });
+
+    const [draftPayload] = onComplete.mock.calls.at(-1)!;
+    expect(draftPayload).toMatchObject({
+      contract_id: 'contract-1',
+      is_draft: true,
+      cadence_owner: 'contract',
+      billing_timing: 'advance',
+      enable_proration: true,
+    });
+  });
+
+  it('applies template-authored cadence_owner and billing_timing to the client contract submission payload (T236)', async () => {
+    const {
+      createClientContractFromWizard,
+      getContractTemplateSnapshotForClientWizard,
+    } = await import('@alga-psa/billing/actions/contractWizardActions');
+    (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-template' });
+    (getContractTemplateSnapshotForClientWizard as any).mockResolvedValue({
+      contract_name: 'Template Contract',
+      billing_frequency: 'monthly',
+      cadence_owner: 'contract',
+      billing_timing: 'advance',
+      enable_proration: false,
+      fixed_base_rate: 10000,
+      fixed_services: [{ service_id: 'svc-template', quantity: 1 }],
+    });
+
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(<ContractWizard open={true} onOpenChange={vi.fn()} />);
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Seed valid basics'));
+      await user.click(screen.getByText('Apply Template'));
+    });
+
+    await waitFor(() => {
+      expect(getContractTemplateSnapshotForClientWizard).toHaveBeenCalledWith('template-1');
+    });
+
+    await act(async () => {
+      await user.click(screen.getByText('Next'));
+    });
+
+    const fixedStep = await screen.findByTestId('step-fixed-fee');
+    expect(fixedStep).toHaveAttribute('data-cadence-owner', 'contract');
+    expect(fixedStep).toHaveAttribute('data-billing-timing', 'advance');
+
+    await act(async () => {
+      await user.click(screen.getByText('Save Draft'));
+    });
+
+    await waitFor(() => {
+      expect(createClientContractFromWizard).toHaveBeenCalledTimes(1);
+    });
+
+    const [submission, options] = (createClientContractFromWizard as any).mock.calls[0];
+    expect(options).toEqual({ isDraft: true });
+    expect(submission).toMatchObject({
+      template_id: 'template-1',
+      cadence_owner: 'contract',
+      billing_timing: 'advance',
+      enable_proration: false,
+      fixed_services: [{ service_id: 'svc-template', quantity: 1 }],
+    });
+  });
+
   it('save draft does not create a duplicate contract (T043)', async () => {
     const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
     (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-99' });
@@ -636,5 +859,38 @@ describe('ContractWizard resume behavior', () => {
 
     const [_submission, options] = (createClientContractFromWizard as any).mock.calls[0];
     expect(options).toBeUndefined();
+  });
+
+  it('submits the client cadence default for newly created recurring lines (T112)', async () => {
+    const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
+    (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-new' });
+
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(<ContractWizard open={true} onOpenChange={vi.fn()} />);
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Seed valid basics'));
+    });
+
+    for (let i = 0; i < 5; i++) {
+      await act(async () => {
+        await user.click(screen.getByText('Next'));
+      });
+    }
+
+    expect(await screen.findByTestId('step-review')).toHaveAttribute('data-cadence-owner', 'client');
+
+    await act(async () => {
+      await user.click(screen.getByText('Finish'));
+    });
+
+    await waitFor(() => {
+      expect(createClientContractFromWizard).toHaveBeenCalledTimes(1);
+    });
+
+    const [submission] = (createClientContractFromWizard as any).mock.calls[0];
+    expect(submission.cadence_owner).toBe('client');
   });
 });

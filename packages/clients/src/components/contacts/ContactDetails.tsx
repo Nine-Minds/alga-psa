@@ -13,20 +13,18 @@ import { ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Input } from '@alga-psa/ui/components/Input';
-import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Card } from '@alga-psa/ui/components/Card';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
-import { updateContact, getContactByContactNameId, deleteContact, listInboundTicketDestinationOptions, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
+import { updateContact, deleteContact, listInboundTicketDestinationOptions, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { validateEmailAddress, validateContactName, validateRole } from '@alga-psa/validation';
-import Documents from '@alga-psa/documents/components/Documents';
-import ContactDetailsEdit from './ContactDetailsEdit';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useToast } from '@alga-psa/ui';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { ITicketCategory } from '@alga-psa/types';
@@ -35,7 +33,6 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
-import { useTags } from '@alga-psa/tags/context';
 import ContactAvatarUpload from './ContactAvatarUpload';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { getClientById } from '@alga-psa/clients/actions';
@@ -47,17 +44,21 @@ import ContactPhoneNumbersEditor, { compactContactPhoneNumbers, validateContactP
 
 const SwitchDetailItem: React.FC<{
   value: boolean;
+  label: string;
+  helperText: string;
+  activeLabel: string;
+  inactiveLabel: string;
   onEdit: (value: boolean) => void;
-}> = ({ value, onEdit }) => {
+}> = ({ value, label, helperText, activeLabel, inactiveLabel, onEdit }) => {
   return (
     <div className="flex items-center justify-between py-3">
       <div>
-        <div className="text-gray-900 font-medium">Status</div>
-        <div className="text-sm text-gray-500">Set contact status as active or inactive</div>
+        <div className="text-gray-900 font-medium">{label}</div>
+        <div className="text-sm text-gray-500">{helperText}</div>
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-700">
-          {value ? 'Active' : 'Inactive'}
+          {value ? activeLabel : inactiveLabel}
         </span>
         <Switch
           checked={value}
@@ -119,39 +120,6 @@ const TextDetailItem: React.FC<{
   );
 };
 
-const DateDetailItem: React.FC<{
-  label: string;
-  value: string | null;
-  onEdit: (value: string) => void;
-}> = ({ label, value, onEdit }) => {
-  const [localValue, setLocalValue] = useState<Date | undefined>(
-    value ? new Date(value.split('T')[0]) : undefined
-  );
-
-  const handleChange = (date: Date | undefined) => {
-    setLocalValue(date);
-    if (date) {
-      const dateString = date.toISOString().split('T')[0];
-      if (dateString !== (value ? value.split('T')[0] : '')) {
-        onEdit(dateString);
-      }
-    } else if (value) {
-      onEdit('');
-    }
-  };
-  
-  return (
-    <div className="space-y-2">
-      <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
-      <DatePicker
-        value={localValue}
-        onChange={handleChange}
-        placeholder="Select date"
-      />
-    </div>
-  );
-};
-
 interface ContactDetailsProps {
   id?: string;
   contact: IContact;
@@ -188,7 +156,6 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   }
 }) => {
   const [editedContact, setEditedContact] = useState<IContact>(contact);
-  const [originalContact, setOriginalContact] = useState<IContact>(contact);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
@@ -198,7 +165,6 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
-  const { tags: allTags } = useTags();
   const [isEditingClient, setIsEditingClient] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(contact.client_id || null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -222,33 +188,13 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const { toast } = useToast();
   const drawer = useDrawer();
   const clientDrawer = useClientDrawer();
+  const { t } = useTranslation('msp/contacts');
   const { getTicketFormOptions, renderContactTickets } = useClientCrossFeature();
-
-  // Implement refreshContactData function
-  const refreshContactData = useCallback(async () => {
-    if (!contact?.contact_name_id) return;
-
-    console.log(`Refreshing contact data for ID: ${contact.contact_name_id}`);
-    try {
-      const latestContactData = await getContactByContactNameId(contact.contact_name_id);
-      if (latestContactData) {
-        setEditedContact(latestContactData);
-        console.log('Contact data refreshed successfully');
-      }
-    } catch (error) {
-      console.error('Error refreshing contact data:', error);
-      toast({
-        title: "Refresh Failed",
-        description: "Could not fetch latest contact data.",
-        variant: "destructive"
-      });
-    }
-  }, [contact?.contact_name_id, toast]);
+  const { renderDocuments } = useDocumentsCrossFeature();
 
   // Initial Load Logic
   useEffect(() => {
     setEditedContact(contact);
-    setOriginalContact(contact);
     setSelectedClientId(contact.client_id || null);
     setHasUnsavedChanges(false);
     setPhoneValidationErrors([]);
@@ -320,7 +266,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             value: row.id,
             label: row.is_active
               ? `${row.display_name} (${row.short_name})`
-              : `${row.display_name} (${row.short_name}) [inactive]`,
+              : `${row.display_name} (${row.short_name}) [${t('contactDetails.inactiveBadge', { defaultValue: 'inactive' })}]`,
           }))
         );
       } catch (error) {
@@ -337,7 +283,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   // Fetch contact avatar URL and tags
   useEffect(() => {
@@ -381,14 +327,14 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('contactDetails.delete.validationFailed', { defaultValue: 'Failed to validate deletion. Please try again.' }),
         dependencies: [],
         alternatives: []
       });
     } finally {
       setIsDeleteValidating(false);
     }
-  }, [editedContact.contact_name_id]);
+  }, [editedContact.contact_name_id, t]);
 
   const handleDeleteContact = () => {
     setIsDeleteDialogOpen(true);
@@ -413,8 +359,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       resetDeleteState();
 
       toast({
-        title: "Contact Deleted",
-        description: "Contact has been deleted successfully.",
+        title: t('contactDetails.delete.successTitle', { defaultValue: 'Contact Deleted' }),
+        description: t('contactDetails.delete.successDescription', { defaultValue: 'Contact has been deleted successfully.' }),
       });
 
       if (isInDrawer) {
@@ -424,9 +370,9 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       }
     } catch (error: any) {
       console.error('Failed to delete contact:', error);
-      const errorMessage = error.message || 'Failed to delete contact. Please try again.';
+      const errorMessage = error.message || t('contactDetails.delete.failed', { defaultValue: 'Failed to delete contact. Please try again.' });
       toast({
-        title: "Error",
+        title: t('contactDetails.error.title', { defaultValue: 'Error' }),
         description: errorMessage,
         variant: "destructive"
       });
@@ -461,88 +407,20 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       setEditedContact(updatedContact);
 
       toast({
-        title: "Contact Deactivated",
-        description: "Contact has been marked as inactive successfully.",
+        title: t('contactDetails.deactivate.successTitle', { defaultValue: 'Contact Deactivated' }),
+        description: t('contactDetails.deactivate.successDescription', { defaultValue: 'Contact has been marked as inactive successfully.' }),
       });
       router.refresh();
     } catch (error: any) {
       console.error('Error marking contact as inactive:', error);
       const errorMessage = error.message?.toLowerCase().includes('permission denied')
-        ? 'Permission denied. Please contact your administrator if you need additional access.'
-        : 'An error occurred while marking the contact as inactive. Please try again.';
+        ? t('contactDetails.errors.permissionDenied', { defaultValue: 'Permission denied. Please contact your administrator if you need additional access.' })
+        : t('contactDetails.errors.markInactiveFailed', { defaultValue: 'An error occurred while marking the contact as inactive. Please try again.' });
       toast({
-        title: "Error",
+        title: t('contactDetails.error.title', { defaultValue: 'Error' }),
         description: errorMessage,
         variant: "destructive"
       });
-    }
-  };
-
-  // Handler for the direct "Mark as Inactive" button (not from delete dialog)
-  const handleDirectMarkInactive = async () => {
-    try {
-      const updatedContact = await updateContact({
-        ...editedContact,
-        is_inactive: true
-      });
-
-      // Update local state immediately
-      setEditedContact(updatedContact);
-
-      toast({
-        title: "Contact Deactivated",
-        description: "Contact has been marked as inactive successfully.",
-      });
-      router.refresh();
-    } catch (error: any) {
-      console.error('Error marking contact as inactive:', error);
-      if (error.message?.toLowerCase().includes('permission denied')) {
-        toast({
-          title: "Error",
-          description: 'Permission denied. Please contact your administrator if you need additional access.',
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: 'An error occurred while marking the contact as inactive. Please try again.',
-          variant: "destructive"
-        });
-      }
-    }
-  };
-
-  // Handler for the direct "Reactivate" button
-  const handleDirectReactivate = async () => {
-    try {
-      const updatedContact = await updateContact({
-        ...editedContact,
-        is_inactive: false
-      });
-
-      // Update local state immediately
-      setEditedContact(updatedContact);
-
-      toast({
-        title: "Contact Reactivated",
-        description: "Contact has been reactivated successfully.",
-      });
-      router.refresh();
-    } catch (error: any) {
-      console.error('Error reactivating contact:', error);
-      if (error.message?.toLowerCase().includes('permission denied')) {
-        toast({
-          title: "Error",
-          description: 'Permission denied. Please contact your administrator if you need additional access.',
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: 'An error occurred while reactivating the contact. Please try again.',
-          variant: "destructive"
-        });
-      }
     }
   };
 
@@ -552,7 +430,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       setPhoneValidationErrors(currentPhoneErrors);
       if (currentPhoneErrors.length > 0) {
         toast({
-          title: "Save Failed",
+          title: t('contactDetails.saveFailed.title', { defaultValue: 'Save Failed' }),
           description: currentPhoneErrors[0],
           variant: "destructive"
         });
@@ -568,12 +446,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
       const updatedContact = await updateContact(dataToUpdate);
       setEditedContact(updatedContact);
-      setOriginalContact(updatedContact);
       setHasUnsavedChanges(false);
 
       toast({
-        title: "Contact Updated",
-        description: "Contact details have been saved successfully.",
+        title: t('contactDetails.update.successTitle', { defaultValue: 'Contact Updated' }),
+        description: t('contactDetails.update.successDescription', { defaultValue: 'Contact details have been saved successfully.' }),
       });
       
       // In quick view mode, mark that changes were saved (for refresh on drawer close)
@@ -586,8 +463,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     } catch (error) {
       console.error('Error saving contact:', error);
       toast({
-        title: "Save Failed",
-        description: "Could not save contact details. Please try again.",
+        title: t('contactDetails.saveFailed.title', { defaultValue: 'Save Failed' }),
+        description: t('contactDetails.saveFailed.description', { defaultValue: 'Could not save contact details. Please try again.' }),
         variant: "destructive"
       });
     }
@@ -638,15 +515,6 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     }
   };
 
-  const handleInteractionAdded = (newInteraction: IInteraction) => {
-    setInteractions(prevInteractions => {
-      const updatedInteractions = [newInteraction, ...prevInteractions];
-      return updatedInteractions.filter((interaction, index, self) =>
-        index === self.findIndex((t) => t.interaction_id === interaction.interaction_id)
-      );
-    });
-  };
-
   const handleTabChange = async (tabValue: string) => {
     // In quick view mode, we don't need to handle tab changes since only Details tab is shown
     if (quickView) {
@@ -660,31 +528,25 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   const getClientName = (clientId: string) => {
     const client = clients.find(c => c.client_id === clientId);
-    return client ? client.client_name : 'Unknown Client';
-  };
-
-  const formatDateForDisplay = (dateString: string | null | undefined): string => {
-    if (!dateString) return 'Not set';
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    return client ? client.client_name : t('contactDetails.empty.unknownClient', { defaultValue: 'Unknown Client' });
   };
 
   const tabContent = [
     {
       id: 'details',
-      label: "Details",
+      label: t('contactDetails.tabs.details', { defaultValue: 'Details' }),
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <TextDetailItem
-              label="Full Name"
+              label={t('contactDetails.fields.fullName', { defaultValue: 'Full Name' })}
               value={editedContact.full_name}
               onEdit={(value) => handleFieldChange('full_name', value)}
               automationId="full-name-field"
               validate={validateContactName}
             />
             <div className="space-y-2">
-              <Text as="label" size="2" className="text-gray-700 font-medium">Client</Text>
+              <Text as="label" size="2" className="text-gray-700 font-medium">{t('contactDetails.fields.client', { defaultValue: 'Client' })}</Text>
               {isEditingClient ? (
                 // Show client picker when editing
                 <div className="flex items-center gap-2">
@@ -719,7 +581,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                       <span className="text-blue-500 hover:underline text-sm">{getClientName(editedContact.client_id)}</span>
                     </div>
                   ) : (
-                    <span className="text-gray-500 italic text-sm py-2 px-2">No client assigned</span>
+                    <span className="text-gray-500 italic text-sm py-2 px-2">{t('contactDetails.client.noClientAssigned', { defaultValue: 'No client assigned' })}</span>
                   )}
                   <Button
                     id="edit-client-btn"
@@ -734,21 +596,21 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               )}
             </div>
             <TextDetailItem
-              label="Email"
+              label={t('contactDetails.fields.email', { defaultValue: 'Email' })}
               value={editedContact.email || ''}
               onEdit={(value) => handleFieldChange('email', value)}
               automationId="email-field"
               validate={validateEmailAddress}
             />
             <TextDetailItem
-              label="Role"
+              label={t('contactDetails.fields.role', { defaultValue: 'Role' })}
               value={editedContact.role || ''}
               onEdit={(value) => handleFieldChange('role', value)}
               automationId="role-field"
               validate={validateRole}
             />
             <div className="space-y-2">
-              <Text as="label" size="2" className="text-gray-700 font-medium">Inbound ticket destination override</Text>
+              <Text as="label" size="2" className="text-gray-700 font-medium">{t('contactDetails.fields.inboundTicketDestinationOverride', { defaultValue: 'Inbound ticket destination override' })}</Text>
               <CustomSelect
                 id="contact-inbound-ticket-destination-select"
                 value={(editedContact as any).inbound_ticket_defaults_id || ''}
@@ -757,13 +619,13 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                 allowClear={true}
                 placeholder={
                   isInboundDestinationOptionsLoading
-                    ? 'Loading destinations...'
-                    : 'Use client destination'
+                    ? t('contactDetails.loading.destinations', { defaultValue: 'Loading destinations...' })
+                    : t('contactDetails.fields.useClientDestination', { defaultValue: 'Use client destination' })
                 }
                 disabled={isInboundDestinationOptionsLoading}
               />
               <Text size="1" className="text-gray-500">
-                If set, this overrides the client destination for this exact sender contact. Precedence: Contact override -&gt; Client destination -&gt; Provider default.
+                {t('contactDetails.fields.inboundTicketDestinationHelp', { defaultValue: 'If set, this overrides the client destination for this exact sender contact. Precedence: Contact override -> Client destination -> Provider default.' })}
               </Text>
             </div>
             <div className="space-y-2">
@@ -779,13 +641,17 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             </div>
             <SwitchDetailItem
               value={!editedContact.is_inactive || false}
+              label={t('contactDetails.status.label', { defaultValue: 'Status' })}
+              helperText={t('contactDetails.status.helper', { defaultValue: 'Set contact status as active or inactive' })}
+              activeLabel={t('contactDetails.status.active', { defaultValue: 'Active' })}
+              inactiveLabel={t('contactDetails.status.inactive', { defaultValue: 'Inactive' })}
               onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
             />
           </div>
 
           {/* Tags Section */}
           <div className="space-y-2">
-            <Text as="label" size="2" className="text-gray-700 font-medium">Tags</Text>
+            <Text as="label" size="2" className="text-gray-700 font-medium">{t('contactDetails.fields.tags', { defaultValue: 'Tags' })}</Text>
             <TagManager
               entityId={editedContact.contact_name_id}
               entityType="contact"
@@ -797,7 +663,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
           {editedContact.notes && (
             <div className="space-y-2">
-              <Text as="label" size="2" className="text-gray-700 font-medium">Notes</Text>
+              <Text as="label" size="2" className="text-gray-700 font-medium">{t('contactDetails.fields.notes', { defaultValue: 'Notes' })}</Text>
               <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
                 <Text className="text-sm whitespace-pre-wrap">{editedContact.notes}</Text>
               </div>
@@ -815,7 +681,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                   : "bg-[rgb(var(--color-border-400))] cursor-not-allowed"
               }`}
             >
-              Save Changes
+              {t('contactDetails.actions.saveChanges', { defaultValue: 'Save Changes' })}
             </Button>
           </Flex>
         </div>
@@ -823,7 +689,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     },
     {
       id: 'tickets',
-      label: "Tickets",
+      label: t('contactDetails.tabs.tickets', { defaultValue: 'Tickets' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           {ticketFormOptions ? (
@@ -841,7 +707,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             })
           ) : (
             <div className="flex justify-center items-center h-32">
-              <span>Loading ticket filters...</span>
+              <span>{t('contactDetails.loading.ticketFilters', { defaultValue: 'Loading ticket filters...' })}</span>
             </div>
           )}
         </div>
@@ -849,28 +715,26 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     },
     {
       id: 'documents',
-      label: "Documents",
+      label: t('contactDetails.tabs.documents', { defaultValue: 'Documents' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          {currentUser ? (
-            <Documents
-              id={`${id}-documents`}
-              documents={documents}
-              gridColumns={3}
-              userId={currentUser.user_id}
-              entityId={editedContact.contact_name_id}
-              entityType="contact"
-              onDocumentCreated={onDocumentCreated || (async () => {})}
-            />
-          ) : (
-            <div>Loading...</div>
+          {currentUser ? renderDocuments({
+              id: `${id}-documents`,
+              documents,
+              gridColumns: 3,
+              userId: currentUser.user_id,
+              entityId: editedContact.contact_name_id,
+            entityType: 'contact',
+            onDocumentCreated: onDocumentCreated || (async () => {}),
+          }) : (
+            <div>{t('common.states.loading', { defaultValue: 'Loading...' })}</div>
           )}
         </div>
       )
     },
     {
       id: 'interactions',
-      label: "Interactions",
+      label: t('contactDetails.tabs.interactions', { defaultValue: 'Interactions' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <InteractionsFeed
@@ -885,7 +749,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     },
     {
       id: 'notes',
-      label: "Notes",
+      label: t('contactDetails.tabs.notes', { defaultValue: 'Notes' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ContactNotesPanel
@@ -897,7 +761,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     },
     {
       id: 'portal',
-      label: "Portal",
+      label: t('contactDetails.tabs.portal', { defaultValue: 'Portal' }),
       content: (
         <ContactPortalTab
           contact={editedContact}
@@ -908,11 +772,13 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   ];
 
   return (
-    <ReflectionContainer id={id} label="Contact Details">
+    <ReflectionContainer id={id} label={t('contactDetails.title', { defaultValue: 'Contact Details' })}>
       <div className="flex items-center space-x-5 mb-4 pt-2">
         {!quickView && (
           <BackNav href={!isInDrawer ? "/msp/contacts" : undefined}>
-            {isInDrawer ? 'Back' : 'Back to Contacts'}
+            {isInDrawer
+              ? t('common.actions.back', { defaultValue: 'Back' })
+              : t('contactDetails.backToContacts', { defaultValue: 'Back to Contacts' })}
           </BackNav>
         )}
         
@@ -940,7 +806,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             className="flex items-center ml-4 mr-2"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
-            Go to contact
+            {t('contactDetails.actions.goToContact', { defaultValue: 'Go to contact' })}
           </Button>
         )}
 
@@ -953,7 +819,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             className="flex items-center"
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Delete
+            {t('common.actions.delete', { defaultValue: 'Delete' })}
           </Button>
         </div>
       </div>

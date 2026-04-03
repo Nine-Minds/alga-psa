@@ -1,0 +1,194 @@
+[
+  {
+    "id": "F001",
+    "description": "Schema: add `contracts.owner_client_id` for non-template client ownership",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F002",
+    "description": "Types/API: add `owner_client_id` to contract interfaces and normal app create/update payloads",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F003",
+    "description": "Migration: detect non-template contracts linked to more than one distinct client",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F004",
+    "description": "Migration: choose the preserved assignment by invoice-history rule, otherwise earliest `start_date`",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F005",
+    "description": "Migration: backfill `owner_client_id` onto preserved non-template contracts",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F006",
+    "description": "Migration: clone contract header rows for non-preserved shared assignments with fresh `contract_id` values",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F007",
+    "description": "Migration: clone `contract_lines` for cloned contracts with fresh `contract_line_id` values",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F008",
+    "description": "Migration: clone contract-line child/configuration records needed for cloned contracts to remain self-contained",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F009",
+    "description": "Migration: repoint non-preserved `client_contracts.contract_id` rows to their cloned contracts",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F010",
+    "description": "Migration: preserve original `contract_id` for the single invoiced assignment when invoice history exists",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F011",
+    "description": "Migration safety: abort shared-contract groups that require historical reference retargeting outside this pass",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F012",
+    "description": "Guardrail: non-template contract creation requires an owning client in supported app flows",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F013",
+    "description": "Guardrail: assignment create/update rejects attaching a non-template contract to a different client than `owner_client_id`",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F014",
+    "description": "Guardrail: renewal-draft creation carries owner client to the new draft contract",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F015",
+    "description": "Guardrail: legacy standalone contract create paths are aligned so they cannot recreate cross-client shared contracts",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F016",
+    "description": "Contract model/actions: stop deriving live contract ownership semantics from shared contract assumptions",
+    "implemented": true,
+    "prdRefs": ["Problem", "Requirements"]
+  },
+  {
+    "id": "F017",
+    "description": "Contract model/actions: stop using aggregate multi-assignment logic to derive live `contracts.status` for client-owned contracts",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F018",
+    "description": "Billing: keep `client_contracts -> contracts -> contract_lines` resolution but rely on owner-client invariant for unambiguous reads",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F019",
+    "description": "Live contract status: standardize contract-facing status logic around assignment-derived lifecycle",
+    "implemented": true,
+    "prdRefs": ["Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F020",
+    "description": "Billing dashboard: reframe contracts hub so templates are reusable and non-template contracts are client-owned instances",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F021",
+    "description": "ClientContractsTab: load rows from assignment-first data instead of contract-first list semantics",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F022",
+    "description": "ClientContractsTab: render live status from `client_contracts` lifecycle, not `contracts.status`",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Requirements"]
+  },
+  {
+    "id": "F023",
+    "description": "Client contract list/actions: mutate assignment lifecycle for live contracts instead of contract-header status",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Requirements"]
+  },
+  {
+    "id": "F024",
+    "description": "Contract detail routing: use `clientContractId` as the primary live-contract context",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F025",
+    "description": "Contract detail: show owner/assignment-derived live semantics instead of implying cross-client shared ownership",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F026",
+    "description": "Templates UI: preserve template workflows as the only reusable contract-definition path",
+    "implemented": true,
+    "prdRefs": ["Goals", "UX / UI Notes"]
+  },
+  {
+    "id": "F027",
+    "description": "Contract report actions: pivot live contract fact sourcing from `contracts` to `client_contracts`",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F028",
+    "description": "Revenue/expiration report definitions: stop counting active/live client contracts from `contracts.is_active`",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F029",
+    "description": "API semantics: document and return `/contracts` as client-owned instantiated headers rather than reusable shared contracts",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F030",
+    "description": "Docs: update contract-domain documentation to reflect templates-only reuse and client-owned non-template contracts",
+    "implemented": true,
+    "prdRefs": ["Summary", "Goals"]
+  },
+  {
+    "id": "F031",
+    "description": "Client portal/document visibility: keep contract-linked document lookups correct for client-owned contracts after migration",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F032",
+    "description": "Client contract line helpers: keep contract-backed overlap/listing queries correct under the owner-client invariant so contract-derived lines cannot bleed across clients",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Requirements"]
+  }
+]

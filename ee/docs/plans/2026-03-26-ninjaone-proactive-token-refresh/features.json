@@ -1,0 +1,122 @@
+[
+  {
+    "id": "F001",
+    "description": "Define a dedicated Temporal workflow/activity pair for proactive NinjaOne token refresh",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Users and Primary Flows"]
+  },
+  {
+    "id": "F002",
+    "description": "Compute a proactive refresh target time from stored NinjaOne credential expiry using a configurable safety buffer",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "Schedule one delayed future refresh workflow per active NinjaOne integration when credentials are first connected",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F004",
+    "description": "Reschedule the next future refresh workflow after each successful proactive token refresh",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F005",
+    "description": "Reschedule the proactive refresh workflow after successful lazy refreshes so background ownership stays current",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Goals"]
+  },
+  {
+    "id": "F006",
+    "description": "Reload the latest stored NinjaOne credentials at workflow execution time instead of trusting stale schedule input",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F007",
+    "description": "Use the existing NinjaOne OAuth refresh-token contract to rotate access token, refresh token, and expiry during proactive refresh",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Persist rotated NinjaOne credentials back to tenant secret storage after successful proactive refresh",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F009",
+    "description": "Persist integration-owned lifecycle metadata for NinjaOne token refresh schedule and reconnect-required state without storing raw tokens",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Security / Permissions"]
+  },
+  {
+    "id": "F010",
+    "description": "Ensure only one future proactive refresh execution is active per NinjaOne integration at a time",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Mark the integration as reconnect-required on terminal provider/token failures such as invalid refresh token",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F012",
+    "description": "Stop or invalidate future proactive scheduling after terminal reconnect-required failures until the integration is reconnected or reset",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements"]
+  },
+  {
+    "id": "F013",
+    "description": "Keep existing lazy NinjaOne token refresh behavior as a fallback for missed schedules or unscheduled integrations",
+    "implemented": true,
+    "prdRefs": ["Goals", "Non-goals"]
+  },
+  {
+    "id": "F014",
+    "description": "Seed proactive refresh scheduling for already-active NinjaOne integrations during rollout using their stored credential expiry",
+    "implemented": true,
+    "prdRefs": ["Rollout / Migration", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F015",
+    "description": "Treat integrations with missing or unreadable NinjaOne credentials as unschedulable and record an explicit failure state instead of silently looping",
+    "implemented": true,
+    "prdRefs": ["Rollout / Migration", "Requirements"]
+  },
+  {
+    "id": "F016",
+    "description": "Disconnecting NinjaOne cancels or safely no-ops any future proactive refresh execution for that integration",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F017",
+    "description": "Reconnecting NinjaOne replaces stale lifecycle metadata and seeds a fresh future proactive refresh schedule",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F018",
+    "description": "Emit structured logs for schedule creation, execution start, success, retryable failure, and terminal reconnect-required failure",
+    "implemented": true,
+    "prdRefs": ["Observability", "Requirements"]
+  },
+  {
+    "id": "F019",
+    "description": "Reuse or extend existing integration token lifecycle event publication so proactive NinjaOne refresh failures remain visible outside worker logs",
+    "implemented": true,
+    "prdRefs": ["Observability", "Requirements"]
+  },
+  {
+    "id": "F020",
+    "description": "Scope workflow ownership to the existing app Temporal worker/task queue used by NinjaOne sync execution unless explicit queue separation is required",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Non-functional Requirements"]
+  }
+]

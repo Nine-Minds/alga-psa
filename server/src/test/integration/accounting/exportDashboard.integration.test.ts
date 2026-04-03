@@ -254,6 +254,102 @@ describe('Accounting export dashboard integration', () => {
     expect(detail.errors[0].code).toBe('XERO_VALIDATION_ERROR');
   });
 
+  it('T178: rereads mixed historical and canonical export lines without collapsing stored period semantics', async () => {
+    const batchId = uuidv4();
+    const canonicalLineId = uuidv4();
+    const historicalLineId = uuidv4();
+    const now = new Date().toISOString();
+
+    await ctx.db('accounting_export_batches').insert({
+      batch_id: batchId,
+      tenant: ctx.tenantId,
+      adapter_type: 'quickbooks_online',
+      export_type: 'invoice',
+      status: 'ready',
+      queued_at: now,
+      created_at: now,
+      updated_at: now,
+      notes: 'Mixed service-period batch'
+    });
+
+    await ctx.db('accounting_export_lines').insert([
+      {
+        line_id: canonicalLineId,
+        batch_id: batchId,
+        tenant: ctx.tenantId,
+        invoice_id: uuidv4(),
+        invoice_charge_id: uuidv4(),
+        client_id: ctx.clientId,
+        amount_cents: 15000,
+        currency_code: 'USD',
+        service_period_start: '2025-01-01',
+        service_period_end: '2025-02-01',
+        payload: {
+          invoice_number: 'INV-CANONICAL-1',
+          service_period_source: 'canonical_detail_periods',
+          recurring_detail_periods: [
+            {
+              service_period_start: '2025-01-01T00:00:00.000Z',
+              service_period_end: '2025-02-01T00:00:00.000Z',
+              billing_timing: 'arrears'
+            }
+          ]
+        },
+        status: 'ready',
+        created_at: now,
+        updated_at: now
+      },
+      {
+        line_id: historicalLineId,
+        batch_id: batchId,
+        tenant: ctx.tenantId,
+        invoice_id: uuidv4(),
+        invoice_charge_id: uuidv4(),
+        client_id: ctx.clientId,
+        amount_cents: 5000,
+        currency_code: 'USD',
+        service_period_start: '2025-02-10',
+        service_period_end: '2025-02-10',
+        payload: {
+          invoice_number: 'INV-HISTORICAL-1',
+          service_period_source: 'invoice_header_fallback',
+          recurring_detail_periods: null,
+          metadata: { manual_invoice: true }
+        },
+        status: 'ready',
+        created_at: now,
+        updated_at: now
+      }
+    ]);
+
+    const detail = await service.getBatchWithDetails(batchId);
+    expect(detail.batch?.batch_id).toBe(batchId);
+    expect(detail.lines).toHaveLength(2);
+
+    const canonicalLine = detail.lines.find((line) => line.line_id === canonicalLineId);
+    expect(canonicalLine?.service_period_start).toBe('2025-01-01T00:00:00.000Z');
+    expect(canonicalLine?.service_period_end).toBe('2025-02-01T00:00:00.000Z');
+    expect(canonicalLine?.payload).toMatchObject({
+      service_period_source: 'canonical_detail_periods',
+      recurring_detail_periods: [
+        {
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears'
+        }
+      ]
+    });
+
+    const historicalLine = detail.lines.find((line) => line.line_id === historicalLineId);
+    expect(historicalLine?.service_period_start).toBe('2025-02-10T00:00:00.000Z');
+    expect(historicalLine?.service_period_end).toBe('2025-02-10T00:00:00.000Z');
+    expect(historicalLine?.payload).toMatchObject({
+      service_period_source: 'invoice_header_fallback',
+      recurring_detail_periods: null,
+      metadata: { manual_invoice: true }
+    });
+  });
+
   it('creates a re-export batch via invoice selector for invoice detail workflow', async () => {
     const selector = new AccountingExportInvoiceSelector(ctx.db, ctx.tenantId);
     const invoiceDay = new Date().toISOString().split('T')[0];
@@ -351,7 +447,7 @@ describe('Accounting export dashboard integration', () => {
     const preview = await selector.previewInvoiceLines(filters);
     expect(preview).toHaveLength(1);
 
-    vi.spyOn(AccountingExportService, 'create').mockResolvedValue(service);
+    vi.spyOn(AccountingExportService, 'createForTenant').mockResolvedValue(service);
 
     const { batch, lines } = await selector.createBatchFromFilters({
       adapterType: 'quickbooks_online',

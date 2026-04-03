@@ -9,7 +9,7 @@ const docsSource = fs.readFileSync(
 
 describe('invoice template AST architecture docs', () => {
   it('documents AST model, evaluator/renderer pipeline, and strategy allowlist extension mechanism', () => {
-    expect(docsSource).toContain('InvoiceTemplateAst');
+    expect(docsSource).toContain('TemplateAst');
     expect(docsSource).toContain('evaluator');
     expect(docsSource).toContain('renderer');
     expect(docsSource).toContain('strategyId');

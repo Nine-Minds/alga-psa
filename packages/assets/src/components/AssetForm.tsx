@@ -29,6 +29,7 @@ import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, S
 import { Text } from '@radix-ui/themes';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { useClientDrawer } from '@alga-psa/ui';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AssetFormProps {
   assetId: string;
@@ -45,33 +46,13 @@ type AssetFormData = Omit<CreateAssetRequest, 'workstation' | 'network_device' |
 type ClientOptionSummary = { id: string; name: string };
 
 
-const STATUS_OPTIONS = [
-  { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
-  { value: 'maintenance', label: 'Maintenance' }
-];
-
-const NETWORK_DEVICE_TYPES = [
-  { value: 'switch', label: 'Switch' },
-  { value: 'router', label: 'Router' },
-  { value: 'firewall', label: 'Firewall' },
-  { value: 'access_point', label: 'Access Point' },
-  { value: 'load_balancer', label: 'Load Balancer' }
-];
-
-const STORAGE_TYPES = [
-  { value: 'ssd', label: 'SSD' },
-  { value: 'hdd', label: 'HDD' },
-  { value: 'nvme', label: 'NVMe' }
-];
-
-const OS_TYPES = [
-  { value: 'windows', label: 'Windows' },
-  { value: 'macos', label: 'macOS' },
-  { value: 'linux', label: 'Linux' }
-];
+const STATUS_OPTION_VALUES = ['active', 'inactive', 'maintenance'] as const;
+const NETWORK_DEVICE_TYPE_VALUES = ['switch', 'router', 'firewall', 'access_point', 'load_balancer'] as const;
+const STORAGE_TYPE_VALUES = ['ssd', 'hdd', 'nvme'] as const;
+const OS_TYPE_VALUES = ['windows', 'macos', 'linux'] as const;
 
 export default function AssetForm({ assetId }: AssetFormProps) {
+  const { t } = useTranslation('msp/assets');
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -89,7 +70,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   useRegisterUIComponent({
     id: 'asset-edit-form',
     type: 'form',
-    label: 'Edit Asset',
+    label: t('assetForm.heading', { defaultValue: 'Edit Asset' }),
     disabled: saving
   });
   const [formData, setFormData] = useState<AssetFormData>({
@@ -105,13 +86,63 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   });
   
   const router = useRouter();
+  const statusOptions = useMemo(() => (
+    STATUS_OPTION_VALUES.map((value) => ({
+      value,
+      label: t(`assetForm.statusOptions.${value}`, {
+        defaultValue: value.charAt(0).toUpperCase() + value.slice(1)
+      })
+    }))
+  ), [t]);
+
+  const networkDeviceTypeOptions = useMemo(() => (
+    NETWORK_DEVICE_TYPE_VALUES.map((value) => ({
+      value,
+      label: t(`assetForm.networkDeviceTypes.${value}`, {
+        defaultValue: value === 'access_point'
+          ? 'Access Point'
+          : value === 'load_balancer'
+            ? 'Load Balancer'
+            : value.charAt(0).toUpperCase() + value.slice(1)
+      })
+    }))
+  ), [t]);
+
+  const storageTypeOptions = useMemo(() => (
+    STORAGE_TYPE_VALUES.map((value) => ({
+      value,
+      label: t(`assetForm.storageTypes.${value}`, {
+        defaultValue: value.toUpperCase()
+      })
+    }))
+  ), [t]);
+
+  const osTypeOptions = useMemo(() => (
+    OS_TYPE_VALUES.map((value) => ({
+      value,
+      label: t(`assetForm.osTypes.${value}`, {
+        defaultValue: value === 'macos' ? 'macOS' : value.charAt(0).toUpperCase() + value.slice(1)
+      })
+    }))
+  ), [t]);
+
+  const mobileOsOptions = useMemo(() => ([
+    {
+      value: 'ios',
+      label: t('assetForm.mobileOsTypes.ios', { defaultValue: 'iOS' })
+    },
+    {
+      value: 'android',
+      label: t('assetForm.mobileOsTypes.android', { defaultValue: 'Android' })
+    }
+  ]), [t]);
 
   useEffect(() => {
     const loadAsset = async () => {
       try {
         const data = await getAsset(assetId);
         if (!data) {
-          setError('Asset not found');
+          setError(t('assetForm.errors.assetNotFound', { defaultValue: 'Asset not found' }));
           return;
         }
         setAsset(data);
@@ -195,14 +226,14 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         setSelectedLocationId(data.location ? 'custom' : '');
       } catch (error) {
         console.error('Error loading asset:', error);
-        setError('Failed to load asset details');
+        setError(t('assetForm.errors.loadFailed', { defaultValue: 'Failed to load asset details' }));
       } finally {
         setLoading(false);
       }
     };
   
     void loadAsset();
-  }, [assetId]);
+  }, [assetId, t]);
 
   useEffect(() => {
     let isMounted = true;
@@ -222,7 +253,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       } catch (err) {
         console.error('Error loading clients:', err);
         if (isMounted) {
-          setClientsError('Unable to load clients');
+          setClientsError(t('assetForm.errors.clientsLoadFailed', {
+            defaultValue: 'Unable to load clients'
+          }));
         }
       } finally {
         if (isMounted) {
@@ -236,7 +269,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let isMounted = true;
@@ -269,7 +302,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       } catch (err) {
         console.error('Error loading client locations:', err);
         if (isMounted) {
-          setLocationsError('Unable to load locations for this client');
+          setLocationsError(t('assetForm.errors.locationsLoadFailed', {
+            defaultValue: 'Unable to load locations for this client'
+          }));
           setClientLocations([]);
           setSelectedLocationId('custom');
         }
@@ -285,7 +320,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     return () => {
       isMounted = false;
     };
-  }, [formData.client_id]);
+  }, [formData.client_id, t]);
 
   const getAssetTypeIcon = () => {
     const iconClass = "h-16 w-16 text-primary-500 mb-4";
@@ -336,9 +371,14 @@ export default function AssetForm({ assetId }: AssetFormProps) {
 
     return [
       ...options,
-      { value: 'custom', label: 'Custom location' }
+      {
+        value: 'custom',
+        label: t('assetForm.fields.customLocationOption', {
+          defaultValue: 'Custom location'
+        })
+      }
     ];
-  }, [clientLocations]);
+  }, [clientLocations, t]);
 
   const handleClientChange = (clientId: string) => {
     setFormData(prev => ({
@@ -447,18 +487,18 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            OS Type
+            {t('assetForm.fields.osType', { defaultValue: 'OS Type' })}
           </label>
           <CustomSelect
             value={formData.workstation.os_type || ''}
             onValueChange={(value) => handleTypeSpecificChange('workstation', 'os_type', value)}
-            options={OS_TYPES}
+            options={osTypeOptions}
             className="mt-1"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            OS Version
+            {t('assetForm.fields.osVersion', { defaultValue: 'OS Version' })}
           </label>
           <Input
             value={formData.workstation.os_version || ''}
@@ -468,7 +508,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            CPU Model
+            {t('assetForm.fields.cpuModel', { defaultValue: 'CPU Model' })}
           </label>
           <Input
             value={formData.workstation.cpu_model || ''}
@@ -478,7 +518,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            CPU Cores
+            {t('assetForm.fields.cpuCores', { defaultValue: 'CPU Cores' })}
           </label>
           <Input
             type="number"
@@ -489,7 +529,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            RAM (GB)
+            {t('assetForm.fields.ramGb', { defaultValue: 'RAM (GB)' })}
           </label>
           <Input
             type="number"
@@ -500,18 +540,18 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Storage Type
+            {t('assetForm.fields.storageType', { defaultValue: 'Storage Type' })}
           </label>
           <CustomSelect
             value={formData.workstation.storage_type || ''}
             onValueChange={(value) => handleTypeSpecificChange('workstation', 'storage_type', value)}
-            options={STORAGE_TYPES}
+            options={storageTypeOptions}
             className="mt-1"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Storage Capacity (GB)
+            {t('assetForm.fields.storageCapacityGb', { defaultValue: 'Storage Capacity (GB)' })}
           </label>
           <Input
             type="number"
@@ -522,7 +562,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            GPU Model
+            {t('assetForm.fields.gpuModel', { defaultValue: 'GPU Model' })}
           </label>
           <Input
             value={formData.workstation.gpu_model || ''}
@@ -542,18 +582,18 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Device Type
+            {t('assetForm.fields.deviceType', { defaultValue: 'Device Type' })}
           </label>
           <CustomSelect
             value={formData.network_device.device_type || ''}
             onValueChange={(value) => handleTypeSpecificChange('network_device', 'device_type', value)}
-            options={NETWORK_DEVICE_TYPES}
+            options={networkDeviceTypeOptions}
             className="mt-1"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Management IP
+            {t('assetForm.fields.managementIp', { defaultValue: 'Management IP' })}
           </label>
           <Input
             value={formData.network_device.management_ip || ''}
@@ -563,7 +603,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Port Count
+            {t('assetForm.fields.portCount', { defaultValue: 'Port Count' })}
           </label>
           <Input
             type="number"
@@ -574,7 +614,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Firmware Version
+            {t('assetForm.fields.firmwareVersion', { defaultValue: 'Firmware Version' })}
           </label>
           <Input
             value={formData.network_device.firmware_version || ''}
@@ -584,7 +624,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Power Draw (Watts)
+            {t('assetForm.fields.powerDrawWatts', { defaultValue: 'Power Draw (Watts)' })}
           </label>
           <Input
             type="number"
@@ -596,7 +636,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         <div className="flex items-center">
           <Checkbox
             id="supports-poe"
-            label="Supports PoE"
+            label={t('assetForm.fields.supportsPoe', { defaultValue: 'Supports PoE' })}
             checked={formData.network_device.supports_poe || false}
             onChange={(e) => handleTypeSpecificChange('network_device', 'supports_poe', (e.target as HTMLInputElement).checked)}
           />
@@ -613,18 +653,18 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            OS Type
+            {t('assetForm.fields.osType', { defaultValue: 'OS Type' })}
           </label>
           <CustomSelect
             value={formData.server.os_type || ''}
             onValueChange={(value) => handleTypeSpecificChange('server', 'os_type', value)}
-            options={OS_TYPES}
+            options={osTypeOptions}
             className="mt-1"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            OS Version
+            {t('assetForm.fields.osVersion', { defaultValue: 'OS Version' })}
           </label>
           <Input
             value={formData.server.os_version || ''}
@@ -634,7 +674,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            CPU Model
+            {t('assetForm.fields.cpuModel', { defaultValue: 'CPU Model' })}
           </label>
           <Input
             value={formData.server.cpu_model || ''}
@@ -644,7 +684,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            CPU Cores
+            {t('assetForm.fields.cpuCores', { defaultValue: 'CPU Cores' })}
           </label>
           <Input
             type="number"
@@ -655,7 +695,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            RAM (GB)
+            {t('assetForm.fields.ramGb', { defaultValue: 'RAM (GB)' })}
           </label>
           <Input
             type="number"
@@ -666,7 +706,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Primary IP
+            {t('assetForm.fields.primaryIp', { defaultValue: 'Primary IP' })}
           </label>
           <Input
             value={formData.server.primary_ip || ''}
@@ -676,7 +716,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            RAID Config
+            {t('assetForm.fields.raidConfig', { defaultValue: 'RAID Config' })}
           </label>
           <Input
             value={formData.server.raid_config || ''}
@@ -687,7 +727,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         <div className="flex items-center">
           <Checkbox
             id="is-virtual"
-            label="Virtual Machine"
+            label={t('assetForm.fields.virtualMachine', { defaultValue: 'Virtual Machine' })}
             checked={formData.server.is_virtual || false}
             onChange={(e) => handleTypeSpecificChange('server', 'is_virtual', (e.target as HTMLInputElement).checked)}
           />
@@ -695,7 +735,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         {formData.server.is_virtual && (
           <div>
             <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-              Hypervisor
+              {t('assetForm.fields.hypervisor', { defaultValue: 'Hypervisor' })}
             </label>
             <Input
               value={formData.server.hypervisor || ''}
@@ -716,21 +756,18 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            OS Type
+            {t('assetForm.fields.osType', { defaultValue: 'OS Type' })}
           </label>
           <CustomSelect
             value={formData.mobile_device.os_type || ''}
             onValueChange={(value) => handleTypeSpecificChange('mobile_device', 'os_type', value)}
-            options={[
-              { value: 'ios', label: 'iOS' },
-              { value: 'android', label: 'Android' }
-            ]}
+            options={mobileOsOptions}
             className="mt-1"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            OS Version
+            {t('assetForm.fields.osVersion', { defaultValue: 'OS Version' })}
           </label>
           <Input
             value={formData.mobile_device.os_version || ''}
@@ -740,7 +777,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Model
+            {t('assetForm.fields.model', { defaultValue: 'Model' })}
           </label>
           <Input
             value={formData.mobile_device.model || ''}
@@ -750,7 +787,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            IMEI
+            {t('assetForm.fields.imei', { defaultValue: 'IMEI' })}
           </label>
           <Input
             value={formData.mobile_device.imei || ''}
@@ -760,7 +797,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Phone Number
+            {t('assetForm.fields.phoneNumber', { defaultValue: 'Phone Number' })}
           </label>
           <Input
             value={formData.mobile_device.phone_number || ''}
@@ -770,7 +807,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Carrier
+            {t('assetForm.fields.carrier', { defaultValue: 'Carrier' })}
           </label>
           <Input
             value={formData.mobile_device.carrier || ''}
@@ -781,7 +818,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         <div className="flex items-center">
           <Checkbox
             id="is-supervised"
-            label="Supervised Device"
+            label={t('assetForm.fields.supervisedDevice', {
+              defaultValue: 'Supervised Device'
+            })}
             checked={formData.mobile_device.is_supervised || false}
             onChange={(e) => handleTypeSpecificChange('mobile_device', 'is_supervised', (e.target as HTMLInputElement).checked)}
           />
@@ -798,7 +837,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Model
+            {t('assetForm.fields.model', { defaultValue: 'Model' })}
           </label>
           <Input
             value={formData.printer.model || ''}
@@ -808,7 +847,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            IP Address
+            {t('assetForm.fields.ipAddress', { defaultValue: 'IP Address' })}
           </label>
           <Input
             value={formData.printer.ip_address || ''}
@@ -818,7 +857,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Monthly Duty Cycle
+            {t('assetForm.fields.monthlyDutyCycle', {
+              defaultValue: 'Monthly Duty Cycle'
+            })}
           </label>
           <Input
             type="number"
@@ -830,19 +871,19 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         <div className="flex items-center space-x-6">
           <Checkbox
             id="is-network-printer"
-            label="Network Printer"
+            label={t('assetForm.fields.networkPrinter', { defaultValue: 'Network Printer' })}
             checked={formData.printer.is_network_printer || false}
             onChange={(e) => handleTypeSpecificChange('printer', 'is_network_printer', (e.target as HTMLInputElement).checked)}
           />
           <Checkbox
             id="supports-color"
-            label="Color Support"
+            label={t('assetForm.fields.colorSupport', { defaultValue: 'Color Support' })}
             checked={formData.printer.supports_color || false}
             onChange={(e) => handleTypeSpecificChange('printer', 'supports_color', (e.target as HTMLInputElement).checked)}
           />
           <Checkbox
             id="supports-duplex"
-            label="Duplex Support"
+            label={t('assetForm.fields.duplexSupport', { defaultValue: 'Duplex Support' })}
             checked={formData.printer.supports_duplex || false}
             onChange={(e) => handleTypeSpecificChange('printer', 'supports_duplex', (e.target as HTMLInputElement).checked)}
           />
@@ -972,7 +1013,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       router.refresh();
     } catch (error) {
       console.error('Error updating asset:', error);
-      setError('Failed to update asset');
+      setError(t('assetForm.errors.updateFailed', { defaultValue: 'Failed to update asset' }));
     } finally {
       setSaving(false);
     }
@@ -980,19 +1021,21 @@ export default function AssetForm({ assetId }: AssetFormProps) {
 
   if (loading) {
     return (
-      <div id="asset-form-loading" className="flex min-h-[400px] items-center justify-center">
-        <div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 px-4 py-2 text-sm text-gray-500">
-          <Spinner size="sm" className="text-primary-500" />
-          Loading asset details...
+        <div id="asset-form-loading" className="flex min-h-[400px] items-center justify-center">
+          <div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 px-4 py-2 text-sm text-gray-500">
+            <Spinner size="sm" className="text-primary-500" />
+            {t('assetForm.loading.assetDetails', { defaultValue: 'Loading asset details...' })}
+          </div>
         </div>
-      </div>
-    );
+      );
   }
 
   if (error || !asset) {
     return (
       <div id="asset-form-error" className="flex items-center justify-center min-h-[400px]">
-        <div className="text-red-500">{error || 'Asset not found'}</div>
+        <div className="text-red-500">
+          {error || t('assetForm.errors.assetNotFound', { defaultValue: 'Asset not found' })}
+        </div>
       </div>
     );
   }
@@ -1000,7 +1043,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   return (
     <div id="asset-form-container" className="space-y-6">
       <div id="asset-form-header" className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">Edit Asset</h1>
+        <h1 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">
+          {t('assetForm.heading', { defaultValue: 'Edit Asset' })}
+        </h1>
       </div>
 
       <form
@@ -1014,26 +1059,32 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           <div id="asset-type-icon" className="flex flex-col items-center">
             {getAssetTypeIcon()}
             <Text size="5" weight="medium" className="text-[rgb(var(--color-text-900))]">
-              Basic Information
+              {t('assetForm.sections.basicInformation', {
+                defaultValue: 'Basic Information'
+              })}
             </Text>
           </div>
 
           <div className="space-y-6">
             <div>
               <Text size="4" weight="medium" className="text-[rgb(var(--color-text-900))]">
-                Client & Location
+                {t('assetForm.sections.clientAndLocation', {
+                  defaultValue: 'Client & Location'
+                })}
               </Text>
               <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="asset-client-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                    Client
+                    {t('assetForm.fields.client', { defaultValue: 'Client' })}
                   </label>
                   <CustomSelect
                     id="asset-client-select"
                     value={formData.client_id}
                     onValueChange={handleClientChange}
                     options={clientOptions}
-                    placeholder={clientsLoading ? 'Loading clients…' : 'Select client'}
+                    placeholder={clientsLoading
+                      ? t('assetForm.placeholders.loadingClients', { defaultValue: 'Loading clients…' })
+                      : t('assetForm.placeholders.selectClient', { defaultValue: 'Select client' })}
                     disabled={clientsLoading || saving}
                     className="mt-1"
                   />
@@ -1049,7 +1100,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                         onClick={() => void handleOpenClientDrawer()}
                         className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-500"
                       >
-                        View client
+                        {t('assetForm.actions.viewClient', { defaultValue: 'View client' })}
                         <ExternalLink className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -1058,19 +1109,29 @@ export default function AssetForm({ assetId }: AssetFormProps) {
 
                 <div>
                   <label htmlFor="asset-location-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                    Primary Location
+                    {t('assetForm.fields.primaryLocation', { defaultValue: 'Primary Location' })}
                   </label>
                   <CustomSelect
                     id="asset-location-select"
                     value={selectedLocationId}
                     onValueChange={handleLocationSelect}
                     options={locationOptions}
-                    placeholder={formData.client_id ? (locationsLoading ? 'Loading locations…' : 'Select a location') : 'Select a client first'}
+                    placeholder={formData.client_id
+                      ? (locationsLoading
+                        ? t('assetForm.placeholders.loadingLocations', { defaultValue: 'Loading locations…' })
+                        : t('assetForm.placeholders.selectLocation', { defaultValue: 'Select a location' }))
+                      : t('assetForm.placeholders.selectClientFirst', {
+                        defaultValue: 'Select a client first'
+                      })}
                     disabled={!formData.client_id || locationsLoading}
                     className="mt-1"
                   />
                   {locationsLoading && (
-                    <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">Loading locations…</p>
+                    <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">
+                      {t('assetForm.placeholders.loadingLocations', {
+                        defaultValue: 'Loading locations…'
+                      })}
+                    </p>
                   )}
                   {locationsError && (
                     <p className="mt-2 text-sm text-red-600">{locationsError}</p>
@@ -1078,7 +1139,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                   {!locationsLoading && formData.client_id && clientLocations.length === 0 && !locationsError && (
                     <Alert variant="info" className="mt-2">
                       <AlertDescription>
-                        This client doesn’t have any saved locations yet. Use custom entry or create one from the client record.
+                        {t('assetForm.alerts.noLocationsSaved', {
+                          defaultValue: 'This client doesn’t have any saved locations yet. Use custom entry or create one from the client record.'
+                        })}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -1088,7 +1151,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                       className="mt-3"
                       value={customLocation}
                       onChange={(e) => handleCustomLocationChange(e.target.value)}
-                      placeholder="Enter a custom location or area"
+                      placeholder={t('assetForm.placeholders.customLocation', {
+                        defaultValue: 'Enter a custom location or area'
+                      })}
                     />
                   )}
                   {formData.client_id && (
@@ -1096,7 +1161,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                       href={`/msp/clients/${formData.client_id}?panel=locations`}
                       className="mt-2 inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-500"
                     >
-                      Manage client locations
+                      {t('assetForm.actions.manageClientLocations', {
+                        defaultValue: 'Manage client locations'
+                      })}
                       <ExternalLink className="h-3.5 w-3.5" />
                     </Link>
                   )}
@@ -1106,13 +1173,13 @@ export default function AssetForm({ assetId }: AssetFormProps) {
 
             <div className="border-t border-[rgb(var(--color-border-200))] pt-6">
               <Text size="4" weight="medium" className="text-[rgb(var(--color-text-900))]">
-                Asset Basics
+                {t('assetForm.sections.assetBasics', { defaultValue: 'Asset Basics' })}
               </Text>
               <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                      Name
+                      {t('assetForm.fields.name', { defaultValue: 'Name' })}
                     </label>
                     <Input
                       id="name"
@@ -1125,7 +1192,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                   </div>
                   <div>
                     <label htmlFor="asset_tag" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                      Asset Tag
+                      {t('assetForm.fields.assetTag', { defaultValue: 'Asset Tag' })}
                     </label>
                     <Input
                       id="asset_tag"
@@ -1138,7 +1205,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                   </div>
                   <div>
                     <label htmlFor="serial_number" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                      Serial Number
+                      {t('assetForm.fields.serialNumber', { defaultValue: 'Serial Number' })}
                     </label>
                     <Input
                       id="serial_number"
@@ -1150,13 +1217,13 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                   </div>
                   <div>
                     <label htmlFor="status" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                      Status
+                      {t('assetForm.fields.status', { defaultValue: 'Status' })}
                     </label>
                     <CustomSelect
                       id="status-select"
                       value={formData.status}
                       onValueChange={handleSelectChange}
-                      options={STATUS_OPTIONS}
+                      options={statusOptions}
                       className="mt-1"
                     />
                   </div>
@@ -1164,7 +1231,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="purchase_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                      Purchase Date
+                      {t('assetForm.fields.purchaseDate', { defaultValue: 'Purchase Date' })}
                     </label>
                     <DatePicker
                       id="purchase_date"
@@ -1175,12 +1242,16 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                           purchase_date: date ? date.toISOString().split('T')[0] : ''
                         }));
                       }}
-                      placeholder="Select purchase date"
+                      placeholder={t('assetForm.placeholders.selectPurchaseDate', {
+                        defaultValue: 'Select purchase date'
+                      })}
                     />
                   </div>
                   <div>
                     <label htmlFor="warranty_end_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                      Warranty End Date
+                      {t('assetForm.fields.warrantyEndDate', {
+                        defaultValue: 'Warranty End Date'
+                      })}
                     </label>
                     <DatePicker
                       id="warranty_end_date"
@@ -1191,7 +1262,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                           warranty_end_date: date ? date.toISOString().split('T')[0] : ''
                         }));
                       }}
-                      placeholder="Select warranty end date"
+                      placeholder={t('assetForm.placeholders.selectWarrantyEndDate', {
+                        defaultValue: 'Select warranty end date'
+                      })}
                     />
                   </div>
                 </div>
@@ -1203,11 +1276,21 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         {(asset.workstation || asset.network_device || asset.server || asset.mobile_device || asset.printer) && (
           <Card id="type-specific-details" className="p-6 border border-[rgb(var(--color-border-200))]">
             <Text size="5" weight="medium" className="block mb-6 text-[rgb(var(--color-text-900))]">
-              {asset.workstation ? 'Workstation Details' :
-                asset.network_device ? 'Network Device Details' :
-                asset.server ? 'Server Details' :
-                asset.mobile_device ? 'Mobile Device Details' :
-                'Printer Details'}
+              {asset.workstation
+                ? t('assetForm.typeDetails.workstation', { defaultValue: 'Workstation Details' })
+                : asset.network_device
+                  ? t('assetForm.typeDetails.networkDevice', {
+                    defaultValue: 'Network Device Details'
+                  })
+                  : asset.server
+                    ? t('assetForm.typeDetails.server', { defaultValue: 'Server Details' })
+                    : asset.mobile_device
+                      ? t('assetForm.typeDetails.mobileDevice', {
+                        defaultValue: 'Mobile Device Details'
+                      })
+                      : t('assetForm.typeDetails.printer', {
+                        defaultValue: 'Printer Details'
+                      })}
             </Text>
             {asset.workstation && renderWorkstationFields()}
             {asset.network_device && renderNetworkDeviceFields()}
@@ -1225,14 +1308,16 @@ export default function AssetForm({ assetId }: AssetFormProps) {
             onClick={() => router.back()}
             disabled={saving}
           >
-            Cancel
+            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button
             id="save-button"
             type="submit"
             disabled={saving}
           >
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving
+              ? t('common.actions.saving', { defaultValue: 'Saving...' })
+              : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' })}
           </Button>
         </div>
 

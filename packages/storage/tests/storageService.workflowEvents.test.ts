@@ -8,13 +8,6 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
 }));
 
-vi.mock('@alga-psa/auth/getCurrentUser', () => ({
-  getCurrentUser: vi.fn(async () => ({
-    user_id: 'a836a8b5-3df5-47b1-b49b-9a78f2b1a8a0',
-    tenant: 'tenant-1',
-  })),
-}));
-
 vi.mock('../src/config/storage', () => ({
   getProviderConfig: vi.fn(),
   getStorageConfig: vi.fn(),
@@ -34,16 +27,6 @@ vi.mock('../src/models/storage', () => ({
     findById: vi.fn(),
     softDelete: vi.fn(),
   },
-}));
-
-vi.mock('@alga-psa/shared/workflow/streams/domainEventBuilders/documentStorageEventBuilders', () => ({
-  buildDocumentDeletedPayload: vi.fn((args: Record<string, unknown>) => args),
-  buildDocumentUploadedPayload: vi.fn((args: Record<string, unknown>) => args),
-}));
-
-vi.mock('@alga-psa/shared/workflow/streams/domainEventBuilders/mediaEventBuilders', () => ({
-  buildFileUploadedPayload: vi.fn((args: Record<string, unknown>) => args),
-  buildMediaProcessingSucceededPayload: vi.fn((args: Record<string, unknown>) => args),
 }));
 
 vi.mock('@alga-psa/validation', () => ({

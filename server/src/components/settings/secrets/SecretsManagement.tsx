@@ -10,7 +10,7 @@ import {
   deleteSecret,
   getSecretUsage
 } from '@alga-psa/tenancy/actions';
-import type { TenantSecretMetadata } from '@alga-psa/shared/workflow/secrets';
+import type { TenantSecretMetadata } from '@alga-psa/workflows/secrets';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Plus, Trash2, Edit, Key, AlertTriangle, Search } from 'lucide-react';

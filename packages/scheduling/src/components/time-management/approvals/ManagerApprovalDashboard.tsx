@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ITimeSheet, ITimeSheetApproval, ITimeSheetApprovalView, ITimeSheetWithUserInfo } from '@alga-psa/types';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -31,6 +32,8 @@ interface ManagerApprovalDashboardProps {
 }
 
 export default function ManagerApprovalDashboard({ currentUser }: ManagerApprovalDashboardProps) {
+  const { t } = useTranslation('msp/time-entry');
+  const { formatDate } = useFormatters();
   const [timeSheets, setTimeSheets] = useState<ITimeSheetApprovalView[]>([]);
   const [selectedTimeSheets, setSelectedTimeSheets] = useState<string[]>([]);
   const [showApproved, setShowApproved] = useState(false);
@@ -135,14 +138,20 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
         <Card className="max-w-xl w-full p-6">
           <CardHeader className="flex flex-row items-center gap-3 p-0 mb-4">
             <Users className="h-6 w-6 text-[rgb(var(--color-primary-500))]" />
-            <CardTitle className="text-xl">Team lead access required</CardTitle>
+            <CardTitle className="text-xl">
+              {t('managerDashboard.access.title', { defaultValue: 'Team lead access required' })}
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <p className="text-[rgb(var(--color-text-700))] mb-4">
-              To approve time sheets for your team members, you need to be a team lead.
+              {t('managerDashboard.access.description', {
+                defaultValue: 'To approve time sheets for your team members, you need to be a team lead.'
+              })}
             </p>
             <Button id="go-to-team-settings" asChild>
-              <Link href="/msp/settings?tab=teams">Go to Team Settings</Link>
+              <Link href="/msp/settings?tab=teams">
+                {t('managerDashboard.access.goToTeamSettings', { defaultValue: 'Go to Team Settings' })}
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -153,21 +162,23 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Time Sheet Approvals</h1>
+        <h1 className="text-2xl font-bold">{t('managerDashboard.title', { defaultValue: 'Time Sheet Approvals' })}</h1>
         <div className="flex gap-4">
           <Button
             id="toggle-approved-btn"
             onClick={() => setShowApproved(!showApproved)}
             variant="outline"
           >
-            {showApproved ? 'Hide Approved' : 'Show Approved'}
+            {showApproved
+              ? t('managerDashboard.actions.hideApproved', { defaultValue: 'Hide Approved' })
+              : t('managerDashboard.actions.showApproved', { defaultValue: 'Show Approved' })}
           </Button>
           <Button
             id="bulk-approve-btn"
             onClick={handleBulkApprove}
             disabled={selectedTimeSheets.length === 0}
           >
-            Bulk Approve Selected
+            {t('managerDashboard.actions.bulkApproveSelected', { defaultValue: 'Bulk Approve Selected' })}
           </Button>
         </div>
       </div>
@@ -176,7 +187,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
         data={timeSheets}
         columns={[
           {
-            title: 'Select',
+            title: t('managerDashboard.columns.select', { defaultValue: 'Select' }),
             dataIndex: 'select',
             width: '10%',
             sortable: false, // Non-data column, sorting disabled
@@ -196,12 +207,12 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             )
           },
           {
-            title: 'Employee',
+            title: t('managerDashboard.columns.employee', { defaultValue: 'Employee' }),
             dataIndex: 'employee_name',
             width: '20%'
           },
           {
-            title: 'Period',
+            title: t('managerDashboard.columns.period', { defaultValue: 'Period' }),
             // Use dot notation to access nested start_date for proper date sorting.
             // DataTable's getNestedValue() handles dot notation, and caseInsensitiveSort()
             // parses ISO-8601 date strings for accurate chronological sorting.
@@ -210,28 +221,28 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             width: '25%',
             render: (_, record) => (
               <>
-                {record.time_period?.start_date ? parseISO(record.time_period.start_date).toLocaleDateString() : 'N/A'} -{' '}
-                {record.time_period?.end_date ? parseISO(record.time_period.end_date).toLocaleDateString() : 'N/A'}
+                {record.time_period?.start_date ? formatDate(parseISO(record.time_period.start_date), { dateStyle: 'medium' }) : t('common.fallbacks.na', { defaultValue: 'N/A' })} -{' '}
+                {record.time_period?.end_date ? formatDate(parseISO(record.time_period.end_date), { dateStyle: 'medium' }) : t('common.fallbacks.na', { defaultValue: 'N/A' })}
               </>
             )
           },
           {
-            title: 'Status',
+            title: t('managerDashboard.columns.status', { defaultValue: 'Status' }),
             dataIndex: 'approval_status',
             width: '20%',
             // Badge variants align with TimeSheetApproval.tsx statusConfig
             render: (status) => {
               const badgeMap: Record<string, { variant: 'secondary' | 'success' | 'warning' | 'outline'; label: string }> = {
-                SUBMITTED: { variant: 'secondary', label: 'Submitted' },
-                APPROVED: { variant: 'success', label: 'Approved' },
-                CHANGES_REQUESTED: { variant: 'warning', label: 'Changes Requested' },
+                SUBMITTED: { variant: 'secondary', label: t('common.states.submitted', { defaultValue: 'Submitted' }) },
+                APPROVED: { variant: 'success', label: t('common.states.approved', { defaultValue: 'Approved' }) },
+                CHANGES_REQUESTED: { variant: 'warning', label: t('common.states.changesRequested', { defaultValue: 'Changes Requested' }) },
               };
-              const config = badgeMap[status] ?? { variant: 'outline' as const, label: status };
+              const config = badgeMap[status] ?? { variant: 'outline' as const, label: t('common.states.unknown', { defaultValue: 'Unknown' }) };
               return <Badge variant={config.variant} className="py-1">{config.label}</Badge>;
             }
           },
           {
-            title: 'Actions',
+            title: t('managerDashboard.columns.actions', { defaultValue: 'Actions' }),
             dataIndex: 'actions',
             width: '15%',
             sortable: false, // Non-data column, sorting disabled
@@ -246,7 +257,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
                   }}
                   variant="soft"
                 >
-                  View
+                  {t('common.actions.view', { defaultValue: 'View' })}
                 </Button>
                 {record.approval_status === 'APPROVED' && (
                   <Button
@@ -257,7 +268,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
                     }}
                     variant="destructive"
                   >
-                    Reverse
+                    {t('managerDashboard.actions.reverse', { defaultValue: 'Reverse' })}
                   </Button>
                 )}
               </div>

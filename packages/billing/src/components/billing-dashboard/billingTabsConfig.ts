@@ -21,11 +21,15 @@ export interface BillingTabDefinition {
 export type BillingTabValue =
   | 'contract-templates'
   | 'client-contracts'
+  | 'quotes'
+  | 'quote-templates'
+  | 'quote-business-templates'
   | 'accounting-exports'
   | 'contract-lines'
   | 'invoicing'
   | 'invoice-templates'
   | 'billing-cycles'
+  | 'service-periods'
   | 'products'
   | 'service-catalog'
   | 'tax-rates'
@@ -33,6 +37,24 @@ export type BillingTabValue =
   | 'reports';
 
 export const billingTabDefinitions: BillingTabDefinition[] = [
+  {
+    value: 'quotes',
+    label: 'Quotes',
+    href: '/msp/billing?tab=quotes',
+    icon: FileText
+  },
+  {
+    value: 'quote-templates',
+    label: 'Quote Layouts',
+    href: '/msp/billing?tab=quote-templates',
+    icon: FileMinus
+  },
+  {
+    value: 'quote-business-templates',
+    label: 'Quote Templates',
+    href: '/msp/billing?tab=quote-business-templates',
+    icon: FileText
+  },
   {
     value: 'client-contracts',
     label: 'Client Contracts',
@@ -59,7 +81,7 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
   },
   {
     value: 'invoice-templates',
-    label: 'Invoice Templates',
+    label: 'Invoice Layouts',
     href: '/msp/billing?tab=invoice-templates',
     icon: FileMinus
   },
@@ -79,6 +101,12 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     value: 'billing-cycles',
     label: 'Billing Cycles',
     href: '/msp/billing?tab=billing-cycles',
+    icon: Calendar
+  },
+  {
+    value: 'service-periods',
+    label: 'Service Periods',
+    href: '/msp/billing?tab=service-periods',
     icon: Calendar
   },
   {

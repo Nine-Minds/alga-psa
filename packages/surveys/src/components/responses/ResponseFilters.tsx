@@ -9,6 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { DateRangePicker, type DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import type { IClient } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export type ResponseFilterState = {
   templateId?: string;
@@ -25,6 +26,8 @@ type ResponseFiltersProps = {
 };
 
 export default function ResponseFilters({ options, initialFilters, onApply, onReset }: ResponseFiltersProps) {
+  const { t } = useTranslation('msp/surveys');
+  const { t: tCommon } = useTranslation('common');
   const createEmptyRange = useCallback((): DateRange => ({ from: undefined, to: undefined }), []);
 
   const FIELD_CLASS = 'flex flex-col gap-1 min-w-[200px] shrink-0';
@@ -82,25 +85,31 @@ export default function ResponseFilters({ options, initialFilters, onApply, onRe
   return (
     <div className="flex flex-wrap items-end gap-4">
       <div className={`${FIELD_CLASS} max-w-xs`}>
-        <span className="text-sm font-medium text-gray-700">Template</span>
+        <span className="text-sm font-medium text-gray-700">
+          {t('responses.filters.labels.template', { defaultValue: 'Template' })}
+        </span>
         <CustomSelect
-          options={[{ value: '__ALL__', label: 'All templates' }, ...options.templates]}
+          options={[{ value: '__ALL__', label: t('responses.filters.placeholders.allTemplates', { defaultValue: 'All templates' }) }, ...options.templates]}
           value={templateId}
           onValueChange={setTemplateId}
-          placeholder="All templates"
+          placeholder={t('responses.filters.placeholders.allTemplates', { defaultValue: 'All templates' })}
         />
       </div>
       <div className={`${FIELD_CLASS} max-w-xs`}>
-        <span className="text-sm font-medium text-gray-700">Technician</span>
+        <span className="text-sm font-medium text-gray-700">
+          {t('responses.filters.labels.technician', { defaultValue: 'Technician' })}
+        </span>
         <CustomSelect
-          options={[{ value: '__ALL__', label: 'All technicians' }, ...options.technicians]}
+          options={[{ value: '__ALL__', label: t('responses.filters.placeholders.allTechnicians', { defaultValue: 'All technicians' }) }, ...options.technicians]}
           value={technicianId}
           onValueChange={setTechnicianId}
-          placeholder="All technicians"
+          placeholder={t('responses.filters.placeholders.allTechnicians', { defaultValue: 'All technicians' })}
         />
       </div>
       <div className={`${FIELD_CLASS} max-w-xs`}>
-        <span className="text-sm font-medium text-gray-700">Client</span>
+        <span className="text-sm font-medium text-gray-700">
+          {t('responses.filters.labels.client', { defaultValue: 'Client' })}
+        </span>
         <ClientPicker
           id="survey-response-client-picker"
           clients={clientsForPicker}
@@ -111,20 +120,22 @@ export default function ResponseFilters({ options, initialFilters, onApply, onRe
           clientTypeFilter={clientTypeFilter}
           onClientTypeFilterChange={setClientTypeFilter}
           fitContent
-          placeholder="All clients"
+          placeholder={t('responses.filters.placeholders.allClients', { defaultValue: 'All clients' })}
         />
       </div>
       <div className={`${FIELD_CLASS} min-w-[250px]`}>
-        <span className="text-sm font-medium text-gray-700">Date Range</span>
+        <span className="text-sm font-medium text-gray-700">
+          {t('responses.filters.labels.dateRange', { defaultValue: 'Date Range' })}
+        </span>
         <DateRangePicker id="survey-response-date-range" value={dateRange} onChange={setDateRange} />
       </div>
       <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
         <Button id="survey-response-reset-filters" variant="outline" onClick={handleReset}>
-          Reset
+          {tCommon('actions.reset', { defaultValue: 'Reset' })}
         </Button>
         <Button id="survey-response-apply-filters" onClick={handleApply}>
           <Filter className="mr-2 h-4 w-4" />
-          Apply
+          {t('responses.filters.actions.apply', { defaultValue: 'Apply' })}
         </Button>
       </div>
     </div>

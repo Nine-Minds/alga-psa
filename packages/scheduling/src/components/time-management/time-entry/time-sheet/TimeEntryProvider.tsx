@@ -1,12 +1,14 @@
 'use client';
 
 import { createContext, useContext, useReducer, useEffect } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { TaxRegion } from '@alga-psa/types';
 import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '../../../../actions/timeEntryActions';
 import { getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
+import { generateUUID } from '@alga-psa/core';
 import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
 import { Service, ITimeEntryWithNew } from './types';
 
@@ -115,6 +117,7 @@ interface TimeEntryContextType extends TimeEntryState {
 const TimeEntryContext = createContext<TimeEntryContextType | undefined>(undefined);
 
 export function TimeEntryProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const { t } = useTranslation('msp/time-entry');
   const [state, dispatch] = useReducer(timeEntryReducer, initialState);
 
   const initializeEntries = async ({
@@ -192,7 +195,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         service_id: prefilledServiceId,
         tax_region: defaultTaxRegion || client?.region_code || '',
         isNew: true,
-        tempId: crypto.randomUUID(),
+        tempId: generateUUID(),
         client_id: clientId || undefined,
         // Service prefill tracking (only for new entries with prefilled service)
         _isServicePrefilled: !!prefilledServiceId,
@@ -244,7 +247,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         service_id: '',
         tax_region: defaultTaxRegion || '',
         isNew: true,
-        tempId: crypto.randomUUID(),
+        tempId: generateUUID(),
         client_id: clientId || undefined,
       }];
     }
@@ -267,7 +270,10 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       dispatch({ type: 'UPDATE_DURATIONS', payload: durations });
     } catch (error) {
       console.error('Error initializing entries:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Failed to initialize time entries' });
+      dispatch({
+        type: 'SET_ERROR',
+        payload: t('timeEntryProvider.errors.initialize', { defaultValue: 'Failed to initialize time entries' })
+      });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }

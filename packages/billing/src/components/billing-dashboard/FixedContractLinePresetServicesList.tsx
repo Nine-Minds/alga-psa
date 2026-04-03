@@ -45,7 +45,7 @@ interface SimplePresetService {
   service_id: string;
   service_name?: string;
   service_type_name?: string;
-  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
+  billing_method?: 'fixed' | 'hourly' | 'usage' | null;
   default_rate?: number;
   quantity?: number;
 }
