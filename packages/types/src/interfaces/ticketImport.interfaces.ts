@@ -349,8 +349,6 @@ export interface ITicketImportValidationResponse {
   unmatchedTeams: string[];
   unmatchedPriorities: string[];
   unmatchedCategories: string[];
-  unmatchedSubcategories: string[];
-  unmatchedBoards: string[];
   unmatchedContacts: string[];
   /** Groups of unparseable dates by structural format pattern */
   unparsableDateGroups: IDateFormatGroup[];
