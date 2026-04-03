@@ -120,8 +120,8 @@ export class ContactService extends BaseService<IContact> {
       knex
     );
 
-    dataQuery = this.applyContactFilters(dataQuery, filters);
-    countQuery = this.applyContactFilters(countQuery, filters);
+    dataQuery = this.applyContactFilters(dataQuery, filters, knex);
+    countQuery = this.applyContactFilters(countQuery, filters, knex);
 
     const sortField = sort || this.defaultSort;
     const sortOrder = order || this.defaultOrder;
@@ -514,7 +514,7 @@ export class ContactService extends BaseService<IContact> {
     query = this.applyContactFilters(query, {
       is_inactive: false,
       ...filters,
-    });
+    }, knex);
 
     const contacts = await query
       .select(
@@ -556,7 +556,7 @@ export class ContactService extends BaseService<IContact> {
       .join('\n');
   }
 
-  private applyContactFilters(query: Knex.QueryBuilder, filters: ContactFilterData): Knex.QueryBuilder {
+  private applyContactFilters(query: Knex.QueryBuilder, filters: ContactFilterData, knex: Knex): Knex.QueryBuilder {
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
 
@@ -566,14 +566,14 @@ export class ContactService extends BaseService<IContact> {
           break;
         case 'email':
           query.where((subQuery) => {
-            applyEmailSearchClause(subQuery, query.client!, String(value), 'c');
+            applyEmailSearchClause(subQuery, knex, String(value), 'c');
           });
           break;
         case 'phone_number': {
           const normalizedDigits = normalizePhoneForSearch(String(value));
           query.where((subQuery) => {
             subQuery.whereExists(function existsPhone() {
-              this.select(query.client!.raw('1'))
+              this.select(knex.raw('1'))
                 .from('contact_phone_numbers as cpn_filter')
                 .whereRaw('cpn_filter.tenant = c.tenant')
                 .andWhereRaw('cpn_filter.contact_name_id = c.contact_name_id')
@@ -612,12 +612,12 @@ export class ContactService extends BaseService<IContact> {
             subQuery
               .whereILike('c.full_name', `%${value}%`)
               .orWhere(function emailSearch() {
-                applyEmailSearchClause(this, query.client!, String(value), 'c');
+                applyEmailSearchClause(this, knex, String(value), 'c');
               })
               .orWhereILike('c.role', `%${value}%`)
               .orWhereILike('comp.client_name', `%${value}%`)
               .orWhereExists(function existsPhone() {
-                this.select(query.client!.raw('1'))
+                this.select(knex.raw('1'))
                   .from('contact_phone_numbers as cpn_search')
                   .whereRaw('cpn_search.tenant = c.tenant')
                   .andWhereRaw('cpn_search.contact_name_id = c.contact_name_id')

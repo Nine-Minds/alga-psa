@@ -36,10 +36,12 @@ import ContactEmailAddressesEditor, {
   validateContactEmailAddresses,
 } from './ContactEmailAddressesEditor';
 
-type QuickAddContactEmailState = Pick<
-  CreateContactInput,
-  'email' | 'primary_email_canonical_type' | 'primary_email_custom_type' | 'additional_email_addresses'
->;
+type QuickAddContactEmailState = {
+  email: string;
+  primary_email_canonical_type: CreateContactInput['primary_email_canonical_type'];
+  primary_email_custom_type: CreateContactInput['primary_email_custom_type'];
+  additional_email_addresses: NonNullable<CreateContactInput['additional_email_addresses']>;
+};
 
 interface QuickAddContactProps {
   isOpen: boolean;

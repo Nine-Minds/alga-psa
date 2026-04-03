@@ -405,7 +405,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                         {' • '}{t('contactDetailsView.fields.defaultEmail', { defaultValue: 'Default' })}
                       </div>
                     </div>
-                    {contact.additional_email_addresses.map((emailAddress) => (
+                    {(contact.additional_email_addresses ?? []).map((emailAddress) => (
                       <div
                         key={emailAddress.contact_additional_email_address_id}
                         className="rounded-md border border-gray-200 px-3 py-2"

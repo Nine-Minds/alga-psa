@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { ContactPhoneNumberInput, CreateContactInput, DeletionValidationResult, IContact } from '@alga-psa/types';
+import type { ContactEmailAddressInput, ContactPhoneNumberInput, CreateContactInput, DeletionValidationResult, IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import { IInteraction } from '@alga-psa/types';
@@ -46,9 +46,10 @@ import ContactEmailAddressesEditor, {
   validateContactEmailAddresses,
 } from './ContactEmailAddressesEditor';
 
-type EditableContact = IContact & {
+type EditableContact = Omit<IContact, 'phone_numbers' | 'additional_email_addresses'> & {
+  phone_numbers: ContactPhoneNumberInput[];
   primary_email_custom_type?: string | null;
-  additional_email_addresses: NonNullable<IContact['additional_email_addresses']>;
+  additional_email_addresses: ContactEmailAddressInput[];
 };
 
 const SwitchDetailItem: React.FC<{
@@ -821,7 +822,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       label: t('contactDetails.tabs.portal', { defaultValue: 'Portal' }),
       content: (
         <ContactPortalTab
-          contact={editedContact}
+          contact={editedContact as IContact}
           currentUserPermissions={userPermissions}
         />
       )

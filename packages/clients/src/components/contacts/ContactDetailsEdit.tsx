@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { ContactPhoneNumberInput, CreateContactInput, IClient, IContact, ITag } from '@alga-psa/types';
+import type { ContactEmailAddressInput, ContactPhoneNumberInput, CreateContactInput, IClient, IContact, ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -31,9 +31,10 @@ import ContactEmailAddressesEditor, {
 } from './ContactEmailAddressesEditor';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-type EditableContact = IContact & {
+type EditableContact = Omit<IContact, 'phone_numbers' | 'additional_email_addresses'> & {
+  phone_numbers: ContactPhoneNumberInput[];
   primary_email_custom_type?: string | null;
-  additional_email_addresses?: CreateContactInput['additional_email_addresses'];
+  additional_email_addresses: ContactEmailAddressInput[];
 };
 
 interface ContactDetailsEditProps {

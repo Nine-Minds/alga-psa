@@ -93,13 +93,17 @@ describe('workflow business contact email lookup', () => {
 
     withTenantTransactionMock.mockImplementation(async (_ctx: any, callback: (tx: any) => Promise<any>) => {
       const searchQuery = makeSearchQuery(scenario.searchRows);
-      const trx = vi.fn((table: string) => {
-        if (table === 'contacts') {
-          return searchQuery;
+      const trx: any = Object.assign(
+        vi.fn((table: string) => {
+          if (table === 'contacts') {
+            return searchQuery;
+          }
+          throw new Error(`Unexpected table ${table}`);
+        }),
+        {
+          raw: vi.fn((value: string) => value),
         }
-        throw new Error(`Unexpected table ${table}`);
-      });
-      trx.raw = vi.fn((value: string) => value);
+      );
       return callback({
         tenantId: 'tenant-1',
         trx,

@@ -99,25 +99,29 @@ describe('findContactByEmail context-aware resolution', () => {
     scenario.contactsQueryUsedAdditionalEmailMatch = false;
 
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
-      const trx = vi.fn((table: string) => {
-        if (table === 'contacts') {
-          return makeContactsQuery(scenario.contactRows);
+      const trx: any = Object.assign(
+        vi.fn((table: string) => {
+          if (table === 'contacts') {
+            return makeContactsQuery(scenario.contactRows);
+          }
+          if (table === 'tickets') {
+            return makeTicketsQuery(scenario.ticketRow);
+          }
+          if (table === 'contact_phone_numbers as cpn') {
+            return makePhoneNumbersQuery([]);
+          }
+          if (table === 'contact_additional_email_addresses as cea') {
+            return makePhoneNumbersQuery([]);
+          }
+          if (table === 'users') {
+            return makeUsersQuery(scenario.internalUserRow);
+          }
+          throw new Error(`Unexpected table in test: ${table}`);
+        }),
+        {
+          raw: vi.fn((value: string) => value),
         }
-        if (table === 'tickets') {
-          return makeTicketsQuery(scenario.ticketRow);
-        }
-        if (table === 'contact_phone_numbers as cpn') {
-          return makePhoneNumbersQuery([]);
-        }
-        if (table === 'contact_additional_email_addresses as cea') {
-          return makePhoneNumbersQuery([]);
-        }
-        if (table === 'users') {
-          return makeUsersQuery(scenario.internalUserRow);
-        }
-        throw new Error(`Unexpected table in test: ${table}`);
-      });
-      trx.raw = vi.fn((value: string) => value);
+      );
 
       return callback(trx);
     });

@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ContactEmailAddressInput,
   ContactEmailCanonicalType,
-  IContact,
   IContactEmailAddress,
 } from '@alga-psa/types';
 import { CONTACT_EMAIL_CANONICAL_TYPES } from '@alga-psa/types';
@@ -23,15 +22,13 @@ type EditableAdditionalEmailRow = ContactEmailAddressInput & {
 
 type ContactEmailRowInput = ContactEmailAddressInput | IContactEmailAddress;
 
-export type ContactEmailAddressesEditorValue = Pick<
-  IContact,
-  | 'email'
-  | 'primary_email_canonical_type'
-  | 'primary_email_custom_type_id'
-  | 'primary_email_type'
-  | 'additional_email_addresses'
-> & {
+export type ContactEmailAddressesEditorValue = {
+  email?: string | null;
+  primary_email_canonical_type?: ContactEmailCanonicalType | null;
   primary_email_custom_type?: string | null;
+  primary_email_custom_type_id?: string | null;
+  primary_email_type?: string | null;
+  additional_email_addresses?: ContactEmailRowInput[];
 };
 
 export type ContactEmailAddressesEditorChange = {
