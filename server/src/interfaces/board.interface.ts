@@ -43,6 +43,12 @@ export interface IBoard extends TenantEntity {
   // SLA policy assignment (board-level SLA)
   sla_policy_id?: string | null;
 
+  // Inbound reply reopen policy
+  inbound_reply_reopen_enabled?: boolean;
+  inbound_reply_reopen_cutoff_hours?: number;
+  inbound_reply_reopen_status_id?: string | null;
+  inbound_reply_ai_ack_suppression_enabled?: boolean;
+
   // Controls live timer + tracked intervals visibility in ticket details
   enable_live_ticket_timer?: boolean;
 }

@@ -24,7 +24,11 @@
       "@alga-psa/event-bus": ["packages/event-bus/src"],
       "@alga-psa/event-bus/*": ["packages/event-bus/src/*"],
       "@alga-psa/event-schemas": ["packages/event-schemas/src"],
-      "@alga-psa/event-schemas/*": ["packages/event-schemas/src/*"]
+      "@alga-psa/event-schemas/*": ["packages/event-schemas/src/*"],
+      "@enterprise": ["packages/ee/src"],
+      "@enterprise/*": ["packages/ee/src/*"],
+      "@ee": ["packages/ee/src"],
+      "@ee/*": ["packages/ee/src/*"]
     },
     "rootDir": "../..",
     "skipLibCheck": true

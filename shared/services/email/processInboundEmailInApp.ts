@@ -12,6 +12,10 @@ import {
   setTicketWatchListOnAttributes,
   type TicketWatchListRecipientInput,
 } from '../../lib/tickets/watchList';
+import {
+  resolveInboundReplyAcknowledgementDecider,
+  type InboundReplyAckDeciderResult,
+} from './inboundReplyAcknowledgementDecider';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
@@ -126,6 +130,39 @@ function getReplyTokenFingerprint(token?: string): {
   };
 }
 
+type InboundReplyReopenPolicyContext = {
+  ticketId: string;
+  boardId: string;
+  statusId: string | null;
+  statusIsClosed: boolean;
+  ticketIsClosed: boolean;
+  closedAt: string | null;
+  inboundReplyReopenEnabled: boolean;
+  inboundReplyReopenCutoffHours: number;
+  inboundReplyReopenStatusId: string | null;
+  inboundReplyAiAckSuppressionEnabled: boolean;
+};
+
+type InboundReplyDecisionMetadata = {
+  policyEnabled: boolean;
+  wasClosedTicketMatch: boolean;
+  cutoffHours: number | null;
+  cutoffExceeded: boolean;
+  senderKind: 'internal' | 'client';
+  action: 'reopen' | 'comment_only' | 'new_ticket';
+  reopenTargetSource?: 'explicit' | 'board_default' | null;
+  reopenTargetStatusId?: string | null;
+  aiSuppression: {
+    enabled: boolean;
+    attempted: boolean;
+    decision: 'ACK' | 'NOT_ACK' | null;
+    source: 'default' | 'ee_ai' | null;
+    reason: string | null;
+    model: string | null;
+    error: string | null;
+    rawOutput: string | null;
+  };
+};
 function buildDiagnostics(params: {
   emailData: EmailMessageDetails;
   senderEmail: string | null;
@@ -251,6 +288,170 @@ function hasSubstantiveReplyContent(parsedEmail: any, emailData: EmailMessageDet
     '';
 
   return stripAutomatedReplyMarkers(String(candidateText)).length > 0;
+}
+
+function normalizePositiveInteger(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.max(1, Math.floor(parsed));
+}
+
+function toIsoOrNull(value: unknown): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function isClosedTicketBeyondReopenCutoff(params: {
+  closedAt: string | null;
+  receivedAt?: string;
+  cutoffHours: number;
+}): boolean {
+  if (!params.closedAt || !params.receivedAt) {
+    return false;
+  }
+
+  const closedAtMs = new Date(params.closedAt).getTime();
+  const receivedAtMs = new Date(params.receivedAt).getTime();
+  if (Number.isNaN(closedAtMs) || Number.isNaN(receivedAtMs)) {
+    return false;
+  }
+
+  const cutoffMs = params.cutoffHours * 60 * 60 * 1000;
+  return (receivedAtMs - closedAtMs) > cutoffMs;
+}
+
+async function loadInboundReplyPolicyContext(params: {
+  tenantId: string;
+  ticketId: string;
+}): Promise<InboundReplyReopenPolicyContext | null> {
+  const { withAdminTransaction } = await import('@alga-psa/db');
+
+  return withAdminTransaction(async (trx: any) => {
+    const ticket = await trx('tickets')
+      .select(
+        'ticket_id',
+        'board_id',
+        'status_id',
+        'is_closed',
+        'closed_at',
+      )
+      .where('tenant', params.tenantId)
+      .andWhere('ticket_id', params.ticketId)
+      .first();
+
+    if (!ticket?.ticket_id || !ticket?.board_id) {
+      return null;
+    }
+
+    const status = ticket.status_id
+      ? await trx('statuses')
+          .select('is_closed')
+          .where({
+            tenant: params.tenantId,
+            status_id: ticket.status_id,
+          })
+          .first()
+      : null;
+
+    const board = await trx('boards')
+      .select(
+        'inbound_reply_reopen_enabled',
+        'inbound_reply_reopen_cutoff_hours',
+        'inbound_reply_reopen_status_id',
+        'inbound_reply_ai_ack_suppression_enabled',
+      )
+      .where({
+        tenant: params.tenantId,
+        board_id: ticket.board_id,
+      })
+      .first();
+
+    const statusIsClosed = Boolean(status?.is_closed);
+    const ticketIsClosed = ticket.is_closed === null || ticket.is_closed === undefined
+      ? statusIsClosed
+      : Boolean(ticket.is_closed);
+
+    return {
+      ticketId: ticket.ticket_id,
+      boardId: ticket.board_id,
+      statusId: ticket.status_id ?? null,
+      statusIsClosed,
+      ticketIsClosed,
+      closedAt: toIsoOrNull(ticket.closed_at),
+      inboundReplyReopenEnabled: Boolean(board?.inbound_reply_reopen_enabled),
+      inboundReplyReopenCutoffHours: normalizePositiveInteger(board?.inbound_reply_reopen_cutoff_hours, 168),
+      inboundReplyReopenStatusId: board?.inbound_reply_reopen_status_id ?? null,
+      inboundReplyAiAckSuppressionEnabled: Boolean(board?.inbound_reply_ai_ack_suppression_enabled),
+    };
+  });
+}
+
+async function resolveBoardReopenStatusTarget(params: {
+  tenantId: string;
+  boardId: string;
+  explicitStatusId: string | null;
+}): Promise<{ statusId: string; source: 'explicit' | 'board_default' }> {
+  const { withAdminTransaction } = await import('@alga-psa/db');
+  const { TicketModel } = await import('../../models/ticketModel');
+
+  return withAdminTransaction(async (trx: any) => {
+    if (params.explicitStatusId) {
+      const explicitStatus = await trx('statuses')
+        .select('status_id', 'is_closed')
+        .where({
+          tenant: params.tenantId,
+          board_id: params.boardId,
+          status_id: params.explicitStatusId,
+          status_type: 'ticket',
+        })
+        .first();
+
+      if (explicitStatus?.status_id && !explicitStatus.is_closed) {
+        return {
+          statusId: explicitStatus.status_id,
+          source: 'explicit' as const,
+        };
+      }
+    }
+
+    const defaultStatusId = await TicketModel.getDefaultStatusId(params.tenantId, trx, params.boardId);
+    if (!defaultStatusId) {
+      throw new Error(`No default open ticket status found for board ${params.boardId}`);
+    }
+
+    return {
+      statusId: defaultStatusId,
+      source: 'board_default' as const,
+    };
+  });
+}
+
+async function applyInboundReplyReopenTransition(params: {
+  tenantId: string;
+  ticketId: string;
+  statusId: string;
+  updatedByUserId?: string;
+}): Promise<void> {
+  const { withAdminTransaction } = await import('@alga-psa/db');
+
+  await withAdminTransaction(async (trx: any) => {
+    await trx('tickets')
+      .where({
+        tenant: params.tenantId,
+        ticket_id: params.ticketId,
+      })
+      .update({
+        status_id: params.statusId,
+        is_closed: false,
+        closed_at: null,
+        closed_by: null,
+        updated_at: trx.fn.now(),
+        updated_by: params.updatedByUserId ?? null,
+      });
+  });
 }
 
 function buildDedupeKey(input: ProcessInboundEmailInAppInput): string {
@@ -675,6 +876,233 @@ export async function processInboundEmailInApp(
     }
   };
 
+  let rerouteToNewTicket = false;
+  let rerouteReasonMetadata: InboundReplyDecisionMetadata | null = null;
+
+  const handleThreadedReply = async (params: {
+    ticketId: string;
+    matchedBy: 'reply_token' | 'thread_headers';
+  }): Promise<ProcessInboundEmailInAppResult | null> => {
+    const existingCommentId = await findExistingEmailComment({
+      tenantId,
+      ticketId: params.ticketId,
+      messageId: emailData.id,
+    });
+    if (existingCommentId) {
+      if (diagnostics) {
+        diagnostics.threading.matchedCommentId = existingCommentId;
+        diagnostics.threading.failureReason = 'deduped';
+      }
+      return withDiagnostics({
+        outcome: 'deduped',
+        dedupeKey,
+        ticketId: params.ticketId,
+        commentId: existingCommentId,
+      }, diagnostics);
+    }
+
+    const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
+    const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
+    const blocks = blocksFromEmailBody({
+      html: parsedHtml,
+      text: parsedText,
+    });
+    const serializedBlocks = JSON.stringify(blocks);
+    const matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId });
+    const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
+    const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
+    const senderKind = matchedSenderIsInternalUser ? 'internal' : 'client';
+
+    let policyContext: InboundReplyReopenPolicyContext | null = null;
+    try {
+      policyContext = await loadInboundReplyPolicyContext({
+        tenantId,
+        ticketId: params.ticketId,
+      });
+    } catch (error) {
+      console.warn('processInboundEmailInApp: failed to load inbound reply reopen policy (continuing)', {
+        tenantId,
+        providerId,
+        emailId: emailData.id,
+        ticketId: params.ticketId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    const aiSuppressionDefault: InboundReplyDecisionMetadata['aiSuppression'] = {
+      enabled: false,
+      attempted: false,
+      decision: null,
+      source: null,
+      reason: null,
+      model: null,
+      error: null,
+      rawOutput: null,
+    };
+
+    let decisionMetadata: InboundReplyDecisionMetadata = {
+      policyEnabled: Boolean(policyContext?.inboundReplyReopenEnabled),
+      wasClosedTicketMatch: Boolean(policyContext?.ticketIsClosed),
+      cutoffHours: policyContext?.inboundReplyReopenCutoffHours ?? null,
+      cutoffExceeded: false,
+      senderKind,
+      action: 'comment_only',
+      reopenTargetSource: null,
+      reopenTargetStatusId: null,
+      aiSuppression: aiSuppressionDefault,
+    };
+
+    let shouldReopen = false;
+    if (policyContext?.ticketIsClosed) {
+      if (!policyContext.inboundReplyReopenEnabled) {
+        decisionMetadata.action = 'comment_only';
+      } else {
+        const cutoffExceeded = isClosedTicketBeyondReopenCutoff({
+          closedAt: policyContext.closedAt,
+          receivedAt: emailData.receivedAt,
+          cutoffHours: policyContext.inboundReplyReopenCutoffHours,
+        });
+        decisionMetadata.cutoffExceeded = cutoffExceeded;
+
+        if (cutoffExceeded) {
+          decisionMetadata.action = 'new_ticket';
+          rerouteToNewTicket = true;
+          rerouteReasonMetadata = decisionMetadata;
+          console.info('processInboundEmailInApp: rerouting closed-ticket reply to new ticket due to cutoff', {
+            tenantId,
+            providerId,
+            emailId: emailData.id,
+            ticketId: params.ticketId,
+            matchedBy: params.matchedBy,
+            metadata: decisionMetadata,
+          });
+          return null;
+        }
+
+        if (matchedSenderIsInternalUser) {
+          shouldReopen = true;
+        } else {
+          const aiSuppressionEnabled = policyContext.inboundReplyAiAckSuppressionEnabled;
+          decisionMetadata.aiSuppression.enabled = aiSuppressionEnabled;
+
+          if (aiSuppressionEnabled) {
+            const decider = await resolveInboundReplyAcknowledgementDecider();
+            const ackResult: InboundReplyAckDeciderResult = await decider.decide({
+              tenantId,
+              boardId: policyContext.boardId,
+              ticketId: params.ticketId,
+              subject: emailData.subject,
+              text: parsedText ?? '',
+            });
+            decisionMetadata.aiSuppression = {
+              enabled: aiSuppressionEnabled,
+              attempted: ackResult.attempted,
+              decision: ackResult.decision,
+              source: ackResult.source,
+              reason: ackResult.reason,
+              model: ackResult.model ?? null,
+              error: ackResult.error ?? null,
+              rawOutput: ackResult.rawOutput ?? null,
+            };
+            shouldReopen = ackResult.decision !== 'ACK';
+          } else {
+            shouldReopen = true;
+          }
+        }
+      }
+    }
+
+    if (shouldReopen && policyContext?.ticketIsClosed) {
+      const reopenTarget = await resolveBoardReopenStatusTarget({
+        tenantId,
+        boardId: policyContext.boardId,
+        explicitStatusId: policyContext.inboundReplyReopenStatusId,
+      });
+      await applyInboundReplyReopenTransition({
+        tenantId,
+        ticketId: params.ticketId,
+        statusId: reopenTarget.statusId,
+        updatedByUserId: matchedSenderIsInternalUser ? matchedSenderContact?.user_id : undefined,
+      });
+      decisionMetadata.action = 'reopen';
+      decisionMetadata.reopenTargetSource = reopenTarget.source;
+      decisionMetadata.reopenTargetStatusId = reopenTarget.statusId;
+    }
+
+    const watchListRecipients = mergeTicketWatchListRecipients(
+      inboundWatchListRecipients,
+      buildUnmatchedSenderWatchListRecipients(matchedSenderContactId ?? null)
+    );
+    const commentId = await createCommentFromEmail(
+      {
+        ticket_id: params.ticketId,
+        content: serializedBlocks,
+        source: 'email',
+        author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
+        author_id: matchedSenderContact?.user_id,
+        contact_id: matchedSenderIsInternalUser ? undefined : matchedSenderContactId,
+        metadata: {
+          email: buildCommentEmailMetadata(),
+          parser: {
+            confidence: parsedEmail?.confidence,
+            strategy: parsedEmail?.strategy,
+            heuristics: parsedEmail?.appliedHeuristics,
+            warnings: parsedEmail?.warnings,
+          },
+          inboundReopenDecision: decisionMetadata,
+        },
+        inboundReplyEvent: {
+          messageId: emailData.id,
+          threadId: emailData.threadId,
+          from: emailData.from?.email ?? '',
+          to: (emailData.to ?? []).map((r) => r.email),
+          subject: emailData.subject,
+          receivedAt: emailData.receivedAt,
+          provider: emailData.provider,
+          matchedBy: params.matchedBy,
+        },
+      },
+      tenantId
+    );
+
+    const artifactsResult = await processInboundEmailArtifactsBestEffort({
+      tenantId,
+      providerId,
+      ticketId: params.ticketId,
+      emailData,
+      scopeLabel: 'reply',
+    });
+    await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+      tenantId,
+      commentId,
+      html: parsedHtml,
+      text: parsedText,
+      originalCommentContent: serializedBlocks,
+      artifactsResult,
+    });
+
+    await upsertWatchListBestEffort(params.ticketId, watchListRecipients);
+
+    console.info('processInboundEmailInApp: inbound threaded reply decision', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      ticketId: params.ticketId,
+      matchedBy: params.matchedBy,
+      metadata: decisionMetadata,
+    });
+
+    if (diagnostics) {
+      diagnostics.threading.matchedCommentId = commentId;
+    }
+    return withDiagnostics({
+      outcome: 'replied',
+      matchedBy: params.matchedBy,
+      ticketId: params.ticketId,
+      commentId,
+    }, diagnostics);
+  };
+
   const token = conversationToken;
   if (token) {
     try {
@@ -686,98 +1114,15 @@ export async function processInboundEmailInApp(
           diagnostics.threading.matchedBy = 'reply_token';
           diagnostics.threading.matchedTicketId = match.ticketId;
         }
-        const existingCommentId = await findExistingEmailComment({
-          tenantId,
+
+        const handled = await handleThreadedReply({
           ticketId: match.ticketId,
-          messageId: emailData.id,
-        });
-        if (existingCommentId) {
-          if (diagnostics) {
-            diagnostics.threading.matchedCommentId = existingCommentId;
-            diagnostics.threading.failureReason = 'deduped';
-          }
-          return withDiagnostics({
-            outcome: 'deduped',
-            dedupeKey,
-            ticketId: match.ticketId,
-            commentId: existingCommentId,
-          }, diagnostics);
-        }
-
-        const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
-        const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
-        const blocks = blocksFromEmailBody({
-          html: parsedHtml,
-          text: parsedText,
-        });
-        const serializedBlocks = JSON.stringify(blocks);
-        const matchedSenderContact = await resolveSenderContact({ ticketId: match.ticketId });
-        const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
-        const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
-        const watchListRecipients = mergeTicketWatchListRecipients(
-          inboundWatchListRecipients,
-          buildUnmatchedSenderWatchListRecipients(matchedSenderContactId ?? null)
-        );
-        const commentId = await createCommentFromEmail(
-          {
-            ticket_id: match.ticketId,
-            content: serializedBlocks,
-            source: 'email',
-            author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
-            author_id: matchedSenderContact?.user_id,
-            contact_id: matchedSenderIsInternalUser ? undefined : matchedSenderContactId,
-            metadata: {
-              email: buildCommentEmailMetadata(),
-              parser: {
-                confidence: parsedEmail?.confidence,
-                strategy: parsedEmail?.strategy,
-                heuristics: parsedEmail?.appliedHeuristics,
-                warnings: parsedEmail?.warnings,
-              },
-            },
-            inboundReplyEvent: {
-              messageId: emailData.id,
-              threadId: emailData.threadId,
-              from: emailData.from?.email ?? '',
-              to: (emailData.to ?? []).map((r) => r.email),
-              subject: emailData.subject,
-              receivedAt: emailData.receivedAt,
-              provider: emailData.provider,
-              matchedBy: 'reply_token',
-            },
-          },
-          tenantId
-        );
-
-        const artifactsResult = await processInboundEmailArtifactsBestEffort({
-          tenantId,
-          providerId,
-          ticketId: match.ticketId,
-          emailData,
-          scopeLabel: 'reply',
-        });
-        await maybeRewriteCommentWithEmbeddedAttachmentUrls({
-          tenantId,
-          commentId,
-          html: parsedHtml,
-          text: parsedText,
-          originalCommentContent: serializedBlocks,
-          artifactsResult,
-        });
-
-        await upsertWatchListBestEffort(match.ticketId, watchListRecipients);
-
-        if (diagnostics) {
-          diagnostics.threading.matchedCommentId = commentId;
-        }
-        return withDiagnostics({
-          outcome: 'replied',
           matchedBy: 'reply_token',
-          ticketId: match.ticketId,
-          commentId,
-        }, diagnostics);
-      }
-      if (diagnostics) {
+        });
+        if (handled) {
+          return handled;
+        }
+      } else if (diagnostics) {
         diagnostics.threading.tokenLookupMissReason = 'token_not_found';
       }
     } catch (error) {
@@ -797,135 +1142,55 @@ export async function processInboundEmailInApp(
 
   // Thread headers fallback.
   let threadedTicketId: string | null = null;
-  if (diagnostics) {
-    diagnostics.threading.headerLookupAttempted = true;
-  }
-  try {
-    const ticket = await findTicketByEmailThread(
-      {
-        threadId: emailData.threadId,
-        inReplyTo: emailData.inReplyTo,
-        references: emailData.references,
-        originalMessageId: emailData.inReplyTo ?? emailData.id,
-      },
-      tenantId
-    );
-    if (ticket?.ticketId) {
-      threadedTicketId = ticket.ticketId;
-      if (diagnostics) {
-        diagnostics.threading.headerLookupMatched = true;
-        diagnostics.threading.headerLookupMissReason = null;
-        diagnostics.threading.matchedBy = 'thread_headers';
-        diagnostics.threading.matchedTicketId = ticket.ticketId;
-      }
-    } else if (diagnostics) {
-      diagnostics.threading.headerLookupMissReason = 'header_no_match';
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.warn('processInboundEmailInApp: header threading failed (continuing)', {
-      tenantId,
-      providerId,
-      emailId: emailData.id,
-      error: errorMessage,
-    });
+  if (!rerouteToNewTicket) {
     if (diagnostics) {
-      diagnostics.threading.headerLookupMissReason = 'header_lookup_error';
-      diagnostics.threading.headerLookupError = errorMessage;
+      diagnostics.threading.headerLookupAttempted = true;
+    }
+
+    try {
+      const ticket = await findTicketByEmailThread(
+        {
+          threadId: emailData.threadId,
+          inReplyTo: emailData.inReplyTo,
+          references: emailData.references,
+          originalMessageId: emailData.inReplyTo ?? emailData.id,
+        },
+        tenantId
+      );
+      if (ticket?.ticketId) {
+        threadedTicketId = ticket.ticketId;
+        if (diagnostics) {
+          diagnostics.threading.headerLookupMatched = true;
+          diagnostics.threading.headerLookupMissReason = null;
+          diagnostics.threading.matchedBy = 'thread_headers';
+          diagnostics.threading.matchedTicketId = ticket.ticketId;
+        }
+      } else if (diagnostics) {
+        diagnostics.threading.headerLookupMissReason = 'header_no_match';
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn('processInboundEmailInApp: header threading failed (continuing)', {
+        tenantId,
+        providerId,
+        emailId: emailData.id,
+        error: errorMessage,
+      });
+      if (diagnostics) {
+        diagnostics.threading.headerLookupMissReason = 'header_lookup_error';
+        diagnostics.threading.headerLookupError = errorMessage;
+      }
     }
   }
 
   if (threadedTicketId) {
-    const existingCommentId = await findExistingEmailComment({
-      tenantId,
+    const handled = await handleThreadedReply({
       ticketId: threadedTicketId,
-      messageId: emailData.id,
-    });
-    if (existingCommentId) {
-      if (diagnostics) {
-        diagnostics.threading.matchedCommentId = existingCommentId;
-        diagnostics.threading.failureReason = 'deduped';
-      }
-      return withDiagnostics({
-        outcome: 'deduped',
-        dedupeKey,
-        ticketId: threadedTicketId,
-        commentId: existingCommentId,
-      }, diagnostics);
-    }
-
-    const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
-    const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
-    const blocks = blocksFromEmailBody({
-      html: parsedHtml,
-      text: parsedText,
-    });
-    const serializedBlocks = JSON.stringify(blocks);
-    const matchedSenderContact = await resolveSenderContact({ ticketId: threadedTicketId });
-    const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
-    const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
-    const watchListRecipients = mergeTicketWatchListRecipients(
-      inboundWatchListRecipients,
-      buildUnmatchedSenderWatchListRecipients(matchedSenderContactId ?? null)
-    );
-    const commentId = await createCommentFromEmail(
-      {
-        ticket_id: threadedTicketId,
-        content: serializedBlocks,
-        source: 'email',
-        author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
-        author_id: matchedSenderContact?.user_id,
-        contact_id: matchedSenderIsInternalUser ? undefined : matchedSenderContactId,
-        metadata: {
-          email: buildCommentEmailMetadata(),
-          parser: {
-            confidence: parsedEmail?.confidence,
-            strategy: parsedEmail?.strategy,
-            heuristics: parsedEmail?.appliedHeuristics,
-            warnings: parsedEmail?.warnings,
-          },
-        },
-        inboundReplyEvent: {
-          messageId: emailData.id,
-          threadId: emailData.threadId,
-          from: emailData.from?.email ?? '',
-          to: (emailData.to ?? []).map((r) => r.email),
-          subject: emailData.subject,
-          receivedAt: emailData.receivedAt,
-          provider: emailData.provider,
-          matchedBy: 'thread_headers',
-        },
-      },
-      tenantId
-    );
-
-    const artifactsResult = await processInboundEmailArtifactsBestEffort({
-      tenantId,
-      providerId,
-      ticketId: threadedTicketId,
-      emailData,
-      scopeLabel: 'reply',
-    });
-    await maybeRewriteCommentWithEmbeddedAttachmentUrls({
-      tenantId,
-      commentId,
-      html: parsedHtml,
-      text: parsedText,
-      originalCommentContent: serializedBlocks,
-      artifactsResult,
-    });
-
-    await upsertWatchListBestEffort(threadedTicketId, watchListRecipients);
-
-    if (diagnostics) {
-      diagnostics.threading.matchedCommentId = commentId;
-    }
-    return withDiagnostics({
-      outcome: 'replied',
       matchedBy: 'thread_headers',
-      ticketId: threadedTicketId,
-      commentId,
-    }, diagnostics);
+    });
+    if (handled) {
+      return handled;
+    }
   }
 
   // New ticket path.
@@ -1100,6 +1365,7 @@ export async function processInboundEmailInApp(
           warnings: parsedEmail?.warnings,
         },
         unmatchedSender: !commentAuthorContactId,
+        inboundReopenDecision: rerouteReasonMetadata ?? undefined,
       },
     },
     tenantId
