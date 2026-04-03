@@ -21,6 +21,7 @@ import { getBiometricGateEnabled, BIOMETRIC_GRACE_MS } from "../auth/biometricGa
 import { BiometricLockView } from "./BiometricLockView";
 import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
+import { setUser as setSentryUser } from "../errors/sentry";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { ToastProvider } from "../ui/toast/ToastProvider";
 import { ThemeProvider } from "../ui/ThemeContext";
@@ -54,6 +55,11 @@ export function AppRoot() {
       setSessionState(next);
       if (!next) setIsBiometricLocked(false);
       void (next ? storeSession(next) : clearStoredSession());
+      setSentryUser(
+        next?.user
+          ? { id: next.user.id, email: next.user.email, tenantId: next.tenantId }
+          : null,
+      );
     },
     [clearStoredSession, setSessionState, setIsBiometricLocked, storeSession],
   );
