@@ -1,7 +1,7 @@
 import { TenantEntity } from './index';
 import type { ISO8601String } from '../lib/temporal';
 import type { DiscountType, TaxSource } from './invoice.interfaces';
-import type { InvoiceTemplateAst } from '../lib/invoice-template-ast';
+import type { TemplateAst } from '../lib/invoice-template-ast';
 
 export type QuoteStatus =
   | 'draft'
@@ -91,6 +91,7 @@ export interface IQuote extends TenantEntity {
   viewed_at?: ISO8601String | null;
   accepted_at?: ISO8601String | null;
   accepted_by?: string | null;
+  accepted_by_name?: string | null;
   rejected_at?: ISO8601String | null;
   rejection_reason?: string | null;
   cancelled_at?: ISO8601String | null;
@@ -152,6 +153,7 @@ export interface QuoteViewModelParty {
 export interface QuoteViewModelLineItem {
   quote_item_id: string;
   service_id?: string | null;
+  service_item_kind?: 'service' | 'product' | null;
   service_name?: string | null;
   service_sku?: string | null;
   billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
@@ -205,7 +207,25 @@ export interface QuoteViewModel {
   contact?: QuoteViewModelParty | null;
   tenant?: QuoteViewModelParty | null;
   line_items: QuoteViewModelLineItem[];
+  recurring_items?: QuoteViewModelLineItem[];
+  onetime_items?: QuoteViewModelLineItem[];
+  service_items?: QuoteViewModelLineItem[];
+  product_items?: QuoteViewModelLineItem[];
+  recurring_subtotal?: number;
+  recurring_tax?: number;
+  recurring_total?: number;
+  onetime_subtotal?: number;
+  onetime_tax?: number;
+  onetime_total?: number;
+  service_subtotal?: number;
+  service_tax?: number;
+  service_total?: number;
+  product_subtotal?: number;
+  product_tax?: number;
+  product_total?: number;
   phases?: QuoteViewModelPhase[];
+  accepted_by_name?: string | null;
+  accepted_at?: ISO8601String | null;
 }
 
 export type QuoteDocumentTemplateSource = 'standard' | 'custom';
@@ -214,7 +234,7 @@ export interface IQuoteDocumentTemplate extends TenantEntity {
   template_id: string;
   name: string;
   version: number;
-  templateAst?: InvoiceTemplateAst | null;
+  templateAst?: TemplateAst | null;
   isStandard?: boolean;
   is_default?: boolean;
   isTenantDefault?: boolean;

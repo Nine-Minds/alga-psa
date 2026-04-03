@@ -40,6 +40,7 @@ interface ClientPickerProps {
   triggerSize?: ButtonSize;
   triggerButtonClassName?: string;
   onAddNew?: () => void;
+  disabled?: boolean;
 }
 
 interface OptionButtonProps {
@@ -84,6 +85,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   triggerSize,
   triggerButtonClassName = '',
   onAddNew,
+  disabled = false,
   'data-automation-type': dataAutomationType = 'picker',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -247,7 +249,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
       fieldType: 'select',
       id,
       value: selectedClientId || '',
-      disabled: false,
+      disabled,
       required: false,
       options: mappedOptions,
     },
@@ -267,7 +269,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
     const metadata = {
       value: selectedClientId || '',
       label: placeholder,
-      disabled: false,
+      disabled,
       required: false,
       options: mappedOptions,
     };
@@ -382,7 +384,8 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
             variant={triggerVariant}
             size={triggerSize}
             className={`${fitContent ? 'w-auto' : 'w-full'} justify-between ${triggerButtonClassName}`}
-            onClick={() => setIsOpen((prev) => !prev)}
+            onClick={() => { if (!disabled) setIsOpen((prev) => !prev); }}
+            disabled={disabled}
             data-automation-type={dataAutomationType}
           >
             <div className="flex items-center gap-2 min-w-0">

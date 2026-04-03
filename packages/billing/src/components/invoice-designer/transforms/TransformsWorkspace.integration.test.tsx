@@ -5,7 +5,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import TransformsWorkspace from './TransformsWorkspace';
-import { importInvoiceTemplateAstToWorkspace, exportWorkspaceToInvoiceTemplateAst } from '../ast/workspaceAst';
+import { importTemplateAstToWorkspace, exportWorkspaceToTemplateAst } from '../ast/workspaceAst';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import {
   createInitialPreviewSessionState,
@@ -49,7 +49,7 @@ const loadExistingInvoiceOptions = async () => ({
 });
 
 const installWorkspace = () => {
-  const workspace = importInvoiceTemplateAstToWorkspace({
+  const workspace = importTemplateAstToWorkspace({
     kind: 'invoice-template-ast',
     version: 1,
     bindings: {
@@ -170,7 +170,7 @@ describe('TransformsWorkspace', () => {
       })
     );
 
-    const ast = exportWorkspaceToInvoiceTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
+    const ast = exportWorkspaceToTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
     expect(ast.transforms?.operations[0]).toMatchObject({
       type: 'sort',
       keys: [{ path: 'category' }, { path: 'category' }],
@@ -254,7 +254,7 @@ describe('TransformsWorkspace', () => {
       })
     );
 
-    const ast = exportWorkspaceToInvoiceTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
+    const ast = exportWorkspaceToTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
     expect(ast.transforms?.operations[0]).toMatchObject({
       type: 'filter',
       predicate: {
@@ -307,7 +307,7 @@ describe('TransformsWorkspace', () => {
       ])
     );
 
-    const ast = exportWorkspaceToInvoiceTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
+    const ast = exportWorkspaceToTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
     expect(ast.transforms?.operations.map((operation) => operation.id)).toEqual([
       'sort-total',
       'filter-positive',
@@ -378,7 +378,7 @@ describe('TransformsWorkspace', () => {
     expect(screen.getAllByText('aggregates.countItems').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Monitoring/).length).toBeGreaterThan(0);
 
-    const ast = exportWorkspaceToInvoiceTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
+    const ast = exportWorkspaceToTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
     expect(ast.transforms?.operations).toMatchObject([
       {
         id: 'group-category',
@@ -519,7 +519,7 @@ describe('TransformsWorkspace', () => {
 
     expect(screen.queryAllByText(/cannot run after grouped output/i)).toHaveLength(0);
 
-    const ast = exportWorkspaceToInvoiceTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
+    const ast = exportWorkspaceToTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
     expect(ast.transforms?.operations.map((operation) => operation.type)).toEqual([
       'filter',
       'sort',
@@ -564,11 +564,11 @@ describe('TransformsWorkspace', () => {
     fireEvent.blur(aggregateIdInput);
     await selectCustomOption('transform-aggregate-op-aggregate-total-0', 'Count');
 
-    const savedAst = exportWorkspaceToInvoiceTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
+    const savedAst = exportWorkspaceToTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
 
     act(() => {
       useInvoiceDesignerStore.getState().resetWorkspace();
-      useInvoiceDesignerStore.getState().loadWorkspace(importInvoiceTemplateAstToWorkspace(savedAst));
+      useInvoiceDesignerStore.getState().loadWorkspace(importTemplateAstToWorkspace(savedAst));
     });
 
     renderTransformsWorkspace();
@@ -617,7 +617,7 @@ describe('TransformsWorkspace', () => {
       expect(useInvoiceDesignerStore.getState().transforms.outputBindingId).toBe('lineItems.sorted')
     );
 
-    const ast = exportWorkspaceToInvoiceTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
+    const ast = exportWorkspaceToTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
     expect(ast.transforms?.outputBindingId).toBe('lineItems.sorted');
   });
 

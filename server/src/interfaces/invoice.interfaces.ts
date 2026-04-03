@@ -1,7 +1,7 @@
 import { DateValue, ISO8601String } from '@alga-psa/types';
 import { TenantEntity } from './index';
 import type { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '@alga-psa/types';
-import type { InvoiceTemplateAst } from '@alga-psa/types';
+import type { TemplateAst } from '@alga-psa/types';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
@@ -172,7 +172,7 @@ export interface IInvoiceTemplate extends TenantEntity {
   template_id: string;
   name: string;
   version: number;
-  templateAst?: InvoiceTemplateAst | null;
+  templateAst?: TemplateAst | null;
   isStandard?: boolean;
   isClone?: boolean;
   is_default?: boolean; // Legacy flag retained for compatibility

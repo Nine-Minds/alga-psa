@@ -10,7 +10,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
-import { INVOICE_TEMPLATE_AST_VERSION, type IQuoteDocumentTemplate } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION, type IQuoteDocumentTemplate } from '@alga-psa/types';
 import { getQuoteDocumentTemplate, saveQuoteDocumentTemplate } from '../../../actions/quoteDocumentTemplates';
 import { runAuthoritativeQuoteTemplatePreview } from '../../../actions/quoteTemplatePreview';
 import { getStandardQuoteTemplateAstByCode } from '../../../lib/quote-template-ast/standardTemplates';
@@ -20,9 +20,9 @@ import PaperInvoice from '../PaperInvoice';
 import { TemplateRenderer } from '../TemplateRenderer';
 import { useInvoiceDesignerStore } from '../../invoice-designer/state/designerStore';
 import {
-  exportWorkspaceToInvoiceTemplateAst,
-  exportWorkspaceToInvoiceTemplateAstJson,
-  importInvoiceTemplateAstToWorkspace,
+  exportWorkspaceToTemplateAst,
+  exportWorkspaceToTemplateAstJson,
+  importTemplateAstToWorkspace,
 } from '../../invoice-designer/ast/workspaceAst';
 import {
   createInitialPreviewSessionState,
@@ -98,7 +98,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
 
   const generatedCodeViewSource = useMemo(() => {
     try {
-      return exportWorkspaceToInvoiceTemplateAstJson(designerExportWorkspace());
+      return exportWorkspaceToTemplateAstJson(designerExportWorkspace());
     } catch {
       return null;
     }
@@ -137,7 +137,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
       return null;
     }
     try {
-      const templateAst = exportWorkspaceToInvoiceTemplateAst(previewWorkspace as any);
+      const templateAst = exportWorkspaceToTemplateAst(previewWorkspace as any);
       return {
         template_id: `quote-designer-preview-${previewWorkspace.rootId ?? 'root'}-${manualRunNonce}`,
         name: 'Quote Designer Preview',
@@ -198,7 +198,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
 
         const initialAst = getStandardQuoteTemplateAstByCode(standardCode || 'standard-quote-default')
           ?? getStandardQuoteTemplateAstByCode('standard-quote-default')
-          ?? { kind: 'invoice-template-ast', version: INVOICE_TEMPLATE_AST_VERSION, layout: { id: 'root', type: 'document', children: [] } };
+          ?? { kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION, layout: { id: 'root', type: 'document', children: [] } };
         const standardName = standardCode
           ? standardCode.replace(/^standard-quote-/, '').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
           : 'Standard Template';
@@ -233,7 +233,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     const templateAst = (template as Record<string, unknown>)?.templateAst;
     if (templateAst && typeof templateAst === 'object') {
       try {
-        const importedWorkspace = importInvoiceTemplateAstToWorkspace(templateAst as any);
+        const importedWorkspace = importTemplateAstToWorkspace(templateAst as any);
         designerLoadWorkspace(importedWorkspace);
         setDesignerHydratedFor(hydrationKey);
         return;
@@ -313,7 +313,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
       const workspace = designerExportWorkspace();
       let ast;
       try {
-        ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+        ast = exportWorkspaceToTemplateAst(workspace);
       } catch (compilerError) {
         const message = compilerError instanceof Error ? compilerError.message : 'Unknown AST export error';
         setError(`Failed to export template AST from visual workspace: ${message}`);

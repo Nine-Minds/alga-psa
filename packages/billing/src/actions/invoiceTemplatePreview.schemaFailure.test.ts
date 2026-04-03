@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { InvoiceTemplateAst } from '@alga-psa/types';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import type { TemplateAst } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 // Ensure schema failures surface as diagnostics and do not proceed to render output.
-const invalidAst: InvoiceTemplateAst = {
+const invalidAst: TemplateAst = {
   kind: 'invoice-template-ast',
-  version: INVOICE_TEMPLATE_AST_VERSION,
+  version: TEMPLATE_AST_VERSION,
   styles: {
     classes: {
       // Invalid identifier: `.` is disallowed by the safe CSS identifier rule.
@@ -27,7 +27,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('../components/invoice-designer/ast/workspaceAst', () => ({
-  exportWorkspaceToInvoiceTemplateAst: () => invalidAst,
+  exportWorkspaceToTemplateAst: () => invalidAst,
 }));
 
 import { runAuthoritativeInvoiceTemplatePreview } from './invoiceTemplatePreview';

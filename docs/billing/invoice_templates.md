@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-Invoice layouts (called **"Invoice Layouts"** in the UI) define how invoices are rendered as PDF documents and in-browser previews. Each layout is a declarative `InvoiceTemplateAst` JSON payload — a tree of layout nodes, style declarations, and data bindings that the evaluator and renderer process deterministically.
+Invoice layouts (called **"Invoice Layouts"** in the UI) define how invoices are rendered as PDF documents and in-browser previews. Each layout is a declarative `TemplateAst` JSON payload — a tree of layout nodes, style declarations, and data bindings that the evaluator and renderer process deterministically.
 
 The AST engine is shared across document types. Both invoice and quote document templates use the same schema, evaluator, and renderer pipeline. Quote templates extend the binding catalog with quote-specific fields (see [quoting-system.md](./quoting-system.md)).
 
@@ -52,7 +52,7 @@ There is no user-authored code execution — no compilation, no Wasm, no sandbox
 
 ### Style Declaration Properties
 
-The `InvoiceTemplateStyleDeclaration` supports:
+The `TemplateStyleDeclaration` supports:
 - **Layout**: `display`, `flexDirection`, `justifyContent`, `alignItems`, `flex`, `gap`, `width`, `height`, `minWidth`, `maxWidth`, `minHeight`, `maxHeight`, `overflow`, `position`, `top`, `right`, `bottom`, `left`, `zIndex`
 - **Spacing**: `padding`, `paddingTop/Right/Bottom/Left`, `margin`, `marginTop/Right/Bottom/Left`
 - **Border**: `border`, `borderTop/Right/Bottom/Left`, `borderRadius`, `borderColor`
@@ -90,7 +90,7 @@ Key entry points:
 PDF rendering uses the same AST evaluator + renderer path. The server wrapper produces a full HTML document for headless browser (Puppeteer) rendering.
 
 Key entry point:
-- `server/src/services/pdf-generation.service.ts`
+- `packages/billing/src/services/pdfGenerationService.ts`
 
 ## 4. Template Management
 

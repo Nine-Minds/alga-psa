@@ -1,21 +1,21 @@
-import type { InvoiceTemplateAst, IQuote } from '@alga-psa/types';
+import type { TemplateAst, IQuote } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
 import Quote from '../../models/quote';
 import { getStandardQuoteTemplateAstByCode } from './standardTemplates';
 
-const cloneAst = (ast: InvoiceTemplateAst): InvoiceTemplateAst =>
-  JSON.parse(JSON.stringify(ast)) as InvoiceTemplateAst;
+const cloneAst = (ast: TemplateAst): TemplateAst =>
+  JSON.parse(JSON.stringify(ast)) as TemplateAst;
 
 const getCustomTemplateAst = async (
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   templateId: string
-): Promise<InvoiceTemplateAst | null> => {
+): Promise<TemplateAst | null> => {
   const record = await knexOrTrx('quote_document_templates')
     .select('templateAst')
     .where({ tenant, template_id: templateId })
-    .first<{ templateAst?: InvoiceTemplateAst | null }>();
+    .first<{ templateAst?: TemplateAst | null }>();
 
   return record?.templateAst ? cloneAst(record.templateAst) : null;
 };
@@ -23,11 +23,11 @@ const getCustomTemplateAst = async (
 const getStandardTemplateAst = async (
   knexOrTrx: Knex | Knex.Transaction,
   code: string
-): Promise<InvoiceTemplateAst | null> => {
+): Promise<TemplateAst | null> => {
   const record = await knexOrTrx('standard_quote_document_templates')
     .select('templateAst')
     .where({ standard_quote_document_template_code: code })
-    .first<{ templateAst?: InvoiceTemplateAst | null }>();
+    .first<{ templateAst?: TemplateAst | null }>();
 
   if (record?.templateAst) {
     return cloneAst(record.templateAst);
@@ -37,7 +37,7 @@ const getStandardTemplateAst = async (
 };
 
 export interface ResolvedQuoteTemplate {
-  templateAst: InvoiceTemplateAst;
+  templateAst: TemplateAst;
   source: 'quote' | 'tenant-default' | 'standard-fallback';
   templateId?: string;
   standardCode?: string;

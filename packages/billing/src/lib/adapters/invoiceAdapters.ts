@@ -3,7 +3,7 @@ import type {
   InvoiceViewModel as DbInvoiceViewModel, // Source type from DB/interfaces
   IInvoiceCharge
 } from '@alga-psa/types';
-import type { WasmInvoiceViewModel, DateValue } from '@alga-psa/types';
+import type { WasmInvoiceViewModel, WasmInvoiceLineItem, DateValue } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
@@ -116,6 +116,50 @@ const resolveTenantClientSnapshot = (source: Record<string, unknown>): WasmInvoi
 };
 
 
+const isRecurringItem = (item: WasmInvoiceLineItem): boolean =>
+  (item.recurringDetailPeriods?.length ?? 0) > 0 || !!item.billingTiming;
+
+/**
+ * Enriches a WasmInvoiceViewModel with recurring/one-time grouped item
+ * collections and their separate subtotals, tax, and totals.
+ * Derives grouping from existing timing fields — no database migration needed.
+ */
+export function enrichWithGroupedItems(vm: WasmInvoiceViewModel): WasmInvoiceViewModel {
+  const recurringItems = vm.items.filter(isRecurringItem);
+  const onetimeItems = vm.items.filter((item) => !isRecurringItem(item));
+
+  const sumField = (items: WasmInvoiceLineItem[], field: 'total' | 'taxAmount') =>
+    items.reduce((sum, item) => sum + toFiniteNumber(item[field]), 0);
+
+  const recurringSubtotal = sumField(recurringItems, 'total');
+  const onetimeSubtotal = sumField(onetimeItems, 'total');
+
+  // Use per-item tax when available, otherwise split proportionally
+  const hasPerItemTax = vm.items.some((item) => (item.taxAmount ?? 0) !== 0);
+  let recurringTax: number;
+  let onetimeTax: number;
+
+  if (hasPerItemTax) {
+    recurringTax = sumField(recurringItems, 'taxAmount');
+    onetimeTax = sumField(onetimeItems, 'taxAmount');
+  } else {
+    const totalSubtotal = recurringSubtotal + onetimeSubtotal;
+    recurringTax = totalSubtotal > 0 ? Math.round(vm.tax * (recurringSubtotal / totalSubtotal)) : 0;
+    onetimeTax = vm.tax - recurringTax;
+  }
+
+  vm.recurringItems = recurringItems;
+  vm.onetimeItems = onetimeItems;
+  vm.recurringSubtotal = recurringSubtotal;
+  vm.recurringTax = recurringTax;
+  vm.recurringTotal = recurringSubtotal + recurringTax;
+  vm.onetimeSubtotal = onetimeSubtotal;
+  vm.onetimeTax = onetimeTax;
+  vm.onetimeTotal = onetimeSubtotal + onetimeTax;
+
+  return vm;
+}
+
 /**
  * Maps the detailed invoice data structure fetched from the database
  * (DbInvoiceViewModel from invoice.interfaces.ts) to the InvoiceViewModel
@@ -194,6 +238,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           quantity: toFiniteNumber(item.quantity),
           unitPrice: toMinorUnits(item.unit_price),
           total: toMinorUnits(item.total_price),
+          taxAmount: toMinorUnits(item.tax_amount),
           servicePeriodStart: summaryStart,
           servicePeriodEnd: summaryEnd,
           billingTiming: summaryBillingTiming,
@@ -247,6 +292,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
     }
 
 
+    enrichWithGroupedItems(viewModel);
     console.log('[mapDbInvoiceToWasmViewModel] Mapped ViewModel:', JSON.stringify(viewModel, null, 2));
     return viewModel;
 

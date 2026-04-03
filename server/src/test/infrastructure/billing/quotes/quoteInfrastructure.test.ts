@@ -32,8 +32,8 @@ import QuoteItem from '../../../../../../packages/billing/src/models/quoteItem';
 import { mapDbQuoteToViewModel } from '../../../../../../packages/billing/src/lib/adapters/quoteAdapters';
 import { getStandardQuoteTemplateAstByCode } from '../../../../../../packages/billing/src/lib/quote-template-ast/standardTemplates';
 import { resolveQuoteTemplateAst } from '../../../../../../packages/billing/src/lib/quote-template-ast/templateSelection';
-import { evaluateInvoiceTemplateAst } from '../../../../../../packages/billing/src/lib/invoice-template-ast/evaluator';
-import { createQuotePDFGenerationService } from '../../../../../../packages/billing/src/services/quotePdfGenerationService';
+import { evaluateTemplateAst } from '../../../../../../packages/billing/src/lib/invoice-template-ast/evaluator';
+import { createPDFGenerationService } from '../../../../../../packages/billing/src/services/pdfGenerationService';
 import { browserPoolService } from '../../../../../../packages/billing/src/services/browserPoolService';
 import { TaxService } from '../../../../../../packages/billing/src/services/taxService';
 
@@ -1124,7 +1124,7 @@ describe('Quote infrastructure', () => {
     expect(viewModel).toBeTruthy();
     expect(ast).toBeTruthy();
 
-    const evaluation = evaluateInvoiceTemplateAst(ast!, viewModel as unknown as Record<string, unknown>);
+    const evaluation = evaluateTemplateAst(ast!, viewModel as unknown as Record<string, unknown>);
     expect(evaluation.bindings.quoteNumber).toBe(quote.quote_number);
     expect(String(evaluation.bindings.quoteDate)).toBe(String(quote.quote_date));
     expect(String(evaluation.bindings.validUntil)).toBe(String(quote.valid_until));
@@ -1147,7 +1147,7 @@ describe('Quote infrastructure', () => {
 
     const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
     const ast = getStandardQuoteTemplateAstByCode('standard-quote-default');
-    const evaluation = evaluateInvoiceTemplateAst(ast!, viewModel as unknown as Record<string, unknown>);
+    const evaluation = evaluateTemplateAst(ast!, viewModel as unknown as Record<string, unknown>);
     const [lineItem] = evaluation.bindings.lineItems as Array<Record<string, unknown>>;
 
     expect(lineItem.is_optional).toBe(true);
@@ -1166,7 +1166,7 @@ describe('Quote infrastructure', () => {
       created_by: context.userId,
     });
 
-    const preview = await createQuotePDFGenerationService(context.tenantId).renderPreview({
+    const preview = await createPDFGenerationService(context.tenantId).renderPreview({
       quoteId: quote.quote_id,
       templateCode: 'standard-quote-default',
     });
@@ -1194,7 +1194,7 @@ describe('Quote infrastructure', () => {
       created_by: context.userId,
     });
 
-    const preview = await createQuotePDFGenerationService(context.tenantId).renderPreview({
+    const preview = await createPDFGenerationService(context.tenantId).renderPreview({
       quoteId: quote.quote_id,
       templateCode: 'standard-quote-detailed',
     });
@@ -1275,7 +1275,7 @@ describe('Quote infrastructure', () => {
     const quote = await createFinancialQuote();
     const getBrowserSpy = vi.spyOn(browserPoolService, 'getBrowser');
 
-    const preview = await createQuotePDFGenerationService(context.tenantId).renderPreview({
+    const preview = await createPDFGenerationService(context.tenantId).renderPreview({
       quoteId: quote.quote_id,
       templateCode: 'standard-quote-default',
     });

@@ -9,14 +9,14 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { TenantEmailService } from '@alga-psa/email';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { IContract, IInvoice, IQuote, IQuoteItem, IQuoteListItem, PaginatedResult, QuoteConversionPreview } from '@alga-psa/types';
+import type { IContract, IInvoice, TemplateAst, IQuote, IQuoteItem, IQuoteListItem, PaginatedResult, QuoteConversionPreview } from '@alga-psa/types';
 import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate } from '../lib/quote-email-templates';
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
-import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, createQuotePDFGenerationService } from '../services';
+import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, createPDFGenerationService } from '../services';
 import { Document as DocumentModel, DocumentAssociation } from '@alga-psa/documents/models';
 
 type CreateQuoteInput = Omit<
@@ -177,7 +177,7 @@ const storeQuotePdf = async (
   quote: IQuote,
   userId: string
 ): Promise<string> => {
-  const pdfService = createQuotePDFGenerationService(tenant);
+  const pdfService = createPDFGenerationService(tenant);
   const fileRecord = await pdfService.generateAndStore({
     quoteId: quote.quote_id,
     quoteNumber: quote.quote_number ?? undefined,
@@ -230,7 +230,8 @@ const sendQuoteEmailWithAttachment = async ({
   html: string;
   text: string;
 }) => {
-  const pdfBuffer = await createQuotePDFGenerationService(tenant).generatePDF({ quoteId: quote.quote_id });
+  const actorId = getActorUserId(user);
+  const pdfBuffer = await createPDFGenerationService(tenant).generatePDF({ quoteId: quote.quote_id, userId: actorId ?? '' });
   const resolvedQuoteNumber = quote.quote_number ?? quote.quote_id;
 
   return await TenantEmailService.getInstance(tenant).sendEmail({
@@ -307,7 +308,33 @@ export const getQuote = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  return await Quote.getById(knex, tenant, quoteId);
+  const quote = await Quote.getById(knex, tenant, quoteId);
+  if (!quote) return null;
+
+  // Resolve accepted_by UUID to a display name
+  if (quote.accepted_by) {
+    try {
+      const contact = await knex('contacts')
+        .select('full_name')
+        .where({ tenant, contact_name_id: quote.accepted_by })
+        .first<{ full_name?: string }>();
+      if (contact?.full_name) {
+        quote.accepted_by_name = contact.full_name;
+      } else {
+        const user = await knex('users')
+          .select('first_name', 'last_name')
+          .where({ tenant, user_id: quote.accepted_by })
+          .first<{ first_name?: string; last_name?: string }>();
+        if (user) {
+          quote.accepted_by_name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || null;
+        }
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
+
+  return quote;
 });
 
 export const listQuotes = withAuth(async (
@@ -887,7 +914,7 @@ export const sendQuote = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
-      const portalBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
       const renderedEmail = buildQuoteSentEmailTemplate({
         quote,
@@ -974,7 +1001,7 @@ export const resendQuote = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
-      const portalBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
       const renderedEmail = buildQuoteSentEmailTemplate({
         quote,
@@ -1057,7 +1084,7 @@ export const sendQuoteReminder = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
-      const portalBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
       const renderedEmail = buildQuoteReminderEmailTemplate({
         quote,
@@ -1297,8 +1324,8 @@ export const downloadQuotePdf = withAuth(async (
     throw new Error(`Quote ${quoteId} not found`);
   }
 
-  const pdfService = createQuotePDFGenerationService(tenant);
-  const pdfBuffer = await pdfService.generatePDF({ quoteId });
+  const pdfService = createPDFGenerationService(tenant);
+  const pdfBuffer = await pdfService.generatePDF({ quoteId, userId: user.user_id });
 
   return {
     pdfData: Array.from(pdfBuffer),
@@ -1310,13 +1337,25 @@ export const renderQuotePreview = withAuth(async (
   user,
   { tenant },
   quoteId: string,
+  templateId?: string,
 ): Promise<{ html: string; css: string } | ActionPermissionError> => {
   const denied = await requireBillingReadPermission(user);
   if (denied) {
     return denied;
   }
 
-  const service = createQuotePDFGenerationService(tenant);
-  const preview = await service.renderPreview({ quoteId });
+  let templateAst: TemplateAst | undefined;
+  if (templateId) {
+    const { knex } = await createTenantKnex();
+    const allTemplates = (await import('../models/quoteDocumentTemplate')).default;
+    const templates = await allTemplates.getTemplates(knex, tenant);
+    const match = templates.find((t) => t.template_id === templateId);
+    if (match?.templateAst) {
+      templateAst = match.templateAst;
+    }
+  }
+
+  const service = createPDFGenerationService(tenant);
+  const preview = await service.renderQuotePreview({ quoteId, templateAst });
   return { html: preview.html, css: preview.css };
 });

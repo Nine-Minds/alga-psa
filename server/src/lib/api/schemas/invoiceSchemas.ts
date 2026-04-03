@@ -287,12 +287,12 @@ const invoiceTemplateSchema = z.object({
 }).merge(baseEntitySchema);
 
 // Create invoice template schema
-const createInvoiceTemplateSchema = invoiceTemplateSchema.omit({
+const createTemplateSchema = invoiceTemplateSchema.omit({
   template_id: true
 });
 
 // Update invoice template schema
-const updateInvoiceTemplateSchema = createUpdateSchema(createInvoiceTemplateSchema);
+const updateTemplateSchema = createUpdateSchema(createTemplateSchema);
 
 // ============================================================================
 // Invoice Operation Schemas
@@ -571,7 +571,7 @@ const recurrenceFrequencySchema = z.enum([
 ]);
 
 // Recurring invoice template schema
-const recurringInvoiceTemplateSchema = z.object({
+const recurringTemplateSchema = z.object({
   template_id: uuidSchema,
   client_id: uuidSchema,
   name: z.string().min(1).max(100),
@@ -585,13 +585,13 @@ const recurringInvoiceTemplateSchema = z.object({
 }).merge(baseEntitySchema);
 
 // Create recurring invoice template
-const createRecurringInvoiceTemplateSchema = recurringInvoiceTemplateSchema.omit({
+const createRecurringTemplateSchema = recurringTemplateSchema.omit({
   template_id: true,
   next_generation_date: true
 });
 
 // Update recurring invoice template
-const updateRecurringInvoiceTemplateSchema = createUpdateSchema(createRecurringInvoiceTemplateSchema);
+const updateRecurringTemplateSchema = createUpdateSchema(createRecurringTemplateSchema);
 
 // ============================================================================
 // Invoice Preview Schemas
@@ -744,8 +744,8 @@ export type UpdateInvoice = z.infer<typeof updateInvoiceSchema>;
 export type InvoiceResponse = z.infer<typeof invoiceResponseSchema>;
 export type InvoiceViewModel = z.infer<typeof invoiceViewModelSchema>;
 export type InvoiceTemplate = z.infer<typeof invoiceTemplateSchema>;
-export type CreateInvoiceTemplate = z.infer<typeof createInvoiceTemplateSchema>;
-export type UpdateInvoiceTemplate = z.infer<typeof updateInvoiceTemplateSchema>;
+export type CreateInvoiceTemplate = z.infer<typeof createTemplateSchema>;
+export type UpdateInvoiceTemplate = z.infer<typeof updateTemplateSchema>;
 export type GenerateInvoice = z.infer<typeof generateInvoiceSchema>;
 export type ManualInvoiceRequest = z.infer<typeof manualInvoiceRequestSchema>;
 export type UpdateManualInvoice = z.infer<typeof updateManualInvoiceSchema>;
@@ -765,9 +765,9 @@ export type BulkInvoiceDelete = z.infer<typeof bulkInvoiceDeleteSchema>;
 export type BulkInvoiceCredit = z.infer<typeof bulkInvoiceCreditSchema>;
 export type TaxCalculationRequest = z.infer<typeof taxCalculationRequestSchema>;
 export type TaxCalculationResponse = z.infer<typeof taxCalculationResponseSchema>;
-export type RecurringInvoiceTemplate = z.infer<typeof recurringInvoiceTemplateSchema>;
-export type CreateRecurringInvoiceTemplate = z.infer<typeof createRecurringInvoiceTemplateSchema>;
-export type UpdateRecurringInvoiceTemplate = z.infer<typeof updateRecurringInvoiceTemplateSchema>;
+export type RecurringInvoiceTemplate = z.infer<typeof recurringTemplateSchema>;
+export type CreateRecurringInvoiceTemplate = z.infer<typeof createRecurringTemplateSchema>;
+export type UpdateRecurringInvoiceTemplate = z.infer<typeof updateRecurringTemplateSchema>;
 export type InvoicePreviewRequest = z.infer<typeof invoicePreviewRequestSchema>;
 export type InvoicePreviewResponse = z.infer<typeof invoicePreviewResponseSchema>;
 
@@ -807,8 +807,8 @@ export {
   layoutBlockSchema,
   templateElementSchema,
   invoiceTemplateSchema,
-  createInvoiceTemplateSchema,
-  updateInvoiceTemplateSchema,
+  createTemplateSchema,
+  updateTemplateSchema,
   
   // Operation schemas
   generateInvoiceSchema,
@@ -847,9 +847,9 @@ export {
   
   // Recurring invoice schemas
   recurrenceFrequencySchema,
-  recurringInvoiceTemplateSchema,
-  createRecurringInvoiceTemplateSchema,
-  updateRecurringInvoiceTemplateSchema,
+  recurringTemplateSchema,
+  createRecurringTemplateSchema,
+  updateRecurringTemplateSchema,
   
   // Preview schemas
   invoicePreviewRequestSchema,

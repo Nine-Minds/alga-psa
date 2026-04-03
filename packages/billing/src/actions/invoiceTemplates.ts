@@ -14,12 +14,12 @@ import {
     InvoiceTemplateSource,
     DeletionValidationResult
 } from '@alga-psa/types';
-import type { InvoiceTemplateAst, WasmInvoiceViewModel, RenderOutput } from '@alga-psa/types';
+import type { TemplateAst, WasmInvoiceViewModel, RenderOutput } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
 
-import { evaluateInvoiceTemplateAst } from '../lib/invoice-template-ast/evaluator';
-import { renderEvaluatedInvoiceTemplateAst } from '../lib/invoice-template-ast/react-renderer';
+import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
+import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 
 export const getInvoiceTemplate = withAuth(async (
@@ -203,7 +203,7 @@ export const saveInvoiceTemplate = withAuth(async (
         isStandard,
         isTenantDefault: _isTenantDefault,
         templateSource: _templateSource,
-        standard_invoice_template_code: _standardInvoiceTemplateCode,
+        standard_invoice_template_code: _standardTemplateCode,
         selectValue: _selectValue,
         ...templateToSaveWithoutFlags
     } = templateToSave;
@@ -305,7 +305,7 @@ export async function getInvoiceAnnotations(invoiceId: string): Promise<IInvoice
  * @throws If template lookup, AST evaluation, or rendering fails.
  */
 type RenderTemplateOnServerOptions = {
-    templateAst?: InvoiceTemplateAst | null;
+    templateAst?: TemplateAst | null;
 };
 
 export const renderTemplateOnServer = withAuth(async (
@@ -322,7 +322,7 @@ export const renderTemplateOnServer = withAuth(async (
     }
 
     try {
-        let templateAst = (options?.templateAst ?? null) as InvoiceTemplateAst | null;
+        let templateAst = (options?.templateAst ?? null) as TemplateAst | null;
 
         if (!templateAst) {
           if (!templateId) {
@@ -336,18 +336,18 @@ export const renderTemplateOnServer = withAuth(async (
           if (!template) {
             throw new Error(`Template ${templateId} not found for tenant ${tenant}.`);
           }
-          templateAst = (template.templateAst ?? null) as InvoiceTemplateAst | null;
+          templateAst = (template.templateAst ?? null) as TemplateAst | null;
         }
 
         if (!templateAst) {
           throw new Error(`Template ${templateId ?? '<inline>'} does not have a canonical templateAst payload.`);
         }
 
-        const evaluation = evaluateInvoiceTemplateAst(
+        const evaluation = evaluateTemplateAst(
           templateAst,
           invoiceData as unknown as Record<string, unknown>
         );
-        const { html, css } = await renderEvaluatedInvoiceTemplateAst(templateAst, evaluation);
+        const { html, css } = await renderEvaluatedTemplateAst(templateAst, evaluation);
 
         console.log(`[Server Action] Successfully rendered template: ${templateId ?? 'inline-templateAst'}`);
         return { html, css };

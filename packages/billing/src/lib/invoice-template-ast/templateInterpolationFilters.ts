@@ -1,13 +1,13 @@
-export type InvoiceTemplateTokenFilter = 'currency';
+export type TemplateTokenFilter = 'currency';
 
-export type ParsedInvoiceTemplateToken = {
+export type ParsedTemplateToken = {
   path: string;
-  filter?: InvoiceTemplateTokenFilter;
+  filter?: TemplateTokenFilter;
 };
 
 const normalizeFilterName = (value: string): string => value.trim().toLowerCase();
 
-export const parseInvoiceTemplateToken = (rawToken: string): ParsedInvoiceTemplateToken | null => {
+export const parseTemplateToken = (rawToken: string): ParsedTemplateToken | null => {
   const normalized = rawToken.trim();
   if (!normalized) {
     return null;
@@ -36,15 +36,15 @@ export const parseInvoiceTemplateToken = (rawToken: string): ParsedInvoiceTempla
   return null;
 };
 
-export const encodeInvoiceTemplatePathExpression = (
+export const encodeTemplatePathExpression = (
   path: string,
-  filter?: InvoiceTemplateTokenFilter
+  filter?: TemplateTokenFilter
 ): string => (filter ? `${path}|${filter}` : path);
 
-export const decodeInvoiceTemplatePathExpression = (
+export const decodeTemplatePathExpression = (
   encodedPath: string
-): ParsedInvoiceTemplateToken => {
-  const parsed = parseInvoiceTemplateToken(encodedPath);
+): ParsedTemplateToken => {
+  const parsed = parseTemplateToken(encodedPath);
   if (parsed) {
     return parsed;
   }

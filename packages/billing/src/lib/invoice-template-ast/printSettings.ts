@@ -1,10 +1,10 @@
 import {
   resolveInvoicePdfPrintOptions,
-  resolveInvoiceTemplatePrintSettings,
+  resolveTemplatePrintSettings,
   type InvoicePdfPrintOptions,
   type InvoicePrintResolutionInput,
-  type InvoiceTemplateAst,
-  type ResolvedInvoiceTemplatePrintSettings,
+  type TemplateAst,
+  type ResolvedTemplatePrintSettings,
 } from '@alga-psa/types';
 
 type UnknownRecord = Record<string, unknown>;
@@ -27,10 +27,10 @@ const parsePxLength = (value: unknown): number | undefined => {
   return undefined;
 };
 
-const getDocumentInlineStyle = (ast: InvoiceTemplateAst | null | undefined): UnknownRecord | undefined =>
+const getDocumentInlineStyle = (ast: TemplateAst | null | undefined): UnknownRecord | undefined =>
   isRecord(ast?.layout?.style?.inline) ? (ast.layout.style.inline as UnknownRecord) : undefined;
 
-const getPageSectionInlineStyle = (ast: InvoiceTemplateAst | null | undefined): UnknownRecord | undefined => {
+const getPageSectionInlineStyle = (ast: TemplateAst | null | undefined): UnknownRecord | undefined => {
   const documentChildren = ast?.layout?.children ?? [];
   const pageSectionCandidate =
     documentChildren.length === 1 && documentChildren[0]?.type === 'section' ? documentChildren[0] : null;
@@ -38,8 +38,8 @@ const getPageSectionInlineStyle = (ast: InvoiceTemplateAst | null | undefined): 
   return isRecord(pageSectionCandidate?.style?.inline) ? (pageSectionCandidate.style.inline as UnknownRecord) : undefined;
 };
 
-export const resolveInvoicePrintResolutionInputFromAst = (
-  ast: InvoiceTemplateAst | null | undefined
+export const resolvePrintResolutionInputFromAst = (
+  ast: TemplateAst | null | undefined
 ): InvoicePrintResolutionInput => {
   const documentInline = getDocumentInlineStyle(ast);
   const pageSectionInline = getPageSectionInlineStyle(ast);
@@ -54,11 +54,12 @@ export const resolveInvoicePrintResolutionInputFromAst = (
   };
 };
 
-export const resolveInvoiceTemplatePrintSettingsFromAst = (
-  ast: InvoiceTemplateAst | null | undefined
-): ResolvedInvoiceTemplatePrintSettings =>
-  resolveInvoiceTemplatePrintSettings(resolveInvoicePrintResolutionInputFromAst(ast));
+export const resolveTemplatePrintSettingsFromAst = (
+  ast: TemplateAst | null | undefined
+): ResolvedTemplatePrintSettings =>
+  resolveTemplatePrintSettings(resolvePrintResolutionInputFromAst(ast));
 
-export const resolveInvoicePdfPrintOptionsFromAst = (
-  ast: InvoiceTemplateAst | null | undefined
-): InvoicePdfPrintOptions => resolveInvoicePdfPrintOptions(resolveInvoicePrintResolutionInputFromAst(ast));
+export const resolvePdfPrintOptionsFromAst = (
+  ast: TemplateAst | null | undefined
+): InvoicePdfPrintOptions => resolveInvoicePdfPrintOptions(resolvePrintResolutionInputFromAst(ast));
+

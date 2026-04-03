@@ -16,13 +16,13 @@ export interface InvoicePaperPresetDefinition {
   heightPx: number;
 }
 
-export interface InvoiceTemplatePrintSettings {
+export interface TemplatePrintSettings {
   paperPreset: InvoicePaperPresetId;
   marginMm: number;
 }
 
 export interface InvoicePrintResolutionInput {
-  printSettings?: Partial<InvoiceTemplatePrintSettings> | null;
+  printSettings?: Partial<TemplatePrintSettings> | null;
   pageWidthPx?: number | null;
   pageHeightPx?: number | null;
   documentWidthPx?: number | null;
@@ -30,7 +30,7 @@ export interface InvoicePrintResolutionInput {
   pagePaddingPx?: number | null;
 }
 
-export interface ResolvedInvoiceTemplatePrintSettings extends InvoiceTemplatePrintSettings {
+export interface ResolvedTemplatePrintSettings extends TemplatePrintSettings {
   source: 'explicit' | 'inferred' | 'fallback' | 'legacy-unresolved';
   preset: InvoicePaperPresetDefinition;
   pageWidthPx: number;
@@ -84,7 +84,7 @@ export const INVOICE_PAPER_PRESET_REGISTRY: Record<InvoicePaperPresetId, Invoice
   Legal: createPaperPreset('Legal', 215.9, 355.6),
 };
 
-export const DEFAULT_INVOICE_PRINT_SETTINGS: InvoiceTemplatePrintSettings = {
+export const DEFAULT_INVOICE_PRINT_SETTINGS: TemplatePrintSettings = {
   paperPreset: 'Letter',
   marginMm: roundToTwoDecimals(pixelsToMillimeters(LEGACY_DEFAULT_MARGIN_PX)),
 };
@@ -115,9 +115,9 @@ export const clampInvoiceMarginMm = (marginMm: number): number => {
   );
 };
 
-export const normalizeInvoiceTemplatePrintSettings = (
-  value: Partial<InvoiceTemplatePrintSettings> | null | undefined
-): InvoiceTemplatePrintSettings | null => {
+export const normalizeTemplatePrintSettings = (
+  value: Partial<TemplatePrintSettings> | null | undefined
+): TemplatePrintSettings | null => {
   const preset = getInvoicePaperPresetById(
     typeof value?.paperPreset === 'string' ? value.paperPreset : null
   );
@@ -154,11 +154,11 @@ export const resolveInvoicePaperPresetFromDimensions = (
   );
 };
 
-const createResolvedInvoiceTemplatePrintSettings = (
-  settings: InvoiceTemplatePrintSettings,
-  source: ResolvedInvoiceTemplatePrintSettings['source'],
-  overrides?: Partial<Pick<ResolvedInvoiceTemplatePrintSettings, 'pageWidthPx' | 'pageHeightPx' | 'marginPx'>>
-): ResolvedInvoiceTemplatePrintSettings => {
+const createResolvedTemplatePrintSettings = (
+  settings: TemplatePrintSettings,
+  source: ResolvedTemplatePrintSettings['source'],
+  overrides?: Partial<Pick<ResolvedTemplatePrintSettings, 'pageWidthPx' | 'pageHeightPx' | 'marginPx'>>
+): ResolvedTemplatePrintSettings => {
   const preset = INVOICE_PAPER_PRESET_REGISTRY[settings.paperPreset];
   const marginPx = overrides?.marginPx ?? Math.round(millimetersToPixels(settings.marginMm));
   const pageWidthPx = overrides?.pageWidthPx ?? preset.widthPx;
@@ -176,12 +176,12 @@ const createResolvedInvoiceTemplatePrintSettings = (
   };
 };
 
-export const resolveInvoiceTemplatePrintSettings = (
+export const resolveTemplatePrintSettings = (
   input: InvoicePrintResolutionInput | null | undefined
-): ResolvedInvoiceTemplatePrintSettings => {
-  const explicitSettings = normalizeInvoiceTemplatePrintSettings(input?.printSettings);
+): ResolvedTemplatePrintSettings => {
+  const explicitSettings = normalizeTemplatePrintSettings(input?.printSettings);
   if (explicitSettings) {
-    return createResolvedInvoiceTemplatePrintSettings(explicitSettings, 'explicit');
+    return createResolvedTemplatePrintSettings(explicitSettings, 'explicit');
   }
 
   const inferredPreset =
@@ -193,7 +193,7 @@ export const resolveInvoiceTemplatePrintSettings = (
       Number.isFinite(input?.pagePaddingPx) ? pixelsToMillimeters(input?.pagePaddingPx ?? 0) : DEFAULT_INVOICE_PRINT_SETTINGS.marginMm
     );
 
-    return createResolvedInvoiceTemplatePrintSettings(
+    return createResolvedTemplatePrintSettings(
       {
         paperPreset: inferredPreset.id,
         marginMm: inferredMarginMm,
@@ -213,7 +213,7 @@ export const resolveInvoiceTemplatePrintSettings = (
         : DEFAULT_INVOICE_PRINT_SETTINGS.marginMm
     );
 
-    return createResolvedInvoiceTemplatePrintSettings(
+    return createResolvedTemplatePrintSettings(
       {
         paperPreset: DEFAULT_INVOICE_PRINT_SETTINGS.paperPreset,
         marginMm: legacyMarginMm,
@@ -227,21 +227,29 @@ export const resolveInvoiceTemplatePrintSettings = (
     );
   }
 
-  return createResolvedInvoiceTemplatePrintSettings(DEFAULT_INVOICE_PRINT_SETTINGS, 'fallback');
+  return createResolvedTemplatePrintSettings(DEFAULT_INVOICE_PRINT_SETTINGS, 'fallback');
 };
 
 export const resolveInvoicePdfPrintOptions = (
   input: InvoicePrintResolutionInput | null | undefined
 ): InvoicePdfPrintOptions => {
-  const resolved = resolveInvoiceTemplatePrintSettings(input);
+  const resolved = resolveTemplatePrintSettings(input);
+
+  // When margins come from explicit printSettings (not inferred from CSS
+  // padding), use them as Puppeteer margins.  When they were inferred from the
+  // page section's CSS padding, the padding is already in the HTML — setting
+  // Puppeteer margins too would double-count and push content to extra pages.
+  const hasCssPadding = Number.isFinite(input?.pagePaddingPx) && (input?.pagePaddingPx ?? 0) > 0;
+  const useExplicitMargin = resolved.source === 'explicit' && !hasCssPadding;
+  const marginStr = useExplicitMargin ? `${roundToTwoDecimals(resolved.marginMm)}mm` : '0mm';
 
   return {
     format: resolved.paperPreset,
     margin: {
-      top: '0mm',
-      right: '0mm',
-      bottom: '0mm',
-      left: '0mm',
+      top: marginStr,
+      right: marginStr,
+      bottom: marginStr,
+      left: marginStr,
     },
     printBackground: true,
   };

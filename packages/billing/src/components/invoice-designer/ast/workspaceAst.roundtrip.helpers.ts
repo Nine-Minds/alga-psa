@@ -1,26 +1,26 @@
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import type {
-  InvoiceTemplateAst,
-  InvoiceTemplateDocumentNode,
-  InvoiceTemplateNode,
-  InvoiceTemplateNodeType,
+  TemplateAst,
+  TemplateDocumentNode,
+  TemplateNode,
+  TemplateNodeType,
 } from '@alga-psa/types';
-import { exportWorkspaceToInvoiceTemplateAst, importInvoiceTemplateAstToWorkspace } from './workspaceAst';
+import { exportWorkspaceToTemplateAst, importTemplateAstToWorkspace } from './workspaceAst';
 
 export const cloneAst = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
-type AstOverrides = Partial<Omit<InvoiceTemplateAst, 'kind' | 'version' | 'layout'>> & {
-  layout?: Partial<InvoiceTemplateAst['layout']>;
+type AstOverrides = Partial<Omit<TemplateAst, 'kind' | 'version' | 'layout'>> & {
+  layout?: Partial<TemplateAst['layout']>;
 };
 
 export const createAstDocument = (
-  children: InvoiceTemplateNode[],
+  children: TemplateNode[],
   overrides?: AstOverrides
-): InvoiceTemplateAst => {
+): TemplateAst => {
   const layoutOverrides = overrides?.layout ?? {};
   return {
     kind: 'invoice-template-ast',
-    version: INVOICE_TEMPLATE_AST_VERSION,
+    version: TEMPLATE_AST_VERSION,
     bindings: { values: {}, collections: {} },
     ...overrides,
     layout: {
@@ -32,21 +32,21 @@ export const createAstDocument = (
   };
 };
 
-export const roundTripAst = (ast: InvoiceTemplateAst): InvoiceTemplateAst =>
-  exportWorkspaceToInvoiceTemplateAst(importInvoiceTemplateAstToWorkspace(cloneAst(ast)));
+export const roundTripAst = (ast: TemplateAst): TemplateAst =>
+  exportWorkspaceToTemplateAst(importTemplateAstToWorkspace(cloneAst(ast)));
 
-export const exportImportExportAst = (ast: InvoiceTemplateAst): InvoiceTemplateAst =>
-  exportWorkspaceToInvoiceTemplateAst(importInvoiceTemplateAstToWorkspace(roundTripAst(ast)));
+export const exportImportExportAst = (ast: TemplateAst): TemplateAst =>
+  exportWorkspaceToTemplateAst(importTemplateAstToWorkspace(roundTripAst(ast)));
 
-export const getDocumentNode = (ast: InvoiceTemplateAst): InvoiceTemplateDocumentNode => {
+export const getDocumentNode = (ast: TemplateAst): TemplateDocumentNode => {
   if (ast.layout.type !== 'document') {
     throw new Error(`Expected document layout, received ${ast.layout.type}`);
   }
-  return ast.layout as InvoiceTemplateDocumentNode;
+  return ast.layout as TemplateDocumentNode;
 };
 
-export const findNodeById = <T extends InvoiceTemplateNode = InvoiceTemplateNode>(
-  root: InvoiceTemplateNode,
+export const findNodeById = <T extends TemplateNode = TemplateNode>(
+  root: TemplateNode,
   id: string
 ): T | null => {
   if (root.id === id) {
@@ -63,14 +63,14 @@ export const findNodeById = <T extends InvoiceTemplateNode = InvoiceTemplateNode
   return null;
 };
 
-export const listNodesByType = <T extends InvoiceTemplateNodeType>(
-  root: InvoiceTemplateNode,
+export const listNodesByType = <T extends TemplateNodeType>(
+  root: TemplateNode,
   type: T
-): Array<Extract<InvoiceTemplateNode, { type: T }>> => {
-  const output: Array<Extract<InvoiceTemplateNode, { type: T }>> = [];
-  const visit = (node: InvoiceTemplateNode) => {
+): Array<Extract<TemplateNode, { type: T }>> => {
+  const output: Array<Extract<TemplateNode, { type: T }>> = [];
+  const visit = (node: TemplateNode) => {
     if (node.type === type) {
-      output.push(node as Extract<InvoiceTemplateNode, { type: T }>);
+      output.push(node as Extract<TemplateNode, { type: T }>);
     }
     const children = Array.isArray(node.children) ? node.children : [];
     children.forEach(visit);

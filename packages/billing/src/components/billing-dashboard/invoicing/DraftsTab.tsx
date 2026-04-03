@@ -241,7 +241,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     if (!selectedInvoice) return;
     setError(null);
     try {
-      const { pdfData, invoiceNumber } = await downloadInvoicePDF(selectedInvoice.invoice_id);
+      const { pdfData, invoiceNumber } = await downloadInvoicePDF(selectedInvoice.invoice_id, selectedTemplateId);
 
       const blob = new Blob([new Uint8Array(pdfData)], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);

@@ -3,6 +3,14 @@ import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import type { Knex } from 'knex';
 
 import Quote from '../../models/quote';
+import { fetchTenantParty } from './tenantPartyAdapter';
+
+type QuoteItemGroupSummary = {
+  items: QuoteViewModelLineItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+};
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
@@ -36,6 +44,7 @@ const buildAddress = (record: Record<string, unknown> | null | undefined): strin
 const mapQuoteItemToViewModel = (item: NonNullable<IQuote['quote_items']>[number]): QuoteViewModelLineItem => ({
   quote_item_id: item.quote_item_id,
   service_id: item.service_id ?? null,
+  service_item_kind: item.service_item_kind ?? null,
   service_name: item.service_name ?? null,
   service_sku: item.service_sku ?? null,
   billing_method: item.billing_method ?? null,
@@ -77,6 +86,22 @@ const buildPhaseViewModels = (items: QuoteViewModelLineItem[]): QuoteViewModelPh
     name,
     items: phaseItems,
   }));
+};
+
+const buildQuoteItemGroupSummary = (
+  items: QuoteViewModelLineItem[],
+  predicate: (item: QuoteViewModelLineItem) => boolean
+): QuoteItemGroupSummary => {
+  const filteredItems = items.filter(predicate);
+  const subtotal = filteredItems.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
+  const tax = filteredItems.reduce((sum, item) => sum + toFiniteNumber(item.tax_amount), 0);
+
+  return {
+    items: filteredItems,
+    subtotal,
+    tax,
+    total: subtotal + tax,
+  };
 };
 
 async function fetchClientParty(
@@ -169,69 +194,38 @@ async function fetchContactParty(
   };
 }
 
-async function fetchTenantParty(
+// fetchTenantParty is now imported from './tenantPartyAdapter' and used directly
+// as its return type (TenantParty) is compatible with QuoteViewModelParty.
+
+async function resolveAcceptedByName(
   knexOrTrx: Knex | Knex.Transaction,
-  tenant: string
-): Promise<QuoteViewModelParty | null> {
-  const tenantClient = await knexOrTrx('tenant_companies as tc')
-    .join('clients as c', function joinClients() {
-      this.on('tc.client_id', '=', 'c.client_id').andOn('tc.tenant', '=', 'c.tenant');
-    })
-    .leftJoin('client_locations as cl', function joinLocations() {
-      this.on('c.client_id', '=', 'cl.client_id')
-        .andOn('c.tenant', '=', 'cl.tenant')
-        .andOn(function preferredLocation() {
-          this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
-            .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
-        });
-    })
-    .select(
-      'tc.client_id',
-      'c.client_name',
-      'cl.phone',
-      'cl.email',
-      'cl.address_line1',
-      'cl.address_line2',
-      'cl.address_line3',
-      'cl.city',
-      'cl.state_province',
-      'cl.postal_code',
-      'cl.country_name'
-    )
-    .where({ 'tc.tenant': tenant, 'tc.is_default': true })
-    .whereNull('tc.deleted_at')
-    .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
-    .first<Record<string, unknown>>();
+  tenant: string,
+  acceptedBy: string | null | undefined
+): Promise<string | null> {
+  if (!acceptedBy) return null;
 
-  if (tenantClient?.client_id) {
-    const logoUrl = await getClientLogoUrl(String(tenantClient.client_id), tenant).catch(() => null);
+  try {
+    // Try contacts first (client portal users link to a contact)
+    const contact = await knexOrTrx('contacts')
+      .select('full_name')
+      .where({ tenant, contact_name_id: acceptedBy })
+      .first<{ full_name?: string }>();
+    if (contact?.full_name) return contact.full_name;
 
-    return {
-      name: asTrimmedString(tenantClient.client_name) || 'Your Company',
-      address: buildAddress(tenantClient),
-      email: asTrimmedString(tenantClient.email) || null,
-      phone: asTrimmedString(tenantClient.phone) || null,
-      logo_url: logoUrl || null,
-    };
+    // Fall back to internal users table
+    const user = await knexOrTrx('users')
+      .select('first_name', 'last_name')
+      .where({ tenant, user_id: acceptedBy })
+      .first<{ first_name?: string; last_name?: string }>();
+    if (user) {
+      const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+      if (name) return name;
+    }
+  } catch {
+    // Non-blocking — return null on any lookup error
   }
 
-  const tenantRecord = await knexOrTrx('tenants')
-    .select('client_name')
-    .where({ tenant })
-    .first<Record<string, unknown>>();
-
-  const tenantName = asTrimmedString(tenantRecord?.client_name);
-  if (!tenantName) {
-    return null;
-  }
-
-  return {
-    name: tenantName,
-    address: null,
-    email: null,
-    phone: null,
-    logo_url: null,
-  };
+  return null;
 }
 
 export async function mapLoadedQuoteToViewModel(
@@ -239,13 +233,18 @@ export async function mapLoadedQuoteToViewModel(
   tenant: string,
   quote: IQuote
 ): Promise<QuoteViewModel> {
-  const [client, contact, tenantParty] = await Promise.all([
+  const [client, contact, tenantParty, acceptedByName] = await Promise.all([
     fetchClientParty(knexOrTrx, tenant, quote.client_id),
     fetchContactParty(knexOrTrx, tenant, quote.contact_id),
     fetchTenantParty(knexOrTrx, tenant),
+    resolveAcceptedByName(knexOrTrx, tenant, quote.accepted_by),
   ]);
 
   const lineItems = (quote.quote_items ?? []).map(mapQuoteItemToViewModel);
+  const recurringSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.is_recurring === true);
+  const onetimeSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.is_recurring !== true);
+  const serviceSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'service');
+  const productSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'product');
 
   return {
     quote_id: quote.quote_id,
@@ -271,7 +270,25 @@ export async function mapLoadedQuoteToViewModel(
     contact,
     tenant: tenantParty,
     line_items: lineItems,
+    recurring_items: recurringSummary.items,
+    onetime_items: onetimeSummary.items,
+    service_items: serviceSummary.items,
+    product_items: productSummary.items,
+    recurring_subtotal: recurringSummary.subtotal,
+    recurring_tax: recurringSummary.tax,
+    recurring_total: recurringSummary.total,
+    onetime_subtotal: onetimeSummary.subtotal,
+    onetime_tax: onetimeSummary.tax,
+    onetime_total: onetimeSummary.total,
+    service_subtotal: serviceSummary.subtotal,
+    service_tax: serviceSummary.tax,
+    service_total: serviceSummary.total,
+    product_subtotal: productSummary.subtotal,
+    product_tax: productSummary.tax,
+    product_total: productSummary.total,
     phases: buildPhaseViewModels(lineItems),
+    accepted_by_name: acceptedByName,
+    accepted_at: quote.accepted_at ?? null,
   };
 }
 

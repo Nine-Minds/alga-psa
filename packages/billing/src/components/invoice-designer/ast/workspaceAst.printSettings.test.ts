@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   DEFAULT_INVOICE_PRINT_SETTINGS,
-  INVOICE_TEMPLATE_AST_VERSION,
+  TEMPLATE_AST_VERSION,
   millimetersToPixels,
   pixelsToMillimeters,
 } from '@alga-psa/types';
 import { useInvoiceDesignerStore } from '../state/designerStore';
-import { exportWorkspaceToInvoiceTemplateAst, importInvoiceTemplateAstToWorkspace } from './workspaceAst';
+import { exportWorkspaceToTemplateAst, importTemplateAstToWorkspace } from './workspaceAst';
 
 const createLegacyAst = (options?: {
   metadata?: Record<string, unknown>;
@@ -17,7 +17,7 @@ const createLegacyAst = (options?: {
   pagePadding?: number;
 }) => ({
   kind: 'invoice-template-ast' as const,
-  version: INVOICE_TEMPLATE_AST_VERSION,
+  version: TEMPLATE_AST_VERSION,
   ...(options?.metadata ? { metadata: options.metadata } : {}),
   layout: {
     id: 'root',
@@ -51,7 +51,7 @@ describe('workspaceAst print settings', () => {
   });
 
   it('infers Letter print settings from legacy 816x1056 geometry and 40px page padding', () => {
-    const workspace = importInvoiceTemplateAstToWorkspace(createLegacyAst() as any);
+    const workspace = importTemplateAstToWorkspace(createLegacyAst() as any);
     const documentNode = workspace.nodesById['designer-document-root'];
     const pageNode = workspace.nodesById['page-wrapper'];
 
@@ -66,7 +66,7 @@ describe('workspaceAst print settings', () => {
   });
 
   it('recognizes known A4 page dimensions when explicit print metadata is absent', () => {
-    const workspace = importInvoiceTemplateAstToWorkspace(
+    const workspace = importTemplateAstToWorkspace(
       createLegacyAst({
         documentWidth: 794,
         documentHeight: 1123,
@@ -86,7 +86,7 @@ describe('workspaceAst print settings', () => {
   });
 
   it('lets explicit print metadata win over inferred legacy width, height, and padding', () => {
-    const workspace = importInvoiceTemplateAstToWorkspace(
+    const workspace = importTemplateAstToWorkspace(
       createLegacyAst({
         metadata: {
           printSettings: {
@@ -117,7 +117,7 @@ describe('workspaceAst print settings', () => {
       marginMm: 15,
     });
 
-    const ast = exportWorkspaceToInvoiceTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
+    const ast = exportWorkspaceToTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
 
     expect(ast.metadata?.printSettings).toEqual({
       paperPreset: 'Legal',
@@ -126,7 +126,7 @@ describe('workspaceAst print settings', () => {
   });
 
   it('hydrates resolved page size and page padding from explicit print metadata', () => {
-    const workspace = importInvoiceTemplateAstToWorkspace(
+    const workspace = importTemplateAstToWorkspace(
       createLegacyAst({
         metadata: {
           printSettings: {
@@ -151,7 +151,7 @@ describe('workspaceAst print settings', () => {
   });
 
   it('preserves unmatched legacy dimensions without persisting fallback print metadata on export', () => {
-    const workspace = importInvoiceTemplateAstToWorkspace(
+    const workspace = importTemplateAstToWorkspace(
       createLegacyAst({
         documentWidth: 900,
         documentHeight: 1100,
@@ -167,7 +167,7 @@ describe('workspaceAst print settings', () => {
     expect(pageNode.props.style).toMatchObject({ width: '900px', height: '1100px' });
     expect(pageNode.props.layout).toMatchObject({ padding: '37px' });
 
-    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const ast = exportWorkspaceToTemplateAst(workspace);
     expect(ast.metadata?.printSettings).toBeUndefined();
     expect(ast.layout.style?.inline).toMatchObject({ width: '900px', height: '1100px' });
     expect(ast.layout.children?.[0]?.style?.inline).toMatchObject({

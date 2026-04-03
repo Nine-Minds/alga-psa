@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -7,7 +7,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
-import { parseInvoiceTemplateToken } from '../../../lib/invoice-template-ast/templateInterpolationFilters';
+import { parseTemplateToken } from '../../../lib/invoice-template-ast/templateInterpolationFilters';
 import { AlignmentGuide } from '../utils/layout';
 import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
@@ -41,6 +41,7 @@ interface DesignCanvasProps {
   onPointerLocationChange: (point: { x: number; y: number } | null) => void;
   onNodeSelect: (id: string | null) => void;
   onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
+  onTextEdit?: (id: string, text: string, commit: boolean) => void;
   readOnly?: boolean;
   previewData?: WasmInvoiceViewModel | null;
 }
@@ -65,6 +66,7 @@ interface CanvasNodeProps {
   forcedDropTarget: string | 'canvas' | null;
   onSelect: (id: string | null) => void;
   onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
+  onTextEdit?: (id: string, text: string, commit: boolean) => void;
   renderChildren: (parentId: string) => React.ReactNode;
   childExtents?: { maxRight: number; maxBottom: number };
   readOnly: boolean;
@@ -98,9 +100,9 @@ type TableBorderConfig = {
   columnDividers: boolean;
 };
 
-const INVOICE_BORDER_COLOR_CLASS = 'border-slate-300';
-const INVOICE_BORDER_SUBTLE_COLOR_CLASS = 'border-slate-200';
-const INVOICE_BORDER_STRONG_COLOR_CLASS = 'border-slate-400';
+const INVOICE_BORDER_COLOR_CLASS = 'border-slate-300 dark:border-slate-600';
+const INVOICE_BORDER_SUBTLE_COLOR_CLASS = 'border-slate-200 dark:border-slate-700';
+const INVOICE_BORDER_STRONG_COLOR_CLASS = 'border-slate-400 dark:border-slate-500';
 const FONT_WEIGHT_CLASS: Record<FontWeightStyle, string> = {
   normal: 'font-normal',
   medium: 'font-medium',
@@ -152,7 +154,7 @@ const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
   }
   return {
     label: 'Section',
-    toneClass: 'bg-blue-100/45',
+    toneClass: 'bg-blue-100/45 dark:bg-blue-900/20',
     chipClass: 'border-blue-300 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300',
     accentClass: 'bg-blue-400/80',
   };
@@ -368,7 +370,7 @@ const resolveTextInterpolationValue = (
   previewData: WasmInvoiceViewModel | null,
   bindingPath: string
 ): string | null => {
-  const parsedToken = parseInvoiceTemplateToken(bindingPath);
+  const parsedToken = parseTemplateToken(bindingPath);
   if (!parsedToken || !parsedToken.path) {
     return null;
   }
@@ -494,17 +496,22 @@ const renderTablePreview = (
   return (
     <div
       className={clsx(
-        'h-full overflow-hidden text-[10px] text-slate-700 dark:text-slate-300 rounded-sm bg-white dark:bg-transparent',
+        'h-full overflow-hidden text-[10px] text-slate-700 dark:text-slate-300 rounded-sm bg-white dark:bg-slate-800',
         borderConfig.outer && ['border', INVOICE_BORDER_STRONG_COLOR_CLASS]
       )}
     >
       <div
         className={clsx(
-          'grid gap-0 pb-1 uppercase tracking-wide text-slate-500',
+          'grid gap-0 pb-1 uppercase tracking-wide',
+          !metadata.headerBackgroundColor && 'text-slate-500',
           headerWeightClass,
           borderConfig.rowDividers && ['border-b', INVOICE_BORDER_COLOR_CLASS]
         )}
-        style={{ gridTemplateColumns: tableGridTemplateColumns }}
+        style={{
+          gridTemplateColumns: tableGridTemplateColumns,
+          ...(metadata.headerBackgroundColor ? { backgroundColor: String(metadata.headerBackgroundColor), borderRadius: '2px 2px 0 0' } : {}),
+          ...(metadata.headerColor ? { color: String(metadata.headerColor) } : {}),
+        }}
       >
         {visibleColumns.map((column, index) => (
           <span
@@ -743,7 +750,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
 	    case 'spacer':
 	      return {
 	        content: (
-	          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 bg-slate-50/50 border border-dashed border-slate-200">
+	          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 dark:text-slate-600 bg-slate-50/50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700">
 	            Spacer
 	          </div>
 	        ),
@@ -767,7 +774,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
           const label = node.type === 'qr' ? 'QR Code' : node.type === 'logo' ? 'Logo' : 'Image';
           return {
             content: (
-              <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 bg-slate-50/50 border border-dashed border-slate-200">
+              <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700">
                 {label}
               </div>
             ),
@@ -807,6 +814,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   forcedDropTarget,
   onSelect,
   onResize,
+  onTextEdit,
   renderChildren,
   childExtents,
   readOnly,
@@ -815,6 +823,8 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   dnd,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = dnd;
+  const [isEditingText, setIsEditingText] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isContainer = node.allowedChildren.length > 0;
   const { setNodeRef: setDropZoneRef, isOver: isNodeDropTarget } = useDroppable({
     id: `droppable-${node.id}`,
@@ -846,8 +856,11 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const astHadHeight = metadata.__astHadHeight === true;
   const allowInferredFlowMinWidth = !astImported || astHadWidth;
   const allowInferredFlowMinHeight = !astImported || astHadHeight;
+  // Strip visual styles (backgroundColor, color, border) from resolved AST inline styles
+  // so that Tailwind dark-mode classes on the canvas node can take effect.
+  const { backgroundColor: _bg, color: _fg, border: _bdr, ...layoutBoxStyle } = resolvedBoxStyle;
   const nodeStyle: React.CSSProperties = {
-    ...resolvedBoxStyle,
+    ...layoutBoxStyle,
     // Keep box sizing stable when we apply padding/borders via Tailwind classes.
     boxSizing: 'border-box',
     // In flow layouts (flex/grid), do not force a fixed width/height from legacy node.size.
@@ -892,11 +905,10 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const isInlineFieldLike = isFieldNode || isLabelNode;
   const isCompactLeaf = isTotalsRow || isInlineFieldLike || isTextNode;
   const isResizeHandleSupported =
-    node.type === 'image' ||
-    node.type === 'logo' ||
-    node.type === 'qr' ||
-    node.type === 'section' ||
-    node.type === 'container';
+    node.type !== 'document' &&
+    node.type !== 'page' &&
+    node.type !== 'divider' &&
+    node.type !== 'spacer';
 
   const combinedRef = useCallback(
     (element: HTMLDivElement | null) => {
@@ -972,6 +984,32 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     }
   };
 
+  const handleDoubleClick: React.MouseEventHandler<HTMLDivElement> = (event) => {
+    if (readOnly || !isTextNode || !onTextEdit) {
+      return;
+    }
+    event.stopPropagation();
+    setIsEditingText(true);
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.select();
+    });
+  };
+
+  const handleTextEditBlur = () => {
+    if (!textareaRef.current || !onTextEdit) {
+      return;
+    }
+    onTextEdit(node.id, textareaRef.current.value, true);
+    setIsEditingText(false);
+  };
+
+  const handleTextEditKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Escape') {
+      setIsEditingText(false);
+    }
+  };
+
   const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
     if (readOnly) {
       return;
@@ -1015,7 +1053,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           ? 'rounded-sm border border-transparent bg-transparent shadow-none'
           : [
               'rounded-md',
-              isContainer ? sectionContainerClasses : `border bg-white dark:bg-transparent shadow-sm ${INVOICE_BORDER_COLOR_CLASS}`,
+              isContainer ? sectionContainerClasses : `border bg-white dark:bg-slate-800 shadow-sm ${INVOICE_BORDER_COLOR_CLASS}`,
             ],
         isSelected &&
           (isLabelNode
@@ -1042,6 +1080,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
       onClick={handleNodeClick}
+      onDoubleClick={handleDoubleClick}
       {...(readOnly ? {} : attributes)}
     >
       {dropIndicator?.kind === 'insert' && parentUsesFlowLayout && dropIndicator.overNodeId === node.id && (
@@ -1136,7 +1175,22 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           </>
         )
       )}
-      {!readOnly && node.allowResize !== false && isResizeHandleSupported && (
+      {isEditingText && isTextNode && (
+        <textarea
+          ref={textareaRef}
+          className="absolute inset-0 z-30 w-full h-full resize-none border-2 border-primary-500 rounded bg-white dark:bg-[rgb(var(--color-card))] px-2 py-1 text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap focus:outline-none"
+          defaultValue={asTrimmedString(metadata.text) || asTrimmedString(metadata.label) || asTrimmedString(metadata.content) || ''}
+          onBlur={handleTextEditBlur}
+          onKeyDown={(event) => {
+            event.stopPropagation();
+            handleTextEditKeyDown(event);
+          }}
+          onKeyUp={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        />
+      )}
+      {!readOnly && node.allowResize !== false && isResizeHandleSupported && !isEditingText && (
         <div
           role="button"
           tabIndex={0}
@@ -1223,6 +1277,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   onPointerLocationChange,
   onNodeSelect,
   onResize,
+  onTextEdit,
   readOnly = false,
   previewData = null,
 }) => {
@@ -1349,6 +1404,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           forcedDropTarget={forcedDropTarget}
           onSelect={onNodeSelect}
           onResize={onResize}
+          onTextEdit={onTextEdit}
           renderChildren={renderNodeTree}
           childExtents={childExtentsMap.get(node.id)}
           readOnly={readOnly}
@@ -1378,6 +1434,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     isDragActive,
     onNodeSelect,
     onResize,
+    onTextEdit,
     previewData,
     readOnly,
     selectionContextNodeIds,

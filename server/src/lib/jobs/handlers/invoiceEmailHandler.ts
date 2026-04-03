@@ -1,5 +1,5 @@
 import { JobService, JobStepResult } from 'server/src/services/job.service';
-import { PDFGenerationService, createPDFGenerationService } from 'server/src/services/pdf-generation.service';
+import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
 import { getEmailService } from 'server/src/services/emailService';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { getClientById, getContactByContactNameId } from '@alga-psa/clients/actions';

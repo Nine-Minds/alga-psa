@@ -100,9 +100,9 @@ export {
   QUOTE_STATUS_METADATA,
 } from '@alga-psa/types';
 export {
-  resolveInvoicePdfPrintOptionsFromAst,
-  resolveInvoicePrintResolutionInputFromAst,
-  resolveInvoiceTemplatePrintSettingsFromAst,
+  resolvePdfPrintOptionsFromAst,
+  resolvePrintResolutionInputFromAst,
+  resolveTemplatePrintSettingsFromAst,
 } from './lib/invoice-template-ast/printSettings';
 
 // Legacy accounting integration helpers (used by server adapters/workflows)

@@ -22,8 +22,8 @@ import { restrictToWindowEdges, createSnapModifier } from '@dnd-kit/modifiers';
 import {
   clampInvoiceMarginMm,
   listInvoicePaperPresets,
-  resolveInvoiceTemplatePrintSettings,
-  type InvoiceTemplatePrintSettings,
+  resolveTemplatePrintSettings,
+  type TemplatePrintSettings,
 } from '@alga-psa/types';
 import { ComponentPalette } from './palette/ComponentPalette';
 import { DesignCanvas } from './canvas/DesignCanvas';
@@ -63,7 +63,9 @@ import { canNestWithinParent, getAllowedParentsForType } from './schema/componen
 import { invoiceDesignerCollisionDetection } from './utils/dndCollision';
 import { resolveInsertPositionFromRects } from './utils/dropIndicator';
 import { DesignerSchemaInspector } from './inspector/DesignerSchemaInspector';
+import DocumentImagePickerWidget from './inspector/widgets/DocumentImagePickerWidget';
 import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from './utils/nodeProps';
+import { resolveDesignerDocumentKind } from './utils/documentKind';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -135,12 +137,6 @@ type DesignerTestApi = {
   ) => boolean;
   simulatePresetDrop: (presetId: string, targetNodeId?: string | 'canvas', dropPoint?: Point) => boolean;
   setForcedDropTarget: (nodeId: string | 'canvas' | null) => void;
-};
-
-type PaletteFloatingFrame = {
-  left: number;
-  width: number;
-  height: number;
 };
 
 declare global {
@@ -299,6 +295,13 @@ type IconToggleOption = {
   icon: LucideIcon;
 };
 
+type GridColumnPreset = {
+  id: string;
+  label: string;
+  template: string;
+  tracks: number[];
+};
+
 const CONTAINER_LAYOUT_MODE_OPTIONS: IconToggleOption[] = [
   { value: 'flex', label: 'Stack', tooltip: 'Stack (Flex)', icon: AlignJustify },
   { value: 'grid', label: 'Grid', tooltip: 'Grid layout', icon: Grid3X3 },
@@ -339,6 +342,17 @@ const CONTAINER_JUSTIFY_CONTENT_OPTIONS: IconToggleOption[] = [
     icon: AlignHorizontalDistributeCenter,
   },
 ];
+
+const GRID_COLUMN_PRESETS: GridColumnPreset[] = [
+  { id: 'single', label: '1 column', template: '1fr', tracks: [1] },
+  { id: 'two-equal', label: '2 equal columns', template: '1fr 1fr', tracks: [1, 1] },
+  { id: 'sidebar-main', label: 'Sidebar + main', template: '1fr 2fr', tracks: [1, 2] },
+  { id: 'main-sidebar', label: 'Main + sidebar', template: '2fr 1fr', tracks: [2, 1] },
+  { id: 'three-equal', label: '3 equal columns', template: '1fr 1fr 1fr', tracks: [1, 1, 1] },
+];
+
+const normalizeGridTemplateColumns = (value: string | undefined): string =>
+  typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
 
 const FIELD_TYPE_LABELS: Record<string, string> = {
   'invoice.number': 'Invoice Number',
@@ -447,21 +461,6 @@ const tryInsertTemplateIntoFocusedInput = (
   return { insertedValue: insertValue, mode };
 };
 
-const findNearestScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
-  if (!element) {
-    return null;
-  }
-  let current = element.parentElement;
-  while (current) {
-    const style = window.getComputedStyle(current);
-    if (/(auto|scroll|overlay)/.test(style.overflowY)) {
-      return current;
-    }
-    current = current.parentElement;
-  }
-  return null;
-};
-
 const parsePxLength = (value: unknown): number | undefined => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
@@ -486,10 +485,10 @@ const resolveDesignerShellPrintSettings = (nodes: DesignerNode[]) => {
   const pageLayout = pageNode ? getNodeLayout(pageNode) : undefined;
   const pageStyle = pageNode ? getNodeStyle(pageNode) : undefined;
 
-  return resolveInvoiceTemplatePrintSettings({
+  return resolveTemplatePrintSettings({
     printSettings:
       typeof documentMetadata.printSettings === 'object' && documentMetadata.printSettings !== null
-        ? (documentMetadata.printSettings as Partial<InvoiceTemplatePrintSettings>)
+        ? (documentMetadata.printSettings as Partial<TemplatePrintSettings>)
         : undefined,
     pageWidthPx: pageNode?.size.width ?? parsePxLength(pageStyle?.width),
     pageHeightPx: pageNode?.size.height ?? parsePxLength(pageStyle?.height),
@@ -503,12 +502,14 @@ export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
   const selectedNode = useMemo(() => nodes.find((node) => node.id === selectedNodeId) ?? null, [nodes, selectedNodeId]);
+  const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
   const invoicePathOptions = useMemo(
     () =>
       buildInvoiceExpressionPathOptions({
         includeRootPaths: false,
+        documentKind,
       }),
-    []
+    [documentKind]
   );
   const addNode = useInvoiceDesignerStore((state) => state.addNodeFromPalette);
   const insertPreset = useInvoiceDesignerStore((state) => state.insertPreset);
@@ -560,6 +561,13 @@ export const DesignerShell: React.FC = () => {
     [setNodeProp]
   );
 
+  const handleTextEdit = useCallback(
+    (id: string, text: string, commit: boolean) => {
+      setNodeProp(id, 'metadata.text', text, commit);
+    },
+    [setNodeProp]
+  );
+
   // Constraints were removed as part of the CSS-first layout cutover.
   const referenceNodeId = null;
   const selectedCounterpartNodeIds = useMemo(() => new Set<string>(), []);
@@ -567,7 +575,7 @@ export const DesignerShell: React.FC = () => {
   const selectedNodeTypeLabel = useMemo(() => resolveSelectedNodeTypeLabel(selectedNode), [selectedNode]);
   const selectedFieldType = useMemo(() => resolveSelectedFieldType(selectedNode), [selectedNode]);
   const selectedContainerLayout = useMemo(() => {
-    if (!selectedNode || selectedNode.type !== 'container') {
+    if (!selectedNode || (selectedNode.type !== 'container' && selectedNode.type !== 'section')) {
       return undefined;
     }
     return getNodeLayout(selectedNode);
@@ -593,13 +601,6 @@ export const DesignerShell: React.FC = () => {
 	  const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
 	  const [dropFeedback, setDropFeedback] = useState<DropFeedback | null>(null);
 	  const [forcedDropTarget, setForcedDropTarget] = useState<string | 'canvas' | null>(null);
-	  const [isPaletteFloating, setIsPaletteFloating] = useState(false);
-	  const [paletteFloatingFrame, setPaletteFloatingFrame] = useState<PaletteFloatingFrame>({
-	    left: 0,
-	    width: 0,
-	    height: 0,
-	  });
-	  const [paletteAnchor, setPaletteAnchor] = useState<HTMLDivElement | null>(null);
 	  const pointerRef = useRef<{ x: number; y: number } | null>(null);
 	  const dropFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	  
@@ -668,68 +669,6 @@ export const DesignerShell: React.FC = () => {
       }
     };
   }, []);
-
-  React.useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const anchor = paletteAnchor;
-    if (!anchor) {
-      return;
-    }
-
-    const scrollParent = findNearestScrollableParent(anchor);
-    let rafId: number | null = null;
-
-    const syncPaletteFloatingState = () => {
-      const rect = anchor.getBoundingClientRect();
-      const nextFrame: PaletteFloatingFrame = {
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      };
-      setPaletteFloatingFrame((prev) => {
-        if (
-          Math.abs(prev.left - nextFrame.left) < 0.5 &&
-          Math.abs(prev.width - nextFrame.width) < 0.5 &&
-          Math.abs(prev.height - nextFrame.height) < 0.5
-        ) {
-          return prev;
-        }
-        return nextFrame;
-      });
-      setIsPaletteFloating((prev) => {
-        const shouldFloat = rect.top <= 0;
-        return prev === shouldFloat ? prev : shouldFloat;
-      });
-    };
-
-    const requestSync = () => {
-      if (rafId !== null) {
-        return;
-      }
-      rafId = window.requestAnimationFrame(() => {
-        rafId = null;
-        syncPaletteFloatingState();
-      });
-    };
-
-    syncPaletteFloatingState();
-    scrollParent?.addEventListener('scroll', requestSync, { passive: true });
-    window.addEventListener('scroll', requestSync, { passive: true, capture: true });
-    window.addEventListener('resize', requestSync);
-    const pollingId = window.setInterval(requestSync, 120);
-
-    return () => {
-      if (rafId !== null) {
-        window.cancelAnimationFrame(rafId);
-      }
-      window.clearInterval(pollingId);
-      scrollParent?.removeEventListener('scroll', requestSync);
-      window.removeEventListener('scroll', requestSync, true);
-      window.removeEventListener('resize', requestSync);
-    };
-  }, [paletteAnchor]);
 
   const snapModifier = useMemo<Modifier | null>(() => {
     if (!snapToGrid) {
@@ -1016,7 +955,7 @@ export const DesignerShell: React.FC = () => {
   }, [updatePointerLocation]);
 
   const renderContainerLayoutControls = () => {
-    if (!selectedNode || selectedNode.type !== 'container' || !selectedContainerLayout) {
+    if (!selectedNode || (selectedNode.type !== 'container' && selectedNode.type !== 'section') || !selectedContainerLayout) {
       return null;
     }
 
@@ -1024,6 +963,7 @@ export const DesignerShell: React.FC = () => {
     const direction = selectedContainerLayout.flexDirection ?? 'column';
     const alignItems = selectedContainerLayout.alignItems ?? 'stretch';
     const justifyContent = selectedContainerLayout.justifyContent ?? 'flex-start';
+    const activeGridTemplateColumns = normalizeGridTemplateColumns(selectedContainerLayout.gridTemplateColumns);
 
     const renderButtonGroup = (
       keyPrefix: string,
@@ -1047,8 +987,8 @@ export const DesignerShell: React.FC = () => {
                   className={clsx(
                     'h-8 rounded border transition-colors inline-flex items-center justify-center',
                     isSelected
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                      : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
                   )}
                   aria-pressed={isSelected}
                   aria-label={`${label}: ${option.label}`}
@@ -1072,6 +1012,55 @@ export const DesignerShell: React.FC = () => {
         {renderButtonGroup('mode', 'Layout', CONTAINER_LAYOUT_MODE_OPTIONS, layoutMode, (value) => {
           setNodeProp(selectedNode.id, 'layout.display', value, true);
         }, 2)}
+        {layoutMode === 'grid' && (
+          <div className="space-y-1.5">
+            <p className="text-xs text-slate-500">Columns</p>
+            <div className="grid grid-cols-2 gap-2" data-automation-id="designer-container-layout-grid-presets">
+              {GRID_COLUMN_PRESETS.map((preset) => {
+                const isSelected = normalizeGridTemplateColumns(preset.template) === activeGridTemplateColumns;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => {
+                      setNodeProp(selectedNode.id, 'layout.gridTemplateColumns', preset.template, true);
+                    }}
+                    className={clsx(
+                      'rounded border px-2 py-2 text-left transition-colors',
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                        : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    )}
+                    aria-pressed={isSelected}
+                    aria-label={`Columns: ${preset.label}`}
+                    data-automation-id={`designer-container-layout-grid-preset-${preset.id}`}
+                  >
+                    <div
+                      className="mb-2 grid h-8 gap-1"
+                      style={{
+                        gridTemplateColumns: preset.tracks.map((track) => `minmax(0, ${track}fr)`).join(' '),
+                      }}
+                    >
+                      {preset.tracks.map((track, index) => (
+                        <div
+                          key={`${preset.id}-${index}`}
+                          className={clsx(
+                            'rounded-sm border',
+                            isSelected
+                              ? 'border-blue-300 bg-blue-200/70 dark:border-blue-700 dark:bg-blue-800/70'
+                              : 'border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800'
+                          )}
+                          style={{ opacity: Math.max(0.6, track / Math.max(...preset.tracks)) }}
+                        />
+                      ))}
+                    </div>
+                    <div className="text-xs font-medium">{preset.label}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {layoutMode === 'flex' && (
           <>
             {renderButtonGroup('direction', 'Direction', CONTAINER_FLEX_DIRECTION_OPTIONS, direction, (value) => {
@@ -1150,7 +1139,7 @@ export const DesignerShell: React.FC = () => {
           </div>
           {items.length === 0 && <p className="text-xs text-slate-500">No attachments defined.</p>}
           {items.map((item) => (
-            <div key={item.id} className="border border-slate-100 rounded-md p-2 space-y-2 bg-slate-50">
+            <div key={item.id} className="border border-slate-100 dark:border-slate-700 rounded-md p-2 space-y-2 bg-slate-50 dark:bg-[rgb(var(--color-background))]">
               <div className="flex items-center justify-between">
                 <Input
                   id={`attachment-label-${item.id}`}
@@ -1196,13 +1185,19 @@ export const DesignerShell: React.FC = () => {
 		        <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
 		          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Media</p>
 	          <div>
-            <label className="text-xs text-slate-500 block mb-1">Source URL</label>
+            <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Source URL</label>
             <Input
               id="designer-media-src"
               value={metadata.src ?? metadata.url ?? ''}
               onChange={(event) => applyMetadata({ src: event.target.value, url: event.target.value }, false)}
               onBlur={(event) => applyMetadata({ src: event.target.value, url: event.target.value }, true)}
             />
+            <div className="mt-2">
+              <DocumentImagePickerWidget
+                currentSrc={metadata.src ?? metadata.url ?? ''}
+                onSourceChange={(url, commit) => applyMetadata({ src: url, url }, commit)}
+              />
+            </div>
           </div>
           <div>
             <label className="text-xs text-slate-500 block mb-1">Alt text</label>
@@ -1729,7 +1724,7 @@ export const DesignerShell: React.FC = () => {
 
   const handlePaperPresetChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     applyPrintSettings({
-      paperPreset: event.target.value as InvoiceTemplatePrintSettings['paperPreset'],
+      paperPreset: event.target.value as TemplatePrintSettings['paperPreset'],
     });
   };
 
@@ -1758,7 +1753,7 @@ export const DesignerShell: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full border border-slate-200 rounded-lg overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-8rem)] border border-slate-200 rounded-lg overflow-hidden">
       <DesignerToolbar
         snapToGrid={snapToGrid}
         showGuides={showGuides}
@@ -1820,35 +1815,19 @@ export const DesignerShell: React.FC = () => {
           collisionDetection={collisionDetection}
           measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         >
-	        <div className="flex flex-1 min-h-[560px] bg-white dark:bg-[rgb(var(--color-background))]">
+	        <div
+            className="flex flex-1 min-h-0 overflow-hidden bg-white dark:bg-[rgb(var(--color-background))]"
+            data-automation-id="designer-shell-panels"
+          >
 	          <div
-              ref={setPaletteAnchor}
-              className="w-72 shrink-0 self-start"
-              style={
-                isPaletteFloating
-                  ? {
-                      height: paletteFloatingFrame.height > 0 ? paletteFloatingFrame.height : undefined,
-                    }
-                  : undefined
-              }
+              className="w-72 shrink-0 min-h-0 overflow-y-auto border-r border-slate-200 dark:border-[rgb(var(--color-border-200))]"
+              data-automation-id="designer-shell-palette-panel"
             >
-              <div
-                className={clsx('w-72 h-screen z-20 shadow-sm', isPaletteFloating && 'fixed top-0')}
-                style={
-                  isPaletteFloating
-                    ? {
-                        left: paletteFloatingFrame.left,
-                        width: paletteFloatingFrame.width > 0 ? paletteFloatingFrame.width : undefined,
-                      }
-                    : undefined
-                }
-              >
 	              <ComponentPalette
 	                onInsertComponent={handleQuickInsertComponent}
                 onInsertPreset={handleQuickInsertPreset}
                 onInsertTemplateVariable={handleInsertTemplateVariable}
               />
-              </div>
           </div>
 	          <DesignerWorkspace
 	            nodes={nodes}
@@ -1869,13 +1848,17 @@ export const DesignerShell: React.FC = () => {
 	            onPointerLocationChange={updatePointerLocation}
             onNodeSelect={selectNode}
 	            onResize={resizeNode}
+	            onTextEdit={handleTextEdit}
 	            onDragStart={handleDragStart}
 	            onDragMove={handleDragMove}
               onDragOver={handleDragOver}
 	            onDragEnd={handleDragEnd}
 	            onDragCancel={handleDragCancel}
 	          />
-          <aside className="w-72 border-l border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] p-4 space-y-4">
+          <aside
+            className="w-72 shrink-0 min-h-0 overflow-y-auto border-l border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] p-4 space-y-4"
+            data-automation-id="designer-shell-inspector-panel"
+          >
             <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Inspector</h3>
 		          {selectedNode ? (
 		            <div className="space-y-3">
@@ -1893,7 +1876,7 @@ export const DesignerShell: React.FC = () => {
                 data-automation-id="designer-selected-node-type-panel"
               >
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Type</p>
-                <p className="text-sm text-slate-700" data-automation-id="designer-selected-node-type">
+                <p className="text-sm text-slate-700 dark:text-slate-300" data-automation-id="designer-selected-node-type">
                   {selectedNodeTypeLabel}
                 </p>
               </div>
@@ -1903,7 +1886,7 @@ export const DesignerShell: React.FC = () => {
                   data-automation-id="designer-selected-field-type-panel"
                 >
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Field Type</p>
-                  <p className="text-sm text-slate-700" data-automation-id="designer-selected-field-type">
+                  <p className="text-sm text-slate-700 dark:text-slate-300" data-automation-id="designer-selected-field-type">
                     {selectedFieldType.label}
                   </p>
                   <p className="text-[11px] text-slate-500">{selectedFieldType.bindingKey || 'No binding key set'}</p>
@@ -1983,7 +1966,7 @@ export const DesignerShell: React.FC = () => {
                   <CustomSelect
                     id="designer-paper-preset-select"
                     value={currentPrintSettings.paperPreset}
-                    onValueChange={(value) => applyPrintSettings({ paperPreset: value as InvoiceTemplatePrintSettings['paperPreset'] })}
+                    onValueChange={(value) => applyPrintSettings({ paperPreset: value as TemplatePrintSettings['paperPreset'] })}
                     options={listInvoicePaperPresets().map((preset) => ({
                       value: preset.id,
                       label: preset.label,
@@ -2036,6 +2019,7 @@ type DesignerWorkspaceProps = {
   onPointerLocationChange: (point: { x: number; y: number } | null) => void;
   onNodeSelect: (nodeId: string | null) => void;
   onResize: (nodeId: string, size: { width: number; height: number }, commit?: boolean) => void;
+  onTextEdit: (nodeId: string, text: string, commit: boolean) => void;
   onDragStart: (event: DragStartEvent) => void;
   onDragMove: (event: DragMoveEvent) => void;
   onDragOver: (event: DragOverEvent) => void;
@@ -2062,6 +2046,7 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
   onPointerLocationChange,
   onNodeSelect,
   onResize,
+  onTextEdit,
   onDragStart,
   onDragMove,
   onDragOver,
@@ -2081,7 +2066,7 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
     (dropIndicator?.kind === 'insert' && dropIndicator.tone === 'invalid');
 
   return (
-    <div className="flex-1 flex">
+    <div className="flex min-h-0 min-w-0 flex-1" data-automation-id="designer-shell-canvas-panel">
 	        <DesignCanvas
 	          nodes={nodes}
 	          selectedNodeId={selectedNodeId}
@@ -2100,6 +2085,7 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
 	        onPointerLocationChange={onPointerLocationChange}
 	        onNodeSelect={onNodeSelect}
 	        onResize={onResize}
+	        onTextEdit={onTextEdit}
 	      />
 	      <DragOverlay modifiers={modifiers}>
 	        {activeDrag && (

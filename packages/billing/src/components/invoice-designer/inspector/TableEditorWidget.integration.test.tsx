@@ -6,10 +6,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { DesignerSchemaInspector } from './DesignerSchemaInspector';
-import { exportWorkspaceToInvoiceTemplateAst } from '../ast/workspaceAst';
+import { exportWorkspaceToTemplateAst } from '../ast/workspaceAst';
 import { DesignCanvas } from '../canvas/DesignCanvas';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import type { DesignerNode } from '../state/designerStore';
+import { buildQuoteTemplateBindings } from '../../../lib/quote-template-ast/bindings';
 
 afterEach(() => cleanup());
 
@@ -55,11 +56,13 @@ const mountTableInspectorAndCanvas = ({
   columns,
   nodeType = 'table',
   sourceBindingId,
+  documentMetadata,
   transforms,
 }: {
   columns: Array<Record<string, unknown>>;
   nodeType?: 'table' | 'dynamic-table';
   sourceBindingId?: string;
+  documentMetadata?: Record<string, unknown>;
   transforms?: {
     sourceBindingId: string;
     outputBindingId: string;
@@ -74,7 +77,12 @@ const mountTableInspectorAndCanvas = ({
         'doc-1': {
           id: 'doc-1',
           type: 'document',
-          props: { name: 'Document', layout: { display: 'flex', flexDirection: 'column' }, style: { width: '816px', height: '1056px' } },
+          props: {
+            name: 'Document',
+            metadata: documentMetadata ?? {},
+            layout: { display: 'flex', flexDirection: 'column' },
+            style: { width: '816px', height: '1056px' },
+          },
           children: ['page-1'],
         },
         'page-1': {
@@ -322,7 +330,7 @@ describe('TableEditorWidget (schema widget integration)', () => {
       expect((updated.props as any)?.metadata?.collectionBindingKey).toBe('items.grouped');
     });
 
-    const ast = exportWorkspaceToInvoiceTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
+    const ast = exportWorkspaceToTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
     const table = findDynamicTableNode(ast.layout);
     expect(table?.type).toBe('dynamic-table');
     if (!table || table.type !== 'dynamic-table') return;
@@ -379,5 +387,30 @@ describe('TableEditorWidget (schema widget integration)', () => {
       expect(screen.queryAllByText('item.aggregates.sumTotal')).toHaveLength(0);
       expect(screen.getAllByText('item.description').length).toBeGreaterThan(0);
     });
+  });
+
+  it('lists recurring, one-time, service, and product quote collections in the table source dropdown when quote bindings are imported', async () => {
+    mountTableInspectorAndCanvas({
+      nodeType: 'dynamic-table',
+      sourceBindingId: 'lineItems',
+      documentMetadata: {
+        __astBindingCatalog: buildQuoteTemplateBindings(),
+      },
+      columns: [{ id: 'col-description', header: 'Description', key: 'item.description', type: 'text', width: 280 }],
+    });
+
+    const trigger = document.getElementById('designer-table-source-binding');
+    expect(trigger).toBeTruthy();
+    if (!trigger) return;
+
+    fireEvent.click(trigger);
+
+    const options = await screen.findAllByRole('option');
+    const optionLabels = options.map((option) => option.textContent?.trim());
+
+    expect(optionLabels).toContain('recurringItems (recurring_items)');
+    expect(optionLabels).toContain('onetimeItems (onetime_items)');
+    expect(optionLabels).toContain('serviceItems (service_items)');
+    expect(optionLabels).toContain('productItems (product_items)');
   });
 });
