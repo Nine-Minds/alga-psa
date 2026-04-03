@@ -7,7 +7,6 @@
     "strict": false,
     "skipLibCheck": true,
     "outDir": "./dist",
-    "rootDir": ".",
     "declaration": true,
     "noEmit": false,
     "baseUrl": ".",

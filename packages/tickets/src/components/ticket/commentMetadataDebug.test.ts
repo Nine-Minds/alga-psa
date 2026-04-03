@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { COMMENT_RESPONSE_SOURCES, type CommentMetadata } from '@alga-psa/types';
 import {
   formatCommentMetadataJson,
   hasAdminSettingsViewAccess,
@@ -35,8 +36,8 @@ describe('commentMetadataDebug', () => {
 
   describe('summarizeCommentMetadataForDebug', () => {
     it('returns ordered inbound-email debug rows from representative metadata', () => {
-      const metadata = {
-        responseSource: 'inbound_email',
+      const metadata: CommentMetadata = {
+        responseSource: COMMENT_RESPONSE_SOURCES.INBOUND_EMAIL,
         email: {
           provider: 'google',
           messageId: '<mid@host>',
@@ -77,7 +78,7 @@ describe('commentMetadataDebug', () => {
 
     it('omits missing paths without throwing', () => {
       const rows = summarizeCommentMetadataForDebug({
-        responseSource: 'client_portal',
+        responseSource: COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL,
         email: { provider: 'microsoft' },
       });
 
