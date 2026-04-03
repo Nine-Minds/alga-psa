@@ -314,7 +314,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       };
 
       const addContactResult = await addContact(contactData);
-      if (!addContactResult.success) {
+      if (addContactResult.success === false) {
         const submitError = new Error(addContactResult.error);
         console.error('Error adding contact:', submitError);
 
