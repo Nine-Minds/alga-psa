@@ -255,6 +255,19 @@ function normalizeEmailAddress(emailAddress: string): string {
   return emailAddress.trim().toLowerCase();
 }
 
+function toPreparedEmailAddressInput(row: ContactEmailRow): PreparedEmailAddressInput {
+  return {
+    contact_additional_email_address_id: row.contact_additional_email_address_id,
+    email_address: row.email_address,
+    normalized_email_address: row.normalized_email_address,
+    canonical_type: row.canonical_type,
+    custom_type: row.custom_type,
+    normalized_custom_type: row.custom_type ? normalizeCustomTypeLabel(row.custom_type) : null,
+    custom_email_type_id: row.custom_email_type_id ?? null,
+    display_order: row.display_order,
+  };
+}
+
 function deriveDefaultPhoneType(phoneNumber: Pick<IContactPhoneNumber, 'canonical_type' | 'custom_type'> | undefined): string | null {
   if (!phoneNumber) return null;
   return phoneNumber.custom_type ?? phoneNumber.canonical_type ?? null;
@@ -745,11 +758,44 @@ export class ContactModel {
     if (updateData.email?.trim()) {
       const normalizedEmail = updateData.email.trim().toLowerCase();
       if (normalizedEmail !== existingContact.email?.toLowerCase()) {
-        const matchingAdditional = (updateData.additional_email_addresses ?? []).find((row) => {
+        const incomingAdditionalRows = updateData.additional_email_addresses ?? [];
+        const normalizedExistingPrimaryEmail = normalizeEmailAddress(existingContact.email || '');
+        const hasDemotedPrimaryRow = incomingAdditionalRows.some((row) => {
+          const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
+          return normalizedRowEmail === normalizedExistingPrimaryEmail;
+        });
+        const hasIncomingPrimaryType =
+          updateData.primary_email_canonical_type !== undefined ||
+          updateData.primary_email_custom_type !== undefined ||
+          updateData.primary_email_custom_type_id !== undefined;
+
+        const matchingAdditional = incomingAdditionalRows.find((row) => {
           const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
           return normalizedRowEmail === normalizedEmail;
         });
-        if (!matchingAdditional) {
+        if (matchingAdditional) {
+          promotedEmailRow = matchingAdditional;
+        } else {
+          const existingAdditionalRows = await this.getAdditionalEmailAddressesForContact(contactId, tenant, trx);
+          const existingPromotedRow = existingAdditionalRows.find((row) => row.normalized_email_address === normalizedEmail);
+
+          if (existingPromotedRow && hasDemotedPrimaryRow) {
+            promotedEmailRow = toPreparedEmailAddressInput(existingPromotedRow);
+          } else if (hasDemotedPrimaryRow && hasIncomingPrimaryType) {
+            const customType = updateData.primary_email_custom_type?.trim() || null;
+            promotedEmailRow = {
+              email_address: updateData.email.trim(),
+              normalized_email_address: normalizedEmail,
+              canonical_type: updateData.primary_email_canonical_type ?? null,
+              custom_type: customType,
+              normalized_custom_type: customType ? normalizeCustomTypeLabel(customType) : null,
+              custom_email_type_id: updateData.primary_email_custom_type_id ?? null,
+              display_order: 0,
+            };
+          }
+        }
+
+        if (!promotedEmailRow) {
           throw new Error('VALIDATION_ERROR: Changing primary email requires promote an additional email first');
         }
       }
@@ -758,10 +804,6 @@ export class ContactModel {
         throw new Error(`EMAIL_EXISTS: A contact with email ${normalizedEmail} already exists`);
       }
       updateData.email = normalizedEmail;
-      promotedEmailRow = (updateData.additional_email_addresses ?? []).find((row) => {
-        const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
-        return normalizedRowEmail === normalizedEmail;
-      }) || null;
       if (promotedEmailRow) {
         updateData.primary_email_canonical_type = promotedEmailRow.canonical_type ?? null;
         updateData.primary_email_custom_type = promotedEmailRow.custom_type ?? null;
@@ -771,16 +813,29 @@ export class ContactModel {
           const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
           return normalizedRowEmail !== normalizedEmail;
         });
-        const demotedPrimaryRow: PreparedEmailAddressInput = {
-          email_address: existingContact.email ?? '',
-          normalized_email_address: normalizeEmailAddress(existingContact.email || ''),
-          canonical_type: existingContact.primary_email_canonical_type ?? null,
-          custom_type: null,
-          normalized_custom_type: null,
-          custom_email_type_id: existingContact.primary_email_custom_type_id ?? null,
-          display_order: remainingRows.length,
-        };
-        updateData.additional_email_addresses = [...remainingRows, demotedPrimaryRow];
+
+        const hasDemotedPrimaryRow = remainingRows.some((row) => {
+          const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
+          return normalizedRowEmail === normalizeEmailAddress(existingContact.email || '');
+        });
+
+        if (!hasDemotedPrimaryRow) {
+          const demotedPrimaryRow: PreparedEmailAddressInput = {
+            email_address: existingContact.email ?? '',
+            normalized_email_address: normalizeEmailAddress(existingContact.email || ''),
+            canonical_type: existingContact.primary_email_canonical_type ?? null,
+            custom_type: null,
+            normalized_custom_type: null,
+            custom_email_type_id: existingContact.primary_email_custom_type_id ?? null,
+            display_order: remainingRows.length,
+          };
+          updateData.additional_email_addresses = [...remainingRows, demotedPrimaryRow];
+        } else {
+          updateData.additional_email_addresses = remainingRows.map((row, index) => ({
+            ...row,
+            display_order: index,
+          }));
+        }
       }
     } else if (updateData.email === null) {
       throw new Error('VALIDATION_ERROR: Primary email cannot be removed');

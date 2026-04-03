@@ -859,6 +859,10 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                     setSearchTerm(e.target.value);
                     setIsFiltered(e.target.value !== '' || selectedTags.length > 0 || filterStatus !== 'active');
                   }}
+                  onClear={() => {
+                    setSearchTerm('');
+                    setIsFiltered(selectedTags.length > 0 || filterStatus !== 'active');
+                  }}
                 />
 
                 <TagFilter

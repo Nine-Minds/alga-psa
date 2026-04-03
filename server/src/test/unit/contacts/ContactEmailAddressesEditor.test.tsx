@@ -66,6 +66,7 @@ afterEach(() => {
 function EditorHarness({
   initialValue,
   errorMessages,
+  compactAdditionalRows,
 }: {
   initialValue?: {
     email: string;
@@ -74,6 +75,7 @@ function EditorHarness({
     additional_email_addresses: ContactEmailAddressInput[];
   };
   errorMessages?: string[];
+  compactAdditionalRows?: boolean;
 }) {
   const [value, setValue] = React.useState(
     initialValue ?? {
@@ -87,6 +89,7 @@ function EditorHarness({
   return (
     <ContactEmailAddressesEditor
       id="contact-email-editor"
+      compactAdditionalRows={compactAdditionalRows}
       value={value}
       onChange={setValue}
       customTypeSuggestions={['Escalations', 'Billing Inbox']}
@@ -198,5 +201,77 @@ describe('ContactEmailAddressesEditor', () => {
     );
 
     expect(await screen.findByText('Primary email: Enter a valid email address.')).toBeInTheDocument();
+  });
+
+  it('does not emit duplicate-key warnings when promoting an existing additional row', async () => {
+    const user = userEvent.setup();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <EditorHarness
+        compactAdditionalRows={true}
+        initialValue={{
+          email: 'primary@example.com',
+          primary_email_canonical_type: 'work',
+          additional_email_addresses: [
+            {
+              contact_additional_email_address_id: '2f6e00ec-6e98-43e0-987a-ea90f88f4e80',
+              email_address: 'billing@example.com',
+              canonical_type: 'billing',
+              custom_type: null,
+              display_order: 0,
+            },
+            {
+              contact_additional_email_address_id: 'ba9f91fb-bb4f-4ebd-9048-39efc33c2d58',
+              email_address: 'escalations@example.com',
+              canonical_type: null,
+              custom_type: 'Escalations',
+              display_order: 1,
+            },
+          ],
+        }}
+      />
+    );
+
+    const firstAdditionalRow = screen.getByTestId('contact-email-editor-additional-row-0');
+    await user.click(within(firstAdditionalRow).getByRole('button', { name: /make default/i }));
+
+    expect(
+      consoleErrorSpy.mock.calls.some(([firstArg]) =>
+        String(firstArg).includes('Encountered two children with the same key')
+      )
+    ).toBe(false);
+  });
+
+  it('renders additional rows in compact mode until the user expands one for editing', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <EditorHarness
+        compactAdditionalRows={true}
+        initialValue={{
+          email: 'primary@example.com',
+          primary_email_canonical_type: 'work',
+          additional_email_addresses: [
+            {
+              email_address: 'billing@example.com',
+              canonical_type: 'billing',
+              custom_type: null,
+              display_order: 0,
+            },
+          ],
+        }}
+      />
+    );
+
+    const additionalRow = screen.getByTestId('contact-email-editor-additional-row-0');
+    expect(within(additionalRow).getByText('billing@example.com')).toBeInTheDocument();
+    expect(within(additionalRow).queryByLabelText('Email Address')).not.toBeInTheDocument();
+
+    await user.click(within(additionalRow).getByRole('button', { name: /edit/i }));
+
+    await waitFor(() => {
+      expect(within(additionalRow).getByLabelText('Email Address')).toBeInTheDocument();
+    });
   });
 });

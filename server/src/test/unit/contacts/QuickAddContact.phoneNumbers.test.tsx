@@ -12,6 +12,8 @@ const { addContactMock, createTagsForEntityMock } = vi.hoisted(() => ({
   createTagsForEntityMock: vi.fn().mockResolvedValue([]),
 }));
 
+const toastMock = vi.fn();
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     refresh: vi.fn(),
@@ -27,7 +29,7 @@ vi.mock('@alga-psa/clients/actions', () => ({
 }));
 
 vi.mock('@alga-psa/ui', () => ({
-  useToast: () => ({ toast: vi.fn() }),
+  useToast: () => ({ toast: toastMock }),
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
@@ -120,18 +122,21 @@ describe('QuickAddContact hybrid email and phone payloads', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     addContactMock.mockResolvedValue({
-      contact_name_id: 'contact-1',
-      full_name: 'Alex Contact',
-      email: 'alex@acme.com',
-      phone_numbers: [],
-      default_phone_number: null,
-      default_phone_type: null,
-      client_id: null,
-      role: null,
-      notes: null,
-      is_inactive: false,
-      created_at: '2026-03-09T12:00:00.000Z',
-      updated_at: '2026-03-09T12:00:00.000Z',
+      success: true,
+      contact: {
+        contact_name_id: 'contact-1',
+        full_name: 'Alex Contact',
+        email: 'alex@acme.com',
+        phone_numbers: [],
+        default_phone_number: null,
+        default_phone_type: null,
+        client_id: null,
+        role: null,
+        notes: null,
+        is_inactive: false,
+        created_at: '2026-03-09T12:00:00.000Z',
+        updated_at: '2026-03-09T12:00:00.000Z',
+      },
     });
   });
 
@@ -207,6 +212,34 @@ describe('QuickAddContact hybrid email and phone payloads', () => {
 
     await waitFor(() => {
       expect(onContactAdded).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('shows a validation toast when addContact returns a handled duplicate-email error', async () => {
+    const user = userEvent.setup();
+    addContactMock.mockResolvedValueOnce({
+      success: false,
+      error: 'EMAIL_EXISTS: A contact with this email address already exists in the system',
+    });
+
+    render(
+      <QuickAddContact
+        isOpen={true}
+        onClose={vi.fn()}
+        onContactAdded={vi.fn()}
+        clients={[]}
+      />
+    );
+
+    await user.type(document.getElementById('quick-add-contact-name') as HTMLInputElement, 'Dupe Test');
+    await user.type(document.getElementById('quick-add-contact-email-primary-email') as HTMLInputElement, 'dupe@example.com');
+    await user.click(screen.getByRole('button', { name: /add contact/i }));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Email Already Exists',
+        variant: 'destructive',
+      }));
     });
   });
 });

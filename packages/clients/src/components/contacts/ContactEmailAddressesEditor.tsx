@@ -15,7 +15,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 
 type EditableAdditionalEmailRow = ContactEmailAddressInput & {
   _localId?: string;
@@ -276,7 +276,20 @@ function buildContactEmailAddressesSignature(
 }
 
 function getRowKey(row: EditableAdditionalEmailRow, index: number): string {
-  return row.contact_additional_email_address_id ?? row._localId ?? `${index}`;
+  if (row.contact_additional_email_address_id) {
+    return `persisted:${row.contact_additional_email_address_id}`;
+  }
+
+  return `local:${row._localId ?? `${index}`}`;
+}
+
+function getEmailRowLabel(row: ContactEmailRowInput): string {
+  if (row.canonical_type === null) {
+    return row.custom_type?.trim() || 'Custom';
+  }
+
+  const canonicalType = row.canonical_type ?? 'work';
+  return canonicalType.charAt(0).toUpperCase() + canonicalType.slice(1);
 }
 
 function getVisibleValidationErrors(
@@ -323,10 +336,13 @@ interface ContactEmailRowProps {
   row: EditableAdditionalEmailRow;
   customTypeSuggestions: string[];
   disabled?: boolean;
+  compact?: boolean;
+  isExpanded?: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
   onChange: (updates: Partial<EditableAdditionalEmailRow>) => void;
   onBlur: () => void;
+  onToggleExpanded?: () => void;
   onPromote: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -339,20 +355,105 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
   row,
   customTypeSuggestions,
   disabled = false,
+  compact = false,
+  isExpanded = true,
   canMoveUp,
   canMoveDown,
   onChange,
   onBlur,
+  onToggleExpanded,
   onPromote,
   onMoveUp,
   onMoveDown,
   onRemove,
 }) => {
   const typeValue = row.canonical_type === null ? 'custom' : row.canonical_type ?? 'work';
+  const summaryLabel = getEmailRowLabel(row);
+  const summaryEmail = row.email_address?.trim() || 'No email entered yet';
   const customTypeOptions = useMemo(
     () => buildCustomTypeOptions(customTypeSuggestions),
     [customTypeSuggestions]
   );
+
+  if (compact && !isExpanded) {
+    return (
+      <Card className="border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50,255_255_255))] p-3" data-testid={`${id}-row-${index}`}>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-[rgb(var(--color-primary-50))] px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-[rgb(var(--color-primary-700))]">
+                {summaryLabel}
+              </span>
+              <span className="text-xs text-[rgb(var(--color-text-500))]">
+                Additional email {index + 1}
+              </span>
+            </div>
+            <div className="truncate text-sm font-medium text-[rgb(var(--color-text-900))]">
+              {summaryEmail}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            <Button
+              id={`${id}-promote-${index}`}
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onPromote}
+              disabled={disabled}
+            >
+              Make Default
+            </Button>
+            <Button
+              id={`${id}-toggle-${index}`}
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onToggleExpanded}
+              disabled={disabled}
+              className="inline-flex items-center gap-1.5"
+            >
+              <ChevronDown className="h-4 w-4" />
+              Edit
+            </Button>
+            <Button
+              id={`${id}-move-up-${index}`}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onMoveUp}
+              disabled={disabled || !canMoveUp}
+              aria-label={`Move additional email ${index + 1} up`}
+            >
+              <ArrowUp className="h-4 w-4" />
+            </Button>
+            <Button
+              id={`${id}-move-down-${index}`}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onMoveDown}
+              disabled={disabled || !canMoveDown}
+              aria-label={`Move additional email ${index + 1} down`}
+            >
+              <ArrowDown className="h-4 w-4" />
+            </Button>
+            <Button
+              id={`${id}-remove-${index}`}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onRemove}
+              disabled={disabled}
+              aria-label={`Remove additional email ${index + 1}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-4" data-testid={`${id}-row-${index}`}>
@@ -372,6 +473,20 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
           >
             Make Default
           </Button>
+          {compact && (
+            <Button
+              id={`${id}-toggle-${index}`}
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onToggleExpanded}
+              disabled={disabled}
+              className="inline-flex items-center gap-1.5"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Done
+            </Button>
+          )}
           <Button
             id={`${id}-move-up-${index}`}
             type="button"
@@ -476,6 +591,7 @@ interface ContactEmailAddressesEditorProps {
   id: string;
   /** When set, used as the DOM id for the primary email input (default: `${id}-primary-email`). */
   primaryEmailInputId?: string;
+  compactAdditionalRows?: boolean;
   value: ContactEmailAddressesEditorValue;
   onChange: (value: ContactEmailAddressesEditorChange) => void;
   customTypeSuggestions?: string[];
@@ -487,6 +603,7 @@ interface ContactEmailAddressesEditorProps {
 const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = ({
   id,
   primaryEmailInputId,
+  compactAdditionalRows = false,
   value,
   onChange,
   customTypeSuggestions = [],
@@ -505,6 +622,7 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
     () => buildEditableAdditionalEmailRows(normalizedValue.additional_email_addresses)
   );
   const [touchedRowKeys, setTouchedRowKeys] = useState<Set<string>>(new Set());
+  const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
   const lastEmittedSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -568,6 +686,21 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
         : nextTouchedRowKeys;
     });
   }, [draftRows]);
+
+  useEffect(() => {
+    if (!compactAdditionalRows) {
+      return;
+    }
+
+    setExpandedRowKey((previousExpandedRowKey) => {
+      if (!previousExpandedRowKey) {
+        return previousExpandedRowKey;
+      }
+
+      const rowKeyStillExists = draftRows.some((row, index) => getRowKey(row, index) === previousExpandedRowKey);
+      return rowKeyStillExists ? previousExpandedRowKey : null;
+    });
+  }, [compactAdditionalRows, draftRows]);
 
   const commitValue = (
     nextPrimaryEmail: string,
@@ -659,16 +792,22 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
   };
 
   const handleAdd = () => {
+    const newRow: EditableAdditionalEmailRow = {
+      ...createEmptyAdditionalEmailRow(),
+      display_order: draftRows.length,
+    };
+
+    if (compactAdditionalRows) {
+      setExpandedRowKey(getRowKey(newRow, draftRows.length));
+    }
+
     commitValue(
       primaryEmail,
       primaryCanonicalType,
       primaryCustomType,
       [
         ...draftRows,
-        {
-          ...createEmptyAdditionalEmailRow(),
-          display_order: draftRows.length,
-        },
+        newRow,
       ]
     );
   };
@@ -748,10 +887,16 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
             row={row}
             customTypeSuggestions={customTypeSuggestions}
             disabled={disabled}
+            compact={compactAdditionalRows}
+            isExpanded={!compactAdditionalRows || expandedRowKey === getRowKey(row, index)}
             canMoveUp={index > 0}
             canMoveDown={index < draftRows.length - 1}
             onChange={(updates) => handleAdditionalRowChange(index, updates)}
             onBlur={() => handleAdditionalRowBlur(index)}
+            onToggleExpanded={() => {
+              const rowKey = getRowKey(row, index);
+              setExpandedRowKey((previousExpandedRowKey) => previousExpandedRowKey === rowKey ? null : rowKey);
+            }}
             onPromote={() => handlePromote(index)}
             onMoveUp={() => handleMove(index, -1)}
             onMoveDown={() => handleMove(index, 1)}

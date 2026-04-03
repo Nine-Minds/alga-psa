@@ -311,7 +311,44 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         notes: notes.trim(),
       };
 
-      const newContact = await addContact(contactData);
+      const addContactResult = await addContact(contactData);
+      if (!addContactResult.success) {
+        const submitError = new Error(addContactResult.error);
+        console.error('Error adding contact:', submitError);
+
+        let errorTitle = t('quickAddContact.errors.createContactTitle', { defaultValue: 'Error creating contact' });
+        let errorDescription = t('quickAddContact.errors.unexpected', {
+          defaultValue: 'An unexpected error occurred. Please try again.'
+        });
+
+        if (submitError.message.includes('VALIDATION_ERROR:')) {
+          errorTitle = t('quickAddContact.errors.validationTitle', { defaultValue: 'Validation Error' });
+          errorDescription = submitError.message.replace('VALIDATION_ERROR:', '').trim();
+        } else if (submitError.message.includes('EMAIL_EXISTS:')) {
+          errorTitle = t('quickAddContact.errors.emailExistsTitle', { defaultValue: 'Email Already Exists' });
+          errorDescription = submitError.message.replace('EMAIL_EXISTS:', '').trim();
+        } else if (submitError.message.includes('FOREIGN_KEY_ERROR:')) {
+          errorTitle = t('quickAddContact.errors.invalidReferenceTitle', { defaultValue: 'Invalid Reference' });
+          errorDescription = submitError.message.replace('FOREIGN_KEY_ERROR:', '').trim();
+        } else if (submitError.message.includes('SYSTEM_ERROR:')) {
+          errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
+          errorDescription = submitError.message.replace('SYSTEM_ERROR:', '').trim();
+        } else {
+          errorDescription = submitError.message;
+        }
+
+        toast({
+          title: errorTitle,
+          description: errorDescription,
+          variant: 'destructive'
+        });
+
+        setError(submitError.message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const newContact = addContactResult.contact;
 
       let createdTags: typeof newContact.tags = [];
       if (pendingTags.length > 0) {

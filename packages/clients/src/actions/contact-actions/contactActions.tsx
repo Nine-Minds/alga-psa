@@ -64,6 +64,10 @@ type ContactImportData = Omit<Partial<IContact>, 'additional_email_addresses'> &
   primary_email_custom_type?: string | null;
 };
 
+export type AddContactResult =
+  | { success: true; contact: IContact }
+  | { success: false; error: string };
+
 function getDerivedDefaultPhone(contact: Pick<IContact, 'default_phone_number' | 'phone_numbers'>): string {
   return contact.default_phone_number
     || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number
@@ -330,7 +334,7 @@ export const addContact = withAuth(async (
   user,
   { tenant },
   contactData: ContactActionInput
-): Promise<IContact> => {
+): Promise<AddContactResult> => {
   const { knex: db } = await createTenantKnex();
 
   if (!await hasPermissionAsync(user, 'contact', 'create')) {
@@ -352,37 +356,67 @@ export const addContact = withAuth(async (
 
   // Use the shared ContactModel to create the contact
   // The model handles all validation and business logic
-  const created = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return ContactModel.createContact(createInput, tenant, trx);
-  });
-
-  const clientId = (created as any)?.client_id;
-  if (typeof clientId === 'string' && clientId) {
-    const occurredAt = (created as any)?.created_at ?? new Date().toISOString();
-    const actor = maybeUserActor(user);
-    await publishWorkflowEvent({
-      eventType: 'CONTACT_CREATED',
-      payload: buildContactCreatedPayload({
-        contactId: created.contact_name_id,
-        clientId,
-        fullName: created.full_name,
-        email: created.email || undefined,
-        primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
-        primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
-        primaryEmailType: created.primary_email_type ?? null,
-        additionalEmailAddresses: created.additional_email_addresses ?? [],
-        phoneNumbers: created.phone_numbers,
-        defaultPhoneNumber: created.default_phone_number || undefined,
-        defaultPhoneType: created.default_phone_type || undefined,
-        createdByUserId: user?.user_id,
-        createdAt: occurredAt,
-      }),
-      ctx: { tenantId: tenant, occurredAt, actor },
-      idempotencyKey: `contact_created:${created.contact_name_id}`,
+  try {
+    const created = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return ContactModel.createContact(createInput, tenant, trx);
     });
-  }
 
-  return created;
+    const clientId = (created as any)?.client_id;
+    if (typeof clientId === 'string' && clientId) {
+      const occurredAt = (created as any)?.created_at ?? new Date().toISOString();
+      const actor = maybeUserActor(user);
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_CREATED',
+        payload: buildContactCreatedPayload({
+          contactId: created.contact_name_id,
+          clientId,
+          fullName: created.full_name,
+          email: created.email || undefined,
+          primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
+          primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
+          primaryEmailType: created.primary_email_type ?? null,
+          additionalEmailAddresses: created.additional_email_addresses ?? [],
+          phoneNumbers: created.phone_numbers,
+          defaultPhoneNumber: created.default_phone_number || undefined,
+          defaultPhoneType: created.default_phone_type || undefined,
+          createdByUserId: user?.user_id,
+          createdAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `contact_created:${created.contact_name_id}`,
+      });
+    }
+
+    return { success: true, contact: created };
+  } catch (err) {
+    console.error('Error adding contact:', err);
+
+    if (err instanceof Error) {
+      const message = err.message;
+      if (
+        message.includes('VALIDATION_ERROR:') ||
+        message.includes('EMAIL_EXISTS:') ||
+        message.includes('FOREIGN_KEY_ERROR:')
+      ) {
+        return { success: false, error: message };
+      }
+
+      if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
+        return { success: false, error: 'EMAIL_EXISTS: A contact with this email address already exists in the system' };
+      }
+
+      if (message.includes('violates not-null constraint')) {
+        const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
+        return { success: false, error: `VALIDATION_ERROR: The ${field} is required` };
+      }
+
+      if (message.includes('violates foreign key constraint') && message.includes('client_id')) {
+        return { success: false, error: 'FOREIGN_KEY_ERROR: The selected client is no longer valid' };
+      }
+    }
+
+    throw new Error('SYSTEM_ERROR: An unexpected error occurred while creating the contact');
+  }
 });
 
 export const listContactPhoneTypeSuggestions = withAuth(async (

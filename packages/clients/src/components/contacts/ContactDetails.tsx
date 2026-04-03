@@ -579,9 +579,6 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     return client ? client.client_name : t('contactDetails.empty.unknownClient', { defaultValue: 'Unknown Client' });
   };
 
-  const additionalEmailCount = editedContact.additional_email_addresses?.length ?? 0;
-  const totalEmailCount = (editedContact.email ? 1 : 0) + additionalEmailCount;
-
   const tabContent = [
     {
       id: 'details',
@@ -648,50 +645,18 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             </div>
           </div>
 
-          <section className="rounded-xl border border-[rgb(var(--color-border-300))] bg-[linear-gradient(180deg,rgba(249,250,251,0.95),rgba(255,255,255,1))] p-5 shadow-sm">
-            <div className="flex flex-col gap-3 border-b border-[rgb(var(--color-border-200))] pb-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-1">
-                <div className="flex items-center gap-3">
-                  <Heading as="h3" size="4" className="text-[rgb(var(--color-text-900))]">
-                    {t('contactDetails.fields.emailAddresses', { defaultValue: 'Email addresses' })}
-                  </Heading>
-                  <span className="inline-flex min-h-6 items-center rounded-full bg-[rgb(var(--color-primary-50))] px-2.5 py-0.5 text-xs font-medium text-[rgb(var(--color-primary-700))]">
-                    {totalEmailCount} {totalEmailCount === 1 ? 'address' : 'addresses'}
-                  </span>
-                </div>
-                <Text size="2" className="text-[rgb(var(--color-text-600))]">
-                  {additionalEmailCount > 0
-                    ? t('contactDetails.emailSection.multipleDescription', {
-                        defaultValue: 'Manage the default contact email and any additional labeled addresses used for billing, personal, or custom workflows.',
-                      })
-                    : t('contactDetails.emailSection.singleDescription', {
-                        defaultValue: 'Set the default contact email and add labeled addresses when this contact needs more than one inbox.',
-                      })}
-                </Text>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 text-xs text-[rgb(var(--color-text-600))]">
-                <span className="inline-flex items-center rounded-full border border-[rgb(var(--color-border-300))] bg-white px-2.5 py-1 font-medium">
-                  Default required
-                </span>
-                <span className="inline-flex items-center rounded-full border border-[rgb(var(--color-border-300))] bg-white px-2.5 py-1 font-medium">
-                  Additional optional
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-4">
-              <ContactEmailAddressesEditor
-                id="contact-details-email"
-                primaryEmailInputId="email-field"
-                value={editedContact}
-                onChange={handleEmailAddressesChange}
-                customTypeSuggestions={[]}
-                errorMessages={emailValidationErrors}
-                onValidationChange={setEmailValidationErrors}
-              />
-            </div>
-          </section>
+          <div className="rounded-xl border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-surface-25,250_250_250))] p-4 shadow-sm">
+            <ContactEmailAddressesEditor
+              id="contact-details-email"
+              primaryEmailInputId="email-field"
+              compactAdditionalRows
+              value={editedContact}
+              onChange={handleEmailAddressesChange}
+              customTypeSuggestions={[]}
+              errorMessages={emailValidationErrors}
+              onValidationChange={setEmailValidationErrors}
+            />
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <TextDetailItem

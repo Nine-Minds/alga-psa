@@ -132,6 +132,141 @@ describe('contact model email addresses integration', () => {
     });
   });
 
+  it('accepts the normalized post-swap payload shape emitted by the shared email editor', async () => {
+    const tenantId = uuidv4();
+    const clientId = uuidv4();
+    await createTenant(db, tenantId);
+    await createClient(db, tenantId, clientId);
+
+    await db.transaction(async (trx) => {
+      const created = await ContactModel.createContact({
+        full_name: 'Normalized Swap Payload Contact',
+        email: `primary-${tenantId}@example.com`,
+        client_id: clientId,
+        primary_email_canonical_type: 'billing',
+        additional_email_addresses: [
+          {
+            email_address: `secondary-${tenantId}@example.com`,
+            custom_type: 'Escalations',
+            display_order: 0,
+          },
+          {
+            email_address: `tertiary-${tenantId}@example.com`,
+            canonical_type: 'other',
+            display_order: 1,
+          },
+        ],
+      }, tenantId, trx);
+
+      const updated = await ContactModel.updateContact(created.contact_name_id, {
+        email: `secondary-${tenantId}@example.com`,
+        primary_email_canonical_type: null,
+        primary_email_custom_type: 'Escalations',
+        additional_email_addresses: [
+          {
+            email_address: `tertiary-${tenantId}@example.com`,
+            canonical_type: 'other',
+            display_order: 0,
+          },
+          {
+            email_address: `primary-${tenantId}@example.com`,
+            canonical_type: 'billing',
+            display_order: 1,
+          },
+        ],
+      }, tenantId, trx);
+
+      expect(updated.email).toBe(`secondary-${tenantId}@example.com`);
+      expect(updated.primary_email_canonical_type).toBeNull();
+      expect(updated.primary_email_type).toBe('Escalations');
+      expect(updated.additional_email_addresses).toHaveLength(2);
+      expect(updated.additional_email_addresses.find((row) => row.email_address === `primary-${tenantId}@example.com`)?.canonical_type).toBe('billing');
+      expect(updated.additional_email_addresses.find((row) => row.email_address === `tertiary-${tenantId}@example.com`)?.canonical_type).toBe('other');
+    });
+  });
+
+  it('accepts a second normalized swap after a previous promotion', async () => {
+    const tenantId = uuidv4();
+    const clientId = uuidv4();
+    await createTenant(db, tenantId);
+    await createClient(db, tenantId, clientId);
+
+    await db.transaction(async (trx) => {
+      const created = await ContactModel.createContact({
+        full_name: 'Second Normalized Swap Contact',
+        email: `primary-${tenantId}@example.com`,
+        client_id: clientId,
+        primary_email_canonical_type: 'work',
+        additional_email_addresses: [
+          {
+            email_address: `billing-${tenantId}@example.com`,
+            canonical_type: 'billing',
+            display_order: 0,
+          },
+          {
+            email_address: `escalations-${tenantId}@example.com`,
+            custom_type: 'Escalations',
+            display_order: 1,
+          },
+        ],
+      }, tenantId, trx);
+
+      const firstSwap = await ContactModel.updateContact(created.contact_name_id, {
+        email: `billing-${tenantId}@example.com`,
+        primary_email_canonical_type: 'billing',
+        additional_email_addresses: [
+          {
+            contact_additional_email_address_id: created.additional_email_addresses.find(
+              (row) => row.email_address === `escalations-${tenantId}@example.com`
+            )?.contact_additional_email_address_id,
+            email_address: `escalations-${tenantId}@example.com`,
+            custom_type: 'Escalations',
+            display_order: 0,
+          },
+          {
+            email_address: `primary-${tenantId}@example.com`,
+            canonical_type: 'work',
+            display_order: 1,
+          },
+        ],
+      }, tenantId, trx);
+
+      const persistedEscalationsRow = firstSwap.additional_email_addresses.find(
+        (row) => row.email_address === `escalations-${tenantId}@example.com`
+      );
+      const persistedPrimaryRow = firstSwap.additional_email_addresses.find(
+        (row) => row.email_address === `primary-${tenantId}@example.com`
+      );
+
+      const secondSwap = await ContactModel.updateContact(created.contact_name_id, {
+        email: `escalations-${tenantId}@example.com`,
+        primary_email_canonical_type: null,
+        primary_email_custom_type: 'Escalations',
+        additional_email_addresses: [
+          {
+            contact_additional_email_address_id: persistedPrimaryRow?.contact_additional_email_address_id,
+            email_address: `primary-${tenantId}@example.com`,
+            canonical_type: 'work',
+            display_order: 0,
+          },
+          {
+            email_address: `billing-${tenantId}@example.com`,
+            canonical_type: 'billing',
+            display_order: 1,
+          },
+        ],
+      }, tenantId, trx);
+
+      expect(persistedEscalationsRow).toBeDefined();
+      expect(secondSwap.email).toBe(`escalations-${tenantId}@example.com`);
+      expect(secondSwap.primary_email_canonical_type).toBeNull();
+      expect(secondSwap.primary_email_type).toBe('Escalations');
+      expect(secondSwap.additional_email_addresses).toHaveLength(2);
+      expect(secondSwap.additional_email_addresses.find((row) => row.email_address === `primary-${tenantId}@example.com`)?.canonical_type).toBe('work');
+      expect(secondSwap.additional_email_addresses.find((row) => row.email_address === `billing-${tenantId}@example.com`)?.canonical_type).toBe('billing');
+    });
+  });
+
   it('T014: rejects removing the primary email directly', async () => {
     const tenantId = uuidv4();
     const clientId = uuidv4();
