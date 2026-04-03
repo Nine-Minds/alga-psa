@@ -145,7 +145,7 @@ export class ResendEmailProvider implements IEmailProvider {
             to: response.data.to,
             createdAt: response.data.created_at,
           },
-          sentAt: new Date(response.data.created_at),
+          sentAt: response.data.created_at ? new Date(response.data.created_at) : new Date(),
         };
       } catch (error: any) {
         logger.error(`[ResendEmailProvider:${this.providerId}] Failed to send email (attempt ${attempt + 1}):`, {

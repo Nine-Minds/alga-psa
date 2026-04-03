@@ -888,7 +888,7 @@ export class TicketService extends BaseService<ITicket> {
         }
 
         if (newStatus?.is_closed) {
-          await this.safePublishEvent('TicketClosed', {
+          await this.safePublishEvent('TICKET_CLOSED', {
             id: require("crypto").randomUUID(),
             eventType: "TICKET_CLOSED" as const,
             timestamp: new Date().toISOString(),
@@ -901,7 +901,7 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
-      await this.safePublishEvent('TicketUpdated', {
+      await this.safePublishEvent('TICKET_UPDATED', {
         id: require("crypto").randomUUID(),
         eventType: "TICKET_UPDATED" as const,
         timestamp: new Date().toISOString(),

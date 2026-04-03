@@ -19,6 +19,10 @@ export const boardResponseSchema = z.object({
   display_itil_impact: z.boolean().nullable(),
   display_itil_urgency: z.boolean().nullable(),
   default_assigned_to: uuidSchema.nullable(),
+  inbound_reply_reopen_enabled: z.boolean().optional(),
+  inbound_reply_reopen_cutoff_hours: z.number().int().optional(),
+  inbound_reply_reopen_status_id: uuidSchema.nullable().optional(),
+  inbound_reply_ai_ack_suppression_enabled: z.boolean().optional(),
   enable_live_ticket_timer: z.boolean().nullable(),
   tenant: uuidSchema
 });

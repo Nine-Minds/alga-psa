@@ -78,6 +78,7 @@ interface TicketConversationProps {
   closedStatusOptions?: { value: string; label: string }[];
   onClipboardImageUploaded?: () => Promise<void> | void;
   defaultNewestFirst?: boolean;
+  canViewCommentMetadataDebug?: boolean;
 }
 
 const ALL_COMMENTS_TAB_ID = 'all-comments';
@@ -112,6 +113,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   closedStatusOptions = [],
   onClipboardImageUploaded,
   defaultNewestFirst = false,
+  canViewCommentMetadataDebug = false,
 }) => {
   const { t } = useTranslation('features/tickets');
   const { t: tCore } = useTranslation('common');
@@ -377,6 +379,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
         onToggleReaction={handleToggleReaction}
         userNames={reactionUserNames}
+        canViewCommentMetadataDebug={canViewCommentMetadataDebug}
       />
     );
     });
@@ -418,6 +421,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 onEdit={() => {}}
                 onDelete={() => {}}
                 hideInternalTab={hideInternalTab}
+                canViewCommentMetadataDebug={canViewCommentMetadataDebug}
               />
             </div>
           );
