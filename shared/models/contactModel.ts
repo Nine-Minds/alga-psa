@@ -151,11 +151,11 @@ type ContactPhoneRow = {
 
 type ContactEmailRow = {
   contact_additional_email_address_id: string;
-  contact_name_id: string;
+  contact_name_id?: string;
   email_address: string;
   normalized_email_address: string;
   canonical_type: ContactEmailCanonicalType | null;
-  custom_email_type_id: string | null;
+  custom_email_type_id?: string | null;
   custom_type: string | null;
   display_order: number;
   created_at?: string;
@@ -740,7 +740,10 @@ export class ContactModel {
       throw new Error(`VALIDATION_ERROR: ${validation.errors?.join('; ')}`);
     }
 
-    const updateData = validation.data as UpdateContactInput & {
+    const updateData = validation.data as Omit<
+      UpdateContactInput,
+      'phone_numbers' | 'additional_email_addresses' | 'primary_email_custom_type'
+    > & {
       phone_numbers?: PreparedPhoneNumberInput[];
       additional_email_addresses?: PreparedEmailAddressInput[];
       primary_email_custom_type?: string | null;
