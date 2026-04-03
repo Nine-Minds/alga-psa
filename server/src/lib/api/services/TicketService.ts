@@ -12,7 +12,7 @@ import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { getEventBus } from 'server/src/lib/eventBus';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
@@ -888,28 +888,17 @@ export class TicketService extends BaseService<ITicket> {
         }
 
         if (newStatus?.is_closed) {
-          await this.safePublishEvent('TICKET_CLOSED', {
-            id: require("crypto").randomUUID(),
-            eventType: "TICKET_CLOSED" as const,
-            timestamp: new Date().toISOString(),
-            payload: {
-              tenantId: context.tenant,
-              ticketId: ticket.ticket_id,
-              userId: context.userId
-            }
+          await this.safePublishEvent('TICKET_CLOSED', context, {
+            ticketId: ticket.ticket_id,
+            closedByUserId: context.userId,
+            closedAt: new Date().toISOString(),
           });
         }
       }
 
-      await this.safePublishEvent('TICKET_UPDATED', {
-        id: require("crypto").randomUUID(),
-        eventType: "TICKET_UPDATED" as const,
-        timestamp: new Date().toISOString(),
-        payload: {
-          tenantId: context.tenant,
-          ticketId: ticket.ticket_id,
-          userId: context.userId
-        }
+      await this.safePublishEvent('TICKET_UPDATED', context, {
+        ticketId: ticket.ticket_id,
+        updatedByUserId: context.userId,
       });
 
       return this.withDescriptionHtml(ticket as ITicket);
@@ -1132,8 +1121,7 @@ export class TicketService extends BaseService<ITicket> {
       const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
 
       // Publish TICKET_COMMENT_ADDED event for mention notifications
-      await this.safePublishEvent('TICKET_COMMENT_ADDED', {
-        tenantId: context.tenant,
+      await this.safePublishEvent('TICKET_COMMENT_ADDED', context, {
         ticketId: ticketId,
         userId: context.userId,
         comment: {
@@ -1592,15 +1580,21 @@ export class TicketService extends BaseService<ITicket> {
   /**
    * Safely publish events
    */
-  private async safePublishEvent(eventType: string, event: any): Promise<void> {
+  private async safePublishEvent(eventType: string, context: ServiceContext, payload: Record<string, unknown>): Promise<void> {
     if (process.env.E2E_SKIP_APP_INIT === 'true') {
       return;
     }
 
     try {
-      await publishEvent({
-        eventType,
-        payload: event
+      await publishWorkflowEvent({
+        eventType: eventType as any,
+        payload,
+        ctx: {
+          tenantId: context.tenant,
+          actor: context.userId
+            ? { actorType: 'USER', actorUserId: context.userId }
+            : { actorType: 'SYSTEM' },
+        },
       });
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
