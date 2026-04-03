@@ -242,17 +242,14 @@ export function AppRoot() {
 
   useAppResume(() => {
     if (!session) return;
-    if (shouldRefreshOnResume(session.expiresAtMs, Date.now())) {
+    const now = Date.now();
+    // Refresh if token is near expiry, or periodically to detect revocation
+    if (shouldRefreshOnResume(session.expiresAtMs, now)) {
+      void refreshSession();
+    } else if (shouldRunRevocationCheck(lastRevocationCheckAtMs.current, now)) {
+      lastRevocationCheckAtMs.current = now;
       void refreshSession();
     }
-  });
-
-  useAppResume(() => {
-    if (!session) return;
-    const now = Date.now();
-    if (!shouldRunRevocationCheck(lastRevocationCheckAtMs.current, now)) return;
-    lastRevocationCheckAtMs.current = now;
-    void refreshSession();
   });
 
   useAppResume(() => {
