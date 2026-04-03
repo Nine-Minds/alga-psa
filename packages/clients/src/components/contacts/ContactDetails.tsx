@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { ContactPhoneNumberInput, DeletionValidationResult, IContact } from '@alga-psa/types';
+import type { ContactPhoneNumberInput, CreateContactInput, DeletionValidationResult, IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import { IInteraction } from '@alga-psa/types';
@@ -23,7 +23,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { updateContact, deleteContact, listInboundTicketDestinationOptions, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
-import { validateEmailAddress, validateContactName, validateRole } from '@alga-psa/validation';
+import { validateContactName, validateRole } from '@alga-psa/validation';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useToast } from '@alga-psa/ui';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
@@ -41,6 +41,15 @@ import ClientDetails from '../clients/ClientDetails';
 import { ContactPortalTab } from './ContactPortalTab';
 import { ContactNotesPanel } from './panels/ContactNotesPanel';
 import ContactPhoneNumbersEditor, { compactContactPhoneNumbers, validateContactPhoneNumbers } from './ContactPhoneNumbersEditor';
+import ContactEmailAddressesEditor, {
+  compactContactEmailAddresses,
+  validateContactEmailAddresses,
+} from './ContactEmailAddressesEditor';
+
+type EditableContact = IContact & {
+  primary_email_custom_type?: string | null;
+  additional_email_addresses: NonNullable<IContact['additional_email_addresses']>;
+};
 
 const SwitchDetailItem: React.FC<{
   value: boolean;
@@ -155,7 +164,10 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     canRead: false
   }
 }) => {
-  const [editedContact, setEditedContact] = useState<IContact>(contact);
+  const [editedContact, setEditedContact] = useState<EditableContact>(() => ({
+    ...contact,
+    additional_email_addresses: contact.additional_email_addresses ?? [],
+  }));
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
@@ -180,6 +192,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [customPhoneTypeSuggestions, setCustomPhoneTypeSuggestions] = useState<string[]>([]);
   const [phoneValidationErrors, setPhoneValidationErrors] = useState<string[]>([]);
+  const [emailValidationErrors, setEmailValidationErrors] = useState<string[]>([]);
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<SelectOption[]>([]);
   const [isInboundDestinationOptionsLoading, setIsInboundDestinationOptionsLoading] = useState(false);
   const router = useRouter();
@@ -194,10 +207,14 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   // Initial Load Logic
   useEffect(() => {
-    setEditedContact(contact);
+    setEditedContact({
+      ...contact,
+      additional_email_addresses: contact.additional_email_addresses ?? [],
+    });
     setSelectedClientId(contact.client_id || null);
     setHasUnsavedChanges(false);
     setPhoneValidationErrors([]);
+    setEmailValidationErrors([]);
   }, [contact]);
 
   // Fetch current user
@@ -313,6 +330,17 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     setHasUnsavedChanges(true);
   };
 
+  const handleEmailAddressesChange = (value: Pick<
+    CreateContactInput,
+    'email' | 'primary_email_canonical_type' | 'primary_email_custom_type' | 'additional_email_addresses'
+  >) => {
+    setEditedContact((prev) => ({
+      ...prev,
+      ...value,
+    }));
+    setHasUnsavedChanges(true);
+  };
+
   const runDeleteValidation = useCallback(async () => {
     if (!editedContact.contact_name_id) {
       return;
@@ -404,7 +432,10 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       setIsDeleteDialogOpen(false);
 
       // Update local state immediately
-      setEditedContact(updatedContact);
+      setEditedContact({
+        ...updatedContact,
+        additional_email_addresses: updatedContact.additional_email_addresses ?? [],
+      });
 
       toast({
         title: t('contactDetails.deactivate.successTitle', { defaultValue: 'Contact Deactivated' }),
@@ -426,6 +457,17 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   const handleSave = async () => {
     try {
+      const currentEmailErrors = validateContactEmailAddresses(editedContact);
+      setEmailValidationErrors(currentEmailErrors);
+      if (currentEmailErrors.length > 0) {
+        toast({
+          title: t('contactDetails.saveFailed.title', { defaultValue: 'Save Failed' }),
+          description: currentEmailErrors[0],
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const currentPhoneErrors = validateContactPhoneNumbers(editedContact.phone_numbers);
       setPhoneValidationErrors(currentPhoneErrors);
       if (currentPhoneErrors.length > 0) {
@@ -437,15 +479,21 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         return;
       }
 
+      const compactedEmails = compactContactEmailAddresses(editedContact);
+
       // Make sure contact_name_id is included in the data being sent
       const dataToUpdate = {
         ...editedContact,
+        ...compactedEmails,
         phone_numbers: compactContactPhoneNumbers(editedContact.phone_numbers),
         contact_name_id: editedContact.contact_name_id
       };
 
       const updatedContact = await updateContact(dataToUpdate);
-      setEditedContact(updatedContact);
+      setEditedContact({
+        ...updatedContact,
+        additional_email_addresses: updatedContact.additional_email_addresses ?? [],
+      });
       setHasUnsavedChanges(false);
 
       toast({
@@ -531,6 +579,9 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     return client ? client.client_name : t('contactDetails.empty.unknownClient', { defaultValue: 'Unknown Client' });
   };
 
+  const additionalEmailCount = editedContact.additional_email_addresses?.length ?? 0;
+  const totalEmailCount = (editedContact.email ? 1 : 0) + additionalEmailCount;
+
   const tabContent = [
     {
       id: 'details',
@@ -595,13 +646,54 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                 </div>
               )}
             </div>
-            <TextDetailItem
-              label={t('contactDetails.fields.email', { defaultValue: 'Email' })}
-              value={editedContact.email || ''}
-              onEdit={(value) => handleFieldChange('email', value)}
-              automationId="email-field"
-              validate={validateEmailAddress}
-            />
+          </div>
+
+          <section className="rounded-xl border border-[rgb(var(--color-border-300))] bg-[linear-gradient(180deg,rgba(249,250,251,0.95),rgba(255,255,255,1))] p-5 shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-[rgb(var(--color-border-200))] pb-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-3">
+                  <Heading as="h3" size="4" className="text-[rgb(var(--color-text-900))]">
+                    {t('contactDetails.fields.emailAddresses', { defaultValue: 'Email addresses' })}
+                  </Heading>
+                  <span className="inline-flex min-h-6 items-center rounded-full bg-[rgb(var(--color-primary-50))] px-2.5 py-0.5 text-xs font-medium text-[rgb(var(--color-primary-700))]">
+                    {totalEmailCount} {totalEmailCount === 1 ? 'address' : 'addresses'}
+                  </span>
+                </div>
+                <Text size="2" className="text-[rgb(var(--color-text-600))]">
+                  {additionalEmailCount > 0
+                    ? t('contactDetails.emailSection.multipleDescription', {
+                        defaultValue: 'Manage the default contact email and any additional labeled addresses used for billing, personal, or custom workflows.',
+                      })
+                    : t('contactDetails.emailSection.singleDescription', {
+                        defaultValue: 'Set the default contact email and add labeled addresses when this contact needs more than one inbox.',
+                      })}
+                </Text>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[rgb(var(--color-text-600))]">
+                <span className="inline-flex items-center rounded-full border border-[rgb(var(--color-border-300))] bg-white px-2.5 py-1 font-medium">
+                  Default required
+                </span>
+                <span className="inline-flex items-center rounded-full border border-[rgb(var(--color-border-300))] bg-white px-2.5 py-1 font-medium">
+                  Additional optional
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-4">
+              <ContactEmailAddressesEditor
+                id="contact-details-email"
+                primaryEmailInputId="email-field"
+                value={editedContact}
+                onChange={handleEmailAddressesChange}
+                customTypeSuggestions={[]}
+                errorMessages={emailValidationErrors}
+                onValidationChange={setEmailValidationErrors}
+              />
+            </div>
+          </section>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <TextDetailItem
               label={t('contactDetails.fields.role', { defaultValue: 'Role' })}
               value={editedContact.role || ''}

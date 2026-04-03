@@ -474,6 +474,8 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
 
 interface ContactEmailAddressesEditorProps {
   id: string;
+  /** When set, used as the DOM id for the primary email input (default: `${id}-primary-email`). */
+  primaryEmailInputId?: string;
   value: ContactEmailAddressesEditorValue;
   onChange: (value: ContactEmailAddressesEditorChange) => void;
   customTypeSuggestions?: string[];
@@ -484,6 +486,7 @@ interface ContactEmailAddressesEditorProps {
 
 const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = ({
   id,
+  primaryEmailInputId,
   value,
   onChange,
   customTypeSuggestions = [],
@@ -491,6 +494,7 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
   errorMessages,
   onValidationChange,
 }) => {
+  const primaryEmailDomId = primaryEmailInputId ?? `${id}-primary-email`;
   const normalizedValue = useMemo(() => normalizeDraftContactEmailAddresses(value), [value]);
   const [primaryEmail, setPrimaryEmail] = useState(normalizedValue.email);
   const [primaryCanonicalType, setPrimaryCanonicalType] = useState<ContactEmailCanonicalType | null>(
@@ -686,11 +690,11 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
 
         <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(240px,0.9fr)] xl:items-start">
           <div className="space-y-1">
-            <Label htmlFor={`${id}-primary-email`} className="block text-gray-700">
+            <Label htmlFor={primaryEmailDomId} className="block text-gray-700">
               Email Address
             </Label>
             <Input
-              id={`${id}-primary-email`}
+              id={primaryEmailDomId}
               type="email"
               value={primaryEmail}
               onChange={(event) => handlePrimaryEmailChange(event.target.value)}
