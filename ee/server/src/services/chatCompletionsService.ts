@@ -11,6 +11,7 @@ import { getRegistry } from '../chat/registry/apiRegistry.indexer';
 import {
   ChatApiRegistryEntry,
 } from '../chat/registry/apiRegistry.schema';
+import { searchRegistryEntries } from '../chat/registry/search';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
@@ -746,49 +747,18 @@ export class ChatCompletionsService {
     }
 
     const limit = Math.max(1, Math.min(typeof limitValue === 'number' ? limitValue : parseInt(String(limitValue ?? ''), 10) || 5, 25));
-    const terms = text.toLowerCase().split(/\s+/).filter(Boolean);
     const registry = getRegistry();
-    const mentionsIdLookup = /\b(by id|id|details?|detail|single)\b/.test(text);
-    const mentionsList = /\b(list|search|find|all|recent|latest)\b/.test(text);
-
-    const scored = registry
-      .map((entry, index) => {
-        const haystack = [
-          entry.displayName,
-          entry.summary,
-          entry.description,
-          entry.path,
-          entry.tags?.join(' '),
-          entry.id,
-          entry.parameters?.map((param) => `${param.name} ${param.in}`).join(' '),
-        ]
-          .join(' ')
-          .toLowerCase();
-        const hasPathId = entry.parameters?.some((param) => param.in === 'path' && param.name === 'id') ?? false;
-        const isGetById = entry.method === 'get' && /\{id\}/.test(entry.path);
-        const isListEndpoint = entry.method === 'get' && !/\{[^}]+\}/.test(entry.path);
-        const score =
-          terms.reduce((acc, term) => (haystack.includes(term) ? acc + 2 : acc), 0) +
-          (mentionsIdLookup && hasPathId ? 8 : 0) +
-          (mentionsIdLookup && isGetById ? 6 : 0) +
-          (mentionsList && isListEndpoint ? 4 : 0) +
-          (entry.playbooks?.length ?? 0) +
-          Math.max(0, 3 - index * 0.1);
-        return { entry, score };
-      })
-      .sort((a, b) => b.score - a.score);
-
-      const top = scored.slice(0, limit).map(({ entry }) => ({
-        id: entry.id,
-        displayName: entry.displayName,
-        description: entry.description,
-        method: entry.method.toUpperCase(),
-        path: entry.path,
-        approvalRequired: entry.approvalRequired,
-        tags: entry.tags ?? [],
-        parameters: entry.parameters ?? [],
-        examples: entry.examples?.slice(0, 1) ?? [],
-      }));
+    const top = searchRegistryEntries(registry, text, limit).map(({ entry }) => ({
+      id: entry.id,
+      displayName: entry.displayName,
+      description: entry.description,
+      method: entry.method.toUpperCase(),
+      path: entry.path,
+      approvalRequired: entry.approvalRequired,
+      tags: entry.tags ?? [],
+      parameters: entry.parameters ?? [],
+      examples: entry.examples?.slice(0, 1) ?? [],
+    }));
 
     return top;
   }
@@ -1171,11 +1141,17 @@ export class ChatCompletionsService {
           error instanceof Error ? error.message : String(error),
           error,
         );
+        const likelyTruncated =
+          context.source === 'stream' && this.isLikelyTruncatedJsonObjectString(args);
         return {
           ok: false,
-          message: `Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only. Raw arguments preview: ${JSON.stringify(
-            args.slice(0, INVALID_TOOL_ARGUMENTS_PREVIEW_CHARS),
-          )}`,
+          message: likelyTruncated
+            ? `Tool arguments appeared truncated during streaming and were not a complete JSON object. Retry the same function call with the full JSON object only. Raw arguments preview: ${JSON.stringify(
+                args.slice(0, INVALID_TOOL_ARGUMENTS_PREVIEW_CHARS),
+              )}`
+            : `Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only. Raw arguments preview: ${JSON.stringify(
+                args.slice(0, INVALID_TOOL_ARGUMENTS_PREVIEW_CHARS),
+              )}`,
         };
       }
     }
@@ -1185,6 +1161,58 @@ export class ChatCompletionsService {
       message:
         'Tool arguments must be a valid JSON object. Retry the same function call with a JSON object only.',
     };
+  }
+
+  private static isLikelyTruncatedJsonObjectString(args: string): boolean {
+    const trimmed = args.trim();
+    if (!trimmed.startsWith('{')) {
+      return false;
+    }
+
+    let inString = false;
+    let escaped = false;
+    const stack: string[] = [];
+
+    for (const char of trimmed) {
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (char === '\\') {
+          escaped = true;
+          continue;
+        }
+        if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === '{' || char === '[') {
+        stack.push(char);
+        continue;
+      }
+
+      if (char === '}' || char === ']') {
+        const expected = char === '}' ? '{' : '[';
+        const open = stack.pop();
+        if (open !== expected) {
+          return false;
+        }
+      }
+    }
+
+    if (inString || escaped || stack.length > 0) {
+      return true;
+    }
+
+    return trimmed.endsWith(':') || trimmed.endsWith(',');
   }
 
   private static logToolArgumentParseFailure(

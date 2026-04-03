@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import type { ChatApiRegistryEntry } from '@ee/chat/registry/apiRegistry.schema';
 
 const openAiCreateSpy = vi.hoisted(() => vi.fn());
 const getSecretMock = vi.hoisted(() => vi.fn());
@@ -12,6 +13,7 @@ const getContactByContactNameIdMock = vi.hoisted(() => vi.fn());
 const getAssetDetailBundleMock = vi.hoisted(() => vi.fn());
 const secretState = vi.hoisted(() => ({ values: {} as Record<string, string | undefined> }));
 const googleAccessTokenState = vi.hoisted(() => ({ token: 'adc-token' as string | undefined }));
+const PLACEHOLDER_REGISTRY_DESCRIPTION = 'This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.';
 
 vi.mock('openai', () => {
   class OpenAI {
@@ -95,7 +97,7 @@ const ORIGINAL_ENV: Record<string, string | undefined> = Object.fromEntries(
   MANAGED_ENV_KEYS.map((key) => [key, process.env[key]]),
 );
 
-const registryEntry = {
+const registryEntry: ChatApiRegistryEntry = {
   id: 'tickets.list',
   method: 'get' as const,
   path: '/api/v1/tickets',
@@ -109,6 +111,15 @@ const registryEntry = {
   playbooks: ['Lookup context'],
   examples: [],
 };
+
+const buildRegistryEntry = (overrides: Partial<ChatApiRegistryEntry> = {}): ChatApiRegistryEntry => ({
+  ...registryEntry,
+  approvalRequired: false,
+  playbooks: [],
+  examples: [],
+  parameters: [],
+  ...overrides,
+});
 
 const resetManagedEnv = () => {
   for (const key of MANAGED_ENV_KEYS) {
@@ -236,6 +247,202 @@ describe('ChatCompletionsService (unit)', () => {
         },
       ]),
     ).toThrow('Invalid messages payload');
+  });
+
+  it('prefers create endpoints over read-only matches for project creation queries', async () => {
+    getRegistryMock.mockReturnValue([
+      buildRegistryEntry({
+        id: 'get-_api_v1_projects',
+        method: 'get',
+        path: '/api/v1/projects',
+        displayName: 'List Projects',
+        summary: 'List projects',
+        description: 'Returns active projects.',
+        tags: ['projects'],
+      }),
+      buildRegistryEntry({
+        id: 'get-_api_v1_projects_id_phases_phaseid_tasks',
+        method: 'get',
+        path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+        displayName: 'List Project Phase Tasks',
+        summary: 'List project phase tasks',
+        description: 'Returns all tasks for a project phase.',
+        tags: ['projects'],
+        playbooks: ['Use after resolving the phase UUID.'],
+      }),
+      buildRegistryEntry({
+        id: 'post-_api_v1_projects',
+        method: 'post',
+        path: '/api/v1/projects',
+        displayName: 'POST v1',
+        summary: 'POST v1',
+        description: PLACEHOLDER_REGISTRY_DESCRIPTION,
+        tags: ['projects'],
+        requestBodySchema: {
+          type: 'object',
+          properties: {},
+        },
+      }),
+    ]);
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const results = (ChatCompletionsService as any).searchRegistry('create project', 5);
+
+    expect(results[0]).toMatchObject({
+      id: 'post-_api_v1_projects',
+      method: 'POST',
+      path: '/api/v1/projects',
+    });
+  });
+
+  it('prefers nested phase creation endpoints for project phase creation queries', async () => {
+    getRegistryMock.mockReturnValue([
+      buildRegistryEntry({
+        id: 'get-_api_v1_projects_id_phases_phaseid_tasks',
+        method: 'get',
+        path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+        displayName: 'List Project Phase Tasks',
+        summary: 'List project phase tasks',
+        description: 'Returns all tasks for a project phase.',
+        tags: ['projects'],
+        playbooks: ['Use after resolving the phase UUID.'],
+      }),
+      buildRegistryEntry({
+        id: 'post-_api_v1_projects',
+        method: 'post',
+        path: '/api/v1/projects',
+        displayName: 'POST v1',
+        summary: 'POST v1',
+        description: PLACEHOLDER_REGISTRY_DESCRIPTION,
+        tags: ['projects'],
+      }),
+      buildRegistryEntry({
+        id: 'post-_api_v1_projects_id_phases',
+        method: 'post',
+        path: '/api/v1/projects/{id}/phases',
+        displayName: 'POST v1',
+        summary: 'POST v1',
+        description: PLACEHOLDER_REGISTRY_DESCRIPTION,
+        tags: ['projects'],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+          },
+        ],
+        requestBodySchema: {
+          type: 'object',
+          properties: {},
+        },
+      }),
+    ]);
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const results = (ChatCompletionsService as any).searchRegistry('create project phase', 5);
+
+    expect(results[0]).toMatchObject({
+      id: 'post-_api_v1_projects_id_phases',
+      method: 'POST',
+      path: '/api/v1/projects/{id}/phases',
+    });
+  });
+
+  it('keeps list queries pointed at list endpoints', async () => {
+    getRegistryMock.mockReturnValue([
+      buildRegistryEntry({
+        id: 'post-_api_v1_projects_id_phases',
+        method: 'post',
+        path: '/api/v1/projects/{id}/phases',
+        displayName: 'POST v1',
+        summary: 'POST v1',
+        description: PLACEHOLDER_REGISTRY_DESCRIPTION,
+        tags: ['projects'],
+      }),
+      buildRegistryEntry({
+        id: 'get-_api_v1_projects_id_phases_phaseid_tasks',
+        method: 'get',
+        path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+        displayName: 'List Project Phase Tasks',
+        summary: 'List project phase tasks',
+        description: 'Returns all tasks for a project phase.',
+        tags: ['projects'],
+      }),
+    ]);
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const results = (ChatCompletionsService as any).searchRegistry('list project phase tasks', 5);
+
+    expect(results[0]).toMatchObject({
+      id: 'get-_api_v1_projects_id_phases_phaseid_tasks',
+      method: 'GET',
+      path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+    });
+  });
+
+  it('prefers create task endpoints over task listing endpoints for task creation queries', async () => {
+    getRegistryMock.mockReturnValue([
+      buildRegistryEntry({
+        id: 'get-_api_v1_projects_id_tasks',
+        method: 'get',
+        path: '/api/v1/projects/{id}/tasks',
+        displayName: 'List Project Tasks',
+        summary: 'List project tasks',
+        description: 'Returns all tasks for a project.',
+        tags: ['projects'],
+      }),
+      buildRegistryEntry({
+        id: 'get-_api_v1_projects_id_phases_phaseid_tasks',
+        method: 'get',
+        path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+        displayName: 'List Project Phase Tasks',
+        summary: 'List project phase tasks',
+        description: 'Returns all tasks for a project phase.',
+        tags: ['projects'],
+      }),
+      buildRegistryEntry({
+        id: 'post-_api_v1_projects_id_phases_phaseid_tasks',
+        method: 'post',
+        path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+        displayName: 'Create Project Phase Task',
+        summary: 'Create project phase task',
+        description: 'Creates a new task in the specified project phase.',
+        tags: ['projects'],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+          },
+          {
+            name: 'phaseId',
+            in: 'path',
+            required: true,
+          },
+        ],
+        requestBodySchema: {
+          type: 'object',
+          properties: {
+            task_name: { type: 'string' },
+            project_status_mapping_id: { type: 'string' },
+          },
+          required: ['task_name', 'project_status_mapping_id'],
+        },
+      }),
+    ]);
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const results = (ChatCompletionsService as any).searchRegistry('create a project task in discovery', 5);
+
+    expect(results[0]).toMatchObject({
+      id: 'post-_api_v1_projects_id_phases_phaseid_tasks',
+      method: 'POST',
+      path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
+    });
   });
 
   it('preserves reasoning_content values during conversation normalization', async () => {
@@ -592,7 +799,7 @@ describe('ChatCompletionsService (unit)', () => {
     expect(toolMessage).toEqual(
       expect.objectContaining({
         content: expect.stringContaining(
-          'Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only.',
+          'Tool arguments appeared truncated during streaming and were not a complete JSON object. Retry the same function call with the full JSON object only.',
         ),
       }),
     );

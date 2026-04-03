@@ -480,6 +480,7 @@ export class ProjectService extends BaseService<IProject> {
   
         const phaseData = {
           ...data,
+          status: data.status ?? 'planning',
           project_id: projectId,
           order_number: nextOrderNumber,
           wbs_code: newWbsCode,
@@ -985,21 +986,13 @@ export class ProjectService extends BaseService<IProject> {
       const { knex } = await this.getKnex();
       
       // First try to find a status marked as default
-      let status = await knex('statuses')
-        .where({ 
-          tenant: context.tenant,
-          item_type: 'project',
-          is_default: true
-        })
+      let status = await this.buildProjectStatusQuery(knex, context)
+        .where({ is_default: true })
         .first();
       
       // If no default status, get the first one by order
       if (!status) {
-        status = await knex('statuses')
-          .where({ 
-            tenant: context.tenant,
-            item_type: 'project'
-          })
+        status = await this.buildProjectStatusQuery(knex, context)
           .orderBy('order_number')
           .first();
       }
@@ -1010,6 +1003,14 @@ export class ProjectService extends BaseService<IProject> {
   
       return status;
     }
+
+  private buildProjectStatusQuery(knex: Knex, context: ServiceContext) {
+    return knex('statuses')
+      .where('tenant', context.tenant)
+      .andWhere((query) => {
+        query.where('status_type', 'project').orWhere('item_type', 'project');
+      });
+  }
 
   // Helper method to check if a string is a valid UUID
   private isUUID(str: string): boolean {
@@ -1033,12 +1034,8 @@ export class ProjectService extends BaseService<IProject> {
 
     const dbStatusName = statusNameMap[statusName.toLowerCase()] || statusName;
     
-    const status = await knex('statuses')
-      .where({
-        tenant: context.tenant,
-        item_type: 'project',
-        name: dbStatusName
-      })
+    const status = await this.buildProjectStatusQuery(knex, context)
+      .where({ name: dbStatusName })
       .first();
 
     if (!status) {
