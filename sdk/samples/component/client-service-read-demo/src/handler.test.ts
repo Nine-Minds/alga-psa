@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createMockHostBindings } from '../../../../extension-runtime/src/index.ts'
+import { createMockHostBindings } from '@alga-psa/extension-runtime'
 
 import { handler } from './handler.ts'
 

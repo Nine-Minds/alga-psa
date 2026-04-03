@@ -1,7 +1,7 @@
 {
   "name": "com.alga.sample.client-service-read-demo",
   "publisher": "Alga",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "runtime": "wasm-js@1",
   "capabilities": [
     "cap:client.read",
