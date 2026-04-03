@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import type { ColumnDefinition } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -19,10 +20,12 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   generateTicketCSVTemplate,
   getTicketImportReferenceData,
-  validateTicketImportData,
-  processTicketRows,
   importTickets,
 } from '../actions/ticketImportActions';
+import {
+  validateTicketImportData,
+  processTicketRows,
+} from '../lib/ticketImportUtils';
 import {
   MappableTicketField,
   TICKET_IMPORT_FIELDS,
@@ -48,8 +51,6 @@ import {
   ContactResolutionAction,
   ITeamResolution,
   TeamResolutionAction,
-  IBoardResolution,
-  BoardResolutionAction,
   IDateFormatGroup,
   IDateFormatResolution,
   DateFormatInterpretation,
@@ -95,9 +96,12 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Board selection
-  const [defaultBoardId, setDefaultBoardId] = useState<string>('');
-  const [hasBoardColumn, setHasBoardColumn] = useState(false);
-
+  const [defaultBoardId, setDefaultBoardId] = useState<string>(() => {
+    const defaultBoard = initialBoards.find(b => b.is_default);
+    if (defaultBoard?.board_id) return defaultBoard.board_id;
+    if (initialBoards.length > 0 && initialBoards[0].board_id) return initialBoards[0].board_id;
+    return '';
+  });
   // Reference data
   const [referenceData, setReferenceData] = useState<ITicketImportReferenceData | null>(null);
 
@@ -133,10 +137,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
   const [unmatchedTeamInfo, setUnmatchedTeamInfo] = useState<IUnmatchedEntityInfo[]>([]);
   const [teamResolutions, setTeamResolutions] = useState<ITeamResolution[]>([]);
 
-  const [unmatchedBoards, setUnmatchedBoards] = useState<string[]>([]);
-  const [unmatchedBoardInfo, setUnmatchedBoardInfo] = useState<IUnmatchedEntityInfo[]>([]);
-  const [boardResolutions, setBoardResolutions] = useState<IBoardResolution[]>([]);
-
   const [unparsableDateGroups, setUnparsableDateGroups] = useState<IDateFormatGroup[]>([]);
   const [dateFormatResolutions, setDateFormatResolutions] = useState<IDateFormatResolution[]>([]);
 
@@ -153,65 +153,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
 
   // Row truncation
   const [rowsTruncated, setRowsTruncated] = useState<{ original: number; kept: number } | null>(null);
-
-  // Reset on open
-  useEffect(() => {
-    if (isOpen) {
-      setStep('upload');
-      setFile(null);
-      setPreviewData(null);
-      setFullCSVData(null);
-      setColumnMappings([]);
-      setValidationResults([]);
-      setImportResult(null);
-      setErrors([]);
-      setIsProcessing(false);
-      setDefaultBoardId('');
-      setHasBoardColumn(false);
-      setReferenceData(null);
-      setMappedRows([]);
-      setUnmatchedClients([]);
-      setUnmatchedClientInfo([]);
-      setClientResolutions([]);
-      setUnmatchedAgents([]);
-      setUnmatchedAgentInfo([]);
-      setAgentResolutions([]);
-      setUnmatchedStatuses([]);
-      setUnmatchedStatusInfo([]);
-      setStatusResolutions([]);
-      setUnmatchedPriorities([]);
-      setUnmatchedPriorityInfo([]);
-      setPriorityResolutions([]);
-      setUnmatchedCategories([]);
-      setUnmatchedCategoryInfo([]);
-      setCategoryResolutions([]);
-      setUnmatchedContacts([]);
-      setUnmatchedContactInfo([]);
-      setContactResolutions([]);
-      setUnmatchedTeams([]);
-      setUnmatchedTeamInfo([]);
-      setTeamResolutions([]);
-      setUnmatchedBoards([]);
-      setUnmatchedBoardInfo([]);
-      setBoardResolutions([]);
-      setUnparsableDateGroups([]);
-      setDateFormatResolutions([]);
-      setExpandedSections(new Set());
-      setImportOptions({ skipInvalidRows: false });
-      setImportConfirmed(false);
-      setCurrentPage(1);
-      setPageSize(10);
-      setRowsTruncated(null);
-
-      // Pre-select default board
-      const defaultBoard = initialBoards.find(b => b.is_default);
-      if (defaultBoard?.board_id) {
-        setDefaultBoardId(defaultBoard.board_id);
-      } else if (initialBoards.length > 0 && initialBoards[0].board_id) {
-        setDefaultBoardId(initialBoards[0].board_id);
-      }
-    }
-  }, [isOpen, initialBoards]);
 
   // -------------------------------------------------------------------------
   // Step 1: Upload
@@ -255,9 +196,9 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         const normalized = header.toLowerCase().replace(/[_\s\-.*]/g, '');
         let ticketField: MappableTicketField | null = null;
 
-        // Look up in alias table
+        // Look up in alias table (skip 'board' — all tickets go to the selected board)
         const aliasMatch = TICKET_FIELD_ALIASES[normalized];
-        if (aliasMatch && !usedFields.has(aliasMatch)) {
+        if (aliasMatch && aliasMatch !== 'board' && aliasMatch !== 'subcategory' && !usedFields.has(aliasMatch)) {
           ticketField = aliasMatch;
           usedFields.add(aliasMatch);
         }
@@ -265,6 +206,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         // Fallback: try matching against field keys directly
         if (!ticketField) {
           for (const [fieldKey] of Object.entries(TICKET_IMPORT_FIELDS)) {
+            if (fieldKey === 'board' || fieldKey === 'subcategory') continue;
             const fieldNorm = fieldKey.toLowerCase().replace(/[_\s\-]/g, '');
             if (!usedFields.has(fieldKey as MappableTicketField) && normalized === fieldNorm) {
               ticketField = fieldKey as MappableTicketField;
@@ -281,9 +223,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       });
 
       setColumnMappings(autoMappings);
-
-      // Check if a board column was auto-mapped
-      setHasBoardColumn(autoMappings.some(m => m.ticketField === 'board'));
 
       setStep('board_selection');
     } catch (error) {
@@ -343,7 +282,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       const rows: ITicketImportRow[] = fullCSVData.map((row) => {
         const mapped: ITicketImportRow = {};
         columnMappings.forEach((mapping, index) => {
-          if (mapping.ticketField) {
+          if (mapping.ticketField && mapping.ticketField !== 'board' && mapping.ticketField !== 'subcategory') {
             (mapped as Record<string, string>)[mapping.ticketField] = row[index] || '';
           }
         });
@@ -416,20 +355,12 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         ...validation.unmatchedCategories.map(name => ({
           originalCategoryName: name, boardId: defaultBoardId, action: 'create' as CategoryResolutionAction,
         })),
-        ...validation.unmatchedSubcategories.map(name => ({
-          originalCategoryName: name, boardId: defaultBoardId, action: 'create' as CategoryResolutionAction,
-        })),
       ]);
       setContactResolutions(validation.unmatchedContacts.map(name => ({
         originalContactName: name, action: 'skip' as ContactResolutionAction,
       })));
       setTeamResolutions(validation.unmatchedTeams.map(name => ({
         originalTeamName: name, action: 'skip' as TeamResolutionAction,
-      })));
-      setUnmatchedBoards(validation.unmatchedBoards);
-      setUnmatchedBoardInfo(buildEntityInfo(validation.unmatchedBoards, r => r.board, validation.validationResults));
-      setBoardResolutions(validation.unmatchedBoards.map(name => ({
-        originalBoardName: name, action: 'use_default' as BoardResolutionAction,
       })));
       setUnparsableDateGroups(validation.unparsableDateGroups);
       setDateFormatResolutions(validation.unparsableDateGroups.map(g => ({
@@ -442,11 +373,10 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       if (validation.unmatchedClients.length > 0) sections.add('clients');
       if (validation.unmatchedPriorities.length > 0) sections.add('priorities');
       if (validation.unmatchedStatuses.length > 0) sections.add('statuses');
-      if (validation.unmatchedCategories.length > 0 || validation.unmatchedSubcategories.length > 0) sections.add('categories');
+      if (validation.unmatchedCategories.length > 0) sections.add('categories');
       if (validation.unmatchedAgents.length > 0) sections.add('agents');
       if (validation.unmatchedTeams.length > 0) sections.add('teams');
       if (validation.unmatchedContacts.length > 0) sections.add('contacts');
-      if (validation.unmatchedBoards.length > 0) sections.add('boards');
       if (validation.unparsableDateGroups.length > 0) sections.add('dates');
       setExpandedSections(sections);
 
@@ -490,10 +420,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     setTeamResolutions(prev => prev.map(r => r.originalTeamName === teamName ? { ...r, action, mappedTeamId } : r));
   }, []);
 
-  const handleBoardResolutionChange = useCallback((boardName: string, action: BoardResolutionAction, mappedBoardId?: string) => {
-    setBoardResolutions(prev => prev.map(r => r.originalBoardName === boardName ? { ...r, action, mappedBoardId } : r));
-  }, []);
-
   const handleDateFormatChange = useCallback((patternKey: string, selectedFormat: DateFormatInterpretation) => {
     setDateFormatResolutions(prev => prev.map(r => r.patternKey === patternKey ? { ...r, selectedFormat } : r));
   }, []);
@@ -514,16 +440,8 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     return unmatchedClients.length > 0 || unmatchedPriorities.length > 0 ||
       unmatchedStatuses.length > 0 || unmatchedCategories.length > 0 ||
       unmatchedAgents.length > 0 || unmatchedTeams.length > 0 || unmatchedContacts.length > 0 ||
-      unmatchedBoards.length > 0 || unparsableDateGroups.length > 0;
-  }, [unmatchedClients, unmatchedPriorities, unmatchedStatuses, unmatchedCategories, unmatchedAgents, unmatchedTeams, unmatchedContacts, unmatchedBoards, unparsableDateGroups]);
-
-  const handleProceedFromPreview = useCallback(() => {
-    if (hasAnyUnmatched) {
-      setStep('resolve_data');
-    } else {
-      handleImport();
-    }
-  }, [hasAnyUnmatched]);
+      unparsableDateGroups.length > 0;
+  }, [unmatchedClients, unmatchedPriorities, unmatchedStatuses, unmatchedCategories, unmatchedAgents, unmatchedTeams, unmatchedContacts, unparsableDateGroups]);
 
   // -------------------------------------------------------------------------
   // Import
@@ -537,7 +455,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     setErrors([]);
 
     try {
-      const processed = await processTicketRows(
+      const processed = processTicketRows(
         mappedRows,
         referenceData,
         defaultBoardId,
@@ -548,7 +466,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         categoryResolutions,
         contactResolutions,
         teamResolutions,
-        boardResolutions,
         dateFormatResolutions,
         importOptions.skipInvalidRows
       );
@@ -565,7 +482,15 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, referenceData, mappedRows, defaultBoardId, clientResolutions, agentResolutions, statusResolutions, priorityResolutions, categoryResolutions, contactResolutions, teamResolutions, boardResolutions, dateFormatResolutions, importOptions.skipInvalidRows]);
+  }, [isProcessing, referenceData, mappedRows, defaultBoardId, clientResolutions, agentResolutions, statusResolutions, priorityResolutions, categoryResolutions, contactResolutions, teamResolutions, dateFormatResolutions, importOptions.skipInvalidRows]);
+
+  const handleProceedFromPreview = useCallback(() => {
+    if (hasAnyUnmatched) {
+      setStep('resolve_data');
+    } else {
+      handleImport();
+    }
+  }, [hasAnyUnmatched, handleImport]);
 
   // -------------------------------------------------------------------------
   // Close
@@ -619,14 +544,13 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       priorityResolutions.some(r => r.action === 'map_to_existing' && !r.mappedPriorityId) ||
       categoryResolutions.some(r => r.action === 'map_to_existing' && !r.mappedCategoryId) ||
       contactResolutions.some(r => r.action === 'map_to_existing' && !r.mappedContactId) ||
-      teamResolutions.some(r => r.action === 'map_to_existing' && !r.mappedTeamId) ||
-      boardResolutions.some(r => r.action === 'map_to_existing' && !r.mappedBoardId);
-  }, [clientResolutions, agentResolutions, statusResolutions, priorityResolutions, categoryResolutions, contactResolutions, teamResolutions, boardResolutions]);
+      teamResolutions.some(r => r.action === 'map_to_existing' && !r.mappedTeamId);
+  }, [clientResolutions, agentResolutions, statusResolutions, priorityResolutions, categoryResolutions, contactResolutions, teamResolutions]);
 
   // Total unmatched count for the resolve step header
   const totalUnmatchedCount = unmatchedClients.length + unmatchedPriorities.length +
     unmatchedStatuses.length + unmatchedCategories.length + unmatchedAgents.length +
-    unmatchedTeams.length + unmatchedContacts.length + unmatchedBoards.length + unparsableDateGroups.length;
+    unmatchedTeams.length + unmatchedContacts.length + unparsableDateGroups.length;
 
   // Board categories for category resolution
   const boardCategories = useMemo(() => {
@@ -686,7 +610,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
             </p>
             <p className="mt-1 text-xs text-gray-500 dark:text-[rgb(var(--color-text-500))]">
               <strong>Required:</strong> title, client<br />
-              <strong>Optional:</strong> description, status, priority, board, category, subcategory, contact, assigned_to, assigned_team, due_date, entered_at, closed_at, is_closed, tags<br />
+              <strong>Optional:</strong> description, status, priority, category, contact, assigned_to, assigned_team, due_date, entered_at, closed_at, is_closed, tags<br />
               <strong>Tip:</strong> Column names from other PSAs (ConnectWise, Autotask, HaloPSA, Zendesk, Freshdesk) are auto-detected
             </p>
             <div className="mt-4 space-y-3">
@@ -728,11 +652,10 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         {step === 'board_selection' && (
           <div>
             <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-[rgb(var(--color-text-100))]">
-              Select Default Board
+              Select Board
             </h3>
             <p className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))] mb-4">
-              All imported tickets will be placed on this board{hasBoardColumn ? ' unless a board is specified in the CSV' : ''}.
-              Statuses and categories are board-specific, so this determines which are available.
+              All tickets will be imported to this board. Statuses and categories are board-specific, so this determines which are available.
             </p>
 
             <div className="mb-6">
@@ -743,15 +666,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 placeholder="Select a board..."
               />
             </div>
-
-            {hasBoardColumn && (
-              <Alert variant="info" className="mb-4">
-                <AlertDescription>
-                  A "Board" column was detected in your CSV. Tickets with a recognized board name will be placed on that board;
-                  others will use the default board selected above.
-                </AlertDescription>
-              </Alert>
-            )}
 
             <DialogFooter>
               <Button
@@ -789,7 +703,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 <span className="w-2/3">Select CSV Column</span>
               </div>
               <div className="border-t dark:border-[rgb(var(--color-border-200))] pt-4 space-y-3">
-                {Object.entries(TICKET_IMPORT_FIELDS).map(([fieldKey, { label }]) => {
+                {Object.entries(TICKET_IMPORT_FIELDS).filter(([fieldKey]) => fieldKey !== 'board' && fieldKey !== 'subcategory').map(([fieldKey, { label, required }]) => {
                   const currentMapping = columnMappings.find(m => m.ticketField === fieldKey);
                   const csvHeader = currentMapping?.csvHeader || 'unassigned';
 
@@ -798,9 +712,14 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                     .filter(m => m.ticketField && m.ticketField !== fieldKey)
                     .map(m => m.csvHeader);
 
+                  const isUnmapped = csvHeader === 'unassigned';
                   return (
-                    <div key={fieldKey} className="flex items-center gap-4">
-                      <span className="w-1/3 text-sm font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">{label}</span>
+                    <div key={fieldKey} className={`flex items-center gap-4 px-3 py-1.5 rounded-md ${isUnmapped && required ? 'bg-destructive/5 ring-1 ring-destructive/20' : ''}`}>
+                      <span className={`w-1/3 text-sm font-medium flex items-center gap-2 ${isUnmapped && required ? 'text-destructive' : 'text-gray-900 dark:text-[rgb(var(--color-text-100))]'}`}>
+                        {isUnmapped && required && <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
+                        {!isUnmapped && <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0" />}
+                        {label}
+                      </span>
                       <span className="text-gray-400 dark:text-[rgb(var(--color-text-500))]">&#8592;</span>
                       <CustomSelect
                         options={[
@@ -990,7 +909,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                     unmatchedAgents.length > 0 && `${unmatchedAgents.length} agent${unmatchedAgents.length > 1 ? 's' : ''}`,
                     unmatchedTeams.length > 0 && `${unmatchedTeams.length} team${unmatchedTeams.length > 1 ? 's' : ''}`,
                     unmatchedContacts.length > 0 && `${unmatchedContacts.length} contact${unmatchedContacts.length > 1 ? 's' : ''}`,
-                    unmatchedBoards.length > 0 && `${unmatchedBoards.length} board${unmatchedBoards.length > 1 ? 's' : ''}`,
                     unparsableDateGroups.length > 0 && `${unparsableDateGroups.length} date format${unparsableDateGroups.length > 1 ? 's' : ''}`,
                   ].filter(Boolean).join(', ')}).
                   You&apos;ll resolve these in the next step.
@@ -1085,11 +1003,18 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
                             <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
-                            <div className="flex flex-wrap gap-3 items-center">
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`client-${info.name}`} checked={res.action === 'create'} onChange={() => handleClientResolutionChange(info.name, 'create')} className="text-primary-500" /> Create new</label>
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`client-${info.name}`} checked={res.action === 'map_to_existing'} onChange={() => handleClientResolutionChange(info.name, 'map_to_existing')} className="text-primary-500" /> Map to existing</label>
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-500"><input type="radio" name={`client-${info.name}`} checked={res.action === 'skip'} onChange={() => handleClientResolutionChange(info.name, 'skip')} className="text-primary-500" /> Skip ({info.ticketCount} tickets dropped)</label>
-                            </div>
+                            <RadioGroup
+                              name={`client-${info.name}`}
+                              value={res.action}
+                              onChange={(value) => handleClientResolutionChange(info.name, value as ClientResolutionAction)}
+                              orientation="horizontal"
+                              size="sm"
+                              options={[
+                                { value: 'create', label: 'Create new' },
+                                { value: 'map_to_existing', label: 'Map to existing' },
+                                { value: 'skip', label: `Skip (${info.ticketCount} ticket${info.ticketCount === 1 ? '' : 's'} dropped)` },
+                              ]}
+                            />
                             {res.action === 'map_to_existing' && (
                               <div className="ml-1">
                                 <ClientPicker id={`client-res-${info.name}`} clients={initialClients} onSelect={(id) => handleClientResolutionChange(info.name, 'map_to_existing', id || undefined)} selectedClientId={res.mappedClientId || null} filterState="active" onFilterStateChange={() => {}} clientTypeFilter="all" onClientTypeFilterChange={() => {}} placeholder="Select client..." fitContent />
@@ -1117,11 +1042,18 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
                             <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
-                            <div className="flex flex-wrap gap-3 items-center">
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`prio-${info.name}`} checked={res.action === 'create'} onChange={() => handlePriorityResolutionChange(info.name, 'create')} className="text-primary-500" /> Create new</label>
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`prio-${info.name}`} checked={res.action === 'map_to_existing'} onChange={() => handlePriorityResolutionChange(info.name, 'map_to_existing')} className="text-primary-500" /> Map to existing</label>
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`prio-${info.name}`} checked={res.action === 'use_default'} onChange={() => handlePriorityResolutionChange(info.name, 'use_default')} className="text-primary-500" /> Use default</label>
-                            </div>
+                            <RadioGroup
+                              name={`prio-${info.name}`}
+                              value={res.action}
+                              onChange={(value) => handlePriorityResolutionChange(info.name, value as PriorityResolutionAction)}
+                              orientation="horizontal"
+                              size="sm"
+                              options={[
+                                { value: 'create', label: 'Create new' },
+                                { value: 'map_to_existing', label: 'Map to existing' },
+                                { value: 'use_default', label: 'Use default' },
+                              ]}
+                            />
                             {res.action === 'map_to_existing' && referenceData && (
                               <div className="ml-1"><CustomSelect options={referenceData.priorities.map(p => ({ value: p.priority_id, label: p.priority_name }))} value={res.mappedPriorityId || ''} onValueChange={(v) => handlePriorityResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select priority..." /></div>
                             )}
@@ -1147,11 +1079,18 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
                             <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
-                            <div className="flex flex-wrap gap-3 items-center">
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`status-${info.name}`} checked={res.action === 'create'} onChange={() => handleStatusResolutionChange(info.name, 'create')} className="text-primary-500" /> Create new</label>
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`status-${info.name}`} checked={res.action === 'map_to_existing'} onChange={() => handleStatusResolutionChange(info.name, 'map_to_existing')} className="text-primary-500" /> Map to existing</label>
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`status-${info.name}`} checked={res.action === 'use_default'} onChange={() => handleStatusResolutionChange(info.name, 'use_default')} className="text-primary-500" /> Use board default</label>
-                            </div>
+                            <RadioGroup
+                              name={`status-${info.name}`}
+                              value={res.action}
+                              onChange={(value) => handleStatusResolutionChange(info.name, value as TicketStatusResolutionAction)}
+                              orientation="horizontal"
+                              size="sm"
+                              options={[
+                                { value: 'create', label: 'Create new' },
+                                { value: 'map_to_existing', label: 'Map to existing' },
+                                { value: 'use_default', label: 'Use board default' },
+                              ]}
+                            />
                             {res.action === 'map_to_existing' && (
                               <div className="ml-1"><CustomSelect options={boardStatuses.map(s => ({ value: s.status_id, label: s.name + (s.is_closed ? ' (closed)' : '') }))} value={res.mappedStatusId || ''} onValueChange={(v) => handleStatusResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select status..." /></div>
                             )}
@@ -1177,11 +1116,18 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
                             <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
-                            <div className="flex flex-wrap gap-3 items-center">
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`cat-${info.name}`} checked={res.action === 'create'} onChange={() => handleCategoryResolutionChange(info.name, 'create')} className="text-primary-500" /> Create new</label>
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`cat-${info.name}`} checked={res.action === 'map_to_existing'} onChange={() => handleCategoryResolutionChange(info.name, 'map_to_existing')} className="text-primary-500" /> Map to existing</label>
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-500"><input type="radio" name={`cat-${info.name}`} checked={res.action === 'skip'} onChange={() => handleCategoryResolutionChange(info.name, 'skip')} className="text-primary-500" /> Skip</label>
-                            </div>
+                            <RadioGroup
+                              name={`cat-${info.name}`}
+                              value={res.action}
+                              onChange={(value) => handleCategoryResolutionChange(info.name, value as CategoryResolutionAction)}
+                              orientation="horizontal"
+                              size="sm"
+                              options={[
+                                { value: 'create', label: 'Create new' },
+                                { value: 'map_to_existing', label: 'Map to existing' },
+                                { value: 'skip', label: 'Skip (leave uncategorized)' },
+                              ]}
+                            />
                             {res.action === 'map_to_existing' && (
                               <div className="ml-1"><CustomSelect options={boardCategories.filter(c => !c.parent_category).map(c => ({ value: c.category_id, label: c.category_name }))} value={res.mappedCategoryId || ''} onValueChange={(v) => handleCategoryResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select category..." /></div>
                             )}
@@ -1207,10 +1153,17 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
                             <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
-                            <div className="flex flex-wrap gap-3 items-center">
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-500"><input type="radio" name={`agent-${info.name}`} checked={res.action === 'skip'} onChange={() => handleAgentResolutionChange(info.name, 'skip')} className="text-primary-500" /> Skip (unassigned)</label>
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`agent-${info.name}`} checked={res.action === 'map_to_existing'} onChange={() => handleAgentResolutionChange(info.name, 'map_to_existing')} className="text-primary-500" /> Map to existing</label>
-                            </div>
+                            <RadioGroup
+                              name={`agent-${info.name}`}
+                              value={res.action}
+                              onChange={(value) => handleAgentResolutionChange(info.name, value as TicketAgentResolutionAction)}
+                              orientation="horizontal"
+                              size="sm"
+                              options={[
+                                { value: 'skip', label: 'Skip (leave unassigned)' },
+                                { value: 'map_to_existing', label: 'Map to existing' },
+                              ]}
+                            />
                             {res.action === 'map_to_existing' && (
                               <div className="ml-1">
                                 <UserPicker value={res.mappedUserId || ''} onValueChange={(v) => handleAgentResolutionChange(info.name, 'map_to_existing', v)} users={initialUsers || (referenceData?.users || []).map(u => ({ ...u, is_inactive: u.is_inactive ?? false })) as IUser[]} size="sm" getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction} />
@@ -1238,10 +1191,17 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
                             <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
-                            <div className="flex flex-wrap gap-3 items-center">
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-500"><input type="radio" name={`team-${info.name}`} checked={res.action === 'skip'} onChange={() => handleTeamResolutionChange(info.name, 'skip')} className="text-primary-500" /> Skip</label>
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`team-${info.name}`} checked={res.action === 'map_to_existing'} onChange={() => handleTeamResolutionChange(info.name, 'map_to_existing')} className="text-primary-500" /> Map to existing</label>
-                            </div>
+                            <RadioGroup
+                              name={`team-${info.name}`}
+                              value={res.action}
+                              onChange={(value) => handleTeamResolutionChange(info.name, value as TeamResolutionAction)}
+                              orientation="horizontal"
+                              size="sm"
+                              options={[
+                                { value: 'skip', label: 'Skip (no team assigned)' },
+                                { value: 'map_to_existing', label: 'Map to existing' },
+                              ]}
+                            />
                             {res.action === 'map_to_existing' && referenceData && (
                               <div className="ml-1"><CustomSelect options={referenceData.teams.map(t => ({ value: t.team_id, label: t.team_name }))} value={res.mappedTeamId || ''} onValueChange={(v) => handleTeamResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select team..." /></div>
                             )}
@@ -1267,41 +1227,19 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
                             <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
-                            <div className="flex flex-wrap gap-3 items-center">
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-500"><input type="radio" name={`contact-${info.name}`} checked={res.action === 'skip'} onChange={() => handleContactResolutionChange(info.name, 'skip')} className="text-primary-500" /> Skip (leave blank)</label>
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`contact-${info.name}`} checked={res.action === 'map_to_existing'} onChange={() => handleContactResolutionChange(info.name, 'map_to_existing')} className="text-primary-500" /> Map to existing</label>
-                            </div>
+                            <RadioGroup
+                              name={`contact-${info.name}`}
+                              value={res.action}
+                              onChange={(value) => handleContactResolutionChange(info.name, value as ContactResolutionAction)}
+                              orientation="horizontal"
+                              size="sm"
+                              options={[
+                                { value: 'skip', label: 'Skip (leave blank)' },
+                                { value: 'map_to_existing', label: 'Map to existing' },
+                              ]}
+                            />
                             {res.action === 'map_to_existing' && referenceData && (
                               <div className="ml-1"><CustomSelect options={referenceData.contacts.map(c => ({ value: c.contact_name_id, label: c.full_name + (c.email ? ` (${c.email})` : '') }))} value={res.mappedContactId || ''} onValueChange={(v) => handleContactResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select contact..." /></div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* --- Boards Section --- */}
-              {unmatchedBoards.length > 0 && (
-                <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
-                  <button type="button" onClick={() => toggleSection('boards')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
-                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Boards ({unmatchedBoards.length} unmatched)</span>
-                  </button>
-                  {expandedSections.has('boards') && (
-                    <div className="px-4 pb-4 space-y-3 border-t dark:border-[rgb(var(--color-border-200))]">
-                      {unmatchedBoardInfo.map(info => {
-                        const res = boardResolutions.find(r => r.originalBoardName.toLowerCase() === info.name.toLowerCase());
-                        if (!res) return null;
-                        return (
-                          <div key={info.name} className="pt-3 space-y-2">
-                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
-                            <div className="flex flex-wrap gap-3 items-center">
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`board-${info.name}`} checked={res.action === 'use_default'} onChange={() => handleBoardResolutionChange(info.name, 'use_default')} className="text-primary-500" /> Use default board</label>
-                              <label className="flex items-center gap-1.5 cursor-pointer text-sm"><input type="radio" name={`board-${info.name}`} checked={res.action === 'map_to_existing'} onChange={() => handleBoardResolutionChange(info.name, 'map_to_existing')} className="text-primary-500" /> Map to existing</label>
-                            </div>
-                            {res.action === 'map_to_existing' && (
-                              <div className="ml-1"><CustomSelect options={boardOptions} value={res.mappedBoardId || ''} onValueChange={(v) => handleBoardResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select board..." /></div>
                             )}
                           </div>
                         );
