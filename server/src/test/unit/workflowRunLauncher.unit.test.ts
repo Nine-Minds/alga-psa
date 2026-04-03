@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
+  initializeWorkflowRuntimeV2Mock,
   startRunMock,
   executeRunMock,
   getByTriggerFireKeyMock,
@@ -9,6 +10,7 @@ const {
   listWorkflowVersionsMock,
   getWorkflowVersionMock
 } = vi.hoisted(() => ({
+  initializeWorkflowRuntimeV2Mock: vi.fn(),
   startRunMock: vi.fn(),
   executeRunMock: vi.fn(),
   getByTriggerFireKeyMock: vi.fn(),
@@ -46,6 +48,7 @@ vi.mock('@alga-psa/workflows/runtime', async (importOriginal) => {
 
   return {
     ...actual,
+    initializeWorkflowRuntimeV2: () => initializeWorkflowRuntimeV2Mock(),
     WorkflowRuntimeV2: WorkflowRuntimeV2Mock,
     getSchemaRegistry: () => ({
       has: () => false,
@@ -75,6 +78,7 @@ describe('Workflow run launcher', () => {
   });
 
   beforeEach(() => {
+    initializeWorkflowRuntimeV2Mock.mockReset();
     startRunMock.mockReset();
     executeRunMock.mockReset();
     getByTriggerFireKeyMock.mockReset();
@@ -114,6 +118,29 @@ describe('Workflow run launcher', () => {
       workflow_version: data.workflow_version,
       ...data
     }));
+    startRunMock.mockResolvedValue('run-started');
+  });
+
+  it('initializes the workflow runtime before launching a run', async () => {
+    const result = await launchPublishedWorkflowRun(knexMock, {
+      workflowId: 'workflow-1',
+      workflowVersion: 5,
+      tenantId: 'tenant-1',
+      payload: {},
+      execute: true
+    });
+
+    expect(result).toEqual({
+      runId: 'run-started',
+      workflowVersion: 5
+    });
+    expect(initializeWorkflowRuntimeV2Mock).toHaveBeenCalledTimes(1);
+    expect(startRunMock).toHaveBeenCalledTimes(1);
+    expect(executeRunMock).toHaveBeenCalledWith(
+      knexMock,
+      'run-started',
+      expect.stringMatching(/^launch-workflow-1-/)
+    );
   });
 
   it('T044: duplicate recurring fire keys return the existing run without executing twice', async () => {
