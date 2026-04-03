@@ -6,7 +6,11 @@ import {
   WorkflowRunModelV2,
   type WorkflowDefinitionVersionRecord,
 } from '@alga-psa/workflows/persistence';
-import { WorkflowRuntimeV2, getSchemaRegistry } from '@alga-psa/workflows/runtime';
+import {
+  WorkflowRuntimeV2,
+  getSchemaRegistry,
+  initializeWorkflowRuntimeV2,
+} from '@alga-psa/workflows/runtime';
 
 const WORKFLOW_RUN_TRIGGER_FIRE_KEY_UNIQUE = 'workflow_runs_trigger_fire_key_unique';
 
@@ -109,6 +113,8 @@ export async function launchPublishedWorkflowRun(
   knex: Knex,
   request: WorkflowRunLaunchRequest
 ): Promise<WorkflowRunLaunchResult> {
+  initializeWorkflowRuntimeV2();
+
   const workflow = await WorkflowDefinitionModelV2.getById(knex, request.workflowId);
   if (!workflow) {
     throw new Error('Workflow not found');
