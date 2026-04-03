@@ -288,22 +288,21 @@ export class ApiKeyService {
       throw new Error('Tenant context is required for cleaning up API keys');
     }
 
-    // Single query: deactivate expired keys and delete old inactive ones via CTE
-    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
-    const result = await knex.raw(
-      `WITH deactivated AS (
-        UPDATE api_keys
-        SET active = false, updated_at = now()
-        WHERE user_id = ? AND tenant = ? AND active = true
-          AND expires_at IS NOT NULL AND expires_at < now()
-      )
-      DELETE FROM api_keys
-      WHERE user_id = ? AND tenant = ? AND active = false
-        AND created_at < ?`,
-      [userId, tenant, userId, tenant, cutoff],
-    );
+    // Deactivate any keys that are still marked active but have expired
+    await knex('api_keys')
+      .where({ user_id: userId, tenant, active: true })
+      .whereNotNull('expires_at')
+      .where('expires_at', '<', knex.fn.now())
+      .update({ active: false, updated_at: knex.fn.now() });
 
-    return result.rowCount ?? 0;
+    // Delete all inactive keys older than the retention period
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+    const deleted = await knex('api_keys')
+      .where({ user_id: userId, tenant, active: false })
+      .where('created_at', '<', cutoff)
+      .del();
+
+    return deleted;
   }
 
   /**

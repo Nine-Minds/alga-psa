@@ -396,7 +396,7 @@ export async function refreshMobileSession(input: z.infer<typeof refreshSessionS
 
   // Best-effort cleanup and audit logging outside the transaction to minimize lock duration.
   // Run deactivation + audit in parallel since they're independent.
-  await Promise.allSettled([
+  const [deactivateResult, auditResult] = await Promise.allSettled([
     result.existing.api_key_id
       ? ApiKeyService.deactivateApiKey(result.existing.api_key_id, result.existing.tenant)
       : Promise.resolve(),
@@ -415,10 +415,22 @@ export async function refreshMobileSession(input: z.infer<typeof refreshSessionS
     }),
   ]);
 
+  if (deactivateResult.status === 'rejected') {
+    console.warn('[mobileAuth] failed to deactivate old API key', {
+      apiKeyId: result.existing.api_key_id,
+      error: deactivateResult.reason,
+    });
+  }
+  if (auditResult.status === 'rejected') {
+    console.warn('[mobileAuth] post-refresh audit log failed', { error: auditResult.reason });
+  }
+
   // Probabilistic stale-key cleanup: run on ~5% of refreshes to avoid
   // unnecessary DB work on every token rotation.
   if (Math.random() < 0.05) {
-    ApiKeyService.cleanupStaleKeys(result.existing.user_id, result.existing.tenant).catch(() => {});
+    ApiKeyService.cleanupStaleKeys(result.existing.user_id, result.existing.tenant).catch((err) => {
+      console.warn('[mobileAuth] stale key cleanup failed', { error: err });
+    });
   }
 
   return {
