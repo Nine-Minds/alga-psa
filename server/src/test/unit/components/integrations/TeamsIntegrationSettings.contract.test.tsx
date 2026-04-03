@@ -13,6 +13,7 @@ const getMicrosoftIntegrationStatusMock = vi.hoisted(() => vi.fn());
 const getTeamsIntegrationStatusMock = vi.hoisted(() => vi.fn());
 const getTeamsAppPackageStatusMock = vi.hoisted(() => vi.fn());
 const saveTeamsIntegrationSettingsMock = vi.hoisted(() => vi.fn());
+const fetchMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/integrations/actions', () => ({
   getMicrosoftIntegrationStatus: (...args: unknown[]) => getMicrosoftIntegrationStatusMock(...args),
@@ -154,6 +155,18 @@ describe('TeamsIntegrationSettings contracts', () => {
     saveTeamsIntegrationSettingsMock.mockResolvedValue({
       success: true,
       integration: buildTeamsStatus().integration,
+    });
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue(new Response('zip-data', {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/zip',
+      },
+    }));
+    Object.defineProperty(globalThis, 'fetch', {
+      configurable: true,
+      writable: true,
+      value: fetchMock,
     });
     window.location.hash = '';
     Object.defineProperty(URL, 'createObjectURL', {
@@ -442,6 +455,39 @@ describe('TeamsIntegrationSettings contracts', () => {
 
     await screen.findByText('Teams package handoff');
     await user.click(screen.getByRole('button', { name: 'Prepare package handoff' }));
+
+    expect(await screen.findByText('Selected Microsoft profile is not ready for Teams package generation')).toBeInTheDocument();
+  });
+
+  it('shows the backend zip-download error inline instead of relying on the browser download manager', async () => {
+    const user = userEvent.setup();
+    render(<TeamsIntegrationSettings />);
+
+    await screen.findByRole('button', { name: 'Generate package' });
+    await user.click(screen.getByRole('button', { name: 'Generate package' }));
+
+    await waitFor(() => {
+      expect(getTeamsAppPackageStatusMock).toHaveBeenCalledTimes(1);
+    });
+
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      success: false,
+      error: 'Selected Microsoft profile is not ready for Teams package generation',
+    }), {
+      status: 400,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }));
+
+    await user.click(screen.getByRole('button', { name: 'Download app package (.zip)' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith('/api/teams/package/download', {
+        method: 'GET',
+        credentials: 'include',
+      });
+    });
 
     expect(await screen.findByText('Selected Microsoft profile is not ready for Teams package generation')).toBeInTheDocument();
   });

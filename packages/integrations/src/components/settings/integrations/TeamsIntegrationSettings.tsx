@@ -162,10 +162,25 @@ function toggleValue(values: string[], value: string, checked: boolean): string[
   return [...next];
 }
 
+async function getDownloadErrorMessage(response: Response): Promise<string> {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    const payload = await response.json().catch(() => null) as { error?: unknown } | null;
+    if (typeof payload?.error === 'string' && payload.error.trim().length > 0) {
+      return payload.error;
+    }
+  }
+
+  const text = await response.text().catch(() => '');
+  return text.trim() || 'Failed to download Teams app package';
+}
+
 export function TeamsIntegrationSettings() {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [packageLoading, setPackageLoading] = React.useState(false);
+  const [downloadLoading, setDownloadLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [packageError, setPackageError] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
@@ -311,6 +326,42 @@ export function TeamsIntegrationSettings() {
       setPackageLoading(false);
     }
   }, []);
+
+  const handleZipDownload = React.useCallback(async () => {
+    if (!packageStatus) {
+      return;
+    }
+
+    setDownloadLoading(true);
+    setPackageError(null);
+    setStatusMessage(null);
+
+    try {
+      const response = await fetch('/api/teams/package/download', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(await getDownloadErrorMessage(response));
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = packageStatus.fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+      setStatusMessage('Teams app package downloaded.');
+    } catch (err: any) {
+      setPackageError(err?.message || 'Failed to download Teams app package');
+    } finally {
+      setDownloadLoading(false);
+    }
+  }, [packageStatus]);
 
   if (loading) {
     return (
@@ -566,11 +617,14 @@ export function TeamsIntegrationSettings() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <Button id="teams-download-zip" asChild variant="default">
-                  <a href="/api/teams/package/download" download={packageStatus.fileName}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download app package (.zip)
-                  </a>
+                <Button
+                  id="teams-download-zip"
+                  variant="default"
+                  onClick={() => void handleZipDownload()}
+                  disabled={downloadLoading}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  {downloadLoading ? 'Downloading...' : 'Download app package (.zip)'}
                 </Button>
                 <Button id="teams-download-manifest" asChild variant="secondary">
                   <a href={`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(packageStatus.manifest, null, 2))}`} download={`${packageStatus.fileName.replace(/\.zip$/, '')}.json`}>
