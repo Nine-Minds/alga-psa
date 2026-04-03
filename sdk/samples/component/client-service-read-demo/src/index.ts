@@ -3,8 +3,8 @@ import type {
   ExecuteRequest,
   ExecuteResponse,
   HostBindings,
-} from '../../../../extension-runtime/src/index.ts'
-import { normalizeUserData } from '../../../../extension-runtime/src/index.ts'
+} from '@alga-psa/extension-runtime'
+import { normalizeUserData } from '@alga-psa/extension-runtime'
 
 import { handler as userHandler } from './handler.ts'
 

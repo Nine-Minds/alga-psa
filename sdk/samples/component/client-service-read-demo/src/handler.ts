@@ -2,7 +2,7 @@ import type {
   ExecuteRequest,
   ExecuteResponse,
   HostBindings,
-} from '../../../../extension-runtime/src/index.ts'
+} from '@alga-psa/extension-runtime'
 
 const encoder = new TextEncoder()
 
