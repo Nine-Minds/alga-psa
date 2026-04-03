@@ -2765,6 +2765,17 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       .first();
     const closedBy = closer ? `${closer.first_name} ${closer.last_name}` : payload.userId;
 
+    // Get the resolution comment (most recent comment with is_resolution = true)
+    const resolutionComment = await db('comments')
+      .where({ ticket_id: payload.ticketId, tenant: tenantId, is_resolution: true })
+      .orderBy('created_at', 'desc')
+      .first();
+    let resolutionHtml = '';
+    if (resolutionComment) {
+      const resolutionFormatting = formatBlockNoteContent(resolutionComment.note);
+      resolutionHtml = resolutionFormatting.html || resolutionFormatting.text || '';
+    }
+
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
     const baseTicketContext = {
@@ -2791,7 +2802,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       locationSummary,
       changes,
       closedBy,
-      resolution: ticket.resolution || ''
+      resolution: resolutionHtml
     };
 
     const externalContext = {
