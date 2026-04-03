@@ -533,8 +533,9 @@ export interface TemplateReactRendererProps {
 
 export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({ ast, evaluation }) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
+  const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
   const currencyCode = String(
-    (invoiceRecord as Record<string, unknown>).currencyCode ?? ast.metadata?.currencyCode ?? 'USD'
+    invoiceRecordUntyped.currencyCode ?? invoiceRecordUntyped.currency_code ?? ast.metadata?.currencyCode ?? 'USD'
   );
   const locale = String(ast.metadata?.locale ?? 'en-US');
   const rootDocumentStyleOverride = resolveSyntheticRootDocumentStyle(ast);
