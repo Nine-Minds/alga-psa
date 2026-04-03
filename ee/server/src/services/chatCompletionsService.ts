@@ -35,6 +35,7 @@ const RATE_LIMIT_MAX_DELAY_MS = 5000;
 const MIN_RATE_LIMIT_DELAY_MS = 100;
 const SEARCH_TOOL_NAME = 'search_api_registry';
 const EXECUTE_TOOL_NAME = 'call_api_endpoint';
+const FINISH_TOOL_NAME = 'finish_response';
 const MAX_TOOL_ITERATIONS = 6;
 const MAX_TOOL_RESULT_CHARS = 12000;
 const TOOL_RESULT_PREVIEW_ITEMS = 3;
@@ -173,6 +174,19 @@ type ParsedToolArgumentsResult =
       message: string;
     };
 
+type FinishResponsePayload =
+  | {
+      ok: true;
+      value: {
+        message: string;
+        reasoning?: string;
+      };
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
 type ToolArgumentParseContext = {
   source: 'stream' | 'non_stream';
   functionName?: string;
@@ -240,10 +254,6 @@ export class ChatCompletionsService {
         const contentDelta = this.readContentDelta(delta);
         if (contentDelta) {
           streamedContent += contentDelta;
-          yield {
-            type: 'content_delta',
-            delta: contentDelta,
-          };
         }
 
         this.mergeStreamedToolCalls(streamedToolCalls, delta.tool_calls);
@@ -251,6 +261,15 @@ export class ChatCompletionsService {
 
       const parsedContent = parseAssistantContent(streamedContent, streamedReasoning);
       const toolCalls = this.materializeStreamedToolCalls(streamedToolCalls);
+
+      if (toolCalls.length > 1) {
+        conversation = this.appendToolContractRetryMessage(
+          conversation,
+          parsedContent,
+          'The previous response called multiple functions. Retry with exactly one function call.',
+        );
+        continue;
+      }
 
       if (toolCalls.length > 0) {
         const toolCall = toolCalls[0];
@@ -268,24 +287,18 @@ export class ChatCompletionsService {
           toolCallId,
         });
         const parsedArgs = parsedArgsResult.ok ? parsedArgsResult.value : {};
-
-        const assistantMessage: ChatCompletionMessage = {
-          role: 'assistant',
-          content: parsedContent.raw || undefined,
-          reasoning: parsedContent.reasoning,
-          reasoning_content: parsedContent.reasoning,
-          function_call: {
-            name: functionName,
-            arguments: parsedArgs,
-          },
-          tool_call_id: toolCallId,
-        };
-        conversation = [...conversation, assistantMessage];
+        const assistantMessage = this.buildAssistantToolCallMessage(
+          functionName,
+          parsedContent,
+          parsedArgs,
+          toolCallId,
+        );
 
         if (parsedArgsResult.ok === false) {
           const parseErrorMessage = parsedArgsResult.message;
           conversation = [
             ...conversation,
+            assistantMessage,
             {
               role: 'function',
               name: functionName,
@@ -300,6 +313,7 @@ export class ChatCompletionsService {
           const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
           conversation = [
             ...conversation,
+            assistantMessage,
             {
               role: 'function',
               name: SEARCH_TOOL_NAME,
@@ -311,6 +325,7 @@ export class ChatCompletionsService {
         }
 
         if (functionName === EXECUTE_TOOL_NAME) {
+          conversation = [...conversation, assistantMessage];
           const entry = this.resolveRegistryEntry(
             parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
             parsedArgs,
@@ -350,6 +365,38 @@ export class ChatCompletionsService {
           return;
         }
 
+        if (functionName === FINISH_TOOL_NAME) {
+          const finishPayload = this.parseFinishResponsePayload(parsedArgs);
+          if (!finishPayload.ok) {
+            conversation = [
+              ...conversation,
+              assistantMessage,
+              {
+                role: 'function',
+                name: FINISH_TOOL_NAME,
+                content: JSON.stringify({ error: finishPayload.error }),
+                tool_call_id: toolCallId,
+              },
+            ];
+            continue;
+          }
+
+          const finalAssistantMessage = this.buildFinalAssistantMessage(
+            finishPayload.value.message,
+            finishPayload.value.reasoning ?? parsedContent.reasoning,
+          );
+          conversation = [...conversation, finalAssistantMessage];
+
+          if (finalAssistantMessage.content) {
+            yield {
+              type: 'content_delta',
+              delta: finalAssistantMessage.content,
+            };
+          }
+          yield { type: 'done' };
+          return;
+        }
+
         yield {
           type: 'content_delta',
           delta: this.buildUnavailableFunctionMessage(functionName),
@@ -362,8 +409,7 @@ export class ChatCompletionsService {
         continue;
       }
 
-      yield { type: 'done' };
-      return;
+      conversation = this.appendToolContractRetryMessage(conversation, parsedContent);
     }
 
     yield { type: 'done' };
@@ -710,6 +756,30 @@ export class ChatCompletionsService {
           },
         },
       },
+      {
+        type: 'function' as const,
+        function: {
+          name: FINISH_TOOL_NAME,
+          description:
+            'Finish the current turn and provide the final user-visible response. Use this only when you are ready to answer the user without any further tool calls.',
+          parameters: {
+            type: 'object',
+            properties: {
+              message: {
+                type: 'string',
+                description: 'Final user-visible response for this turn.',
+              },
+              reasoning: {
+                type: 'string',
+                description:
+                  'Optional concise reasoning summary to persist with the assistant response.',
+              },
+            },
+            required: ['message'],
+            ...(isVertex ? {} : { additionalProperties: false }),
+          },
+        },
+      },
     ];
   }
 
@@ -763,6 +833,89 @@ export class ChatCompletionsService {
     return top;
   }
 
+  private static buildAssistantToolCallMessage(
+    functionName: string,
+    parsedContent: ParsedAssistantContent,
+    parsedArgs: Record<string, unknown>,
+    toolCallId: string,
+  ): ChatCompletionMessage {
+    return {
+      role: 'assistant',
+      content: parsedContent.raw || undefined,
+      reasoning: parsedContent.reasoning,
+      reasoning_content: parsedContent.reasoning,
+      function_call: {
+        name: functionName,
+        arguments: parsedArgs,
+      },
+      tool_call_id: toolCallId,
+    };
+  }
+
+  private static buildFinalAssistantMessage(
+    message: string,
+    reasoning?: string,
+  ): ChatCompletionMessage {
+    const trimmedMessage = message.trim();
+    const trimmedReasoning = reasoning?.trim();
+    return {
+      role: 'assistant',
+      content: trimmedMessage,
+      reasoning: trimmedReasoning || undefined,
+      reasoning_content: trimmedReasoning || undefined,
+    };
+  }
+
+  private static appendToolContractRetryMessage(
+    conversation: ChatCompletionMessage[],
+    parsedContent: ParsedAssistantContent,
+    reason = 'The previous response was invalid because every assistant turn must be exactly one function call.',
+  ): ChatCompletionMessage[] {
+    const nextConversation = [...conversation];
+    if (this.hasMeaningfulContent(parsedContent)) {
+      nextConversation.push({
+        role: 'assistant',
+        content: parsedContent.raw || undefined,
+        reasoning: parsedContent.reasoning,
+        reasoning_content: parsedContent.reasoning,
+      });
+    }
+    nextConversation.push({
+      role: 'user',
+      content:
+        `${reason} Retry now with exactly one function call. ` +
+        `Use ${SEARCH_TOOL_NAME} to look up registry entries, ${EXECUTE_TOOL_NAME} to propose an API call, or ${FINISH_TOOL_NAME} when you are ready to respond to the user. ` +
+        `Do not send plain assistant text outside ${FINISH_TOOL_NAME}. Put the final user-visible reply in ${FINISH_TOOL_NAME}.message.`,
+    });
+    return nextConversation;
+  }
+
+  private static parseFinishResponsePayload(
+    args: Record<string, unknown>,
+  ): FinishResponsePayload {
+    const message = typeof args.message === 'string' ? args.message.trim() : '';
+    if (!message) {
+      return {
+        ok: false,
+        error:
+          'finish_response requires a non-empty "message" string. Retry the same function call with that property set.',
+      };
+    }
+
+    const reasoning =
+      typeof args.reasoning === 'string' && args.reasoning.trim().length > 0
+        ? args.reasoning.trim()
+        : undefined;
+
+    return {
+      ok: true,
+      value: {
+        message,
+        reasoning,
+      },
+    };
+  }
+
   private static async processModelInteraction(params: {
     messages: ChatCompletionMessage[];
     chatId: string | null;
@@ -803,6 +956,15 @@ export class ChatCompletionsService {
         throw error;
       }
 
+      if (toolCalls.length > 1) {
+        conversation = this.appendToolContractRetryMessage(
+          conversation,
+          parsedContent,
+          'The previous response called multiple functions. Retry with exactly one function call.',
+        );
+        continue;
+      }
+
       if (toolCalls.length > 0) {
         const toolCall = toolCalls[0];
         const functionName = toolCall.function?.name;
@@ -821,20 +983,12 @@ export class ChatCompletionsService {
           toolCallId,
         });
         const parsedArgs = parsedArgsResult.ok ? parsedArgsResult.value : {};
-
-        const assistantMessage: ChatCompletionMessage = {
-          role: 'assistant',
-          content: parsedContent.raw || undefined,
-          reasoning: parsedContent.reasoning,
-          reasoning_content: parsedContent.reasoning,
-          function_call: {
-            name: functionName,
-            arguments: parsedArgs,
-          },
-          tool_call_id: toolCallId,
-        };
-
-        conversation = [...conversation, assistantMessage];
+        const assistantMessage = this.buildAssistantToolCallMessage(
+          functionName,
+          parsedContent,
+          parsedArgs,
+          toolCallId,
+        );
 
         if (parsedArgsResult.ok === false) {
           const parseErrorMessage = parsedArgsResult.message;
@@ -844,7 +998,7 @@ export class ChatCompletionsService {
             content: JSON.stringify({ error: parseErrorMessage }),
             tool_call_id: toolCallId,
           };
-          conversation = [...conversation, functionMessage];
+          conversation = [...conversation, assistantMessage, functionMessage];
           continue;
         }
 
@@ -856,11 +1010,12 @@ export class ChatCompletionsService {
             content: JSON.stringify({ results }),
             tool_call_id: toolCallId,
           };
-          conversation = [...conversation, functionMessage];
+          conversation = [...conversation, assistantMessage, functionMessage];
           continue;
         }
 
         if (functionName === EXECUTE_TOOL_NAME) {
+          conversation = [...conversation, assistantMessage];
           const entry = this.resolveRegistryEntry(
             parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
             parsedArgs,
@@ -893,37 +1048,57 @@ export class ChatCompletionsService {
           };
         }
 
+        if (functionName === FINISH_TOOL_NAME) {
+          const finishPayload = this.parseFinishResponsePayload(parsedArgs);
+          if (!finishPayload.ok) {
+            conversation = [
+              ...conversation,
+              assistantMessage,
+              {
+                role: 'function',
+                name: FINISH_TOOL_NAME,
+                content: JSON.stringify({ error: finishPayload.error }),
+                tool_call_id: toolCallId,
+              },
+            ];
+            continue;
+          }
+
+          const finalAssistantMessage = this.buildFinalAssistantMessage(
+            finishPayload.value.message,
+            finishPayload.value.reasoning ?? parsedContent.reasoning,
+          );
+          const nextMessages = [...conversation, finalAssistantMessage];
+
+          return {
+            type: 'assistant_message',
+            message: {
+              role: 'assistant',
+              content: finalAssistantMessage.content ?? '',
+              reasoning: finalAssistantMessage.reasoning,
+              reasoning_content: finalAssistantMessage.reasoning_content,
+            },
+            nextMessages: this.sanitizeMessagesForClient(nextMessages),
+            modelMessages: nextMessages,
+          };
+        }
+
         return {
           type: 'error',
           error: `Function ${functionName} is not available.`,
         };
       }
 
-      const assistantMessage: ChatCompletionMessage = {
-        role: 'assistant',
-        content: parsedContent.raw || undefined,
-        reasoning: parsedContent.reasoning,
-        reasoning_content: parsedContent.reasoning,
-      };
+      if (!this.hasMeaningfulContent(parsedContent)) {
+        continue;
+      }
 
-      const nextMessages = [...conversation, assistantMessage];
-
-      return {
-        type: 'assistant_message',
-        message: {
-          role: 'assistant',
-          content: this.buildUserFacingContent(parsedContent),
-          reasoning: parsedContent.reasoning,
-          reasoning_content: parsedContent.reasoning,
-        },
-        nextMessages: this.sanitizeMessagesForClient(nextMessages),
-        modelMessages: nextMessages,
-      };
+      conversation = this.appendToolContractRetryMessage(conversation, parsedContent);
     }
 
     return {
       type: 'error',
-      error: 'The assistant produced too many tool invocations without completing the task.',
+      error: 'The assistant produced too many invalid or incomplete tool turns without completing the task.',
     };
   }
 
@@ -1456,6 +1631,8 @@ export class ChatCompletionsService {
       role: 'system' as const,
       content:
         'You are Alga, an assistant that helps users manage PSA workflows. ' +
+        `Every assistant turn must contain exactly one function call: ${SEARCH_TOOL_NAME}, ${EXECUTE_TOOL_NAME}, or ${FINISH_TOOL_NAME}. ` +
+        `Do not return plain assistant text without a function call. When you are ready to answer the user, call ${FINISH_TOOL_NAME} and put the final user-visible reply in ${FINISH_TOOL_NAME}.message. ` +
         'Always consult the enterprise API registry before executing actions so you understand every required parameter. ' +
         'When the registry or endpoint descriptions mention prerequisite data (such as IDs for boards, clients, categories, priorities, or other related resources), proactively call the appropriate lookup endpoints to gather that information instead of asking the user. ' +
         'For ticket-creation calls, first use search_api_registry to locate the list endpoints you need, gather current data (e.g. call GET /api/v1/tickets to sample board_id/status_id/priority_id combinations and GET /api/v1/clients to confirm client_id), and do not proceed until you have concrete UUIDs for board_id, client_id, status_id, and priority_id collected from prior API responses. When sampling GET /api/v1/tickets, pick the first record with non-null board_id, status_id, and priority_id and reuse those UUIDs unless the user specifies different values. ' +

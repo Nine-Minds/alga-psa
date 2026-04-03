@@ -147,6 +147,36 @@ const buildCompletion = (message: Record<string, unknown>) => ({
   ],
 });
 
+const buildFinishResponseCompletion = (
+  message: string,
+  options: {
+    reasoning?: string;
+    content?: string;
+    id?: string;
+  } = {},
+) =>
+  buildCompletion({
+    content: options.content ?? '',
+    ...(options.reasoning
+      ? {
+          reasoning_content: [{ type: 'reasoning', text: options.reasoning }],
+        }
+      : {}),
+    tool_calls: [
+      {
+        id: options.id ?? 'tool-call-finish',
+        type: 'function',
+        function: {
+          name: 'finish_response',
+          arguments: JSON.stringify({
+            message,
+            ...(options.reasoning ? { reasoning: options.reasoning } : {}),
+          }),
+        },
+      },
+    ],
+  });
+
 const buildChunkStream = (chunks: Array<Record<string, unknown>>) => ({
   async *[Symbol.asyncIterator]() {
     for (const chunk of chunks) {
@@ -154,6 +184,39 @@ const buildChunkStream = (chunks: Array<Record<string, unknown>>) => ({
     }
   },
 });
+
+const buildFinishResponseChunkStream = (
+  message: string,
+  options: {
+    reasoning?: string;
+    id?: string;
+  } = {},
+) =>
+  buildChunkStream([
+    {
+      choices: [
+        {
+          index: 0,
+          delta: {
+            tool_calls: [
+              {
+                index: 0,
+                id: options.id ?? 'tool-call-finish-stream',
+                type: 'function',
+                function: {
+                  name: 'finish_response',
+                  arguments: JSON.stringify({
+                    message,
+                    ...(options.reasoning ? { reasoning: options.reasoning } : {}),
+                  }),
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  ]);
 
 const buildRateLimitError = (retryAfter?: string) => {
   const error = new Error('Rate limited') as Error & {
@@ -762,18 +825,7 @@ describe('ChatCompletionsService (unit)', () => {
         ]),
       )
       .mockResolvedValueOnce(
-        buildChunkStream([
-          {
-            choices: [
-              {
-                index: 0,
-                delta: {
-                  content: 'Recovered after retry.',
-                },
-              },
-            ],
-          },
-        ]),
+        buildFinishResponseChunkStream('Recovered after retry.'),
       );
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
@@ -838,18 +890,7 @@ describe('ChatCompletionsService (unit)', () => {
         ]),
       )
       .mockResolvedValueOnce(
-        buildChunkStream([
-          {
-            choices: [
-              {
-                index: 0,
-                delta: {
-                  content: 'Recovered.',
-                },
-              },
-            ],
-          },
-        ]),
+        buildFinishResponseChunkStream('Recovered.'),
       );
 
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -945,9 +986,7 @@ describe('ChatCompletionsService (unit)', () => {
         }),
       )
       .mockResolvedValueOnce(
-        buildCompletion({
-          content: 'Recovered after retry.',
-        }),
+        buildFinishResponseCompletion('Recovered after retry.'),
       );
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
@@ -978,7 +1017,7 @@ describe('ChatCompletionsService (unit)', () => {
     );
   });
 
-  it('appends assistant reasoning_content on final non-tool responses', async () => {
+  it('appends assistant reasoning_content on finish_response turns', async () => {
     process.env.AI_CHAT_PROVIDER = 'openrouter';
     setSecrets({
       OPENROUTER_API_KEY: 'openrouter-key',
@@ -986,9 +1025,8 @@ describe('ChatCompletionsService (unit)', () => {
     });
 
     openAiCreateSpy.mockResolvedValueOnce(
-      buildCompletion({
-        content: 'Done.',
-        reasoning_content: [{ type: 'reasoning', text: 'Checked all records.' }],
+      buildFinishResponseCompletion('Done.', {
+        reasoning: 'Checked all records.',
       }),
     );
 
@@ -1013,6 +1051,100 @@ describe('ChatCompletionsService (unit)', () => {
     );
   });
 
+  it('retries non-stream plain assistant text until the model emits finish_response', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({
+      OPENROUTER_API_KEY: 'openrouter-key',
+      OPENROUTER_CHAT_MODEL: 'openrouter/model',
+    });
+
+    openAiCreateSpy
+      .mockResolvedValueOnce(
+        buildCompletion({
+          content: "I'll look up the endpoint first.",
+        }),
+      )
+      .mockResolvedValueOnce(buildFinishResponseCompletion('Here is the final answer.'));
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const result = await (ChatCompletionsService as any).processModelInteraction({
+      messages: [{ role: 'user', content: 'Help me add a task' }],
+      chatId: 'chat-1',
+      baseUrl: 'https://example.invalid',
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+    });
+
+    expect(result).toMatchObject({
+      type: 'assistant_message',
+      message: expect.objectContaining({ content: 'Here is the final answer.' }),
+    });
+    expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
+    const retryRequest = openAiCreateSpy.mock.calls[1]?.[0] as Record<string, unknown>;
+    const retryMessages = retryRequest.messages as Array<Record<string, unknown>>;
+    expect(retryMessages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('every assistant turn must be exactly one function call'),
+        }),
+      ]),
+    );
+  });
+
+  it('retries streamed plain assistant text until the model emits finish_response', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({
+      OPENROUTER_API_KEY: 'openrouter-key',
+      OPENROUTER_CHAT_MODEL: 'openrouter/model',
+    });
+
+    openAiCreateSpy
+      .mockResolvedValueOnce(
+        buildChunkStream([
+          {
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  content: "I'll look up the endpoint first.",
+                },
+              },
+            ],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(buildFinishResponseChunkStream('Here is the streamed final answer.'));
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const events: Array<{ type: string; delta?: string }> = [];
+    for await (const event of ChatCompletionsService.createStructuredCompletionStream([
+      { role: 'user', content: 'Help me add a task' },
+    ])) {
+      events.push(event as { type: string; delta?: string });
+    }
+
+    expect(events).toEqual(
+      expect.arrayContaining([
+        { type: 'content_delta', delta: 'Here is the streamed final answer.' },
+        { type: 'done' },
+      ]),
+    );
+    expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
+    const retryRequest = openAiCreateSpy.mock.calls[1]?.[0] as Record<string, unknown>;
+    const retryMessages = retryRequest.messages as Array<Record<string, unknown>>;
+    expect(retryMessages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('every assistant turn must be exactly one function call'),
+        }),
+      ]),
+    );
+  });
+
   it('uses provider-resolved OpenRouter model/client for non-stream completions and keeps tool_choice:auto', async () => {
     process.env.AI_CHAT_PROVIDER = 'openrouter';
     setSecrets({
@@ -1020,11 +1152,7 @@ describe('ChatCompletionsService (unit)', () => {
       OPENROUTER_CHAT_MODEL: 'openrouter/custom-model',
     });
 
-    openAiCreateSpy.mockResolvedValueOnce(
-      buildCompletion({
-        content: 'OpenRouter result',
-      }),
-    );
+    openAiCreateSpy.mockResolvedValueOnce(buildFinishResponseCompletion('OpenRouter result'));
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
@@ -1049,11 +1177,7 @@ describe('ChatCompletionsService (unit)', () => {
       VERTEX_CHAT_MODEL: 'glm-5-maas',
     });
 
-    openAiCreateSpy.mockResolvedValueOnce(
-      buildCompletion({
-        content: 'Vertex result',
-      }),
-    );
+    openAiCreateSpy.mockResolvedValueOnce(buildFinishResponseCompletion('Vertex result'));
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
@@ -1259,9 +1383,7 @@ describe('ChatCompletionsService (unit)', () => {
     openAiCreateSpy
       .mockRejectedValueOnce(buildRateLimitError())
       .mockResolvedValueOnce(
-        buildCompletion({
-          content: 'Recovered after rate limit.',
-        }),
+        buildFinishResponseCompletion('Recovered after rate limit.'),
       );
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
@@ -1296,18 +1418,7 @@ describe('ChatCompletionsService (unit)', () => {
     openAiCreateSpy
       .mockRejectedValueOnce(buildRateLimitError('1'))
       .mockResolvedValueOnce(
-        buildChunkStream([
-          {
-            choices: [
-              {
-                index: 0,
-                delta: {
-                  content: 'Recovered stream response',
-                },
-              },
-            ],
-          },
-        ]),
+        buildFinishResponseChunkStream('Recovered stream response'),
       );
 
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
@@ -1520,9 +1631,8 @@ describe('ChatCompletionsService (unit)', () => {
     });
 
     openAiCreateSpy.mockResolvedValueOnce(
-      buildCompletion({
-        content: 'Follow-up complete',
-        reasoning_content: [{ type: 'reasoning', text: 'follow-up reasoning' }],
+      buildFinishResponseCompletion('Follow-up complete', {
+        reasoning: 'follow-up reasoning',
       }),
     );
 
