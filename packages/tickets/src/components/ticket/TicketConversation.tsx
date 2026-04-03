@@ -311,6 +311,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const handleToggleReaction = useCallback(async (commentId: string, emoji: string) => {
     try {
       const { added } = await toggleCommentReaction(commentId, emoji);
+      if (added && currentUser?.id && currentUser.name) {
+        setReactionUserNames(prev => prev[currentUser.id] ? prev : { ...prev, [currentUser.id]: currentUser.name! });
+      }
       setReactionsMap((prev) => {
         const existing = prev[commentId] || [];
         const idx = existing.findIndex((r) => r.emoji === emoji);
@@ -340,7 +343,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     } catch (err) {
       console.error('[TicketConversation] Failed to toggle reaction:', err);
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentUser?.name]);
 
   const renderComments = (comments: IComment[]): React.JSX.Element[] => {
     // Use the sorted comments based on the reverseOrder state
