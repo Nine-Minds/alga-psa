@@ -53,6 +53,53 @@ function getCanonicalUrl(): URL | null {
   return process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL) : null;
 }
 
+const apiKeySkipPaths = [
+  '/api/health',
+  '/api/healthz',
+  '/api/readyz',
+  '/api/documents/download/',
+  '/api/documents/view/',
+  '/api/email/webhooks/',
+  '/api/calendar/webhooks/',
+  '/api/email/oauth/',
+  '/api/teams/auth/',
+  '/api/teams/bot/',
+  '/api/teams/message-extension/',
+  '/api/teams/package/download',
+  '/api/client-portal/domain-session',
+  // Mobile auth endpoints use OTT/refresh tokens (no x-api-key)
+  '/api/v1/mobile/auth/',
+  '/api/integrations/ninjaone/callback',
+  '/api/integrations/xero/connect',
+  '/api/integrations/xero/callback',
+  // AI chat endpoints are session-authenticated (MSP UI)
+  '/api/chat/',
+  // Workflow bundle import/export is session-authenticated (developer + future UI tooling)
+  '/api/workflow-definitions/',
+  // Internal MSP UI endpoints (session-authenticated)
+  '/api/accounting/csv/',
+  '/api/accounting/exports/',
+  '/api/webhooks/stripe',
+  '/api/webhooks/ninjaone',
+  '/api/webhooks/tacticalrmm',
+  '/api/files/',   // File download routes use session auth
+  '/api/share/',  // Public share link routes handle their own auth
+  '/api/ext/',  // Extension API routes handle their own auth
+  '/api/ext-proxy/',
+  '/api/ext-debug/',  // Extension debug stream uses session auth
+  '/api/internal/ext-storage/',  // Runner storage API uses x-runner-auth token
+  '/api/internal/ext-runner/',   // Runner install-config/registry API uses x-runner-auth token
+  '/api/internal/ext-scheduler/', // Runner scheduler host API uses x-runner-auth token
+  '/api/internal/ext-invoicing/', // Runner invoicing host API uses x-runner-auth token
+  '/api/internal/ext-clients/', // Runner client read host API uses x-runner-auth token
+  '/api/internal/ext-services/', // Runner service read host API uses x-runner-auth token
+];
+
+export function shouldSkipApiKeyAuth(pathname: string): boolean {
+  return apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
+    (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview')));
+}
+
 export function getVanityClientPortalInternalRedirectTarget(args: {
   pathname: string;
   isAuthPage: boolean;
@@ -136,64 +183,18 @@ const _middleware = auth((request) => {
     // Skip paths that don't need API authentication.
     // Any session-authenticated `/api/*` route must be added here or middleware will return
     // `401 Unauthorized: API key missing` before the route handler has a chance to run.
-    const skipPaths = [
-      '/api/health',
-      '/api/healthz',
-      '/api/readyz',
-      '/api/documents/download/',
-      '/api/documents/view/',
-      '/api/email/webhooks/',
-      '/api/calendar/webhooks/',
-      '/api/email/oauth/',
-      '/api/teams/auth/',
-      '/api/teams/bot/',
-      '/api/teams/message-extension/',
-      '/api/client-portal/domain-session',
-      // Mobile auth endpoints use OTT/refresh tokens (no x-api-key)
-      '/api/v1/mobile/auth/',
-      '/api/integrations/ninjaone/callback',
-      '/api/integrations/xero/connect',
-      '/api/integrations/xero/callback',
-      // AI chat endpoints are session-authenticated (MSP UI)
-      '/api/chat/',
-      // Workflow bundle import/export is session-authenticated (developer + future UI tooling)
-      '/api/workflow-definitions/',
-      // Internal MSP UI endpoints (session-authenticated)
-      '/api/accounting/csv/',
-      '/api/accounting/exports/',
-      '/api/webhooks/stripe',
-      '/api/webhooks/ninjaone',
-      '/api/webhooks/tacticalrmm',
-      '/api/files/',   // File download routes use session auth
-      '/api/share/',  // Public share link routes handle their own auth
-      '/api/ext/',  // Extension API routes handle their own auth
-      '/api/ext-proxy/',
-      '/api/ext-debug/',  // Extension debug stream uses session auth
-      '/api/internal/ext-storage/',  // Runner storage API uses x-runner-auth token
-      '/api/internal/ext-runner/',   // Runner install-config/registry API uses x-runner-auth token
-      '/api/internal/ext-scheduler/', // Runner scheduler host API uses x-runner-auth token
-      '/api/internal/ext-invoicing/', // Runner invoicing host API uses x-runner-auth token
-      '/api/internal/ext-clients/', // Runner client read host API uses x-runner-auth token
-      '/api/internal/ext-services/', // Runner service read host API uses x-runner-auth token
-    ];
-
     // Log for debugging CORS issues
     if (process.env.NODE_ENV === 'development') {
       console.log('[CORS Middleware]', {
         pathname,
         origin,
         hasApiKey: !!apiKey,
-        skipped: skipPaths.some((path) => pathname.startsWith(path)),
+        skipped: shouldSkipApiKeyAuth(pathname),
         method: request.method
       });
     }
 
-    if (skipPaths.some((path) => pathname.startsWith(path))) {
-      return applyCorsHeaders(response, origin);
-    }
-
-    // Document thumbnail/preview routes use session auth (path: /api/documents/[id]/thumbnail or /preview)
-    if (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview'))) {
+    if (shouldSkipApiKeyAuth(pathname)) {
       return applyCorsHeaders(response, origin);
     }
 
