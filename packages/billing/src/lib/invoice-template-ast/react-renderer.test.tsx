@@ -277,6 +277,77 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(rendered.html).toContain('1');
   });
 
+  it('renders grouped dynamic-table rows when aggregate ids are produced across multiple aggregate steps', async () => {
+    const groupedInvoiceFixture = {
+      ...invoiceFixture,
+      items: [
+        { id: 'a', description: 'Consulting', quantity: 2, unitPrice: 100, total: 200, category: 'Services' },
+        { id: 'b', description: 'Support', quantity: 1, unitPrice: 100, total: 100, category: 'Services' },
+        { id: 'c', description: 'Hardware', quantity: 1, unitPrice: 30, total: 30, category: 'Products' },
+      ],
+    };
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {},
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+        },
+      },
+      transforms: {
+        sourceBindingId: 'lineItems',
+        outputBindingId: 'lineItems.grouped',
+        operations: [
+          {
+            id: 'group-category',
+            type: 'group',
+            key: 'category',
+          },
+          {
+            id: 'aggregate-qty',
+            type: 'aggregate',
+            aggregations: [{ id: 'sumQty', op: 'sum', path: 'quantity' }],
+          },
+          {
+            id: 'aggregate-total',
+            type: 'aggregate',
+            aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }],
+          },
+        ],
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'grouped-line-items',
+            type: 'dynamic-table',
+            repeat: {
+              sourceBinding: { bindingId: 'lineItems.grouped' },
+              itemBinding: 'item',
+            },
+            columns: [
+              { id: 'group-key', header: 'Category', value: { type: 'path', path: 'key' } },
+              { id: 'group-qty', header: 'Qty', value: { type: 'path', path: 'aggregates.sumQty' }, format: 'number' },
+              { id: 'group-total', header: 'Total', value: { type: 'path', path: 'aggregates.sumTotal' } },
+            ],
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, groupedInvoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('Services');
+    expect(rendered.html).toContain('Products');
+    expect(rendered.html).toContain('3');
+    expect(rendered.html).toContain('1');
+    expect(rendered.html).toContain('300');
+    expect(rendered.html).toContain('30');
+  });
+
   it('applies class tokens and style declarations consistently', async () => {
     const ast: TemplateAst = {
       kind: 'invoice-template-ast',
