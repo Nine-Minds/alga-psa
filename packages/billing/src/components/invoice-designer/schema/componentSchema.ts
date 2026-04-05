@@ -249,34 +249,6 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
         },
       ],
     },
-    {
-      id: 'flex-item',
-      title: 'Flex Item',
-      visibleWhen: { kind: 'parentPathEquals', path: 'layout.display', value: 'flex' },
-      fields: [
-        {
-          kind: 'number',
-          id: 'flexGrow',
-          label: 'flex-grow',
-          path: 'style.flexGrow',
-          placeholder: '0',
-        },
-        {
-          kind: 'number',
-          id: 'flexShrink',
-          label: 'flex-shrink',
-          path: 'style.flexShrink',
-          placeholder: '1',
-        },
-        {
-          kind: 'css-length',
-          id: 'flexBasis',
-          label: 'flex-basis',
-          path: 'style.flexBasis',
-          placeholder: 'auto | 240px | 50%',
-        },
-      ],
-    },
   ],
 };
 

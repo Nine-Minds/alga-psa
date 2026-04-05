@@ -28,7 +28,7 @@ import {
 import { ComponentPalette } from './palette/ComponentPalette';
 import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
-import type { DesignerComponentType, DesignerNode, Point, Size } from './state/designerStore';
+import type { DesignerComponentType, DesignerNode, DesignerNodeStyle, Point, Size } from './state/designerStore';
 import { clampNodeSizeToPracticalMinimum, getAbsolutePosition, useInvoiceDesignerStore } from './state/designerStore';
 import { AlignmentGuide, resolveFlexPadding } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
@@ -317,6 +317,8 @@ type GridColumnPreset = {
   tracks: number[];
 };
 
+type FlexItemPreset = 'natural' | 'fill' | 'share' | 'fixed' | 'custom';
+
 const CONTAINER_LAYOUT_MODE_OPTIONS: IconToggleOption[] = [
   { value: 'flex', label: 'Stack', tooltip: 'Stack (Flex)', icon: AlignJustify },
   { value: 'grid', label: 'Grid', tooltip: 'Grid layout', icon: Grid3X3 },
@@ -389,6 +391,33 @@ const BLOCK_HEIGHT_MODE_OPTIONS: IconToggleOption[] = [
   { value: 'hug', label: 'Hug', tooltip: 'Grow only as tall as the content needs', icon: Shrink },
 ];
 
+const FLEX_ITEM_PRESET_OPTIONS: Array<{
+  value: Exclude<FlexItemPreset, 'custom'>;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: 'natural',
+    label: 'Natural',
+    description: 'Use the item content size, but allow it to shrink if space is tight.',
+  },
+  {
+    value: 'fill',
+    label: 'Fill',
+    description: 'Expand into leftover space while keeping the item’s preferred size.',
+  },
+  {
+    value: 'share',
+    label: 'Share',
+    description: 'Split available space evenly with other shared items.',
+  },
+  {
+    value: 'fixed',
+    label: 'Fixed',
+    description: 'Keep the item size and do not let flexbox shrink it.',
+  },
+];
+
 const GRID_COLUMN_PRESETS: GridColumnPreset[] = [
   { id: 'single', label: '1 column', template: '1fr', tracks: [1] },
   { id: 'two-equal', label: '2 equal columns', template: '1fr 1fr', tracks: [1, 1] },
@@ -399,6 +428,41 @@ const GRID_COLUMN_PRESETS: GridColumnPreset[] = [
 
 const normalizeGridTemplateColumns = (value: string | undefined): string =>
   typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+
+const coerceFlexNumber = (value: unknown, fallback: number): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const numeric = Number(value.trim());
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+  }
+  return fallback;
+};
+
+const normalizeCssToken = (value: unknown): string => (typeof value === 'string' ? value.trim().toLowerCase() : '');
+
+const inferFlexItemPreset = (style: Partial<DesignerNodeStyle> | undefined): FlexItemPreset => {
+  const grow = coerceFlexNumber(style?.flexGrow, 0);
+  const shrink = coerceFlexNumber(style?.flexShrink, 1);
+  const basis = normalizeCssToken(style?.flexBasis);
+
+  if (grow === 0 && shrink === 1 && (basis === '' || basis === 'auto')) {
+    return 'natural';
+  }
+  if (grow === 1 && shrink === 1 && (basis === '' || basis === 'auto')) {
+    return 'fill';
+  }
+  if (grow === 1 && shrink === 1 && (basis === '0' || basis === '0%' || basis === '0px')) {
+    return 'share';
+  }
+  if (grow === 0 && shrink === 0 && (basis === '' || basis === 'auto')) {
+    return 'fixed';
+  }
+  return 'custom';
+};
 
 const FIELD_TYPE_LABELS: Record<string, string> = {
   'invoice.number': 'Invoice Number',
@@ -638,6 +702,13 @@ export const DesignerShell: React.FC = () => {
     () => (selectedNode?.parentId ? nodesById.get(selectedNode.parentId) ?? null : null),
     [nodesById, selectedNode]
   );
+  const selectedParentFlexLayout = useMemo(() => {
+    if (!selectedParentNode) {
+      return null;
+    }
+    const layout = getNodeLayout(selectedParentNode);
+    return layout?.display === 'flex' ? layout : null;
+  }, [selectedParentNode]);
   const selectedSizingStyle = useMemo(() => getNodeStyle(selectedNode ?? undefined), [selectedNode]);
   const selectedWidthMode = useMemo(
     () => inferWidthMode(selectedSizingStyle),
@@ -650,6 +721,10 @@ export const DesignerShell: React.FC = () => {
   const selectedSupportsSharedSizingModes = useMemo(
     () => Boolean(selectedNode && supportsSharedSizingModes(selectedNode.type)),
     [selectedNode]
+  );
+  const selectedFlexItemPreset = useMemo(
+    () => inferFlexItemPreset(selectedSizingStyle),
+    [selectedSizingStyle]
   );
   const selectedMediaParentSection = useMemo(() => {
     if (!selectedNode || !['image', 'logo', 'qr'].includes(selectedNode.type)) {
@@ -1208,6 +1283,139 @@ export const DesignerShell: React.FC = () => {
             Fill sizing works best inside stack or grid parents.
           </p>
         )}
+      </div>
+    );
+  };
+
+  const renderFlexItemControls = () => {
+    if (!selectedNode || !selectedParentFlexLayout) {
+      return null;
+    }
+
+    const mainAxisLabel = selectedParentFlexLayout.flexDirection === 'row' ? 'Width' : 'Height';
+    const mainAxisNoun = selectedParentFlexLayout.flexDirection === 'row' ? 'width' : 'height';
+    const currentFlexGrow = coerceFlexNumber(selectedSizingStyle?.flexGrow, 0);
+    const currentFlexShrink = coerceFlexNumber(selectedSizingStyle?.flexShrink, 1);
+    const currentFlexBasis = typeof selectedSizingStyle?.flexBasis === 'string' ? selectedSizingStyle.flexBasis : '';
+
+    const applyFlexPreset = (preset: Exclude<FlexItemPreset, 'custom'>) => {
+      const patch =
+        preset === 'fill'
+          ? { grow: 1, shrink: 1, basis: 'auto' }
+          : preset === 'share'
+            ? { grow: 1, shrink: 1, basis: '0%' }
+            : preset === 'fixed'
+              ? { grow: 0, shrink: 0, basis: 'auto' }
+              : { grow: 0, shrink: 1, basis: 'auto' };
+      setNodeProp(selectedNode.id, 'style.flexGrow', patch.grow, false);
+      setNodeProp(selectedNode.id, 'style.flexShrink', patch.shrink, false);
+      setNodeProp(selectedNode.id, 'style.flexBasis', patch.basis, true);
+    };
+
+    const applyFlexBasis = (raw: string, commit: boolean) => {
+      const trimmed = raw.trim();
+      if (trimmed.length === 0) {
+        unsetNodeProp(selectedNode.id, 'style.flexBasis', commit);
+        return;
+      }
+      setNodeProp(selectedNode.id, 'style.flexBasis', trimmed, commit);
+    };
+
+    const applyFlexNumber = (path: 'style.flexGrow' | 'style.flexShrink', raw: string, commit: boolean) => {
+      const trimmed = raw.trim();
+      if (trimmed.length === 0) {
+        unsetNodeProp(selectedNode.id, path, commit);
+        return;
+      }
+      const numeric = Number(trimmed);
+      if (!Number.isFinite(numeric)) {
+        return;
+      }
+      setNodeProp(selectedNode.id, path, numeric, commit);
+    };
+
+    return (
+      <div
+        className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2"
+        data-automation-id="designer-flex-item-controls"
+      >
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Flex Item</p>
+          <p className="text-[11px] text-slate-500">
+            In this {selectedParentFlexLayout.flexDirection === 'row' ? 'horizontal' : 'vertical'} stack, these settings control how the item shares {mainAxisNoun} with its siblings.
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-xs text-slate-500">{mainAxisLabel} Behavior</p>
+          <div className="grid grid-cols-2 gap-2">
+            {FLEX_ITEM_PRESET_OPTIONS.map((option) => {
+              const isSelected = option.value === selectedFlexItemPreset;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => applyFlexPreset(option.value)}
+                  className={clsx(
+                    'rounded border px-2 py-2 text-left transition-colors',
+                    isSelected
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                      : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  )}
+                  aria-pressed={isSelected}
+                  aria-label={`${mainAxisLabel} behavior: ${option.label}`}
+                  data-automation-id={`designer-flex-item-preset-${option.value}`}
+                >
+                  <div className="text-xs font-medium">{option.label}</div>
+                  <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{option.description}</div>
+                </button>
+              );
+            })}
+          </div>
+          {selectedFlexItemPreset === 'custom' && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400">
+              This item has custom flex values. Choose a preset to simplify it, or adjust the advanced values below.
+            </p>
+          )}
+        </div>
+        <details data-automation-id="designer-flex-item-advanced">
+          <summary className="cursor-pointer text-xs font-medium text-slate-600 dark:text-slate-300">
+            Advanced Flex Values
+          </summary>
+          <div className="mt-2 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-slate-500 block mb-1">Take extra space</label>
+                <Input
+                  value={String(currentFlexGrow)}
+                  placeholder="0"
+                  onChange={(event) => applyFlexNumber('style.flexGrow', event.target.value, false)}
+                  onBlur={(event) => applyFlexNumber('style.flexGrow', event.target.value, true)}
+                  data-automation-id="designer-flex-grow-input"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-500 block mb-1">Allow shrinking</label>
+                <Input
+                  value={String(currentFlexShrink)}
+                  placeholder="1"
+                  onChange={(event) => applyFlexNumber('style.flexShrink', event.target.value, false)}
+                  onBlur={(event) => applyFlexNumber('style.flexShrink', event.target.value, true)}
+                  data-automation-id="designer-flex-shrink-input"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 block mb-1">Preferred {mainAxisNoun} size</label>
+              <Input
+                value={currentFlexBasis}
+                placeholder="auto | 240px | 50%"
+                onChange={(event) => applyFlexBasis(event.target.value, false)}
+                onBlur={(event) => applyFlexBasis(event.target.value, true)}
+                data-automation-id="designer-flex-basis-input"
+              />
+            </div>
+          </div>
+        </details>
       </div>
     );
   };
@@ -2130,6 +2338,7 @@ export const DesignerShell: React.FC = () => {
 		              )}
                   {renderContainerLayoutControls()}
                   {renderSharedSizingControls()}
+                  {renderFlexItemControls()}
                   <DesignerSchemaInspector node={selectedNode} nodesById={nodesById} />
 			              {selectedNode.type === 'section' && (
 			                <div className="space-y-1">
