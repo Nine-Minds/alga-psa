@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { DndContext } from '@dnd-kit/core';
-import { render, cleanup } from '@testing-library/react';
+import { render, cleanup, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { DesignCanvas } from './DesignCanvas';
@@ -88,6 +88,8 @@ describe('DesignCanvas (media aspect-ratio integration)', () => {
     if (!imageEl) return;
 
     expect(imageEl.style.aspectRatio).toBe('16 / 9');
+    expect(imageEl.style.overflow).toBe('hidden');
+    expect(screen.getByText('Image · image')).toBeTruthy();
 
     const img = imageEl.querySelector('img') as HTMLImageElement | null;
     expect(img).toBeTruthy();
