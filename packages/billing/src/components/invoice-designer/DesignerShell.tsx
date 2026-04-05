@@ -57,6 +57,11 @@ import {
   ArrowRight,
   ArrowUp,
   ArrowUpDown,
+  BoxSelect,
+  Maximize2,
+  Scaling,
+  Shrink,
+  StretchHorizontal,
   Grid3X3,
 } from 'lucide-react';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
@@ -354,6 +359,14 @@ const MEDIA_VERTICAL_ALIGN_OPTIONS: IconToggleOption[] = [
   { value: 'top', label: 'Top', tooltip: 'Align image to the top', icon: ArrowUp },
   { value: 'center', label: 'Center', tooltip: 'Center image vertically', icon: ArrowUpDown },
   { value: 'bottom', label: 'Bottom', tooltip: 'Align image to the bottom', icon: ArrowDown },
+];
+
+const MEDIA_OBJECT_FIT_OPTIONS: IconToggleOption[] = [
+  { value: 'contain', label: 'Contain', tooltip: 'Scale to fit inside the frame', icon: Scaling },
+  { value: 'cover', label: 'Cover', tooltip: 'Fill the frame and crop overflow', icon: Maximize2 },
+  { value: 'fill', label: 'Fill', tooltip: 'Stretch to fill the frame', icon: StretchHorizontal },
+  { value: 'none', label: 'None', tooltip: 'Keep the intrinsic image size', icon: BoxSelect },
+  { value: 'scale-down', label: 'Scale Down', tooltip: 'Use intrinsic size unless it needs shrinking', icon: Shrink },
 ];
 
 const GRID_COLUMN_PRESETS: GridColumnPreset[] = [
@@ -1247,27 +1260,19 @@ export const DesignerShell: React.FC = () => {
               onBlur={(event) => applyMetadata({ alt: event.target.value }, true)}
             />
 	          </div>
-	          <div>
-	            <label className="text-xs text-slate-500 block mb-1">Object fit</label>
-	            <CustomSelect
-	              id="designer-media-object-fit"
-	              options={[
-	                { value: 'contain', label: 'Contain' },
-	                { value: 'cover', label: 'Cover' },
-	                { value: 'fill', label: 'Fill' },
-	                { value: 'none', label: 'None' },
-	                { value: 'scale-down', label: 'Scale Down' },
-	              ]}
-	              value={objectFit}
-	              onValueChange={(value: string) => {
-	                setNodeProp(selectedNode.id, 'style.objectFit', value, true);
-	                if (value === 'contain' || value === 'cover' || value === 'fill') {
-	                  applyMetadata({ fitMode: value, fit: value }, true);
-	                }
-	              }}
-	              size="sm"
-	            />
-	          </div>
+            {renderIconButtonGroup(
+              'media-object-fit',
+              'Object Fit',
+              MEDIA_OBJECT_FIT_OPTIONS,
+              objectFit,
+              (value) => {
+                setNodeProp(selectedNode.id, 'style.objectFit', value, true);
+                if (value === 'contain' || value === 'cover' || value === 'fill') {
+                  applyMetadata({ fitMode: value, fit: value }, true);
+                }
+              },
+              5
+            )}
             <div className="grid grid-cols-2 gap-2">
               {renderIconButtonGroup(
                 'media-horizontal-align',
