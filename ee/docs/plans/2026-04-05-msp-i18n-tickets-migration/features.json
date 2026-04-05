@@ -11,7 +11,7 @@
   {"id": "F010", "description": "Update route namespace coverage so `/msp/settings` and `/msp/service-requests/*` load `features/tickets` for reused ticket components", "implemented": true, "prdRefs": ["2b-21a/acceptance"]},
 
   {"id": "F020", "description": "Wire useTranslation('features/tickets') in TicketingDashboard.tsx — page title, add button, filter labels (status/priority/assignee/response state/due date)", "implemented": true, "prdRefs": ["2b-21a/sub-batch-A"]},
-  {"id": "F021", "description": "Wire bulk action strings in TicketingDashboard.tsx — move/delete/bundle buttons, selection counts, confirmations, toast messages (with count interpolation)", "implemented": false, "prdRefs": ["2b-21a/sub-batch-A"]},
+  {"id": "F021", "description": "Wire bulk action strings in TicketingDashboard.tsx — move/delete/bundle buttons, selection counts, confirmations, toast messages (with count interpolation)", "implemented": true, "prdRefs": ["2b-21a/sub-batch-A"]},
   {"id": "F022", "description": "Wire TicketingDashboard.tsx empty states, loading text, error toasts, board-switching confirmations", "implemented": false, "prdRefs": ["2b-21a/sub-batch-A"]},
   {"id": "F023", "description": "Wire useTranslation in QuickAddTicket.tsx — dialog title, field labels, placeholders", "implemented": false, "prdRefs": ["2b-21a/sub-batch-A"]},
   {"id": "F024", "description": "Wire QuickAddTicket.tsx validation errors, submit/cancel buttons, tag creation flow strings, toast messages", "implemented": false, "prdRefs": ["2b-21a/sub-batch-A"]},

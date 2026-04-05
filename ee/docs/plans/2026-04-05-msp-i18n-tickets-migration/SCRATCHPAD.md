@@ -279,6 +279,13 @@ the one-liner. Keep the validator green before committing.
   packages/tickets/src/components/TicketingDashboard.tsx`; it exited 0 with only pre-existing
   warnings in this file (unused vars, hook deps, legacy JSX apostrophe), so no new lint errors
   were introduced by the i18n patch.
+- **(2026-04-05, F021)** Localized the dashboard’s bulk-selection surface in
+  `packages/tickets/src/components/TicketingDashboard.tsx`: selection-menu actions, bulk move/
+  delete/bundle toolbar buttons, select-all banners, bundle cross-client confirmation, move/
+  delete/bundle dialog titles and buttons, bulk dialog field labels/placeholders, and bulk toast
+  messages now all resolve through `features/tickets` with `count` interpolation. Re-ran
+  `npx eslint packages/tickets/src/components/TicketingDashboard.tsx`; it stayed green with only
+  the same file-local pre-existing warnings.
 
 ## Risks
 
