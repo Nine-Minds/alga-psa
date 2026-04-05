@@ -685,28 +685,28 @@ export function QuickAddTicket({
 
   const validateForm = () => {
     const validationErrors: string[] = [];
-    if (!title.trim()) validationErrors.push('Title');
-    if (!boardId) validationErrors.push('Board');
-    if (!statusId) validationErrors.push('Status');
+    if (!title.trim()) validationErrors.push(t('create.errors.titleRequired', 'Title is required'));
+    if (!boardId) validationErrors.push(t('validation.quickAdd.boardRequired', 'Please select a board'));
+    if (!statusId) validationErrors.push(t('validation.quickAdd.statusRequired', 'Please select a status'));
 
     // Validate priority based on board type
     if (boardConfig.priority_type === 'custom') {
       // Custom priority boards require priority_id
       if (!priorityId) {
-        validationErrors.push('Priority');
+        validationErrors.push(t('validation.quickAdd.priorityRequired', 'Please select a priority'));
       }
     } else if (boardConfig.priority_type === 'itil') {
       // ITIL priority boards require impact and urgency
-      if (!itilImpact) validationErrors.push('Impact');
-      if (!itilUrgency) validationErrors.push('Urgency');
+      if (!itilImpact) validationErrors.push(t('validation.quickAdd.impactRequired', 'Please select an impact'));
+      if (!itilUrgency) validationErrors.push(t('validation.quickAdd.urgencyRequired', 'Please select an urgency'));
     } else {
       // Default to custom behavior if priority_type is undefined
       if (!priorityId) {
-        validationErrors.push('Priority');
+        validationErrors.push(t('validation.quickAdd.priorityRequired', 'Please select a priority'));
       }
     }
 
-    if (!clientId) validationErrors.push('Client');
+    if (!clientId) validationErrors.push(t('validation.quickAdd.clientRequired', 'Please select a client'));
     return validationErrors;
   };
 
@@ -719,7 +719,7 @@ export function QuickAddTicket({
       session?.user?.id || (await getCurrentUser())?.user_id;
 
     if (!effectiveUserId) {
-      throw new Error('User session is required for clipboard image upload.');
+      throw new Error(t('quickAdd.clipboardUploadSessionRequired', 'User session is required for clipboard image upload.'));
     }
 
     const replacementUrls = new Map<string, string>();
@@ -735,11 +735,11 @@ export function QuickAddTicket({
       });
 
       if (isActionPermissionError(uploadResult)) {
-        throw new Error(uploadResult.permissionError || 'Clipboard image upload failed.');
+        throw new Error(uploadResult.permissionError || t('quickAdd.clipboardUploadFailed', 'Clipboard image upload failed.'));
       }
 
       if (!uploadResult.success) {
-        throw new Error(uploadResult.error || 'Clipboard image upload failed.');
+        throw new Error(uploadResult.error || t('quickAdd.clipboardUploadFailed', 'Clipboard image upload failed.'));
       }
 
       const uploadedDocument = uploadResult.document;
@@ -851,7 +851,7 @@ export function QuickAddTicket({
 
       const newTicket = await addTicket(formData);
       if (!newTicket) {
-        throw new Error('Failed to create ticket');
+        throw new Error(t('errors.createTicketFailed', 'Failed to create ticket. Please try again.'));
       }
 
       let finalizedDescription = serializeTicketRichTextContent(descriptionForCreate);
@@ -859,7 +859,7 @@ export function QuickAddTicket({
         finalizedDescription = await finalizeDescriptionForCreatedTicket(newTicket);
       } catch (descriptionFinalizeError) {
         console.error('Failed to finalize quick add description:', descriptionFinalizeError);
-        toast.error('Ticket created, but pasted images could not be attached to the description.');
+        toast.error(t('quickAdd.clipboardUploadPartialFailure', 'Ticket created, but pasted images could not be attached to the description.'));
       }
 
       // Assign team if selected
@@ -868,7 +868,7 @@ export function QuickAddTicket({
           await assignTeamToTicket(newTicket.ticket_id, assignedTeamId);
         } catch (teamError) {
           console.error('Failed to assign team:', teamError);
-          toast.error('Ticket created but team assignment failed');
+          toast.error(t('quickAdd.teamAssignmentPartialFailure', 'Ticket created but team assignment failed'));
         }
       }
 
@@ -889,10 +889,18 @@ export function QuickAddTicket({
         try {
           createdTags = await createTagsForEntity(newTicket.ticket_id, 'ticket', pendingTags);
           if (createdTags.length < pendingTags.length) {
-            toast.error(`${pendingTags.length - createdTags.length} tag(s) could not be created`);
+            const failedCount = pendingTags.length - createdTags.length;
+            toast.error(t('quickAdd.tagCreatePartialFailure', {
+              count: failedCount,
+              defaultValue: failedCount === 1 ? '{{count}} tag could not be created' : '{{count}} tags could not be created',
+            }));
           }
         } catch (tagError) {
           console.error("Error creating ticket tags:", tagError);
+          toast.error(t('quickAdd.tagCreatePartialFailure', {
+            count: pendingTags.length,
+            defaultValue: pendingTags.length === 1 ? '{{count}} tag could not be created' : '{{count}} tags could not be created',
+          }));
         }
       }
 
@@ -914,7 +922,7 @@ export function QuickAddTicket({
       }
     } catch (error) {
       console.error('Error creating ticket:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create ticket. Please try again.');
+      setError(error instanceof Error ? error.message : t('errors.createTicketFailed', 'Failed to create ticket. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -983,10 +991,10 @@ export function QuickAddTicket({
             </div>
           ) : (
             <>
-              {hasAttemptedSubmit && error && (
+                  {hasAttemptedSubmit && error && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>
-                    <p className="font-medium mb-2">Please fill in the required fields:</p>
+                    <p className="font-medium mb-2">{t('quickAdd.requiredFieldsHeading', 'Please fill in the required fields:')}</p>
                     <ul className="list-disc list-inside space-y-1">
                       {error.split('\n').map((err, index) => (
                         <li key={index}>{err}</li>
@@ -1508,7 +1516,7 @@ export function QuickAddTicket({
                       variant="outline"
                       onClick={handleClose}
                     >
-                      Cancel
+                      {t('actions.cancel', 'Cancel')}
                     </Button>
                     <Button
                       id={`${id}-create-open-btn`}
@@ -1520,7 +1528,9 @@ export function QuickAddTicket({
                       }}
                       className={hasRequiredFieldErrors ? 'opacity-50' : ''}
                     >
-                      {isSubmitting ? 'Creating...' : 'Create + View Ticket'}
+                      {isSubmitting
+                        ? t('quickAdd.submitting', 'Adding...')
+                        : t('quickAdd.createAndView', 'Create + View Ticket')}
                     </Button>
                     <Button
                       id={`${id}-submit-btn`}
@@ -1530,7 +1540,9 @@ export function QuickAddTicket({
                       onClick={() => { void handleCreateTicket(); }}
                       className={hasRequiredFieldErrors ? 'opacity-50' : ''}
                     >
-                      {isSubmitting ? 'Creating...' : 'Create'}
+                      {isSubmitting
+                        ? t('quickAdd.submitting', 'Adding...')
+                        : t('actions.create', 'Create')}
                     </Button>
                   </DialogFooter>
                 </FormOrDiv>
@@ -1592,10 +1604,10 @@ export function QuickAddTicket({
         isOpen={descriptionUploadSession.showDraftCancelDialog}
         onClose={() => descriptionUploadSession.setShowDraftCancelDialog(false)}
         onConfirm={descriptionUploadSession.deleteTrackedDraftClipboardImages}
-        title="Pasted Images Detected"
-        message="This quick-add description includes pasted images that have not been attached to a saved ticket yet. Continue editing, or delete the staged images and close?"
-        confirmLabel="Delete Images"
-        cancelLabel="Continue Editing"
+        title={t('conversation.clipboardDraftCancelTitle', 'Pasted Images Detected')}
+        message={t('quickAdd.clipboardDraftMessage', 'This quick-add description includes pasted images that have not been attached to a saved ticket yet. Continue editing, or delete the staged images and close?')}
+        confirmLabel={t('conversation.deleteUploadedImages', 'Delete Images')}
+        cancelLabel={t('quickAdd.continueEditing', 'Continue Editing')}
         isConfirming={descriptionUploadSession.isDeletingDraftImages}
       />
     </div>

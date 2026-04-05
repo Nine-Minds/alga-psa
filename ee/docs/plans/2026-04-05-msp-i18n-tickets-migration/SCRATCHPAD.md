@@ -320,6 +320,15 @@ the one-liner. Keep the validator green before committing.
   scripts/validate-translations.cjs` successfully. `npx eslint
   packages/tickets/src/components/QuickAddTicket.tsx` still reports only the file’s existing
   warnings (`@ts-nocheck`, unused imports/types, and pre-existing hook-deps warnings).
+- **(2026-04-05, F024)** Completed the remaining user-visible QuickAddTicket action/error copy:
+  validation messages now use translated field-specific requirements, submit/cancel buttons and
+  the secondary `Create + View Ticket` action resolve through i18n, clipboard image confirmation
+  copy is translated, and the quick-add toast/error paths for clipboard image upload, team
+  assignment, tag creation, and generic create failures now use `features/tickets`. Added
+  `quickAdd.createAndView`, `quickAdd.continueEditing`, and `quickAdd.clipboardDraftMessage`
+  across the production locales, regenerated pseudo-locales, and re-ran translation validation
+  successfully. `npx eslint packages/tickets/src/components/QuickAddTicket.tsx` remained green
+  with only the file’s pre-existing warnings.
 
 ## Risks
 

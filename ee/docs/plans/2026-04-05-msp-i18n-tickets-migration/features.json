@@ -15,7 +15,7 @@
   {"id": "F022", "description": "Wire TicketingDashboard.tsx empty states, loading text, error toasts, board-switching confirmations", "implemented": true, "prdRefs": ["2b-21a/sub-batch-A"]},
   {"id": "F023", "description": "Wire useTranslation in QuickAddTicket.tsx — dialog title, field labels, placeholders", "implemented": true, "prdRefs": ["2b-21a/sub-batch-A"]},
   {"id": "F023A", "description": "Finish QuickAddTicket.tsx field-chrome i18n missed by the earlier audit — ITIL matrix labels, team-member picker section label, unnamed location fallback", "implemented": true, "prdRefs": ["2b-21a/sub-batch-A"]},
-  {"id": "F024", "description": "Wire QuickAddTicket.tsx validation errors, submit/cancel buttons, tag creation flow strings, toast messages", "implemented": false, "prdRefs": ["2b-21a/sub-batch-A"]},
+  {"id": "F024", "description": "Wire QuickAddTicket.tsx validation errors, submit/cancel buttons, tag creation flow strings, toast messages", "implemented": true, "prdRefs": ["2b-21a/sub-batch-A"]},
   {"id": "F025", "description": "Wire useTranslation in ticket/TicketInfo.tsx — detail header, field labels, action buttons", "implemented": false, "prdRefs": ["2b-21a/sub-batch-A"]},
   {"id": "F026", "description": "Wire TicketInfo.tsx confirmation dialogs, inline edit triggers, toast messages", "implemented": false, "prdRefs": ["2b-21a/sub-batch-A"]},
   {"id": "F027", "description": "Wire useTranslation in ticket/TicketProperties.tsx — side panel labels, status/priority/board selects, assignment UI", "implemented": false, "prdRefs": ["2b-21a/sub-batch-A"]},
