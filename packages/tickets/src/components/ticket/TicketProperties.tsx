@@ -537,7 +537,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         setSelectedContactId(null);
                       }}
                     >
-                      Cancel
+                      {t('actions.cancel', 'Cancel')}
                     </Button>
                     <Button
                       {...withDataAutomationId({ id: `${id}-save-contact-picker-btn` })}
@@ -548,7 +548,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         setShowContactPicker(false);
                       }}
                     >
-                      Save
+                      {t('actions.save', 'Save')}
                     </Button>
                   </div>
                 </div>
@@ -651,7 +651,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         setSelectedClientId(null);
                       }}
                     >
-                      Cancel
+                      {t('actions.cancel', 'Cancel')}
                     </Button>
                     <Button
                       {...withDataAutomationId({ id: `${id}-save-client-picker-btn` })}
@@ -664,7 +664,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         setShowClientPicker(false);
                       }}
                     >
-                      Save
+                      {t('actions.save', 'Save')}
                     </Button>
                   </div>
                 </div>
@@ -732,7 +732,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                           setSelectedLocationId(null);
                         }}
                       >
-                        Cancel
+                        {t('actions.cancel', 'Cancel')}
                       </Button>
                       <Button
                         {...withDataAutomationId({ id: `${id}-save-location-picker-btn` })}
@@ -745,7 +745,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                           setShowLocationPicker(false);
                         }}
                       >
-                        Save
+                        {t('actions.save', 'Save')}
                       </Button>
                     </div>
                   </div>
@@ -1150,7 +1150,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             setPendingSwitchTeamId(null);
             setIsRemoveTeamDialogOpen(false);
           }}
-          title={pendingSwitchTeamId ? "Switch team assignment" : "Remove team assignment"}
+          title={pendingSwitchTeamId
+            ? t('properties.switchTeamAssignment', 'Switch team assignment')
+            : t('properties.removeTeamAssignment', 'Remove team assignment')}
           id={`${id}-remove-team-dialog`}
         >
         <DialogContent className="space-y-4">
@@ -1163,7 +1165,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 checked={removeTeamMode === 'remove_all'}
                 onChange={() => setRemoveTeamMode('remove_all')}
               />
-              <span>Remove all team members</span>
+              <span>{t('properties.removeTeamMode.removeAll', 'Remove all team members')}</span>
             </label>
             <label className="flex items-start gap-2 text-sm">
               <input
@@ -1173,7 +1175,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 checked={removeTeamMode === 'keep_all'}
                 onChange={() => setRemoveTeamMode('keep_all')}
               />
-              <span>Keep all team members as individual agents</span>
+              <span>{t('properties.removeTeamMode.keepAll', 'Keep all team members as individual agents')}</span>
             </label>
             <label className="flex items-start gap-2 text-sm">
               <input
@@ -1183,13 +1185,13 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 checked={removeTeamMode === 'selective'}
                 onChange={() => setRemoveTeamMode('selective')}
               />
-              <span>Select individual members to keep/remove</span>
+              <span>{t('properties.removeTeamMode.selective', 'Select individual members to keep/remove')}</span>
             </label>
           </div>
           {removeTeamMode === 'selective' && (
             <div className="space-y-2 border border-gray-100 rounded p-3">
               {teamMembersOnTicket.length === 0 ? (
-                <div className="text-sm text-gray-500">No team members found on this ticket.</div>
+                <div className="text-sm text-gray-500">{t('properties.noTeamMembersFound', 'No team members found on this ticket.')}</div>
               ) : (
                 teamMembersOnTicket.map(member => {
                   const memberId = member.additional_user_id!;
@@ -1228,7 +1230,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               setIsRemoveTeamDialogOpen(false);
             }}
           >
-            Cancel
+            {t('actions.cancel', 'Cancel')}
           </Button>
           <Button
             id="remove-team-confirm-btn"
@@ -1248,7 +1250,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               setIsRemoveTeamDialogOpen(false);
             }}
           >
-            Confirm
+            {t('actions.confirm', 'Confirm')}
           </Button>
         </DialogFooter>
       </Dialog>

@@ -374,6 +374,18 @@ the one-liner. Keep the validator green before committing.
   src/components/ticket/__tests__/ticket-properties-inline-contact.test.tsx`. Those tests now mock
   `useTranslation`, and the inline-contact harness also mocks `useQuickAddClient` so the quick-add
   contact dialog continues to render in isolation.
+- **(2026-04-05, F028)** Finished the remaining interactive `TicketProperties.tsx` copy without
+  adding new keys: the contact/client/location picker footer buttons now use shared
+  `actions.cancel` / `actions.save`, and the team removal/switch dialog now resolves its title,
+  option labels, empty state, and confirm/cancel buttons through existing `properties.*` and
+  `actions.*` keys. The only English strings still visible in the file are inside a commented-out
+  legacy team block and do not render at runtime.
+- **(2026-04-05, F028 validation)** Re-ran `npx eslint
+  packages/tickets/src/components/ticket/TicketProperties.tsx` (same pre-existing warnings only)
+  plus `cd packages/tickets && npx vitest run
+  src/components/ticket/__tests__/TicketProperties.liveTimerPolicy.test.tsx
+  src/components/ticket/__tests__/ticket-properties-inline-contact.test.tsx`, which stayed green
+  after the dialog/button wiring.
 
 ## Risks
 
