@@ -573,6 +573,9 @@ the one-liner. Keep the validator green before committing.
   user-visible copy at runtime; `AgentScheduleDrawerStyles.tsx` contains CSS comments only.
   `TicketDetailsSkeleton.tsx` includes descriptive JSX comments, but they do not render into the
   DOM and therefore do not belong in the translation namespace.
+- **(2026-04-05, F060)** Ran `node scripts/validate-translations.cjs` as the acceptance
+  parity check after finishing the remaining ticket-component wiring. Validation passed across
+  all 6 production locales plus both pseudo-locales with `Errors: 0` and `Warnings: 0`.
 
 ## Risks
 
