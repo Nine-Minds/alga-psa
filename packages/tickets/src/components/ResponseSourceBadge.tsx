@@ -3,6 +3,7 @@
 import React from 'react';
 import { Mail, Monitor } from 'lucide-react';
 import { cn } from '@alga-psa/ui';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   COMMENT_RESPONSE_SOURCES,
   type CommentResponseSource,
@@ -15,7 +16,7 @@ export interface ResponseSourceLabels {
 
 interface ResponseSourceBadgeProps {
   source: CommentResponseSource;
-  labels: ResponseSourceLabels;
+  labels?: Partial<ResponseSourceLabels>;
   size?: 'sm' | 'md';
   className?: string;
 }
@@ -30,14 +31,19 @@ function ResponseSourceIcon({ source }: { source: CommentResponseSource }) {
 
 export default function ResponseSourceBadge({
   source,
-  labels,
+  labels = {},
   size = 'sm',
   className,
 }: ResponseSourceBadgeProps) {
+  const { t } = useTranslation('features/tickets');
+  const resolvedLabels: ResponseSourceLabels = {
+    clientPortal: labels.clientPortal ?? t('responseSource.clientPortal', 'Received via Client Portal'),
+    inboundEmail: labels.inboundEmail ?? t('responseSource.inboundEmail', 'Received via Inbound Email'),
+  };
   const label =
     source === COMMENT_RESPONSE_SOURCES.INBOUND_EMAIL
-      ? labels.inboundEmail
-      : labels.clientPortal;
+      ? resolvedLabels.inboundEmail
+      : resolvedLabels.clientPortal;
 
   return (
     <div

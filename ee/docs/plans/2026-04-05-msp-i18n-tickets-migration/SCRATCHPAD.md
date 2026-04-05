@@ -553,6 +553,20 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, F048 validation)** `npx eslint
   packages/tickets/src/components/TicketingDashboardContainer.tsx` exited 0 after adding the
   new `t` dependency to the fetch callback.
+- **(2026-04-05, F049)** Audited `TicketOriginBadge.tsx` and `ResponseSourceBadge.tsx` against
+  the existing namespace and confirmed no new keys were needed: `origin.*` already covers all
+  badge enum values and `responseSource.*` already covers the comment-source variants used in
+  MSP. Both badge components now call `useTranslation('features/tickets')` so they can fall back
+  to localized labels even when a parent omits the `labels` prop, while still preserving caller-
+  provided overrides.
+- **(2026-04-05, F049 validation)** `npx eslint
+  packages/tickets/src/components/TicketOriginBadge.tsx
+  packages/tickets/src/components/ResponseSourceBadge.tsx` exited 0. Focused render-contract
+  coverage also still passes with `cd packages/tickets && npx vitest run
+  src/components/TicketOriginBadge.render.test.tsx
+  src/components/ResponseSourceBadge.render.test.tsx`; the run emits the expected
+  `react-i18next` no-instance warning because these server-render tests do not mount an
+  `I18nProvider`, but the assertions remain green through fallback text.
 
 ## Risks
 
