@@ -228,6 +228,11 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, F002)** Placeholder strategy is intentional: `F003`-`F008` will replace the
   temporary English values in each production locale with real translations one locale at a
   time while keeping the validator green throughout.
+- **(2026-04-05, F003)** Replaced the temporary English placeholders in
+  `fr/features/tickets.json` with French translations for the MSP ticket additions. During
+  validation a partial Italian worker edit had renamed `ticketSection.on` / `ticketSection.minutes`
+  to localized key names; corrected the key names in-place so parity stayed valid without
+  altering the Italian values.
 
 ## Risks
 
