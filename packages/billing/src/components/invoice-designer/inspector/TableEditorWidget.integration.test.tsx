@@ -354,6 +354,10 @@ describe('TableEditorWidget (schema widget integration)', () => {
 
     expect(screen.getAllByText('item.key').length).toBeGreaterThan(0);
     expect(screen.getAllByText('item.aggregates.sumTotal').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'item.description' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'item.unitPrice' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Description' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Rate' })).toBeNull();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'item.aggregates.sumTotal' })[0]!);
 
@@ -380,12 +384,16 @@ describe('TableEditorWidget (schema widget integration)', () => {
     });
 
     expect(screen.getAllByText('item.aggregates.sumTotal').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Description' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'item.description' })).toBeNull();
 
     await selectCustomOption('designer-table-source-binding', 'items (Transforms source)');
 
     await waitFor(() => {
       expect(screen.queryAllByText('item.aggregates.sumTotal')).toHaveLength(0);
       expect(screen.getAllByText('item.description').length).toBeGreaterThan(0);
+      expect(screen.getByRole('button', { name: 'Description' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'item.description' })).toBeTruthy();
     });
   });
 
@@ -408,9 +416,9 @@ describe('TableEditorWidget (schema widget integration)', () => {
     const options = await screen.findAllByRole('option');
     const optionLabels = options.map((option) => option.textContent?.trim());
 
-    expect(optionLabels).toContain('recurringItems (recurring_items)');
-    expect(optionLabels).toContain('onetimeItems (onetime_items)');
-    expect(optionLabels).toContain('serviceItems (service_items)');
-    expect(optionLabels).toContain('productItems (product_items)');
+    expect(optionLabels).toContain('Recurring Items');
+    expect(optionLabels).toContain('One-time Items');
+    expect(optionLabels).toContain('Service Items');
+    expect(optionLabels).toContain('Product Items');
   });
 });
