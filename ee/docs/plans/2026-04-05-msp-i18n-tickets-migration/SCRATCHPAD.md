@@ -483,6 +483,13 @@ the one-liner. Keep the validator green before committing.
   packages/tickets/src/components/ticket/TicketEmailNotifications.tsx`, which exited 0. There is
   no dedicated component test file for this card yet; only higher-level TicketDetails tests mock
   it out.
+- **(2026-04-05, F042)** Wired `ResponseStateSelect.tsx` through
+  `useTranslation('features/tickets')`: the dropdown option labels (`awaitingClient`,
+  `awaitingInternal`, `clear`), the select placeholder, the display heading, and the empty-state
+  `Not set` text now all resolve through `responseState.*`. Removed the stale unused
+  `getResponseStateLabel` import while touching the file.
+- **(2026-04-05, F042 validation)** Verified with `npx eslint
+  packages/tickets/src/components/ResponseStateSelect.tsx`, which exited 0.
 
 ## Risks
 
