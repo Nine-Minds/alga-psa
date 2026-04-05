@@ -172,8 +172,6 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
 
     const labelInput = screen.getByDisplayValue('Invoice #') as HTMLInputElement;
     expect(labelInput.getAttribute('data-template-insert-target')).toBeNull();
-    const bindingInput = screen.getByDisplayValue('invoice.number') as HTMLInputElement;
-    expect(bindingInput.getAttribute('data-template-insert-target')).toBe('metadata.bindingKey');
     fireEvent.change(labelInput, { target: { value: 'PO #' } });
 
     const emptyValueInput = screen.getByDisplayValue('-') as HTMLInputElement;
@@ -182,6 +180,125 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
     const updated = useInvoiceDesignerStore.getState().nodesById['field-1'];
     expect((updated.props as any)?.metadata?.label).toBe('PO #');
     expect((updated.props as any)?.metadata?.emptyValue).toBe('N/A');
+  });
+
+  it('lets field bindings be selected from a searchable picker with a custom path fallback', () => {
+    act(() => {
+      const store = useInvoiceDesignerStore.getState();
+      store.loadWorkspace({
+        rootId: 'doc-1',
+        nodesById: {
+          'doc-1': { id: 'doc-1', type: 'document', props: { name: 'Document' }, children: ['page-1'] },
+          'page-1': { id: 'page-1', type: 'page', props: { name: 'Page 1' }, children: ['field-1'] },
+          'field-1': {
+            id: 'field-1',
+            type: 'field',
+            props: {
+              name: 'Invoice Field',
+              metadata: {
+                label: 'Invoice #',
+                bindingKey: 'invoice.number',
+                format: 'text',
+                placeholder: 'Invoice Number',
+              },
+            },
+            children: [],
+          },
+        },
+        snapToGrid: false,
+        gridSize: 8,
+        showGuides: false,
+        showRulers: false,
+        canvasScale: 1,
+      });
+      store.selectNode('field-1');
+    });
+
+    const Wrapper: React.FC = () => {
+      const nodes = useInvoiceDesignerStore((state) => state.nodes);
+      const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
+      const node = useInvoiceDesignerStore((state) =>
+        selectedNodeId ? (state.nodesById[selectedNodeId] as DesignerNode | undefined) : undefined
+      );
+      const nodesById = useMemo(() => new Map(nodes.map((n) => [n.id, n] as const)), [nodes]);
+      if (!node) return null;
+      return <DesignerSchemaInspector node={node} nodesById={nodesById} />;
+    };
+
+    render(<Wrapper />);
+
+    expect(screen.getByText('Current')).toBeTruthy();
+
+    const searchInput = screen.getByPlaceholderText('Search fields...') as HTMLInputElement;
+    fireEvent.change(searchInput, { target: { value: 'customer address' } });
+    fireEvent.click(screen.getByText('Customer Address'));
+
+    let updated = useInvoiceDesignerStore.getState().nodesById['field-1'];
+    expect((updated.props as any)?.metadata?.bindingKey).toBe('customer.address');
+    expect((updated.props as any)?.metadata?.placeholder).toBe('Customer Address');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use custom path' }));
+
+    const customInput = screen.getByDisplayValue('customer.address') as HTMLInputElement;
+    expect(customInput.getAttribute('data-template-insert-target')).toBe('metadata.bindingKey');
+    fireEvent.change(customInput, { target: { value: 'invoice.balanceDue' } });
+    fireEvent.blur(customInput);
+
+    updated = useInvoiceDesignerStore.getState().nodesById['field-1'];
+    expect((updated.props as any)?.metadata?.bindingKey).toBe('invoice.balanceDue');
+  });
+
+  it('does not overwrite a custom placeholder when picking a new field binding', () => {
+    act(() => {
+      const store = useInvoiceDesignerStore.getState();
+      store.loadWorkspace({
+        rootId: 'doc-1',
+        nodesById: {
+          'doc-1': { id: 'doc-1', type: 'document', props: { name: 'Document' }, children: ['page-1'] },
+          'page-1': { id: 'page-1', type: 'page', props: { name: 'Page 1' }, children: ['field-1'] },
+          'field-1': {
+            id: 'field-1',
+            type: 'field',
+            props: {
+              name: 'Invoice Field',
+              metadata: {
+                bindingKey: 'invoice.number',
+                format: 'text',
+                placeholder: 'Reference value',
+              },
+            },
+            children: [],
+          },
+        },
+        snapToGrid: false,
+        gridSize: 8,
+        showGuides: false,
+        showRulers: false,
+        canvasScale: 1,
+      });
+      store.selectNode('field-1');
+    });
+
+    const Wrapper: React.FC = () => {
+      const nodes = useInvoiceDesignerStore((state) => state.nodes);
+      const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
+      const node = useInvoiceDesignerStore((state) =>
+        selectedNodeId ? (state.nodesById[selectedNodeId] as DesignerNode | undefined) : undefined
+      );
+      const nodesById = useMemo(() => new Map(nodes.map((n) => [n.id, n] as const)), [nodes]);
+      if (!node) return null;
+      return <DesignerSchemaInspector node={node} nodesById={nodesById} />;
+    };
+
+    render(<Wrapper />);
+
+    const searchInput = screen.getByPlaceholderText('Search fields...') as HTMLInputElement;
+    fireEvent.change(searchInput, { target: { value: 'customer address' } });
+    fireEvent.click(screen.getByText('Customer Address'));
+
+    const updated = useInvoiceDesignerStore.getState().nodesById['field-1'];
+    expect((updated.props as any)?.metadata?.bindingKey).toBe('customer.address');
+    expect((updated.props as any)?.metadata?.placeholder).toBe('Reference value');
   });
 
   it('preserves label spacing while typing and trims on blur commit', () => {

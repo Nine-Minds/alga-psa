@@ -38,7 +38,7 @@ describe('previewBindings', () => {
       bindingKey: 'invoice.number',
       format: 'text',
     });
-    expect(value).toBe('INV-100');
+    expect(value.text).toBe('INV-100');
   });
 
   it('returns null when binding is missing so scaffold fallback can apply', () => {
@@ -47,7 +47,7 @@ describe('previewBindings', () => {
       bindingKey: 'invoice.unknownField',
       format: 'text',
     });
-    expect(value).toBeNull();
+    expect(value.text).toBeNull();
   });
 
   it('formats date and currency bindings', () => {
@@ -62,8 +62,8 @@ describe('previewBindings', () => {
       format: 'currency',
     });
 
-    expect(dateValue).toMatch(/\d{1,2}\/\d{1,2}\/\d{4}/);
-    expect(currencyValue).toBe('$21.00');
+    expect(dateValue.text).toMatch(/\d{1,2}\/\d{1,2}\/\d{4}/);
+    expect(currencyValue.text).toBe('$21.00');
   });
 
   it('derives invoice.discount from subtotal + tax - total', () => {
@@ -78,7 +78,7 @@ describe('previewBindings', () => {
       format: 'currency',
     });
 
-    expect(value).toBe('$2.00');
+    expect(value.text).toBe('$2.00');
   });
 
   it('does not mirror customer address when tenant address is missing', () => {
@@ -91,6 +91,42 @@ describe('previewBindings', () => {
       format: 'text',
     });
 
-    expect(value).toBeNull();
+    expect(value.text).toBeNull();
+  });
+
+  it('formats address bindings as multiline blocks when requested', () => {
+    const value = resolveFieldPreviewValue({
+      invoice: {
+        ...previewInvoice,
+        tenantClient: {
+          ...previewInvoice.tenantClient!,
+          address: '400 SW Main St, , Portland, OR 97204',
+        },
+      },
+      bindingKey: 'tenant.address',
+      format: 'text',
+      displayFormat: 'multiline',
+    });
+
+    expect(value.text).toBe('400 SW Main St\nPortland\nOR 97204');
+    expect(value.multiline).toBe(true);
+  });
+
+  it('treats client.address as a synonym for customer.address', () => {
+    const value = resolveFieldPreviewValue({
+      invoice: {
+        ...previewInvoice,
+        customer: {
+          ...previewInvoice.customer!,
+          address: '901 Harbor Ave, Seattle, WA 98104',
+        },
+      },
+      bindingKey: 'client.address',
+      format: 'text',
+      displayFormat: 'multiline',
+    });
+
+    expect(value.text).toBe('901 Harbor Ave\nSeattle\nWA 98104');
+    expect(value.multiline).toBe(true);
   });
 });

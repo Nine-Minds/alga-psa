@@ -112,6 +112,156 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(rendered.html).toContain('300');
   });
 
+  it('renders multiline address fields with preserved line breaks', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          tenantAddress: { id: 'tenantAddress', kind: 'value', path: 'tenantClient.address' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'issuer-address',
+            type: 'field',
+            binding: { bindingId: 'tenantAddress' },
+            displayFormat: 'multiline',
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, {
+      ...invoiceFixture,
+      tenantClient: { address: '400 SW Main St, Portland, OR 97204' },
+    });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('400 SW Main St');
+    expect(rendered.html).toContain('Portland');
+    expect(rendered.html).toContain('white-space:pre-line');
+  });
+
+  it('renders field border styles in preview output', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'invoice-number-boxed',
+            type: 'field',
+            binding: { bindingId: 'invoiceNumber' },
+            borderStyle: 'box',
+          },
+          {
+            id: 'invoice-number-underlined',
+            type: 'field',
+            binding: { bindingId: 'invoiceNumber' },
+            borderStyle: 'underline',
+          },
+          {
+            id: 'invoice-number-plain',
+            type: 'field',
+            binding: { bindingId: 'invoiceNumber' },
+            borderStyle: 'none',
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('border:1px solid #cbd5e1');
+    expect(rendered.html).toContain('border-bottom:1px solid #cbd5e1');
+    expect(rendered.html).toContain('padding:0');
+    expect(rendered.html).toContain('border:0');
+  });
+
+  it('renders multiline plain fields without single-line inset chrome', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          customerAddress: { id: 'customerAddress', kind: 'value', path: 'customer.address' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'customer-address',
+            type: 'field',
+            binding: { bindingId: 'customerAddress' },
+            borderStyle: 'none',
+            displayFormat: 'multiline',
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, {
+      ...invoiceFixture,
+      customer: { address: '901 Harbor Ave, Seattle, WA 98104' },
+    });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('padding:0');
+    expect(rendered.html).toContain('align-items:flex-start');
+    expect(rendered.html).toContain('white-space:pre-line');
+    expect(rendered.html).toContain('901 Harbor Ave');
+  });
+
+  it('removes single-line inset padding for multiline underlined fields', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          customerAddress: { id: 'customerAddress', kind: 'value', path: 'customer.address' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'customer-address',
+            type: 'field',
+            binding: { bindingId: 'customerAddress' },
+            borderStyle: 'underline',
+            displayFormat: 'multiline',
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, {
+      ...invoiceFixture,
+      customer: { address: '901 Harbor Ave, Seattle, WA 98104' },
+    });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('padding:0');
+    expect(rendered.html).toContain('border-bottom:1px solid #cbd5e1');
+    expect(rendered.html).toContain('align-items:flex-start');
+    expect(rendered.html).toContain('white-space:pre-line');
+  });
+
   it('renders grouped dynamic-table rows from a transformed output binding', async () => {
     const ast: TemplateAst = {
       kind: 'invoice-template-ast',

@@ -23,6 +23,8 @@ export interface TemplateAstMetadata {
 }
 
 export type TemplateValueFormat = 'text' | 'number' | 'currency' | 'date';
+export type TemplateFieldDisplayFormat = 'single-line' | 'multiline' | 'raw';
+export type TemplateFieldBorderStyle = 'underline' | 'box' | 'none';
 
 export type TemplateNodeType =
   | 'document'
@@ -71,7 +73,10 @@ export interface TemplateFieldNode extends TemplateNodeBase {
   binding: TemplateBindingRef;
   label?: string;
   emptyValue?: string;
+  placeholder?: string;
   format?: TemplateValueFormat;
+  displayFormat?: TemplateFieldDisplayFormat;
+  borderStyle?: TemplateFieldBorderStyle;
   children?: never;
 }
 
@@ -186,6 +191,9 @@ export interface TemplateStyleDeclaration {
   lineHeight?: string | number;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
   flex?: string;
+  aspectRatio?: string;
+  objectFit?: string;
+  objectPosition?: string;
   borderColor?: string;
   fontStyle?: string;
 }

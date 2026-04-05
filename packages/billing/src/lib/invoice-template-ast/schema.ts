@@ -15,6 +15,8 @@ const cssIdentifierSchema = z
   .regex(CSS_SAFE_IDENTIFIER_REGEX, { message: 'Invalid CSS identifier.' });
 
 const valueFormatSchema = z.enum(['text', 'number', 'currency', 'date']);
+const fieldDisplayFormatSchema = z.enum(['single-line', 'multiline', 'raw']);
+const fieldBorderStyleSchema = z.enum(['underline', 'box', 'none']);
 const paperPresetSchema = z.enum(INVOICE_PAPER_PRESET_IDS);
 const printSettingsSchema = z.object({
   paperPreset: paperPresetSchema,
@@ -46,6 +48,7 @@ const styleDeclarationSchema = z.object({
   flex: z.string().optional(),
   aspectRatio: z.string().optional(),
   objectFit: z.string().optional(),
+  objectPosition: z.string().optional(),
   color: z.string().optional(),
   backgroundColor: z.string().optional(),
   borderColor: z.string().optional(),
@@ -272,7 +275,10 @@ type NodeInput =
       binding: z.infer<typeof bindingRefSchema>;
       label?: string;
       emptyValue?: string;
+      placeholder?: string;
       format?: z.infer<typeof valueFormatSchema>;
+      displayFormat?: z.infer<typeof fieldDisplayFormatSchema>;
+      borderStyle?: z.infer<typeof fieldBorderStyleSchema>;
     }
   | {
       id: string;
@@ -368,7 +374,10 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       binding: bindingRefSchema,
       label: z.string().optional(),
       emptyValue: z.string().optional(),
+      placeholder: z.string().optional(),
       format: valueFormatSchema.optional(),
+      displayFormat: fieldDisplayFormatSchema.optional(),
+      borderStyle: fieldBorderStyleSchema.optional(),
     }).strict(),
     z.object({
       id: z.string().min(1),
@@ -513,4 +522,3 @@ export const parseTemplateAst = (input: unknown): TemplateAst => {
   }
   return result.ast;
 };
-

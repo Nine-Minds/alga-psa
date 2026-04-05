@@ -11,6 +11,7 @@ import { OutlineView } from './OutlineView';
 import clsx from 'clsx';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import { resolveDesignerDocumentKind } from '../utils/documentKind';
+import { getTemplateFieldDefinition, type InvoiceFieldCategory } from '../fields/fieldCatalog';
 
 interface PaletteProps {
   onSearch?: (query: string) => void;
@@ -30,16 +31,6 @@ const groupByCategory = (components: ComponentDefinition[]) => {
 };
 
 const paletteGroups = groupByCategory(COMPONENT_CATALOG);
-
-type InvoiceFieldCategory =
-  | 'Invoice'
-  | 'Customer'
-  | 'Tenant'
-  | 'Line Item'
-  | 'Quote'
-  | 'Quote Totals'
-  | 'Client'
-  | 'Contact';
 
 type TemplateVariableOption = {
   path: string;
@@ -68,6 +59,15 @@ const toTitleCase = (value: string) =>
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const toTemplateVariableOption = (option: SharedExpressionPathOption): TemplateVariableOption | null => {
+  const knownField = getTemplateFieldDefinition(option.path);
+  if (knownField) {
+    return {
+      path: knownField.path,
+      label: knownField.label,
+      category: knownField.category,
+      description: knownField.description,
+    };
+  }
   const category = categoryLabelByRoot[option.root];
   if (!category) return null;
   const pathSegments = option.path.split('.');

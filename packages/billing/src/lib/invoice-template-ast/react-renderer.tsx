@@ -1,12 +1,14 @@
 import React from 'react';
 import type {
   TemplateAst,
+  TemplateFieldBorderStyle,
   TemplateNode,
   TemplateNodeStyleRef,
   TemplateStyleDeclaration,
   TemplateValueExpression,
   TemplateValueFormat,
 } from '@alga-psa/types';
+import { formatTemplateFieldValue } from './fieldFormatting';
 import type { TemplateEvaluationResult } from './evaluator';
 import { decodeTemplatePathExpression } from './templateInterpolationFilters';
 import { resolveTemplatePrintSettingsFromAst } from './printSettings';
@@ -117,6 +119,39 @@ const resolveStyleRef = (
           .join(' ')
       : null;
   return { className, style: styleDeclarationToReactStyle(styleRef.inline) };
+};
+
+const resolveFieldBorderStyle = (
+  borderStyle: TemplateFieldBorderStyle | undefined
+): React.CSSProperties => {
+  if (borderStyle === 'none') {
+    return {
+      padding: '0',
+      border: '0',
+      backgroundColor: 'transparent',
+      display: 'flex',
+      alignItems: 'flex-start',
+    };
+  }
+  if (borderStyle === 'box') {
+    return {
+      padding: '6px 8px',
+      border: '1px solid #cbd5e1',
+      borderRadius: '4px',
+      backgroundColor: 'transparent',
+      display: 'flex',
+      alignItems: 'center',
+    };
+  }
+  return {
+    padding: '2px 4px',
+    border: '0',
+    borderBottom: '1px solid #cbd5e1',
+    borderRadius: '0',
+    backgroundColor: 'transparent',
+    display: 'flex',
+    alignItems: 'center',
+  };
 };
 
 const resolveSyntheticRootDocumentStyle = (ast: TemplateAst): React.CSSProperties | undefined => {
@@ -371,10 +406,33 @@ const renderNode = (
     }
     case 'field': {
       const value = evaluation.bindings[node.binding.bindingId];
+      const formattedValue = formatTemplateFieldValue({
+        value: value ?? node.emptyValue ?? '',
+        format: node.format,
+        currencyCode: ctx.currencyCode,
+        displayFormat: node.displayFormat,
+      });
+      const multilineFieldAdjustments: React.CSSProperties | null = formattedValue.multiline
+        ? {
+            alignItems: 'flex-start',
+            ...(node.borderStyle === 'none' || node.borderStyle === 'underline'
+              ? {
+                  padding: '0',
+                }
+              : null),
+          }
+        : null;
+      const fieldStyle = {
+        ...resolveFieldBorderStyle(node.borderStyle),
+        ...(multilineFieldAdjustments ?? null),
+        ...(style ?? {}),
+      };
       return (
-        <div key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
+        <div key={node.id} id={node.id} className={elementClassName || undefined} style={fieldStyle}>
           {node.label ? <span>{node.label}: </span> : null}
-          <span>{formatValue(value ?? node.emptyValue ?? '', node.format, ctx)}</span>
+          <span style={formattedValue.multiline ? { whiteSpace: 'pre-line' } : undefined}>
+            {formattedValue.text ?? ''}
+          </span>
         </div>
       );
     }
@@ -564,4 +622,3 @@ export const renderEvaluatedTemplateAst = async (
     css: buildAstCss(ast),
   };
 };
-

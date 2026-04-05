@@ -457,6 +457,25 @@ describe('exportWorkspaceToTemplateAst', () => {
     expect(ast2).toEqual(ast1);
   });
 
+  it('hydrates imported logo nodes from media width and max-height constraints', () => {
+    const sourceAst = getStandardTemplateAstByCode('standard-detailed');
+    expect(sourceAst).toBeTruthy();
+    if (!sourceAst) return;
+
+    const hydrated = importTemplateAstToWorkspace(sourceAst);
+    const hydratedLogo = hydrated.nodesById['issuer-logo'];
+
+    expect(hydratedLogo?.type).toBe('image');
+    expect((hydratedLogo?.props as any)?.style).toMatchObject({
+      width: '180px',
+      maxHeight: '72px',
+    });
+    expect((hydratedLogo?.props as any)?.size).toMatchObject({
+      width: 180,
+      height: 72,
+    });
+  });
+
   it('omits transforms from generated AST when the workspace has no authored transform pipeline', () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable();
     const ast = exportWorkspaceToTemplateAst(workspace);

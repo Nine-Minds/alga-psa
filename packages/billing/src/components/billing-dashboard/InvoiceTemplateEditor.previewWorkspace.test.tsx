@@ -334,6 +334,58 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     });
   });
 
+  it('persists edited field designer placeholders through save and reopen', async () => {
+    const workspace = createWorkspaceWithField('placeholder-field');
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-placeholder',
+      name: 'Template Placeholder',
+      templateAst: exportWorkspaceToTemplateAst(workspace as any),
+      isStandard: false,
+    });
+
+    const rendered = render(<InvoiceTemplateEditor templateId="tpl-placeholder" />);
+
+    await waitFor(() => {
+      const fieldNode = useInvoiceDesignerStore.getState().nodesById['placeholder-field'];
+      expect(fieldNode).toBeTruthy();
+      expect((fieldNode?.props as any)?.metadata?.placeholder).toBe('Invoice Number');
+    });
+
+    act(() => {
+      useInvoiceDesignerStore.getState().setNodeProp(
+        'placeholder-field',
+        'metadata.placeholder',
+        'Invoice Reference',
+        true
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+
+    const savedAst = saveInvoiceTemplateMock.mock.calls[0]?.[0]?.templateAst;
+    const savedField = findLayoutNodeById(savedAst.layout, 'placeholder-field');
+    expect(savedField?.type).toBe('field');
+    if (!savedField || savedField.type !== 'field') return;
+    expect(savedField.placeholder).toBe('Invoice Reference');
+
+    rendered.unmount();
+    useInvoiceDesignerStore.getState().resetWorkspace();
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-placeholder',
+      name: 'Template Placeholder',
+      templateAst: savedAst,
+      isStandard: false,
+    });
+
+    render(<InvoiceTemplateEditor templateId="tpl-placeholder" />);
+
+    await waitFor(() => {
+      const fieldNode = useInvoiceDesignerStore.getState().nodesById['placeholder-field'];
+      expect((fieldNode?.props as any)?.metadata?.placeholder).toBe('Invoice Reference');
+    });
+  });
+
   it('keeps save payload behavior while preview sub-tab is active', async () => {
     render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
