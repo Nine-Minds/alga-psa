@@ -276,7 +276,8 @@
     "drawer": {
       "loading": "Cargando...",
       "clientNotFound": "No se encontró la empresa.",
-      "clientRendererMissing": "Los detalles de la empresa no están disponibles en este contexto."
+      "clientRendererMissing": "Los detalles de la empresa no están disponibles en este contexto.",
+      "clientLoadFailed": "No se pudo cargar el cliente."
     },
     "filters": {
       "allAssignees": "Todos los asignados",
@@ -376,6 +377,8 @@
       "selectDestinationBoard": "Selecciona un tablero de destino...",
       "selectDestinationStatus": "Selecciona un estado de destino...",
       "unnamedBoard": "Tablero sin nombre",
+      "noStatusesConfigured": "Este tablero no tiene estados de ticket configurados para seleccionar.",
+      "loadStatusesFailed": "No se pudieron cargar los estados del tablero.",
       "noTicketsSelected": "No hay tickets seleccionados.",
       "failedItemsHeading": "Los siguientes tickets no se pudieron mover:",
       "confirm_one": "Mover {{count}} ticket",
@@ -394,6 +397,7 @@
       "button_other": "Eliminar {{count}} tickets",
       "failedItemsHeading": "Los siguientes tickets no se pudieron eliminar:",
       "noTicketsSelected": "No hay tickets seleccionados.",
+      "entityFallback": "este ticket",
       "submitting": "Eliminando...",
       "success_one": "{{count}} ticket eliminado",
       "success_other": "{{count}} tickets eliminados",
@@ -958,7 +962,9 @@
     "addMaterial": "No se pudo agregar el material",
     "removeMaterial": "No se pudo eliminar el material",
     "updateWatchList": "No se pudo actualizar la lista de seguimiento. Inténtalo de nuevo.",
-    "fetchCategoryImports": "No se pudieron obtener las categorías disponibles para importar"
+    "fetchCategoryImports": "No se pudieron obtener las categorías disponibles para importar",
+    "validateDeletionFailed": "No se pudo validar la eliminación. Inténtalo de nuevo.",
+    "deleteTicketUnexpected": "Se produjo un error inesperado al eliminar el ticket."
   },
   "ticketSection": {
     "title": "Solicitud de cita",

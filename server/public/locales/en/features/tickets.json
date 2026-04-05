@@ -276,7 +276,8 @@
     "drawer": {
       "loading": "Loading...",
       "clientNotFound": "Client not found.",
-      "clientRendererMissing": "Client details are unavailable in this context."
+      "clientRendererMissing": "Client details are unavailable in this context.",
+      "clientLoadFailed": "Failed to load client."
     },
     "filters": {
       "allAssignees": "All Assignees",
@@ -376,6 +377,8 @@
       "selectDestinationBoard": "Select destination board...",
       "selectDestinationStatus": "Select destination status...",
       "unnamedBoard": "Unnamed board",
+      "noStatusesConfigured": "This board has no ticket statuses configured for selection.",
+      "loadStatusesFailed": "Failed to load board statuses",
       "noTicketsSelected": "No tickets selected.",
       "failedItemsHeading": "The following tickets could not be moved:",
       "confirm_one": "Move {{count}} Ticket",
@@ -394,6 +397,7 @@
       "button_other": "Delete {{count}} Tickets",
       "failedItemsHeading": "The following tickets could not be deleted:",
       "noTicketsSelected": "No tickets selected.",
+      "entityFallback": "this ticket",
       "submitting": "Deleting...",
       "success_one": "{{count}} ticket deleted",
       "success_other": "{{count}} tickets deleted",
@@ -958,7 +962,9 @@
     "addMaterial": "Failed to add material",
     "removeMaterial": "Failed to remove material",
     "updateWatchList": "Unable to update watch list. Please try again.",
-    "fetchCategoryImports": "Failed to fetch available categories for import"
+    "fetchCategoryImports": "Failed to fetch available categories for import",
+    "validateDeletionFailed": "Failed to validate deletion. Please try again.",
+    "deleteTicketUnexpected": "An unexpected error occurred while deleting the ticket."
   },
   "ticketSection": {
     "title": "Appointment Request",

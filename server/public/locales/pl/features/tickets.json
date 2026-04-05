@@ -276,7 +276,8 @@
     "drawer": {
       "loading": "Ładowanie...",
       "clientNotFound": "Nie znaleziono klienta.",
-      "clientRendererMissing": "Szczegóły klienta są niedostępne w tym kontekście."
+      "clientRendererMissing": "Szczegóły klienta są niedostępne w tym kontekście.",
+      "clientLoadFailed": "Nie udało się załadować klienta."
     },
     "filters": {
       "allAssignees": "Wszyscy przypisani",
@@ -376,6 +377,8 @@
       "selectDestinationBoard": "Wybierz tablicę docelową...",
       "selectDestinationStatus": "Wybierz status docelowy...",
       "unnamedBoard": "Nieznana tablica",
+      "noStatusesConfigured": "Na tej tablicy nie skonfigurowano statusów zgłoszeń do wyboru.",
+      "loadStatusesFailed": "Nie udało się załadować statusów tablicy.",
       "noTicketsSelected": "Nie zaznaczono żadnych zgłoszeń.",
       "failedItemsHeading": "Nie udało się przenieść następujących zgłoszeń:",
       "confirm_one": "Przenieś {{count}} zgłoszenie",
@@ -394,6 +397,7 @@
       "button_other": "Usuń {{count}} zgłoszenia",
       "failedItemsHeading": "Nie udało się usunąć następujących zgłoszeń:",
       "noTicketsSelected": "Nie zaznaczono żadnych zgłoszeń.",
+      "entityFallback": "to zgłoszenie",
       "submitting": "Usuwanie...",
       "success_one": "Usunięto {{count}} zgłoszenie",
       "success_other": "Usunięto {{count}} zgłoszeń",
@@ -958,7 +962,9 @@
     "addMaterial": "Nie udało się dodać materiału",
     "removeMaterial": "Nie udało się usunąć materiału",
     "updateWatchList": "Nie udało się zaktualizować listy obserwujących. Spróbuj ponownie.",
-    "fetchCategoryImports": "Nie udało się pobrać dostępnych kategorii do importu"
+    "fetchCategoryImports": "Nie udało się pobrać dostępnych kategorii do importu",
+    "validateDeletionFailed": "Nie udało się zweryfikować usunięcia. Spróbuj ponownie.",
+    "deleteTicketUnexpected": "Wystąpił nieoczekiwany błąd podczas usuwania zgłoszenia."
   },
   "ticketSection": {
     "title": "Prośba o wizytę",

@@ -286,6 +286,17 @@ the one-liner. Keep the validator green before committing.
   messages now all resolve through `features/tickets` with `count` interpolation. Re-ran
   `npx eslint packages/tickets/src/components/TicketingDashboard.tsx`; it stayed green with only
   the same file-local pre-existing warnings.
+- **(2026-04-05, F022)** Finished the remaining dashboard UX copy in
+  `packages/tickets/src/components/TicketingDashboard.tsx`: export tooltip text, client quick-
+  drawer loading/not-found/load-failed fallbacks, bundle-child load errors, destination-board
+  status-load errors, single-delete fallback entity name, delete-validation fallback copy, and
+  the quick-add optimistic-row unknown-client label now all resolve through `features/tickets`.
+  This required a small namespace extension in `en/fr/es/de/nl/it/pl/features/tickets.json`
+  (`dashboard.drawer.clientLoadFailed`, `bulk.move.noStatusesConfigured`,
+  `bulk.move.loadStatusesFailed`, `bulk.delete.entityFallback`,
+  `errors.validateDeletionFailed`, `errors.deleteTicketUnexpected`), followed by
+  `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  which passed with `Errors: 0`, `Warnings: 0`.
 
 ## Risks
 

@@ -276,7 +276,8 @@
     "drawer": {
       "loading": "Chargement...",
       "clientNotFound": "Client introuvable.",
-      "clientRendererMissing": "Les détails du client ne sont pas disponibles dans ce contexte."
+      "clientRendererMissing": "Les détails du client ne sont pas disponibles dans ce contexte.",
+      "clientLoadFailed": "Échec du chargement du client."
     },
     "filters": {
       "allAssignees": "Tous les cessionnaires",
@@ -376,6 +377,8 @@
       "selectDestinationBoard": "Sélectionnez le tableau de destination...",
       "selectDestinationStatus": "Sélectionnez le statut de destination...",
       "unnamedBoard": "Tableau sans nom",
+      "noStatusesConfigured": "Aucun statut de ticket n'est configuré sur ce tableau pour la sélection.",
+      "loadStatusesFailed": "Échec du chargement des statuts du tableau.",
       "noTicketsSelected": "Aucun ticket sélectionné.",
       "failedItemsHeading": "Les tickets suivants n'ont pas pu être déplacés :",
       "confirm_one": "Déplacer {{count}} ticket",
@@ -394,6 +397,7 @@
       "button_other": "Supprimer {{count}} tickets",
       "failedItemsHeading": "Les tickets suivants n'ont pas pu être supprimés :",
       "noTicketsSelected": "Aucun ticket sélectionné.",
+      "entityFallback": "ce ticket",
       "submitting": "Suppression...",
       "success_one": "{{count}} ticket supprimé",
       "success_other": "{{count}} tickets supprimés",
@@ -958,7 +962,9 @@
     "addMaterial": "Échec de l'ajout de matériel",
     "removeMaterial": "Échec de la suppression du matériel",
     "updateWatchList": "Impossible de mettre à jour la liste de surveillance. Veuillez réessayer.",
-    "fetchCategoryImports": "Échec de la récupération des catégories disponibles pour l'importation"
+    "fetchCategoryImports": "Échec de la récupération des catégories disponibles pour l'importation",
+    "validateDeletionFailed": "Échec de la validation de la suppression. Veuillez réessayer.",
+    "deleteTicketUnexpected": "Une erreur inattendue s'est produite lors de la suppression du ticket."
   },
   "ticketSection": {
     "title": "Demande de rendez-vous",

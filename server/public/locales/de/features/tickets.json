@@ -276,7 +276,8 @@
     "drawer": {
       "loading": "Wird geladen...",
       "clientNotFound": "Kunde nicht gefunden.",
-      "clientRendererMissing": "Kundendetails sind in diesem Kontext nicht verfügbar."
+      "clientRendererMissing": "Kundendetails sind in diesem Kontext nicht verfügbar.",
+      "clientLoadFailed": "Kunde konnte nicht geladen werden."
     },
     "filters": {
       "allAssignees": "Alle Zuständigen",
@@ -376,6 +377,8 @@
       "selectDestinationBoard": "Ziel-Board auswählen...",
       "selectDestinationStatus": "Zielstatus auswählen...",
       "unnamedBoard": "Unbenanntes Board",
+      "noStatusesConfigured": "Für dieses Board sind keine Ticketstatus zur Auswahl konfiguriert.",
+      "loadStatusesFailed": "Board-Status konnten nicht geladen werden.",
       "noTicketsSelected": "Keine Tickets ausgewählt.",
       "failedItemsHeading": "Die folgenden Tickets konnten nicht verschoben werden:",
       "confirm_one": "{{count}} Ticket verschieben",
@@ -394,6 +397,7 @@
       "button_other": "{{count}} Tickets löschen",
       "failedItemsHeading": "Die folgenden Tickets konnten nicht gelöscht werden:",
       "noTicketsSelected": "Keine Tickets ausgewählt.",
+      "entityFallback": "dieses Ticket",
       "submitting": "Wird gelöscht...",
       "success_one": "{{count}} Ticket gelöscht",
       "success_other": "{{count}} Tickets gelöscht",
@@ -958,7 +962,9 @@
     "addMaterial": "Material konnte nicht hinzugefügt werden",
     "removeMaterial": "Material konnte nicht entfernt werden",
     "updateWatchList": "Die Beobachtungsliste konnte nicht aktualisiert werden. Bitte versuche es erneut.",
-    "fetchCategoryImports": "Verfügbare Kategorien für den Import konnten nicht abgerufen werden"
+    "fetchCategoryImports": "Verfügbare Kategorien für den Import konnten nicht abgerufen werden",
+    "validateDeletionFailed": "Die Löschung konnte nicht validiert werden. Bitte versuchen Sie es erneut.",
+    "deleteTicketUnexpected": "Beim Löschen des Tickets ist ein unerwarteter Fehler aufgetreten."
   },
   "ticketSection": {
     "title": "Terminanfrage",

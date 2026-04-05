@@ -276,7 +276,8 @@
     "drawer": {
       "loading": "Caricamento...",
       "clientNotFound": "Cliente non trovato.",
-      "clientRendererMissing": "I dettagli del cliente non sono disponibili in questo contesto."
+      "clientRendererMissing": "I dettagli del cliente non sono disponibili in questo contesto.",
+      "clientLoadFailed": "Impossibile caricare il cliente."
     },
     "filters": {
       "allAssignees": "Tutti gli assegnatari",
@@ -376,6 +377,8 @@
       "selectDestinationBoard": "Seleziona canale di destinazione...",
       "selectDestinationStatus": "Seleziona stato di destinazione...",
       "unnamedBoard": "Canale senza nome",
+      "noStatusesConfigured": "Per questa bacheca non sono configurati stati ticket selezionabili.",
+      "loadStatusesFailed": "Impossibile caricare gli stati della bacheca.",
       "noTicketsSelected": "Nessun ticket selezionato.",
       "failedItemsHeading": "I seguenti ticket non possono essere spostati:",
       "confirm_one": "Sposta {{count}} ticket",
@@ -394,6 +397,7 @@
       "button_other": "Elimina {{count}} ticket",
       "failedItemsHeading": "I seguenti ticket non possono essere eliminati:",
       "noTicketsSelected": "Nessun ticket selezionato.",
+      "entityFallback": "questo ticket",
       "submitting": "Eliminazione in corso...",
       "success_one": "{{count}} ticket eliminato",
       "success_other": "{{count}} ticket eliminati",
@@ -958,7 +962,9 @@
     "addMaterial": "Impossibile aggiungere il materiale",
     "removeMaterial": "Impossibile rimuovere il materiale",
     "updateWatchList": "Impossibile aggiornare l'elenco osservati. Riprova.",
-    "fetchCategoryImports": "Impossibile recuperare le categorie disponibili da importare"
+    "fetchCategoryImports": "Impossibile recuperare le categorie disponibili da importare",
+    "validateDeletionFailed": "Impossibile convalidare l'eliminazione. Riprova.",
+    "deleteTicketUnexpected": "Si è verificato un errore imprevisto durante l'eliminazione del ticket."
   },
   "ticketSection": {
     "title": "Richiesta appuntamento",

@@ -276,7 +276,8 @@
     "drawer": {
       "loading": "11111",
       "clientNotFound": "11111",
-      "clientRendererMissing": "11111"
+      "clientRendererMissing": "11111",
+      "clientLoadFailed": "11111"
     },
     "filters": {
       "allAssignees": "11111",
@@ -376,6 +377,8 @@
       "selectDestinationBoard": "11111",
       "selectDestinationStatus": "11111",
       "unnamedBoard": "11111",
+      "noStatusesConfigured": "11111",
+      "loadStatusesFailed": "11111",
       "noTicketsSelected": "11111",
       "failedItemsHeading": "11111",
       "confirm_one": "11111 {{count}} 11111",
@@ -394,6 +397,7 @@
       "button_other": "11111 {{count}} 11111",
       "failedItemsHeading": "11111",
       "noTicketsSelected": "11111",
+      "entityFallback": "11111",
       "submitting": "11111",
       "success_one": "11111 {{count}} 11111",
       "success_other": "11111 {{count}} 11111",
@@ -958,7 +962,9 @@
     "addMaterial": "11111",
     "removeMaterial": "11111",
     "updateWatchList": "11111",
-    "fetchCategoryImports": "11111"
+    "fetchCategoryImports": "11111",
+    "validateDeletionFailed": "11111",
+    "deleteTicketUnexpected": "11111"
   },
   "ticketSection": {
     "title": "11111",

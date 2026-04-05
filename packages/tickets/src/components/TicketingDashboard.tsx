@@ -463,14 +463,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('errors.validateDeletionFailed', 'Failed to validate deletion. Please try again.'),
         dependencies: [],
         alternatives: []
       });
     } finally {
       setIsDeleteValidating(false);
     }
-  }, []);
+  }, [t]);
 
   const handleDeleteTicket = (ticketId: string, ticketNameOrNumber: string) => {
     setTicketToDelete(ticketId);
@@ -481,26 +481,43 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const onQuickViewClient = useCallback(async (clientId: string) => {
     if (!clientId) return;
 
-    openDrawer(<div className="p-4 text-sm text-gray-600">Loading…</div>, undefined, undefined, '900px');
+    openDrawer(
+      <div className="p-4 text-sm text-gray-600">
+        {t('dashboard.drawer.loading', 'Loading...')}
+      </div>,
+      undefined,
+      undefined,
+      '900px'
+    );
     try {
       const client = await getClientById(clientId);
       if (!client) {
-        replaceDrawer(<div className="p-4 text-sm text-gray-600">Client not found.</div>);
+        replaceDrawer(
+          <div className="p-4 text-sm text-gray-600">
+            {t('dashboard.drawer.clientNotFound', 'Client not found.')}
+          </div>
+        );
         return;
       }
 
       replaceDrawer(
         renderClientDetails
           ? renderClientDetails({ id: `${id}-client-details`, client })
-          : <div className="p-4 text-sm text-gray-600">Client details renderer not configured.</div>,
+          : (
+            <div className="p-4 text-sm text-gray-600">
+              {t('dashboard.drawer.clientRendererMissing', 'Client details are unavailable in this context.')}
+            </div>
+          ),
         undefined,
         '900px'
       );
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to load client.';
+      const message = e instanceof Error
+        ? e.message
+        : t('dashboard.drawer.clientLoadFailed', 'Failed to load client.');
       replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
     }
-  }, [id, openDrawer, replaceDrawer, renderClientDetails]);
+  }, [id, openDrawer, replaceDrawer, renderClientDetails, t]);
   
   // Use interval tracking hook to get interval count
   const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.user_id);
@@ -532,7 +549,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: error?.message || 'An unexpected error occurred while deleting the ticket.',
+        message: error?.message || t('errors.deleteTicketUnexpected', 'An unexpected error occurred while deleting the ticket.'),
         dependencies: [],
         alternatives: []
       });
@@ -599,10 +616,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           return next;
         });
       } catch (error) {
-        handleError(error, 'Failed to load bundled tickets');
+        handleError(error, t('errors.loadBundledTickets', 'Failed to load bundled tickets'));
       }
     }
-  }, [bundleView, currentUser, expandedBundleMasters, loadedBundleChildrenMasters]);
+  }, [bundleView, currentUser, expandedBundleMasters, loadedBundleChildrenMasters, t]);
 
   const displayedTickets = useMemo(() => {
     // In bundled view we collapse children under masters and allow expanding inline.
@@ -835,14 +852,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       }
 
       if (boardStatusOptions.length === 0) {
-        setDestinationStatusError('This board has no ticket statuses configured for selection.');
+        setDestinationStatusError(t('bulk.move.noStatusesConfigured', 'This board has no ticket statuses configured for selection.'));
       }
     } catch (error: unknown) {
-      setDestinationStatusError(error instanceof Error ? error.message : 'Failed to load board statuses');
+      setDestinationStatusError(
+        error instanceof Error ? error.message : t('bulk.move.loadStatusesFailed', 'Failed to load board statuses')
+      );
     } finally {
       setIsLoadingDestinationStatuses(false);
     }
-  }, []);
+  }, [t]);
 
   const clearSelection = useCallback(() => {
     setSelectedTicketIds(prev => (prev.size === 0 ? prev : new Set<string>()));
@@ -1272,7 +1291,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
       // Find the client name
       const client = initialClients.find(c => c.client_id === newTicket.client_id);
-      const clientName = client ? client.client_name : 'Unknown';
+      const clientName = client ? client.client_name : t('properties.unknown', 'Unknown');
 
       // Convert the new ticket to match the ITicketListItem format
       const newTicketListItem: ITicketListItem = {
@@ -1311,7 +1330,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     // Close the quick add dialog
     setIsQuickAddOpen(false);
-  }, [rawStatusOptions, priorityOptions, boards, categories, currentUser]);
+  }, [rawStatusOptions, priorityOptions, boards, categories, currentUser, initialClients, t]);
 
   const handleBoardSelect = useCallback((boardId: string) => {
     const nextBoardId = boardId || undefined;
@@ -1428,8 +1447,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             </Button>
           )}
           <Tooltip content={hasSelection
-            ? `Export ${selectedTicketIds.size} selected ticket${selectedTicketIds.size === 1 ? '' : 's'} to CSV`
-            : 'Select ticket(s) to export'
+            ? t('dashboard.exportSelectedTooltip', {
+              count: selectedTicketIds.size,
+              defaultValue: selectedTicketIds.size === 1
+                ? 'Export {{count}} selected ticket to CSV'
+                : 'Export {{count}} selected tickets to CSV',
+            })
+            : t('dashboard.exportDisabledTooltip', 'Select ticket(s) to export')
           }>
             <span>
               <Button
@@ -1768,7 +1792,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         isOpen={!!ticketToDelete}
         onClose={resetDeleteState}
         onConfirmDelete={confirmDeleteTicket}
-        entityName={ticketToDeleteName || ticketToDelete || 'this ticket'}
+        entityName={ticketToDeleteName || ticketToDelete || t('bulk.delete.entityFallback', 'this ticket')}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}

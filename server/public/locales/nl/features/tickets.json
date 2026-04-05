@@ -276,7 +276,8 @@
     "drawer": {
       "loading": "Laden...",
       "clientNotFound": "Klant niet gevonden.",
-      "clientRendererMissing": "Klantgegevens zijn niet beschikbaar in deze context."
+      "clientRendererMissing": "Klantgegevens zijn niet beschikbaar in deze context.",
+      "clientLoadFailed": "Kan klant niet laden."
     },
     "filters": {
       "allAssignees": "Alle toegewezen personen",
@@ -376,6 +377,8 @@
       "selectDestinationBoard": "Kies bestemmingsbord...",
       "selectDestinationStatus": "Kies bestemmingsstatus...",
       "unnamedBoard": "Naamloos bord",
+      "noStatusesConfigured": "Voor dit bord zijn geen ticketstatussen geconfigureerd om te selecteren.",
+      "loadStatusesFailed": "Kan bordstatussen niet laden.",
       "noTicketsSelected": "Geen tickets geselecteerd.",
       "failedItemsHeading": "De volgende tickets konden niet worden verplaatst:",
       "confirm_one": "Verplaats {{count}} ticket",
@@ -394,6 +397,7 @@
       "button_other": "Verwijder {{count}} tickets",
       "failedItemsHeading": "De volgende tickets konden niet worden verwijderd:",
       "noTicketsSelected": "Geen tickets geselecteerd.",
+      "entityFallback": "dit ticket",
       "submitting": "Bezig met verwijderen...",
       "success_one": "{{count}} ticket verwijderd",
       "success_other": "{{count}} tickets verwijderd",
@@ -958,7 +962,9 @@
     "addMaterial": "Materiaal toevoegen is mislukt",
     "removeMaterial": "Materiaal verwijderen is mislukt",
     "updateWatchList": "Volglijst bijwerken is mislukt. Probeer het opnieuw.",
-    "fetchCategoryImports": "Beschikbare categorieën voor import ophalen is mislukt"
+    "fetchCategoryImports": "Beschikbare categorieën voor import ophalen is mislukt",
+    "validateDeletionFailed": "Verwijderen kon niet worden gevalideerd. Probeer het opnieuw.",
+    "deleteTicketUnexpected": "Er is een onverwachte fout opgetreden bij het verwijderen van het ticket."
   },
   "ticketSection": {
     "title": "Afspraakverzoek",
