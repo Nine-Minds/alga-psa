@@ -424,6 +424,15 @@ the one-liner. Keep the validator green before committing.
   packages/tickets/src/components/TicketExportDialog.tsx` and a direct source grep to confirm the
   former hardcoded action/progress strings now route through `t(...)`. No locale-file changes were
   needed for this pass.
+- **(2026-04-05, F034)** Wired the core `TicketMaterialsCard.tsx` chrome through
+  `useTranslation('features/tickets')` using the pre-existing `materials.*` keys: the card title,
+  add-button label, add-material form labels/placeholders, price-loading/no-price copy, quantity/
+  total/description fields, cancel/add CTA labels, the materials table headers, billed/pending
+  badges, unknown-product fallback, unbilled-per-currency summary, and add-success toast now all
+  resolve through the shared tickets namespace. This pass intentionally left validation/error/
+  delete/empty-state copy for `F035` so the remaining work stays atomic.
+- **(2026-04-05, F034 validation)** Verified with `npx eslint
+  packages/tickets/src/components/ticket/TicketMaterialsCard.tsx`, which exited 0.
 
 ## Risks
 

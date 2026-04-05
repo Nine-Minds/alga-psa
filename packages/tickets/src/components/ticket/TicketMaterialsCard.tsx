@@ -15,6 +15,7 @@ import { ContentCard } from '@alga-psa/ui/components';
 import AsyncSearchableSelect, { type SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { ITicketMaterial, IServicePrice } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   listTicketMaterials,
   addTicketMaterial,
@@ -34,6 +35,7 @@ export default function TicketMaterialsCard({
   ticketId,
   clientId,
 }: TicketMaterialsCardProps) {
+  const { t } = useTranslation('features/tickets');
   const [materials, setMaterials] = useState<ITicketMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -152,7 +154,7 @@ export default function TicketMaterialsCard({
         description: description.trim() || null,
       });
 
-      toast.success('Material added');
+      toast.success(t('materials.addSuccess', 'Material added'));
       setShowAddForm(false);
       setSelectedProductId('');
       setSelectedProductLabel('');
@@ -205,21 +207,25 @@ export default function TicketMaterialsCard({
   }));
 
   return (
-    <ReflectionContainer id={id} label="Ticket Materials">
+    <ReflectionContainer id={id} label={t('materials.title', 'Materials')}>
       <ContentCard
         id={id}
         collapsible
         defaultExpanded={false}
-        title="Materials"
+        title={t('materials.title', 'Materials')}
         headerIcon={<Package className="w-5 h-5" />}
         count={materials.length}
-        addButton={clientId && !showAddForm ? { id: `${id}-add-btn`, onClick: () => setShowAddForm(true) } : undefined}
+        addButton={clientId && !showAddForm ? {
+          id: `${id}-add-btn`,
+          label: t('materials.addMaterial', 'Add Material'),
+          onClick: () => setShowAddForm(true),
+        } : undefined}
       >
         {/* Add Form */}
         {showAddForm && clientId && (
           <div className="border rounded-md p-4 space-y-4 bg-gray-50">
             <div className="space-y-2">
-              <Label htmlFor={`${id}-product-select`}>Product</Label>
+              <Label htmlFor={`${id}-product-select`}>{t('materials.product', 'Product')}</Label>
               <AsyncSearchableSelect
                 id={`${id}-product-select`}
                 value={selectedProductId}
@@ -232,9 +238,9 @@ export default function TicketMaterialsCard({
                 loadOptions={loadProductOptions}
                 limit={10}
                 debounceMs={300}
-                placeholder="Select a product..."
-                searchPlaceholder="Search products..."
-                emptyMessage="No products found"
+                placeholder={t('materials.selectProduct', 'Select a product...')}
+                searchPlaceholder={t('materials.searchProducts', 'Search products...')}
+                emptyMessage={t('materials.noProductsFound', 'No products found')}
                 dropdownMode="overlay"
                 maxListHeight="200px"
                 showMoreIndicator
@@ -244,15 +250,15 @@ export default function TicketMaterialsCard({
             {/* Price/Currency selection */}
             {selectedProductId && (
               <div className="space-y-2">
-                <Label htmlFor={`${id}-currency-select`}>Price</Label>
+                <Label htmlFor={`${id}-currency-select`}>{t('materials.price', 'Price')}</Label>
                 {isLoadingPrices ? (
                   <div className="flex items-center text-sm text-gray-500">
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Loading prices...
+                    {t('materials.loadingPrices', 'Loading prices...')}
                   </div>
                 ) : productPrices.length === 0 ? (
                   <div className="text-sm text-amber-600">
-                    No prices configured for this product
+                    {t('materials.noPricesConfigured', 'No prices configured for this product')}
                   </div>
                 ) : productPrices.length === 1 ? (
                   <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
@@ -264,7 +270,7 @@ export default function TicketMaterialsCard({
                     options={currencyOptions}
                     value={selectedCurrency}
                     onValueChange={setSelectedCurrency}
-                    placeholder="Select currency..."
+                    placeholder={t('materials.selectCurrency', 'Select currency...')}
                   />
                 )}
               </div>
@@ -272,7 +278,7 @@ export default function TicketMaterialsCard({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor={`${id}-quantity`}>Quantity</Label>
+                <Label htmlFor={`${id}-quantity`}>{t('materials.quantity', 'Quantity')}</Label>
                 <Input
                   {...withDataAutomationId({ id: `${id}-quantity` })}
                   id={`${id}-quantity`}
@@ -283,7 +289,7 @@ export default function TicketMaterialsCard({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Total</Label>
+                <Label>{t('materials.total', 'Total')}</Label>
                 <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
                   {selectedPrice
                     ? formatCurrencyFromMinorUnits(selectedPrice.rate * quantity, 'en-US', selectedPrice.currency_code)
@@ -293,13 +299,15 @@ export default function TicketMaterialsCard({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`${id}-description`}>Description (optional)</Label>
+              <Label htmlFor={`${id}-description`}>
+                {t('materials.descriptionOptional', 'Description (optional)')}
+              </Label>
               <Input
                 {...withDataAutomationId({ id: `${id}-description` })}
                 id={`${id}-description`}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Additional notes..."
+                placeholder={t('materials.additionalNotes', 'Additional notes...')}
               />
             </div>
 
@@ -318,7 +326,7 @@ export default function TicketMaterialsCard({
                   setDescription('');
                 }}
               >
-                Cancel
+                {t('actions.cancel', 'Cancel')}
               </Button>
               <Button
                 {...withDataAutomationId({ id: `${id}-save-add-btn` })}
@@ -329,10 +337,10 @@ export default function TicketMaterialsCard({
                 {isAdding ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                    Adding...
+                    {t('materials.adding', 'Adding...')}
                   </>
                 ) : (
-                  'Add Material'
+                  t('materials.addMaterial', 'Add Material')
                 )}
               </Button>
             </div>
@@ -355,11 +363,11 @@ export default function TicketMaterialsCard({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="pb-2 font-medium">Product</th>
-                    <th className="pb-2 font-medium text-right">Qty</th>
-                    <th className="pb-2 font-medium text-right">Rate</th>
-                    <th className="pb-2 font-medium text-right">Total</th>
-                    <th className="pb-2 font-medium text-center">Status</th>
+                    <th className="pb-2 font-medium">{t('materials.product', 'Product')}</th>
+                    <th className="pb-2 font-medium text-right">{t('materials.qty', 'Qty')}</th>
+                    <th className="pb-2 font-medium text-right">{t('materials.rate', 'Rate')}</th>
+                    <th className="pb-2 font-medium text-right">{t('materials.total', 'Total')}</th>
+                    <th className="pb-2 font-medium text-center">{t('materials.status', 'Status')}</th>
                     <th className="pb-2 w-10"></th>
                   </tr>
                 </thead>
@@ -368,7 +376,9 @@ export default function TicketMaterialsCard({
                     <tr key={material.ticket_material_id} className="border-b last:border-0">
                       <td className="py-2">
                         <div>
-                          <span className="font-medium">{material.service_name || 'Unknown Product'}</span>
+                          <span className="font-medium">
+                            {material.service_name || t('materials.unknownProduct', 'Unknown Product')}
+                          </span>
                           {material.sku && (
                             <span className="text-gray-500 ml-1">({material.sku})</span>
                           )}
@@ -386,9 +396,9 @@ export default function TicketMaterialsCard({
                       </td>
                       <td className="py-2 text-center">
                         {material.is_billed ? (
-                          <Badge variant="default">Billed</Badge>
+                          <Badge variant="default">{t('materials.billed', 'Billed')}</Badge>
                         ) : (
-                          <Badge variant="outline">Pending</Badge>
+                          <Badge variant="outline">{t('materials.pending', 'Pending')}</Badge>
                         )}
                       </td>
                       <td className="py-2 text-right">
@@ -421,7 +431,9 @@ export default function TicketMaterialsCard({
                 <div className="text-sm space-y-1">
                   {Object.entries(unbilledByCurrency).map(([curr, total]) => (
                     <div key={curr} className="text-right">
-                      <span className="text-gray-500">Unbilled ({curr}): </span>
+                      <span className="text-gray-500">
+                        {t('materials.unbilled', 'Unbilled ({{currency}}):', { currency: curr })}{' '}
+                      </span>
                       <span className="font-semibold">
                         {formatCurrencyFromMinorUnits(total, 'en-US', curr)}
                       </span>
