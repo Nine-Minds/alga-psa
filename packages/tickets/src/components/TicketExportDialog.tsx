@@ -9,6 +9,7 @@ import { Download, Check, FileSpreadsheet } from 'lucide-react';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { exportTicketsToCSV } from '../actions/ticketExportActions';
 import type { ITicketListFilters } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TicketExportDialogProps {
   isOpen: boolean;
@@ -21,28 +22,28 @@ interface TicketExportDialogProps {
 type ExportStep = 'configure' | 'exporting' | 'complete';
 
 const EXPORT_FIELDS = [
-  { key: 'ticket_number', label: 'Ticket Number' },
-  { key: 'title', label: 'Title' },
-  { key: 'status', label: 'Status' },
-  { key: 'is_closed', label: 'Is Closed' },
-  { key: 'priority', label: 'Priority' },
-  { key: 'board', label: 'Board' },
-  { key: 'category', label: 'Category' },
-  { key: 'subcategory', label: 'Subcategory' },
-  { key: 'client', label: 'Client' },
-  { key: 'contact', label: 'Contact' },
-  { key: 'assigned_to', label: 'Assigned To' },
-  { key: 'assigned_team', label: 'Assigned Team' },
-  { key: 'entered_by', label: 'Entered By' },
-  { key: 'updated_by', label: 'Updated By' },
-  { key: 'closed_by', label: 'Closed By' },
-  { key: 'entered_at', label: 'Entered At' },
-  { key: 'updated_at', label: 'Updated At' },
-  { key: 'closed_at', label: 'Closed At' },
-  { key: 'due_date', label: 'Due Date' },
-  { key: 'response_state', label: 'Response State' },
-  { key: 'ticket_origin', label: 'Ticket Origin' },
-  { key: 'tags', label: 'Tags' },
+  { key: 'ticket_number', labelKey: 'fields.ticketNumber', fallback: 'Ticket Number' },
+  { key: 'title', labelKey: 'fields.title', fallback: 'Title' },
+  { key: 'status', labelKey: 'fields.status', fallback: 'Status' },
+  { key: 'is_closed', labelKey: 'fields.isClosed', fallback: 'Is Closed' },
+  { key: 'priority', labelKey: 'fields.priority', fallback: 'Priority' },
+  { key: 'board', labelKey: 'fields.board', fallback: 'Board' },
+  { key: 'category', labelKey: 'fields.category', fallback: 'Category' },
+  { key: 'subcategory', labelKey: 'fields.subcategory', fallback: 'Subcategory' },
+  { key: 'client', labelKey: 'fields.client', fallback: 'Client' },
+  { key: 'contact', labelKey: 'properties.contact', fallback: 'Contact' },
+  { key: 'assigned_to', labelKey: 'fields.assignedTo', fallback: 'Assigned To' },
+  { key: 'assigned_team', labelKey: 'fields.assignedTeam', fallback: 'Assigned Team' },
+  { key: 'entered_by', labelKey: 'fields.enteredBy', fallback: 'Entered By' },
+  { key: 'updated_by', labelKey: 'fields.updatedBy', fallback: 'Updated By' },
+  { key: 'closed_by', labelKey: 'fields.closedBy', fallback: 'Closed By' },
+  { key: 'entered_at', labelKey: 'fields.enteredAt', fallback: 'Entered At' },
+  { key: 'updated_at', labelKey: 'fields.updatedAt', fallback: 'Updated At' },
+  { key: 'closed_at', labelKey: 'fields.closedAt', fallback: 'Closed At' },
+  { key: 'due_date', labelKey: 'fields.dueDate', fallback: 'Due Date' },
+  { key: 'response_state', labelKey: 'fields.responseState', fallback: 'Response State' },
+  { key: 'ticket_origin', labelKey: 'fields.ticketOrigin', fallback: 'Ticket Origin' },
+  { key: 'tags', labelKey: 'settings.display.columns.tags', fallback: 'Tags' },
 ];
 
 const ALL_FIELD_KEYS = EXPORT_FIELDS.map(f => f.key);
@@ -54,6 +55,7 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
   totalCount,
   selectedTicketIds,
 }) => {
+  const { t } = useTranslation('features/tickets');
   const [step, setStep] = useState<ExportStep>('configure');
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(ALL_FIELD_KEYS));
   const [exportedCount, setExportedCount] = useState(0);
@@ -126,7 +128,7 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
     <Dialog
       isOpen={isOpen}
       onClose={handleClose}
-      title="Export Tickets"
+      title={t('export.title', 'Export Tickets')}
       className="max-w-lg"
     >
       <DialogContent>
@@ -155,14 +157,16 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-[rgb(var(--color-text-200))]">
-                  Fields to export
+                  {t('export.fieldsTitle', 'Fields to export')}
                 </h3>
                 <button
                   type="button"
                   onClick={toggleAll}
                   className="text-xs text-primary-600 hover:text-primary-700 dark:text-[rgb(var(--color-primary-400))] dark:hover:text-[rgb(var(--color-primary-300))]"
                 >
-                  {allSelected ? 'Deselect all' : 'Select all'}
+                  {allSelected
+                    ? t('export.deselectAll', 'Deselect all')
+                    : t('export.selectAll', 'Select all')}
                 </button>
               </div>
               <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
@@ -171,7 +175,7 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
                     <Checkbox
                       key={field.key}
                       id={`export-field-${field.key}`}
-                      label={field.label}
+                      label={t(field.labelKey, field.fallback)}
                       checked={selectedFields.has(field.key)}
                       onChange={() => toggleField(field.key)}
                       size="sm"
@@ -182,7 +186,10 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
                 </div>
               </div>
               <p className="mt-1.5 text-xs text-gray-500 dark:text-[rgb(var(--color-text-500))]">
-                {selectedFields.size} of {EXPORT_FIELDS.length} fields selected
+                {t('export.selectedCount', '{{selected}} of {{total}} fields selected', {
+                  selected: selectedFields.size,
+                  total: EXPORT_FIELDS.length,
+                })}
               </p>
             </div>
 

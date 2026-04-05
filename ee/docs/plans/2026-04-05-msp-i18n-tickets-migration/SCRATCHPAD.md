@@ -406,6 +406,15 @@ the one-liner. Keep the validator green before committing.
   src/components/settings/__tests__/CategoriesSettings.contract.test.ts` after updating its stale
   raw-string assertions to the new `t(...)` calls, and re-ran `npx eslint
   packages/tickets/src/components/settings/CategoriesSettings.tsx` (warnings only, no new errors).
+- **(2026-04-05, F032)** Started the `TicketExportDialog.tsx` pass by wiring the configure-step
+  chrome to `useTranslation('features/tickets')`: the dialog title, export-field labels, field-
+  picker heading, select-all/deselect-all toggle, and selected-field count now resolve through the
+  existing `export.*`, `fields.*`, `properties.contact`, and `settings.display.columns.tags` keys.
+  No namespace expansion was required for this slice.
+- **(2026-04-05, F032 validation)** Verified the configure-step patch with `npx eslint
+  packages/tickets/src/components/TicketExportDialog.tsx` and a direct source grep confirming the
+  previous hardcoded configure labels were replaced by `t(...)` calls. The remaining export-action
+  strings are intentionally deferred to `F033`.
 
 ## Risks
 
