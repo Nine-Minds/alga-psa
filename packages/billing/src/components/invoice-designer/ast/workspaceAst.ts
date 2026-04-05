@@ -3,6 +3,7 @@ import type {
   TemplateNode,
   TemplatePrintSettings,
   TemplateNodeStyleRef,
+  TemplateFieldDisplayFormat,
   TemplateTableColumn,
   TemplateTotalsRow,
   TemplateValueExpression,
@@ -51,6 +52,12 @@ const isTemplateValueFormat = (value: unknown): value is TemplateValueFormat =>
 
 const parseTemplateValueFormat = (value: unknown): TemplateValueFormat | undefined =>
   isTemplateValueFormat(value) ? value : undefined;
+
+const isTemplateFieldDisplayFormat = (value: unknown): value is TemplateFieldDisplayFormat =>
+  value === 'single-line' || value === 'multiline' || value === 'raw';
+
+const parseTemplateFieldDisplayFormat = (value: unknown): TemplateFieldDisplayFormat | undefined =>
+  isTemplateFieldDisplayFormat(value) ? value : undefined;
 
 const isTemplateValueExpression = (value: unknown): value is TemplateValueExpression => {
   if (!isRecord(value)) {
@@ -154,6 +161,8 @@ const normalizeInvoiceBindingPath = (bindingKey: string): string => {
   }
   return aliases[normalized] ?? normalized;
 };
+
+const supportsFieldDisplayFormat = (bindingPath: string): boolean => bindingPath.trim().endsWith('.address');
 
 const TEMPLATE_TOKEN_PATTERN = /\{\{\s*([^{}]+?)\s*\}\}/g;
 const SIMPLE_BINDING_ALIASES = new Set([
@@ -960,11 +969,15 @@ const mapDesignerNodeToAstNode = (
       const bindingId = registerValueBinding(bindingPath);
       const explicitLabel = asTrimmedString(metadata.label);
       const format = parseTemplateValueFormat(metadata.format);
+      const displayFormat = parseTemplateFieldDisplayFormat(metadata.displayFormat);
       const astImported = metadata.__astImported === true;
       const hadImportedFormat = metadata.__astFieldHadFormat === true;
       const hadImportedEmptyValue = metadata.__astFieldHadEmptyValue === true;
+      const hadImportedPlaceholder = metadata.__astFieldHadPlaceholder === true;
       const hasExplicitEmptyValue = typeof metadata.emptyValue === 'string';
       const emptyValue = hasExplicitEmptyValue ? asTrimmedString(metadata.emptyValue) : '';
+      const hasExplicitPlaceholder = typeof metadata.placeholder === 'string';
+      const placeholder = hasExplicitPlaceholder ? asTrimmedString(metadata.placeholder) : '';
       const mapped: TemplateNode = {
         ...createBaseNode(node),
         type: 'field',
@@ -982,8 +995,16 @@ const mapDesignerNodeToAstNode = (
         // Designer-authored fields default to empty string; imported templates only retain this when explicitly present.
         mapped.emptyValue = '';
       }
+      if (hasExplicitPlaceholder) {
+        mapped.placeholder = placeholder;
+      } else if (astImported && hadImportedPlaceholder) {
+        mapped.placeholder = '';
+      }
       if (format && (!astImported || hadImportedFormat || format !== 'text')) {
         mapped.format = format;
+      }
+      if (displayFormat && supportsFieldDisplayFormat(bindingPath)) {
+        mapped.displayFormat = displayFormat;
       }
       return mapped;
     }
@@ -1722,14 +1743,21 @@ export const importTemplateAstToWorkspace = (
           metadata.bindingKey = denormalizeBindingPath(bindingPath);
           metadata.__astFieldHadFormat = Object.prototype.hasOwnProperty.call(inputNode, 'format');
           metadata.__astFieldHadEmptyValue = Object.prototype.hasOwnProperty.call(inputNode, 'emptyValue');
+          metadata.__astFieldHadPlaceholder = Object.prototype.hasOwnProperty.call(inputNode, 'placeholder');
           if (inputNode.format) {
             metadata.format = inputNode.format;
+          }
+          if (inputNode.displayFormat) {
+            metadata.displayFormat = inputNode.displayFormat;
           }
           if (inputNode.label) {
             metadata.label = inputNode.label;
           }
           if (typeof inputNode.emptyValue === 'string') {
             metadata.emptyValue = inputNode.emptyValue;
+          }
+          if (typeof inputNode.placeholder === 'string') {
+            metadata.placeholder = inputNode.placeholder;
           }
         } else if (inputNode.type === 'dynamic-table' || inputNode.type === 'table') {
           const collectionPath = resolveImportedCollectionBindingPath(

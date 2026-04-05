@@ -168,7 +168,7 @@ describe('workspaceAst roundtrip node/property matrix', () => {
     expect(divider.style?.inline).toMatchObject({ margin: '8px 0' });
   });
 
-  it('round-trips field properties including optional format and emptyValue', () => {
+  it('round-trips field properties including optional format, emptyValue, placeholder, and displayFormat', () => {
     const ast = createAstDocument(
       [
         {
@@ -178,10 +178,12 @@ describe('workspaceAst roundtrip node/property matrix', () => {
             {
               id: 'field-explicit',
               type: 'field',
-              binding: { bindingId: 'issueDate' },
-              label: 'Issue Date',
-              format: 'date',
+              binding: { bindingId: 'tenantAddress' },
+              label: 'From Address',
+              format: 'text',
               emptyValue: '-',
+              placeholder: 'Company Address',
+              displayFormat: 'multiline',
             },
             {
               id: 'field-implicit',
@@ -197,6 +199,7 @@ describe('workspaceAst roundtrip node/property matrix', () => {
           values: {
             issueDate: { id: 'issueDate', kind: 'value', path: 'issueDate' },
             invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
+            tenantAddress: { id: 'tenantAddress', kind: 'value', path: 'tenantClient.address' },
           },
           collections: {},
         },
@@ -209,10 +212,12 @@ describe('workspaceAst roundtrip node/property matrix', () => {
     const explicitField = findNodeById(layout, 'field-explicit');
     expect(explicitField?.type).toBe('field');
     if (!explicitField || explicitField.type !== 'field') return;
-    expect(explicitField.binding).toEqual({ bindingId: 'issueDate' });
-    expect(explicitField.label).toBe('Issue Date');
-    expect(explicitField.format).toBe('date');
+    expect(explicitField.binding).toEqual({ bindingId: 'tenantAddress' });
+    expect(explicitField.label).toBe('From Address');
+    expect(explicitField.format).toBe('text');
     expect(explicitField.emptyValue).toBe('-');
+    expect(explicitField.placeholder).toBe('Company Address');
+    expect(explicitField.displayFormat).toBe('multiline');
 
     const implicitField = findNodeById(layout, 'field-implicit');
     expect(implicitField?.type).toBe('field');
@@ -221,6 +226,7 @@ describe('workspaceAst roundtrip node/property matrix', () => {
     expect(implicitField.label).toBe('Invoice #');
     expect(Object.prototype.hasOwnProperty.call(implicitField, 'format')).toBe(false);
     expect(Object.prototype.hasOwnProperty.call(implicitField, 'emptyValue')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(implicitField, 'displayFormat')).toBe(false);
   });
 
   it('round-trips dynamic-table columns including style and emptyStateText', () => {

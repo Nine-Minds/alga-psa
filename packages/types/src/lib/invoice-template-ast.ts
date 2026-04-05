@@ -23,6 +23,7 @@ export interface TemplateAstMetadata {
 }
 
 export type TemplateValueFormat = 'text' | 'number' | 'currency' | 'date';
+export type TemplateFieldDisplayFormat = 'single-line' | 'multiline' | 'raw';
 
 export type TemplateNodeType =
   | 'document'
@@ -71,7 +72,9 @@ export interface TemplateFieldNode extends TemplateNodeBase {
   binding: TemplateBindingRef;
   label?: string;
   emptyValue?: string;
+  placeholder?: string;
   format?: TemplateValueFormat;
+  displayFormat?: TemplateFieldDisplayFormat;
   children?: never;
 }
 
