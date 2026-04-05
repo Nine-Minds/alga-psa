@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { UnsavedChangesContext } from '@alga-psa/ui/context/UnsavedChangesContext';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAdjacentTicketIds } from '../../actions/optimizedTicketActions';
 import { parseReturnFilters, DEFAULT_TICKET_LIST_FILTERS } from '../../lib/ticketFilterUtils';
 
@@ -13,6 +14,7 @@ interface TicketNavigationProps {
 }
 
 export default function TicketNavigation({ currentTicketId }: TicketNavigationProps) {
+  const { t } = useTranslation('features/tickets');
   const searchParams = useSearchParams();
   const unsavedChangesContext = useContext(UnsavedChangesContext);
 
@@ -118,7 +120,7 @@ export default function TicketNavigation({ currentTicketId }: TicketNavigationPr
         disabled={!adjacentData.prevTicketId}
         onClick={() => adjacentData.prevTicketId && navigateToTicket(adjacentData.prevTicketId)}
         className="h-7 w-7 p-0"
-        aria-label="Previous ticket"
+        aria-label={t('navigation.previousTicket', 'Previous ticket')}
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
@@ -134,7 +136,7 @@ export default function TicketNavigation({ currentTicketId }: TicketNavigationPr
         disabled={!adjacentData.nextTicketId}
         onClick={() => adjacentData.nextTicketId && navigateToTicket(adjacentData.nextTicketId)}
         className="h-7 w-7 p-0"
-        aria-label="Next ticket"
+        aria-label={t('navigation.nextTicket', 'Next ticket')}
       >
         <ChevronRight className="h-4 w-4" />
       </Button>

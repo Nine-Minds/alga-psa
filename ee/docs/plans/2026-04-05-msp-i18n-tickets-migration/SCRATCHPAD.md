@@ -538,6 +538,13 @@ the one-liner. Keep the validator green before committing.
   `cd packages/tickets && npx vitest run src/components/ticket/CommentMetadataDebugModal.test.tsx`
   still passes. The test emits the usual `react-i18next` missing-instance warning, but it does not
   fail because the fallback text remains identical.
+- **(2026-04-05, F047)** Wired `TicketNavigation.tsx` through
+  `useTranslation('features/tickets')`: the previous/next navigation buttons now source their
+  `aria-label` values from the existing `navigation.previousTicket` /
+  `navigation.nextTicket` keys instead of hardcoded English. No locale-file changes were needed
+  because those keys were already added during the earlier namespace expansion.
+- **(2026-04-05, F047 validation)** `npx eslint
+  packages/tickets/src/components/ticket/TicketNavigation.tsx` exited 0.
 
 ## Risks
 

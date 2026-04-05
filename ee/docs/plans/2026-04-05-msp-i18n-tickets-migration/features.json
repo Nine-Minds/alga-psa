@@ -37,7 +37,7 @@
   {"id": "F044", "description": "Wire useTranslation in ticket/TicketDetailsContainer.tsx — loading/error states, not-found messaging", "implemented": true, "prdRefs": ["2b-21a/sub-batch-C"]},
   {"id": "F045", "description": "Wire useTranslation in CategoryPicker.tsx — picker placeholder, empty state, search label", "implemented": true, "prdRefs": ["2b-21a/sub-batch-C"]},
   {"id": "F046", "description": "Wire useTranslation in ticket/CommentMetadataDebugModal.tsx (dev-facing; translate user-visible strings only)", "implemented": true, "prdRefs": ["2b-21a/sub-batch-C"]},
-  {"id": "F047", "description": "Wire useTranslation in ticket/TicketNavigation.tsx — prev/next button labels", "implemented": false, "prdRefs": ["2b-21a/sub-batch-C"]},
+  {"id": "F047", "description": "Wire useTranslation in ticket/TicketNavigation.tsx — prev/next button labels", "implemented": true, "prdRefs": ["2b-21a/sub-batch-C"]},
   {"id": "F048", "description": "Wire useTranslation in TicketingDashboardContainer.tsx — any visible strings in wrapper/container", "implemented": false, "prdRefs": ["2b-21a/sub-batch-C"]},
   {"id": "F049", "description": "Audit and wire TicketOriginBadge.tsx and ResponseSourceBadge.tsx — origin/source labels (may need new keys in origin.* / responseSource.*)", "implemented": false, "prdRefs": ["2b-21a/sub-batch-C"]},
   {"id": "F050", "description": "Confirm zero-string components (TicketDetailsSkeleton, AgentScheduleDrawerStyles, TicketListSkeleton, AgentScheduleDrawer re-export shim) and document as N/A", "implemented": false, "prdRefs": ["2b-21a/sub-batch-C"]},
