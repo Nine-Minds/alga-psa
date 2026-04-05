@@ -45,6 +45,7 @@ async function ensureTenantDistribution(knex, tableName) {
 
 exports.up = async function up(knex) {
   console.log('Creating contact email label definitions and additional email tables...');
+  const distributedTablesSupported = await canCreateDistributedTable(knex);
 
   await knex.schema.createTable('contact_email_type_definitions', (table) => {
     table.uuid('tenant').notNullable();
@@ -152,52 +153,56 @@ exports.up = async function up(knex) {
     ON contact_additional_email_addresses (tenant, normalized_email_address)
   `);
 
-  await knex.raw(`
-    CREATE OR REPLACE FUNCTION check_contact_primary_email_uniqueness()
-    RETURNS TRIGGER AS $$
-    DECLARE
-      normalized_primary text;
-    BEGIN
-      IF NEW.email IS NOT NULL THEN
-        normalized_primary := LOWER(BTRIM(NEW.email));
+  if (!distributedTablesSupported) {
+    await knex.raw(`
+      CREATE OR REPLACE FUNCTION check_contact_primary_email_uniqueness()
+      RETURNS TRIGGER AS $$
+      DECLARE
+        normalized_primary text;
+      BEGIN
+        IF NEW.email IS NOT NULL THEN
+          normalized_primary := LOWER(BTRIM(NEW.email));
+          IF EXISTS (
+            SELECT 1
+            FROM contact_additional_email_addresses AS cea
+            WHERE cea.tenant = NEW.tenant
+              AND cea.normalized_email_address = normalized_primary
+          ) THEN
+            RAISE EXCEPTION 'A contact email already exists as an additional email address in this tenant';
+          END IF;
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER trg_check_contact_primary_email_uniqueness
+      BEFORE INSERT OR UPDATE ON contacts
+      FOR EACH ROW
+      EXECUTE FUNCTION check_contact_primary_email_uniqueness();
+
+      CREATE OR REPLACE FUNCTION check_contact_additional_email_uniqueness()
+      RETURNS TRIGGER AS $$
+      BEGIN
         IF EXISTS (
           SELECT 1
-          FROM contact_additional_email_addresses AS cea
-          WHERE cea.tenant = NEW.tenant
-            AND cea.normalized_email_address = normalized_primary
+          FROM contacts AS c
+          WHERE c.tenant = NEW.tenant
+            AND LOWER(BTRIM(c.email)) = LOWER(BTRIM(NEW.email_address))
         ) THEN
-          RAISE EXCEPTION 'A contact email already exists as an additional email address in this tenant';
+          RAISE EXCEPTION 'An additional email address already exists as a contact primary email in this tenant';
         END IF;
-      END IF;
-      RETURN NEW;
-    END;
-    $$ LANGUAGE plpgsql;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
 
-    CREATE TRIGGER trg_check_contact_primary_email_uniqueness
-    BEFORE INSERT OR UPDATE ON contacts
-    FOR EACH ROW
-    EXECUTE FUNCTION check_contact_primary_email_uniqueness();
-
-    CREATE OR REPLACE FUNCTION check_contact_additional_email_uniqueness()
-    RETURNS TRIGGER AS $$
-    BEGIN
-      IF EXISTS (
-        SELECT 1
-        FROM contacts AS c
-        WHERE c.tenant = NEW.tenant
-          AND LOWER(BTRIM(c.email)) = LOWER(BTRIM(NEW.email_address))
-      ) THEN
-        RAISE EXCEPTION 'An additional email address already exists as a contact primary email in this tenant';
-      END IF;
-      RETURN NEW;
-    END;
-    $$ LANGUAGE plpgsql;
-
-    CREATE TRIGGER trg_check_contact_additional_email_uniqueness
-    BEFORE INSERT OR UPDATE ON contact_additional_email_addresses
-    FOR EACH ROW
-    EXECUTE FUNCTION check_contact_additional_email_uniqueness();
-  `);
+      CREATE TRIGGER trg_check_contact_additional_email_uniqueness
+      BEFORE INSERT OR UPDATE ON contact_additional_email_addresses
+      FOR EACH ROW
+      EXECUTE FUNCTION check_contact_additional_email_uniqueness();
+    `);
+  } else {
+    console.log('Skipping cross-table email uniqueness triggers on distributed tables; application-level checks remain authoritative.');
+  }
 
   await knex.raw(`
     UPDATE contacts
