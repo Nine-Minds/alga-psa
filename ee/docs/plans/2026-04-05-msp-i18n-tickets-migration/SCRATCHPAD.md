@@ -34,6 +34,11 @@ The shared namespace (147 keys, 9 locales) already exists and is already loaded 
   createNew, createButton, viewAll, myTickets, resetFilters, filters (7), create (10),
   status (8), priority (6), fields (21), actions (8), messages (31), conversation (23),
   responseState (4), origin (5), responseSource (2), documents (14). Total: 147 keys.
+- **(2026-04-05, F002)** The initial 147-key count was from an early partial read and is no
+  longer accurate. After the MSP key expansion, `server/public/locales/en/features/tickets.json`
+  contains **852 leaf strings**. The file already had substantial nested MSP/support-ticket
+  coverage below the first 260 lines; F002 extended that existing structure rather than
+  introducing a second parallel namespace.
 - **(2026-04-05)** `ROUTE_NAMESPACES['/msp/tickets']` already loads
   `['common', 'msp/core', 'features/tickets']` — no config changes needed.
 - **(2026-04-05)** Already-wired MSP components (reference examples for patterns):
@@ -211,6 +216,18 @@ the one-liner. Keep the validator green before committing.
    loading before starting.
 4. **Sub-batch C PR (F040-F050):** 15 small components. Quick cleanup pass.
 5. **Closeout (F060-F062):** Validate, update parent plan, archive scratchpad notes.
+
+## Progress Log
+
+- **(2026-04-05, F002)** Expanded `en/features/tickets.json` with the audited MSP ticket key
+  families used by dashboard/bulk/quick-add/ITIL/info/properties/settings/export/materials/
+  watch-list/email/category-picker/response-state/navigation/debug/validation/error flows.
+  To keep key parity green on every commit, mirrored the new keys into `fr/es/de/nl/it/pl`
+  with temporary English placeholders. Regenerated `xx/yy/features/tickets.json` from English
+  and re-ran `node scripts/validate-translations.cjs` successfully (`Errors: 0`, `Warnings: 0`).
+- **(2026-04-05, F002)** Placeholder strategy is intentional: `F003`-`F008` will replace the
+  temporary English values in each production locale with real translations one locale at a
+  time while keeping the validator green throughout.
 
 ## Risks
 

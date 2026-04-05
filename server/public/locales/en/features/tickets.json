@@ -208,7 +208,13 @@
     "delete": "Delete",
     "reply": "Reply",
     "edited": "Edited",
-    "noComments": "No comments yet"
+    "noComments": "No comments yet",
+    "metadataDebug": "View metadata (debug)",
+    "closeStatus": "Close status",
+    "noStatusChange": "Do not change status",
+    "clipboardDraftCancelTitle": "Pasted Images Detected",
+    "deleteUploadedImages": "Delete Images",
+    "keepUploadedImages": "Keep Images"
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",
@@ -220,7 +226,10 @@
     "awaitingInternal": "Awaiting Internal",
     "clear": "Clear",
     "setResponseState": "Set Response State",
-    "notSet": "Not set"
+    "notSet": "Not set",
+    "set": "Set Response State",
+    "all": "All Response States",
+    "none": "No Response State"
   },
   "origin": {
     "internal": "Created Internally",
@@ -263,7 +272,54 @@
     "allMatchingSelected_other": "All {{count}} tickets matching your filters are selected.",
     "allPageSelected_one": "All {{count}} ticket on this page is selected.",
     "allPageSelected_other": "All {{count}} tickets on this page are selected.",
-    "clearSelection": "Clear selection"
+    "clearSelection": "Clear selection",
+    "drawer": {
+      "loading": "Loading...",
+      "clientNotFound": "Client not found.",
+      "clientRendererMissing": "Client details are unavailable in this context."
+    },
+    "filters": {
+      "allAssignees": "All Assignees",
+      "selectStatus": "Select Status",
+      "responseState": "Response State",
+      "allResponseStates": "All Response States",
+      "noResponseState": "No Response State",
+      "dueDate": "Due Date",
+      "allDueDates": "All Due Dates",
+      "overdue": "Overdue",
+      "dueToday": "Due Today",
+      "dueNext7Days": "Due Next 7 Days",
+      "beforeDate": "Before Date...",
+      "beforeDateSelected": "Before {{date}}",
+      "afterDate": "After Date...",
+      "afterDateSelected": "After {{date}}",
+      "noDueDate": "No Due Date",
+      "pickDate": "Pick date",
+      "slaStatus": "SLA Status",
+      "allSlaStatus": "All SLA Status",
+      "hasSla": "Has SLA",
+      "noSla": "No SLA",
+      "onTrack": "On Track",
+      "breached": "Breached",
+      "paused": "Paused",
+      "bundled": "Bundled"
+    },
+    "selection": {
+      "pageSelected_one": "All {{count}} ticket on this page are selected.",
+      "pageSelected_other": "All {{count}} tickets on this page are selected.",
+      "allMatchingSelected_one": "All {{count}} ticket matching your filters are selected.",
+      "allMatchingSelected_other": "All {{count}} tickets matching your filters are selected.",
+      "clear": "Clear selection",
+      "selectAllMatching_one": "Select all {{count}} ticket matching your filters",
+      "selectAllMatching_other": "Select all {{count}} tickets matching your filters"
+    },
+    "spacing": {
+      "compact": "Compact",
+      "spacious": "Spacious",
+      "decrease": "Decrease ticket list spacing",
+      "increase": "Increase ticket list spacing",
+      "reset": "Reset ticket list spacing"
+    }
   },
   "bulk": {
     "moveToBoard": "Move to Board",
@@ -307,7 +363,62 @@
     "bundleSuccess": "Tickets bundled",
     "bundleFailed": "Failed to bundle tickets",
     "multiClientConfirmTitle": "Bundle spans multiple clients",
-    "multiClientConfirmMessage": "This bundle includes tickets from multiple clients. Confirm that you want to proceed."
+    "multiClientConfirmMessage": "This bundle includes tickets from multiple clients. Confirm that you want to proceed.",
+    "deleteSelected": "Delete Selected",
+    "exportSelectedTooltip_one": "Export {{count}} selected ticket to CSV",
+    "exportSelectedTooltip_other": "Export {{count}} selected tickets to CSV",
+    "exportDisabledTooltip": "Select ticket(s) to export",
+    "move": {
+      "dialogTitle": "Move Selected Tickets",
+      "description": "Select a destination board and status, then confirm moving the selected tickets.",
+      "destinationBoard": "Destination Board",
+      "destinationStatus": "Destination Status",
+      "selectDestinationBoard": "Select destination board...",
+      "selectDestinationStatus": "Select destination status...",
+      "unnamedBoard": "Unnamed board",
+      "noTicketsSelected": "No tickets selected.",
+      "failedItemsHeading": "The following tickets could not be moved:",
+      "confirm_one": "Move {{count}} Ticket",
+      "confirm_other": "Move {{count}} Tickets",
+      "submitting": "Moving...",
+      "success_one": "{{count}} ticket moved",
+      "success_other": "{{count}} tickets moved",
+      "partialFailure": "Some tickets could not be moved",
+      "failure": "Failed to move selected tickets"
+    },
+    "delete": {
+      "dialogTitle": "Delete Selected Tickets",
+      "confirm_one": "Are you sure you want to delete this ticket? This action cannot be undone.",
+      "confirm_other": "Are you sure you want to delete these {{count}} tickets? This action cannot be undone.",
+      "button_one": "Delete {{count}} Ticket",
+      "button_other": "Delete {{count}} Tickets",
+      "failedItemsHeading": "The following tickets could not be deleted:",
+      "noTicketsSelected": "No tickets selected.",
+      "submitting": "Deleting...",
+      "success_one": "{{count}} ticket deleted",
+      "success_other": "{{count}} tickets deleted",
+      "partialFailure": "Some tickets could not be deleted",
+      "failure": "Failed to delete selected tickets"
+    },
+    "bundle": {
+      "dialogTitle": "Bundle Tickets",
+      "multiClientTitle": "Bundle spans multiple clients",
+      "multiClientMessage": "This bundle includes tickets from multiple clients. Confirm that you want to proceed.",
+      "proceed": "Proceed",
+      "success": "Tickets bundled",
+      "failure": "Failed to bundle tickets",
+      "selectAtLeastTwo": "Select at least two tickets to bundle.",
+      "selectMaster": "Select a master ticket.",
+      "crossClientWarning": "This bundle spans multiple clients. You'll be asked to confirm before bundling.",
+      "masterTicket": "Select Master Ticket",
+      "selectMasterTicket": "Select master ticket...",
+      "syncUpdates": "Sync updates from master to children (public replies + workflow changes)",
+      "syncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master."
+    },
+    "auth": {
+      "moveRequired": "You must be logged in to move tickets",
+      "deleteRequired": "You must be logged in to delete tickets"
+    }
   },
   "quickAdd": {
     "dialogTitle": "Quick Add Ticket",
@@ -336,7 +447,28 @@
     "descriptionImagesWarning": "Ticket created, but pasted images could not be attached to the description.",
     "teamAssignmentFailed": "Ticket created but team assignment failed",
     "tagCreationFailed_one": "{{count}} tag could not be created",
-    "tagCreationFailed_other": "{{count}} tags could not be created"
+    "tagCreationFailed_other": "{{count}} tags could not be created",
+    "requiredFieldsHeading": "Please fill in the required fields:",
+    "titlePlaceholder": "Ticket Title *",
+    "descriptionPlaceholder": "Description",
+    "noContactsForClient": "No contacts for selected client",
+    "selectContact": "Select contact",
+    "none": "None",
+    "defaultSuffix": "(Default)",
+    "noLocationsForClient": "No locations for selected client",
+    "boardPlaceholder": "Select Board *",
+    "assignTo": "Assign To",
+    "statusPlaceholder": "Select Status *",
+    "priorityCalculated": "Priority (Calculated)",
+    "showPriorityMatrix": "Show ITIL Priority Matrix",
+    "submit": "Add Ticket",
+    "submitting": "Adding...",
+    "clipboardUploadSessionRequired": "User session is required for clipboard image upload.",
+    "clipboardUploadFailed": "Clipboard image upload failed.",
+    "clipboardUploadPartialFailure": "Ticket created, but pasted images could not be attached to the description.",
+    "teamAssignmentPartialFailure": "Ticket created but team assignment failed",
+    "tagCreatePartialFailure_one": "{{count}} tag could not be created",
+    "tagCreatePartialFailure_other": "{{count}} tags could not be created"
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",
@@ -371,6 +503,50 @@
       "three": "Medium Impact (3)",
       "four": "Medium-Low Impact (4)",
       "five": "Low Impact (5)"
+    },
+    "impact": "Impact",
+    "urgency": "Urgency",
+    "selectImpact": "Select Impact",
+    "selectUrgency": "Select Urgency",
+    "calculatePrompt": "Select Impact and Urgency to calculate priority",
+    "explainer": {
+      "impact": "Impact: How many users/business functions are affected?",
+      "urgency": "Urgency: How quickly does this need to be resolved?"
+    },
+    "impactLevels": {
+      "1": "1 - High (Critical business function affected)",
+      "2": "2 - Medium-High (Important function affected)",
+      "3": "3 - Medium (Minor function affected)",
+      "4": "4 - Medium-Low (Minimal impact)",
+      "5": "5 - Low (No business impact)"
+    },
+    "urgencyLevels": {
+      "1": "1 - High (Work cannot continue)",
+      "2": "2 - Medium-High (Work severely impaired)",
+      "3": "3 - Medium (Work continues with limitations)",
+      "4": "4 - Medium-Low (Minor inconvenience)",
+      "5": "5 - Low (Work continues normally)"
+    },
+    "priorityLevels": {
+      "1": "Critical (1)",
+      "2": "High (2)",
+      "3": "Medium (3)",
+      "4": "Low (4)",
+      "5": "Planning (5)"
+    },
+    "impactAxis": {
+      "1": "High Impact (1)",
+      "2": "Medium-High Impact (2)",
+      "3": "Medium Impact (3)",
+      "4": "Medium-Low Impact (4)",
+      "5": "Low Impact (5)"
+    },
+    "urgencyAxis": {
+      "1": "High\nUrgency (1)",
+      "2": "Medium-High\nUrgency (2)",
+      "3": "Medium\nUrgency (3)",
+      "4": "Medium-Low\nUrgency (4)",
+      "5": "Low\nUrgency (5)"
     }
   },
   "info": {
@@ -383,7 +559,22 @@
     "additionalAgentsTooltip": "Additional Agents:",
     "loading": "Loading...",
     "tagsCannotBeManaged": "Tags cannot be managed",
-    "viewEmailNotificationLogs": "View email notification logs"
+    "viewEmailNotificationLogs": "View email notification logs",
+    "changesSaved": "Changes saved successfully!",
+    "additionalAgents": "Additional Agents:",
+    "board": "Board",
+    "itilCategory": "ITIL Category",
+    "loadingBoardConfig": "Loading...",
+    "selectStatusForNewBoard": "Select a status for the new board before saving.",
+    "calculatedPriority": "Calculated Priority:",
+    "slaStatus": "SLA Status",
+    "responseSlaBreached": "Response SLA breached",
+    "resolutionSlaBreached": "Resolution SLA breached",
+    "editDescription": "Edit description",
+    "noDescription": "No description found.",
+    "openEmailNotificationLogs": "View email notification logs",
+    "clearDueDate": "Clear due date",
+    "paused": "Paused"
   },
   "properties": {
     "timerActiveElsewhere": "Timer active in another window",
@@ -423,7 +614,27 @@
     "removeAllTeamMembers": "Remove all team members",
     "keepAllTeamMembers": "Keep all team members as individual agents",
     "selectMembersToKeep": "Select individual members to keep/remove",
-    "noTeamMembersFound": "No team members found on this ticket."
+    "noTeamMembersFound": "No team members found on this ticket.",
+    "contact": "Contact",
+    "createdBy": "Created By",
+    "location": "Location",
+    "contactPhone": "Contact Phone",
+    "clientPhone": "Client Phone",
+    "contactEmail": "Contact Email",
+    "clientEmail": "Client Email",
+    "assignedTeam": "Assigned Team",
+    "teamLead": "Lead",
+    "team": "Team",
+    "noTeamAssigned": "No team assigned",
+    "additionalAgents": "Additional Agents",
+    "scheduled": "Scheduled: {{time}}",
+    "removeTeamMode": {
+      "removeAll": "Remove all team members",
+      "keepAll": "Keep all team members as individual agents",
+      "selective": "Select individual members to keep/remove"
+    },
+    "noTeamMembersOnTicket": "No team members found on this ticket.",
+    "unnamedUser": "Unnamed User"
   },
   "settings": {
     "categories": {
@@ -455,7 +666,33 @@
       "importWithNewName": "Import with new name:",
       "categoryNameConflict": "A category with this name already exists.",
       "displayOrderConflict": "Display order {{order}} is already in use.",
-      "importWithOrder": "Import with order {{order}}"
+      "importWithOrder": "Import with order {{order}}",
+      "importStandard": "Import Standard Categories",
+      "editTitle": "Edit Category",
+      "conflictsTitle": "Resolve Import Conflicts",
+      "name": "Name",
+      "description": "Description",
+      "enterName": "Enter category name",
+      "targetBoardPlaceholder": "Select a board for imported categories",
+      "noStandardCategories": "No standard categories available to import.",
+      "importSelected": "Import Selected",
+      "importWithResolutions": "Import With Resolutions",
+      "conflictDescription": "Description conflict",
+      "nameConflict": "Name conflict",
+      "orderConflict": "Order conflict",
+      "renameTo": "Import with new name:",
+      "fetchFailed": "Failed to fetch categories",
+      "validateDeleteFailed": "Failed to validate category deletion.",
+      "deleteSuccess": "Category deleted successfully",
+      "deleteFailed": "Failed to delete category",
+      "nameRequired": "Category name is required",
+      "saveSuccess": "Category updated successfully",
+      "saveFailed": "Failed to save category",
+      "importBoardRequired": "Please select a board for the imported categories",
+      "importMissingParents": "Cannot import subcategories without their parent categories. Please also select: {{parents}}",
+      "importSuccess": "Categories imported successfully",
+      "importFailed": "Failed to import categories",
+      "fetchAvailableFailed": "Failed to fetch available categories for import"
     },
     "display": {
       "responseStateTrackingTitle": "Response State Tracking",
@@ -471,7 +708,18 @@
       "displayInSeparateColumn": "Display in separate column",
       "saveSuccess": "Ticket display settings saved",
       "saveFailed": "Failed to save display settings",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "preferencesTitle": "Ticket Display Preferences",
+      "preferencesDescription": "Configure how your Ticketing dashboard displays columns and timestamps for your team.",
+      "columnsTitle": "Ticket List Columns",
+      "columns": {
+        "sla": "SLA",
+        "createdBy": "Created By",
+        "actions": "Actions"
+      },
+      "requiredSuffix": "(required)",
+      "tagsUnderTitle": "Display under Title",
+      "tagsSeparateColumn": "Display in separate column"
     }
   },
   "export": {
@@ -487,7 +735,36 @@
     "completeTitle": "Export Complete",
     "completeDescription_one": "Successfully exported {{count}} ticket to CSV.",
     "completeDescription_other": "Successfully exported {{count}} tickets to CSV.",
-    "exportFailed": "Failed to export tickets"
+    "exportFailed": "Failed to export tickets",
+    "summary_one": "Exporting {{selected}} selected ticket",
+    "summary_other": "Exporting {{selected}} selected tickets",
+    "summaryMatching_one": "(of {{total}} ticket matching applied filters)",
+    "summaryMatching_other": "(of {{total}} tickets matching applied filters)",
+    "fieldsTitle": "Fields to export",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "selectedCount": "{{selected}} of {{total}} fields selected",
+    "confirm_one": "Export {{count}} Ticket",
+    "confirm_other": "Export {{count}} Tickets",
+    "completeMessage_one": "Successfully exported {{count}} ticket to CSV.",
+    "completeMessage_other": "Successfully exported {{count}} tickets to CSV.",
+    "done": "Done",
+    "failed": "Failed to export tickets",
+    "fields": {
+      "isClosed": "Is Closed",
+      "board": "Board",
+      "contact": "Contact",
+      "assignedTeam": "Assigned Team",
+      "enteredBy": "Entered By",
+      "updatedBy": "Updated By",
+      "closedBy": "Closed By",
+      "enteredAt": "Entered At",
+      "updatedAt": "Updated At",
+      "closedAt": "Closed At",
+      "responseState": "Response State",
+      "ticketOrigin": "Ticket Origin",
+      "tags": "Tags"
+    }
   },
   "materials": {
     "title": "Materials",
@@ -514,7 +791,18 @@
     "removed": "Material removed",
     "loadFailed": "Failed to load materials",
     "addFailed": "Failed to add material",
-    "removeFailed": "Failed to remove material"
+    "removeFailed": "Failed to remove material",
+    "product": "Product",
+    "price": "Price",
+    "quantity": "Quantity",
+    "total": "Total",
+    "selectProduct": "Select a product...",
+    "noPricesConfigured": "No prices configured for this product",
+    "qty": "Qty",
+    "rate": "Rate",
+    "status": "Status",
+    "addSuccess": "Material added",
+    "removeSuccess": "Material removed"
   },
   "watchList": {
     "title": "Watch List",
@@ -540,7 +828,24 @@
     "teamHasNoMembers": "Team has no members.",
     "noTeamMembersWithValidEmails": "No team members with valid email addresses.",
     "selectContactToAdd": "Select a contact to add.",
-    "selectedContactInvalidEmail": "Selected contact does not have a valid email address."
+    "selectedContactInvalidEmail": "Selected contact does not have a valid email address.",
+    "tabs": {
+      "contact": "Contact",
+      "internal": "Internal",
+      "email": "Email"
+    },
+    "scope": {
+      "ticketClient": "Ticket client",
+      "allContacts": "All contacts"
+    },
+    "placeholders": {
+      "loading": "Loading...",
+      "searchAllContacts": "Search all contacts",
+      "selectContact": "Select contact",
+      "selectUserOrTeam": "Select user or team",
+      "selectUser": "Select user",
+      "email": "name@example.com"
+    }
   },
   "emailNotifications": {
     "title": "Email Notifications",
@@ -551,7 +856,8 @@
     "subject": "Subject",
     "status": "Status",
     "error": "Error",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "loadMore": "Load more"
   },
   "categoryPicker": {
     "title": "Category Picker",
@@ -564,7 +870,12 @@
     "excludingNoCategory": "excluding No Category",
     "excludingCategory": "excluding {{category}}",
     "excludingCategoriesCount_one": "excluding {{count}} category",
-    "excludingCategoriesCount_other": "excluding {{count}} categories"
+    "excludingCategoriesCount_other": "excluding {{count}} categories",
+    "selectedCount_one": "{{count}} category",
+    "selectedCount_other": "{{count}} categories",
+    "excludingCount_one": "excluding {{count}} category",
+    "excludingCount_other": "excluding {{count}} categories",
+    "excludingPrefix": "excluding {{name}}"
   },
   "navigation": {
     "previousTicket": "Previous ticket",
@@ -585,7 +896,33 @@
     "categoryNameRequired": "Category name is required",
     "boardRequiredForTopLevelCategory": "Board is required for top-level categories",
     "selectBoardForImport": "Please select a board for the imported categories",
-    "importParentCategoriesRequired": "Cannot import subcategories without their parent categories. Please also select: {{parents}}"
+    "importParentCategoriesRequired": "Cannot import subcategories without their parent categories. Please also select: {{parents}}",
+    "quickAdd": {
+      "clientRequired": "Please select a client",
+      "boardRequired": "Please select a board",
+      "statusRequired": "Please select a status",
+      "priorityRequired": "Please select a priority",
+      "impactRequired": "Please select an impact",
+      "urgencyRequired": "Please select an urgency"
+    },
+    "category": {
+      "nameRequired": "Category name is required",
+      "boardRequiredForTopLevel": "Board is required for top-level categories"
+    },
+    "materials": {
+      "productRequired": "Please select a product",
+      "currencyRequired": "Please select a currency",
+      "quantityMin": "Quantity must be at least 1"
+    },
+    "watchList": {
+      "invalidEmail": "Enter a valid email address.",
+      "userRequired": "Select a user to add.",
+      "contactRequired": "Select a contact to add.",
+      "selectedUserMissingEmail": "Selected user does not have a valid email address.",
+      "selectedContactMissingEmail": "Selected contact does not have a valid email address.",
+      "teamHasNoMembers": "Team has no members.",
+      "teamMembersMissingEmails": "No team members with valid email addresses."
+    }
   },
   "errors": {
     "clipboardUploadSessionRequired": "User session is required for clipboard image upload.",
@@ -603,6 +940,35 @@
     "addCommentsAuthRequired": "You must be logged in to add comments",
     "performActionAuthRequired": "You must be logged in to perform this action",
     "deleteTicketsAuthRequired": "You must be logged in to delete tickets",
-    "fetchTicketsFailed": "Failed to fetch tickets"
+    "fetchTicketsFailed": "Failed to fetch tickets",
+    "authRequiredMove": "You must be logged in to move tickets",
+    "authRequiredDelete": "You must be logged in to delete tickets",
+    "authRequiredUpdate": "You must be logged in to update tickets",
+    "authRequiredComment": "You must be logged in to add comments",
+    "authRequiredAction": "You must be logged in to perform this action",
+    "loadBundledTickets": "Failed to load bundled tickets",
+    "fetchTickets": "Failed to fetch tickets",
+    "fetchCategories": "Failed to fetch categories",
+    "loadBoards": "Failed to load boards",
+    "exportFailed": "Failed to export tickets",
+    "saveChanges": "Failed to save changes",
+    "updateField": "Failed to update {{field}}",
+    "addComment": "Failed to add comment",
+    "loadMaterials": "Failed to load materials",
+    "addMaterial": "Failed to add material",
+    "removeMaterial": "Failed to remove material",
+    "updateWatchList": "Unable to update watch list. Please try again.",
+    "fetchCategoryImports": "Failed to fetch available categories for import"
+  },
+  "ticketSection": {
+    "title": "Appointment Request",
+    "service": "Service",
+    "publicRequest": "Requested Date & Time",
+    "approvedBy": "Approved By",
+    "preferred": "Preferred",
+    "on": "on",
+    "minutes": "minutes",
+    "invalidDateTime": "Invalid date/time",
+    "declined": "Declined"
   }
 }

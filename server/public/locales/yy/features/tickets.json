@@ -208,7 +208,13 @@
     "delete": "55555",
     "reply": "55555",
     "edited": "55555",
-    "noComments": "55555"
+    "noComments": "55555",
+    "metadataDebug": "55555",
+    "closeStatus": "55555",
+    "noStatusChange": "55555",
+    "clipboardDraftCancelTitle": "55555",
+    "deleteUploadedImages": "55555",
+    "keepUploadedImages": "55555"
   },
   "responseState": {
     "awaitingYourResponse": "55555",
@@ -220,7 +226,10 @@
     "awaitingInternal": "55555",
     "clear": "55555",
     "setResponseState": "55555",
-    "notSet": "55555"
+    "notSet": "55555",
+    "set": "55555",
+    "all": "55555",
+    "none": "55555"
   },
   "origin": {
     "internal": "55555",
@@ -263,7 +272,54 @@
     "allMatchingSelected_other": "55555 {{count}} 55555",
     "allPageSelected_one": "55555 {{count}} 55555",
     "allPageSelected_other": "55555 {{count}} 55555",
-    "clearSelection": "55555"
+    "clearSelection": "55555",
+    "drawer": {
+      "loading": "55555",
+      "clientNotFound": "55555",
+      "clientRendererMissing": "55555"
+    },
+    "filters": {
+      "allAssignees": "55555",
+      "selectStatus": "55555",
+      "responseState": "55555",
+      "allResponseStates": "55555",
+      "noResponseState": "55555",
+      "dueDate": "55555",
+      "allDueDates": "55555",
+      "overdue": "55555",
+      "dueToday": "55555",
+      "dueNext7Days": "55555",
+      "beforeDate": "55555",
+      "beforeDateSelected": "55555 {{date}} 55555",
+      "afterDate": "55555",
+      "afterDateSelected": "55555 {{date}} 55555",
+      "noDueDate": "55555",
+      "pickDate": "55555",
+      "slaStatus": "55555",
+      "allSlaStatus": "55555",
+      "hasSla": "55555",
+      "noSla": "55555",
+      "onTrack": "55555",
+      "breached": "55555",
+      "paused": "55555",
+      "bundled": "55555"
+    },
+    "selection": {
+      "pageSelected_one": "55555 {{count}} 55555",
+      "pageSelected_other": "55555 {{count}} 55555",
+      "allMatchingSelected_one": "55555 {{count}} 55555",
+      "allMatchingSelected_other": "55555 {{count}} 55555",
+      "clear": "55555",
+      "selectAllMatching_one": "55555 {{count}} 55555",
+      "selectAllMatching_other": "55555 {{count}} 55555"
+    },
+    "spacing": {
+      "compact": "55555",
+      "spacious": "55555",
+      "decrease": "55555",
+      "increase": "55555",
+      "reset": "55555"
+    }
   },
   "bulk": {
     "moveToBoard": "55555",
@@ -307,7 +363,62 @@
     "bundleSuccess": "55555",
     "bundleFailed": "55555",
     "multiClientConfirmTitle": "55555",
-    "multiClientConfirmMessage": "55555"
+    "multiClientConfirmMessage": "55555",
+    "deleteSelected": "55555",
+    "exportSelectedTooltip_one": "55555 {{count}} 55555",
+    "exportSelectedTooltip_other": "55555 {{count}} 55555",
+    "exportDisabledTooltip": "55555",
+    "move": {
+      "dialogTitle": "55555",
+      "description": "55555",
+      "destinationBoard": "55555",
+      "destinationStatus": "55555",
+      "selectDestinationBoard": "55555",
+      "selectDestinationStatus": "55555",
+      "unnamedBoard": "55555",
+      "noTicketsSelected": "55555",
+      "failedItemsHeading": "55555",
+      "confirm_one": "55555 {{count}} 55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "submitting": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555",
+      "partialFailure": "55555",
+      "failure": "55555"
+    },
+    "delete": {
+      "dialogTitle": "55555",
+      "confirm_one": "55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "button_one": "55555 {{count}} 55555",
+      "button_other": "55555 {{count}} 55555",
+      "failedItemsHeading": "55555",
+      "noTicketsSelected": "55555",
+      "submitting": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555",
+      "partialFailure": "55555",
+      "failure": "55555"
+    },
+    "bundle": {
+      "dialogTitle": "55555",
+      "multiClientTitle": "55555",
+      "multiClientMessage": "55555",
+      "proceed": "55555",
+      "success": "55555",
+      "failure": "55555",
+      "selectAtLeastTwo": "55555",
+      "selectMaster": "55555",
+      "crossClientWarning": "55555",
+      "masterTicket": "55555",
+      "selectMasterTicket": "55555",
+      "syncUpdates": "55555",
+      "syncUpdatesHelp": "55555"
+    },
+    "auth": {
+      "moveRequired": "55555",
+      "deleteRequired": "55555"
+    }
   },
   "quickAdd": {
     "dialogTitle": "55555",
@@ -336,7 +447,28 @@
     "descriptionImagesWarning": "55555",
     "teamAssignmentFailed": "55555",
     "tagCreationFailed_one": "55555 {{count}} 55555",
-    "tagCreationFailed_other": "55555 {{count}} 55555"
+    "tagCreationFailed_other": "55555 {{count}} 55555",
+    "requiredFieldsHeading": "55555",
+    "titlePlaceholder": "55555",
+    "descriptionPlaceholder": "55555",
+    "noContactsForClient": "55555",
+    "selectContact": "55555",
+    "none": "55555",
+    "defaultSuffix": "55555",
+    "noLocationsForClient": "55555",
+    "boardPlaceholder": "55555",
+    "assignTo": "55555",
+    "statusPlaceholder": "55555",
+    "priorityCalculated": "55555",
+    "showPriorityMatrix": "55555",
+    "submit": "55555",
+    "submitting": "55555",
+    "clipboardUploadSessionRequired": "55555",
+    "clipboardUploadFailed": "55555",
+    "clipboardUploadPartialFailure": "55555",
+    "teamAssignmentPartialFailure": "55555",
+    "tagCreatePartialFailure_one": "55555 {{count}} 55555",
+    "tagCreatePartialFailure_other": "55555 {{count}} 55555"
   },
   "itil": {
     "calculatedPriority": "55555",
@@ -371,6 +503,50 @@
       "three": "55555",
       "four": "55555",
       "five": "55555"
+    },
+    "impact": "55555",
+    "urgency": "55555",
+    "selectImpact": "55555",
+    "selectUrgency": "55555",
+    "calculatePrompt": "55555",
+    "explainer": {
+      "impact": "55555",
+      "urgency": "55555"
+    },
+    "impactLevels": {
+      "1": "55555",
+      "2": "55555",
+      "3": "55555",
+      "4": "55555",
+      "5": "55555"
+    },
+    "urgencyLevels": {
+      "1": "55555",
+      "2": "55555",
+      "3": "55555",
+      "4": "55555",
+      "5": "55555"
+    },
+    "priorityLevels": {
+      "1": "55555",
+      "2": "55555",
+      "3": "55555",
+      "4": "55555",
+      "5": "55555"
+    },
+    "impactAxis": {
+      "1": "55555",
+      "2": "55555",
+      "3": "55555",
+      "4": "55555",
+      "5": "55555"
+    },
+    "urgencyAxis": {
+      "1": "55555",
+      "2": "55555",
+      "3": "55555",
+      "4": "55555",
+      "5": "55555"
     }
   },
   "info": {
@@ -383,7 +559,22 @@
     "additionalAgentsTooltip": "55555",
     "loading": "55555",
     "tagsCannotBeManaged": "55555",
-    "viewEmailNotificationLogs": "55555"
+    "viewEmailNotificationLogs": "55555",
+    "changesSaved": "55555",
+    "additionalAgents": "55555",
+    "board": "55555",
+    "itilCategory": "55555",
+    "loadingBoardConfig": "55555",
+    "selectStatusForNewBoard": "55555",
+    "calculatedPriority": "55555",
+    "slaStatus": "55555",
+    "responseSlaBreached": "55555",
+    "resolutionSlaBreached": "55555",
+    "editDescription": "55555",
+    "noDescription": "55555",
+    "openEmailNotificationLogs": "55555",
+    "clearDueDate": "55555",
+    "paused": "55555"
   },
   "properties": {
     "timerActiveElsewhere": "55555",
@@ -423,7 +614,27 @@
     "removeAllTeamMembers": "55555",
     "keepAllTeamMembers": "55555",
     "selectMembersToKeep": "55555",
-    "noTeamMembersFound": "55555"
+    "noTeamMembersFound": "55555",
+    "contact": "55555",
+    "createdBy": "55555",
+    "location": "55555",
+    "contactPhone": "55555",
+    "clientPhone": "55555",
+    "contactEmail": "55555",
+    "clientEmail": "55555",
+    "assignedTeam": "55555",
+    "teamLead": "55555",
+    "team": "55555",
+    "noTeamAssigned": "55555",
+    "additionalAgents": "55555",
+    "scheduled": "55555 {{time}} 55555",
+    "removeTeamMode": {
+      "removeAll": "55555",
+      "keepAll": "55555",
+      "selective": "55555"
+    },
+    "noTeamMembersOnTicket": "55555",
+    "unnamedUser": "55555"
   },
   "settings": {
     "categories": {
@@ -455,7 +666,33 @@
       "importWithNewName": "55555",
       "categoryNameConflict": "55555",
       "displayOrderConflict": "55555 {{order}} 55555",
-      "importWithOrder": "55555 {{order}} 55555"
+      "importWithOrder": "55555 {{order}} 55555",
+      "importStandard": "55555",
+      "editTitle": "55555",
+      "conflictsTitle": "55555",
+      "name": "55555",
+      "description": "55555",
+      "enterName": "55555",
+      "targetBoardPlaceholder": "55555",
+      "noStandardCategories": "55555",
+      "importSelected": "55555",
+      "importWithResolutions": "55555",
+      "conflictDescription": "55555",
+      "nameConflict": "55555",
+      "orderConflict": "55555",
+      "renameTo": "55555",
+      "fetchFailed": "55555",
+      "validateDeleteFailed": "55555",
+      "deleteSuccess": "55555",
+      "deleteFailed": "55555",
+      "nameRequired": "55555",
+      "saveSuccess": "55555",
+      "saveFailed": "55555",
+      "importBoardRequired": "55555",
+      "importMissingParents": "55555 {{parents}} 55555",
+      "importSuccess": "55555",
+      "importFailed": "55555",
+      "fetchAvailableFailed": "55555"
     },
     "display": {
       "responseStateTrackingTitle": "55555",
@@ -471,7 +708,18 @@
       "displayInSeparateColumn": "55555",
       "saveSuccess": "55555",
       "saveFailed": "55555",
-      "saving": "55555"
+      "saving": "55555",
+      "preferencesTitle": "55555",
+      "preferencesDescription": "55555",
+      "columnsTitle": "55555",
+      "columns": {
+        "sla": "55555",
+        "createdBy": "55555",
+        "actions": "55555"
+      },
+      "requiredSuffix": "55555",
+      "tagsUnderTitle": "55555",
+      "tagsSeparateColumn": "55555"
     }
   },
   "export": {
@@ -487,7 +735,36 @@
     "completeTitle": "55555",
     "completeDescription_one": "55555 {{count}} 55555",
     "completeDescription_other": "55555 {{count}} 55555",
-    "exportFailed": "55555"
+    "exportFailed": "55555",
+    "summary_one": "55555 {{selected}} 55555",
+    "summary_other": "55555 {{selected}} 55555",
+    "summaryMatching_one": "55555 {{total}} 55555",
+    "summaryMatching_other": "55555 {{total}} 55555",
+    "fieldsTitle": "55555",
+    "selectAll": "55555",
+    "deselectAll": "55555",
+    "selectedCount": "55555 {{selected}} 55555 {{total}} 55555",
+    "confirm_one": "55555 {{count}} 55555",
+    "confirm_other": "55555 {{count}} 55555",
+    "completeMessage_one": "55555 {{count}} 55555",
+    "completeMessage_other": "55555 {{count}} 55555",
+    "done": "55555",
+    "failed": "55555",
+    "fields": {
+      "isClosed": "55555",
+      "board": "55555",
+      "contact": "55555",
+      "assignedTeam": "55555",
+      "enteredBy": "55555",
+      "updatedBy": "55555",
+      "closedBy": "55555",
+      "enteredAt": "55555",
+      "updatedAt": "55555",
+      "closedAt": "55555",
+      "responseState": "55555",
+      "ticketOrigin": "55555",
+      "tags": "55555"
+    }
   },
   "materials": {
     "title": "55555",
@@ -514,7 +791,18 @@
     "removed": "55555",
     "loadFailed": "55555",
     "addFailed": "55555",
-    "removeFailed": "55555"
+    "removeFailed": "55555",
+    "product": "55555",
+    "price": "55555",
+    "quantity": "55555",
+    "total": "55555",
+    "selectProduct": "55555",
+    "noPricesConfigured": "55555",
+    "qty": "55555",
+    "rate": "55555",
+    "status": "55555",
+    "addSuccess": "55555",
+    "removeSuccess": "55555"
   },
   "watchList": {
     "title": "55555",
@@ -540,7 +828,24 @@
     "teamHasNoMembers": "55555",
     "noTeamMembersWithValidEmails": "55555",
     "selectContactToAdd": "55555",
-    "selectedContactInvalidEmail": "55555"
+    "selectedContactInvalidEmail": "55555",
+    "tabs": {
+      "contact": "55555",
+      "internal": "55555",
+      "email": "55555"
+    },
+    "scope": {
+      "ticketClient": "55555",
+      "allContacts": "55555"
+    },
+    "placeholders": {
+      "loading": "55555",
+      "searchAllContacts": "55555",
+      "selectContact": "55555",
+      "selectUserOrTeam": "55555",
+      "selectUser": "55555",
+      "email": "55555"
+    }
   },
   "emailNotifications": {
     "title": "55555",
@@ -551,7 +856,8 @@
     "subject": "55555",
     "status": "55555",
     "error": "55555",
-    "unknownError": "55555"
+    "unknownError": "55555",
+    "loadMore": "55555"
   },
   "categoryPicker": {
     "title": "55555",
@@ -564,7 +870,12 @@
     "excludingNoCategory": "55555",
     "excludingCategory": "55555 {{category}} 55555",
     "excludingCategoriesCount_one": "55555 {{count}} 55555",
-    "excludingCategoriesCount_other": "55555 {{count}} 55555"
+    "excludingCategoriesCount_other": "55555 {{count}} 55555",
+    "selectedCount_one": "55555 {{count}} 55555",
+    "selectedCount_other": "55555 {{count}} 55555",
+    "excludingCount_one": "55555 {{count}} 55555",
+    "excludingCount_other": "55555 {{count}} 55555",
+    "excludingPrefix": "55555 {{name}} 55555"
   },
   "navigation": {
     "previousTicket": "55555",
@@ -585,7 +896,33 @@
     "categoryNameRequired": "55555",
     "boardRequiredForTopLevelCategory": "55555",
     "selectBoardForImport": "55555",
-    "importParentCategoriesRequired": "55555 {{parents}} 55555"
+    "importParentCategoriesRequired": "55555 {{parents}} 55555",
+    "quickAdd": {
+      "clientRequired": "55555",
+      "boardRequired": "55555",
+      "statusRequired": "55555",
+      "priorityRequired": "55555",
+      "impactRequired": "55555",
+      "urgencyRequired": "55555"
+    },
+    "category": {
+      "nameRequired": "55555",
+      "boardRequiredForTopLevel": "55555"
+    },
+    "materials": {
+      "productRequired": "55555",
+      "currencyRequired": "55555",
+      "quantityMin": "55555"
+    },
+    "watchList": {
+      "invalidEmail": "55555",
+      "userRequired": "55555",
+      "contactRequired": "55555",
+      "selectedUserMissingEmail": "55555",
+      "selectedContactMissingEmail": "55555",
+      "teamHasNoMembers": "55555",
+      "teamMembersMissingEmails": "55555"
+    }
   },
   "errors": {
     "clipboardUploadSessionRequired": "55555",
@@ -603,6 +940,35 @@
     "addCommentsAuthRequired": "55555",
     "performActionAuthRequired": "55555",
     "deleteTicketsAuthRequired": "55555",
-    "fetchTicketsFailed": "55555"
+    "fetchTicketsFailed": "55555",
+    "authRequiredMove": "55555",
+    "authRequiredDelete": "55555",
+    "authRequiredUpdate": "55555",
+    "authRequiredComment": "55555",
+    "authRequiredAction": "55555",
+    "loadBundledTickets": "55555",
+    "fetchTickets": "55555",
+    "fetchCategories": "55555",
+    "loadBoards": "55555",
+    "exportFailed": "55555",
+    "saveChanges": "55555",
+    "updateField": "55555 {{field}} 55555",
+    "addComment": "55555",
+    "loadMaterials": "55555",
+    "addMaterial": "55555",
+    "removeMaterial": "55555",
+    "updateWatchList": "55555",
+    "fetchCategoryImports": "55555"
+  },
+  "ticketSection": {
+    "title": "55555",
+    "service": "55555",
+    "publicRequest": "55555",
+    "approvedBy": "55555",
+    "preferred": "55555",
+    "on": "55555",
+    "minutes": "55555",
+    "invalidDateTime": "55555",
+    "declined": "55555"
   }
 }
