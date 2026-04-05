@@ -34,10 +34,10 @@ The shared namespace (147 keys, 9 locales) already exists and is already loaded 
   createNew, createButton, viewAll, myTickets, resetFilters, filters (7), create (10),
   status (8), priority (6), fields (21), actions (8), messages (31), conversation (23),
   responseState (4), origin (5), responseSource (2), documents (14). Total: 147 keys.
-- **(2026-04-05, F002)** The initial 147-key count was from an early partial read and is no
-  longer accurate. After the MSP key expansion, `server/public/locales/en/features/tickets.json`
-  contains **852 leaf strings**. The file already had substantial nested MSP/support-ticket
-  coverage below the first 260 lines; F002 extended that existing structure rather than
+- **(2026-04-05, F002/F062)** The initial 147-key count was from an early partial read and is no
+  longer accurate. After the full MSP migration pass, `server/public/locales/en/features/tickets.json`
+  contains **887 leaf strings**. The file already had substantial nested MSP/support-ticket
+  coverage below the first 260 lines; this batch extended that existing structure rather than
   introducing a second parallel namespace.
 - **(2026-04-05)** `ROUTE_NAMESPACES['/msp/tickets']` already loads
   `['common', 'msp/core', 'features/tickets']` — no config changes needed.
@@ -121,9 +121,12 @@ The shared namespace (147 keys, 9 locales) already exists and is already loaded 
   the same new key structure was scaffolded into `fr/es/de/nl/it/pl` with English placeholder
   values. `xx/yy` were regenerated immediately from English; the real locale translations are
   filled in by `F003`-`F008`.
-- **(2026-04-05, F002)** `features/tickets.json` now has **536 leaf strings** in English
-  (up from 147). This is above the earlier ~250 revisit threshold, but still acceptable for
-  this batch because the file remains the intentionally shared ticket namespace.
+- **(2026-04-05, F062)** Final namespace closeout: `features/tickets.json` ends this batch at
+  **887 English leaf strings**. That is well above the earlier ~250 revisit threshold, but the
+  shared MSP/client-portal namespace is still the right design because the badge enums, ticket
+  chrome, quick-add flow, settings surfaces, and reused picker components now all draw from one
+  route-agnostic ticket vocabulary. No feature-scope code items remain deferred; the remaining
+  backlog is test execution/coverage tracked in `tests.json`.
 
 ## Commands / Runbooks
 
@@ -581,6 +584,10 @@ the one-liner. Keep the validator green before committing.
   `features/tickets.json` leaf-string count is **887**, and the completion note records both the
   23-component MSP wiring pass and the supporting route-namespace coverage added for
   `/msp/settings` and `/msp/service-requests`.
+- **(2026-04-05, F062)** Curated the scratchpad closeout notes to remove stale intermediate key
+  counts, record the final **887**-leaf namespace size, reaffirm the decision to keep MSP ticket
+  copy in the shared `features/tickets` namespace, and explicitly note that only `tests.json`
+  work remains after feature completion.
 
 ## Risks
 
