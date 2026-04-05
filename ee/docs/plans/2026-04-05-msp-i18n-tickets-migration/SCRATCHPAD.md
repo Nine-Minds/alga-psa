@@ -250,6 +250,12 @@ the one-liner. Keep the validator green before committing.
   manual cleanup was limited to replacing the exported-ticket tooltip’s literal `ticket(s)`
   phrasing with natural Dutch. Remaining English-equal leaves are acceptable product terms or
   invariants (`Open`, `Status`, `Team`, `Impact`, `Product`, `Compact`, `SLA`, `ITIL`).
+- **(2026-04-05, F007)** Italian locale coverage was already effectively complete after the
+  placeholder scaffold. The substantive work here was preserving key parity by restoring the
+  canonical key names `ticketSection.on` and `ticketSection.minutes` while keeping the localized
+  values (`il`, `minuti`). Accent-sensitive validation remained green, so no further copy edits
+  were required beyond confirming the remaining English-equal leaves are acceptable (`Team`,
+  `Email`, `SLA`, `ITIL`).
 
 ## Risks
 

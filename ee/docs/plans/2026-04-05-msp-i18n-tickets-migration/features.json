@@ -5,7 +5,7 @@
   {"id": "F004", "description": "Generate es/features/tickets.json updates for all new keys", "implemented": true, "prdRefs": ["2b-21a/non-functional"]},
   {"id": "F005", "description": "Generate de/features/tickets.json updates for all new keys", "implemented": true, "prdRefs": ["2b-21a/non-functional"]},
   {"id": "F006", "description": "Generate nl/features/tickets.json updates for all new keys", "implemented": true, "prdRefs": ["2b-21a/non-functional"]},
-  {"id": "F007", "description": "Generate it/features/tickets.json updates for all new keys (with accent audit)", "implemented": false, "prdRefs": ["2b-21a/non-functional"]},
+  {"id": "F007", "description": "Generate it/features/tickets.json updates for all new keys (with accent audit)", "implemented": true, "prdRefs": ["2b-21a/non-functional"]},
   {"id": "F008", "description": "Generate pl/features/tickets.json updates for all new keys", "implemented": false, "prdRefs": ["2b-21a/non-functional"]},
   {"id": "F009", "description": "Run `node scripts/generate-pseudo-locales.cjs` to regenerate xx/ and yy/ pseudo-locale files from updated English source (do NOT hand-edit pseudo-locales)", "implemented": false, "prdRefs": ["2b-21a/non-functional"]},
   {"id": "F010", "description": "Update route namespace coverage so `/msp/settings` and `/msp/service-requests/*` load `features/tickets` for reused ticket components", "implemented": false, "prdRefs": ["2b-21a/acceptance"]},
