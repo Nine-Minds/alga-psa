@@ -529,6 +529,15 @@ the one-liner. Keep the validator green before committing.
   exited with warnings only; the remaining warnings are pre-existing (`dataAutomationType`,
   unused `path`, and non-null assertions). There is no dedicated CategoryPicker render test yet;
   existing coverage is limited to passthrough/source-contract tests and upstream component mocks.
+- **(2026-04-05, F046)** Wired `CommentMetadataDebugModal.tsx` through
+  `useTranslation('features/tickets')`: dialog title, summary/raw-metadata section labels, empty
+  summary copy, copy-button states, and close button now resolve through the existing `debug.*`
+  keys. No namespace expansion was needed for this pass.
+- **(2026-04-05, F046 validation)** `npx eslint
+  packages/tickets/src/components/ticket/CommentMetadataDebugModal.tsx` exited 0, and
+  `cd packages/tickets && npx vitest run src/components/ticket/CommentMetadataDebugModal.test.tsx`
+  still passes. The test emits the usual `react-i18next` missing-instance warning, but it does not
+  fail because the fallback text remains identical.
 
 ## Risks
 
