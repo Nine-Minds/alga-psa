@@ -303,6 +303,15 @@ the one-liner. Keep the validator green before committing.
   `t('...')` calls for the page title, add button, primary filter placeholders/options, reset
   control, bundled toggle, and density-control labels directly in `TicketingDashboard.tsx`.
   Verified with `cd packages/tickets && npx vitest run src/components/TicketingDashboard.i18n.test.ts`.
+- **(2026-04-05, F023)** Audited `packages/tickets/src/components/QuickAddTicket.tsx` and
+  confirmed the dialog/title/field placeholder slice was already wired even though the checklist
+  was stale: dialog title + automation labels, title/description/client/contact/location/board/
+  assignee/additional-agent/category/status/priority/due-date placeholders, and the ITIL field
+  labels/help text all resolve through `useTranslation('features/tickets')`. Attempted to validate
+  with `cd packages/tickets && npx vitest run src/components/__tests__/QuickAddTicket.boardScopedStatuses.test.tsx`,
+  but the package test setup currently fails before executing tests because Vite cannot resolve
+  `@alga-psa/core/server` from `shared/core/getSecret.ts`. No source change was required in this
+  turn beyond syncing the feature checklist to the implementation state.
 
 ## Risks
 
