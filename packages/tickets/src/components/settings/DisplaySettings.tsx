@@ -7,12 +7,14 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getTicketingDisplaySettings, 
   updateTicketingDisplaySettings 
 } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 
 const DisplaySettings = (): React.JSX.Element => {
+  const { t, i18n } = useTranslation('features/tickets');
   // Ticket display preferences (tenant-wide)
   const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
   const [isSavingDisplay, setIsSavingDisplay] = useState<boolean>(false);
@@ -34,6 +36,32 @@ const DisplaySettings = (): React.JSX.Element => {
   });
   const [tagsInlineUnderTitle, setTagsInlineUnderTitle] = useState<boolean>(false);
   const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
+  const sampleDate = new Date(Date.UTC(2025, 7, 22, 13, 23));
+  const locale = i18n.language || 'en';
+  const formatDateExample = (options: Intl.DateTimeFormatOptions): string =>
+    new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' }).format(sampleDate);
+  const dateTimeOptions = [
+    { value: 'MMM d, yyyy h:mm a', label: formatDateExample({ month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) },
+    { value: 'yyyy-MM-dd HH:mm', label: '2025-08-22 13:23' },
+    { value: 'MM/dd/yyyy h:mm a', label: formatDateExample({ month: '2-digit', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) },
+    { value: 'dd/MM/yyyy HH:mm', label: '22/08/2025 13:23' },
+    { value: 'EEE, MMM d, yyyy h:mm a', label: formatDateExample({ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) },
+  ];
+  const columnOptions = [
+    { key: 'ticket_number', label: t('fields.ticketNumber', 'Ticket Number'), required: true },
+    { key: 'title', label: t('fields.title', 'Title'), required: true },
+    { key: 'status', label: t('fields.status', 'Status'), required: false },
+    { key: 'priority', label: t('fields.priority', 'Priority'), required: false },
+    { key: 'sla', label: t('settings.display.columns.sla', 'SLA'), required: false },
+    { key: 'board', label: t('fields.board', 'Board'), required: false },
+    { key: 'category', label: t('fields.category', 'Category'), required: false },
+    { key: 'client', label: t('fields.client', 'Client'), required: false },
+    { key: 'assigned_to', label: t('fields.assignedTo', 'Assigned To'), required: false },
+    { key: 'created', label: t('fields.created', 'Created'), required: false },
+    { key: 'created_by', label: t('settings.display.columns.createdBy', 'Created By'), required: false },
+    { key: 'due_date', label: t('fields.dueDate', 'Due Date'), required: false },
+    { key: 'actions', label: t('settings.display.columns.actions', 'Actions'), required: true },
+  ] as const;
 
   // Track original values to detect changes
   const [originalDisplaySettings, setOriginalDisplaySettings] = useState<{
@@ -147,62 +175,59 @@ const DisplaySettings = (): React.JSX.Element => {
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">Response State Tracking</h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+          {t('settings.display.responseStateTrackingTitle', 'Response State Tracking')}
+        </h3>
         <p className="text-sm text-gray-600 mb-4">
-          When enabled, tickets automatically track who needs to respond next (awaiting client or awaiting internal response).
-          Disabling this hides response state badges, filters, and related SLA pause options.
+          {t(
+            'settings.display.responseStateTrackingDescription',
+            'When enabled, tickets automatically track who needs to respond next (awaiting client or awaiting internal response). Disabling this hides response state badges, filters, and related SLA pause options.'
+          )}
         </p>
         <Switch
           id="response-state-tracking-toggle"
           checked={responseStateTrackingEnabled}
           onCheckedChange={(v) => setResponseStateTrackingEnabled(Boolean(v))}
-          label={responseStateTrackingEnabled ? 'Response state tracking enabled' : 'Response state tracking disabled'}
+          label={responseStateTrackingEnabled
+            ? t('settings.display.responseStateTrackingEnabled', 'Response state tracking enabled')
+            : t('settings.display.responseStateTrackingDisabled', 'Response state tracking disabled')}
         />
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm">
-      <h3 className="text-lg font-semibold text-gray-800 mb-2">Ticket Display Preferences</h3>
-      <p className="text-sm text-gray-600 mb-4">Configure how your Ticketing dashboard displays columns and timestamps for your team.</p>
+      <h3 className="text-lg font-semibold text-gray-800 mb-2">
+        {t('settings.display.preferencesTitle', 'Ticket Display Preferences')}
+      </h3>
+      <p className="text-sm text-gray-600 mb-4">
+        {t(
+          'settings.display.preferencesDescription',
+          'Configure how your Ticketing dashboard displays columns and timestamps for your team.'
+        )}
+      </p>
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
         <div className="flex-1 min-w-[260px]">
-          <label className="block text-md font-semibold text-gray-800 mb-2">Date/Time Format</label>
+          <label className="block text-md font-semibold text-gray-800 mb-2">
+            {t('settings.display.dateTimeFormat', 'Date/Time Format')}
+          </label>
           <CustomSelect
             value={dateTimeFormat}
             onValueChange={(v: string) => setDateTimeFormat(v)}
-            options={[
-              { value: 'MMM d, yyyy h:mm a', label: 'Aug 22, 2025 1:23 PM' },
-              { value: 'yyyy-MM-dd HH:mm', label: '2025-08-22 13:23' },
-              { value: 'MM/dd/yyyy h:mm a', label: '08/22/2025 1:23 PM' },
-              { value: 'dd/MM/yyyy HH:mm', label: '22/08/2025 13:23' },
-              { value: 'EEE, MMM d, yyyy h:mm a', label: 'Fri, Aug 22, 2025 1:23 PM' },
-            ]}
+            options={dateTimeOptions}
             className="!w-fit"
           />
         </div>
       </div>
 
       <div className="mt-6">
-        <h4 className="text-md font-semibold text-gray-800 mb-2">Ticket List Columns</h4>
+        <h4 className="text-md font-semibold text-gray-800 mb-2">
+          {t('settings.display.columnsTitle', 'Ticket List Columns')}
+        </h4>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-          {[
-            { key: 'ticket_number', label: 'Ticket Number', required: true },
-            { key: 'title', label: 'Title', required: true },
-            { key: 'status', label: 'Status', required: false },
-            { key: 'priority', label: 'Priority', required: false },
-            { key: 'sla', label: 'SLA', required: false },
-            { key: 'board', label: 'Board', required: false },
-            { key: 'category', label: 'Category', required: false },
-            { key: 'client', label: 'Client', required: false },
-            { key: 'assigned_to', label: 'Assigned To', required: false },
-            { key: 'created', label: 'Created', required: false },
-            { key: 'created_by', label: 'Created By', required: false },
-            { key: 'due_date', label: 'Due Date', required: false },
-            { key: 'actions', label: 'Actions', required: true },
-          ].map(({ key, label, required }) => (
+          {columnOptions.map(({ key, label, required }) => (
             <div key={key} className="[&>div]:mb-0">
               <Checkbox
                 id={`column-${key}`}
-                label={`${label}${required ? ' (required)' : ''}`}
+                label={`${label}${required ? ` ${t('settings.display.requiredSuffix', '(required)')}` : ''}`}
                 checked={!!columnVisibility[key]}
                 disabled={required}
                 onChange={(e) => setColumnVisibility(v => ({ ...v, [key]: (e.target as HTMLInputElement).checked }))}
@@ -215,7 +240,7 @@ const DisplaySettings = (): React.JSX.Element => {
           <div className="[&>div]:mb-0">
             <Checkbox
               id="column-tags"
-              label="Show Tags"
+              label={t('settings.display.showTags', 'Show Tags')}
               checked={!!columnVisibility['tags']}
               onChange={(e) => setColumnVisibility(v => ({ ...v, tags: (e.target as HTMLInputElement).checked }))}
             />
@@ -226,7 +251,9 @@ const DisplaySettings = (): React.JSX.Element => {
                 id="tags-layout-switch"
                 checked={tagsInlineUnderTitle}
                 onCheckedChange={(v) => setTagsInlineUnderTitle(Boolean(v))}
-                label={tagsInlineUnderTitle ? 'Display under Title' : 'Display in separate column'}
+                label={tagsInlineUnderTitle
+                  ? t('settings.display.tagsUnderTitle', 'Display under Title')
+                  : t('settings.display.tagsSeparateColumn', 'Display in separate column')}
               />
             </div>
           )}

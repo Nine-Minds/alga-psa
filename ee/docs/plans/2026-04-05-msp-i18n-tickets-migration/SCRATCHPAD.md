@@ -444,6 +444,15 @@ the one-liner. Keep the validator green before committing.
   `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
   (`Errors: 0`, `Warnings: 0`) and `npx eslint
   packages/tickets/src/components/ticket/TicketMaterialsCard.tsx`, which exited 0.
+- **(2026-04-05, F036)** Wired the main `DisplaySettings.tsx` labels through
+  `useTranslation('features/tickets')` without expanding the namespace: the response-state
+  tracking section title/description/toggle labels, the display-preferences heading and
+  description, the date/time-format label, the date-format preview options, the ticket-list
+  columns heading, every column checkbox label plus required suffix, and the tags visibility/
+  layout labels now resolve through `settings.display.*` and shared `fields.*` keys. The save
+  CTA and save/failure copy are intentionally left for `F037`.
+- **(2026-04-05, F036 validation)** Verified with `npx eslint
+  packages/tickets/src/components/settings/DisplaySettings.tsx`, which exited 0.
 
 ## Risks
 
