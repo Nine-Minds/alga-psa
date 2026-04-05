@@ -233,6 +233,12 @@ the one-liner. Keep the validator green before committing.
   validation a partial Italian worker edit had renamed `ticketSection.on` / `ticketSection.minutes`
   to localized key names; corrected the key names in-place so parity stayed valid without
   altering the Italian values.
+- **(2026-04-05, F004)** Replaced the temporary English placeholders in
+  `es/features/tickets.json` with Spanish translations for the MSP ticket additions using the
+  same batched machine-translation pass as French, then manually corrected ticket-domain copy
+  around bundle warnings, bulk move success interpolation, and plural action labels. After the
+  cleanup pass only expected invariants remain English-equal (`Total`, `Error`, `SLA`, `ITIL`,
+  `N/A`), and `node scripts/validate-translations.cjs` stays green.
 
 ## Risks
 

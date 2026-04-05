@@ -2,7 +2,7 @@
   {"id": "F001", "description": "Audit features/tickets.json and list MSP-specific key gaps (bulk.*, dashboard.*, export.*, settings.*, watchList.*, materials.*, etc.)", "implemented": true, "prdRefs": ["2b-21a/namespace-gaps"]},
   {"id": "F002", "description": "Add missing MSP keys to en/features/tickets.json under appropriate groups (bulk, dashboard, export, watchList, materials, settings, quickAdd, properties, validation, errors)", "implemented": true, "prdRefs": ["2b-21a/namespace-gaps"]},
   {"id": "F003", "description": "Generate fr/features/tickets.json updates for all new keys added in F002", "implemented": true, "prdRefs": ["2b-21a/non-functional"]},
-  {"id": "F004", "description": "Generate es/features/tickets.json updates for all new keys", "implemented": false, "prdRefs": ["2b-21a/non-functional"]},
+  {"id": "F004", "description": "Generate es/features/tickets.json updates for all new keys", "implemented": true, "prdRefs": ["2b-21a/non-functional"]},
   {"id": "F005", "description": "Generate de/features/tickets.json updates for all new keys", "implemented": false, "prdRefs": ["2b-21a/non-functional"]},
   {"id": "F006", "description": "Generate nl/features/tickets.json updates for all new keys", "implemented": false, "prdRefs": ["2b-21a/non-functional"]},
   {"id": "F007", "description": "Generate it/features/tickets.json updates for all new keys (with accent audit)", "implemented": false, "prdRefs": ["2b-21a/non-functional"]},
