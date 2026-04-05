@@ -53,6 +53,7 @@ import {
   resolveContractCadenceInvoiceWindowForServicePeriod,
 } from "@alga-psa/shared/billingClients/contractCadenceServicePeriods";
 import {
+  buildPostDropRecurringObligationCandidates,
   buildClientCadencePostDropObligationRef,
   CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
   POST_DROP_RECURRING_OBLIGATION_TYPES,
@@ -1844,10 +1845,6 @@ export class BillingEngine {
           // Note: enable_proration is on contract_lines, not service config
         );
 
-      if (planServices.length === 0) {
-        return [];
-      }
-
       const normalizedPlanServices = planServices.map((service: any) => {
         const quantityValue =
           service.configuration_quantity ??
@@ -1955,7 +1952,84 @@ export class BillingEngine {
         (planLevelBaseRateCents === null ||
           Math.round(Number(effectiveCustomRate)) !== planLevelBaseRateCents);
 
-      if (isFixedFeePlan) {
+      if (planServices.length === 0) {
+        if (!isFixedFeePlan || planLevelBaseRateCents === null) {
+          return [];
+        }
+
+        const baseRateInCents = hasCustomRateOverride
+          ? Math.round(Number(effectiveCustomRate))
+          : planLevelBaseRateCents;
+        const fallbackService = await this.knex(
+          "contract_line_services as cls_fallback",
+        )
+          .join("service_catalog as sc", function () {
+            this.on("sc.service_id", "=", "cls_fallback.service_id").andOn(
+              "sc.tenant",
+              "=",
+              "cls_fallback.tenant",
+            );
+          })
+          .where({
+            "cls_fallback.contract_line_id":
+              clientContractLine.client_contract_line_id,
+            "cls_fallback.tenant": tenant,
+          })
+          .whereNot("sc.item_kind", "product")
+          .orderBy("sc.service_id", "asc")
+          .first("sc.service_id", "sc.service_name", "sc.tax_rate_id");
+
+        if (!fallbackService?.service_id) {
+          return [];
+        }
+
+        const { taxRegion: fallbackTaxRegion, isTaxable: fallbackIsTaxable } =
+          await this.getTaxInfoFromService(fallbackService);
+        let fallbackTaxAmount = 0;
+        let fallbackTaxRate = 0;
+        if (!client.is_tax_exempt && fallbackIsTaxable && fallbackTaxRegion) {
+          const taxServiceInstance = new TaxService();
+          const taxResult = await taxServiceInstance.calculateTax(
+            client.client_id,
+            baseRateInCents,
+            servicePeriodEnd,
+            fallbackTaxRegion,
+            true,
+            clientContractLine.currency_code || "USD",
+          );
+          fallbackTaxRate = taxResult.taxRate;
+          fallbackTaxAmount = taxResult.taxAmount;
+        }
+
+        generatedCharges = [
+          {
+            type: "fixed",
+            serviceId: fallbackService.service_id,
+            serviceName:
+              fallbackService.service_name ||
+              clientContractLine.contract_line_name ||
+              "Fixed Plan Charge",
+            quantity: 1,
+            rate: baseRateInCents,
+            total: baseRateInCents,
+            tax_amount: fallbackTaxAmount,
+            tax_rate: fallbackTaxRate,
+            tax_region: fallbackTaxRegion ?? undefined,
+            is_taxable: fallbackIsTaxable,
+            client_contract_line_id: clientContractLine.client_contract_line_id,
+            client_contract_id:
+              clientContractLine.client_contract_id || undefined,
+            contract_name: clientContractLine.contract_name || undefined,
+            base_rate: baseRateInCents,
+            enable_proration: planLevelEnableProration,
+            fmv: baseRateInCents,
+            proportion: 1,
+            allocated_amount: baseRateInCents,
+          },
+        ];
+      }
+
+      if (!generatedCharges && isFixedFeePlan) {
         // For fixed fee plans, we want to create a single consolidated charge
         // but internally allocate the tax based on FMV of each service
 
@@ -2204,7 +2278,7 @@ export class BillingEngine {
         );
         generatedCharges = detailedCharges;
         generatedChargeAmountsUseCoverage = planLevelEnableProration;
-      } else {
+      } else if (!generatedCharges) {
         // This block handles cases where the plan type isn't 'Fixed', but a service within it
         // is configured as 'Fixed'. This might be legacy or an edge case.
         // We should still use the plan-level coverage settings if the plan *was* fixed.
@@ -3198,6 +3272,7 @@ export class BillingEngine {
         return {
           serviceId: entry.service_id,
           serviceName: entry.service_name,
+          client_contract_line_id: clientContractLine.client_contract_line_id,
           userId: entry.user_id,
           duration,
           quantity: duration,
@@ -3477,6 +3552,7 @@ export class BillingEngine {
         return {
           serviceId: record.service_id,
           serviceName: record.service_name,
+          client_contract_line_id: clientContractLine.client_contract_line_id,
           quantity,
           rate,
           total,
@@ -3764,6 +3840,7 @@ export class BillingEngine {
           type: chargeType,
           serviceId: service.service_id,
           config_id: service.config_id,
+          client_contract_line_id: clientContractLine.client_contract_line_id,
           serviceName: service.service_name,
           quantity: quantity,
           rate: rate,
@@ -4187,6 +4264,7 @@ export class BillingEngine {
             type: "bucket",
             service_catalog_id: bucketConfig.service_id,
             serviceName: bucketConfig.service_name,
+            client_contract_line_id: contractLine.client_contract_line_id,
             rate: overageRate,
             total: total,
             hoursUsed: hoursUsed,
@@ -4241,7 +4319,53 @@ export class BillingEngine {
       .andWhere("iid.billing_timing", billingTiming)
       .first();
 
-    return Boolean(existing);
+    if (existing) {
+      return true;
+    }
+
+    const servicePeriodEndExclusive = toISODate(
+      toPlainDate(servicePeriodEnd).add({ days: 1 }),
+    );
+    const obligationCandidates = buildPostDropRecurringObligationCandidates({
+      contractLineId: clientContractLineId,
+      chargeFamily: "fixed",
+    });
+
+    const recurringLinkedCharge = await this.knex("recurring_service_periods")
+      .where("tenant", this.tenant)
+      .where("charge_family", "fixed")
+      .where("due_position", billingTiming)
+      .whereNotNull("invoice_id")
+      .where(function matchObligationCandidates() {
+        for (const [index, candidate] of obligationCandidates.entries()) {
+          if (index === 0) {
+            this.where(function matchCandidate() {
+              this.where("obligation_type", candidate.obligationType).andWhere(
+                "obligation_id",
+                candidate.obligationId,
+              );
+            });
+            continue;
+          }
+
+          this.orWhere(function matchCandidate() {
+            this.where("obligation_type", candidate.obligationType).andWhere(
+              "obligation_id",
+              candidate.obligationId,
+            );
+          });
+        }
+      })
+      .where("service_period_start", servicePeriodStart)
+      .where(function matchServicePeriodEnd() {
+        this.where("service_period_end", servicePeriodEnd).orWhere(
+          "service_period_end",
+          servicePeriodEndExclusive,
+        );
+      })
+      .first("record_id");
+
+    return Boolean(recurringLinkedCharge);
   }
 
   private shouldApplyAdvanceTerminationCoverageSettlement(

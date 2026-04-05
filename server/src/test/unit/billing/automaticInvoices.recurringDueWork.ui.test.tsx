@@ -836,12 +836,14 @@ describe('AutomaticInvoices recurring due-work UI', () => {
           expect.objectContaining({
             selectorInput: clientRow.selectorInput,
             executionWindow: clientRow.executionWindow,
+            billingCycleId: 'cycle-2025-03',
           }),
         ],
       });
     });
 
     const [generateCall] = generateInvoicesAsRecurringBillingRunMock.mock.calls;
+    expect(generateCall?.[0]?.targets?.[0]?.billingCycleId).toBe('cycle-2025-03');
     expect(generateCall?.[0]?.targets?.[0]?.selectorInput?.billingCycleId).toBeUndefined();
     expect(generateCall?.[0]?.targets?.[0]?.selectorInput?.executionWindow?.kind).toBe(
       'client_cadence_window',
