@@ -256,6 +256,11 @@ the one-liner. Keep the validator green before committing.
   values (`il`, `minuti`). Accent-sensitive validation remained green, so no further copy edits
   were required beyond confirming the remaining English-equal leaves are acceptable (`Team`,
   `Email`, `SLA`, `ITIL`).
+- **(2026-04-05, F008)** Completed the Polish locale pass for
+  `pl/features/tickets.json`, including the remaining MSP validation strings, ITIL helper copy,
+  ticket-section appointment labels, and quick-add placeholders. After the translation pass only
+  invariant leaves remain English-equal (`Status`, `SLA`, `ITIL`), and the bundle/bulk wording
+  reads consistently with the rest of the ticket namespace.
 
 ## Risks
 
