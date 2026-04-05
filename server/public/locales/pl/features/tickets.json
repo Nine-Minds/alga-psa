@@ -157,6 +157,7 @@
     "loadingTickets": "Ładowanie zgłoszeń...",
     "ticketCreated": "Zgłoszenie utworzone pomyślnie",
     "ticketUpdated": "Zgłoszenie zaktualizowane pomyślnie",
+    "commentAdded": "Komentarz dodany pomyślnie",
     "ticketClosed": "Zgłoszenie zamknięte pomyślnie",
     "statusUpdateSuccess": "Status zgłoszenia zaktualizowany do „{{status}}”.",
     "error": "Wystąpił błąd podczas przetwarzania żądania",

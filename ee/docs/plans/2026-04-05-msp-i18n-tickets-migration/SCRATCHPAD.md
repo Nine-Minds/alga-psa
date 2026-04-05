@@ -506,6 +506,21 @@ the one-liner. Keep the validator green before committing.
   which both passed. `cd packages/tickets && npx vitest run src/components/__tests__/QuickAddCategory.test.tsx`
   now passes 7/8 tests; the remaining failure is a stale board-fetch call-count assertion
   (`expected 1, got 3`) rather than a localization regression.
+- **(2026-04-05, F044)** `TicketDetailsContainer.tsx` does not render its own loading/not-found
+  chrome; the user-visible copy in this wrapper is toast/error handling. Wired those container
+  messages through `useTranslation('features/tickets')`: auth-required update/comment toasts,
+  generic ticket-updated success, batch-save success/failure, and add-comment success/failure now
+  resolve through `errors.*`, `messages.ticketUpdated`, `messages.commentAdded`, and
+  `info.changesSaved`. This required one new locale key, `messages.commentAdded`, in
+  `en/fr/es/de/nl/it/pl/features/tickets.json`, followed by pseudo-locale regeneration.
+- **(2026-04-05, F044 validation)** Re-ran
+  `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  (`Errors: 0`, `Warnings: 0`), plus `npx eslint
+  packages/tickets/src/components/ticket/TicketDetailsContainer.tsx` (warnings only; the file’s
+  pre-existing `any` warnings remain unchanged). `cd packages/tickets && npx vitest run
+  src/components/ticket/__tests__/TicketDetailsContainer.description.test.tsx` still passes, while
+  `TicketDetailsContainerCreateTask.test.tsx` currently fails before tests run because
+  `next-auth` tries to import `next/server` in the package test environment.
 
 ## Risks
 

@@ -157,6 +157,7 @@
     "loadingTickets": "11111",
     "ticketCreated": "11111",
     "ticketUpdated": "11111",
+    "commentAdded": "11111",
     "ticketClosed": "11111",
     "statusUpdateSuccess": "11111 {{status}} 11111",
     "error": "11111",

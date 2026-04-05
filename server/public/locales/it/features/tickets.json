@@ -157,6 +157,7 @@
     "loadingTickets": "Caricamento ticket...",
     "ticketCreated": "Ticket creato correttamente",
     "ticketUpdated": "Ticket aggiornato correttamente",
+    "commentAdded": "Commento aggiunto correttamente",
     "ticketClosed": "Ticket chiuso correttamente",
     "statusUpdateSuccess": "Stato del ticket aggiornato correttamente a \"{{status}}\".",
     "error": "Si è verificato un errore durante l'elaborazione della richiesta",

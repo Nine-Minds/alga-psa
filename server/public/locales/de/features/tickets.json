@@ -157,6 +157,7 @@
     "loadingTickets": "Tickets werden geladen...",
     "ticketCreated": "Ticket erfolgreich erstellt",
     "ticketUpdated": "Ticket erfolgreich aktualisiert",
+    "commentAdded": "Kommentar erfolgreich hinzugefügt",
     "ticketClosed": "Ticket erfolgreich geschlossen",
     "statusUpdateSuccess": "Ticketstatus erfolgreich auf \"{{status}}\" aktualisiert.",
     "error": "Beim Verarbeiten deiner Anfrage ist ein Fehler aufgetreten",

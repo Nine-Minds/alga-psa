@@ -157,6 +157,7 @@
     "loadingTickets": "Loading tickets...",
     "ticketCreated": "Ticket created successfully",
     "ticketUpdated": "Ticket updated successfully",
+    "commentAdded": "Comment added successfully",
     "ticketClosed": "Ticket closed successfully",
     "statusUpdateSuccess": "Ticket status successfully updated to \"{{status}}\".",
     "error": "An error occurred while processing your request",
