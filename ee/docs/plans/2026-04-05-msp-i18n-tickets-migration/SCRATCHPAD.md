@@ -245,6 +245,11 @@ the one-liner. Keep the validator green before committing.
   leaves are domain terms or deliberate invariants (`Board`, `Team`, `Lead`, `Service`,
   `SLA`, `ITIL`, `name@example.com`), so no extra manual rewrites were needed beyond the
   automated fill-in. Validation stayed green.
+- **(2026-04-05, F006)** Completed the Dutch locale pass for
+  `nl/features/tickets.json`. The machine fill covered the remaining MSP placeholders cleanly;
+  manual cleanup was limited to replacing the exported-ticket tooltip’s literal `ticket(s)`
+  phrasing with natural Dutch. Remaining English-equal leaves are acceptable product terms or
+  invariants (`Open`, `Status`, `Team`, `Impact`, `Product`, `Compact`, `SLA`, `ITIL`).
 
 ## Risks
 
