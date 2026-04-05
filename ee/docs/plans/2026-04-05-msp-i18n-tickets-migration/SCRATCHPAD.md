@@ -567,6 +567,12 @@ the one-liner. Keep the validator green before committing.
   src/components/ResponseSourceBadge.render.test.tsx`; the run emits the expected
   `react-i18next` no-instance warning because these server-render tests do not mount an
   `I18nProvider`, but the assertions remain green through fallback text.
+- **(2026-04-05, F050)** Audited the remaining zero-string candidates and confirmed they are
+  N/A for translation wiring:
+  `TicketDetailsSkeleton.tsx`, `TicketListSkeleton.tsx`, and `AgentScheduleDrawer.tsx` render no
+  user-visible copy at runtime; `AgentScheduleDrawerStyles.tsx` contains CSS comments only.
+  `TicketDetailsSkeleton.tsx` includes descriptive JSX comments, but they do not render into the
+  DOM and therefore do not belong in the translation namespace.
 
 ## Risks
 
