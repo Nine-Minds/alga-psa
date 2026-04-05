@@ -261,6 +261,11 @@ the one-liner. Keep the validator green before committing.
   ticket-section appointment labels, and quick-add placeholders. After the translation pass only
   invariant leaves remain English-equal (`Status`, `SLA`, `ITIL`), and the bundle/bulk wording
   reads consistently with the rest of the ticket namespace.
+- **(2026-04-05, F009)** Re-ran `node scripts/generate-pseudo-locales.cjs` after the locale
+  setup work. The generator reported `52` pseudo-locale files rebuilt from `26` English sources,
+  but produced no git diff, confirming `xx/yy` were already in sync with the current English
+  namespace. This item is complete as an explicit regeneration checkpoint rather than a content
+  change.
 
 ## Risks
 
