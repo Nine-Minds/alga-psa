@@ -1,5 +1,5 @@
 [
-  {"id": "F001", "description": "Audit features/tickets.json and list MSP-specific key gaps (bulk.*, dashboard.*, export.*, settings.*, watchList.*, materials.*, etc.)", "implemented": false, "prdRefs": ["2b-21a/namespace-gaps"]},
+  {"id": "F001", "description": "Audit features/tickets.json and list MSP-specific key gaps (bulk.*, dashboard.*, export.*, settings.*, watchList.*, materials.*, etc.)", "implemented": true, "prdRefs": ["2b-21a/namespace-gaps"]},
   {"id": "F002", "description": "Add missing MSP keys to en/features/tickets.json under appropriate groups (bulk, dashboard, export, watchList, materials, settings, quickAdd, properties, validation, errors)", "implemented": false, "prdRefs": ["2b-21a/namespace-gaps"]},
   {"id": "F003", "description": "Generate fr/features/tickets.json updates for all new keys added in F002", "implemented": false, "prdRefs": ["2b-21a/non-functional"]},
   {"id": "F004", "description": "Generate es/features/tickets.json updates for all new keys", "implemented": false, "prdRefs": ["2b-21a/non-functional"]},
@@ -8,6 +8,7 @@
   {"id": "F007", "description": "Generate it/features/tickets.json updates for all new keys (with accent audit)", "implemented": false, "prdRefs": ["2b-21a/non-functional"]},
   {"id": "F008", "description": "Generate pl/features/tickets.json updates for all new keys", "implemented": false, "prdRefs": ["2b-21a/non-functional"]},
   {"id": "F009", "description": "Run `node scripts/generate-pseudo-locales.cjs` to regenerate xx/ and yy/ pseudo-locale files from updated English source (do NOT hand-edit pseudo-locales)", "implemented": false, "prdRefs": ["2b-21a/non-functional"]},
+  {"id": "F010", "description": "Update route namespace coverage so `/msp/settings` and `/msp/service-requests/*` load `features/tickets` for reused ticket components", "implemented": false, "prdRefs": ["2b-21a/acceptance"]},
 
   {"id": "F020", "description": "Wire useTranslation('features/tickets') in TicketingDashboard.tsx — page title, add button, filter labels (status/priority/assignee/response state/due date)", "implemented": false, "prdRefs": ["2b-21a/sub-batch-A"]},
   {"id": "F021", "description": "Wire bulk action strings in TicketingDashboard.tsx — move/delete/bundle buttons, selection counts, confirmations, toast messages (with count interpolation)", "implemented": false, "prdRefs": ["2b-21a/sub-batch-A"]},

@@ -61,6 +61,48 @@ The shared namespace (147 keys, 9 locales) already exists and is already loaded 
   `server/src/components/settings/general/TicketingSettings.tsx` → likely loaded by
   `/msp/settings` route. `ROUTE_NAMESPACES['/msp/settings']` doesn't currently include
   `features/tickets` — **verify this route loads it transitively or add it**.
+- **(2026-04-05, F001 audit)** `/msp/service-requests/*` also does not have a dedicated
+  `ROUTE_NAMESPACES` entry. Those pages currently inherit `/msp` only, so reused ticket
+  components like `CategoryPicker` would not receive `features/tickets` unless route config
+  is expanded.
+- **(2026-04-05, F001 audit)** Concrete namespace gaps found by component audit:
+  - `dashboard.*`: title, add button, assignee/status/response-state/due-date/SLA filters,
+    destination board/status prompts, selected-count text, no-selection text, move/delete/
+    bundle modal copy, board-switch warnings, bulk result summaries, empty/loading states.
+  - `bulk.*`: move/delete/bundle button labels, confirm/cancel/continue actions, singular/
+    plural success toasts, partial-failure headings, master-ticket selection, cross-client
+    bundle warning, destination validation errors.
+  - `quickAdd.*`: dialog title, required-fields summary, assigned-to/additional-agents labels,
+    board/category/status/location/contact placeholders, due-date helper copy, clipboard
+    upload failure, team assignment/tag creation partial-failure toasts.
+  - `itil.*`: impact/urgency field labels, select placeholders, calculated-priority label,
+    priority-matrix heading, impact/urgency scale labels, explanatory help text, planning
+    priority label.
+  - `info.*` / `properties.*`: unsaved-changes banner, status/board/priority/due-date/SLA/
+    tags/description headings, not-assigned/no-contact/no-location/no-primary-agent/no-team
+    empty states, additional-agents label, appointment request field labels, team-assignment
+    removal modes, email-log button label.
+  - `settings.categories.*`: categories heading, board filter placeholder, dialog field labels,
+    import flow copy, import conflict actions, delete/save/import success and failure strings.
+  - `settings.display.*`: response-state tracking section, explanatory copy, toggle labels,
+    display-preferences section, date/time format label, column labels, tags layout labels,
+    save/saving success and failure strings.
+  - `export.*`: dialog title, field-picker heading, select-all toggles, selected-count copy,
+    exporting/progress/completion copy, done/cancel actions, CSV file export failures.
+  - `materials.*`: product/price/quantity/total/description labels, select placeholders,
+    loading/empty states, billed/pending badges, add/remove success and validation errors.
+  - `watchList.*`: tab labels, contact scope labels, selector placeholders, empty state, add/
+    remove validation errors, generic save failure message.
+  - `emailNotifications.*`: table headings, loading/empty states, pagination action text.
+  - `categoryPicker.*`: "No Category", multi-select summary text, exclusion summary text,
+    add-new label, ITIL badge label, default placeholder.
+  - `responseState.*` additions: `awaitingClient`, `awaitingInternal`, `clear`,
+    `setResponseState`, `notSet`, `label`. Existing keys use client-portal wording and do not
+    cover the MSP dropdown strings directly.
+  - `navigation.*`: previous/next ticket aria-labels.
+  - `debug.*`: comment metadata modal section headings and empty-summary copy.
+  - `errors.*` / `validation.*`: generic save/load/export/category/material/watch-list errors
+    that are user-visible today and should not stay hardcoded.
 
 ## Commands / Runbooks
 
@@ -95,6 +137,10 @@ the one-liner. Keep the validator green before committing.
     grep -qE "useTranslation" "$f" || echo "$f"
   done
   ```
+- Audit user-visible strings in unwired components:
+  ```bash
+  rg -n "toast\.|title:|label=|placeholder=|aria-label|>[^<{]*[A-Za-z][^<{]*<|throw new Error|confirm\(" packages/tickets/src/components
+  ```
 - Find all places a component is imported:
   ```bash
   grep -rn "from '@alga-psa/tickets" server/src ee/server/src | grep ComponentName
@@ -127,6 +173,9 @@ the one-liner. Keep the validator green before committing.
 - Does `ROUTE_NAMESPACES['/msp/settings']` or `/msp/settings/ticketing` load
   `features/tickets`? If not, wiring `CategoriesSettings` and `DisplaySettings` requires a
   namespaces update. **Action: verify before starting sub-batch B.**
+- `F010` is required: add `features/tickets` to `/msp/settings` and add an explicit
+  `/msp/service-requests` route mapping so `CategoriesSettings`, `DisplaySettings`, and the
+  reused `CategoryPicker` have locale resources outside `/msp/tickets`.
 - Should `TicketOriginBadge` and `ResponseSourceBadge` reuse the existing
   `features/tickets.json` `origin.*` and `responseSource.*` keys or do those groups need
   more enum values? **Action: diff badge enum values against existing keys during F049.**
