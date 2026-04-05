@@ -8,6 +8,19 @@ function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
 }
 
+function readJson<T>(relativePath: string): T {
+  return JSON.parse(read(relativePath)) as T;
+}
+
+function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
+  return dottedPath.split('.').reduce<unknown>((value, key) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return undefined;
+    }
+    return (value as Record<string, unknown>)[key];
+  }, record);
+}
+
 describe('ticketing dashboard i18n wiring contract', () => {
   it('T010: wires the dashboard shell and primary filter chrome through features/tickets translations', () => {
     const source = read('./TicketingDashboard.tsx');
@@ -33,5 +46,31 @@ describe('ticketing dashboard i18n wiring contract', () => {
     expect(source).toContain("t('dashboard.spacing.decrease', 'Decrease ticket list spacing')");
     expect(source).toContain("t('dashboard.spacing.increase', 'Increase ticket list spacing')");
     expect(source).toContain("t('dashboard.spacing.reset', 'Reset ticket list spacing')");
+  });
+
+  it('T011: keeps the dashboard shell/bulk chrome backed by xx pseudo-locale strings instead of raw English', () => {
+    const source = read('./TicketingDashboard.tsx');
+    const pseudo = readJson<Record<string, unknown>>('../../../../server/public/locales/xx/features/tickets.json');
+
+    const pseudoKeys = [
+      'dashboard.title',
+      'dashboard.addTicket',
+      'dashboard.filters.allAssignees',
+      'dashboard.exportDisabledTooltip',
+      'dashboard.drawer.clientLoadFailed',
+      'bulk.move.dialogTitle',
+      'bulk.delete.dialogTitle',
+      'bulk.bundle.dialogTitle',
+    ];
+
+    for (const key of pseudoKeys) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(pseudo, key)).toBe('11111');
+    }
+
+    expect(getLeaf(pseudo, 'bulk.move.success_one')).toBe('11111 {{count}} 11111');
+    expect(getLeaf(pseudo, 'bulk.move.success_other')).toBe('11111 {{count}} 11111');
+    expect(getLeaf(pseudo, 'bulk.delete.success_one')).toBe('11111 {{count}} 11111');
+    expect(getLeaf(pseudo, 'bulk.delete.success_other')).toBe('11111 {{count}} 11111');
   });
 });

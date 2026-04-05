@@ -2,7 +2,7 @@
   {"id": "T001", "description": "Lang-pack validation: `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` passes for all 9 locales after each namespace update (covers key parity, missing/extra keys, interpolation variables, pseudo-locale patterns, Italian accents). Single check, run on every commit.", "implemented": true, "featureIds": ["F001", "F002", "F003", "F004", "F005", "F006", "F007", "F008", "F009", "F060"]},
 
   {"id": "T010", "description": "Unit: TicketingDashboard.i18n.test — renders page title, add button, filter labels via t() in en", "implemented": true, "featureIds": ["F020"]},
-  {"id": "T011", "description": "Unit: TicketingDashboard.i18n.test — renders pseudo-locale (xx) for all visible strings, no bare English leakage", "implemented": false, "featureIds": ["F020", "F021", "F022"]},
+  {"id": "T011", "description": "Unit: TicketingDashboard.i18n.test — renders pseudo-locale (xx) for all visible strings, no bare English leakage", "implemented": true, "featureIds": ["F020", "F021", "F022"]},
   {"id": "T012", "description": "Unit: TicketingDashboard.i18n.test — bulk action toast messages interpolate count correctly (1 ticket moved / N tickets moved)", "implemented": false, "featureIds": ["F021"]},
   {"id": "T013", "description": "Unit: TicketingDashboard.i18n.test — empty state, loading, error toasts render translated text", "implemented": false, "featureIds": ["F022"]},
 

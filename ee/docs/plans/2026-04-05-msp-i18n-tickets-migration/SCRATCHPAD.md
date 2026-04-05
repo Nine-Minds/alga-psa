@@ -594,6 +594,11 @@ the one-liner. Keep the validator green before committing.
   passed with `Errors: 0`, `Warnings: 0`. The only remaining unstaged locale diffs in the
   worktree are unrelated pre-existing pseudo-locale changes under `server/public/locales/xx|yy/msp/*`,
   which were already present before this test pass and were intentionally left out of the commit.
+- **(2026-04-05, T011)** Extended `TicketingDashboard.i18n.test.ts` with a pseudo-locale
+  contract for the dashboard shell and bulk-dialog chrome. The test reads
+  `server/public/locales/xx/features/tickets.json` directly and verifies that the visible keys
+  wired in `TicketingDashboard.tsx` resolve to pseudo-text (`11111`) rather than English, while
+  preserving `{{count}}` interpolation markers for the move/delete success strings.
 
 ## Risks
 
