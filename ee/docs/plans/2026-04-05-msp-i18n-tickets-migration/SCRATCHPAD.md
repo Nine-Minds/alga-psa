@@ -266,6 +266,12 @@ the one-liner. Keep the validator green before committing.
   but produced no git diff, confirming `xx/yy` were already in sync with the current English
   namespace. This item is complete as an explicit regeneration checkpoint rather than a content
   change.
+- **(2026-04-05, F010)** Updated `packages/core/src/lib/i18n/config.ts` so reused ticket
+  components can resolve `features/tickets` outside `/msp/tickets`: `/msp/settings` now loads
+  `features/tickets` alongside its existing namespaces, and `/msp/service-requests` now has an
+  explicit route entry loading `['common', 'msp/core', 'features/tickets']`. Added focused route
+  coverage to `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` and
+  verified it with `cd server && npx vitest run src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts`.
 
 ## Risks
 
