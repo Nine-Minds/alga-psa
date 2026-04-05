@@ -1,3 +1,4 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Invoice designer inspector uses shared expression-authoring utilities to enumerate template field bindings */
 import React, { useCallback, useMemo, useState } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
