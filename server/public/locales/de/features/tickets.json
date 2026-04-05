@@ -706,11 +706,21 @@
       "nameRequired": "Der Kategoriename ist erforderlich",
       "saveSuccess": "Kategorie erfolgreich aktualisiert",
       "saveFailed": "Kategorie konnte nicht gespeichert werden",
+      "createSuccess": "Kategorie erfolgreich erstellt",
       "importBoardRequired": "Bitte wähle ein Board für die importierten Kategorien aus",
       "importMissingParents": "Unterkategorien können nicht ohne ihre übergeordneten Kategorien importiert werden. Bitte wähle auch: {{parents}}",
       "importSuccess": "Kategorien erfolgreich importiert",
       "importFailed": "Kategorien konnten nicht importiert werden",
-      "fetchAvailableFailed": "Verfügbare Kategorien für den Import konnten nicht abgerufen werden"
+      "fetchAvailableFailed": "Verfügbare Kategorien für den Import konnten nicht abgerufen werden",
+      "noneTopLevelCategory": "Keine (Kategorie der obersten Ebene)",
+      "noBoard": "Kein Board",
+      "loadingBoards": "Boards werden geladen…",
+      "boardRequiredHelp": "Erforderlich für Kategorien der obersten Ebene",
+      "parentCategoryOptional": "Übergeordnete Kategorie (optional)",
+      "selectParentCategory": "Übergeordnete Kategorie auswählen",
+      "parentHelpWithBoard": "Wähle eine übergeordnete Kategorie, um eine Unterkategorie zu erstellen, oder lasse das Feld leer für die oberste Ebene",
+      "parentHelpWithoutBoard": "Wähle zuerst ein Board oder eine übergeordnete Kategorie, um deren Board zu übernehmen",
+      "creating": "Wird erstellt..."
     },
     "display": {
       "responseStateTrackingTitle": "Antwortstatus-Tracking",

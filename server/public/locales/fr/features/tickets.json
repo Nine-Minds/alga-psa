@@ -706,11 +706,21 @@
       "nameRequired": "Le nom de la catégorie est obligatoire",
       "saveSuccess": "Catégorie mise à jour avec succès",
       "saveFailed": "Échec de l'enregistrement de la catégorie",
+      "createSuccess": "Catégorie créée avec succès",
       "importBoardRequired": "Veuillez sélectionner un tableau pour les catégories importées",
       "importMissingParents": "Impossible d'importer des sous-catégories sans leurs catégories parentes. Veuillez également sélectionner : {{parents}}",
       "importSuccess": "Catégories importées avec succès",
       "importFailed": "Échec de l'importation des catégories",
-      "fetchAvailableFailed": "Échec de la récupération des catégories disponibles pour l'importation"
+      "fetchAvailableFailed": "Échec de la récupération des catégories disponibles pour l'importation",
+      "noneTopLevelCategory": "Aucune (catégorie de niveau supérieur)",
+      "noBoard": "Aucun tableau",
+      "loadingBoards": "Chargement des tableaux…",
+      "boardRequiredHelp": "Requis pour les catégories de niveau supérieur",
+      "parentCategoryOptional": "Catégorie parente (facultatif)",
+      "selectParentCategory": "Sélectionnez une catégorie parente",
+      "parentHelpWithBoard": "Sélectionnez une catégorie parente pour créer une sous-catégorie, ou laissez vide pour le niveau supérieur",
+      "parentHelpWithoutBoard": "Sélectionnez d'abord un tableau ou choisissez une catégorie parente pour hériter de son tableau",
+      "creating": "Création..."
     },
     "display": {
       "responseStateTrackingTitle": "Suivi de l'état de réponse",

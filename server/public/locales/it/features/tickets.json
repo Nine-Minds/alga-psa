@@ -706,11 +706,21 @@
       "nameRequired": "Il nome della categoria è obbligatorio",
       "saveSuccess": "Categoria aggiornata con successo",
       "saveFailed": "Impossibile salvare la categoria",
+      "createSuccess": "Categoria creata con successo",
       "importBoardRequired": "Seleziona un canale per le categorie importate",
       "importMissingParents": "Impossibile importare sottocategorie senza le rispettive categorie padre. Seleziona anche: {{parents}}",
       "importSuccess": "Categorie importate con successo",
       "importFailed": "Impossibile importare le categorie",
-      "fetchAvailableFailed": "Impossibile recuperare le categorie disponibili da importare"
+      "fetchAvailableFailed": "Impossibile recuperare le categorie disponibili da importare",
+      "noneTopLevelCategory": "Nessuna (categoria di primo livello)",
+      "noBoard": "Nessun canale",
+      "loadingBoards": "Caricamento canali…",
+      "boardRequiredHelp": "Obbligatorio per le categorie di primo livello",
+      "parentCategoryOptional": "Categoria padre (facoltativa)",
+      "selectParentCategory": "Seleziona categoria padre",
+      "parentHelpWithBoard": "Seleziona una categoria padre per creare una sottocategoria, oppure lascia vuoto per il livello superiore",
+      "parentHelpWithoutBoard": "Seleziona prima un canale oppure scegli una categoria padre per ereditarne il canale",
+      "creating": "Creazione..."
     },
     "display": {
       "responseStateTrackingTitle": "Tracciamento dello stato di risposta",

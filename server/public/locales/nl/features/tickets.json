@@ -706,11 +706,21 @@
       "nameRequired": "Categorienaam is verplicht",
       "saveSuccess": "Categorie succesvol bijgewerkt",
       "saveFailed": "Categorie opslaan is mislukt",
+      "createSuccess": "Categorie succesvol aangemaakt",
       "importBoardRequired": "Selecteer een bord voor de geïmporteerde categorieën",
       "importMissingParents": "Subcategorieën kunnen niet worden geïmporteerd zonder hun bovenliggende categorieën. Selecteer ook: {{parents}}",
       "importSuccess": "Categorieën succesvol geïmporteerd",
       "importFailed": "Categorieën importeren is mislukt",
-      "fetchAvailableFailed": "Beschikbare categorieën voor import ophalen is mislukt"
+      "fetchAvailableFailed": "Beschikbare categorieën voor import ophalen is mislukt",
+      "noneTopLevelCategory": "Geen (categorie op het hoogste niveau)",
+      "noBoard": "Geen bord",
+      "loadingBoards": "Borden laden…",
+      "boardRequiredHelp": "Vereist voor categorieën op het hoogste niveau",
+      "parentCategoryOptional": "Bovenliggende categorie (optioneel)",
+      "selectParentCategory": "Selecteer bovenliggende categorie",
+      "parentHelpWithBoard": "Selecteer een bovenliggende categorie om een subcategorie te maken, of laat leeg voor het hoogste niveau",
+      "parentHelpWithoutBoard": "Selecteer eerst een bord of kies een bovenliggende categorie om het bord daarvan over te nemen",
+      "creating": "Bezig met aanmaken..."
     },
     "display": {
       "responseStateTrackingTitle": "Reactiestatusbewaking",

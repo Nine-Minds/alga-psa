@@ -706,11 +706,21 @@
       "nameRequired": "11111",
       "saveSuccess": "11111",
       "saveFailed": "11111",
+      "createSuccess": "11111",
       "importBoardRequired": "11111",
       "importMissingParents": "11111 {{parents}} 11111",
       "importSuccess": "11111",
       "importFailed": "11111",
-      "fetchAvailableFailed": "11111"
+      "fetchAvailableFailed": "11111",
+      "noneTopLevelCategory": "11111",
+      "noBoard": "11111",
+      "loadingBoards": "11111",
+      "boardRequiredHelp": "11111",
+      "parentCategoryOptional": "11111",
+      "selectParentCategory": "11111",
+      "parentHelpWithBoard": "11111",
+      "parentHelpWithoutBoard": "11111",
+      "creating": "11111"
     },
     "display": {
       "responseStateTrackingTitle": "11111",

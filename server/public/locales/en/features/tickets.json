@@ -706,11 +706,21 @@
       "nameRequired": "Category name is required",
       "saveSuccess": "Category updated successfully",
       "saveFailed": "Failed to save category",
+      "createSuccess": "Category created successfully",
       "importBoardRequired": "Please select a board for the imported categories",
       "importMissingParents": "Cannot import subcategories without their parent categories. Please also select: {{parents}}",
       "importSuccess": "Categories imported successfully",
       "importFailed": "Failed to import categories",
-      "fetchAvailableFailed": "Failed to fetch available categories for import"
+      "fetchAvailableFailed": "Failed to fetch available categories for import",
+      "noneTopLevelCategory": "None (Top-level category)",
+      "noBoard": "No board",
+      "loadingBoards": "Loading boards…",
+      "boardRequiredHelp": "Required for top-level categories",
+      "parentCategoryOptional": "Parent Category (Optional)",
+      "selectParentCategory": "Select parent category",
+      "parentHelpWithBoard": "Select a parent to create a subcategory, or leave empty for top-level",
+      "parentHelpWithoutBoard": "Select a board first, or pick a parent category to inherit its board",
+      "creating": "Creating..."
     },
     "display": {
       "responseStateTrackingTitle": "Response State Tracking",

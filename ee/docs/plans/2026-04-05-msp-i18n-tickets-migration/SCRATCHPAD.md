@@ -490,6 +490,22 @@ the one-liner. Keep the validator green before committing.
   `getResponseStateLabel` import while touching the file.
 - **(2026-04-05, F042 validation)** Verified with `npx eslint
   packages/tickets/src/components/ResponseStateSelect.tsx`, which exited 0.
+- **(2026-04-05, F043)** Wired `QuickAddCategory.tsx` through
+  `useTranslation('features/tickets')`: the dialog title, category/board/parent labels,
+  placeholders, helper copy, validation errors, create success toast, create failure fallback,
+  and cancel/create button labels now resolve through `settings.categories.*`,
+  `validation.category.*`, shared `actions.*`, and the existing category error keys. This
+  required a small `settings.categories` expansion in `en/fr/es/de/nl/it/pl/features/tickets.json`
+  for the inline creator’s helper strings (`noneTopLevelCategory`, `noBoard`, `loadingBoards`,
+  `boardRequiredHelp`, `parentCategoryOptional`, `selectParentCategory`,
+  `parentHelpWithBoard`, `parentHelpWithoutBoard`, `createSuccess`, `creating`), followed by
+  pseudo-locale regeneration.
+- **(2026-04-05, F043 validation)** Re-ran
+  `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  (`Errors: 0`, `Warnings: 0`) and `npx eslint packages/tickets/src/components/QuickAddCategory.tsx`,
+  which both passed. `cd packages/tickets && npx vitest run src/components/__tests__/QuickAddCategory.test.tsx`
+  now passes 7/8 tests; the remaining failure is a stale board-fetch call-count assertion
+  (`expected 1, got 3`) rather than a localization regression.
 
 ## Risks
 

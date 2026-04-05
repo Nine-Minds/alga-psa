@@ -33,7 +33,7 @@
   {"id": "F040", "description": "Wire useTranslation in ticket/TicketWatchListCard.tsx — watcher list, add/remove buttons, empty state", "implemented": true, "prdRefs": ["2b-21a/sub-batch-C"]},
   {"id": "F041", "description": "Wire useTranslation in ticket/TicketEmailNotifications.tsx — notification toggle labels, help text", "implemented": true, "prdRefs": ["2b-21a/sub-batch-C"]},
   {"id": "F042", "description": "Wire useTranslation in ResponseStateSelect.tsx — response state option labels (All/Awaiting Client/Awaiting Internal/None)", "implemented": true, "prdRefs": ["2b-21a/sub-batch-C"]},
-  {"id": "F043", "description": "Wire useTranslation in QuickAddCategory.tsx — inline category creation dialog, validation", "implemented": false, "prdRefs": ["2b-21a/sub-batch-C"]},
+  {"id": "F043", "description": "Wire useTranslation in QuickAddCategory.tsx — inline category creation dialog, validation", "implemented": true, "prdRefs": ["2b-21a/sub-batch-C"]},
   {"id": "F044", "description": "Wire useTranslation in ticket/TicketDetailsContainer.tsx — loading/error states, not-found messaging", "implemented": false, "prdRefs": ["2b-21a/sub-batch-C"]},
   {"id": "F045", "description": "Wire useTranslation in CategoryPicker.tsx — picker placeholder, empty state, search label", "implemented": false, "prdRefs": ["2b-21a/sub-batch-C"]},
   {"id": "F046", "description": "Wire useTranslation in ticket/CommentMetadataDebugModal.tsx (dev-facing; translate user-visible strings only)", "implemented": false, "prdRefs": ["2b-21a/sub-batch-C"]},

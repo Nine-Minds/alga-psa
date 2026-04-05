@@ -706,11 +706,21 @@
       "nameRequired": "Nazwa kategorii jest wymagana",
       "saveSuccess": "Kategoria zaktualizowana pomyślnie",
       "saveFailed": "Nie udało się zapisać kategorii",
+      "createSuccess": "Kategoria została utworzona",
       "importBoardRequired": "Wybierz tablicę dla zaimportowanych kategorii",
       "importMissingParents": "Nie można zaimportować podkategorii bez ich kategorii nadrzędnych. Zaznacz także: {{parents}}",
       "importSuccess": "Kategorie zaimportowane pomyślnie",
       "importFailed": "Nie udało się zaimportować kategorii",
-      "fetchAvailableFailed": "Nie udało się pobrać dostępnych kategorii do importu"
+      "fetchAvailableFailed": "Nie udało się pobrać dostępnych kategorii do importu",
+      "noneTopLevelCategory": "Brak (kategoria najwyższego poziomu)",
+      "noBoard": "Brak tablicy",
+      "loadingBoards": "Ładowanie tablic…",
+      "boardRequiredHelp": "Wymagane dla kategorii najwyższego poziomu",
+      "parentCategoryOptional": "Kategoria nadrzędna (opcjonalnie)",
+      "selectParentCategory": "Wybierz kategorię nadrzędną",
+      "parentHelpWithBoard": "Wybierz kategorię nadrzędną, aby utworzyć podkategorię, lub pozostaw puste dla poziomu najwyższego",
+      "parentHelpWithoutBoard": "Najpierw wybierz tablicę albo kategorię nadrzędną, aby odziedziczyć jej tablicę",
+      "creating": "Tworzenie..."
     },
     "display": {
       "responseStateTrackingTitle": "Śledzenie stanu odpowiedzi",
