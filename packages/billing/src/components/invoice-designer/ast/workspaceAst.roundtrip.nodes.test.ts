@@ -168,7 +168,7 @@ describe('workspaceAst roundtrip node/property matrix', () => {
     expect(divider.style?.inline).toMatchObject({ margin: '8px 0' });
   });
 
-  it('round-trips field properties including optional format, emptyValue, placeholder, and displayFormat', () => {
+  it('round-trips field properties including optional format, emptyValue, placeholder, displayFormat, and borderStyle', () => {
     const ast = createAstDocument(
       [
         {
@@ -184,6 +184,7 @@ describe('workspaceAst roundtrip node/property matrix', () => {
               emptyValue: '-',
               placeholder: 'Company Address',
               displayFormat: 'multiline',
+              borderStyle: 'box',
             },
             {
               id: 'field-implicit',
@@ -218,6 +219,7 @@ describe('workspaceAst roundtrip node/property matrix', () => {
     expect(explicitField.emptyValue).toBe('-');
     expect(explicitField.placeholder).toBe('Company Address');
     expect(explicitField.displayFormat).toBe('multiline');
+    expect(explicitField.borderStyle).toBe('box');
 
     const implicitField = findNodeById(layout, 'field-implicit');
     expect(implicitField?.type).toBe('field');
@@ -227,6 +229,7 @@ describe('workspaceAst roundtrip node/property matrix', () => {
     expect(Object.prototype.hasOwnProperty.call(implicitField, 'format')).toBe(false);
     expect(Object.prototype.hasOwnProperty.call(implicitField, 'emptyValue')).toBe(false);
     expect(Object.prototype.hasOwnProperty.call(implicitField, 'displayFormat')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(implicitField, 'borderStyle')).toBe(false);
   });
 
   it('round-trips dynamic-table columns including style and emptyStateText', () => {

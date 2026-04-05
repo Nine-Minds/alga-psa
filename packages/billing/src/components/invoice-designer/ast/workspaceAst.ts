@@ -1,5 +1,6 @@
 import type {
   TemplateAst,
+  TemplateFieldBorderStyle,
   TemplateNode,
   TemplatePrintSettings,
   TemplateNodeStyleRef,
@@ -58,6 +59,12 @@ const isTemplateFieldDisplayFormat = (value: unknown): value is TemplateFieldDis
 
 const parseTemplateFieldDisplayFormat = (value: unknown): TemplateFieldDisplayFormat | undefined =>
   isTemplateFieldDisplayFormat(value) ? value : undefined;
+
+const isTemplateFieldBorderStyle = (value: unknown): value is TemplateFieldBorderStyle =>
+  value === 'underline' || value === 'box' || value === 'none';
+
+const parseTemplateFieldBorderStyle = (value: unknown): TemplateFieldBorderStyle | undefined =>
+  isTemplateFieldBorderStyle(value) ? value : undefined;
 
 const isTemplateValueExpression = (value: unknown): value is TemplateValueExpression => {
   if (!isRecord(value)) {
@@ -970,6 +977,7 @@ const mapDesignerNodeToAstNode = (
       const explicitLabel = asTrimmedString(metadata.label);
       const format = parseTemplateValueFormat(metadata.format);
       const displayFormat = parseTemplateFieldDisplayFormat(metadata.displayFormat);
+      const borderStyle = parseTemplateFieldBorderStyle(metadata.fieldBorderStyle);
       const astImported = metadata.__astImported === true;
       const hadImportedFormat = metadata.__astFieldHadFormat === true;
       const hadImportedEmptyValue = metadata.__astFieldHadEmptyValue === true;
@@ -978,6 +986,7 @@ const mapDesignerNodeToAstNode = (
       const emptyValue = hasExplicitEmptyValue ? asTrimmedString(metadata.emptyValue) : '';
       const hasExplicitPlaceholder = typeof metadata.placeholder === 'string';
       const placeholder = hasExplicitPlaceholder ? asTrimmedString(metadata.placeholder) : '';
+      const hasExplicitBorderStyle = typeof metadata.fieldBorderStyle === 'string';
       const mapped: TemplateNode = {
         ...createBaseNode(node),
         type: 'field',
@@ -1005,6 +1014,9 @@ const mapDesignerNodeToAstNode = (
       }
       if (displayFormat && supportsFieldDisplayFormat(bindingPath)) {
         mapped.displayFormat = displayFormat;
+      }
+      if (hasExplicitBorderStyle && borderStyle) {
+        mapped.borderStyle = borderStyle;
       }
       return mapped;
     }
@@ -1744,11 +1756,17 @@ export const importTemplateAstToWorkspace = (
           metadata.__astFieldHadFormat = Object.prototype.hasOwnProperty.call(inputNode, 'format');
           metadata.__astFieldHadEmptyValue = Object.prototype.hasOwnProperty.call(inputNode, 'emptyValue');
           metadata.__astFieldHadPlaceholder = Object.prototype.hasOwnProperty.call(inputNode, 'placeholder');
+          metadata.__astFieldHadBorderStyle = Object.prototype.hasOwnProperty.call(inputNode, 'borderStyle');
           if (inputNode.format) {
             metadata.format = inputNode.format;
           }
           if (inputNode.displayFormat) {
             metadata.displayFormat = inputNode.displayFormat;
+          }
+          if (inputNode.borderStyle) {
+            metadata.fieldBorderStyle = inputNode.borderStyle;
+          } else {
+            delete metadata.fieldBorderStyle;
           }
           if (inputNode.label) {
             metadata.label = inputNode.label;

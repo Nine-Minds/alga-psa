@@ -16,6 +16,7 @@ const cssIdentifierSchema = z
 
 const valueFormatSchema = z.enum(['text', 'number', 'currency', 'date']);
 const fieldDisplayFormatSchema = z.enum(['single-line', 'multiline', 'raw']);
+const fieldBorderStyleSchema = z.enum(['underline', 'box', 'none']);
 const paperPresetSchema = z.enum(INVOICE_PAPER_PRESET_IDS);
 const printSettingsSchema = z.object({
   paperPreset: paperPresetSchema,
@@ -277,6 +278,7 @@ type NodeInput =
       placeholder?: string;
       format?: z.infer<typeof valueFormatSchema>;
       displayFormat?: z.infer<typeof fieldDisplayFormatSchema>;
+      borderStyle?: z.infer<typeof fieldBorderStyleSchema>;
     }
   | {
       id: string;
@@ -375,6 +377,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       placeholder: z.string().optional(),
       format: valueFormatSchema.optional(),
       displayFormat: fieldDisplayFormatSchema.optional(),
+      borderStyle: fieldBorderStyleSchema.optional(),
     }).strict(),
     z.object({
       id: z.string().min(1),
