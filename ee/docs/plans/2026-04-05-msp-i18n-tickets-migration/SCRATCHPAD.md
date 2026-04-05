@@ -599,6 +599,11 @@ the one-liner. Keep the validator green before committing.
   `server/public/locales/xx/features/tickets.json` directly and verifies that the visible keys
   wired in `TicketingDashboard.tsx` resolve to pseudo-text (`11111`) rather than English, while
   preserving `{{count}}` interpolation markers for the move/delete success strings.
+- **(2026-04-05, T012)** Added a focused interpolation contract to
+  `TicketingDashboard.i18n.test.ts` for the bulk move/delete success toasts. The test asserts
+  that `TicketingDashboard.tsx` passes `count` into `t('bulk.move.success', …)` and
+  `t('bulk.delete.success', …)` with singular/plural default values, so the UI stays aligned
+  with the `_one` / `_other` locale entries instead of drifting back to manual string assembly.
 
 ## Risks
 

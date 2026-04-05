@@ -73,4 +73,16 @@ describe('ticketing dashboard i18n wiring contract', () => {
     expect(getLeaf(pseudo, 'bulk.delete.success_one')).toBe('11111 {{count}} 11111');
     expect(getLeaf(pseudo, 'bulk.delete.success_other')).toBe('11111 {{count}} 11111');
   });
+
+  it('T012: uses count interpolation for bulk move/delete success toasts', () => {
+    const source = read('./TicketingDashboard.tsx');
+
+    expect(source).toContain("toast.success(t('bulk.move.success', {");
+    expect(source).toContain('count: result.movedIds.length');
+    expect(source).toContain("defaultValue: result.movedIds.length === 1 ? '{{count}} ticket moved' : '{{count}} tickets moved'");
+
+    expect(source).toContain("toast.success(t('bulk.delete.success', {");
+    expect(source).toContain('count: result.deletedIds.length');
+    expect(source).toContain("defaultValue: result.deletedIds.length === 1 ? '{{count}} ticket deleted' : '{{count}} tickets deleted'");
+  });
 });
