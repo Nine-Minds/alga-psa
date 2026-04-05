@@ -239,6 +239,12 @@ the one-liner. Keep the validator green before committing.
   around bundle warnings, bulk move success interpolation, and plural action labels. After the
   cleanup pass only expected invariants remain English-equal (`Total`, `Error`, `SLA`, `ITIL`,
   `N/A`), and `node scripts/validate-translations.cjs` stays green.
+- **(2026-04-05, F005)** Completed the German locale pass for
+  `de/features/tickets.json`. This file already had broad ticket coverage; the remaining work
+  was mostly placeholder cleanup in MSP additions. After translation, the only English-equal
+  leaves are domain terms or deliberate invariants (`Board`, `Team`, `Lead`, `Service`,
+  `SLA`, `ITIL`, `name@example.com`), so no extra manual rewrites were needed beyond the
+  automated fill-in. Validation stayed green.
 
 ## Risks
 
