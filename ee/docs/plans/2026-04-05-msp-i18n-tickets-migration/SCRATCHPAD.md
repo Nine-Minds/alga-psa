@@ -297,6 +297,12 @@ the one-liner. Keep the validator green before committing.
   `errors.validateDeletionFailed`, `errors.deleteTicketUnexpected`), followed by
   `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
   which passed with `Errors: 0`, `Warnings: 0`.
+- **(2026-04-05, T010)** Added `packages/tickets/src/components/TicketingDashboard.i18n.test.ts`
+  as a fast source-contract test for the dashboard shell/filter wiring. A jsdom render harness
+  pulled in too much of the ticket/auth runtime for this file, so the test asserts the concrete
+  `t('...')` calls for the page title, add button, primary filter placeholders/options, reset
+  control, bundled toggle, and density-control labels directly in `TicketingDashboard.tsx`.
+  Verified with `cd packages/tickets && npx vitest run src/components/TicketingDashboard.i18n.test.ts`.
 
 ## Risks
 
