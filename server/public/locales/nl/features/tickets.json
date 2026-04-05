@@ -561,8 +561,14 @@
   "info": {
     "saveTitle": "Titel opslaan",
     "editTitle": "Titel bewerken",
+    "saveChanges": "Wijzigingen opslaan",
+    "saving": "Bezig met opslaan...",
     "unsavedChanges": "Je hebt niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
     "saveSuccess": "Wijzigingen succesvol opgeslagen!",
+    "discardChangesTitle": "Wijzigingen verwerpen",
+    "discardChangesMessage": "Je hebt niet-opgeslagen wijzigingen. Weet je zeker dat je ze wilt verwerpen?",
+    "discard": "Verwerpen",
+    "keepEditing": "Doorgaan met bewerken",
     "statusRequiresSelection": "Selecteer een status voor het nieuwe bord voordat je opslaat.",
     "notAssigned": "Niet toegewezen",
     "additionalAgentsTooltip": "Extra medewerkers:",
@@ -582,6 +588,7 @@
     "editDescription": "Beschrijving bewerken",
     "noDescription": "Geen beschrijving gevonden.",
     "openEmailNotificationLogs": "E-mailnotificatie-logboeken bekijken",
+    "clipboardDraftMessage": "Deze beschrijving bevat geplakte afbeeldingen die al als ticketdocumenten zijn geüpload. Wil je ze behouden of permanent verwijderen?",
     "clearDueDate": "Vervaldatum wissen",
     "paused": "Gepauzeerd"
   },

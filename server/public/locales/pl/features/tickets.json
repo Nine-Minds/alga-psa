@@ -561,8 +561,14 @@
   "info": {
     "saveTitle": "Zapisz tytuł",
     "editTitle": "Edytuj tytuł",
+    "saveChanges": "Zapisz zmiany",
+    "saving": "Zapisywanie...",
     "unsavedChanges": "Masz niezapisane zmiany. Kliknij „Zapisz zmiany”, aby je zastosować.",
     "saveSuccess": "Zmiany zapisane pomyślnie!",
+    "discardChangesTitle": "Odrzuć zmiany",
+    "discardChangesMessage": "Masz niezapisane zmiany. Czy na pewno chcesz je odrzucić?",
+    "discard": "Odrzuć",
+    "keepEditing": "Kontynuuj edycję",
     "statusRequiresSelection": "Wybierz status dla nowej tablicy przed zapisaniem.",
     "notAssigned": "Nie przypisano",
     "additionalAgentsTooltip": "Dodatkowi agenci:",
@@ -582,6 +588,7 @@
     "editDescription": "Edytuj opis",
     "noDescription": "Nie znaleziono opisu.",
     "openEmailNotificationLogs": "Wyświetl dzienniki powiadomień e-mail",
+    "clipboardDraftMessage": "Ten opis zawiera wklejone obrazy, które zostały już przesłane jako dokumenty zgłoszenia. Chcesz je zachować czy usunąć na stałe?",
     "clearDueDate": "Wyczyść termin",
     "paused": "Wstrzymane"
   },

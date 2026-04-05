@@ -342,6 +342,22 @@ the one-liner. Keep the validator green before committing.
   aria label now all resolve through the shared ticket namespace. Validation used
   `npx eslint packages/tickets/src/components/ticket/TicketInfo.tsx`; it exited 0 with only the
   file’s pre-existing warnings (`@ts-nocheck`, unused symbols, existing `any`/non-null asserts).
+- **(2026-04-05, F026)** Finished the remaining user-facing `TicketInfo.tsx` action/confirmation
+  copy: description save/cancel controls, the footer cancel/save-changes controls, the unsaved-
+  changes discard dialog, and the pasted-images cleanup dialog now all resolve through
+  `features/tickets`. Added `info.saveChanges`, `info.saving`, `info.discardChangesTitle`,
+  `info.discardChangesMessage`, `info.discard`, `info.keepEditing`, and
+  `info.clipboardDraftMessage` across `en/fr/es/de/nl/it/pl`, regenerated `xx/yy`, and re-ran
+  `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  successfully. Focused validation also passed with `npx eslint
+  packages/tickets/src/components/ticket/TicketInfo.tsx` and `cd packages/tickets && npx vitest
+  run src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx
+  src/components/ticket/TicketInfo.richText.contract.test.ts`.
+- **(2026-04-05, F026 test harness)** The existing `TicketInfo` regression tests needed upkeep to
+  reflect the current component composition: `TicketInfo.boardChangeStatusReselection.test.tsx`
+  now mocks `useTranslation` and `useDocumentsCrossFeature`, and
+  `TicketInfo.richText.contract.test.ts` asserts the translated clipboard-dialog wiring instead of
+  the retired hardcoded `"Keep Images"` literal.
 
 ## Risks
 

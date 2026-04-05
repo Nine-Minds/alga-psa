@@ -561,8 +561,14 @@
   "info": {
     "saveTitle": "11111",
     "editTitle": "11111",
+    "saveChanges": "11111",
+    "saving": "11111",
     "unsavedChanges": "11111",
     "saveSuccess": "11111",
+    "discardChangesTitle": "11111",
+    "discardChangesMessage": "11111",
+    "discard": "11111",
+    "keepEditing": "11111",
     "statusRequiresSelection": "11111",
     "notAssigned": "11111",
     "additionalAgentsTooltip": "11111",
@@ -582,6 +588,7 @@
     "editDescription": "11111",
     "noDescription": "11111",
     "openEmailNotificationLogs": "11111",
+    "clipboardDraftMessage": "11111",
     "clearDueDate": "11111",
     "paused": "11111"
   },

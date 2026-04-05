@@ -561,8 +561,14 @@
   "info": {
     "saveTitle": "Enregistrer le titre",
     "editTitle": "Modifier le titre",
+    "saveChanges": "Enregistrer les modifications",
+    "saving": "Enregistrement...",
     "unsavedChanges": "Vous avez des modifications non enregistrées. Cliquez sur \"Enregistrer les modifications\" pour les appliquer.",
     "saveSuccess": "Modifications enregistrées avec succès !",
+    "discardChangesTitle": "Annuler les modifications",
+    "discardChangesMessage": "Vous avez des modifications non enregistrées. Voulez-vous vraiment les abandonner ?",
+    "discard": "Abandonner",
+    "keepEditing": "Continuer la modification",
     "statusRequiresSelection": "Sélectionnez un statut pour la nouvelle carte avant de sauvegarder.",
     "notAssigned": "Non attribué",
     "additionalAgentsTooltip": "Agents supplémentaires :",
@@ -582,6 +588,7 @@
     "editDescription": "Modifier la description",
     "noDescription": "Aucune description trouvée.",
     "openEmailNotificationLogs": "Afficher les journaux de notifications par e-mail",
+    "clipboardDraftMessage": "Cette description comprend des images collées qui ont déjà été téléversées comme documents du ticket. Voulez-vous les conserver ou les supprimer définitivement ?",
     "clearDueDate": "Effacer la date d'échéance",
     "paused": "En pause"
   },

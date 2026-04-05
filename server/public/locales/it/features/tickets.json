@@ -561,8 +561,14 @@
   "info": {
     "saveTitle": "Salva titolo",
     "editTitle": "Modifica titolo",
+    "saveChanges": "Salva modifiche",
+    "saving": "Salvataggio in corso...",
     "unsavedChanges": "Hai modifiche non salvate. Fai clic su \"Salva modifiche\" per applicarle.",
     "saveSuccess": "Modifiche salvate con successo!",
+    "discardChangesTitle": "Annulla modifiche",
+    "discardChangesMessage": "Hai modifiche non salvate. Vuoi davvero annullarle?",
+    "discard": "Annulla",
+    "keepEditing": "Continua a modificare",
     "statusRequiresSelection": "Seleziona uno stato per il nuovo canale prima di salvare.",
     "notAssigned": "Non assegnato",
     "additionalAgentsTooltip": "Agenti aggiuntivi:",
@@ -582,6 +588,7 @@
     "editDescription": "Modifica descrizione",
     "noDescription": "Nessuna descrizione trovata.",
     "openEmailNotificationLogs": "Visualizza registro notifiche email",
+    "clipboardDraftMessage": "Questa descrizione include immagini incollate che sono già state caricate come documenti del ticket. Vuoi mantenerle o eliminarle definitivamente?",
     "clearDueDate": "Rimuovi scadenza",
     "paused": "In pausa"
   },

@@ -561,8 +561,14 @@
   "info": {
     "saveTitle": "Titel speichern",
     "editTitle": "Titel bearbeiten",
+    "saveChanges": "Änderungen speichern",
+    "saving": "Wird gespeichert...",
     "unsavedChanges": "Du hast ungespeicherte Änderungen. Klicke auf \"Änderungen speichern\", um sie anzuwenden.",
     "saveSuccess": "Änderungen erfolgreich gespeichert!",
+    "discardChangesTitle": "Änderungen verwerfen",
+    "discardChangesMessage": "Du hast ungespeicherte Änderungen. Möchtest du sie wirklich verwerfen?",
+    "discard": "Verwerfen",
+    "keepEditing": "Weiter bearbeiten",
     "statusRequiresSelection": "Wähle vor dem Speichern einen Status für das neue Board aus.",
     "notAssigned": "Nicht zugewiesen",
     "additionalAgentsTooltip": "Zusätzliche Agents:",
@@ -582,6 +588,7 @@
     "editDescription": "Beschreibung bearbeiten",
     "noDescription": "Keine Beschreibung gefunden.",
     "openEmailNotificationLogs": "E-Mail-Benachrichtigungsprotokolle anzeigen",
+    "clipboardDraftMessage": "Diese Beschreibung enthält eingefügte Bilder, die bereits als Ticketdokumente hochgeladen wurden. Möchtest du sie behalten oder dauerhaft löschen?",
     "clearDueDate": "Fälligkeitsdatum löschen",
     "paused": "Pausiert"
   },

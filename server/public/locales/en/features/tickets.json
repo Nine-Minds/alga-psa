@@ -561,8 +561,14 @@
   "info": {
     "saveTitle": "Save title",
     "editTitle": "Edit title",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
     "unsavedChanges": "You have unsaved changes. Click \"Save Changes\" to apply them.",
     "saveSuccess": "Changes saved successfully!",
+    "discardChangesTitle": "Discard Changes",
+    "discardChangesMessage": "You have unsaved changes. Are you sure you want to discard them?",
+    "discard": "Discard",
+    "keepEditing": "Keep Editing",
     "statusRequiresSelection": "Select a status for the new board before saving.",
     "notAssigned": "Not assigned",
     "additionalAgentsTooltip": "Additional Agents:",
@@ -582,6 +588,7 @@
     "editDescription": "Edit description",
     "noDescription": "No description found.",
     "openEmailNotificationLogs": "View email notification logs",
+    "clipboardDraftMessage": "This description includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?",
     "clearDueDate": "Clear due date",
     "paused": "Paused"
   },

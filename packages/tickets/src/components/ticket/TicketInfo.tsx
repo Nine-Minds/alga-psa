@@ -1495,7 +1495,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     }}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Saving...' : 'Save'}
+                    {isSubmitting
+                      ? t('info.saving', 'Saving...')
+                      : t('actions.save', 'Save')}
                   </Button>
                   <Button
                     id={`${id}-cancel-description-btn`}
@@ -1503,7 +1505,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     variant="outline"
                     onClick={descriptionUploadSession.requestDiscard}
                   >
-                    Cancel
+                    {t('actions.cancel', 'Cancel')}
                   </Button>
                 </div>
               </div>
@@ -1547,7 +1549,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               onClick={handleCancelClick}
               disabled={isSaving}
             >
-              Cancel
+              {t('actions.cancel', 'Cancel')}
             </Button>
             <Button
               id={`${id}-save-changes-btn`}
@@ -1556,7 +1558,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               disabled={isSaving || requiresDestinationStatusSelection}
             >
               <span className={hasUnsavedChanges ? 'font-bold' : ''}>
-                {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+                {isSaving
+                  ? t('info.saving', 'Saving...')
+                  : hasUnsavedChanges
+                    ? `${t('info.saveChanges', 'Save Changes')} *`
+                    : t('info.saveChanges', 'Save Changes')}
               </span>
               {!isSaving && <Save className="ml-2 h-4 w-4" />}
             </Button>
@@ -1568,10 +1574,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             isOpen={showCancelConfirm}
             onClose={() => setShowCancelConfirm(false)}
             onConfirm={handleCancelConfirm}
-            title="Discard Changes"
-            message="You have unsaved changes. Are you sure you want to discard them?"
-            confirmLabel="Discard"
-            cancelLabel="Keep Editing"
+            title={t('info.discardChangesTitle', 'Discard Changes')}
+            message={t('info.discardChangesMessage', 'You have unsaved changes. Are you sure you want to discard them?')}
+            confirmLabel={t('info.discard', 'Discard')}
+            cancelLabel={t('info.keepEditing', 'Keep Editing')}
           />
           <ConfirmationDialog
             id={`${id}-description-clipboard-draft-cancel-dialog`}
@@ -1579,11 +1585,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             onClose={() => descriptionUploadSession.setShowDraftCancelDialog(false)}
             onConfirm={descriptionUploadSession.deleteTrackedDraftClipboardImages}
             onCancel={descriptionUploadSession.keepDraftClipboardImages}
-            title="Pasted Images Detected"
-            message="This description includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?"
-            confirmLabel="Delete Images"
-            thirdButtonLabel="Keep Images"
-            cancelLabel="Continue Editing"
+            title={t('conversation.clipboardDraftCancelTitle', 'Pasted Images Detected')}
+            message={t('info.clipboardDraftMessage', 'This description includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?')}
+            confirmLabel={t('conversation.deleteUploadedImages', 'Delete Images')}
+            thirdButtonLabel={t('conversation.keepUploadedImages', 'Keep Images')}
+            cancelLabel={t('quickAdd.continueEditing', 'Continue Editing')}
             isConfirming={descriptionUploadSession.isDeletingDraftImages}
           />
         </div>

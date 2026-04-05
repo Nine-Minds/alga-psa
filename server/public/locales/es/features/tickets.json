@@ -561,8 +561,14 @@
   "info": {
     "saveTitle": "Guardar título",
     "editTitle": "Editar título",
+    "saveChanges": "Guardar cambios",
+    "saving": "Guardando...",
     "unsavedChanges": "Tienes cambios sin guardar. Haz clic en \"Guardar cambios\" para aplicarlos.",
     "saveSuccess": "¡Cambios guardados correctamente!",
+    "discardChangesTitle": "Descartar cambios",
+    "discardChangesMessage": "Tienes cambios sin guardar. ¿Seguro que quieres descartarlos?",
+    "discard": "Descartar",
+    "keepEditing": "Seguir editando",
     "statusRequiresSelection": "Selecciona un estado para el nuevo tablero antes de guardar.",
     "notAssigned": "Sin asignar",
     "additionalAgentsTooltip": "Agentes adicionales:",
@@ -582,6 +588,7 @@
     "editDescription": "Editar descripción",
     "noDescription": "No se encontró ninguna descripción.",
     "openEmailNotificationLogs": "Ver registros de notificaciones por correo",
+    "clipboardDraftMessage": "Esta descripción incluye imágenes pegadas que ya se cargaron como documentos del ticket. ¿Quieres conservarlas o eliminarlas de forma permanente?",
     "clearDueDate": "Limpiar fecha de vencimiento",
     "paused": "Pausado"
   },

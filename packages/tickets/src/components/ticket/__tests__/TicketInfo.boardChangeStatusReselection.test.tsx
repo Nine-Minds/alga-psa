@@ -20,6 +20,12 @@ vi.mock('@alga-psa/ui/context', () => ({
   useRegisterUnsavedChanges: vi.fn(),
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (_key: string, fallback?: string) => fallback ?? _key,
+  }),
+}));
+
 vi.mock('@alga-psa/ui/editor', () => ({
   RichTextViewer: ({ content }: { content: string }) => <div>{content}</div>,
   TextEditor: () => <div data-testid="text-editor" />,
@@ -135,8 +141,14 @@ vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
   ConfirmationDialog: () => null,
 }));
 
-vi.mock('@alga-psa/sla/components', () => ({
+vi.mock('@alga-psa/ui/components/sla', () => ({
   SlaStatusBadge: () => <div data-testid="sla-status-badge" />,
+}));
+
+vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
+  useDocumentsCrossFeature: () => ({
+    deleteDocument: vi.fn(),
+  }),
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
