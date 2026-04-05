@@ -71,6 +71,15 @@ import { resolveInsertPositionFromRects } from './utils/dropIndicator';
 import { DesignerSchemaInspector } from './inspector/DesignerSchemaInspector';
 import DocumentImagePickerWidget from './inspector/widgets/DocumentImagePickerWidget';
 import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from './utils/nodeProps';
+import {
+  inferHeightMode,
+  inferWidthMode,
+  resolveHeightValueForMode,
+  resolveWidthValueForMode,
+  supportsSharedSizingModes,
+  type DesignerHeightMode,
+  type DesignerWidthMode,
+} from './utils/sizeModes';
 import { resolveDesignerDocumentKind } from './utils/documentKind';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
@@ -369,6 +378,17 @@ const MEDIA_OBJECT_FIT_OPTIONS: IconToggleOption[] = [
   { value: 'scale-down', label: 'Scale Down', tooltip: 'Use intrinsic size unless it needs shrinking', icon: Shrink },
 ];
 
+const BLOCK_WIDTH_MODE_OPTIONS: IconToggleOption[] = [
+  { value: 'fixed', label: 'Fixed', tooltip: 'Use an explicit width', icon: BoxSelect },
+  { value: 'fill', label: 'Fill', tooltip: 'Stretch to the available width', icon: Maximize2 },
+  { value: 'hug', label: 'Hug', tooltip: 'Size to the content width', icon: Shrink },
+];
+
+const BLOCK_HEIGHT_MODE_OPTIONS: IconToggleOption[] = [
+  { value: 'fixed', label: 'Fixed', tooltip: 'Use an explicit height', icon: BoxSelect },
+  { value: 'hug', label: 'Hug', tooltip: 'Grow only as tall as the content needs', icon: Shrink },
+];
+
 const GRID_COLUMN_PRESETS: GridColumnPreset[] = [
   { id: 'single', label: '1 column', template: '1fr', tracks: [1] },
   { id: 'two-equal', label: '2 equal columns', template: '1fr 1fr', tracks: [1, 1] },
@@ -566,7 +586,12 @@ export const DesignerShell: React.FC = () => {
   }, [currentPrintSettings.marginMm]);
 
   const resizeNode = useCallback(
-    (id: string, size: Size, commit: boolean = false) => {
+    (
+      id: string,
+      size: Size,
+      commit: boolean = false,
+      options: { widthMode?: DesignerWidthMode; heightMode?: DesignerHeightMode } = {}
+    ) => {
       const node = useInvoiceDesignerStore.getState().nodesById[id];
       if (!node) return;
 
@@ -575,14 +600,16 @@ export const DesignerShell: React.FC = () => {
         width: Math.round(clamped.width),
         height: Math.round(clamped.height),
       };
+      const widthMode = options.widthMode ?? 'fixed';
+      const heightMode = options.heightMode ?? 'fixed';
 
       // Batch updates without generating multiple history entries.
       setNodeProp(id, 'size.width', rounded.width, false);
       setNodeProp(id, 'size.height', rounded.height, false);
       setNodeProp(id, 'baseSize.width', rounded.width, false);
       setNodeProp(id, 'baseSize.height', rounded.height, false);
-      setNodeProp(id, 'style.width', `${rounded.width}px`, false);
-      setNodeProp(id, 'style.height', `${rounded.height}px`, commit);
+      setNodeProp(id, 'style.width', resolveWidthValueForMode(widthMode, { ...node, size: rounded }), false);
+      setNodeProp(id, 'style.height', resolveHeightValueForMode(heightMode, { ...node, size: rounded }), commit);
     },
     [setNodeProp]
   );
@@ -600,12 +627,30 @@ export const DesignerShell: React.FC = () => {
   const selectedPreset = selectedNode?.layoutPresetId ? getPresetById(selectedNode.layoutPresetId) : null;
   const selectedNodeTypeLabel = useMemo(() => resolveSelectedNodeTypeLabel(selectedNode), [selectedNode]);
   const selectedFieldType = useMemo(() => resolveSelectedFieldType(selectedNode), [selectedNode]);
+  const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node] as const)), [nodes]);
   const selectedContainerLayout = useMemo(() => {
     if (!selectedNode || (selectedNode.type !== 'container' && selectedNode.type !== 'section')) {
       return undefined;
     }
     return getNodeLayout(selectedNode);
   }, [selectedNode]);
+  const selectedParentNode = useMemo(
+    () => (selectedNode?.parentId ? nodesById.get(selectedNode.parentId) ?? null : null),
+    [nodesById, selectedNode]
+  );
+  const selectedSizingStyle = useMemo(() => getNodeStyle(selectedNode ?? undefined), [selectedNode]);
+  const selectedWidthMode = useMemo(
+    () => inferWidthMode(selectedSizingStyle),
+    [selectedSizingStyle]
+  );
+  const selectedHeightMode = useMemo(
+    () => inferHeightMode(selectedSizingStyle),
+    [selectedSizingStyle]
+  );
+  const selectedSupportsSharedSizingModes = useMemo(
+    () => Boolean(selectedNode && supportsSharedSizingModes(selectedNode.type)),
+    [selectedNode]
+  );
   const selectedMediaParentSection = useMemo(() => {
     if (!selectedNode || !['image', 'logo', 'qr'].includes(selectedNode.type)) {
       return null;
@@ -619,7 +664,6 @@ export const DesignerShell: React.FC = () => {
     }
     return getSectionFitSizeFromChildren(selectedNode, new Map(nodes.map((node) => [node.id, node])));
   }, [nodes, selectedNode]);
-  const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node] as const)), [nodes]);
 
 	  useDesignerShortcuts();
 	
@@ -1109,6 +1153,60 @@ export const DesignerShell: React.FC = () => {
               3
             )}
           </>
+        )}
+      </div>
+    );
+  };
+
+  const renderSharedSizingControls = () => {
+    if (!selectedNode || !selectedSupportsSharedSizingModes) {
+      return null;
+    }
+
+    const applyWidthMode = (mode: DesignerWidthMode) => {
+      setNodeProp(selectedNode.id, 'style.width', resolveWidthValueForMode(mode, selectedNode), true);
+    };
+
+    const applyHeightMode = (mode: DesignerHeightMode) => {
+      setNodeProp(selectedNode.id, 'style.height', resolveHeightValueForMode(mode, selectedNode), true);
+    };
+
+    const parentUsesFlowLayout = Boolean(
+      selectedParentNode && (() => {
+        const parentLayout = getNodeLayout(selectedParentNode);
+        return parentLayout?.display === 'flex' || parentLayout?.display === 'grid';
+      })()
+    );
+
+    return (
+      <div
+        className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2"
+        data-automation-id="designer-shared-sizing-controls"
+      >
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Sizing Mode</p>
+        {renderIconButtonGroup(
+          'block-width-mode',
+          'Width',
+          BLOCK_WIDTH_MODE_OPTIONS,
+          selectedWidthMode,
+          (value) => applyWidthMode(value as DesignerWidthMode),
+          3
+        )}
+        {renderIconButtonGroup(
+          'block-height-mode',
+          'Height',
+          BLOCK_HEIGHT_MODE_OPTIONS,
+          selectedHeightMode,
+          (value) => applyHeightMode(value as DesignerHeightMode),
+          2
+        )}
+        <p className="text-[11px] text-slate-500">
+          Width uses fill, fixed, or hug sizing. Height uses fixed or hug sizing so blocks can grow with their content.
+        </p>
+        {!parentUsesFlowLayout && (
+          <p className="text-[11px] text-amber-600 dark:text-amber-400">
+            Fill sizing works best inside stack or grid parents.
+          </p>
         )}
       </div>
     );
@@ -1742,13 +1840,20 @@ export const DesignerShell: React.FC = () => {
     if (!selectedNodeId) return;
     const liveNodes = useInvoiceDesignerStore.getState().nodes;
     const liveSelectedNode = liveNodes.find((node) => node.id === selectedNodeId) ?? null;
-    const liveParentNode =
-      liveSelectedNode?.parentId ? liveNodes.find((node) => node.id === liveSelectedNode.parentId) ?? null : null;
+    const widthMode = inferWidthMode(getNodeStyle(liveSelectedNode ?? undefined));
+    const heightMode = inferHeightMode(getNodeStyle(liveSelectedNode ?? undefined));
 
     // Avoid creating a separate history entry just for position; the resize commit will snapshot both.
     setNodeProp(selectedNodeId, 'position.x', propertyDraft.x, false);
     setNodeProp(selectedNodeId, 'position.y', propertyDraft.y, false);
-    resizeNode(selectedNodeId, { width: propertyDraft.width, height: propertyDraft.height }, true);
+    if (widthMode === 'fixed' || heightMode === 'fixed') {
+      resizeNode(
+        selectedNodeId,
+        { width: propertyDraft.width, height: propertyDraft.height },
+        true,
+        { widthMode, heightMode }
+      );
+    }
 
     const resolvedNode = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === selectedNodeId);
     if (!resolvedNode) {
@@ -1756,10 +1861,11 @@ export const DesignerShell: React.FC = () => {
     }
 
     const draftSize = {
-      width: Number.isFinite(propertyDraft.width) ? propertyDraft.width : resolvedNode.size.width,
-      height: Number.isFinite(propertyDraft.height) ? propertyDraft.height : resolvedNode.size.height,
+      width: widthMode === 'fixed' && Number.isFinite(propertyDraft.width) ? propertyDraft.width : resolvedNode.size.width,
+      height:
+        heightMode === 'fixed' && Number.isFinite(propertyDraft.height) ? propertyDraft.height : resolvedNode.size.height,
     };
-    if (wasSizeConstrainedFromDraft(draftSize, resolvedNode.size)) {
+    if ((widthMode === 'fixed' || heightMode === 'fixed') && wasSizeConstrainedFromDraft(draftSize, resolvedNode.size)) {
       showDropFeedback('info', 'Size constrained to valid bounds.');
     }
   };
@@ -1957,19 +2063,53 @@ export const DesignerShell: React.FC = () => {
               <div className="grid grid-cols-2 gap-3 text-xs text-slate-500">
                 <div>
                   <label htmlFor="prop-x" className="block mb-1">X</label>
-                  <Input id="prop-x" name="x" type="number" value={propertyDraft.x} onChange={handlePropertyInput} onBlur={commitPropertyChanges} />
+                  <Input
+                    id="prop-x"
+                    name="x"
+                    type="number"
+                    value={propertyDraft.x}
+                    onChange={handlePropertyInput}
+                    onBlur={commitPropertyChanges}
+                    data-automation-id="designer-prop-x"
+                  />
                 </div>
                 <div>
                   <label htmlFor="prop-y" className="block mb-1">Y</label>
-                  <Input id="prop-y" name="y" type="number" value={propertyDraft.y} onChange={handlePropertyInput} onBlur={commitPropertyChanges} />
+                  <Input
+                    id="prop-y"
+                    name="y"
+                    type="number"
+                    value={propertyDraft.y}
+                    onChange={handlePropertyInput}
+                    onBlur={commitPropertyChanges}
+                    data-automation-id="designer-prop-y"
+                  />
                 </div>
                 <div>
                   <label htmlFor="prop-width" className="block mb-1">Width</label>
-                  <Input id="prop-width" name="width" type="number" value={propertyDraft.width} onChange={handlePropertyInput} onBlur={commitPropertyChanges} />
+                  <Input
+                    id="prop-width"
+                    name="width"
+                    type="number"
+                    value={propertyDraft.width}
+                    onChange={handlePropertyInput}
+                    onBlur={commitPropertyChanges}
+                    disabled={selectedSupportsSharedSizingModes && selectedWidthMode !== 'fixed'}
+                    data-automation-id="designer-prop-width"
+                  />
                 </div>
                 <div>
                   <label htmlFor="prop-height" className="block mb-1">Height</label>
-                  <Input id="prop-height" name="height" type="number" value={propertyDraft.height} onChange={handlePropertyInput} onBlur={commitPropertyChanges} />
+                  <Input
+                    id="prop-height"
+                    name="height"
+                    type="number"
+                    value={propertyDraft.height}
+                    onChange={handlePropertyInput}
+                    onBlur={commitPropertyChanges}
+                    disabled={selectedSupportsSharedSizingModes && selectedHeightMode !== 'fixed'}
+                    data-automation-id="designer-prop-height"
+                  />
                 </div>
               </div>
               {selectedPreset && (
@@ -1989,6 +2129,7 @@ export const DesignerShell: React.FC = () => {
 	                </div>
 		              )}
                   {renderContainerLayoutControls()}
+                  {renderSharedSizingControls()}
                   <DesignerSchemaInspector node={selectedNode} nodesById={nodesById} />
 			              {selectedNode.type === 'section' && (
 			                <div className="space-y-1">

@@ -15,6 +15,7 @@ import { resolveFieldPreviewScaffold, resolveLabelPreviewScaffold } from './prev
 import { resolveContainerLayoutStyle, resolveNodeBoxStyle } from '../utils/cssLayout';
 import { resolveMediaFrameSize } from '../utils/mediaSizing';
 import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from '../utils/nodeProps';
+import { inferHeightMode } from '../utils/sizeModes';
 import { resolveSortableStrategy } from '../utils/sortableStrategy';
 import {
   formatBoundValue,
@@ -470,7 +471,8 @@ const resolveTotalsRowPreviewModel = (
 
 const renderTablePreview = (
   metadata: Record<string, unknown>,
-  previewData: WasmInvoiceViewModel | null
+  previewData: WasmInvoiceViewModel | null,
+  options: { fillHeight: boolean }
 ): React.ReactNode => {
   const borderConfig = resolveTableBorderConfig(metadata);
   const headerWeightClass = FONT_WEIGHT_CLASS[
@@ -497,7 +499,8 @@ const renderTablePreview = (
   return (
     <div
       className={clsx(
-        'h-full overflow-hidden text-[10px] text-slate-700 dark:text-slate-300 rounded-sm bg-white dark:bg-slate-800',
+        options.fillHeight ? 'h-full' : 'h-auto',
+        'overflow-hidden text-[10px] text-slate-700 dark:text-slate-300 rounded-sm bg-white dark:bg-slate-800',
         borderConfig.outer && ['border', INVOICE_BORDER_STRONG_COLOR_CLASS]
       )}
     >
@@ -734,8 +737,9 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     }
     case 'table':
     case 'dynamic-table': {
+      const fillHeight = inferHeightMode(getNodeStyle(node)) === 'fixed';
       return {
-        content: renderTablePreview(metadata, previewData),
+        content: renderTablePreview(metadata, previewData, { fillHeight }),
       };
     }
     case 'action-button':

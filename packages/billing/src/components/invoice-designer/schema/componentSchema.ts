@@ -634,7 +634,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       metadata: {},
     },
     hierarchy: {
-      allowedChildren: ['section'],
+      allowedChildren: ['section', 'totals', 'table', 'dynamic-table', 'image', 'logo', 'qr', 'signature', 'attachment-list', 'action-button'],
       allowedParents: ['document'],
     },
     inspector: COMMON_INSPECTOR,
@@ -743,11 +743,15 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Content',
     defaults: {
       size: { width: 360, height: 140 },
+      style: {
+        width: '100%',
+        height: 'auto',
+      },
       metadata: {},
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: COMMON_INSPECTOR,
   },
@@ -758,6 +762,10 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Dynamic',
     defaults: {
       size: { width: 520, height: 220 },
+      style: {
+        width: '100%',
+        height: 'auto',
+      },
       metadata: {
         columns: [
           { id: 'col-desc', header: 'Description', key: 'item.description', type: 'text', width: 220 },
@@ -774,7 +782,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TABLE_INSPECTOR),
   },
@@ -785,6 +793,10 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Dynamic',
     defaults: {
       size: { width: 520, height: 240 },
+      style: {
+        width: '100%',
+        height: 'auto',
+      },
       metadata: {
         tableBorderPreset: 'boxed',
         tableOuterBorder: true,
@@ -795,7 +807,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TABLE_INSPECTOR),
   },

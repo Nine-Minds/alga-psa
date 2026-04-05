@@ -42,4 +42,24 @@ describe('designerStore addNodeFromPalette', () => {
       height: `${Math.round(schemaSize.height)}px`,
     });
   });
+
+  it('applies shared block sizing defaults for dynamic tables', () => {
+    const store = useInvoiceDesignerStore.getState();
+    const pageId = store.nodes.find((node) => node.type === 'page')?.id;
+    expect(pageId).toBeTruthy();
+    if (!pageId) return;
+
+    store.addNodeFromPalette('dynamic-table', { x: 120, y: 160 }, { parentId: pageId });
+
+    const tableId = useInvoiceDesignerStore.getState().selectedNodeId;
+    expect(tableId).toBeTruthy();
+    if (!tableId) return;
+
+    const table = useInvoiceDesignerStore.getState().nodesById[tableId];
+    expect(table.type).toBe('dynamic-table');
+    expect(table.props.style).toMatchObject({
+      width: '100%',
+      height: 'auto',
+    });
+  });
 });
