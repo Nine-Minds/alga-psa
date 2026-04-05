@@ -474,6 +474,15 @@ the one-liner. Keep the validator green before committing.
   `TicketWatchListCard.test.tsx` run still fails before assertions because the existing harness
   does not provide the now-required `useTranslation`/`useFeatureFlag` context; that follow-up is
   queued as test work rather than a source blocker for the feature wiring.
+- **(2026-04-05, F041)** Wired `TicketEmailNotifications.tsx` through
+  `useTranslation('features/tickets')`: the card title, table column titles, loading/empty
+  states, load-more button, and fallback unknown-error string now resolve through
+  `emailNotifications.*`. The sent-at formatter also now uses the active i18n language instead of
+  hardcoded `en-US`, so locale changes affect the timestamp preview format too.
+- **(2026-04-05, F041 validation)** Verified with `npx eslint
+  packages/tickets/src/components/ticket/TicketEmailNotifications.tsx`, which exited 0. There is
+  no dedicated component test file for this card yet; only higher-level TicketDetails tests mock
+  it out.
 
 ## Risks
 
