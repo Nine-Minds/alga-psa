@@ -545,6 +545,14 @@ the one-liner. Keep the validator green before committing.
   because those keys were already added during the earlier namespace expansion.
 - **(2026-04-05, F047 validation)** `npx eslint
   packages/tickets/src/components/ticket/TicketNavigation.tsx` exited 0.
+- **(2026-04-05, F048)** Wired the visible `TicketingDashboardContainer.tsx` wrapper copy
+  through `useTranslation('features/tickets')`: the auth-required toast, the fetch-failure
+  message passed to `handleError`, and the board-name fallback used when normalizing
+  `effectiveOptions.boardOptions` now all resolve through existing `errors.*` /
+  `bulk.move.unnamedBoard` keys instead of hardcoded English.
+- **(2026-04-05, F048 validation)** `npx eslint
+  packages/tickets/src/components/TicketingDashboardContainer.tsx` exited 0 after adding the
+  new `t` dependency to the fetch callback.
 
 ## Risks
 
