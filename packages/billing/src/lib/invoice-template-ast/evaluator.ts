@@ -514,11 +514,18 @@ export const evaluateTemplateAst = (
             operation.id
           );
         }
-        aggregates = computeAggregateFromItems(aggregateSource, operation);
+        const nextAggregates = computeAggregateFromItems(aggregateSource, operation);
+        aggregates = {
+          ...aggregates,
+          ...nextAggregates,
+        };
         if (groups) {
           groups = groups.map((group) => ({
             ...group,
-            aggregates: computeAggregateFromItems(group.items, operation),
+            aggregates: {
+              ...(group.aggregates ?? {}),
+              ...computeAggregateFromItems(group.items, operation),
+            },
           }));
         }
         break;
@@ -598,4 +605,3 @@ export const evaluateAstTransforms = (
   ast: TemplateAst,
   invoiceData: UnknownRecord
 ): TemplateEvaluationResult => evaluateTemplateAst(ast, invoiceData);
-

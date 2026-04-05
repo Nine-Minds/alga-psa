@@ -300,6 +300,84 @@ describe('workspaceAst roundtrip node/property matrix', () => {
     });
   });
 
+  it('round-trips transform output collection bindings for dynamic tables and totals', () => {
+    const ast = createAstDocument(
+      [
+        {
+          id: 'grouped-line-items',
+          type: 'dynamic-table',
+          repeat: {
+            sourceBinding: { bindingId: 'lineItems.grouped' },
+            itemBinding: 'item',
+          },
+          columns: [
+            {
+              id: 'group-key',
+              header: 'Category',
+              value: { type: 'path', path: 'key' },
+            },
+            {
+              id: 'group-total',
+              header: 'Amount',
+              value: { type: 'path', path: 'aggregates.sumTotal' },
+              format: 'currency',
+            },
+          ],
+        },
+        {
+          id: 'grouped-totals',
+          type: 'totals',
+          sourceBinding: { bindingId: 'lineItems.grouped' },
+          rows: [
+            {
+              id: 'total',
+              label: 'Total',
+              value: { type: 'path', path: 'aggregates.sumTotal' },
+              format: 'currency',
+            },
+          ],
+        },
+      ],
+      {
+        transforms: {
+          sourceBindingId: 'lineItems',
+          outputBindingId: 'lineItems.grouped',
+          operations: [
+            {
+              id: 'group-category',
+              type: 'group',
+              key: 'category',
+            },
+            {
+              id: 'aggregate-total',
+              type: 'aggregate',
+              aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }],
+            },
+          ],
+        },
+        bindings: {
+          values: {},
+          collections: {
+            lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+          },
+        },
+      }
+    );
+
+    const roundTripped = roundTripAst(ast);
+    const layout = getDocumentNode(roundTripped);
+
+    const groupedTable = findNodeById(layout, 'grouped-line-items');
+    expect(groupedTable?.type).toBe('dynamic-table');
+    if (!groupedTable || groupedTable.type !== 'dynamic-table') return;
+    expect(groupedTable.repeat.sourceBinding.bindingId).toBe('lineItems.grouped');
+
+    const groupedTotals = findNodeById(layout, 'grouped-totals');
+    expect(groupedTotals?.type).toBe('totals');
+    if (!groupedTotals || groupedTotals.type !== 'totals') return;
+    expect(groupedTotals.sourceBinding.bindingId).toBe('lineItems.grouped');
+  });
+
   it('round-trips totals rows with expression, format, and emphasize', () => {
     const ast = createAstDocument(
       [

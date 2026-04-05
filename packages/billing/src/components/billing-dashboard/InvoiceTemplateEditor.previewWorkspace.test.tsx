@@ -176,6 +176,25 @@ const buildTransformedTemplateAst = () => {
   return exportWorkspaceToTemplateAst(workspace);
 };
 
+const findLayoutNodeById = (node: any, id: string): any | null => {
+  if (!node || typeof node !== 'object') {
+    return null;
+  }
+  if (node.id === id) {
+    return node;
+  }
+  if (!Array.isArray(node.children)) {
+    return null;
+  }
+  for (const child of node.children) {
+    const match = findLayoutNodeById(child, id);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+};
+
 const installLocalStorageMock = () => {
   const backing = new Map<string, string>();
   const storageMock: Storage = {
@@ -591,6 +610,13 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
         'aggregate-total',
       ])
     );
+    expect(
+      (
+        useInvoiceDesignerStore.getState().nodesById['grouped-table']?.props as
+          | { metadata?: { collectionBindingKey?: string } }
+          | undefined
+      )?.metadata?.collectionBindingKey
+    ).toBe('lineItems.grouped');
 
     fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
     await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
@@ -618,6 +644,82 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
       ])
     );
     expect(useInvoiceDesignerStore.getState().transforms.outputBindingId).toBe('lineItems.grouped');
+    expect(
+      (
+        useInvoiceDesignerStore.getState().nodesById['grouped-table']?.props as
+          | { metadata?: { collectionBindingKey?: string } }
+          | undefined
+      )?.metadata?.collectionBindingKey
+    ).toBe('lineItems.grouped');
+  });
+
+  it('persists edited grouped-table aggregate column bindings through save and reopen', async () => {
+    const transformedAst = JSON.parse(JSON.stringify(buildTransformedTemplateAst()));
+    const groupedTable = findLayoutNodeById(transformedAst.layout, 'grouped-table');
+    expect(groupedTable?.type).toBe('dynamic-table');
+    if (!groupedTable || groupedTable.type !== 'dynamic-table') return;
+    groupedTable.columns = groupedTable.columns.map((column: { id: string; value: unknown }) =>
+      column.id === 'col-total'
+        ? {
+            ...column,
+            value: { type: 'path', path: 'total' },
+          }
+        : column
+    );
+
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-column-roundtrip',
+      name: 'Template Column Roundtrip',
+      templateAst: transformedAst,
+      isStandard: false,
+    });
+
+    const rendered = render(<InvoiceTemplateEditor templateId="tpl-column-roundtrip" />);
+
+    await waitFor(() => {
+      const groupedTableNode = useInvoiceDesignerStore.getState().nodesById['grouped-table'];
+      expect(groupedTableNode).toBeTruthy();
+      expect((groupedTableNode?.props as any)?.metadata?.columns?.find((column: { id: string }) => column.id === 'col-total')?.key).toBe('item.total');
+    });
+
+    act(() => {
+      useInvoiceDesignerStore.getState().setNodeProp(
+        'grouped-table',
+        'metadata.columns.1.key',
+        'item.aggregates.sumTotal',
+        true
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+
+    const savedAst = saveInvoiceTemplateMock.mock.calls[0]?.[0]?.templateAst;
+    const savedGroupedTable = findLayoutNodeById(savedAst.layout, 'grouped-table');
+    expect(savedGroupedTable?.type).toBe('dynamic-table');
+    if (!savedGroupedTable || savedGroupedTable.type !== 'dynamic-table') return;
+    expect(savedGroupedTable.columns.find((column: { id: string }) => column.id === 'col-total')?.value).toEqual({
+      type: 'path',
+      path: 'aggregates.sumTotal',
+    });
+
+    rendered.unmount();
+    useInvoiceDesignerStore.getState().resetWorkspace();
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-column-roundtrip',
+      name: 'Template Column Roundtrip',
+      templateAst: savedAst,
+      isStandard: false,
+    });
+
+    render(<InvoiceTemplateEditor templateId="tpl-column-roundtrip" />);
+
+    await waitFor(() => {
+      const groupedTableNode = useInvoiceDesignerStore.getState().nodesById['grouped-table'];
+      expect((groupedTableNode?.props as any)?.metadata?.columns?.find((column: { id: string }) => column.id === 'col-total')?.key).toBe(
+        'item.aggregates.sumTotal'
+      );
+    });
   });
 
   it('preserves reordered transform order through save and reopen', async () => {

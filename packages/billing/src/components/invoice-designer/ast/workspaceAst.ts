@@ -765,11 +765,18 @@ const mapTableColumns = (node: WorkspaceNode): TemplateTableColumn[] => {
         ? column.valueExpression
         : null;
       const parsedFormat = parseTemplateValueFormat(column.format ?? column.type);
+      const placeholderKey = sanitizeId(id);
+      const resolvedValue =
+        preservedExpression?.type === 'path'
+          ? { type: 'path' as const, path: key.length > 0 ? key : 'description' }
+          : key.length > 0 && key !== placeholderKey
+            ? { type: 'path' as const, path: key }
+            : preservedExpression ?? { type: 'path' as const, path: key.length > 0 ? key : 'description' };
 
       const mapped: TemplateTableColumn = {
         id: sanitizeId(id),
         header: header.length > 0 ? header : undefined,
-        value: preservedExpression ?? { type: 'path', path: key.length > 0 ? key : 'description' },
+        value: resolvedValue,
       };
       const style = mapColumnStyle(column.style);
       if (style) {
@@ -1389,6 +1396,31 @@ const denormalizeBindingPath = (path: string): string => {
   return aliases[path] ?? path;
 };
 
+const resolveImportedCollectionBindingPath = (
+  astInput: TemplateAst,
+  bindingId: string,
+  fallbackPath = 'items'
+): string => {
+  const trimmedBindingId = asTrimmedString(bindingId);
+  if (trimmedBindingId.length === 0) {
+    return fallbackPath;
+  }
+
+  const registeredPath = astInput.bindings?.collections?.[trimmedBindingId]?.path;
+  if (typeof registeredPath === 'string' && registeredPath.trim().length > 0) {
+    return registeredPath;
+  }
+
+  const transformOutputBindingId = normalizeInvoiceBindingPath(
+    asTrimmedString(astInput.transforms?.outputBindingId)
+  );
+  if (transformOutputBindingId.length > 0 && normalizeInvoiceBindingPath(trimmedBindingId) === transformOutputBindingId) {
+    return transformOutputBindingId;
+  }
+
+  return fallbackPath;
+};
+
 const parseSizeFromStyle = (node: TemplateNode): { width?: number; height?: number } => {
   const inline = node.style?.inline ?? {};
   return {
@@ -1690,12 +1722,12 @@ export const importTemplateAstToWorkspace = (
             metadata.emptyValue = inputNode.emptyValue;
           }
         } else if (inputNode.type === 'dynamic-table' || inputNode.type === 'table') {
-          const collectionPath =
-            astInput.bindings?.collections?.[
-              inputNode.type === 'dynamic-table'
-                ? inputNode.repeat.sourceBinding.bindingId
-                : inputNode.sourceBinding.bindingId
-            ]?.path ?? 'items';
+          const collectionPath = resolveImportedCollectionBindingPath(
+            astInput,
+            inputNode.type === 'dynamic-table'
+              ? inputNode.repeat.sourceBinding.bindingId
+              : inputNode.sourceBinding.bindingId
+          );
           metadata.collectionBindingKey = denormalizeBindingPath(collectionPath);
           metadata.columns = inputNode.columns.map((column) => {
             const mappedColumn: Record<string, unknown> = {
@@ -1724,9 +1756,11 @@ export const importTemplateAstToWorkspace = (
             if (hs.color) metadata.headerColor = hs.color;
           }
         } else if (inputNode.type === 'totals') {
-          const sourcePath =
-            astInput.bindings?.collections?.[inputNode.sourceBinding.bindingId]?.path ??
-            inputNode.sourceBinding.bindingId;
+          const sourcePath = resolveImportedCollectionBindingPath(
+            astInput,
+            inputNode.sourceBinding.bindingId,
+            inputNode.sourceBinding.bindingId
+          );
           metadata.collectionBindingKey = denormalizeBindingPath(sourcePath);
           metadata.totalsRows = inputNode.rows.map((row) => ({
             id: row.id,

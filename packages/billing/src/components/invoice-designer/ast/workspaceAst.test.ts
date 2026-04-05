@@ -209,6 +209,46 @@ describe('exportWorkspaceToTemplateAst', () => {
     });
   });
 
+  it('exports edited dynamic-table column keys over stale imported path expressions', () => {
+    const workspace = createWorkspaceWithFieldAndDynamicTable();
+    const table = workspace.nodesById['ast-table-1'];
+    if (!table) return;
+
+    workspace.nodesById['ast-table-1'] = {
+      ...table,
+      props: {
+        ...table.props,
+        metadata: {
+          ...(table.props.metadata as Record<string, unknown>),
+          columns: [
+            { id: 'col-desc', header: 'Description', key: 'item.description' },
+            {
+              id: 'col-total',
+              header: 'Amount',
+              key: 'item.aggregates.sumTotal',
+              valueExpression: { type: 'path', path: 'total' },
+              format: 'currency',
+            },
+          ],
+        },
+      },
+    };
+
+    const ast = exportWorkspaceToTemplateAst(workspace);
+    const pageSection = ast.layout.children?.find((child) => child.type === 'section');
+    expect(pageSection).toBeTruthy();
+    if (!pageSection || pageSection.type !== 'section') return;
+
+    const dynamicTable = pageSection.children.find((child) => child.type === 'dynamic-table');
+    expect(dynamicTable).toBeTruthy();
+    if (!dynamicTable || dynamicTable.type !== 'dynamic-table') return;
+
+    expect(dynamicTable.columns.find((column) => column.id === 'col-total')?.value).toEqual({
+      type: 'path',
+      path: 'aggregates.sumTotal',
+    });
+  });
+
   it('roundtrips CSS-like layout/style props through AST inline styles', () => {
     const base = useInvoiceDesignerStore.getState().exportWorkspace();
     const pageNode = Object.values(base.nodesById).find((node) => node.type === 'page');
