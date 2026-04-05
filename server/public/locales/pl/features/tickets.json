@@ -593,6 +593,8 @@
     "paused": "Wstrzymane"
   },
   "properties": {
+    "timeEntry": "Wpis czasu",
+    "ticketTimer": "Timer zgłoszenia - nr {{ticketNumber}}",
     "timerActiveElsewhere": "Minutnik jest aktywny w innym oknie",
     "start": "Rozpocznij",
     "pause": "Pauza",

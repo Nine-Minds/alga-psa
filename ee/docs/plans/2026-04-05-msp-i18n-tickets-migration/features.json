@@ -18,7 +18,7 @@
   {"id": "F024", "description": "Wire QuickAddTicket.tsx validation errors, submit/cancel buttons, tag creation flow strings, toast messages", "implemented": true, "prdRefs": ["2b-21a/sub-batch-A"]},
   {"id": "F025", "description": "Wire useTranslation in ticket/TicketInfo.tsx — detail header, field labels, action buttons", "implemented": true, "prdRefs": ["2b-21a/sub-batch-A"]},
   {"id": "F026", "description": "Wire TicketInfo.tsx confirmation dialogs, inline edit triggers, toast messages", "implemented": true, "prdRefs": ["2b-21a/sub-batch-A"]},
-  {"id": "F027", "description": "Wire useTranslation in ticket/TicketProperties.tsx — side panel labels, status/priority/board selects, assignment UI", "implemented": false, "prdRefs": ["2b-21a/sub-batch-A"]},
+  {"id": "F027", "description": "Wire useTranslation in ticket/TicketProperties.tsx — side panel labels, status/priority/board selects, assignment UI", "implemented": true, "prdRefs": ["2b-21a/sub-batch-A"]},
   {"id": "F028", "description": "Wire TicketProperties.tsx inline edit controls, change confirmations, board-change reselection prompts", "implemented": false, "prdRefs": ["2b-21a/sub-batch-A"]},
 
   {"id": "F030", "description": "Wire useTranslation in settings/CategoriesSettings.tsx — board/channel scope selector, category tree labels", "implemented": false, "prdRefs": ["2b-21a/sub-batch-B"]},

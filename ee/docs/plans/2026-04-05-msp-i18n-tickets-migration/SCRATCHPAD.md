@@ -358,6 +358,22 @@ the one-liner. Keep the validator green before committing.
   now mocks `useTranslation` and `useDocumentsCrossFeature`, and
   `TicketInfo.richText.contract.test.ts` asserts the translated clipboard-dialog wiring instead of
   the retired hardcoded `"Keep Images"` literal.
+- **(2026-04-05, F027)** Wired the main `TicketProperties.tsx` side-panel chrome through
+  `useTranslation('features/tickets')`: the time-entry card title/timer label/controls, work-
+  description label + placeholder, disabled-timer message, tracked-interval heading, contact-info
+  card title and field labels, contact/location placeholders and empty states, client/contact
+  fallback labels, appointment-request drawer headings, assigned-team fallbacks, primary-agent
+  section labels, scheduled-hours text, and additional-agent picker labels/placeholders are now
+  localized. Added `properties.timeEntry` and `properties.ticketTimer` across
+  `en/fr/es/de/nl/it/pl`, regenerated `xx/yy`, and re-ran `node scripts/generate-pseudo-locales.cjs
+  && node scripts/validate-translations.cjs` successfully.
+- **(2026-04-05, F027 validation)** Focused regression checks passed with `npx eslint
+  packages/tickets/src/components/ticket/TicketProperties.tsx` (warnings only, no new errors) and
+  `cd packages/tickets && npx vitest run
+  src/components/ticket/__tests__/TicketProperties.liveTimerPolicy.test.tsx
+  src/components/ticket/__tests__/ticket-properties-inline-contact.test.tsx`. Those tests now mock
+  `useTranslation`, and the inline-contact harness also mocks `useQuickAddClient` so the quick-add
+  contact dialog continues to render in isolation.
 
 ## Risks
 

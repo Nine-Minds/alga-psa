@@ -593,6 +593,8 @@
     "paused": "11111"
   },
   "properties": {
+    "timeEntry": "11111",
+    "ticketTimer": "11111 {{ticketNumber}} 11111",
     "timerActiveElsewhere": "11111",
     "start": "11111",
     "pause": "11111",

@@ -593,6 +593,8 @@
     "paused": "Gepauzeerd"
   },
   "properties": {
+    "timeEntry": "Tijdregistratie",
+    "ticketTimer": "Tickettimer - #{{ticketNumber}}",
     "timerActiveElsewhere": "Timer actief in een ander venster",
     "start": "Starten",
     "pause": "Pauzeren",

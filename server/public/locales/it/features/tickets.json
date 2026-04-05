@@ -593,6 +593,8 @@
     "paused": "In pausa"
   },
   "properties": {
+    "timeEntry": "Voce di tempo",
+    "ticketTimer": "Timer ticket - #{{ticketNumber}}",
     "timerActiveElsewhere": "Timer attivo in un'altra finestra",
     "start": "Avvia",
     "pause": "Pausa",

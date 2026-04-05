@@ -593,6 +593,8 @@
     "paused": "Paused"
   },
   "properties": {
+    "timeEntry": "Time Entry",
+    "ticketTimer": "Ticket Timer - #{{ticketNumber}}",
     "timerActiveElsewhere": "Timer active in another window",
     "start": "Start",
     "pause": "Pause",
