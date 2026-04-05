@@ -848,6 +848,9 @@
     "noTeamMembersWithValidEmails": "11111",
     "selectContactToAdd": "11111",
     "selectedContactInvalidEmail": "11111",
+    "userBadge": "11111",
+    "contactBadge": "11111",
+    "removeWatcher": "11111",
     "tabs": {
       "contact": "11111",
       "internal": "11111",

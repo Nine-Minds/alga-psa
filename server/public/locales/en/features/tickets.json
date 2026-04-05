@@ -848,6 +848,9 @@
     "noTeamMembersWithValidEmails": "No team members with valid email addresses.",
     "selectContactToAdd": "Select a contact to add.",
     "selectedContactInvalidEmail": "Selected contact does not have a valid email address.",
+    "userBadge": "User",
+    "contactBadge": "Contact",
+    "removeWatcher": "Remove watcher",
     "tabs": {
       "contact": "Contact",
       "internal": "Internal",

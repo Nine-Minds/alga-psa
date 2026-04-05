@@ -848,6 +848,9 @@
     "noTeamMembersWithValidEmails": "Geen teamleden met geldige e-mailadressen.",
     "selectContactToAdd": "Selecteer een contact om toe te voegen.",
     "selectedContactInvalidEmail": "Het geselecteerde contact heeft geen geldig e-mailadres.",
+    "userBadge": "Gebruiker",
+    "contactBadge": "Contact",
+    "removeWatcher": "Volger verwijderen",
     "tabs": {
       "contact": "Contact opnemen met",
       "internal": "Intern",

@@ -460,6 +460,20 @@ the one-liner. Keep the validator green before committing.
   currently only exposes a save action; no reset UI exists to wire in this batch.
 - **(2026-04-05, F037 validation)** Re-ran `npx eslint
   packages/tickets/src/components/settings/DisplaySettings.tsx`, which exited 0.
+- **(2026-04-05, F040)** Wired `TicketWatchListCard.tsx` through
+  `useTranslation('features/tickets')`: the card title, add-mode tabs, contact-scope toggle,
+  picker/email placeholders, add button labels, empty state, validation/update-failure messages,
+  recipient type badges, and remove-button aria/title copy now resolve through `watchList.*`.
+  This required a small namespace addition in `en/fr/es/de/nl/it/pl/features/tickets.json`
+  (`watchList.userBadge`, `watchList.contactBadge`, `watchList.removeWatcher`), followed by
+  pseudo-locale regeneration.
+- **(2026-04-05, F040 validation)** Re-ran
+  `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  (`Errors: 0`, `Warnings: 0`) and `npx eslint
+  packages/tickets/src/components/ticket/TicketWatchListCard.tsx`, which exited 0. A focused
+  `TicketWatchListCard.test.tsx` run still fails before assertions because the existing harness
+  does not provide the now-required `useTranslation`/`useFeatureFlag` context; that follow-up is
+  queued as test work rather than a source blocker for the feature wiring.
 
 ## Risks
 
