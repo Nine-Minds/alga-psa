@@ -1,0 +1,63 @@
+[
+  {"id": "T001", "description": "Lang-pack validation: `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` passes for all 9 locales after each namespace update (covers key parity, missing/extra keys, interpolation variables, pseudo-locale patterns, Italian accents). Single check, run on every commit.", "implemented": false, "featureIds": ["F001", "F002", "F003", "F004", "F005", "F006", "F007", "F008", "F009", "F060"]},
+
+  {"id": "T010", "description": "Unit: TicketingDashboard.i18n.test — renders page title, add button, filter labels via t() in en", "implemented": false, "featureIds": ["F020"]},
+  {"id": "T011", "description": "Unit: TicketingDashboard.i18n.test — renders pseudo-locale (xx) for all visible strings, no bare English leakage", "implemented": false, "featureIds": ["F020", "F021", "F022"]},
+  {"id": "T012", "description": "Unit: TicketingDashboard.i18n.test — bulk action toast messages interpolate count correctly (1 ticket moved / N tickets moved)", "implemented": false, "featureIds": ["F021"]},
+  {"id": "T013", "description": "Unit: TicketingDashboard.i18n.test — empty state, loading, error toasts render translated text", "implemented": false, "featureIds": ["F022"]},
+
+  {"id": "T020", "description": "Unit: QuickAddTicket.i18n.test — dialog title, field labels, placeholders rendered via t() in en", "implemented": false, "featureIds": ["F023"]},
+  {"id": "T021", "description": "Unit: QuickAddTicket.i18n.test — validation errors (title required, etc.) appear in current locale", "implemented": false, "featureIds": ["F024"]},
+  {"id": "T022", "description": "Unit: QuickAddTicket.i18n.test — tag creation failure toast uses interpolation for failed count", "implemented": false, "featureIds": ["F024"]},
+  {"id": "T023", "description": "Unit: QuickAddTicket.i18n.test — pseudo-locale (xx) covers all visible strings", "implemented": false, "featureIds": ["F023", "F024"]},
+
+  {"id": "T030", "description": "Unit: TicketInfo.i18n.test — detail header, field labels rendered via t()", "implemented": false, "featureIds": ["F025"]},
+  {"id": "T031", "description": "Unit: TicketInfo.i18n.test — confirmation dialogs and inline edit prompts translated", "implemented": false, "featureIds": ["F026"]},
+  {"id": "T032", "description": "Unit: TicketInfo.i18n.test — pseudo-locale coverage", "implemented": false, "featureIds": ["F025", "F026"]},
+
+  {"id": "T040", "description": "Unit: TicketProperties.i18n.test — side panel labels, status/priority/board select placeholders render via t()", "implemented": false, "featureIds": ["F027"]},
+  {"id": "T041", "description": "Unit: TicketProperties.i18n.test — board change reselection prompt translated", "implemented": false, "featureIds": ["F028"]},
+  {"id": "T042", "description": "Unit: TicketProperties.i18n.test — pseudo-locale coverage for inline edit controls", "implemented": false, "featureIds": ["F027", "F028"]},
+
+  {"id": "T050", "description": "Unit: CategoriesSettings.i18n.test — board/channel scope selector and tree labels translated", "implemented": false, "featureIds": ["F030"]},
+  {"id": "T051", "description": "Unit: CategoriesSettings.i18n.test — add/edit/delete dialogs render validation messages in current locale", "implemented": false, "featureIds": ["F031"]},
+
+  {"id": "T060", "description": "Unit: TicketExportDialog.i18n.test — format options (CSV/XLSX), column picker, date range labels translated", "implemented": false, "featureIds": ["F032"]},
+  {"id": "T061", "description": "Unit: TicketExportDialog.i18n.test — download failure toast translated", "implemented": false, "featureIds": ["F033"]},
+
+  {"id": "T070", "description": "Unit: TicketMaterialsCard.i18n.test — materials list, add dialog, cost labels translated", "implemented": false, "featureIds": ["F034"]},
+  {"id": "T071", "description": "Unit: TicketMaterialsCard.i18n.test — empty state and delete confirmation translated", "implemented": false, "featureIds": ["F035"]},
+
+  {"id": "T080", "description": "Unit: DisplaySettings.i18n.test — column visibility toggles and sort options translated", "implemented": false, "featureIds": ["F036"]},
+  {"id": "T081", "description": "Unit: DisplaySettings.i18n.test — save/reset button labels translated", "implemented": false, "featureIds": ["F037"]},
+
+  {"id": "T090", "description": "Unit: TicketWatchListCard.i18n.test — watcher list, add/remove buttons, empty state translated", "implemented": false, "featureIds": ["F040"]},
+  {"id": "T091", "description": "Unit: TicketEmailNotifications.i18n.test — notification toggle labels translated", "implemented": false, "featureIds": ["F041"]},
+  {"id": "T092", "description": "Unit: ResponseStateSelect.i18n.test — All/Awaiting Client/Awaiting Internal/None options translated", "implemented": false, "featureIds": ["F042"]},
+  {"id": "T093", "description": "Unit: QuickAddCategory.i18n.test — inline creation dialog and validation translated", "implemented": false, "featureIds": ["F043"]},
+  {"id": "T094", "description": "Unit: TicketDetailsContainer.i18n.test — loading/error/not-found states translated", "implemented": false, "featureIds": ["F044"]},
+  {"id": "T095", "description": "Unit: CategoryPicker.i18n.test — placeholder, empty state, search label translated", "implemented": false, "featureIds": ["F045"]},
+  {"id": "T096", "description": "Unit: TicketNavigation.i18n.test — prev/next button aria-labels translated", "implemented": false, "featureIds": ["F047"]},
+  {"id": "T097", "description": "Unit: TicketOriginBadge.i18n.test — all origin enum values render localized labels", "implemented": false, "featureIds": ["F049"]},
+  {"id": "T098", "description": "Unit: ResponseSourceBadge.i18n.test — all source enum values render localized labels", "implemented": false, "featureIds": ["F049"]},
+
+  {"id": "T100", "description": "Integration: /msp/tickets list loads in en with no hardcoded English visible in the dashboard frame", "implemented": false, "featureIds": ["F020", "F021", "F022", "F042", "F045"]},
+  {"id": "T101", "description": "Integration: /msp/tickets list loads in de with translated page title, add button, filters", "implemented": false, "featureIds": ["F020", "F021", "F022"]},
+  {"id": "T102", "description": "Integration: /msp/tickets quick-add dialog renders translated labels in de", "implemented": false, "featureIds": ["F023", "F024"]},
+  {"id": "T103", "description": "Integration: /msp/tickets/[id] detail page renders TicketInfo/TicketProperties/TicketMaterialsCard/TicketWatchListCard in de with no English leakage", "implemented": false, "featureIds": ["F025", "F026", "F027", "F028", "F034", "F035", "F040"]},
+  {"id": "T104", "description": "Integration: /msp/settings/ticketing renders CategoriesSettings + DisplaySettings in de with translated labels", "implemented": false, "featureIds": ["F030", "F031", "F036", "F037"]},
+  {"id": "T105", "description": "Integration: /msp/service-requests/[id] editor (which reuses CategoryPicker) renders translated picker in de", "implemented": false, "featureIds": ["F045"]},
+  {"id": "T106", "description": "Integration: global quick-create dialog (QuickAddTicket reused in layout/QuickCreateDialog) renders translated in de", "implemented": false, "featureIds": ["F023", "F024"]},
+  {"id": "T107", "description": "Integration: bulk move/delete on /msp/tickets shows translated confirmation and toast messages (with count interpolation)", "implemented": false, "featureIds": ["F021"]},
+  {"id": "T108", "description": "Integration: xx pseudo-locale smoke test across /msp/tickets list, detail, settings renders pseudo-text everywhere", "implemented": false, "featureIds": ["F009", "F020", "F023", "F025", "F027", "F030", "F032", "F034", "F036"]},
+
+  {"id": "T120", "description": "Regression: existing ticket unit tests (TicketDetailsContainer.description.test, TicketInfo.boardChangeStatusReselection.test, TicketProperties.liveTimerPolicy.test, QuickAddTicket.boardScopedStatuses.test, TicketWatchListCard.test, ticket-properties-inline-contact.test, ticket-inline-add-prefill.test, etc.) still pass", "implemented": false, "featureIds": ["F020", "F023", "F025", "F027", "F040"]},
+  {"id": "T121", "description": "Regression: existing ticket render tests (TicketOriginBadge.render, ResponseSourceBadge.render) still pass after badge i18n wiring", "implemented": false, "featureIds": ["F049"]},
+  {"id": "T122", "description": "Regression: CommentMetadataDebugModal.test still passes after dev-facing translation wiring", "implemented": false, "featureIds": ["F046"]},
+  {"id": "T123", "description": "Regression: AgentScheduleDrawer.test still passes (re-export shim)", "implemented": false, "featureIds": ["F050"]},
+  {"id": "T124", "description": "Regression: TicketDetailsContainerCreateTask.test and TicketDetailsCreateTask.test pass (project-tickets integration)", "implemented": false, "featureIds": ["F025"]},
+
+  {"id": "T130", "description": "Manual: visual diff on /msp/tickets in en between main and PR branch — no layout shifts from key length differences", "implemented": false, "featureIds": ["F020", "F021", "F022"]},
+  {"id": "T131", "description": "Manual: visual diff on /msp/tickets in de — long German strings do not break button/column widths", "implemented": false, "featureIds": ["F020", "F021", "F022"]},
+  {"id": "T132", "description": "Manual: verify client-portal ticket views unchanged (CommentItem, TicketConversation, TicketDetails, TicketDocumentsSection remain wired as before)", "implemented": false, "featureIds": ["F002"]}
+]
