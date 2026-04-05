@@ -329,6 +329,11 @@ the one-liner. Keep the validator green before committing.
   across the production locales, regenerated pseudo-locales, and re-ran translation validation
   successfully. `npx eslint packages/tickets/src/components/QuickAddTicket.tsx` remained green
   with only the file’s pre-existing warnings.
+- **(2026-04-05, F024 follow-up)** Removed duplicated `quickAdd.createAndView`,
+  `quickAdd.continueEditing`, and `quickAdd.clipboardDraftMessage` entries that were lingering in
+  the production locale files while leaving the canonical localized values intact. Re-ran
+  `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`; it still
+  passed with `Errors: 0`, `Warnings: 0`.
 
 ## Risks
 
