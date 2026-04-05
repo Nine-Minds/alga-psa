@@ -24,6 +24,9 @@ The shared namespace (147 keys, 9 locales) already exists and is already loaded 
 - **(2026-04-05)** Use i18next `{{count}}` interpolation for pluralized toast messages
   (e.g., `'{{count}} ticket moved'` / `'{{count}} tickets moved'`) rather than template
   literals. Matches existing `features/tickets.json` patterns in `messages.*`.
+- **(2026-04-05, F002)** Expand `features/tickets.json` in-place rather than splitting micro-
+  namespaces. The shared file is now broad, but keeping tickets UI copy in one namespace makes
+  the MSP/client-portal overlap explicit and avoids route-specific key plumbing.
 
 ## Discoveries / Constraints
 
@@ -103,6 +106,19 @@ The shared namespace (147 keys, 9 locales) already exists and is already loaded 
   - `debug.*`: comment metadata modal section headings and empty-summary copy.
   - `errors.*` / `validation.*`: generic save/load/export/category/material/watch-list errors
     that are user-visible today and should not stay hardcoded.
+- **(2026-04-05, F002)** Added the first full MSP key expansion to
+  `server/public/locales/en/features/tickets.json`: `dashboard`, `bulk`, `quickAdd`, `itil`,
+  `info`, `properties`, `settings.categories`, `settings.display`, `export`, `materials`,
+  `watchList`, `emailNotifications`, `categoryPicker`, `navigation`, `debug`, `validation`,
+  and `errors`, plus targeted additions to `filters`, `priority`, `fields`, `actions`, and
+  `responseState`.
+- **(2026-04-05, F002)** To keep translation validation green between per-locale commits,
+  the same new key structure was scaffolded into `fr/es/de/nl/it/pl` with English placeholder
+  values. `xx/yy` were regenerated immediately from English; the real locale translations are
+  filled in by `F003`-`F008`.
+- **(2026-04-05, F002)** `features/tickets.json` now has **536 leaf strings** in English
+  (up from 147). This is above the earlier ~250 revisit threshold, but still acceptable for
+  this batch because the file remains the intentionally shared ticket namespace.
 
 ## Commands / Runbooks
 
