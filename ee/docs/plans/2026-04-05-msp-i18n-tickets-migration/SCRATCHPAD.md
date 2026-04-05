@@ -334,6 +334,14 @@ the one-liner. Keep the validator green before committing.
   the production locale files while leaving the canonical localized values intact. Re-ran
   `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`; it still
   passed with `Errors: 0`, `Warnings: 0`.
+- **(2026-04-05, F025)** Wired the main `TicketInfo.tsx` detail-surface chrome to
+  `useTranslation('features/tickets')`: title-edit button titles, unsaved/saved banners,
+  section headings (status/assignee/board/category/priority/due date/SLA/tags/description),
+  assignee/category/date/time placeholders, ITIL labels + matrix text, additional-agent tooltip
+  heading, paused/clear-due-date labels, description empty-state copy, and the email-log tooltip/
+  aria label now all resolve through the shared ticket namespace. Validation used
+  `npx eslint packages/tickets/src/components/ticket/TicketInfo.tsx`; it exited 0 with only the
+  file’s pre-existing warnings (`@ts-nocheck`, unused symbols, existing `any`/non-null asserts).
 
 ## Risks
 
