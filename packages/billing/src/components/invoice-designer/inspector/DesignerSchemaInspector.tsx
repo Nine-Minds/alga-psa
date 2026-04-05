@@ -18,6 +18,7 @@ import { TableEditorWidget } from './widgets/TableEditorWidget';
 import {
   getTemplateFieldDefinition,
   humanizeBindingToken,
+  resolveTemplateFieldLabel,
   type InvoiceFieldCategory,
 } from '../fields/fieldCatalog';
 import { resolveDesignerDocumentKind } from '../utils/documentKind';
@@ -159,8 +160,17 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
   const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
   const normalizedBinding = value.trim();
   const selectedDefinition = getTemplateFieldDefinition(normalizedBinding);
+  const currentNode = useInvoiceDesignerStore((state) => state.nodesById[nodeId] as DesignerNode | undefined);
   const [query, setQuery] = useState('');
   const [customMode, setCustomMode] = useState(() => normalizedBinding.length > 0 && !selectedDefinition);
+  const currentPlaceholder = useMemo(() => {
+    if (!currentNode || !isPlainObject(currentNode.props)) {
+      return '';
+    }
+    const metadata = isPlainObject(currentNode.props.metadata) ? currentNode.props.metadata : null;
+    return typeof metadata?.placeholder === 'string' ? metadata.placeholder.trim() : '';
+  }, [currentNode]);
+  const autoPlaceholderLabel = useMemo(() => resolveTemplateFieldLabel(normalizedBinding), [normalizedBinding]);
 
   React.useEffect(() => {
     setCustomMode(normalizedBinding.length > 0 && !getTemplateFieldDefinition(normalizedBinding));
@@ -286,6 +296,11 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
                     }`}
                     data-automation-id={`${domId}-option-${option.path.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
                     onClick={() => {
+                      const shouldSyncPlaceholder =
+                        currentPlaceholder.length === 0 || currentPlaceholder === autoPlaceholderLabel;
+                      if (shouldSyncPlaceholder) {
+                        applyNormalized('metadata.placeholder', option.label, false);
+                      }
                       applyNormalized(path, option.path, true);
                       setQuery('');
                     }}
