@@ -22,7 +22,7 @@
   {"id": "F028", "description": "Wire TicketProperties.tsx inline edit controls, change confirmations, board-change reselection prompts", "implemented": true, "prdRefs": ["2b-21a/sub-batch-A"]},
 
   {"id": "F030", "description": "Wire useTranslation in settings/CategoriesSettings.tsx — board/channel scope selector, category tree labels", "implemented": true, "prdRefs": ["2b-21a/sub-batch-B"]},
-  {"id": "F031", "description": "Wire CategoriesSettings.tsx add/edit/delete dialogs, validation messages, toast confirmations", "implemented": false, "prdRefs": ["2b-21a/sub-batch-B"]},
+  {"id": "F031", "description": "Wire CategoriesSettings.tsx add/edit/delete dialogs, validation messages, toast confirmations", "implemented": true, "prdRefs": ["2b-21a/sub-batch-B"]},
   {"id": "F032", "description": "Wire useTranslation in TicketExportDialog.tsx — format options (CSV/XLSX), column picker, date range labels", "implemented": false, "prdRefs": ["2b-21a/sub-batch-B"]},
   {"id": "F033", "description": "Wire TicketExportDialog.tsx action buttons, download/failure toasts, progress messaging", "implemented": false, "prdRefs": ["2b-21a/sub-batch-B"]},
   {"id": "F034", "description": "Wire useTranslation in ticket/TicketMaterialsCard.tsx — materials list, add dialog, cost labels", "implemented": false, "prdRefs": ["2b-21a/sub-batch-B"]},

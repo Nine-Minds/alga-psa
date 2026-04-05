@@ -395,6 +395,17 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, F030 validation)** Verified the wiring with `cd packages/tickets && npx vitest
   run src/components/settings/__tests__/CategoriesSettings.contract.test.ts` and `npx eslint
   packages/tickets/src/components/settings/CategoriesSettings.tsx` (warnings only, no new errors).
+- **(2026-04-05, F031)** Finished the `CategoriesSettings.tsx` dialog/error flow wiring using the
+  existing `settings.categories.*` keys: fetch/save/import/delete validation messages, success
+  toasts, dropdown action labels, edit/import/conflict dialog titles, form labels/placeholders,
+  import target-board help text, import-table column labels, conflict resolution copy, and the
+  related cancel/update/import buttons now all resolve through `features/tickets`. No locale-file
+  expansion was needed for this pass because the namespace additions from `F002` already covered
+  the settings copy.
+- **(2026-04-05, F031 validation)** Re-ran `cd packages/tickets && npx vitest run
+  src/components/settings/__tests__/CategoriesSettings.contract.test.ts` after updating its stale
+  raw-string assertions to the new `t(...)` calls, and re-ran `npx eslint
+  packages/tickets/src/components/settings/CategoriesSettings.tsx` (warnings only, no new errors).
 
 ## Risks
 

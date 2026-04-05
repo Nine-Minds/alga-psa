@@ -30,9 +30,9 @@ describe('categories settings quick-add refactor contract', () => {
     const source = read('../CategoriesSettings.tsx');
 
     expect(source).toContain('{editingCategory && (');
-    expect(source).toContain('title="Edit Category"');
+    expect(source).toContain("title={t('settings.categories.editTitle', 'Edit Category')}");
     expect(source).toContain('await updateCategory(editingCategory.category_id, updateData);');
-    expect(source).toContain("toast.success('Category updated successfully');");
+    expect(source).toContain("toast.success(t('settings.categories.saveSuccess', 'Category updated successfully'));");
     expect(source).toContain('await fetchCategories();');
   });
 });
