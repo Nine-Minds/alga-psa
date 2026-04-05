@@ -521,6 +521,14 @@ the one-liner. Keep the validator green before committing.
   src/components/ticket/__tests__/TicketDetailsContainer.description.test.tsx` still passes, while
   `TicketDetailsContainerCreateTask.test.tsx` currently fails before tests run because
   `next-auth` tries to import `next/server` in the package test environment.
+- **(2026-04-05, F045)** Wired `CategoryPicker.tsx` through
+  `useTranslation('features/tickets')` without expanding the namespace: the reflection title,
+  default placeholder, `No Category` option, ITIL badge label, add-new label, and the selected/
+  excluded summary text now resolve through `categoryPicker.*`, including pluralized count copy.
+- **(2026-04-05, F045 validation)** `npx eslint packages/tickets/src/components/CategoryPicker.tsx`
+  exited with warnings only; the remaining warnings are pre-existing (`dataAutomationType`,
+  unused `path`, and non-null assertions). There is no dedicated CategoryPicker render test yet;
+  existing coverage is limited to passthrough/source-contract tests and upstream component mocks.
 
 ## Risks
 
