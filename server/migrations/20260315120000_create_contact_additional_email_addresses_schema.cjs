@@ -4,6 +4,45 @@ function normalizedEmailSql(columnExpression) {
   return `LOWER(BTRIM(${columnExpression}))`;
 }
 
+async function canCreateDistributedTable(knex) {
+  const result = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_proc
+      WHERE proname = 'create_distributed_table'
+    ) AS exists;
+  `);
+
+  return Boolean(result.rows?.[0]?.exists);
+}
+
+async function isDistributed(knex, tableName) {
+  const result = await knex.raw(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_dist_partition
+        WHERE logicalrelid = ?::regclass
+      ) AS is_distributed;
+    `,
+    [tableName]
+  );
+
+  return Boolean(result.rows?.[0]?.is_distributed);
+}
+
+async function ensureTenantDistribution(knex, tableName) {
+  if (!(await canCreateDistributedTable(knex))) {
+    console.warn(`[${tableName}] Skipping create_distributed_table (function unavailable)`);
+    return;
+  }
+
+  if (await isDistributed(knex, tableName)) {
+    return;
+  }
+
+  await knex.raw(`SELECT create_distributed_table('${tableName}', 'tenant', colocate_with => 'tenants')`);
+}
+
 exports.up = async function up(knex) {
   console.log('Creating contact email label definitions and additional email tables...');
 
@@ -25,6 +64,8 @@ exports.up = async function up(knex) {
     ADD CONSTRAINT chk_contact_email_type_definitions_normalized_label
     CHECK (normalized_label = LOWER(BTRIM(normalized_label)))
   `);
+
+  await ensureTenantDistribution(knex, 'contact_email_type_definitions');
 
   await knex.schema.alterTable('contacts', (table) => {
     table.text('primary_email_canonical_type').nullable();
@@ -52,10 +93,26 @@ exports.up = async function up(knex) {
 
     table.primary(['tenant', 'contact_additional_email_address_id']);
     table.foreign('tenant').references('tenants.tenant');
-    table.foreign(['tenant', 'contact_name_id']).references(['tenant', 'contact_name_id']).inTable('contacts').onDelete('CASCADE');
-    table.foreign(['tenant', 'custom_email_type_id']).references(['tenant', 'contact_email_type_id']).inTable('contact_email_type_definitions').onDelete('RESTRICT');
     table.index(['tenant', 'contact_name_id', 'display_order'], 'idx_contact_additional_emails_contact_order');
   });
+
+  await ensureTenantDistribution(knex, 'contact_additional_email_addresses');
+
+  await knex.raw(`
+    ALTER TABLE contact_additional_email_addresses
+    ADD CONSTRAINT fk_contact_additional_email_addresses_contact
+    FOREIGN KEY (tenant, contact_name_id)
+    REFERENCES contacts (tenant, contact_name_id)
+    ON DELETE CASCADE;
+  `);
+
+  await knex.raw(`
+    ALTER TABLE contact_additional_email_addresses
+    ADD CONSTRAINT fk_contact_additional_email_addresses_custom_email_type
+    FOREIGN KEY (tenant, custom_email_type_id)
+    REFERENCES contact_email_type_definitions (tenant, contact_email_type_id)
+    ON DELETE RESTRICT;
+  `);
 
   await knex.raw(`
     ALTER TABLE contact_additional_email_addresses
@@ -176,3 +233,5 @@ exports.down = async function down(knex) {
 
   console.log('Contact email label schema dropped.');
 };
+
+exports.config = { transaction: false };
