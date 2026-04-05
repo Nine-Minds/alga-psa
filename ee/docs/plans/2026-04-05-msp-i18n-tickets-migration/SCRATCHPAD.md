@@ -272,6 +272,13 @@ the one-liner. Keep the validator green before committing.
   explicit route entry loading `['common', 'msp/core', 'features/tickets']`. Added focused route
   coverage to `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` and
   verified it with `cd server && npx vitest run src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts`.
+- **(2026-04-05, F020)** Wired `packages/tickets/src/components/TicketingDashboard.tsx` to
+  `useTranslation('features/tickets')` for the dashboard title, add-ticket CTA, assignee/status/
+  priority/response-state/due-date/SLA filter placeholders and option labels, including the
+  interpolated before/after-date labels. Validation used `npx eslint
+  packages/tickets/src/components/TicketingDashboard.tsx`; it exited 0 with only pre-existing
+  warnings in this file (unused vars, hook deps, legacy JSX apostrophe), so no new lint errors
+  were introduced by the i18n patch.
 
 ## Risks
 

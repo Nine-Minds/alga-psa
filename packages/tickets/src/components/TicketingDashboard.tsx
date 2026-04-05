@@ -50,6 +50,7 @@ import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import { useDrawer } from '@alga-psa/ui';
 import { getClientById } from '../actions/clientLookupActions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   buildTicketStatusFilterOptions,
   isTicketStatusOpenFilter,
@@ -147,6 +148,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
+  const { t } = useTranslation('features/tickets');
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
 
@@ -1359,7 +1361,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   return (
     <ReflectionContainer id={id} label="Ticketing Dashboard">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Ticketing Dashboard</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {t('dashboard.title', 'Ticketing Dashboard')}
+        </h1>
         <div className="flex items-center gap-3">
           {hasSelection && canUpdateTickets && (
             <Button
@@ -1423,7 +1427,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               </Button>
             </span>
           </Tooltip>
-          <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
+          <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>
+            {t('dashboard.addTicket', 'Add Ticket')}
+          </Button>
         </div>
       </div>
       <div className="bg-white dark:bg-[rgb(var(--color-card))] shadow rounded-lg">
@@ -1465,7 +1471,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     filterMode={true}
                     includeUnassigned={includeUnassigned}
                     onUnassignedChange={(value) => onFilterChange({ includeUnassigned: value })}
-                    placeholder="All Assignees"
+                    placeholder={t('dashboard.filters.allAssignees', 'All Assignees')}
                     showSearch={true}
                     compactDisplay={true}
                   />
@@ -1474,20 +1480,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   options={statusOptions}
                   value={selectedStatus}
                   onValueChange={(value) => onFilterChange({ statusId: value, showOpenOnly: isTicketStatusOpenFilter(value) })}
-                  placeholder="Select Status"
+                  placeholder={t('dashboard.filters.selectStatus', 'Select Status')}
                 />
                 {displaySettings?.responseStateTrackingEnabled !== false && (
                   <CustomSelect
                     data-automation-id={`${id}-response-state-select`}
                     options={[
-                      { value: 'all', label: 'All Response States' },
-                      { value: 'awaiting_client', label: 'Awaiting Client' },
-                      { value: 'awaiting_internal', label: 'Awaiting Internal' },
-                      { value: 'none', label: 'No Response State' },
+                      { value: 'all', label: t('dashboard.filters.allResponseStates', 'All Response States') },
+                      { value: 'awaiting_client', label: t('responseState.awaitingClient', 'Awaiting Client') },
+                      { value: 'awaiting_internal', label: t('responseState.awaitingInternal', 'Awaiting Internal') },
+                      { value: 'none', label: t('dashboard.filters.noResponseState', 'No Response State') },
                     ]}
                     value={selectedResponseState}
                     onValueChange={(value) => onFilterChange({ responseState: value !== 'all' ? value as ITicketListFilters['responseState'] : undefined })}
-                    placeholder="Response State"
+                    placeholder={t('dashboard.filters.responseState', 'Response State')}
                   />
                 )}
                 <PrioritySelect
@@ -1495,23 +1501,23 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   options={priorityOptions}
                   value={selectedPriority}
                   onValueChange={(value) => onFilterChange({ priorityId: value })}
-                  placeholder="All Priorities"
+                  placeholder={t('filters.allPriorities', 'All Priorities')}
                 />
                 <div className="flex items-center gap-1">
                   <CustomSelect
                     data-automation-id={`${id}-due-date-filter`}
                     options={[
-                      { value: 'all', label: 'All Due Dates' },
-                      { value: 'overdue', label: 'Overdue' },
-                      { value: 'today', label: 'Due Today' },
-                      { value: 'upcoming', label: 'Due Next 7 Days' },
+                      { value: 'all', label: t('dashboard.filters.allDueDates', 'All Due Dates') },
+                      { value: 'overdue', label: t('dashboard.filters.overdue', 'Overdue') },
+                      { value: 'today', label: t('dashboard.filters.dueToday', 'Due Today') },
+                      { value: 'upcoming', label: t('dashboard.filters.dueNext7Days', 'Due Next 7 Days') },
                       { value: 'before', label: dueDateFilterValue && selectedDueDateFilter === 'before'
-                        ? `Before ${dueDateFilterValue.toLocaleDateString()}`
-                        : 'Before Date...' },
+                        ? t('dashboard.filters.beforeDateSelected', 'Before {{date}}', { date: dueDateFilterValue.toLocaleDateString() })
+                        : t('dashboard.filters.beforeDate', 'Before Date...') },
                       { value: 'after', label: dueDateFilterValue && selectedDueDateFilter === 'after'
-                        ? `After ${dueDateFilterValue.toLocaleDateString()}`
-                        : 'After Date...' },
-                      { value: 'no_due_date', label: 'No Due Date' },
+                        ? t('dashboard.filters.afterDateSelected', 'After {{date}}', { date: dueDateFilterValue.toLocaleDateString() })
+                        : t('dashboard.filters.afterDate', 'After Date...') },
+                      { value: 'no_due_date', label: t('dashboard.filters.noDueDate', 'No Due Date') },
                     ]}
                     value={selectedDueDateFilter}
                     onValueChange={(value) => {
@@ -1524,7 +1530,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       }
                       onFilterChange(update);
                     }}
-                    placeholder="Due Date"
+                    placeholder={t('dashboard.filters.dueDate', 'Due Date')}
                     className="w-fit min-w-[140px]"
                   />
                   {(selectedDueDateFilter === 'before' || selectedDueDateFilter === 'after') && (
@@ -1537,23 +1543,23 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                           dueDateTo: selectedDueDateFilter === 'before' && date ? date.toISOString() : undefined,
                         });
                       }}
-                      placeholder="Pick date"
+                      placeholder={t('dashboard.filters.pickDate', 'Pick date')}
                     />
                   )}
                 </div>
                 <CustomSelect
                   data-automation-id={`${id}-sla-status-filter`}
                   options={[
-                    { value: 'all', label: 'All SLA Status' },
-                    { value: 'has_sla', label: 'Has SLA' },
-                    { value: 'no_sla', label: 'No SLA' },
-                    { value: 'on_track', label: 'On Track' },
-                    { value: 'breached', label: 'Breached' },
-                    { value: 'paused', label: 'Paused' },
+                    { value: 'all', label: t('dashboard.filters.allSlaStatus', 'All SLA Status') },
+                    { value: 'has_sla', label: t('dashboard.filters.hasSla', 'Has SLA') },
+                    { value: 'no_sla', label: t('dashboard.filters.noSla', 'No SLA') },
+                    { value: 'on_track', label: t('dashboard.filters.onTrack', 'On Track') },
+                    { value: 'breached', label: t('dashboard.filters.breached', 'Breached') },
+                    { value: 'paused', label: t('dashboard.filters.paused', 'Paused') },
                   ]}
                   value={selectedSlaStatus}
                   onValueChange={(value) => onFilterChange({ slaStatusFilter: value !== 'all' ? value as ITicketListFilters['slaStatusFilter'] : undefined })}
-                  placeholder="SLA Status"
+                  placeholder={t('dashboard.filters.slaStatus', 'SLA Status')}
                 />
               </div>
 
