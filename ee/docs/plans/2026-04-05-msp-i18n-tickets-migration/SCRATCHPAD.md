@@ -453,6 +453,13 @@ the one-liner. Keep the validator green before committing.
   CTA and save/failure copy are intentionally left for `F037`.
 - **(2026-04-05, F036 validation)** Verified with `npx eslint
   packages/tickets/src/components/settings/DisplaySettings.tsx`, which exited 0.
+- **(2026-04-05, F037)** Finished the existing `DisplaySettings.tsx` save path: the success
+  toast, save-failure message, and save-button/saving labels now resolve through
+  `settings.display.saveSuccess`, `settings.display.saveFailed`, `settings.display.saving`,
+  and shared `actions.save`. The checklist mentioned reset/per-user controls, but this component
+  currently only exposes a save action; no reset UI exists to wire in this batch.
+- **(2026-04-05, F037 validation)** Re-ran `npx eslint
+  packages/tickets/src/components/settings/DisplaySettings.tsx`, which exited 0.
 
 ## Risks
 

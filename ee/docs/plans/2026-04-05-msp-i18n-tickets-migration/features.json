@@ -28,7 +28,7 @@
   {"id": "F034", "description": "Wire useTranslation in ticket/TicketMaterialsCard.tsx — materials list, add dialog, cost labels", "implemented": true, "prdRefs": ["2b-21a/sub-batch-B"]},
   {"id": "F035", "description": "Wire TicketMaterialsCard.tsx delete confirmations, empty states, validation errors", "implemented": true, "prdRefs": ["2b-21a/sub-batch-B"]},
   {"id": "F036", "description": "Wire useTranslation in settings/DisplaySettings.tsx — column visibility toggles, sort options", "implemented": true, "prdRefs": ["2b-21a/sub-batch-B"]},
-  {"id": "F037", "description": "Wire DisplaySettings.tsx save/reset buttons, per-user preference labels", "implemented": false, "prdRefs": ["2b-21a/sub-batch-B"]},
+  {"id": "F037", "description": "Wire DisplaySettings.tsx save/reset buttons, per-user preference labels", "implemented": true, "prdRefs": ["2b-21a/sub-batch-B"]},
 
   {"id": "F040", "description": "Wire useTranslation in ticket/TicketWatchListCard.tsx — watcher list, add/remove buttons, empty state", "implemented": false, "prdRefs": ["2b-21a/sub-batch-C"]},
   {"id": "F041", "description": "Wire useTranslation in ticket/TicketEmailNotifications.tsx — notification toggle labels, help text", "implemented": false, "prdRefs": ["2b-21a/sub-batch-C"]},

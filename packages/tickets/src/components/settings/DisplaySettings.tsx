@@ -156,7 +156,7 @@ const DisplaySettings = (): React.JSX.Element => {
           tagsInlineUnderTitle,
         },
       });
-      toast.success('Ticket display settings saved');
+      toast.success(t('settings.display.saveSuccess', 'Ticket display settings saved'));
 
       // Update original settings after successful save
       setOriginalDisplaySettings({
@@ -166,7 +166,7 @@ const DisplaySettings = (): React.JSX.Element => {
         responseStateTrackingEnabled,
       });
     } catch (e) {
-      handleError(e, 'Failed to save display settings');
+      handleError(e, t('settings.display.saveFailed', 'Failed to save display settings'));
     } finally {
       setIsSavingDisplay(false);
     }
@@ -266,7 +266,9 @@ const DisplaySettings = (): React.JSX.Element => {
           variant="default"
           onClick={handleSaveDisplaySettings}
           disabled={isSavingDisplay || !hasUnsavedChanges()}>
-          {isSavingDisplay ? 'Saving…' : 'Save'}
+          {isSavingDisplay
+            ? t('settings.display.saving', 'Saving…')
+            : t('actions.save', 'Save')}
         </Button>
       </div>
       </div>
