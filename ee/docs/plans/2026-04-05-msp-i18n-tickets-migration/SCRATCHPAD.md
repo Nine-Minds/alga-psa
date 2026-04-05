@@ -604,6 +604,10 @@ the one-liner. Keep the validator green before committing.
   that `TicketingDashboard.tsx` passes `count` into `t('bulk.move.success', …)` and
   `t('bulk.delete.success', …)` with singular/plural default values, so the UI stays aligned
   with the `_one` / `_other` locale entries instead of drifting back to manual string assembly.
+- **(2026-04-05, T013)** Extended `TicketingDashboard.i18n.test.ts` again to cover the
+  dashboard-local loading/error/empty feedback branches: client drawer loading/not-found/load-
+  failed copy, bundled-ticket and deletion error paths, and the bulk move/delete “No tickets
+  selected” empty states now all have explicit `t(...)` source assertions.
 
 ## Risks
 
