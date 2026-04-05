@@ -64,6 +64,11 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
   const exportCount = selectedTicketIds.length;
   const allSelected = selectedFields.size === EXPORT_FIELDS.length;
   const noneSelected = selectedFields.size === 0;
+  const selectedTicketsSummary = t('export.selectedTicketsSummary', 'Exporting {{count}} selected ticket', {
+    count: exportCount,
+  });
+  const selectedSummaryCount = String(exportCount);
+  const selectedSummaryCountIndex = selectedTicketsSummary.indexOf(selectedSummaryCount);
 
   const handleClose = useCallback(() => {
     if (step === 'exporting') return;
@@ -118,11 +123,11 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
       setExportedCount(count);
       setStep('complete');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to export tickets');
+      setError(err instanceof Error ? err.message : t('export.failed', 'Failed to export tickets'));
       setStep('configure');
-      handleError(err, 'Failed to export tickets');
+      handleError(err, t('export.failed', 'Failed to export tickets'));
     }
-  }, [filters, selectedFields, selectedTicketIds]);
+  }, [filters, selectedFields, selectedTicketIds, t]);
 
   return (
     <Dialog
@@ -145,10 +150,20 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
               <AlertDescription className="flex items-center gap-2">
                 <FileSpreadsheet className="h-4 w-4 shrink-0" />
                 <span>
-                  Exporting <strong>{exportCount}</strong> selected ticket{exportCount === 1 ? '' : 's'}
+                  {selectedSummaryCountIndex >= 0 ? (
+                    <>
+                      {selectedTicketsSummary.slice(0, selectedSummaryCountIndex)}
+                      <strong>{selectedSummaryCount}</strong>
+                      {selectedTicketsSummary.slice(selectedSummaryCountIndex + selectedSummaryCount.length)}
+                    </>
+                  ) : (
+                    selectedTicketsSummary
+                  )}
                   {' '}
                   <span className="text-xs opacity-75">
-                    (of {totalCount} ticket{totalCount === 1 ? '' : 's'} matching applied filters)
+                    {t('export.appliedFiltersSummary', '(of {{count}} ticket matching applied filters)', {
+                      count: totalCount,
+                    })}
                   </span>
                 </span>
               </AlertDescription>
@@ -199,7 +214,7 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
                 variant="outline"
                 onClick={handleClose}
               >
-                Cancel
+                {t('actions.cancel', 'Cancel')}
               </Button>
               <Button
                 id="export-tickets-btn"
@@ -208,7 +223,7 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
                 className="flex items-center gap-2"
               >
                 <Download className="h-4 w-4" />
-                Export {exportCount} Ticket{exportCount === 1 ? '' : 's'}
+                {t('export.confirm', 'Export {{count}} Ticket', { count: exportCount })}
               </Button>
             </DialogFooter>
           </div>
@@ -218,7 +233,7 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
         {step === 'exporting' && (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">Exporting tickets...</p>
+            <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">{t('export.exporting', 'Exporting tickets...')}</p>
           </div>
         )}
 
@@ -228,16 +243,18 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
               <Check className="h-6 w-6 text-green-600" />
             </div>
-            <h3 className="text-lg font-medium mb-2">Export Complete</h3>
+            <h3 className="text-lg font-medium mb-2">{t('export.completeTitle', 'Export Complete')}</h3>
             <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">
-              Successfully exported {exportedCount} ticket{exportedCount === 1 ? '' : 's'} to CSV.
+              {t('export.completeMessage', 'Successfully exported {{count}} ticket to CSV.', {
+                count: exportedCount,
+              })}
             </p>
             <DialogFooter>
               <Button
                 id="export-done-btn"
                 onClick={handleClose}
               >
-                Done
+                {t('export.done', 'Done')}
               </Button>
             </DialogFooter>
           </div>

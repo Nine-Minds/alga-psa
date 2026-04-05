@@ -415,6 +415,15 @@ the one-liner. Keep the validator green before committing.
   packages/tickets/src/components/TicketExportDialog.tsx` and a direct source grep confirming the
   previous hardcoded configure labels were replaced by `t(...)` calls. The remaining export-action
   strings are intentionally deferred to `F033`.
+- **(2026-04-05, F033)** Completed the `TicketExportDialog.tsx` export-state wiring: the export
+  summary, applied-filters summary, cancel/export CTA labels, exporting-state message, completion
+  title/message, done button, and export failure handling now all resolve through `export.*` and
+  `actions.cancel`. The count-based strings use the existing pluralized export keys instead of
+  manual `ticket/tickets` concatenation.
+- **(2026-04-05, F033 validation)** Re-ran `npx eslint
+  packages/tickets/src/components/TicketExportDialog.tsx` and a direct source grep to confirm the
+  former hardcoded action/progress strings now route through `t(...)`. No locale-file changes were
+  needed for this pass.
 
 ## Risks
 
