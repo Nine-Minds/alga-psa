@@ -60,11 +60,11 @@ export default function TicketMaterialsCard({
       const data = await listTicketMaterials(ticketId);
       setMaterials(data);
     } catch (error) {
-      handleError(error, 'Failed to load materials');
+      handleError(error, t('errors.loadMaterials', 'Failed to load materials'));
     } finally {
       setIsLoading(false);
     }
-  }, [ticketId]);
+  }, [ticketId, t]);
 
   useEffect(() => {
     loadMaterials();
@@ -128,17 +128,17 @@ export default function TicketMaterialsCard({
   // Handle add material
   const handleAddMaterial = async () => {
     if (!selectedProductId || !clientId) {
-      toast.error('Please select a product');
+      toast.error(t('validation.materials.productRequired', 'Please select a product'));
       return;
     }
 
     if (!selectedPrice) {
-      toast.error('Please select a currency');
+      toast.error(t('validation.materials.currencyRequired', 'Please select a currency'));
       return;
     }
 
     if (quantity < 1) {
-      toast.error('Quantity must be at least 1');
+      toast.error(t('validation.materials.quantityMin', 'Quantity must be at least 1'));
       return;
     }
 
@@ -164,7 +164,7 @@ export default function TicketMaterialsCard({
       setDescription('');
       await loadMaterials();
     } catch (error) {
-      handleError(error, 'Failed to add material');
+      handleError(error, t('errors.addMaterial', 'Failed to add material'));
     } finally {
       setIsAdding(false);
     }
@@ -178,11 +178,11 @@ export default function TicketMaterialsCard({
     setMaterials(prev => prev.filter(m => m.ticket_material_id !== materialId));
     try {
       await deleteTicketMaterial(materialId);
-      toast.success('Material removed');
+      toast.success(t('materials.removeSuccess', 'Material removed'));
     } catch (error) {
       // Revert on failure
       setMaterials(previousMaterials);
-      handleError(error, 'Failed to remove material');
+      handleError(error, t('errors.removeMaterial', 'Failed to remove material'));
     } finally {
       setDeletingId(null);
     }
@@ -351,11 +351,11 @@ export default function TicketMaterialsCard({
         {isLoading ? (
           <div className="flex items-center justify-center py-8 text-gray-500">
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            Loading materials...
+            {t('materials.loading', 'Loading materials...')}
           </div>
         ) : materials.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            No materials added to this ticket.
+            {t('materials.empty', 'No materials added to this ticket.')}
           </div>
         ) : (
           <div className="space-y-2">
@@ -447,7 +447,10 @@ export default function TicketMaterialsCard({
 
         {!clientId && (
           <div className="text-center py-4 text-amber-600 text-sm">
-            A client must be assigned to this ticket before materials can be added.
+            {t(
+              'materials.clientRequired',
+              'A client must be assigned to this ticket before materials can be added.'
+            )}
           </div>
         )}
       </ContentCard>

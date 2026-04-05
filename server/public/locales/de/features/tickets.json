@@ -820,7 +820,8 @@
     "rate": "Satz",
     "status": "Status",
     "addSuccess": "Material hinzugefügt",
-    "removeSuccess": "Material entfernt"
+    "removeSuccess": "Material entfernt",
+    "clientRequired": "Diesem Ticket muss ein Kunde zugewiesen sein, bevor Materialien hinzugefügt werden können."
   },
   "watchList": {
     "title": "Beobachtungsliste",

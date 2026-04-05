@@ -820,7 +820,8 @@
     "rate": "Stawka",
     "status": "Status",
     "addSuccess": "Materiał dodany",
-    "removeSuccess": "Materiał usunięty"
+    "removeSuccess": "Materiał usunięty",
+    "clientRequired": "Przed dodaniem materiałów do tego zgłoszenia musi być przypisany klient."
   },
   "watchList": {
     "title": "Lista obserwujących",

@@ -820,7 +820,8 @@
     "rate": "55555",
     "status": "55555",
     "addSuccess": "55555",
-    "removeSuccess": "55555"
+    "removeSuccess": "55555",
+    "clientRequired": "55555"
   },
   "watchList": {
     "title": "55555",

@@ -820,7 +820,8 @@
     "rate": "Tarief",
     "status": "Status",
     "addSuccess": "Materiaal toegevoegd",
-    "removeSuccess": "Materiaal verwijderd"
+    "removeSuccess": "Materiaal verwijderd",
+    "clientRequired": "Er moet een klant aan dit ticket zijn toegewezen voordat materialen kunnen worden toegevoegd."
   },
   "watchList": {
     "title": "Volglijst",

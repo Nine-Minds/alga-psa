@@ -820,7 +820,8 @@
     "rate": "Rate",
     "status": "Status",
     "addSuccess": "Material added",
-    "removeSuccess": "Material removed"
+    "removeSuccess": "Material removed",
+    "clientRequired": "A client must be assigned to this ticket before materials can be added."
   },
   "watchList": {
     "title": "Watch List",

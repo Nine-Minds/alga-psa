@@ -820,7 +820,8 @@
     "rate": "Taux",
     "status": "Statut",
     "addSuccess": "Matériel ajouté",
-    "removeSuccess": "Matériau retiré"
+    "removeSuccess": "Matériau retiré",
+    "clientRequired": "Un client doit être attribué à ce ticket avant de pouvoir ajouter des matériaux."
   },
   "watchList": {
     "title": "Liste de surveillance",

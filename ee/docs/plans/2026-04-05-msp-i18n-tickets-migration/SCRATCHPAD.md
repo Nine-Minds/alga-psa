@@ -433,6 +433,17 @@ the one-liner. Keep the validator green before committing.
   delete/empty-state copy for `F035` so the remaining work stays atomic.
 - **(2026-04-05, F034 validation)** Verified with `npx eslint
   packages/tickets/src/components/ticket/TicketMaterialsCard.tsx`, which exited 0.
+- **(2026-04-05, F035)** Finished the remaining `TicketMaterialsCard.tsx` user-facing copy:
+  load/add/remove failures now use `errors.loadMaterials` / `errors.addMaterial` /
+  `errors.removeMaterial`, add-form validation toasts use `validation.materials.*`, the delete
+  success toast uses `materials.removeSuccess`, and the loading/empty/client-required helper
+  states now resolve through `materials.*`. This required one namespace addition,
+  `materials.clientRequired`, in `en/fr/es/de/nl/it/pl/features/tickets.json`, followed by
+  pseudo-locale regeneration.
+- **(2026-04-05, F035 validation)** Re-ran
+  `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  (`Errors: 0`, `Warnings: 0`) and `npx eslint
+  packages/tickets/src/components/ticket/TicketMaterialsCard.tsx`, which exited 0.
 
 ## Risks
 

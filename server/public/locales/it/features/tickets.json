@@ -820,7 +820,8 @@
     "rate": "Tariffa",
     "status": "Stato",
     "addSuccess": "Materiale aggiunto",
-    "removeSuccess": "Materiale rimosso"
+    "removeSuccess": "Materiale rimosso",
+    "clientRequired": "Prima di poter aggiungere materiali, a questo ticket deve essere assegnato un cliente."
   },
   "watchList": {
     "title": "Elenco osservati",

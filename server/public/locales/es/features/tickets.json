@@ -820,7 +820,8 @@
     "rate": "Tarifa",
     "status": "Estado",
     "addSuccess": "Material agregado",
-    "removeSuccess": "Material eliminado"
+    "removeSuccess": "Material eliminado",
+    "clientRequired": "Debe asignarse un cliente a este ticket antes de poder agregar materiales."
   },
   "watchList": {
     "title": "Lista de seguimiento",
