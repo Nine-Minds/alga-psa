@@ -576,6 +576,11 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, F060)** Ran `node scripts/validate-translations.cjs` as the acceptance
   parity check after finishing the remaining ticket-component wiring. Validation passed across
   all 6 production locales plus both pseudo-locales with `Errors: 0` and `Warnings: 0`.
+- **(2026-04-05, F061)** Updated the parent MSP i18n plan at
+  `.ai/translation/MSP_i18n_plan.md` to mark batch `2b-21a` complete. The final English
+  `features/tickets.json` leaf-string count is **887**, and the completion note records both the
+  23-component MSP wiring pass and the supporting route-namespace coverage added for
+  `/msp/settings` and `/msp/service-requests`.
 
 ## Risks
 
