@@ -31,8 +31,10 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import QuickAddCategory from '../QuickAddCategory';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const CategoriesSettings = (): React.JSX.Element => {
+  const { t } = useTranslation('features/tickets');
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState({
@@ -296,7 +298,7 @@ const CategoriesSettings = (): React.JSX.Element => {
 
   const columns: ColumnDefinition<ITicketCategory>[] = [
     {
-      title: 'Name',
+      title: t('settings.categories.name', 'Name'),
       dataIndex: 'category_name',
       render: (value: string, record: ITicketCategory) => (
         <div className="flex items-center">
@@ -315,7 +317,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       ),
     },
     {
-      title: 'Board',
+      title: t('fields.board', 'Board'),
       dataIndex: 'board_id',
       render: (value: string) => {
         const board = boards.find(ch => ch.board_id === value);
@@ -323,7 +325,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       },
     },
     {
-      title: 'Order',
+      title: t('settings.categories.orderColumn', 'Order'),
       dataIndex: 'display_order',
       render: (value: number, record: ITicketCategory) => {
         if (!record.parent_category) {
@@ -349,7 +351,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       },
     },
     {
-      title: 'Actions',
+      title: t('settings.display.columns.actions', 'Actions'),
       dataIndex: 'category_id',
       width: '10%',
       render: (value: string, record: ITicketCategory) => (
@@ -382,18 +384,18 @@ const CategoriesSettings = (): React.JSX.Element => {
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <div>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Categories</h3>
+          <h3 className="text-lg font-semibold text-gray-800">{t('settings.categories.title', 'Categories')}</h3>
           <CustomSelect
             value={boardFilter}
             onValueChange={setBoardFilter}
             options={[
-              { value: 'all', label: 'All Boards' },
+              { value: 'all', label: t('settings.categories.allBoards', 'All Boards') },
               ...boards.map(ch => ({
                 value: ch.board_id || '',
                 label: ch.board_name || ''
               }))
             ]}
-            placeholder="Filter by board"
+            placeholder={t('settings.categories.filterByBoard', 'Filter by board')}
             className="w-64"
           />
         </div>

@@ -386,6 +386,15 @@ the one-liner. Keep the validator green before committing.
   src/components/ticket/__tests__/TicketProperties.liveTimerPolicy.test.tsx
   src/components/ticket/__tests__/ticket-properties-inline-contact.test.tsx`, which stayed green
   after the dialog/button wiring.
+- **(2026-04-05, F030)** Wired the `CategoriesSettings.tsx` page shell to
+  `useTranslation('features/tickets')` without expanding the namespace: the page heading, board
+  filter option/placeholder, and the category table’s `Name` / `Board` / `Order` / `Actions`
+  headers now resolve through existing `settings.categories.*`, `fields.board`, and
+  `settings.display.columns.actions` keys. This leaves the add/edit/import/delete dialog and toast
+  copy isolated for `F031`.
+- **(2026-04-05, F030 validation)** Verified the wiring with `cd packages/tickets && npx vitest
+  run src/components/settings/__tests__/CategoriesSettings.contract.test.ts` and `npx eslint
+  packages/tickets/src/components/settings/CategoriesSettings.tsx` (warnings only, no new errors).
 
 ## Risks
 
