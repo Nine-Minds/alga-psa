@@ -588,6 +588,12 @@ the one-liner. Keep the validator green before committing.
   counts, record the final **887**-leaf namespace size, reaffirm the decision to keep MSP ticket
   copy in the shared `features/tickets` namespace, and explicitly note that only `tests.json`
   work remains after feature completion.
+- **(2026-04-05, T001)** Re-ran the full lang-pack loop:
+  `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`.
+  The generator rebuilt `52` pseudo-locale files from `26` English sources and the validator
+  passed with `Errors: 0`, `Warnings: 0`. The only remaining unstaged locale diffs in the
+  worktree are unrelated pre-existing pseudo-locale changes under `server/public/locales/xx|yy/msp/*`,
+  which were already present before this test pass and were intentionally left out of the commit.
 
 ## Risks
 
