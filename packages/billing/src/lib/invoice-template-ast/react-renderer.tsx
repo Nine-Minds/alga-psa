@@ -126,11 +126,11 @@ const resolveFieldBorderStyle = (
 ): React.CSSProperties => {
   if (borderStyle === 'none') {
     return {
-      padding: '2px 4px',
-      border: '1px solid transparent',
+      padding: '0',
+      border: '0',
       backgroundColor: 'transparent',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-start',
     };
   }
   if (borderStyle === 'box') {
@@ -412,7 +412,21 @@ const renderNode = (
         currencyCode: ctx.currencyCode,
         displayFormat: node.displayFormat,
       });
-      const fieldStyle = { ...resolveFieldBorderStyle(node.borderStyle), ...(style ?? {}) };
+      const multilineFieldAdjustments: React.CSSProperties | null = formattedValue.multiline
+        ? {
+            alignItems: 'flex-start',
+            ...(node.borderStyle === 'none' || node.borderStyle === 'underline'
+              ? {
+                  padding: '0',
+                }
+              : null),
+          }
+        : null;
+      const fieldStyle = {
+        ...resolveFieldBorderStyle(node.borderStyle),
+        ...(multilineFieldAdjustments ?? null),
+        ...(style ?? {}),
+      };
       return (
         <div key={node.id} id={node.id} className={elementClassName || undefined} style={fieldStyle}>
           {node.label ? <span>{node.label}: </span> : null}

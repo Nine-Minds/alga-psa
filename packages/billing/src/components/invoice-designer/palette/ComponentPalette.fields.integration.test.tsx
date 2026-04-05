@@ -43,4 +43,17 @@ describe('ComponentPalette fields tab', () => {
     expect(screen.getByText('Currency Code')).toBeTruthy();
     expect(screen.queryByText('Tenant Address')).toBeNull();
   });
+
+  it('keeps address field descriptions neutral in the fields tab', () => {
+    render(
+      <DndContext>
+        <ComponentPalette />
+      </DndContext>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'FIELDS' }));
+
+    expect(screen.getByText('The customer billing address.')).toBeTruthy();
+    expect(screen.queryByText(/property panel/i)).toBeNull();
+  });
 });

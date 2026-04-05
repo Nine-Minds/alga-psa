@@ -13,6 +13,7 @@ import {
   resolveTemplateStrategy,
 } from './strategies';
 import { validateTemplateAst } from './schema';
+import { resolveInvoiceTemplateBindingAlias } from './bindingAliases';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -135,16 +136,16 @@ const resolveBindingValue = (
 ): unknown => {
   const valueBinding = ast.bindings?.values?.[bindingId];
   if (valueBinding) {
-    const resolved = getPathValue(invoiceData, valueBinding.path);
+    const resolved = getPathValue(invoiceData, resolveInvoiceTemplateBindingAlias(valueBinding.path));
     return resolved === undefined ? valueBinding.fallback : resolved;
   }
 
   const collectionBinding = ast.bindings?.collections?.[bindingId];
   if (collectionBinding) {
-    return getPathValue(invoiceData, collectionBinding.path);
+    return getPathValue(invoiceData, resolveInvoiceTemplateBindingAlias(collectionBinding.path));
   }
 
-  return getPathValue(invoiceData, bindingId);
+  return getPathValue(invoiceData, resolveInvoiceTemplateBindingAlias(bindingId));
 };
 
 const hasBindingReference = (ast: TemplateAst, bindingId: string): boolean =>
@@ -429,11 +430,13 @@ export const evaluateTemplateAst = (
   };
 
   for (const [bindingId, binding] of Object.entries(ast.bindings?.values ?? {})) {
-    const resolved = getPathValue(invoiceData, binding.path);
+    const resolved = getPathValue(invoiceData, resolveInvoiceTemplateBindingAlias(binding.path));
     bindings[bindingId] = resolved === undefined ? binding.fallback : resolved;
   }
   for (const [bindingId, binding] of Object.entries(ast.bindings?.collections ?? {})) {
-    bindings[bindingId] = cloneRecordArray(getPathValue(invoiceData, binding.path));
+    bindings[bindingId] = cloneRecordArray(
+      getPathValue(invoiceData, resolveInvoiceTemplateBindingAlias(binding.path))
+    );
   }
 
   if (!ast.transforms) {

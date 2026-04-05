@@ -23,6 +23,7 @@ import {
   clampInvoiceMarginMm,
   listInvoicePaperPresets,
   resolveTemplatePrintSettings,
+  type TemplateFieldDisplayFormat,
   type TemplatePrintSettings,
 } from '@alga-psa/types';
 import { ComponentPalette } from './palette/ComponentPalette';
@@ -81,6 +82,11 @@ import {
   type DesignerWidthMode,
 } from './utils/sizeModes';
 import { resolveDesignerDocumentKind } from './utils/documentKind';
+import {
+  getTemplateFieldDefinition,
+  getTemplateFieldDisplayFormats,
+  resolveTemplateFieldLabel,
+} from './fields/fieldCatalog';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -464,23 +470,6 @@ const inferFlexItemPreset = (style: Partial<DesignerNodeStyle> | undefined): Fle
   return 'custom';
 };
 
-const FIELD_TYPE_LABELS: Record<string, string> = {
-  'invoice.number': 'Invoice Number',
-  'invoice.invoiceNumber': 'Invoice Number',
-  'invoice.issueDate': 'Issue Date',
-  'invoice.dueDate': 'Due Date',
-  'invoice.poNumber': 'PO Number',
-  'invoice.subtotal': 'Subtotal',
-  'invoice.tax': 'Tax',
-  'invoice.discount': 'Discount',
-  'invoice.total': 'Total',
-  'invoice.currencyCode': 'Currency Code',
-  'customer.name': 'Customer Name',
-  'customer.address': 'Customer Address',
-  'tenant.name': 'Tenant Name',
-  'tenant.address': 'Tenant Address',
-};
-
 const humanizeBindingToken = (input: string): string =>
   input
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
@@ -502,11 +491,7 @@ const resolveFieldTypeLabel = (bindingKey: string): string => {
   if (!normalized) {
     return 'Unbound';
   }
-  const known = FIELD_TYPE_LABELS[normalized];
-  if (known) {
-    return known;
-  }
-  return humanizeBindingToken(normalized);
+  return resolveTemplateFieldLabel(normalized);
 };
 
 const resolveSelectedFieldType = (selectedNode: DesignerNode | null): { label: string; bindingKey: string } | null => {
@@ -726,6 +711,12 @@ export const DesignerShell: React.FC = () => {
     () => inferFlexItemPreset(selectedSizingStyle),
     [selectedSizingStyle]
   );
+  const selectedFieldDisplayFormats = useMemo(() => {
+    if (!selectedFieldType) {
+      return [];
+    }
+    return getTemplateFieldDisplayFormats(selectedFieldType.bindingKey);
+  }, [selectedFieldType]);
   const selectedMediaParentSection = useMemo(() => {
     if (!selectedNode || !['image', 'logo', 'qr'].includes(selectedNode.type)) {
       return null;
@@ -1416,6 +1407,74 @@ export const DesignerShell: React.FC = () => {
             </div>
           </div>
         </details>
+      </div>
+    );
+  };
+
+  const renderFieldDisplayControls = () => {
+    if (!selectedNode || selectedNode.type !== 'field' || !selectedFieldType) {
+      return null;
+    }
+
+    const fieldDefinition = getTemplateFieldDefinition(selectedFieldType.bindingKey);
+    if (!fieldDefinition || selectedFieldDisplayFormats.length === 0) {
+      return null;
+    }
+
+    const metadata = getNodeMetadata(selectedNode) as Record<string, unknown>;
+    const selectedDisplayFormat = (
+      metadata.displayFormat === 'single-line' ||
+      metadata.displayFormat === 'multiline' ||
+      metadata.displayFormat === 'raw'
+        ? metadata.displayFormat
+        : 'single-line'
+    ) as TemplateFieldDisplayFormat;
+    const optionLabels: Record<TemplateFieldDisplayFormat, string> = {
+      'single-line': 'Single line',
+      multiline: 'Multiline',
+      raw: 'Raw',
+    };
+    const optionDescriptions: Record<TemplateFieldDisplayFormat, string> = {
+      'single-line': 'Collapse the address onto one line.',
+      multiline: 'Split the address into multiple lines.',
+      raw: 'Use the stored value as-is.',
+    };
+
+    return (
+      <div
+        className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2"
+        data-automation-id="designer-field-display-controls"
+      >
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Display Format</p>
+          <p className="text-[11px] text-slate-500">
+            {fieldDefinition.description} This only applies to Data Field nodes.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-2">
+          {selectedFieldDisplayFormats.map((option) => {
+            const isSelected = option === selectedDisplayFormat;
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setNodeProp(selectedNode.id, 'metadata.displayFormat', option, true)}
+                className={clsx(
+                  'rounded border px-2 py-2 text-left transition-colors',
+                  isSelected
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                    : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                )}
+                aria-pressed={isSelected}
+                aria-label={`Display format: ${optionLabels[option]}`}
+                data-automation-id={`designer-field-display-format-${option}`}
+              >
+                <div className="text-xs font-medium">{optionLabels[option]}</div>
+                <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{optionDescriptions[option]}</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -2339,6 +2398,7 @@ export const DesignerShell: React.FC = () => {
                   {renderContainerLayoutControls()}
                   {renderSharedSizingControls()}
                   {renderFlexItemControls()}
+                  {renderFieldDisplayControls()}
                   <DesignerSchemaInspector node={selectedNode} nodesById={nodesById} />
 			              {selectedNode.type === 'section' && (
 			                <div className="space-y-1">

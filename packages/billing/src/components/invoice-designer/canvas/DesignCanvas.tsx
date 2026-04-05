@@ -607,11 +607,21 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         invoice: previewData,
         bindingKey,
         format: metadata.format,
+        displayFormat:
+          metadata.displayFormat === 'single-line' ||
+          metadata.displayFormat === 'multiline' ||
+          metadata.displayFormat === 'raw'
+            ? metadata.displayFormat
+            : undefined,
       });
-      if (boundValue) {
+      if (boundValue.text) {
         return {
-          content: boundValue,
-          singleLine: true,
+          content: boundValue.multiline ? (
+            <span className="whitespace-pre-line break-words">{boundValue.text}</span>
+          ) : (
+            boundValue.text
+          ),
+          singleLine: !boundValue.multiline,
         };
       }
       const preview = resolveFieldPreviewScaffold(node);
@@ -1137,7 +1147,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
               className={clsx(
                 'h-full text-[11px] text-slate-500 gap-1.5',
                 fieldSurfaceClasses,
-                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
+                previewContent.singleLine ? 'whitespace-nowrap overflow-hidden' : 'items-start',
                 previewContent.isPlaceholder && 'text-slate-400'
               )}
             >
@@ -1149,7 +1159,9 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
                   {fieldDisplayLabel}:
                 </span>
               )}
-              <span className="min-w-0 truncate">{previewContent.content}</span>
+              <span className={clsx('min-w-0', previewContent.singleLine ? 'truncate' : 'whitespace-pre-line break-words')}>
+                {previewContent.content}
+              </span>
             </div>
           ) : (
             <div

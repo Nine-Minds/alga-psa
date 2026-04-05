@@ -292,12 +292,12 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
           placeholder: 'Invoice #',
         },
         {
-          kind: 'string',
+          kind: 'widget',
           id: 'bindingKey',
+          widget: 'field-binding-picker',
           domId: 'designer-field-binding',
           label: 'Binding key',
           path: 'metadata.bindingKey',
-          enableExpressionInsert: true,
         },
         {
           kind: 'enum',
@@ -790,11 +790,15 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Content',
     defaults: {
       size: { width: 200, height: 48 },
+      style: {
+        width: 'auto',
+        height: 'auto',
+      },
       metadata: {
         bindingKey: 'invoice.number',
         format: 'text',
         placeholder: 'Invoice Number',
-        fieldBorderStyle: 'underline',
+        fieldBorderStyle: 'none',
       },
     },
     hierarchy: {
