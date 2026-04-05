@@ -312,6 +312,14 @@ the one-liner. Keep the validator green before committing.
   but the package test setup currently fails before executing tests because Vite cannot resolve
   `@alga-psa/core/server` from `shared/core/getSecret.ts`. No source change was required in this
   turn beyond syncing the feature checklist to the implementation state.
+- **(2026-04-05, F023A)** The earlier `F023` audit was incomplete: `QuickAddTicket.tsx` still
+  had hardcoded field-chrome in the ITIL matrix, the additional-agents team-section label, and
+  the unnamed-location fallback. Wired those through `features/tickets`, added
+  `quickAdd.unnamedLocation` and `quickAdd.addTeamMembers` to the locale packs, regenerated
+  pseudo-locales, and re-ran `node scripts/generate-pseudo-locales.cjs && node
+  scripts/validate-translations.cjs` successfully. `npx eslint
+  packages/tickets/src/components/QuickAddTicket.tsx` still reports only the file’s existing
+  warnings (`@ts-nocheck`, unused imports/types, and pre-existing hook-deps warnings).
 
 ## Risks
 

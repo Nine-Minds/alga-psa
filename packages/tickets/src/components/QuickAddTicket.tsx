@@ -50,6 +50,7 @@ import { useSession } from 'next-auth/react';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import QuickAddCategory from './QuickAddCategory';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../lib/ticketRichText';
 import { removeTicketRichTextImageUrls, replaceTicketRichTextImageUrls } from '../lib/ticketRichTextImages';
 import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSession';
@@ -64,7 +65,7 @@ function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; on
 }
 
 // Helper function to format location display
-const formatLocationDisplay = (location: IClientLocation): string => {
+const formatLocationDisplay = (location: IClientLocation, unnamedFallback = 'Unnamed Location'): string => {
   const parts: string[] = [];
   
   if (location.location_name) {
@@ -87,7 +88,7 @@ const formatLocationDisplay = (location: IClientLocation): string => {
     parts.push(location.postal_code);
   }
   
-  return parts.join(' - ') || 'Unnamed Location';
+  return parts.join(' - ') || unnamedFallback;
 };
 
 const getDefaultStatus = (availableStatuses: ITicketStatus[]): ITicketStatus | null => {
@@ -175,6 +176,7 @@ export function QuickAddTicket({
   const router = useRouter();
   const { data: session } = useSession();
   const { renderQuickAddClient, renderQuickAddContact } = useQuickAddClient();
+  const { t } = useTranslation('features/tickets');
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -260,21 +262,21 @@ export function QuickAddTicket({
   }, [itilImpact, itilUrgency]);
 
   // ITIL options for selects
-  const itilImpactOptions: SelectOption[] = [
-    { value: '1', label: '1 - High (Critical business function affected)' },
-    { value: '2', label: '2 - Medium-High (Important function affected)' },
-    { value: '3', label: '3 - Medium (Minor function affected)' },
-    { value: '4', label: '4 - Medium-Low (Minimal impact)' },
-    { value: '5', label: '5 - Low (No business impact)' }
-  ];
+  const itilImpactOptions = useMemo<SelectOption[]>(() => [
+    { value: '1', label: t('itil.impactLevels.1', '1 - High (Critical business function affected)') },
+    { value: '2', label: t('itil.impactLevels.2', '2 - Medium-High (Important function affected)') },
+    { value: '3', label: t('itil.impactLevels.3', '3 - Medium (Minor function affected)') },
+    { value: '4', label: t('itil.impactLevels.4', '4 - Medium-Low (Minimal impact)') },
+    { value: '5', label: t('itil.impactLevels.5', '5 - Low (No business impact)') }
+  ], [t]);
 
-  const itilUrgencyOptions: SelectOption[] = [
-    { value: '1', label: '1 - High (Work cannot continue)' },
-    { value: '2', label: '2 - Medium-High (Work severely impaired)' },
-    { value: '3', label: '3 - Medium (Work continues with limitations)' },
-    { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
-    { value: '5', label: '5 - Low (Work continues normally)' }
-  ];
+  const itilUrgencyOptions = useMemo<SelectOption[]>(() => [
+    { value: '1', label: t('itil.urgencyLevels.1', '1 - High (Work cannot continue)') },
+    { value: '2', label: t('itil.urgencyLevels.2', '2 - Medium-High (Work severely impaired)') },
+    { value: '3', label: t('itil.urgencyLevels.3', '3 - Medium (Work continues with limitations)') },
+    { value: '4', label: t('itil.urgencyLevels.4', '4 - Medium-Low (Minor inconvenience)') },
+    { value: '5', label: t('itil.urgencyLevels.5', '5 - Low (Work continues normally)') }
+  ], [t]);
 
   // NOTE: Categories are now unified - no need for separate ITIL category filtering
 
@@ -285,9 +287,9 @@ export function QuickAddTicket({
   const { automationIdProps: dialogProps, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: 'quick-add-ticket-dialog',
     type: 'dialog',
-    label: 'Quick Add Ticket Dialog',
+    label: t('quickAdd.dialogLabel', 'Quick Add Ticket Dialog'),
     helperText: "",
-    title: 'Quick Add Ticket',
+    title: t('quickAdd.dialogTitle', 'Quick Add Ticket'),
   });
 
   const descriptionUploadSession = useQuickAddRichTextUploadSession({
@@ -971,7 +973,7 @@ export function QuickAddTicket({
         isOpen={open}
         onClose={handleClose}
         className="w-full max-w-2xl max-h-[90vh]"
-        title="Add Ticket"
+        title={t('quickAdd.dialogTitle', 'Quick Add Ticket')}
         disableFocusTrap
       >
         <DialogContent>
@@ -994,7 +996,7 @@ export function QuickAddTicket({
                 </Alert>
               )}
 
-              <ReflectionContainer id={`${id}-form`} label="Quick Add Ticket Form">
+              <ReflectionContainer id={`${id}-form`} label={t('quickAdd.formLabel', 'Quick Add Ticket Form')}>
                 {/* Use a div instead of form when embedded to avoid nested <form> tags */}
                 <FormOrDiv isEmbedded={isEmbedded} onSubmit={handleSubmit}>
 
@@ -1005,11 +1007,11 @@ export function QuickAddTicket({
                       setTitle(e.target.value);
                       clearErrorIfSubmitted();
                     }}
-                    placeholder="Ticket Title *"
+                    placeholder={t('quickAdd.titlePlaceholder', 'Ticket Title *')}
                     className={hasAttemptedSubmit && !title.trim() ? 'border-red-500' : ''}
                   />
                   <div className="space-y-2">
-                    <div className="text-sm font-medium text-gray-700">Description</div>
+                    <div className="text-sm font-medium text-gray-700">{t('quickAdd.descriptionLabel', 'Description')}</div>
                     <div className="min-w-0 w-full">
                       <TextEditor
                         key={`${id}-description-editor-${open ? descriptionEditorInstanceKey : 'closed'}`}
@@ -1019,7 +1021,7 @@ export function QuickAddTicket({
                           setDescriptionContent(content);
                           clearErrorIfSubmitted();
                         }}
-                        placeholder="Description"
+                        placeholder={t('quickAdd.descriptionPlaceholder', 'Description')}
                         searchMentions={searchUsersForMentions}
                         uploadFile={descriptionUploadSession.uploadFile}
                       />
@@ -1036,7 +1038,7 @@ export function QuickAddTicket({
                       onFilterStateChange={setClientFilterState}
                       clientTypeFilter={clientTypeFilter}
                       onClientTypeFilterChange={setClientTypeFilter}
-                      placeholder="Select Client *"
+                      placeholder={t('quickAdd.clientPlaceholder', 'Select Client *')}
                       onAddNew={() => setIsQuickAddClientOpen(true)}
                     />
                   </div>
@@ -1053,8 +1055,8 @@ export function QuickAddTicket({
                       clientId={clientId}
                       placeholder={
                         contacts.length === 0
-                          ? "No contacts for selected client"
-                          : "Select contact"
+                          ? t('quickAdd.noContactsForClient', 'No contacts for selected client')
+                          : t('quickAdd.selectContact', 'Select contact')
                       }
                       buttonWidth="full"
                       onAddNew={() => setIsQuickAddContactOpen(true)}
@@ -1069,13 +1071,16 @@ export function QuickAddTicket({
                         clearErrorIfSubmitted();
                       }}
                       options={[
-                        ...(locations.length > 0 ? [{ value: 'none', label: 'None' }] : []),
+                        ...(locations.length > 0 ? [{ value: 'none', label: t('quickAdd.none', 'None') }] : []),
                         ...locations.map(location => ({
                           value: location.location_id,
-                          label: formatLocationDisplay(location) + (location.is_default ? ' (Default)' : '')
+                          label: formatLocationDisplay(location, t('quickAdd.unnamedLocation', 'Unnamed Location')) +
+                            (location.is_default ? ` ${t('quickAdd.defaultSuffix', '(Default)')}` : '')
                         }))
                       ]}
-                      placeholder={locations.length === 0 ? "No locations for selected client" : "Select location"}
+                      placeholder={locations.length === 0
+                        ? t('quickAdd.noLocationsForClient', 'No locations for selected client')
+                        : t('quickAdd.selectLocation', 'Select location')}
                       showPlaceholderInDropdown={false}
                     />
                   )}
@@ -1087,13 +1092,13 @@ export function QuickAddTicket({
                       selectedBoardId={boardId}
                       onFilterStateChange={setQuickAddBoardFilterState}
                       filterState={quickAddBoardFilterState}
-                      placeholder="Select Board *"
+                      placeholder={t('quickAdd.boardPlaceholder', 'Select Board *')}
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.assignedTo', 'Assigned To')}</label>
                       {teamsV2Enabled ? (
                         <UserAndTeamPicker
                           value={assignedTo}
@@ -1133,7 +1138,7 @@ export function QuickAddTicket({
                           getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                           buttonWidth="full"
                           size="sm"
-                          placeholder="Assign To"
+                          placeholder={t('quickAdd.assignTo', 'Assign To')}
                         />
                       ) : (
                         <UserPicker
@@ -1148,7 +1153,7 @@ export function QuickAddTicket({
                           getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                           buttonWidth="full"
                           size="sm"
-                          placeholder="Assign To"
+                          placeholder={t('quickAdd.assignTo', 'Assign To')}
                         />
                       )}
                       {assignedTeamId && (() => {
@@ -1167,7 +1172,7 @@ export function QuickAddTicket({
                       })()}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Additional Agents</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.additionalAgents', 'Additional Agents')}</label>
                       {teamsV2Enabled ? (
                         <MultiUserAndTeamPicker
                           id={`${id}-additional-agents`}
@@ -1175,7 +1180,7 @@ export function QuickAddTicket({
                           getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                           getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                           teams={teams}
-                          teamSectionLabel="Add Team Members"
+                          teamSectionLabel={t('quickAdd.addTeamMembers', 'Add Team Members')}
                           onTeamValuesChange={(selectedTeamIds) => {
                             for (const teamId of selectedTeamIds) {
                               const team = teams.find(t => t.team_id === teamId);
@@ -1218,7 +1223,7 @@ export function QuickAddTicket({
                           }}
                           users={users.filter(u => u.user_id !== assignedTo)}
                           size="sm"
-                          placeholder="Additional agents..."
+                          placeholder={t('quickAdd.additionalAgentsPlaceholder', 'Additional agents...')}
                         />
                       ) : (
                         <MultiUserPicker
@@ -1245,7 +1250,7 @@ export function QuickAddTicket({
                           }}
                           users={users.filter(u => u.user_id !== assignedTo)}
                           size="sm"
-                          placeholder="Additional agents..."
+                          placeholder={t('quickAdd.additionalAgentsPlaceholder', 'Additional agents...')}
                         />
                       )}
                     </div>
@@ -1260,7 +1265,9 @@ export function QuickAddTicket({
                         setSelectedCategories(categoryIds);
                         clearErrorIfSubmitted();
                       }}
-                      placeholder={boardConfig.category_type === 'custom' ? "Select category" : "Select ITIL category"}
+                      placeholder={boardConfig.category_type === 'custom'
+                        ? t('quickAdd.selectCategory', 'Select category')
+                        : t('quickAdd.selectItilCategory', 'Select ITIL category')}
                       multiSelect={false}
                       className="w-full"
                       onAddNew={() => setIsQuickAddCategoryOpen(true)}
@@ -1275,7 +1282,7 @@ export function QuickAddTicket({
                       clearErrorIfSubmitted();
                     }}
                     options={memoizedStatusOptions}
-                    placeholder="Select Status *"
+                    placeholder={t('quickAdd.statusPlaceholder', 'Select Status *')}
                     className={hasAttemptedSubmit && !statusId ? 'border-red-500' : ''}
                     disabled={!boardId || isLoadingStatuses}
                   />
@@ -1293,7 +1300,7 @@ export function QuickAddTicket({
                             clearErrorIfSubmitted();
                           }}
                           options={memoizedPriorityOptions}
-                          placeholder="Select Priority *"
+                          placeholder={t('quickAdd.selectPriority', 'Select Priority *')}
                           className={hasAttemptedSubmit && !priorityId ? 'border-red-500' : ''}
                         />
                       )}
@@ -1302,7 +1309,7 @@ export function QuickAddTicket({
                       {boardConfig.priority_type === 'itil' && (
                         <>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Impact *</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('itil.impact', 'Impact')} *</label>
                             <CustomSelect
                               options={itilImpactOptions}
                               value={itilImpact?.toString() || null}
@@ -1310,13 +1317,13 @@ export function QuickAddTicket({
                                 setItilImpact(value ? parseInt(value) : undefined);
                                 clearErrorIfSubmitted();
                               }}
-                              placeholder="Select Impact"
+                              placeholder={t('itil.selectImpact', 'Select Impact')}
                               className={hasAttemptedSubmit && !itilImpact ? 'border-red-500' : ''}
                             />
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Urgency *</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('itil.urgency', 'Urgency')} *</label>
                             <CustomSelect
                               options={itilUrgencyOptions}
                               value={itilUrgency?.toString() || null}
@@ -1324,7 +1331,7 @@ export function QuickAddTicket({
                                 setItilUrgency(value ? parseInt(value) : undefined);
                                 clearErrorIfSubmitted();
                               }}
-                              placeholder="Select Urgency"
+                              placeholder={t('itil.selectUrgency', 'Select Urgency')}
                               className={hasAttemptedSubmit && !itilUrgency ? 'border-red-500' : ''}
                             />
                           </div>
@@ -1332,12 +1339,12 @@ export function QuickAddTicket({
                           {/* Read-only Priority field showing calculated value */}
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <label className="block text-sm font-medium text-gray-700">Priority (Calculated)</label>
+                              <label className="block text-sm font-medium text-gray-700">{t('quickAdd.priorityCalculated', 'Priority (Calculated)')}</label>
                               <button
                                 type="button"
                                 onClick={() => setShowPriorityMatrix(!showPriorityMatrix)}
                                 className="text-gray-400 hover:text-gray-600 transition-colors"
-                                title="Show ITIL Priority Matrix"
+                                title={t('quickAdd.showPriorityMatrix', 'Show ITIL Priority Matrix')}
                               >
                                 <HelpCircle className="w-4 h-4" />
                               </button>
@@ -1358,80 +1365,80 @@ export function QuickAddTicket({
                                     }}
                                   />
                                   <span className="text-gray-900">
-                                    {ItilLabels.priority[calculatedItilPriority]}
+                                    {t(`itil.priorityLevels.${calculatedItilPriority}` as const, ItilLabels.priority[calculatedItilPriority])}
                                   </span>
                                   <span className="text-sm text-gray-500">
-                                    (Impact {itilImpact} × Urgency {itilUrgency})
+                                    ({t('itil.impact', 'Impact')} {itilImpact} × {t('itil.urgency', 'Urgency')} {itilUrgency})
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-gray-500">Select Impact and Urgency to calculate priority</span>
+                                <span className="text-gray-500">{t('itil.calculatePrompt', 'Select Impact and Urgency to calculate priority')}</span>
                               )}
                             </div>
 
                             {/* ITIL Priority Matrix - Show when help icon is clicked */}
                             {showPriorityMatrix && (
                               <div className="mt-3 p-4 bg-gray-500/10 border rounded-lg">
-                                <h4 className="text-sm font-medium mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
+                                <h4 className="text-sm font-medium mb-3">{t('itil.matrixTitle', 'ITIL Priority Matrix (Impact × Urgency)')}</h4>
                                 <div className="overflow-x-auto">
                                   <table className="min-w-full text-xs">
                                     <thead>
                                       <tr>
                                         <th className="px-2 py-1 text-left text-gray-600 border-b"></th>
-                                        <th className="px-2 py-1 text-center text-gray-600 border-b">High<br/>Urgency (1)</th>
-                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-High<br/>Urgency (2)</th>
-                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Medium<br/>Urgency (3)</th>
-                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-Low<br/>Urgency (4)</th>
-                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Low<br/>Urgency (5)</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">{t('itil.urgencyAxis.1', 'High\nUrgency (1)').split('\n').map((line, index) => <React.Fragment key={`urgency-1-${index}`}>{index > 0 && <br />}{line}</React.Fragment>)}</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">{t('itil.urgencyAxis.2', 'Medium-High\nUrgency (2)').split('\n').map((line, index) => <React.Fragment key={`urgency-2-${index}`}>{index > 0 && <br />}{line}</React.Fragment>)}</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">{t('itil.urgencyAxis.3', 'Medium\nUrgency (3)').split('\n').map((line, index) => <React.Fragment key={`urgency-3-${index}`}>{index > 0 && <br />}{line}</React.Fragment>)}</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">{t('itil.urgencyAxis.4', 'Medium-Low\nUrgency (4)').split('\n').map((line, index) => <React.Fragment key={`urgency-4-${index}`}>{index > 0 && <br />}{line}</React.Fragment>)}</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">{t('itil.urgencyAxis.5', 'Low\nUrgency (5)').split('\n').map((line, index) => <React.Fragment key={`urgency-5-${index}`}>{index > 0 && <br />}{line}</React.Fragment>)}</th>
                                       </tr>
                                     </thead>
                                     <tbody>
                                       <tr>
-                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">High Impact (1)</td>
-                                        <td className="px-2 py-1 text-center bg-red-500/15 text-red-600 dark:text-red-400 font-semibold">Critical (1)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.1', 'High Impact (1)')}</td>
+                                        <td className="px-2 py-1 text-center bg-red-500/15 text-red-600 dark:text-red-400 font-semibold">{t('itil.priorityLevels.1', 'Critical (1)')}</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
                                       </tr>
                                       <tr>
-                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-High Impact (2)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.2', 'Medium-High Impact (2)')}</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
                                       </tr>
                                       <tr>
-                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium Impact (3)</td>
-                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">High (2)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.3', 'Medium Impact (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
                                       </tr>
                                       <tr>
-                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-Low Impact (4)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 dark:text-gray-400 font-semibold">Planning (5)</td>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.4', 'Medium-Low Impact (4)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 dark:text-gray-400 font-semibold">{t('itil.priorityLevels.5', 'Planning (5)')}</td>
                                       </tr>
                                       <tr>
-                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Low Impact (5)</td>
-                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">Medium (3)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">Low (4)</td>
-                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 dark:text-gray-400 font-semibold">Planning (5)</td>
-                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 dark:text-gray-400 font-semibold">Planning (5)</td>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.5', 'Low Impact (5)')}</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                                        <td className="px-2 py-1 text-center bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 dark:text-gray-400 font-semibold">{t('itil.priorityLevels.5', 'Planning (5)')}</td>
+                                        <td className="px-2 py-1 text-center bg-gray-500/15 text-gray-600 dark:text-gray-400 font-semibold">{t('itil.priorityLevels.5', 'Planning (5)')}</td>
                                       </tr>
                                     </tbody>
                                   </table>
                                 </div>
                                 <div className="mt-2 text-xs text-gray-600">
-                                  <p><strong>Impact:</strong> How many users/business functions are affected?</p>
-                                  <p><strong>Urgency:</strong> How quickly does this need to be resolved?</p>
+                                  <p><strong>{t('itil.impact', 'Impact')}:</strong> {t('itil.impactHelp', 'How many users/business functions are affected?')}</p>
+                                  <p><strong>{t('itil.urgency', 'Urgency')}:</strong> {t('itil.urgencyHelp', 'How quickly does this need to be resolved?')}</p>
                                 </div>
                               </div>
                             )}
@@ -1445,14 +1452,14 @@ export function QuickAddTicket({
 
                   {/* Due Date */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.dueDate', 'Due Date')}</label>
                     <div className="flex items-center gap-2 w-fit">
                       <div className="w-fit">
                         <DatePicker
                           id={`${id}-due-date`}
                           value={dueDateDate}
                           onChange={(date) => setDueDateDate(date)}
-                          placeholder="Select date"
+                          placeholder={t('quickAdd.selectDate', 'Select date')}
                         />
                       </div>
                       <div className="w-fit">
@@ -1460,7 +1467,7 @@ export function QuickAddTicket({
                           id={`${id}-due-time`}
                           value={dueDateTime}
                           onChange={(time) => setDueDateTime(time)}
-                          placeholder="Time"
+                          placeholder={t('quickAdd.timePlaceholder', 'Time')}
                           disabled={!dueDateDate}
                         />
                       </div>
@@ -1481,7 +1488,7 @@ export function QuickAddTicket({
                       )}
                     </div>
                     {dueDateDate && !dueDateTime && (
-                      <p className="text-xs text-gray-500 mt-1">No time set - defaults to 12:00 AM</p>
+                      <p className="text-xs text-gray-500 mt-1">{t('quickAdd.noTimeDefault', 'No time set - defaults to 12:00 AM')}</p>
                     )}
                   </div>
 
