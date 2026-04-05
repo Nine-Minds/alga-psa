@@ -62,6 +62,7 @@ describe('cssLayout', () => {
       flexBasis: '240px',
       aspectRatio: '16 / 9',
       objectFit: 'contain',
+      objectPosition: 'right bottom',
     });
 
     expect(style).toMatchObject({
@@ -76,7 +77,7 @@ describe('cssLayout', () => {
       flexBasis: '240px',
       aspectRatio: '16 / 9',
       objectFit: 'contain',
+      objectPosition: 'right bottom',
     });
   });
 });
-

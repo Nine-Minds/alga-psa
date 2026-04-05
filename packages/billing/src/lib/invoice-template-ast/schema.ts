@@ -46,6 +46,7 @@ const styleDeclarationSchema = z.object({
   flex: z.string().optional(),
   aspectRatio: z.string().optional(),
   objectFit: z.string().optional(),
+  objectPosition: z.string().optional(),
   color: z.string().optional(),
   backgroundColor: z.string().optional(),
   borderColor: z.string().optional(),
@@ -513,4 +514,3 @@ export const parseTemplateAst = (input: unknown): TemplateAst => {
   }
   return result.ast;
 };
-

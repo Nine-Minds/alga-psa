@@ -186,6 +186,9 @@ export interface TemplateStyleDeclaration {
   lineHeight?: string | number;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
   flex?: string;
+  aspectRatio?: string;
+  objectFit?: string;
+  objectPosition?: string;
   borderColor?: string;
   fontStyle?: string;
 }

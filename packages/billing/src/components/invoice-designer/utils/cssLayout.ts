@@ -48,6 +48,7 @@ export const resolveNodeBoxStyle = (nodeStyle?: DesignerNodeStyle): CSSPropertie
     // Media helpers (applies to replaced elements like <img>, but harmless on a wrapper div).
     aspectRatio: nodeStyle.aspectRatio,
     objectFit: nodeStyle.objectFit,
+    objectPosition: nodeStyle.objectPosition,
 
     // Visual style helpers used by imported AST templates.
     margin: nodeStyle.margin,

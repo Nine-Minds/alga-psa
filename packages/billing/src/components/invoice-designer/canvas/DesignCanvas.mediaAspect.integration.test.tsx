@@ -57,7 +57,7 @@ describe('DesignCanvas (media aspect-ratio integration)', () => {
         props: {
           name: 'Image',
           metadata: { src: 'https://example.com/test.png', alt: 'Test' },
-          style: { aspectRatio: '16 / 9', objectFit: 'cover' },
+          style: { aspectRatio: '16 / 9', objectFit: 'cover', objectPosition: 'right bottom' },
         },
         position: { x: 0, y: 0 },
         size: { width: 320, height: 180 },
@@ -101,6 +101,7 @@ describe('DesignCanvas (media aspect-ratio integration)', () => {
     expect(img).toBeTruthy();
     if (!img) return;
     expect(img.style.objectFit).toBe('cover');
+    expect(img.style.objectPosition).toBe('right bottom');
   });
 
   it('keeps imported standard logos close to preview sizing constraints in the designer canvas', () => {

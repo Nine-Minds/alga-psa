@@ -418,6 +418,7 @@ const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined
 
   if (style.aspectRatio) inline.aspectRatio = style.aspectRatio;
   if (style.objectFit) inline.objectFit = style.objectFit;
+  if (style.objectPosition) inline.objectPosition = style.objectPosition;
   if (style.margin) inline.margin = style.margin;
   if (style.border) inline.border = style.border;
   if (style.borderRadius) inline.borderRadius = style.borderRadius;
@@ -663,6 +664,9 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   if (aspectRatio) style.aspectRatio = aspectRatio;
   const objectFit = coerceObjectFit(inline.objectFit);
   if (objectFit) style.objectFit = objectFit;
+  if (typeof inline.objectPosition === 'string' && inline.objectPosition.trim().length > 0) {
+    style.objectPosition = inline.objectPosition.trim();
+  }
 
   const margin = coerceCssLength(inline.margin);
   if (margin) style.margin = margin;

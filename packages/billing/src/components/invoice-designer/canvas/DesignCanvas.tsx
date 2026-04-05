@@ -770,6 +770,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
               ? metadata.fit
               : 'contain';
         const objectFit = getNodeStyle(node)?.objectFit ?? fallbackFit;
+        const objectPosition = getNodeStyle(node)?.objectPosition;
 
         if (!src) {
           const label = node.type === 'qr' ? 'QR Code' : node.type === 'logo' ? 'Logo' : 'Image';
@@ -791,6 +792,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
                 width: '100%',
                 height: '100%',
                 objectFit,
+                objectPosition,
                 display: 'block',
               }}
             />

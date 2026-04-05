@@ -55,6 +55,7 @@ import {
   AlignRight,
   ArrowDown,
   ArrowRight,
+  ArrowUp,
   ArrowUpDown,
   Grid3X3,
 } from 'lucide-react';
@@ -341,6 +342,18 @@ const CONTAINER_JUSTIFY_CONTENT_OPTIONS: IconToggleOption[] = [
     tooltip: 'Distribute with equal spacing',
     icon: AlignHorizontalDistributeCenter,
   },
+];
+
+const MEDIA_HORIZONTAL_ALIGN_OPTIONS: IconToggleOption[] = [
+  { value: 'left', label: 'Left', tooltip: 'Align image to the left', icon: AlignLeft },
+  { value: 'center', label: 'Center', tooltip: 'Center image horizontally', icon: AlignCenter },
+  { value: 'right', label: 'Right', tooltip: 'Align image to the right', icon: AlignRight },
+];
+
+const MEDIA_VERTICAL_ALIGN_OPTIONS: IconToggleOption[] = [
+  { value: 'top', label: 'Top', tooltip: 'Align image to the top', icon: ArrowUp },
+  { value: 'center', label: 'Center', tooltip: 'Center image vertically', icon: ArrowUpDown },
+  { value: 'bottom', label: 'Bottom', tooltip: 'Align image to the bottom', icon: ArrowDown },
 ];
 
 const GRID_COLUMN_PRESETS: GridColumnPreset[] = [
@@ -954,18 +967,8 @@ export const DesignerShell: React.FC = () => {
     updatePointerLocation(null);
   }, [updatePointerLocation]);
 
-  const renderContainerLayoutControls = () => {
-    if (!selectedNode || (selectedNode.type !== 'container' && selectedNode.type !== 'section') || !selectedContainerLayout) {
-      return null;
-    }
-
-    const layoutMode = selectedContainerLayout.display ?? 'flex';
-    const direction = selectedContainerLayout.flexDirection ?? 'column';
-    const alignItems = selectedContainerLayout.alignItems ?? 'stretch';
-    const justifyContent = selectedContainerLayout.justifyContent ?? 'flex-start';
-    const activeGridTemplateColumns = normalizeGridTemplateColumns(selectedContainerLayout.gridTemplateColumns);
-
-    const renderButtonGroup = (
+  const renderIconButtonGroup = useCallback(
+    (
       keyPrefix: string,
       label: string,
       options: IconToggleOption[],
@@ -992,7 +995,7 @@ export const DesignerShell: React.FC = () => {
                   )}
                   aria-pressed={isSelected}
                   aria-label={`${label}: ${option.label}`}
-                  data-automation-id={`designer-container-layout-${keyPrefix}-${option.value}`}
+                  data-automation-id={`designer-icon-group-${keyPrefix}-${option.value}`}
                 >
                   <Icon className="h-4 w-4" />
                 </button>
@@ -1001,7 +1004,20 @@ export const DesignerShell: React.FC = () => {
           })}
         </div>
       </div>
-    );
+    ),
+    []
+  );
+
+  const renderContainerLayoutControls = () => {
+    if (!selectedNode || (selectedNode.type !== 'container' && selectedNode.type !== 'section') || !selectedContainerLayout) {
+      return null;
+    }
+
+    const layoutMode = selectedContainerLayout.display ?? 'flex';
+    const direction = selectedContainerLayout.flexDirection ?? 'column';
+    const alignItems = selectedContainerLayout.alignItems ?? 'stretch';
+    const justifyContent = selectedContainerLayout.justifyContent ?? 'flex-start';
+    const activeGridTemplateColumns = normalizeGridTemplateColumns(selectedContainerLayout.gridTemplateColumns);
 
     return (
       <div
@@ -1009,7 +1025,7 @@ export const DesignerShell: React.FC = () => {
         data-automation-id="designer-container-layout-controls"
       >
         <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Layout Controls</p>
-        {renderButtonGroup('mode', 'Layout', CONTAINER_LAYOUT_MODE_OPTIONS, layoutMode, (value) => {
+        {renderIconButtonGroup('layout-mode', 'Layout', CONTAINER_LAYOUT_MODE_OPTIONS, layoutMode, (value) => {
           setNodeProp(selectedNode.id, 'layout.display', value, true);
         }, 2)}
         {layoutMode === 'grid' && (
@@ -1063,14 +1079,14 @@ export const DesignerShell: React.FC = () => {
         )}
         {layoutMode === 'flex' && (
           <>
-            {renderButtonGroup('direction', 'Direction', CONTAINER_FLEX_DIRECTION_OPTIONS, direction, (value) => {
+            {renderIconButtonGroup('layout-direction', 'Direction', CONTAINER_FLEX_DIRECTION_OPTIONS, direction, (value) => {
               setNodeProp(selectedNode.id, 'layout.flexDirection', value, true);
             }, 2)}
-            {renderButtonGroup('align-items', 'Align Items', CONTAINER_ALIGN_ITEMS_OPTIONS, alignItems, (value) => {
+            {renderIconButtonGroup('layout-align-items', 'Align Items', CONTAINER_ALIGN_ITEMS_OPTIONS, alignItems, (value) => {
               setNodeProp(selectedNode.id, 'layout.alignItems', value, true);
             }, 4)}
-            {renderButtonGroup(
-              'justify-content',
+            {renderIconButtonGroup(
+              'layout-justify-content',
               'Justify Content',
               CONTAINER_JUSTIFY_CONTENT_OPTIONS,
               justifyContent,
@@ -1173,6 +1189,29 @@ export const DesignerShell: React.FC = () => {
 		    if (selectedNode.type === 'image' || selectedNode.type === 'logo' || selectedNode.type === 'qr') {
 		      const fitMode = metadata.fitMode ?? metadata.fit ?? 'contain';
         const objectFit = getNodeStyle(selectedNode)?.objectFit ?? fitMode;
+        const rawObjectPosition = getNodeStyle(selectedNode)?.objectPosition ?? 'center center';
+        const parseObjectPosition = (
+          value: string
+        ): { horizontal: 'left' | 'center' | 'right'; vertical: 'top' | 'center' | 'bottom' } => {
+          const tokens = value
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+          const horizontalToken = tokens.find((token) => token === 'left' || token === 'center' || token === 'right');
+          const verticalToken = tokens.find((token) => token === 'top' || token === 'center' || token === 'bottom');
+          return {
+            horizontal: (horizontalToken as 'left' | 'center' | 'right' | undefined) ?? 'center',
+            vertical: (verticalToken as 'top' | 'center' | 'bottom' | undefined) ?? 'center',
+          };
+        };
+        const objectPosition = parseObjectPosition(rawObjectPosition);
+        const applyObjectPosition = (
+          patch: Partial<{ horizontal: 'left' | 'center' | 'right'; vertical: 'top' | 'center' | 'bottom' }>
+        ) => {
+          const nextHorizontal = patch.horizontal ?? objectPosition.horizontal;
+          const nextVertical = patch.vertical ?? objectPosition.vertical;
+          setNodeProp(selectedNode.id, 'style.objectPosition', `${nextHorizontal} ${nextVertical}`, true);
+        };
         const applyAspectRatio = (raw: string, commit: boolean) => {
           const normalized = normalizeCssValue(raw);
           if (normalized === undefined) {
@@ -1229,6 +1268,24 @@ export const DesignerShell: React.FC = () => {
 	              size="sm"
 	            />
 	          </div>
+            <div className="grid grid-cols-2 gap-2">
+              {renderIconButtonGroup(
+                'media-horizontal-align',
+                'Horizontal Align',
+                MEDIA_HORIZONTAL_ALIGN_OPTIONS,
+                objectPosition.horizontal,
+                (value) => applyObjectPosition({ horizontal: value as 'left' | 'center' | 'right' }),
+                3
+              )}
+              {renderIconButtonGroup(
+                'media-vertical-align',
+                'Vertical Align',
+                MEDIA_VERTICAL_ALIGN_OPTIONS,
+                objectPosition.vertical,
+                (value) => applyObjectPosition({ vertical: value as 'top' | 'center' | 'bottom' }),
+                3
+              )}
+            </div>
             <div>
               <label className="text-xs text-slate-500 block mb-1">Aspect ratio</label>
 	              <Input
