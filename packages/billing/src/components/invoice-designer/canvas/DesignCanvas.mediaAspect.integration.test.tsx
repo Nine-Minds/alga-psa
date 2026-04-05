@@ -2,13 +2,19 @@
 
 import React from 'react';
 import { DndContext } from '@dnd-kit/core';
-import { render, cleanup, screen } from '@testing-library/react';
+import { act, render, cleanup, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { DesignCanvas } from './DesignCanvas';
 import type { DesignerNode } from '../state/designerStore';
+import { useInvoiceDesignerStore } from '../state/designerStore';
+import { importTemplateAstToWorkspace } from '../ast/workspaceAst';
+import { getStandardTemplateAstByCode } from '../../../lib/invoice-template-ast/standardTemplates';
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  useInvoiceDesignerStore.getState().resetWorkspace();
+});
 
 const noop = () => {};
 
@@ -95,5 +101,45 @@ describe('DesignCanvas (media aspect-ratio integration)', () => {
     expect(img).toBeTruthy();
     if (!img) return;
     expect(img.style.objectFit).toBe('cover');
+  });
+
+  it('keeps imported standard logos close to preview sizing constraints in the designer canvas', () => {
+    const ast = getStandardTemplateAstByCode('standard-detailed');
+    expect(ast).toBeTruthy();
+    if (!ast) return;
+
+    const workspace = importTemplateAstToWorkspace(ast);
+    act(() => {
+      useInvoiceDesignerStore.getState().loadWorkspace(workspace);
+    });
+
+    render(
+      <DndContext>
+        <DesignCanvas
+          nodes={useInvoiceDesignerStore.getState().nodes}
+          selectedNodeId={null}
+          showGuides={false}
+          showRulers={false}
+          gridSize={8}
+          canvasScale={1}
+          snapToGrid={false}
+          guides={[]}
+          isDragActive={false}
+          forcedDropTarget={null}
+          droppableId="canvas"
+          onPointerLocationChange={noop}
+          onNodeSelect={noop}
+          onResize={noop}
+          readOnly={false}
+        />
+      </DndContext>
+    );
+
+    const logoEl = document.querySelector('[data-automation-id="designer-canvas-node-issuer-logo"]') as HTMLElement | null;
+    expect(logoEl).toBeTruthy();
+    if (!logoEl) return;
+
+    expect(logoEl.style.width).toBe('180px');
+    expect(logoEl.style.height).toBe('72px');
   });
 });

@@ -13,6 +13,7 @@ import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
 import { resolveFieldPreviewScaffold, resolveLabelPreviewScaffold } from './previewScaffolds';
 import { resolveContainerLayoutStyle, resolveNodeBoxStyle } from '../utils/cssLayout';
+import { resolveMediaFrameSize } from '../utils/mediaSizing';
 import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from '../utils/nodeProps';
 import { resolveSortableStrategy } from '../utils/sortableStrategy';
 import {
@@ -857,6 +858,9 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const allowInferredFlowMinWidth = !astImported || astHadWidth;
   const allowInferredFlowMinHeight = !astImported || astHadHeight;
   const isMediaNode = node.type === 'image' || node.type === 'logo' || node.type === 'qr';
+  const mediaFrameSize = isMediaNode ? resolveMediaFrameSize(resolvedBoxStyle) : {};
+  const resolvedMediaWidth = mediaFrameSize.width;
+  const resolvedMediaHeight = mediaFrameSize.height;
   // Strip visual styles (backgroundColor, color, border) from resolved AST inline styles
   // so that Tailwind dark-mode classes on the canvas node can take effect.
   const { backgroundColor: _bg, color: _fg, border: _bdr, ...layoutBoxStyle } = resolvedBoxStyle;
@@ -866,17 +870,17 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     boxSizing: 'border-box',
     // In flow layouts (flex/grid), do not force a fixed width/height from legacy node.size.
     // Instead, treat the authored size as a minimum box size so flex/grid can stretch items naturally.
-    width: isFlowPositioning ? resolvedWidth : (resolvedWidth ?? inferredWidth),
-    height: isFlowPositioning ? resolvedHeight : (resolvedHeight ?? inferredHeight),
+    width: isFlowPositioning ? (resolvedWidth ?? resolvedMediaWidth) : (resolvedWidth ?? resolvedMediaWidth ?? inferredWidth),
+    height: isFlowPositioning ? (resolvedHeight ?? resolvedMediaHeight) : (resolvedHeight ?? resolvedMediaHeight ?? inferredHeight),
     minWidth:
       isFlowPositioning
         ? (resolvedBoxStyle.minWidth ??
-          (resolvedWidth ? undefined : allowInferredFlowMinWidth ? inferredWidth : undefined))
+          (resolvedWidth || resolvedMediaWidth ? undefined : allowInferredFlowMinWidth ? inferredWidth : undefined))
         : resolvedBoxStyle.minWidth,
     minHeight:
       isFlowPositioning
         ? (resolvedBoxStyle.minHeight ??
-          (resolvedHeight ? undefined : allowInferredFlowMinHeight ? inferredHeight : undefined))
+          (resolvedHeight || resolvedMediaHeight ? undefined : allowInferredFlowMinHeight ? inferredHeight : undefined))
         : resolvedBoxStyle.minHeight,
     top: isFlowPositioning ? undefined : node.position.y,
     left: isFlowPositioning ? undefined : node.position.x,

@@ -28,6 +28,7 @@ import type {
 import { createEmptyDesignerTransformWorkspace, DOCUMENT_NODE_ID } from '../state/designerStore';
 import { getDefinition } from '../constants/componentCatalog';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
+import { resolveMediaFrameSize } from '../utils/mediaSizing';
 import {
   toTemplateTransformPipeline,
   validateDesignerTransformWorkspace,
@@ -1423,10 +1424,15 @@ const resolveImportedCollectionBindingPath = (
 
 const parseSizeFromStyle = (node: TemplateNode): { width?: number; height?: number } => {
   const inline = node.style?.inline ?? {};
-  return {
-    width: parsePxLength(inline.width),
-    height: parsePxLength(inline.height),
-  };
+
+  if (node.type !== 'image') {
+    return {
+      width: parsePxLength(inline.width),
+      height: parsePxLength(inline.height),
+    };
+  }
+
+  return resolveMediaFrameSize(inline);
 };
 
 export const importTemplateAstToWorkspace = (
