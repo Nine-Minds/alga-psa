@@ -22,7 +22,15 @@ export function initSentry() {
     enabled: !__DEV__,
     tracesSampleRate: 0.2,
     sendDefaultPii: false,
-    integrations: [reactNavigationIntegration],
+    replaysOnErrorSampleRate: 1.0,
+    integrations: [
+      reactNavigationIntegration,
+      Sentry.mobileReplayIntegration({
+        maskAllText: true,
+        maskAllImages: true,
+        maskAllVectors: true,
+      }),
+    ],
   });
 }
 
