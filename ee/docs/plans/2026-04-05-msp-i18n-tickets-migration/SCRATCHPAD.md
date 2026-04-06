@@ -699,6 +699,10 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, T096)** `ticket/TicketSmallComponents.i18n.test.ts` also covers
   `TicketNavigation.tsx`, asserting that both previous/next button `aria-label` values resolve
   through `navigation.previousTicket` / `navigation.nextTicket`.
+- **(2026-04-05, T097)** Re-ran `TicketOriginBadge.render.test.tsx` after the badge fallback
+  wiring. All origin enum render cases still pass, which now exercises the component’s localized
+  fallback labels directly (with the usual no-instance `react-i18next` warning in this server-
+  render harness).
 
 ## Risks
 
