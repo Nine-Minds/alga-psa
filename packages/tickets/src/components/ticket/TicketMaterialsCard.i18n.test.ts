@@ -29,4 +29,19 @@ describe('ticket materials card i18n wiring contract', () => {
     expect(source).toContain("t('materials.billed', 'Billed')");
     expect(source).toContain("t('materials.pending', 'Pending')");
   });
+
+  it('T071: routes materials empty-state, validation, and remove/load error feedback through translations', () => {
+    const source = read('./TicketMaterialsCard.tsx');
+
+    expect(source).toContain("t('errors.loadMaterials', 'Failed to load materials')");
+    expect(source).toContain("t('errors.addMaterial', 'Failed to add material')");
+    expect(source).toContain("t('errors.removeMaterial', 'Failed to remove material')");
+    expect(source).toContain("t('validation.materials.productRequired', 'Please select a product')");
+    expect(source).toContain("t('validation.materials.currencyRequired', 'Please select a currency')");
+    expect(source).toContain("t('validation.materials.quantityMin', 'Quantity must be at least 1')");
+    expect(source).toContain("t('materials.removeSuccess', 'Material removed')");
+    expect(source).toContain("t('materials.loading', 'Loading materials...')");
+    expect(source).toContain("t('materials.empty', 'No materials added to this ticket.')");
+    expect(source).toContain("t(\n              'materials.clientRequired'");
+  });
 });

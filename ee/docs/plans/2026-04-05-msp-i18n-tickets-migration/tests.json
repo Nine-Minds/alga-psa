@@ -26,7 +26,7 @@
   {"id": "T061", "description": "Unit: TicketExportDialog.i18n.test — download failure toast translated", "implemented": true, "featureIds": ["F033"]},
 
   {"id": "T070", "description": "Unit: TicketMaterialsCard.i18n.test — materials list, add dialog, cost labels translated", "implemented": true, "featureIds": ["F034"]},
-  {"id": "T071", "description": "Unit: TicketMaterialsCard.i18n.test — empty state and delete confirmation translated", "implemented": false, "featureIds": ["F035"]},
+  {"id": "T071", "description": "Unit: TicketMaterialsCard.i18n.test — empty state and delete confirmation translated", "implemented": true, "featureIds": ["F035"]},
 
   {"id": "T080", "description": "Unit: DisplaySettings.i18n.test — column visibility toggles and sort options translated", "implemented": false, "featureIds": ["F036"]},
   {"id": "T081", "description": "Unit: DisplaySettings.i18n.test — save/reset button labels translated", "implemented": false, "featureIds": ["F037"]},

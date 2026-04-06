@@ -665,6 +665,9 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, T070)** Added `ticket/TicketMaterialsCard.i18n.test.ts` to cover the
   materials card’s main chrome: card title, add-material dialog labels/placeholders, price/
   quantity/total/description labels, materials table headers, and billed/pending status badges.
+- **(2026-04-05, T071)** Extended the materials card contract with the error/validation/empty-
+  state path: load/add/remove failures, form validation toasts, remove-success copy, the loading
+  and empty helpers, and the `materials.clientRequired` guard are now all asserted.
 
 ## Risks
 
