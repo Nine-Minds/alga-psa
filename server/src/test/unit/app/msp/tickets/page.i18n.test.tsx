@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type TranslationOptions = {
   defaultValue?: string;
+  count?: number;
   [key: string]: unknown;
 };
 
@@ -52,6 +53,12 @@ const translations = {
       'actions.cancel': '__EN Cancel__',
       'actions.create': '__EN Create__',
       'quickAdd.createAndView': '__EN Create + View Ticket__',
+      'bulk.move.dialogTitle': '__EN Move Selected Tickets__',
+      'bulk.move.confirm_other': '__EN Move {{count}} tickets__',
+      'bulk.move.success_other': '__EN {{count}} tickets moved__',
+      'bulk.delete.dialogTitle': '__EN Delete Selected Tickets__',
+      'bulk.delete.confirm_other': '__EN Delete these {{count}} tickets?__',
+      'bulk.delete.success_other': '__EN {{count}} tickets deleted__',
     },
   },
   de: {
@@ -83,6 +90,17 @@ const translations = {
       'actions.cancel': 'Abbrechen',
       'actions.create': 'Erstellen',
       'quickAdd.createAndView': 'Erstellen + Ticket anzeigen',
+      'bulk.move.dialogTitle': 'Ausgewählte Tickets verschieben',
+      'bulk.move.confirm_one': '{{count}} Ticket verschieben',
+      'bulk.move.confirm_other': '{{count}} Tickets verschieben',
+      'bulk.move.success_one': '{{count}} Ticket verschoben',
+      'bulk.move.success_other': '{{count}} Tickets verschoben',
+      'bulk.delete.dialogTitle': 'Ausgewählte Tickets löschen',
+      'bulk.delete.confirm_one': 'Möchtest du dieses Ticket wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
+      'bulk.delete.confirm_other':
+        'Möchtest du diese {{count}} Tickets wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
+      'bulk.delete.success_one': '{{count}} Ticket gelöscht',
+      'bulk.delete.success_other': '{{count}} Tickets gelöscht',
     },
   },
 } as const;
@@ -112,11 +130,19 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
   const resolveTranslation = (
     locale: keyof typeof translations,
     namespace: string,
-    key: string
+    key: string,
+    count?: number
   ): string | undefined => {
-    return translations[locale]?.[namespace as 'features/tickets']?.[
-      key as keyof (typeof translations)['en']['features/tickets']
-    ];
+    const pluralSuffix =
+      typeof count === 'number' ? (count === 1 ? '_one' : '_other') : '';
+    const pluralKey = `${key}${pluralSuffix}` as keyof (typeof translations)['en']['features/tickets'];
+
+    return (
+      translations[locale]?.[namespace as 'features/tickets']?.[pluralKey] ??
+      translations[locale]?.[namespace as 'features/tickets']?.[
+        key as keyof (typeof translations)['en']['features/tickets']
+      ]
+    );
   };
 
   return {
@@ -152,7 +178,9 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
               : defaultValueOrOptions ?? {};
           const hasNamespace = namespace ? namespaces.includes(namespace) : true;
           const translation =
-            namespace && hasNamespace ? resolveTranslation(locale, namespace, key) : undefined;
+            namespace && hasNamespace
+              ? resolveTranslation(locale, namespace, key, options.count)
+              : undefined;
 
           return interpolate(translation ?? defaultValue ?? key, options);
         },
@@ -249,6 +277,20 @@ vi.mock('@alga-psa/msp-composition/tickets', async () => {
             <button type="button">{t('actions.cancel', 'Cancel')}</button>
             <button type="button">{t('actions.create', 'Create')}</button>
             <button type="button">{t('quickAdd.createAndView', 'Create + View Ticket')}</button>
+          </div>
+          <div data-testid="bulk-actions">
+            <span>{t('bulk.move.dialogTitle', 'Move Selected Tickets')}</span>
+            <span>{t('bulk.move.confirm', { count: 2, defaultValue: 'Move {{count}} tickets' })}</span>
+            <span>{t('bulk.move.success', { count: 2, defaultValue: '{{count}} tickets moved' })}</span>
+            <span>{t('bulk.delete.dialogTitle', 'Delete Selected Tickets')}</span>
+            <span>
+              {t('bulk.delete.confirm', {
+                count: 2,
+                defaultValue:
+                  'Are you sure you want to delete these {{count}} tickets? This action cannot be undone.',
+              })}
+            </span>
+            <span>{t('bulk.delete.success', { count: 2, defaultValue: '{{count}} tickets deleted' })}</span>
           </div>
         </section>
       );
@@ -380,5 +422,27 @@ describe('/msp/tickets i18n integration', () => {
     expect(screen.queryByText('Cancel')).not.toBeInTheDocument();
     expect(screen.queryByText('Create')).not.toBeInTheDocument();
     expect(screen.queryByText('Create + View Ticket')).not.toBeInTheDocument();
+  });
+
+  it('T107: /msp/tickets renders bulk move/delete dialog and success-copy in de with count interpolation', async () => {
+    await renderTicketsList('de');
+
+    expect(screen.getByText('Ausgewählte Tickets verschieben')).toBeInTheDocument();
+    expect(screen.getByText('2 Tickets verschieben')).toBeInTheDocument();
+    expect(screen.getByText('2 Tickets verschoben')).toBeInTheDocument();
+    expect(screen.getByText('Ausgewählte Tickets löschen')).toBeInTheDocument();
+    expect(
+      screen.getByText('Möchtest du diese 2 Tickets wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('2 Tickets gelöscht')).toBeInTheDocument();
+
+    expect(screen.queryByText('Move Selected Tickets')).not.toBeInTheDocument();
+    expect(screen.queryByText('Move 2 tickets')).not.toBeInTheDocument();
+    expect(screen.queryByText('2 tickets moved')).not.toBeInTheDocument();
+    expect(screen.queryByText('Delete Selected Tickets')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Are you sure you want to delete these 2 tickets? This action cannot be undone.')
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('2 tickets deleted')).not.toBeInTheDocument();
   });
 });

@@ -756,6 +756,13 @@ the one-liner. Keep the validator green before committing.
   the German assertions cover the actual global quick-create shell without pulling the entire
   `QuickAddTicket` runtime into the test. Verified with `cd server && npx vitest run
   src/test/unit/layout/QuickCreateDialog.ticket.i18n.integration.test.tsx`.
+- **(2026-04-06, T107)** Expanded the `/msp/tickets` page harness with plural-aware bulk-action
+  strings. The in-memory translation mock now resolves `_one` / `_other` variants based on
+  `count`, and the new assertion covers the German bulk move/delete dialog titles, confirmation
+  copy, and success summaries (`2 Tickets verschoben`, `2 Tickets gelöscht`) so interpolation
+  remains aligned with the locale pack instead of falling back to manual English assembly.
+  Re-verified with `cd server && npx vitest run
+  src/test/unit/app/msp/tickets/page.i18n.test.tsx`.
 
 ## Risks
 
