@@ -47,7 +47,7 @@
   {"id": "T103", "description": "Integration: /msp/tickets/[id] detail page renders TicketInfo/TicketProperties/TicketMaterialsCard/TicketWatchListCard in de with no English leakage", "implemented": true, "featureIds": ["F025", "F026", "F027", "F028", "F034", "F035", "F040"]},
   {"id": "T104", "description": "Integration: /msp/settings/ticketing renders CategoriesSettings + DisplaySettings in de with translated labels", "implemented": true, "featureIds": ["F030", "F031", "F036", "F037"]},
   {"id": "T105", "description": "Integration: /msp/service-requests/[id] editor (which reuses CategoryPicker) renders translated picker in de", "implemented": true, "featureIds": ["F045"]},
-  {"id": "T106", "description": "Integration: global quick-create dialog (QuickAddTicket reused in layout/QuickCreateDialog) renders translated in de", "implemented": false, "featureIds": ["F023", "F024"]},
+  {"id": "T106", "description": "Integration: global quick-create dialog (QuickAddTicket reused in layout/QuickCreateDialog) renders translated in de", "implemented": true, "featureIds": ["F023", "F024"]},
   {"id": "T107", "description": "Integration: bulk move/delete on /msp/tickets shows translated confirmation and toast messages (with count interpolation)", "implemented": false, "featureIds": ["F021"]},
   {"id": "T108", "description": "Integration: xx pseudo-locale smoke test across /msp/tickets list, detail, settings renders pseudo-text everywhere", "implemented": false, "featureIds": ["F009", "F020", "F023", "F025", "F027", "F030", "F032", "F034", "F036"]},
 

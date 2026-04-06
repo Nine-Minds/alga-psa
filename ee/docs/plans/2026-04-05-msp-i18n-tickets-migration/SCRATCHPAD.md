@@ -749,6 +749,13 @@ the one-liner. Keep the validator green before committing.
   German picker placeholder/badge/summary/add-new copy only renders when `MspLayoutClient` loads
   `features/tickets` for `/msp/service-requests/*`. Verified with `cd server && npx vitest run
   src/test/unit/app/msp/service-requests/editor.i18n.test.tsx`.
+- **(2026-04-06, T106)** Added
+  `server/src/test/unit/layout/QuickCreateDialog.ticket.i18n.integration.test.tsx` for the
+  layout-level reuse of `QuickAddTicket` inside `QuickCreateDialog`. This harness mounts the real
+  layout dialog on a non-ticket MSP route and stubs only the embedded ticket quick-add body, so
+  the German assertions cover the actual global quick-create shell without pulling the entire
+  `QuickAddTicket` runtime into the test. Verified with `cd server && npx vitest run
+  src/test/unit/layout/QuickCreateDialog.ticket.i18n.integration.test.tsx`.
 
 ## Risks
 
