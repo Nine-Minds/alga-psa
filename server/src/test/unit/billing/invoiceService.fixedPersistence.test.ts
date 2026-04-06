@@ -177,6 +177,7 @@ describe("invoiceService fixed recurring persistence", () => {
         {
           type: "product",
           serviceId: "service-1",
+          config_id: "config-product-1",
           serviceName: "Managed Router",
           quantity: 2,
           rate: 4500,
@@ -228,6 +229,7 @@ describe("invoiceService fixed recurring persistence", () => {
         {
           type: "license",
           serviceId: "service-2",
+          config_id: "config-license-1",
           serviceName: "Microsoft 365 Business Premium",
           quantity: 3,
           rate: 3200,
@@ -666,6 +668,7 @@ describe("invoiceService fixed recurring persistence", () => {
         {
           type: "time",
           serviceId: "service-hourly",
+          config_id: "config-hourly-1",
           serviceName: "Hourly Support",
           userId: "user-1",
           duration: 2,
@@ -685,6 +688,7 @@ describe("invoiceService fixed recurring persistence", () => {
         {
           type: "usage",
           serviceId: "service-usage",
+          config_id: "config-usage-1",
           serviceName: "Device Usage",
           quantity: 4,
           rate: 300,
@@ -769,6 +773,7 @@ describe("invoiceService fixed recurring persistence", () => {
         {
           type: "fixed",
           serviceId: "service-fallback",
+          config_id: "config-fallback",
           serviceName: "Base Rate Only Fixed Fee",
           quantity: 1,
           rate: 12000,
@@ -807,6 +812,7 @@ describe("invoiceService fixed recurring persistence", () => {
     expect(inserts.invoice_charge_details).toHaveLength(1);
     expect(inserts.invoice_charge_details[0]).toMatchObject({
       service_id: "service-fallback",
+      config_id: "config-fallback",
       service_period_start: "2025-04-01",
       service_period_end: "2025-04-30",
       billing_timing: "advance",
