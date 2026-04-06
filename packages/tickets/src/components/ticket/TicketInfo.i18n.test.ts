@@ -28,4 +28,20 @@ describe('ticket info i18n wiring contract', () => {
     expect(source).toContain("t('settings.display.columns.tags', 'Tags')");
     expect(source).toContain("t('fields.description', 'Description')");
   });
+
+  it('T031: routes confirmation dialogs and inline edit prompts through translations', () => {
+    const source = read('./TicketInfo.tsx');
+
+    expect(source).toContain("t('info.saveTitle', 'Save title')");
+    expect(source).toContain("t('actions.cancel', 'Cancel')");
+    expect(source).toContain("t('info.editDescription', 'Edit description')");
+    expect(source).toContain("t('info.saving', 'Saving...')");
+    expect(source).toContain("t('info.saveChanges', 'Save Changes')");
+    expect(source).toContain("t('info.discardChangesTitle', 'Discard Changes')");
+    expect(source).toContain("t('info.discardChangesMessage', 'You have unsaved changes. Are you sure you want to discard them?')");
+    expect(source).toContain("t('info.discard', 'Discard')");
+    expect(source).toContain("t('info.keepEditing', 'Keep Editing')");
+    expect(source).toContain("t('info.clipboardDraftMessage', 'This description includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?')");
+    expect(source).toContain("t('quickAdd.continueEditing', 'Continue Editing')");
+  });
 });

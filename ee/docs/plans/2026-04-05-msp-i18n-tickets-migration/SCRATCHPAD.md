@@ -627,6 +627,9 @@ the one-liner. Keep the validator green before committing.
   contract harness. The first assertion covers the detail header and field chrome across the
   mixed `fields.*`, `info.*`, `itil.*`, and `settings.display.columns.tags` keys used by the
   main detail pane.
+- **(2026-04-05, T031)** Extended `TicketInfo.i18n.test.ts` with the save/cancel/editing
+  surface: title-edit affordances, description edit controls, footer save state, unsaved-changes
+  discard dialog, and the pasted-images cleanup dialog now all have direct `t(...)` assertions.
 
 ## Risks
 
