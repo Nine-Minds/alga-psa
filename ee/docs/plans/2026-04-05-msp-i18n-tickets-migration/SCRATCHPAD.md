@@ -703,6 +703,9 @@ the one-liner. Keep the validator green before committing.
   wiring. All origin enum render cases still pass, which now exercises the component’s localized
   fallback labels directly (with the usual no-instance `react-i18next` warning in this server-
   render harness).
+- **(2026-04-05, T098)** Re-ran `ResponseSourceBadge.render.test.tsx` alongside the origin badge
+  test. All portal/email source variants still render correctly after making the component’s
+  `labels` prop optional and translation-backed.
 
 ## Risks
 
