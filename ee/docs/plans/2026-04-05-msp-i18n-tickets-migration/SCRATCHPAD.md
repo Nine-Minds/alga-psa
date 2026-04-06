@@ -683,6 +683,9 @@ the one-liner. Keep the validator green before committing.
   for the remaining small-ticket-component contracts. The first assertion covers the email
   notifications card title, table headings, loading/empty states, unknown-error fallback, and the
   load-more CTA.
+- **(2026-04-05, T092)** The shared small-component contract file also now covers
+  `ResponseStateSelect.tsx`: awaiting-client/awaiting-internal/clear option labels, the select
+  placeholder, the response-state heading, and the `Not set` fallback text.
 
 ## Risks
 

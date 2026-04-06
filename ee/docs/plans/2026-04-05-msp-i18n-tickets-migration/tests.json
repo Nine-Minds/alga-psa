@@ -33,7 +33,7 @@
 
   {"id": "T090", "description": "Unit: TicketWatchListCard.i18n.test — watcher list, add/remove buttons, empty state translated", "implemented": true, "featureIds": ["F040"]},
   {"id": "T091", "description": "Unit: TicketEmailNotifications.i18n.test — notification toggle labels translated", "implemented": true, "featureIds": ["F041"]},
-  {"id": "T092", "description": "Unit: ResponseStateSelect.i18n.test — All/Awaiting Client/Awaiting Internal/None options translated", "implemented": false, "featureIds": ["F042"]},
+  {"id": "T092", "description": "Unit: ResponseStateSelect.i18n.test — All/Awaiting Client/Awaiting Internal/None options translated", "implemented": true, "featureIds": ["F042"]},
   {"id": "T093", "description": "Unit: QuickAddCategory.i18n.test — inline creation dialog and validation translated", "implemented": false, "featureIds": ["F043"]},
   {"id": "T094", "description": "Unit: TicketDetailsContainer.i18n.test — loading/error/not-found states translated", "implemented": false, "featureIds": ["F044"]},
   {"id": "T095", "description": "Unit: CategoryPicker.i18n.test — placeholder, empty state, search label translated", "implemented": false, "featureIds": ["F045"]},
