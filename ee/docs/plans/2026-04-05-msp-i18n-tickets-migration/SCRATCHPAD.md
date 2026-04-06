@@ -672,6 +672,8 @@ the one-liner. Keep the validator green before committing.
   test for the display-settings chrome: response-state tracking copy, preferences/date-time
   labels, column section heading, required suffix, and tags layout toggles are all now pinned to
   `t(...)` calls.
+- **(2026-04-05, T081)** Extended the display-settings contract with the save path. The test now
+  asserts the translated success toast, failure message, saving state, and save button label.
 
 ## Risks
 

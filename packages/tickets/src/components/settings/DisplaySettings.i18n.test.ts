@@ -24,4 +24,13 @@ describe('display settings i18n wiring contract', () => {
     expect(source).toContain("t('settings.display.tagsUnderTitle', 'Display under Title')");
     expect(source).toContain("t('settings.display.tagsSeparateColumn', 'Display in separate column')");
   });
+
+  it('T081: routes the save action and save-result feedback through translations', () => {
+    const source = read('./DisplaySettings.tsx');
+
+    expect(source).toContain("t('settings.display.saveSuccess', 'Ticket display settings saved')");
+    expect(source).toContain("t('settings.display.saveFailed', 'Failed to save display settings')");
+    expect(source).toContain("t('settings.display.saving', 'Saving…')");
+    expect(source).toContain("t('actions.save', 'Save')");
+  });
 });

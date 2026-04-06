@@ -29,7 +29,7 @@
   {"id": "T071", "description": "Unit: TicketMaterialsCard.i18n.test — empty state and delete confirmation translated", "implemented": true, "featureIds": ["F035"]},
 
   {"id": "T080", "description": "Unit: DisplaySettings.i18n.test — column visibility toggles and sort options translated", "implemented": true, "featureIds": ["F036"]},
-  {"id": "T081", "description": "Unit: DisplaySettings.i18n.test — save/reset button labels translated", "implemented": false, "featureIds": ["F037"]},
+  {"id": "T081", "description": "Unit: DisplaySettings.i18n.test — save/reset button labels translated", "implemented": true, "featureIds": ["F037"]},
 
   {"id": "T090", "description": "Unit: TicketWatchListCard.i18n.test — watcher list, add/remove buttons, empty state translated", "implemented": false, "featureIds": ["F040"]},
   {"id": "T091", "description": "Unit: TicketEmailNotifications.i18n.test — notification toggle labels translated", "implemented": false, "featureIds": ["F041"]},
