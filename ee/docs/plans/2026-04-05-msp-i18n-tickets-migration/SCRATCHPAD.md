@@ -679,6 +679,10 @@ the one-liner. Keep the validator green before committing.
   empty state, and remove-button copy. While checking the older jsdom harness for later
   regression work, I also restored its missing `useFeatureFlag` / `useTranslation` test mocks so
   it can be repaired incrementally under `T120` instead of crashing immediately on mount.
+- **(2026-04-05, T091)** Added `ticket/TicketSmallComponents.i18n.test.ts` and started using it
+  for the remaining small-ticket-component contracts. The first assertion covers the email
+  notifications card title, table headings, loading/empty states, unknown-error fallback, and the
+  load-more CTA.
 
 ## Risks
 
