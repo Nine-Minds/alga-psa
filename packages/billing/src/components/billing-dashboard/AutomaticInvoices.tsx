@@ -79,6 +79,7 @@ interface RecurringInvoiceParentGroup {
 type RecurringSelectionGroup = {
   groupKey: string;
   selectorInputs: IRecurringDueSelectionInput[];
+  billingCycleId: string | null;
 };
 
 const getParentGroupSummary = ({
@@ -515,10 +516,33 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   ].filter((member, index, allMembers) =>
     allMembers.findIndex((item) => item.executionIdentityKey === member.executionIdentityKey) === index,
   );
+  const resolveSelectionGroupBillingCycleId = (
+    members: Array<{
+      billingCycleId?: string | null;
+      selectorInput: IRecurringDueSelectionInput;
+    }>,
+  ): string | null => {
+    if (members.some((member) => member.selectorInput.executionWindow.kind !== 'client_cadence_window')) {
+      return null;
+    }
+
+    const billingCycleIds = new Set(
+      members
+        .map((member) => member.billingCycleId)
+        .filter((billingCycleId): billingCycleId is string => Boolean(billingCycleId)),
+    );
+
+    if (billingCycleIds.size !== 1 || members.some((member) => !member.billingCycleId)) {
+      return null;
+    }
+
+    return Array.from(billingCycleIds)[0] ?? null;
+  };
   const selectedSelectionGroups: RecurringSelectionGroup[] = [
     ...selectedParentGroups.map((group) => ({
       groupKey: group.parentSummary.parentSelectionKey,
       selectorInputs: group.childExecutionRows.map((member) => member.selectorInput),
+      billingCycleId: resolveSelectionGroupBillingCycleId(group.childExecutionRows),
     })),
     ...selectedChildRows
       .filter((member) => {
@@ -530,6 +554,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       .map((member) => ({
         groupKey: childSelectionKeyForMember(member),
         selectorInputs: [member.selectorInput],
+        billingCycleId:
+          member.selectorInput.executionWindow.kind === 'client_cadence_window'
+            ? member.billingCycleId ?? null
+            : null,
       })),
   ].filter((group) => group.selectorInputs.length > 0);
   const previewSupportsDirectGeneration =
@@ -690,10 +718,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   const buildRecurringRunTargetFromSelection = (selection: {
     selectorInput: IRecurringDueSelectionInput;
+    billingCycleId?: string | null;
   }) => {
     return {
       selectorInput: selection.selectorInput,
       executionWindow: selection.selectorInput.executionWindow,
+      billingCycleId: selection.billingCycleId ?? null,
     };
   };
 
@@ -733,7 +763,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       setPreviewState({
         previews: response.previews,
         invoiceCount: response.invoiceCount,
-        billingCycleId: null,
+        billingCycleId: groups.length === 1 ? groups[0]?.billingCycleId ?? null : null,
         executionIdentityKey: primarySelection?.executionWindow.identityKey ?? null,
         selectorInput: response.previews.length === 1 && response.previews[0].selectorInputs.length === 1
           ? response.previews[0].selectorInputs[0]
@@ -809,6 +839,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         groupedTargets: selectedSelectionGroups.map((group) => ({
           groupKey: group.groupKey,
           selectorInputs: group.selectorInputs,
+          billingCycleId: group.billingCycleId,
         })),
       });
       const newErrors: { [key: string]: string } = {};
@@ -861,6 +892,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         groupedTargets: toGenerate.map((period) => ({
           groupKey: `child-selection:${period.executionIdentityKey}`,
           selectorInputs: [period.selectorInput],
+          billingCycleId: period.billingCycleId ?? null,
         })),
         allowPoOverage: decision === 'allow',
       });
@@ -949,6 +981,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         targets: [
           buildRecurringRunTargetFromSelection({
             selectorInput: previewState.selectorInput,
+            billingCycleId: previewState.billingCycleId,
           }),
         ],
       });
@@ -996,6 +1029,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         targets: [
           buildRecurringRunTargetFromSelection({
             selectorInput,
+            billingCycleId: poOverageSingleConfirm.billingCycleId,
           }),
         ],
         allowPoOverage: true,

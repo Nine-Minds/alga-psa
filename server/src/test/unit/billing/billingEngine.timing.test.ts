@@ -40,6 +40,8 @@ interface FixedChargeMockOptions {
   contractLineCustomRate?: number | null;
   assignmentCustomRate?: number | null;
   serviceRates?: number[];
+  serviceRows?: any[];
+  fallbackServiceRows?: any[];
   enableProration?: boolean;
   contractLineType?: string;
   billingCycleAlignment?: "start" | "end" | "prorated";
@@ -54,6 +56,25 @@ const installFixedChargeMocks = (
     endDate: "2025-02-01",
   };
   const serviceRates = options.serviceRates ?? [6200];
+  const serviceRows =
+    options.serviceRows ??
+    serviceRates.map((rate, index) => ({
+      service_id: `service-${index + 1}`,
+      service_name: `Managed Support ${index + 1}`,
+      default_rate: rate,
+      tax_rate_id: null,
+      service_quantity: 1,
+      configuration_quantity: 1,
+      config_id: `config-${index + 1}`,
+      service_base_rate: rate,
+    }));
+  const fallbackServiceRows =
+    options.fallbackServiceRows ??
+    serviceRows.map((service) => ({
+      service_id: service.service_id,
+      service_name: service.service_name,
+      tax_rate_id: service.tax_rate_id ?? null,
+    }));
 
   (engine as any).tenant = "test_tenant";
   vi.spyOn(engine as any, "getBillingCycle").mockResolvedValue("monthly");
@@ -106,16 +127,14 @@ const installFixedChargeMocks = (
     if (tableName === "contract_line_services as cls") {
       return buildQuery(
         null,
-        serviceRates.map((rate, index) => ({
-          service_id: `service-${index + 1}`,
-          service_name: `Managed Support ${index + 1}`,
-          default_rate: rate,
-          tax_rate_id: null,
-          service_quantity: 1,
-          configuration_quantity: 1,
-          config_id: `config-${index + 1}`,
-          service_base_rate: rate,
-        })),
+        serviceRows,
+      );
+    }
+
+    if (tableName === "contract_line_services as cls_fallback") {
+      return buildQuery(
+        fallbackServiceRows[0] ?? null,
+        fallbackServiceRows,
       );
     }
 
@@ -776,6 +795,58 @@ describe("BillingEngine billing timing", () => {
         servicePeriodEnd: "2025-01-31",
         billingTiming: "arrears",
         client_contract_id: "assignment-1",
+      }),
+    ]);
+  });
+
+  it("T166: fixed recurring base-rate-only lines still emit a billable charge when no service rows exist", async () => {
+    const engine = new BillingEngine();
+    const billingPeriod = installFixedChargeMocks(engine, {
+      contractLineCustomRate: 12000,
+      serviceRows: [],
+      fallbackServiceRows: [
+        {
+          service_id: "service-fallback",
+          service_name: "Base Rate Only Fixed Fee",
+          tax_rate_id: null,
+        },
+      ],
+      enableProration: false,
+      billingPeriod: {
+        startDate: "2025-04-01",
+        endDate: "2025-05-01",
+      },
+    });
+
+    const charges = await (engine as any).calculateFixedPriceCharges(
+      "client-1",
+      billingPeriod,
+      {
+        client_contract_line_id: "ccd-1",
+        client_id: "client-1",
+        contract_line_id: "contract-line-1",
+        client_contract_id: "assignment-1",
+        contract_id: "contract-1",
+        contract_line_name: "Base Rate Only Fixed Fee",
+        contract_name: "Acme Corp",
+        billing_timing: "advance",
+        start_date: "2025-03-01",
+        end_date: null,
+        custom_rate: null,
+      },
+    );
+
+    expect(charges).toEqual([
+      expect.objectContaining({
+        type: "fixed",
+        serviceId: "service-fallback",
+        serviceName: "Base Rate Only Fixed Fee",
+        rate: 12000,
+        total: 12000,
+        client_contract_line_id: "ccd-1",
+        servicePeriodStart: "2025-04-01",
+        servicePeriodEnd: "2025-04-30",
+        billingTiming: "advance",
       }),
     ]);
   });

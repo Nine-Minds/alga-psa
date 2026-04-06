@@ -81,6 +81,7 @@ interface PersistedRecurringDueWorkDbRow {
     schedule_key: string;
     period_key: string;
     lifecycle_state: string;
+    reason_code?: string | null;
     cadence_owner: 'client' | 'contract';
     due_position: DuePosition;
     service_period_start: ISO8601String;
@@ -370,6 +371,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'rsp.schedule_key',
             'rsp.period_key',
             'rsp.lifecycle_state',
+            'rsp.reason_code',
             'rsp.cadence_owner',
             'rsp.due_position',
             'rsp.service_period_start',
@@ -438,6 +440,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'rsp.schedule_key',
             'rsp.period_key',
             'rsp.lifecycle_state',
+            'rsp.reason_code',
             'rsp.cadence_owner',
             'rsp.due_position',
             'rsp.service_period_start',
@@ -1260,6 +1263,14 @@ export const getAvailableRecurringDueWork = withAuth(async (
             asOf,
             groupingMetadataByRecordId,
         );
+        const compatibilityBackfillRecordIds = new Set(
+            persistedDbRows
+                .filter((row) => row.reason_code === 'backfill_materialization')
+                .map((row) => row.record_id),
+        );
+        const readyPersistedRows = persistedRows.filter(
+            (row) => !row.recordId || !compatibilityBackfillRecordIds.has(row.recordId),
+        );
         const unresolvedNonContractRows = await fetchUnresolvedNonContractDueWorkRows(
             candidateBillingPeriods,
             asOf,
@@ -1267,7 +1278,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
             clientMetadataById,
         );
         const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(
-            [...persistedRows, ...unresolvedNonContractRows],
+            [...readyPersistedRows, ...unresolvedNonContractRows],
             groupingMetadataByRecordId,
         );
         const persistedIdentityKeys = new Set(
