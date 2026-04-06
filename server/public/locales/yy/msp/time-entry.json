@@ -156,16 +156,16 @@
     "assignment": {
       "oneUser": "55555",
       "multipleUsers": "55555 {{count}} 55555",
-      "additionalUsers": "55555 {{name}} {{count}} 55555",
-      "additionalUsersOther": "55555 {{name}} {{count}} 55555"
+      "additionalUsers": "55555 {{name}} 55555 {{count}} 55555",
+      "additionalUsersOther": "55555 {{name}} 55555 {{count}} 55555"
     },
     "bundledTicket": "55555 {{suffix}} 55555",
     "pagination": {
       "previous": "55555",
       "next": "55555",
-      "pageInfo": "55555 {{current}} {{total}} {{records}} 55555"
+      "pageInfo": "55555 {{current}} 55555 {{total}} 55555 {{records}} 55555"
     },
-    "interactionType": "55555 {{type}} {{client}} 55555"
+    "interactionType": "55555 {{type}} 55555 {{client}} 55555"
   },
   "timeSheetHeader": {
     "title": "55555",
@@ -176,7 +176,7 @@
       "nextWeek": "55555"
     },
     "pagination": {
-      "pageInfo": "55555 {{current}} {{total}} 55555"
+      "pageInfo": "55555 {{current}} 55555 {{total}} 55555"
     },
     "labels": {
       "status": "55555",
@@ -248,7 +248,7 @@
   "feedback": {
     "approverFeedback": "55555",
     "viewHistory": "55555",
-    "approverOn": "55555 {{name}} {{value}} 55555"
+    "approverOn": "55555 {{name}} 55555 {{value}} 55555"
   },
   "managerDashboard": {
     "access": {
