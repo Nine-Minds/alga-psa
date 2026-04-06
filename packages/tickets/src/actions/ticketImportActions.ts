@@ -13,6 +13,7 @@ import {
   ITicketImportResult,
   IProcessedTicketData,
   IClientResolution,
+  IContactResolution,
   ITicketStatusResolution,
   IPriorityResolution,
   ICategoryResolution,
@@ -22,7 +23,7 @@ import {
 // CSV template
 // ---------------------------------------------------------------------------
 
-export async function generateTicketCSVTemplate(): Promise<string> {
+export const generateTicketCSVTemplate = withAuth(async (_user, _ctx): Promise<string> => {
   const templateData = [
     {
       title: 'Network connectivity issue',
@@ -108,7 +109,7 @@ export async function generateTicketCSVTemplate(): Promise<string> {
   ];
 
   return unparseCSV(templateData, fields);
-}
+});
 
 // ---------------------------------------------------------------------------
 // Reference data
@@ -123,9 +124,9 @@ export const getTicketImportReferenceData = withAuth(async (
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const [boards, users, teams, priorities, clients, contacts, allStatuses, allCategories] = await Promise.all([
-      // Active boards
+      // Active boards (include priority_type for ITIL enforcement)
       trx('boards')
-        .select('board_id', 'board_name', 'is_default')
+        .select('board_id', 'board_name', 'is_default', 'priority_type')
         .where('tenant', tenant)
         .where('is_inactive', false)
         .orderBy('board_name'),
@@ -144,9 +145,9 @@ export const getTicketImportReferenceData = withAuth(async (
         .where('tenant', tenant)
         .orderBy('team_name'),
 
-      // Ticket priorities
+      // Ticket priorities (include ITIL flag for board-type enforcement)
       trx('priorities')
-        .select('priority_id', 'priority_name')
+        .select('priority_id', 'priority_name', 'is_from_itil_standard')
         .where('tenant', tenant)
         .where('item_type', 'ticket')
         .orderBy('order_number'),
@@ -181,7 +182,7 @@ export const getTicketImportReferenceData = withAuth(async (
 
     // Build lookup maps
     const boardLookup: Record<string, string> = {};
-    boards.forEach((b: { board_id: string; board_name: string }) => {
+    boards.forEach((b: { board_id: string; board_name: string; priority_type?: string }) => {
       boardLookup[b.board_name.toLowerCase().trim()] = b.board_id;
     });
 
@@ -288,6 +289,7 @@ export const importTickets = withAuth(async (
   processedTickets: IProcessedTicketData[],
   statusResolutions: ITicketStatusResolution[],
   clientResolutions: IClientResolution[],
+  contactResolutions: IContactResolution[],
   priorityResolutions: IPriorityResolution[],
   categoryResolutions: ICategoryResolution[],
   defaultBoardId: string
@@ -299,9 +301,46 @@ export const importTickets = withAuth(async (
       throw new Error('Permission denied: Cannot create tickets');
     }
 
+    // Check entity-creation permissions for each resolution type that has 'create' actions
+    const hasClientCreates = clientResolutions.some(r => r.action === 'create');
+    if (hasClientCreates && !await hasPermission(user, 'client', 'create')) {
+      throw new Error('Permission denied: Cannot create clients. Change unmatched clients to "Map to existing" or "Skip".');
+    }
+
+    const hasPriorityCreates = priorityResolutions.some(r => r.action === 'create');
+    if (hasPriorityCreates && !await hasPermission(user, 'priority', 'create')) {
+      throw new Error('Permission denied: Cannot create priorities. Change unmatched priorities to "Map to existing" or "Use default".');
+    }
+
+    const hasContactCreates = contactResolutions.some(r => r.action === 'create');
+    if (hasContactCreates && !await hasPermission(user, 'contact', 'create')) {
+      throw new Error('Permission denied: Cannot create contacts. Change unmatched contacts to "Map to existing" or "Skip".');
+    }
+
+    // Statuses and categories are board configuration — gated by ticket_settings:update
+    const hasStatusCreates = statusResolutions.some(r => r.action === 'create');
+    const hasCategoryCreates = categoryResolutions.some(r => r.action === 'create');
+    if ((hasStatusCreates || hasCategoryCreates) && !await hasPermission(user, 'ticket_settings', 'update')) {
+      const entities = [hasStatusCreates && 'statuses', hasCategoryCreates && 'categories'].filter(Boolean).join(' and ');
+      throw new Error(`Permission denied: Cannot create ${entities}. Change unmatched items to "Map to existing" or use defaults.`);
+    }
+
+    // Check board priority_type for ITIL enforcement
+    const board = await trx('boards')
+      .where({ board_id: defaultBoardId, tenant })
+      .select('priority_type')
+      .first();
+    const boardPriorityType = board?.priority_type || 'custom';
+
+    if (boardPriorityType === 'itil' && priorityResolutions.some(r => r.action === 'create')) {
+      throw new Error('Cannot create custom priorities for an ITIL board. Map unmatched priorities to existing ITIL priorities or use the default.');
+    }
+
     let ticketsCreated = 0;
     let ticketsSkipped = 0;
-    const errors: string[] = [];
+    const errors: string[] = [];     // Hard failures
+    const warnings: string[] = [];   // Non-fatal: skips, contact mismatches, etc.
+    const ticketNumbers: string[] = [];
 
     // Helper: run an insert inside a savepoint so a failure doesn't poison the transaction
     async function safeInsert<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
@@ -391,6 +430,7 @@ export const importTickets = withAuth(async (
               item_type: 'ticket',
               order_number: nextOrder,
               color: '#6B7280',
+              is_from_itil_standard: false,
               created_by: user.user_id,
               created_at: new Date(),
             })
@@ -453,28 +493,57 @@ export const importTickets = withAuth(async (
       throw new Error('No ticket priorities found. Please configure priorities first.');
     }
 
-    // Step 6: Create tickets
+    // Pre-load all status is_closed flags to avoid per-ticket queries
+    const allStatuses = await trx('statuses')
+      .where({ tenant, status_type: 'ticket' })
+      .select('status_id', 'is_closed');
+    const statusClosedMap = new Map<string, boolean>();
+    for (const s of allStatuses) {
+      statusClosedMap.set(s.status_id, Boolean(s.is_closed));
+    }
+
+    // Pre-load contact → client_id mapping for cross-client validation
+    const allContacts = await trx('contacts')
+      .where({ tenant })
+      .select('contact_name_id', 'client_id');
+    const contactClientMap = new Map<string, string | null>();
+    for (const c of allContacts) {
+      contactClientMap.set(c.contact_name_id, c.client_id || null);
+    }
+
+    // Collect post-creation updates to batch at the end
+    const enteredAtUpdates: Array<{ ticket_id: string; entered_at: string }> = [];
+    const closedUpdates: Array<{ ticket_id: string; closed_at: string; closed_by: string }> = [];
+
+    // Step 6: Pre-resolve all tickets (pure logic, no DB)
+    interface ResolvedTicket {
+      ticket: IProcessedTicketData;
+      clientId: string;
+      statusId: string;
+      priorityId: string;
+      categoryId: string | undefined;
+      contactId: string | null;
+      isClosed: boolean;
+    }
+    const resolvedTickets: ResolvedTicket[] = [];
+
     for (const ticket of processedTickets) {
       if (!ticket.title) {
         ticketsSkipped++;
-        errors.push(`Row ${ticket.rowNumber}: Skipped — title is missing`);
+        warnings.push(`Row ${ticket.rowNumber}: Skipped — title is missing`);
         continue;
       }
 
-      // Resolve client_id from creation placeholders
       let resolvedClientId = ticket.client_id;
       if (resolvedClientId?.startsWith('__create__:')) {
-        const clientName = resolvedClientId.replace('__create__:', '');
-        resolvedClientId = createdClientMap.get(clientName.toLowerCase().trim()) || null;
+        resolvedClientId = createdClientMap.get(resolvedClientId.replace('__create__:', '').toLowerCase().trim()) || null;
       }
-
       if (!resolvedClientId) {
         ticketsSkipped++;
-        errors.push(`Row ${ticket.rowNumber}: Skipped — client could not be resolved`);
+        warnings.push(`Row ${ticket.rowNumber}: Skipped — client could not be resolved`);
         continue;
       }
 
-      // Resolve all __create__ placeholders to actual IDs
       let resolvedStatusId = ticket.status_id;
       if (resolvedStatusId?.startsWith('__create__:')) {
         resolvedStatusId = createdStatusMap.get(resolvedStatusId.replace('__create__:', '').toLowerCase().trim()) || null;
@@ -487,84 +556,200 @@ export const importTickets = withAuth(async (
       if (resolvedCategoryId?.startsWith('__create__:')) {
         resolvedCategoryId = createdCategoryMap.get(resolvedCategoryId.replace('__create__:', '').toLowerCase().trim()) || null;
       }
-      let resolvedSubcategoryId = ticket.subcategory_id;
-      if (resolvedSubcategoryId?.startsWith('__create_sub__:')) {
-        resolvedSubcategoryId = createdCategoryMap.get(resolvedSubcategoryId.replace('__create_sub__:', '').toLowerCase().trim()) || null;
+
+      // Resolve contact — handle __create__ placeholders and cross-client validation
+      let resolvedContactId = ticket.contact_id || null;
+      if (resolvedContactId?.startsWith('__create__:')) {
+        // Defer creation to the ticket loop (needs clientId); store placeholder for now
+      } else if (resolvedContactId) {
+        const contactClientId = contactClientMap.get(resolvedContactId);
+        if (contactClientId && contactClientId !== resolvedClientId) {
+          warnings.push(`Row ${ticket.rowNumber}: Contact does not belong to the ticket's client — contact cleared`);
+          resolvedContactId = null;
+        }
       }
 
-      // Use a savepoint so one ticket failure doesn't abort the rest
-      const created = await safeInsert(`Row ${ticket.rowNumber}: Failed to create ticket "${ticket.title}"`, async () => {
-        // Determine if ticket should be closed based on status
-        let isClosed = ticket.is_closed;
-        if (resolvedStatusId) {
-          const statusRow = await trx('statuses')
-            .where({ status_id: resolvedStatusId, tenant })
-            .select('is_closed')
-            .first();
-          if (statusRow?.is_closed) isClosed = true;
-        }
+      const finalStatusId = resolvedStatusId || resolvedFallbackStatusId;
+      let isClosed = ticket.is_closed;
+      if (finalStatusId && statusClosedMap.get(finalStatusId)) {
+        isClosed = true;
+      }
 
-        const createInput: CreateTicketInput = {
-          title: ticket.title,
-          description: ticket.description || undefined,
-          client_id: resolvedClientId!,
-          contact_id: ticket.contact_id || undefined,
-          status_id: resolvedStatusId || resolvedFallbackStatusId,
-          priority_id: resolvedPriorityId || fallbackPriorityId,
-          board_id: ticket.board_id,
-          category_id: resolvedCategoryId || undefined,
-          subcategory_id: resolvedSubcategoryId || undefined,
-          assigned_to: ticket.assigned_to || undefined,
-          assigned_team_id: ticket.assigned_team_id || undefined,
-          due_date: ticket.due_date || undefined,
-          entered_by: user.user_id,
-          source: 'csv_import',
-          ticket_origin: 'INTERNAL',
-        };
-
-        const result = await TicketModel.createTicket(
-          createInput,
-          tenant,
-          trx,
-          { skipLocationValidation: true, skipCategoryValidation: true, skipSubcategoryValidation: true, skipStatusBoardValidation: true },
-          undefined,
-          undefined,
-          user.user_id
-        );
-
-        if (isClosed && result.ticket_id) {
-          await trx('tickets').where({ ticket_id: result.ticket_id, tenant }).update({
-            closed_at: ticket.closed_at || new Date().toISOString(),
-            closed_by: user.user_id,
-          });
-        }
-
-        if (ticket.entered_at && result.ticket_id) {
-          await trx('tickets').where({ ticket_id: result.ticket_id, tenant }).update({ entered_at: ticket.entered_at });
-        }
-
-        if (ticket.tags.length > 0 && result.ticket_id) {
-          const pendingTags = ticket.tags.map(tagText => ({
-            tag_text: tagText, background_color: null, text_color: null, isNew: true,
-          }));
-          await createTagsForEntityWithTransaction(trx, tenant, result.ticket_id, 'ticket', pendingTags);
-        }
-
-        return result;
+      resolvedTickets.push({
+        ticket,
+        clientId: resolvedClientId,
+        statusId: finalStatusId,
+        priorityId: resolvedPriorityId || fallbackPriorityId,
+        categoryId: resolvedCategoryId || undefined,
+        contactId: resolvedContactId,
+        isClosed,
       });
+    }
 
-      if (created) {
-        ticketsCreated++;
-      } else {
-        ticketsSkipped++;
+    // Step 7: Create tickets in batches with shared savepoints.
+    // Each batch shares one savepoint; on failure, retry the batch one-by-one.
+    const SP_BATCH = 25;
+
+    // Contacts created during import, keyed by "contactName\0clientId" to deduplicate
+    const createdContactMap = new Map<string, string>();
+
+    async function createSingleTicket(rt: ResolvedTicket): Promise<{ ticket_id: string; ticket_number: string } | null> {
+      const { ticket, clientId, statusId, priorityId, categoryId, isClosed } = rt;
+      let { contactId } = rt;
+
+      // Resolve __create__ contact placeholder — create contact for this client
+      if (contactId?.startsWith('__create__:')) {
+        const contactName = contactId.replace('__create__:', '');
+        const dedupeKey = `${contactName.toLowerCase().trim()}\0${clientId}`;
+        if (createdContactMap.has(dedupeKey)) {
+          contactId = createdContactMap.get(dedupeKey)!;
+        } else {
+          const [newContact] = await trx('contacts')
+            .insert({
+              contact_name_id: trx.raw('gen_random_uuid()'),
+              tenant,
+              full_name: contactName,
+              client_id: clientId,
+              is_inactive: false,
+              is_client_admin: false,
+              created_at: trx.raw('now()'),
+              updated_at: trx.raw('now()'),
+            })
+            .returning(['contact_name_id']);
+          contactId = newContact.contact_name_id as string;
+          createdContactMap.set(dedupeKey, contactId);
+        }
+      }
+
+      const createInput: CreateTicketInput = {
+        title: ticket.title,
+        description: ticket.description || undefined,
+        client_id: clientId,
+        contact_id: contactId || undefined,
+        status_id: statusId,
+        priority_id: priorityId,
+        board_id: ticket.board_id,
+        category_id: categoryId,
+        subcategory_id: undefined,
+        assigned_to: ticket.assigned_to || undefined,
+        assigned_team_id: ticket.assigned_team_id || undefined,
+        due_date: ticket.due_date || undefined,
+        entered_by: user.user_id,
+        source: 'csv_import',
+        ticket_origin: 'INTERNAL',
+      };
+
+      const result = await TicketModel.createTicket(
+        createInput, tenant, trx,
+        { skipLocationValidation: true, skipCategoryValidation: true, skipSubcategoryValidation: true, skipStatusBoardValidation: true },
+        undefined, undefined, user.user_id
+      );
+
+      if (isClosed && result.ticket_id) {
+        closedUpdates.push({
+          ticket_id: result.ticket_id,
+          closed_at: ticket.closed_at || new Date().toISOString(),
+          closed_by: user.user_id,
+        });
+      }
+      if (ticket.entered_at && result.ticket_id) {
+        enteredAtUpdates.push({ ticket_id: result.ticket_id, entered_at: ticket.entered_at });
+      }
+      if (ticket.tags.length > 0 && result.ticket_id) {
+        const pendingTags = ticket.tags.map(tagText => ({
+          tag_text: tagText, background_color: null, text_color: null, isNew: true,
+        }));
+        await createTagsForEntityWithTransaction(trx, tenant, result.ticket_id, 'ticket', pendingTags);
+      }
+
+      return result;
+    }
+
+    for (let i = 0; i < resolvedTickets.length; i += SP_BATCH) {
+      const batch = resolvedTickets.slice(i, i + SP_BATCH);
+      const sp = `sp_batch_${i}`;
+      let batchOk = false;
+
+      // Snapshot mutable state before attempting the batch so we can restore on rollback
+      const prevEnteredLen = enteredAtUpdates.length;
+      const prevClosedLen = closedUpdates.length;
+      const prevCreated = ticketsCreated;
+      const prevNumbers = ticketNumbers.length;
+      const prevContactMap = new Map(createdContactMap);
+
+      // Try the batch under one savepoint
+      await trx.raw(`SAVEPOINT ${sp}`);
+      try {
+        for (const rt of batch) {
+          const result = await createSingleTicket(rt);
+          if (result) {
+            ticketsCreated++;
+            if (result.ticket_number) ticketNumbers.push(result.ticket_number);
+          }
+        }
+        await trx.raw(`RELEASE SAVEPOINT ${sp}`);
+        batchOk = true;
+      } catch {
+        // Batch failed — rollback DB and restore in-memory state
+        await trx.raw(`ROLLBACK TO SAVEPOINT ${sp}`);
+        await trx.raw(`RELEASE SAVEPOINT ${sp}`);
+        enteredAtUpdates.length = prevEnteredLen;
+        closedUpdates.length = prevClosedLen;
+        ticketsCreated = prevCreated;
+        ticketNumbers.length = prevNumbers;
+        // Restore createdContactMap — contacts created in the failed batch were rolled back
+        createdContactMap.clear();
+        for (const [k, v] of prevContactMap) createdContactMap.set(k, v);
+      }
+
+      if (!batchOk) {
+        // Fall back to per-ticket savepoints for this batch
+        for (const rt of batch) {
+          const created = await safeInsert(
+            `Row ${rt.ticket.rowNumber}: Failed to create ticket "${rt.ticket.title}"`,
+            () => createSingleTicket(rt)
+          );
+          if (created) {
+            ticketsCreated++;
+            if (created.ticket_number) ticketNumbers.push(created.ticket_number);
+          } else {
+            ticketsSkipped++;
+          }
+        }
       }
     }
 
+    // Batch post-creation updates to reduce round-trips
+    // Use parameterized VALUES + UPDATE FROM to avoid string interpolation
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < enteredAtUpdates.length; i += BATCH_SIZE) {
+      const batch = enteredAtUpdates.slice(i, i + BATCH_SIZE);
+      const values = batch.map(() => '(?::uuid, ?::timestamptz)').join(', ');
+      const params: (string)[] = [];
+      for (const u of batch) { params.push(u.ticket_id, u.entered_at); }
+      await trx.raw(
+        `UPDATE tickets t SET entered_at = v.entered_at FROM (VALUES ${values}) AS v(tid, entered_at) WHERE t.ticket_id = v.tid AND t.tenant = ?`,
+        [...params, tenant]
+      );
+    }
+    for (let i = 0; i < closedUpdates.length; i += BATCH_SIZE) {
+      const batch = closedUpdates.slice(i, i + BATCH_SIZE);
+      const values = batch.map(() => '(?::uuid, ?::timestamptz, ?::uuid)').join(', ');
+      const params: (string)[] = [];
+      for (const u of batch) { params.push(u.ticket_id, u.closed_at, u.closed_by); }
+      await trx.raw(
+        `UPDATE tickets t SET closed_at = v.closed_at, closed_by = v.closed_by FROM (VALUES ${values}) AS v(tid, closed_at, closed_by) WHERE t.ticket_id = v.tid AND t.tenant = ?`,
+        [...params, tenant]
+      );
+    }
+
     return {
-      success: errors.length === 0,
+      success: ticketsCreated > 0 || (processedTickets.length === 0 && errors.length === 0),
       ticketsCreated,
       ticketsSkipped,
       errors,
+      warnings,
+      ticketNumbers,
     };
   });
 });

@@ -304,7 +304,12 @@ export interface ITicketImportResult {
   success: boolean;
   ticketsCreated: number;
   ticketsSkipped: number;
+  /** Hard failures (e.g. ticket creation threw an error) */
   errors: string[];
+  /** Non-fatal messages (skipped rows, contact client mismatches, etc.) */
+  warnings: string[];
+  /** Ticket numbers of successfully created tickets, for post-import discoverability */
+  ticketNumbers: string[];
 }
 
 /**
@@ -314,10 +319,10 @@ export interface ITicketImportResult {
  */
 export interface ITicketImportReferenceData {
   // Full objects for dropdowns/pickers
-  boards: Array<{ board_id: string; board_name: string; is_default: boolean }>;
+  boards: Array<{ board_id: string; board_name: string; is_default: boolean; priority_type?: 'custom' | 'itil' }>;
   users: ITicketImportUser[];
   teams: Array<{ team_id: string; team_name: string }>;
-  priorities: Array<{ priority_id: string; priority_name: string }>;
+  priorities: Array<{ priority_id: string; priority_name: string; is_from_itil_standard?: boolean }>;
   clients: Array<{ client_id: string; client_name: string }>;
   contacts: Array<{ contact_name_id: string; full_name: string; email: string | null; client_id: string | null }>;
   /** Statuses grouped by board_id */
@@ -423,7 +428,7 @@ export interface ICategoryResolution {
 
 // --- Contact Resolution ---
 
-export type ContactResolutionAction = 'map_to_existing' | 'skip';
+export type ContactResolutionAction = 'create' | 'map_to_existing' | 'skip';
 
 export interface IContactResolution {
   originalContactName: string;
@@ -441,17 +446,6 @@ export interface ITeamResolution {
   action: TeamResolutionAction;
   /** If action is 'map_to_existing', the target team ID */
   mappedTeamId?: string;
-}
-
-// --- Board Resolution ---
-
-export type BoardResolutionAction = 'map_to_existing' | 'use_default';
-
-export interface IBoardResolution {
-  originalBoardName: string;
-  action: BoardResolutionAction;
-  /** If action is 'map_to_existing', the target board ID */
-  mappedBoardId?: string;
 }
 
 // --- Date Format Resolution ---

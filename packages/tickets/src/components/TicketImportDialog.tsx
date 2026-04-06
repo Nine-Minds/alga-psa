@@ -13,7 +13,8 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import type { IUser, IBoard, IClient } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { Upload, AlertTriangle, Check, Download } from 'lucide-react';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Upload, AlertTriangle, Check, Download, ChevronDown } from 'lucide-react';
 import { parseCSV } from '@alga-psa/core';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -338,35 +339,68 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       setUnmatchedTeams(validation.unmatchedTeams);
       setUnmatchedTeamInfo(buildEntityInfo(validation.unmatchedTeams, r => r.assigned_team, validation.validationResults));
 
-      // Initialize resolutions with sensible defaults
-      setClientResolutions(validation.unmatchedClients.map(name => ({
-        originalClientName: name, action: 'create' as ClientResolutionAction,
-      })));
-      setAgentResolutions(validation.unmatchedAgents.map(name => ({
-        originalAgentName: name, action: 'skip' as TicketAgentResolutionAction,
-      })));
-      setStatusResolutions(validation.unmatchedStatuses.map(name => ({
-        originalStatusName: name, boardId: defaultBoardId, action: 'create' as TicketStatusResolutionAction,
-      })));
-      setPriorityResolutions(validation.unmatchedPriorities.map(name => ({
-        originalPriorityName: name, action: 'create' as PriorityResolutionAction,
-      })));
-      setCategoryResolutions([
-        ...validation.unmatchedCategories.map(name => ({
-          originalCategoryName: name, boardId: defaultBoardId, action: 'create' as CategoryResolutionAction,
-        })),
-      ]);
-      setContactResolutions(validation.unmatchedContacts.map(name => ({
-        originalContactName: name, action: 'skip' as ContactResolutionAction,
-      })));
-      setTeamResolutions(validation.unmatchedTeams.map(name => ({
-        originalTeamName: name, action: 'skip' as TeamResolutionAction,
-      })));
+      // Initialize resolutions — preserve existing user picks for items still unmatched,
+      // only add defaults for newly-discovered unmatched items.
+      setClientResolutions(prev => {
+        const existing = new Map(prev.map(r => [r.originalClientName.toLowerCase(), r]));
+        return validation.unmatchedClients.map(name =>
+          existing.get(name.toLowerCase()) || { originalClientName: name, action: 'create' as ClientResolutionAction }
+        );
+      });
+      setAgentResolutions(prev => {
+        const existing = new Map(prev.map(r => [r.originalAgentName.toLowerCase(), r]));
+        return validation.unmatchedAgents.map(name =>
+          existing.get(name.toLowerCase()) || { originalAgentName: name, action: 'skip' as TicketAgentResolutionAction }
+        );
+      });
+      setStatusResolutions(prev => {
+        const existing = new Map(prev.map(r => [r.originalStatusName.toLowerCase(), r]));
+        return validation.unmatchedStatuses.map(name =>
+          existing.get(name.toLowerCase()) || { originalStatusName: name, boardId: defaultBoardId, action: 'create' as TicketStatusResolutionAction }
+        );
+      });
+      setPriorityResolutions(prev => {
+        const existing = new Map(prev.map(r => [r.originalPriorityName.toLowerCase(), r]));
+        // ITIL boards don't allow creating custom priorities
+        const boardInfo = refData.boards.find(b => b.board_id === defaultBoardId);
+        const defaultPrioAction: PriorityResolutionAction = (boardInfo as { priority_type?: string } | undefined)?.priority_type === 'itil' ? 'use_default' : 'create';
+        return validation.unmatchedPriorities.map(name => {
+          const prev = existing.get(name.toLowerCase());
+          if (prev) {
+            // If board switched to ITIL, force existing "create" picks to "use_default"
+            if (defaultPrioAction === 'use_default' && prev.action === 'create') {
+              return { ...prev, action: 'use_default' as PriorityResolutionAction };
+            }
+            return prev;
+          }
+          return { originalPriorityName: name, action: defaultPrioAction };
+        });
+      });
+      setCategoryResolutions(prev => {
+        const existing = new Map(prev.map(r => [r.originalCategoryName.toLowerCase(), r]));
+        return validation.unmatchedCategories.map(name =>
+          existing.get(name.toLowerCase()) || { originalCategoryName: name, boardId: defaultBoardId, action: 'create' as CategoryResolutionAction }
+        );
+      });
+      setContactResolutions(prev => {
+        const existing = new Map(prev.map(r => [r.originalContactName.toLowerCase(), r]));
+        return validation.unmatchedContacts.map(name =>
+          existing.get(name.toLowerCase()) || { originalContactName: name, action: 'create' as ContactResolutionAction }
+        );
+      });
+      setTeamResolutions(prev => {
+        const existing = new Map(prev.map(r => [r.originalTeamName.toLowerCase(), r]));
+        return validation.unmatchedTeams.map(name =>
+          existing.get(name.toLowerCase()) || { originalTeamName: name, action: 'skip' as TeamResolutionAction }
+        );
+      });
       setUnparsableDateGroups(validation.unparsableDateGroups);
-      setDateFormatResolutions(validation.unparsableDateGroups.map(g => ({
-        patternKey: g.patternKey,
-        selectedFormat: g.possibleFormats[0] || 'skip',
-      })));
+      setDateFormatResolutions(prev => {
+        const existing = new Map(prev.map(r => [r.patternKey, r]));
+        return validation.unparsableDateGroups.map(g =>
+          existing.get(g.patternKey) || { patternKey: g.patternKey, selectedFormat: g.possibleFormats[0] || 'skip' }
+        );
+      });
 
       // Auto-expand sections that have unmatched items
       const sections = new Set<string>();
@@ -471,7 +505,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       );
 
       const result = await importTickets(
-        processed, statusResolutions, clientResolutions,
+        processed, statusResolutions, clientResolutions, contactResolutions,
         priorityResolutions, categoryResolutions, defaultBoardId
       );
       setImportResult(result);
@@ -552,6 +586,12 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     unmatchedStatuses.length + unmatchedCategories.length + unmatchedAgents.length +
     unmatchedTeams.length + unmatchedContacts.length + unparsableDateGroups.length;
 
+  // Check if the selected board uses ITIL priorities (disables "Create new" for priorities)
+  const isItilBoard = useMemo(() => {
+    const board = initialBoards.find(b => b.board_id === defaultBoardId);
+    return (board as { priority_type?: string } | undefined)?.priority_type === 'itil';
+  }, [initialBoards, defaultBoardId]);
+
   // Board categories for category resolution
   const boardCategories = useMemo(() => {
     if (!referenceData || !defaultBoardId) return [];
@@ -573,6 +613,83 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     if (!referenceData || !defaultBoardId) return [];
     return referenceData.statusesByBoard[defaultBoardId] || referenceData.statusesByBoard['_global'] || [];
   }, [referenceData, defaultBoardId]);
+
+  // client_id → client_name lookup for annotating contact dropdown
+  const clientNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (referenceData) {
+      for (const c of referenceData.clients) map.set(c.client_id, c.client_name);
+    }
+    return map;
+  }, [referenceData]);
+
+  // For each unmatched contact: which client(s) reference it, their resolved client_ids,
+  // and whether any clients are being newly created.
+  const contactClientContext = useMemo(() => {
+    // Step 1: collect which CSV client names reference each unmatched contact
+    const clientNamesPerContact = new Map<string, Set<string>>(); // lowercase contact → client names
+    for (const result of validationResults) {
+      const contact = result.data.contact?.trim();
+      const client = result.data.client?.trim();
+      if (!contact || !client) continue;
+      const key = contact.toLowerCase();
+      if (!unmatchedContacts.some(n => n.toLowerCase() === key)) continue;
+      if (!clientNamesPerContact.has(key)) clientNamesPerContact.set(key, new Set());
+      clientNamesPerContact.get(key)!.add(client);
+    }
+
+    // Step 2: resolve each CSV client name → client_id, display label, and creation status
+    const resolveClient = (clientName: string): { id: string | null; isCreating: boolean; displayLabel: string } => {
+      if (!referenceData) return { id: null, isCreating: false, displayLabel: clientName };
+      // Direct match — client exists with this name
+      const directId = referenceData.clientLookup[clientName.toLowerCase().trim()];
+      if (directId) return { id: directId, isCreating: false, displayLabel: clientName };
+      // Check client resolutions
+      const resolution = clientResolutions.find(
+        r => r.originalClientName.toLowerCase() === clientName.toLowerCase()
+      );
+      if (resolution?.action === 'map_to_existing' && resolution.mappedClientId) {
+        const targetName = clientNameMap.get(resolution.mappedClientId);
+        return {
+          id: resolution.mappedClientId,
+          isCreating: false,
+          displayLabel: targetName && targetName.toLowerCase() !== clientName.toLowerCase()
+            ? `${clientName} \u2192 ${targetName}`
+            : clientName,
+        };
+      }
+      if (resolution?.action === 'create') {
+        return { id: null, isCreating: true, displayLabel: `${clientName} (new)` };
+      }
+      return { id: null, isCreating: false, displayLabel: clientName };
+    };
+
+    // Step 3: build per-contact context
+    const result = new Map<string, {
+      clientDisplayLabels: string[];
+      resolvedClientIds: Set<string>;
+      hasCreatingClients: boolean;
+      allClientsCreating: boolean;
+    }>();
+    for (const [contactKey, clientNames] of clientNamesPerContact) {
+      const resolvedIds = new Set<string>();
+      const displayLabels: string[] = [];
+      let creatingCount = 0;
+      for (const name of clientNames) {
+        const { id, isCreating, displayLabel } = resolveClient(name);
+        if (id) resolvedIds.add(id);
+        if (isCreating) creatingCount++;
+        displayLabels.push(displayLabel);
+      }
+      result.set(contactKey, {
+        clientDisplayLabels: displayLabels,
+        resolvedClientIds: resolvedIds,
+        hasCreatingClients: creatingCount > 0,
+        allClientsCreating: creatingCount === clientNames.size,
+      });
+    }
+    return result;
+  }, [validationResults, unmatchedContacts, referenceData, clientResolutions]);
 
   // -------------------------------------------------------------------------
   // Render
@@ -717,7 +834,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                     <div key={fieldKey} className={`flex items-center gap-4 px-3 py-1.5 rounded-md ${isUnmapped && required ? 'bg-destructive/5 ring-1 ring-destructive/20' : ''}`}>
                       <span className={`w-1/3 text-sm font-medium flex items-center gap-2 ${isUnmapped && required ? 'text-destructive' : 'text-gray-900 dark:text-[rgb(var(--color-text-100))]'}`}>
                         {isUnmapped && required && <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
-                        {!isUnmapped && <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0" />}
+                        {!isUnmapped && <Check className="h-3.5 w-3.5 text-[rgb(var(--badge-success-text))] shrink-0" />}
                         {label}
                       </span>
                       <span className="text-gray-400 dark:text-[rgb(var(--color-text-500))]">&#8592;</span>
@@ -848,7 +965,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                       value ? (
                         <div className="flex justify-center">
                           <Tooltip content="Valid">
-                            <Check className="h-4 w-4 text-green-600 cursor-help" />
+                            <Check className="h-4 w-4 text-[rgb(var(--badge-success-text))] cursor-help" />
                           </Tooltip>
                         </div>
                       ) : (
@@ -993,7 +1110,10 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('clients')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
                     <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Clients ({unmatchedClients.length} unmatched)</span>
-                    <span className="text-xs text-red-500 font-medium">Required</span>
+                    <span className="flex items-center gap-2">
+                      <Badge variant="error" size="sm">Required</Badge>
+                      <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('clients') ? '' : '-rotate-90'}`} />
+                    </span>
                   </button>
                   {expandedSections.has('clients') && (
                     <div className="px-4 pb-4 space-y-3 border-t dark:border-[rgb(var(--color-border-200))]">
@@ -1033,6 +1153,10 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('priorities')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
                     <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Priorities ({unmatchedPriorities.length} unmatched)</span>
+                    <span className="flex items-center gap-2">
+                      {isItilBoard && <Badge variant="warning" size="sm">ITIL board — create disabled</Badge>}
+                      <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('priorities') ? '' : '-rotate-90'}`} />
+                    </span>
                   </button>
                   {expandedSections.has('priorities') && (
                     <div className="px-4 pb-4 space-y-3 border-t dark:border-[rgb(var(--color-border-200))]">
@@ -1049,13 +1173,13 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               orientation="horizontal"
                               size="sm"
                               options={[
-                                { value: 'create', label: 'Create new' },
+                                ...(!isItilBoard ? [{ value: 'create', label: 'Create new' }] : []),
                                 { value: 'map_to_existing', label: 'Map to existing' },
                                 { value: 'use_default', label: 'Use default' },
                               ]}
                             />
                             {res.action === 'map_to_existing' && referenceData && (
-                              <div className="ml-1"><CustomSelect options={referenceData.priorities.map(p => ({ value: p.priority_id, label: p.priority_name }))} value={res.mappedPriorityId || ''} onValueChange={(v) => handlePriorityResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select priority..." /></div>
+                              <div className="ml-1"><CustomSelect options={referenceData.priorities.filter(p => !isItilBoard || p.is_from_itil_standard).map(p => ({ value: p.priority_id, label: p.priority_name }))} value={res.mappedPriorityId || ''} onValueChange={(v) => handlePriorityResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select priority..." /></div>
                             )}
                           </div>
                         );
@@ -1070,6 +1194,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('statuses')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
                     <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Statuses ({unmatchedStatuses.length} unmatched)</span>
+                    <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('statuses') ? '' : '-rotate-90'}`} />
                   </button>
                   {expandedSections.has('statuses') && (
                     <div className="px-4 pb-4 space-y-3 border-t dark:border-[rgb(var(--color-border-200))]">
@@ -1107,6 +1232,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('categories')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
                     <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Categories ({unmatchedCategories.length} unmatched)</span>
+                    <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('categories') ? '' : '-rotate-90'}`} />
                   </button>
                   {expandedSections.has('categories') && (
                     <div className="px-4 pb-4 space-y-3 border-t dark:border-[rgb(var(--color-border-200))]">
@@ -1144,6 +1270,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('agents')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
                     <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Agents ({unmatchedAgents.length} unmatched)</span>
+                    <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('agents') ? '' : '-rotate-90'}`} />
                   </button>
                   {expandedSections.has('agents') && (
                     <div className="px-4 pb-4 space-y-3 border-t dark:border-[rgb(var(--color-border-200))]">
@@ -1182,6 +1309,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('teams')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
                     <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Teams ({unmatchedTeams.length} unmatched)</span>
+                    <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('teams') ? '' : '-rotate-90'}`} />
                   </button>
                   {expandedSections.has('teams') && (
                     <div className="px-4 pb-4 space-y-3 border-t dark:border-[rgb(var(--color-border-200))]">
@@ -1218,15 +1346,33 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('contacts')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
                     <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Contacts ({unmatchedContacts.length} unmatched)</span>
+                    <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('contacts') ? '' : '-rotate-90'}`} />
                   </button>
                   {expandedSections.has('contacts') && (
                     <div className="px-4 pb-4 space-y-3 border-t dark:border-[rgb(var(--color-border-200))]">
                       {unmatchedContactInfo.map(info => {
                         const res = contactResolutions.find(r => r.originalContactName.toLowerCase() === info.name.toLowerCase());
                         if (!res) return null;
+                        const ctx = contactClientContext.get(info.name.toLowerCase());
+                        const clientLabels = ctx?.clientDisplayLabels ?? [];
+                        const resolvedClientIds = ctx?.resolvedClientIds ?? new Set<string>();
+                        const allClientsCreating = ctx?.allClientsCreating ?? false;
+                        // Filter contacts to those belonging to the resolved client(s)
+                        const filteredContacts = referenceData && resolvedClientIds.size > 0
+                          ? referenceData.contacts.filter(c => c.client_id && resolvedClientIds.has(c.client_id))
+                          : [];
+                        const canMapToExisting = filteredContacts.length > 0;
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
-                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
+                            <div>
+                              <span className="font-medium text-sm">&quot;{info.name}&quot;</span>
+                              <span className="text-xs text-gray-500"> ({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span>
+                              {clientLabels.length > 0 && (
+                                <span className="text-xs text-[rgb(var(--color-text-500))] ml-1">
+                                  — on {clientLabels.join(', ')}
+                                </span>
+                              )}
+                            </div>
                             <RadioGroup
                               name={`contact-${info.name}`}
                               value={res.action}
@@ -1234,12 +1380,26 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               orientation="horizontal"
                               size="sm"
                               options={[
+                                { value: 'create', label: 'Create new' },
+                                ...(canMapToExisting ? [{ value: 'map_to_existing', label: 'Map to existing' }] : []),
                                 { value: 'skip', label: 'Skip (leave blank)' },
-                                { value: 'map_to_existing', label: 'Map to existing' },
                               ]}
                             />
-                            {res.action === 'map_to_existing' && referenceData && (
-                              <div className="ml-1"><CustomSelect options={referenceData.contacts.map(c => ({ value: c.contact_name_id, label: c.full_name + (c.email ? ` (${c.email})` : '') }))} value={res.mappedContactId || ''} onValueChange={(v) => handleContactResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select contact..." /></div>
+                            {res.action === 'map_to_existing' && referenceData && canMapToExisting && (
+                              <div className="ml-1">
+                                <CustomSelect
+                                  options={filteredContacts.map(c => {
+                                    const cClient = c.client_id ? clientNameMap.get(c.client_id) : null;
+                                    const label = c.full_name
+                                      + (c.email ? ` (${c.email})` : '')
+                                      + (cClient ? ` — ${cClient}` : '');
+                                    return { value: c.contact_name_id, label };
+                                  })}
+                                  value={res.mappedContactId || ''}
+                                  onValueChange={(v) => handleContactResolutionChange(info.name, 'map_to_existing', v)}
+                                  placeholder="Select contact..."
+                                />
+                              </div>
                             )}
                           </div>
                         );
@@ -1254,7 +1414,10 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('dates')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
                     <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Date Formats ({unparsableDateGroups.length} unrecognized)</span>
-                    <span className="text-xs text-amber-600 font-medium">Needs interpretation</span>
+                    <span className="flex items-center gap-2">
+                      <Badge variant="warning" size="sm">Needs interpretation</Badge>
+                      <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('dates') ? '' : '-rotate-90'}`} />
+                    </span>
                   </button>
                   {expandedSections.has('dates') && (
                     <div className="px-4 pb-4 space-y-4 border-t dark:border-[rgb(var(--color-border-200))]">
@@ -1354,30 +1517,73 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         {/* ============================================================= */}
         {step === 'complete' && importResult && (
           <div className="text-center py-8">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
-              <Check className="h-6 w-6 text-green-600 dark:text-green-400" />
-            </div>
-            <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-[rgb(var(--color-text-100))]">
-              Import Complete
-            </h3>
-            <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">
-              Successfully created <strong>{importResult.ticketsCreated}</strong> ticket{importResult.ticketsCreated === 1 ? '' : 's'}.
-              {importResult.ticketsSkipped > 0 && (
-                <> <strong>{importResult.ticketsSkipped}</strong> ticket{importResult.ticketsSkipped === 1 ? ' was' : 's were'} skipped.</>
-              )}
-            </p>
+            {importResult.ticketsCreated > 0 ? (
+              <>
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-[rgb(var(--badge-success-bg))] mb-4">
+                  <Check className="h-6 w-6 text-[rgb(var(--badge-success-text))]" />
+                </div>
+                <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-[rgb(var(--color-text-100))]">
+                  Import Complete
+                </h3>
+                <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">
+                  Successfully created <strong>{importResult.ticketsCreated}</strong> ticket{importResult.ticketsCreated === 1 ? '' : 's'}.
+                  {importResult.ticketsSkipped > 0 && (
+                    <> <strong>{importResult.ticketsSkipped}</strong> ticket{importResult.ticketsSkipped === 1 ? ' was' : 's were'} skipped.</>
+                  )}
+                </p>
+                {importResult.ticketNumbers.length > 0 && (
+                  <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))] mt-2">
+                    Ticket numbers: {importResult.ticketNumbers.slice(0, 20).join(', ')}
+                    {importResult.ticketNumbers.length > 20 && ` ... and ${importResult.ticketNumbers.length - 20} more`}
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-[rgb(var(--badge-error-bg))] mb-4">
+                  <AlertTriangle className="h-6 w-6 text-[rgb(var(--badge-error-text))]" />
+                </div>
+                <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-[rgb(var(--color-text-100))]">
+                  Import Failed
+                </h3>
+                <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">
+                  No tickets were created.
+                  {importResult.ticketsSkipped > 0 && (
+                    <> All <strong>{importResult.ticketsSkipped}</strong> ticket{importResult.ticketsSkipped === 1 ? ' was' : 's were'} skipped due to errors.</>
+                  )}
+                </p>
+              </>
+            )}
 
             {importResult.errors.length > 0 && (
               <div className="mt-4 text-left">
-                <Alert variant={importResult.ticketsCreated > 0 ? 'warning' : 'destructive'}>
+                <Alert variant="destructive">
                   <AlertDescription>
-                    <p className="font-medium mb-2">{importResult.errors.length} issue(s) during import:</p>
+                    <p className="font-medium mb-2">{importResult.errors.length} error{importResult.errors.length === 1 ? '' : 's'}:</p>
                     <div className="max-h-40 overflow-y-auto text-sm">
                       {importResult.errors.slice(0, 20).map((error, i) => (
                         <div key={i} className="mb-1">&#8226; {error}</div>
                       ))}
                       {importResult.errors.length > 20 && (
                         <div className="text-gray-500 mt-1">... and {importResult.errors.length - 20} more</div>
+                      )}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+
+            {importResult.warnings.length > 0 && (
+              <div className="mt-4 text-left">
+                <Alert variant="warning">
+                  <AlertDescription>
+                    <p className="font-medium mb-2">{importResult.warnings.length} warning{importResult.warnings.length === 1 ? '' : 's'}:</p>
+                    <div className="max-h-40 overflow-y-auto text-sm">
+                      {importResult.warnings.slice(0, 20).map((warning, i) => (
+                        <div key={i} className="mb-1">&#8226; {warning}</div>
+                      ))}
+                      {importResult.warnings.length > 20 && (
+                        <div className="text-gray-500 mt-1">... and {importResult.warnings.length - 20} more</div>
                       )}
                     </div>
                   </AlertDescription>

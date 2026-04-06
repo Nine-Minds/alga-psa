@@ -154,9 +154,12 @@ function classifyDatePattern(val: string): { patternKey: string; patternLabel: s
 function parseDateWithFormat(val: string, format: DateFormatInterpretation): string | null {
   const trimmed = val.trim();
 
+  // Split date and time portions so we can preserve time through format resolution
+  const spaceIndex = trimmed.search(/\s+\d/);
+  const datePart = spaceIndex >= 0 ? trimmed.slice(0, spaceIndex) : trimmed;
+  const timePart = spaceIndex >= 0 ? trimmed.slice(spaceIndex).trim() : '';
+
   const extractParts = (sep: string): [string, string, string] | null => {
-    // Split and handle optional time portion
-    const datePart = trimmed.split(/\s+/)[0];
     const parts = datePart.split(sep);
     if (parts.length !== 3) return null;
     return [parts[0], parts[1], parts[2]];
@@ -224,6 +227,13 @@ function parseDateWithFormat(val: string, format: DateFormatInterpretation): str
   if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
 
+  // If there was a time portion, reconstruct a full date-time string to preserve it
+  if (timePart) {
+    const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${timePart}`;
+    const withTime = new Date(isoDate);
+    if (!isNaN(withTime.getTime())) return withTime.toISOString();
+  }
+
   const date = new Date(year, month - 1, day);
   return isNaN(date.getTime()) ? null : date.toISOString();
 }
@@ -248,13 +258,15 @@ export function validateTicketImportData(
     categoryLookupByBoard,
   } = referenceData;
 
-  const unmatchedClientsSet = new Set<string>();
-  const unmatchedAgentsSet = new Set<string>();
-  const unmatchedStatusesSet = new Set<string>();
-  const unmatchedTeamsSet = new Set<string>();
-  const unmatchedPrioritiesSet = new Set<string>();
-  const unmatchedCategoriesSet = new Set<string>();
-  const unmatchedContactsSet = new Set<string>();
+  // Use Maps keyed by lowercase to deduplicate case variants (e.g. "Acme Corp" vs "acme corp"),
+  // preserving the first-seen casing for display.
+  const unmatchedClientsMap = new Map<string, string>();
+  const unmatchedAgentsMap = new Map<string, string>();
+  const unmatchedStatusesMap = new Map<string, string>();
+  const unmatchedTeamsMap = new Map<string, string>();
+  const unmatchedPrioritiesMap = new Map<string, string>();
+  const unmatchedCategoriesMap = new Map<string, string>();
+  const unmatchedContactsMap = new Map<string, string>();
   // Track unparsable dates grouped by structural format pattern
   const datePatternGroups = new Map<string, { patternKey: string; patternLabel: string; possibleFormats: DateFormatInterpretation[]; sampleValues: Set<string>; totalCount: number }>();
 
@@ -275,9 +287,8 @@ export function validateTicketImportData(
     // Client lookup
     if (row.client?.trim()) {
       const key = row.client.trim().toLowerCase();
-      if (!clientLookup[key]) {
-        unmatchedClientsSet.add(row.client.trim());
-        // Not an error — will be resolved in client resolution step
+      if (!clientLookup[key] && !unmatchedClientsMap.has(key)) {
+        unmatchedClientsMap.set(key, row.client.trim());
       }
     }
 
@@ -290,16 +301,16 @@ export function validateTicketImportData(
     if (row.status?.trim()) {
       const key = row.status.trim().toLowerCase();
       const boardStatuses = statusLookupByBoard[targetBoardId] || statusLookupByBoard['_global'] || {};
-      if (!boardStatuses[key]) {
-        unmatchedStatusesSet.add(row.status.trim());
+      if (!boardStatuses[key] && !unmatchedStatusesMap.has(key)) {
+        unmatchedStatusesMap.set(key, row.status.trim());
       }
     }
 
     // Priority lookup
     if (row.priority?.trim()) {
       const key = row.priority.trim().toLowerCase();
-      if (!priorityLookup[key]) {
-        unmatchedPrioritiesSet.add(row.priority.trim());
+      if (!priorityLookup[key] && !unmatchedPrioritiesMap.has(key)) {
+        unmatchedPrioritiesMap.set(key, row.priority.trim());
       }
     }
 
@@ -307,32 +318,32 @@ export function validateTicketImportData(
     if (row.category?.trim()) {
       const key = row.category.trim().toLowerCase();
       const boardCategories = categoryLookupByBoard[targetBoardId] || categoryLookupByBoard['_global'] || {};
-      if (!boardCategories[key]) {
-        unmatchedCategoriesSet.add(row.category.trim());
+      if (!boardCategories[key] && !unmatchedCategoriesMap.has(key)) {
+        unmatchedCategoriesMap.set(key, row.category.trim());
       }
     }
 
     // Agent lookup
     if (row.assigned_to?.trim()) {
       const key = row.assigned_to.trim().toLowerCase();
-      if (!userLookup[key]) {
-        unmatchedAgentsSet.add(row.assigned_to.trim());
+      if (!userLookup[key] && !unmatchedAgentsMap.has(key)) {
+        unmatchedAgentsMap.set(key, row.assigned_to.trim());
       }
     }
 
     // Team lookup
     if (row.assigned_team?.trim()) {
       const key = row.assigned_team.trim().toLowerCase();
-      if (!teamLookup[key]) {
-        unmatchedTeamsSet.add(row.assigned_team.trim());
+      if (!teamLookup[key] && !unmatchedTeamsMap.has(key)) {
+        unmatchedTeamsMap.set(key, row.assigned_team.trim());
       }
     }
 
     // Contact lookup
     if (row.contact?.trim()) {
       const key = row.contact.trim().toLowerCase();
-      if (!contactLookup[key]) {
-        unmatchedContactsSet.add(row.contact.trim());
+      if (!contactLookup[key] && !unmatchedContactsMap.has(key)) {
+        unmatchedContactsMap.set(key, row.contact.trim());
       }
     }
 
@@ -374,13 +385,13 @@ export function validateTicketImportData(
 
   return {
     validationResults,
-    unmatchedClients: Array.from(unmatchedClientsSet),
-    unmatchedAgents: Array.from(unmatchedAgentsSet),
-    unmatchedStatuses: Array.from(unmatchedStatusesSet),
-    unmatchedTeams: Array.from(unmatchedTeamsSet),
-    unmatchedPriorities: Array.from(unmatchedPrioritiesSet),
-    unmatchedCategories: Array.from(unmatchedCategoriesSet),
-    unmatchedContacts: Array.from(unmatchedContactsSet),
+    unmatchedClients: Array.from(unmatchedClientsMap.values()),
+    unmatchedAgents: Array.from(unmatchedAgentsMap.values()),
+    unmatchedStatuses: Array.from(unmatchedStatusesMap.values()),
+    unmatchedTeams: Array.from(unmatchedTeamsMap.values()),
+    unmatchedPriorities: Array.from(unmatchedPrioritiesMap.values()),
+    unmatchedCategories: Array.from(unmatchedCategoriesMap.values()),
+    unmatchedContacts: Array.from(unmatchedContactsMap.values()),
     unparsableDateGroups: Array.from(datePatternGroups.values()).map(g => ({
       patternKey: g.patternKey,
       patternLabel: g.patternLabel,
@@ -554,20 +565,6 @@ export function processTicketRows(
       }
     }
 
-    // Resolve subcategory (with resolution support — reuses category resolution map)
-    let subcategoryId: string | null = null;
-    if (row.subcategory?.trim()) {
-      const subKey = row.subcategory.trim().toLowerCase();
-      subcategoryId = boardCats[subKey] || null;
-      if (!subcategoryId) {
-        const resolution = categoryResolutionMap.get(subKey);
-        if (resolution) {
-          if (resolution.action === 'map_to_existing' && resolution.mappedCategoryId) subcategoryId = resolution.mappedCategoryId;
-          if (resolution.action === 'create') subcategoryId = `__create_sub__:${row.subcategory.trim()}`;
-        }
-      }
-    }
-
     // Resolve contact (with resolution support)
     let contactId: string | null = null;
     if (row.contact?.trim()) {
@@ -575,8 +572,12 @@ export function processTicketRows(
       contactId = contactLookup[contactKey] || null;
       if (!contactId) {
         const resolution = contactResolutionMap.get(contactKey);
-        if (resolution && resolution.action === 'map_to_existing' && resolution.mappedContactId) {
-          contactId = resolution.mappedContactId;
+        if (resolution) {
+          if (resolution.action === 'map_to_existing' && resolution.mappedContactId) {
+            contactId = resolution.mappedContactId;
+          } else if (resolution.action === 'create') {
+            contactId = `__create__:${row.contact.trim()}`;
+          }
         }
       }
     }
@@ -627,7 +628,7 @@ export function processTicketRows(
       priority_id: priorityId,
       board_id: targetBoardId,
       category_id: categoryId,
-      subcategory_id: subcategoryId,
+      subcategory_id: null,
       client_id: clientId,
       contact_id: contactId,
       assigned_to: assignedTo,
