@@ -334,6 +334,52 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     });
   });
 
+  it('materializes missing field border styles as none when reopening and saving a legacy template', async () => {
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-legacy-border',
+      name: 'Legacy Border Template',
+      templateAst: {
+        kind: 'invoice-template-ast',
+        version: 1,
+        bindings: {
+          values: {
+            invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
+          },
+          collections: {},
+        },
+        layout: {
+          id: 'root',
+          type: 'document',
+          children: [
+            {
+              id: 'legacy-border-field',
+              type: 'field',
+              label: 'Invoice #',
+              binding: { bindingId: 'invoiceNumber' },
+            },
+          ],
+        },
+      },
+      isStandard: false,
+    });
+
+    render(<InvoiceTemplateEditor templateId="tpl-legacy-border" />);
+
+    await waitFor(() => {
+      const fieldNode = useInvoiceDesignerStore.getState().nodesById['legacy-border-field'];
+      expect((fieldNode?.props as any)?.metadata?.fieldBorderStyle).toBe('none');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+
+    const savedAst = saveInvoiceTemplateMock.mock.calls[0]?.[0]?.templateAst;
+    const savedField = findLayoutNodeById(savedAst.layout, 'legacy-border-field');
+    expect(savedField?.type).toBe('field');
+    if (!savedField || savedField.type !== 'field') return;
+    expect(savedField.borderStyle).toBe('none');
+  });
+
   it('persists edited field designer placeholders through save and reopen', async () => {
     const workspace = createWorkspaceWithField('placeholder-field');
     getInvoiceTemplateMock.mockResolvedValueOnce({
