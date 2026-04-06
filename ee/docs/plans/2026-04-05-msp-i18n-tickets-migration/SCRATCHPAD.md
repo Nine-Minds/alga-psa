@@ -763,6 +763,14 @@ the one-liner. Keep the validator green before committing.
   remains aligned with the locale pack instead of falling back to manual English assembly.
   Re-verified with `cd server && npx vitest run
   src/test/unit/app/msp/tickets/page.i18n.test.tsx`.
+- **(2026-04-06, T108)** Added
+  `server/src/test/unit/i18n/ticketsPseudoLocale.integration.test.tsx` as the cross-route pseudo-
+  locale smoke test. It drives `MspLayoutClient` under `locale='xx'` for `/msp/tickets`,
+  `/msp/tickets/[id]`, and `/msp/settings`, with namespace-gated `features/tickets` stubs for the
+  list, detail, and settings surfaces. The assertions require pseudo fill text (`11111`) and reject
+  the corresponding English defaults, which makes this a fast regression check for route namespace
+  leakage across the main MSP ticket surfaces. Verified with `cd server && npx vitest run
+  src/test/unit/i18n/ticketsPseudoLocale.integration.test.tsx`.
 
 ## Risks
 

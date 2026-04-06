@@ -49,7 +49,7 @@
   {"id": "T105", "description": "Integration: /msp/service-requests/[id] editor (which reuses CategoryPicker) renders translated picker in de", "implemented": true, "featureIds": ["F045"]},
   {"id": "T106", "description": "Integration: global quick-create dialog (QuickAddTicket reused in layout/QuickCreateDialog) renders translated in de", "implemented": true, "featureIds": ["F023", "F024"]},
   {"id": "T107", "description": "Integration: bulk move/delete on /msp/tickets shows translated confirmation and toast messages (with count interpolation)", "implemented": true, "featureIds": ["F021"]},
-  {"id": "T108", "description": "Integration: xx pseudo-locale smoke test across /msp/tickets list, detail, settings renders pseudo-text everywhere", "implemented": false, "featureIds": ["F009", "F020", "F023", "F025", "F027", "F030", "F032", "F034", "F036"]},
+  {"id": "T108", "description": "Integration: xx pseudo-locale smoke test across /msp/tickets list, detail, settings renders pseudo-text everywhere", "implemented": true, "featureIds": ["F009", "F020", "F023", "F025", "F027", "F030", "F032", "F034", "F036"]},
 
   {"id": "T120", "description": "Regression: existing ticket unit tests (TicketDetailsContainer.description.test, TicketInfo.boardChangeStatusReselection.test, TicketProperties.liveTimerPolicy.test, QuickAddTicket.boardScopedStatuses.test, TicketWatchListCard.test, ticket-properties-inline-contact.test, ticket-inline-add-prefill.test, etc.) still pass", "implemented": false, "featureIds": ["F020", "F023", "F025", "F027", "F040"]},
   {"id": "T121", "description": "Regression: existing ticket render tests (TicketOriginBadge.render, ResponseSourceBadge.render) still pass after badge i18n wiring", "implemented": false, "featureIds": ["F049"]},
