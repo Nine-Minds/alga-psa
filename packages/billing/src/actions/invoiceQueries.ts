@@ -561,6 +561,46 @@ export const getInvoiceForRendering = withAuth(async (
   }
 });
 
+export const getResolvedInvoiceTemplateId = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<string | null> => {
+  const { knex } = await createTenantKnex();
+
+  const invoice = await knex('invoices')
+    .select('client_id')
+    .where({
+      invoice_id: invoiceId,
+      tenant
+    })
+    .first();
+
+  if (!invoice?.client_id) {
+    return null;
+  }
+
+  try {
+    const client = await knex('clients')
+      .select('invoice_template_id')
+      .where({
+        client_id: invoice.client_id,
+        tenant
+      })
+      .first();
+
+    if (client?.invoice_template_id) {
+      return client.invoice_template_id;
+    }
+  } catch {
+    // Fall back to tenant default template selection below.
+  }
+
+  const templates = await Invoice.getAllTemplates(knex, tenant);
+  const defaultTemplate = templates.find((template) => template.is_default || template.isTenantDefault) ?? templates[0];
+  return defaultTemplate?.template_id ?? null;
+});
+
 export type InvoicePurchaseOrderSummary = {
   invoice_id: string;
   client_contract_id: string;

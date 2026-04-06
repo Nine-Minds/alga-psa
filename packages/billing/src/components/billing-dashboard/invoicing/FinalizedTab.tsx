@@ -162,10 +162,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     if (selectedInvoiceId === invoice.invoice_id) {
       updateUrlParams({ invoiceId: null, templateId: null });
     } else {
-      const defaultTemplateId = templates.length > 0 ? templates[0].template_id : null;
       updateUrlParams({
         invoiceId: invoice.invoice_id,
-        templateId: selectedTemplateId || defaultTemplateId
+        templateId: selectedTemplateId
       });
     }
   };
