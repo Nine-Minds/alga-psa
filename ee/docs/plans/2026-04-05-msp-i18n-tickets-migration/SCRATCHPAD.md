@@ -646,6 +646,10 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, T042)** Finished the TicketProperties contract set with an `xx` pseudo-locale
   check covering the side-panel headings, additional-agent picker, team-removal dialog strings,
   shared action labels, and the interpolated `properties.ticketTimer` value.
+- **(2026-04-05, T050)** Extended the existing
+  `settings/__tests__/CategoriesSettings.contract.test.ts` source-contract file with a
+  board-scope/tree-label assertion covering the page title, the `All Boards` scope selector
+  label, and the translated Name/Board/Order/Actions table headings used by the category tree.
 
 ## Risks
 
