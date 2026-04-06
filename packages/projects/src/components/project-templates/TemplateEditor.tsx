@@ -86,6 +86,7 @@ import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import KanbanZoomControl, { calculateCardGap, calculateColumnWidth, calculateZoomScales } from '../KanbanZoomControl';
 import * as LucideIcons from 'lucide-react';
 import { LayoutGrid, List } from 'lucide-react';
+import { useKanbanPan } from '../useKanbanPan';
 import styles from '../ProjectDetail.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -215,6 +216,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
 
   // Refs for scroll sync
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
+  useKanbanPan(kanbanBoardRef, viewMode === 'kanban');
   const kanbanHeaderRef = useRef<HTMLDivElement>(null);
   const scrollbarProxyRef = useRef<HTMLDivElement>(null);
   const stickyStatusStripRef = useRef<HTMLDivElement>(null);
@@ -1217,7 +1219,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
 
         <div
           className={styles.mainContent}
-          style={viewMode === 'kanban' ? { flex: '0 0 auto', minHeight: 'auto' } : undefined}
+          style={viewMode !== 'kanban' ? { flex: '0 0 auto', minHeight: 'auto' } : undefined}
         >
           {viewMode === 'list' ? (
             /* List View - Full Width */
@@ -1252,7 +1254,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
             /* Kanban View - Phases sidebar + Kanban board */
             <div
               className={styles.contentWrapper}
-              style={{ flex: '0 0 auto', minHeight: 'auto', alignItems: 'flex-start' }}
+              style={viewMode !== 'kanban' ? { flex: '0 0 auto', minHeight: 'auto', alignItems: 'flex-start' } : undefined}
             >
               {/* Collapsible Phases Panel */}
               <div className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}>
@@ -1486,7 +1488,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
               </div>
 
               {/* Kanban Board - Right Side */}
-              <div className={styles.kanbanArea} style={{ flex: '1 1 auto', minHeight: 'auto' }}>
+              <div className={styles.kanbanArea} style={viewMode !== 'kanban' ? { flex: '1 1 auto', minHeight: 'auto' } : undefined}>
                 {/* Pinnable header with phase info, search, and controls */}
                 <div
                   ref={kanbanHeaderRef}
@@ -1644,7 +1646,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                   className={styles.kanbanContainer}
                   ref={kanbanBoardRef}
                   data-kanban-container="true"
-                  style={{ overflowY: 'visible', flex: '0 0 auto' }}
+                  style={viewMode !== 'kanban' ? { overflowY: 'visible', flex: '0 0 auto' } : undefined}
                 >
                   {!selectedPhase ? (
                     <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
@@ -1670,10 +1672,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                       </Button>
                     </div>
                   ) : (
-                    <div className={styles.kanbanWrapper} style={{ height: 'auto', minHeight: 'auto' }}>
+                    <div className={styles.kanbanWrapper} style={viewMode !== 'kanban' ? { height: 'auto', minHeight: 'auto' } : undefined}>
                       <div
                         className={styles.kanbanBoard}
-                        style={{ height: 'auto', minHeight: 'auto', alignItems: 'flex-start' }}
+                        style={viewMode !== 'kanban' ? { height: 'auto', minHeight: 'auto' } : undefined}
                       >
                         {sortedStatusMappings.map((statusMapping, index) => {
                           const isFirstColumn = index === 0;
@@ -1879,9 +1881,6 @@ function TemplateStatusColumn({
         width: `${columnWidth}px`,
         minWidth: `${columnWidth}px`,
         maxWidth: `${columnWidth}px`,
-        height: 'auto',
-        maxHeight: 'none',
-        alignSelf: 'flex-start',
         backgroundColor: isDark ? darkenColor(statusColor, 0.75) : lightenColor(statusColor, 0.85),
         borderColor: isDraggedOver && draggedTaskId ? undefined : (isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70))
       }}
@@ -1934,7 +1933,7 @@ function TemplateStatusColumn({
       <div
         className={`${styles.kanbanTasks} ${styles.taskList}`}
         data-kanban-column-tasks="true"
-        style={{ overflowY: 'visible', flex: '0 0 auto', gap: `${cardGap}px` }}
+        style={{ gap: `${cardGap}px` }}
       >
         {sortedTasks.map((task, index) => (
           <div key={task.template_task_id}>
