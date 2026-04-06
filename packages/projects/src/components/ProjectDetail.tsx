@@ -2722,7 +2722,7 @@ export default function ProjectDetail({
   };
 
   return (
-    <div ref={pageContainerRef} className={`${styles.pageContainer} ${viewMode === 'kanban' ? styles.pageContainerKanban : ''}`}>
+    <div ref={pageContainerRef} className={styles.pageContainer}>
       <Toaster position="top-right" />
       <div
         className={styles.mainContent}

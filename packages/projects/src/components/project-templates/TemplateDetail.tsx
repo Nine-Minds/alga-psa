@@ -67,104 +67,9 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
     return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
   };
 
-  const renderPhaseContent = () => {
-    if (!selectedPhase) {
-      return (
-        <div className="flex items-center justify-center h-64 bg-gray-100 dark:bg-[rgb(var(--color-border-100))] rounded-lg">
-          <div className="text-center">
-            <p className="text-xl text-gray-600 dark:text-gray-400">
-              Please select a phase to view the template details.
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    // Get tasks for selected phase
-    const phaseTasks = tasks.filter(
-      (task) => task.template_phase_id === selectedPhase.template_phase_id
-    );
-
-    return (
-      <div className="flex flex-col h-full">
-        <div className="mb-4">
-          <div className="flex justify-between items-center gap-4">
-            {/* Phase Title */}
-            <div>
-              <h2 className="text-xl font-bold mb-1">Phase: {selectedPhase.phase_name}</h2>
-              {selectedPhase.description && (
-                <p className="text-sm text-gray-600 dark:text-gray-400">{selectedPhase.description}</p>
-              )}
-              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {selectedPhase.duration_days && `Duration: ${selectedPhase.duration_days} days`}
-                {selectedPhase.start_offset_days > 0 && ` • Start: +${selectedPhase.start_offset_days} days`}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Kanban Board */}
-        <div className={styles.kanbanWrapper}>
-          {statusMappings.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              No status columns defined
-            </div>
-          ) : (
-            <div className={styles.kanbanBoard}>
-              {statusMappings
-                .sort((a, b) => a.display_order - b.display_order)
-                .map((statusMapping, index) => {
-                  // Filter tasks that belong to this status column
-                  // Tasks without a status mapping go to the first column
-                  const isFirstColumn = index === 0;
-                  const statusTasks = phaseTasks.filter(
-                    task => task.template_status_mapping_id === statusMapping.template_status_mapping_id ||
-                      (isFirstColumn && !task.template_status_mapping_id)
-                  );
-
-                  const displayName = statusMapping.status_name || statusMapping.custom_status_name || 'Status';
-                  const statusColor = statusMapping.color || '#6B7280';
-
-                  return (
-                    <div
-                      key={statusMapping.template_status_mapping_id}
-                      className={`${styles.kanbanColumn} rounded-lg transition-all duration-200`}
-                      style={{ backgroundColor: isDark ? darkenColor(statusColor, 0.75) : lightenColor(statusColor, 0.85) }}
-                    >
-                      {/* Status Column Header */}
-                      <div className="font-bold text-sm p-3 rounded-t-lg flex items-center justify-between relative">
-                        <div
-                          className="flex rounded-[20px] border-2 shadow-sm items-center ps-3 py-3 pe-4"
-                          style={{
-                            backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
-                            borderColor: isDark ? darkenColor(statusColor, 0.40) : lightenColor(statusColor, 0.40)
-                          }}
-                        >
-                          <Circle className="w-4 h-4 mr-2" fill={statusColor} stroke={statusColor} />
-                          <span className="ml-2">{displayName}</span>
-                        </div>
-                        <div className={styles.taskCount}>
-                          {statusTasks.length}
-                        </div>
-                      </div>
-
-                      {/* Tasks in this status */}
-                      <div className={styles.kanbanTasks}>
-                        <div className="space-y-2">
-                          {statusTasks.map((task) => (
-                            <TaskCard key={task.template_task_id} task={task} />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
+  const phaseTasks = selectedPhase
+    ? tasks.filter((task) => task.template_phase_id === selectedPhase.template_phase_id)
+    : [];
 
   return (
     <>
@@ -190,7 +95,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
         initialTemplateId={template.template_id}
       />
 
-      <div className={`${styles.pageContainer} ${styles.pageContainerKanban}`}>
+      <div className={styles.pageContainer}>
         {/* Template Header - Top */}
         <div className="border-b px-6 py-4">
           <div className="flex items-center justify-between">
@@ -277,9 +182,92 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
               </Card>
             </div>
 
-            {/* Kanban Board - Right Side */}
-            <div ref={kanbanContainerRef} className={styles.kanbanContainer}>
-              {renderPhaseContent()}
+            {/* Kanban Area - Right Side */}
+            <div className={styles.kanbanArea}>
+              {/* Phase title header (above scroll container, like kanbanHeader in ProjectDetail) */}
+              {selectedPhase && (
+                <div className="flex-shrink-0 px-1 pb-2">
+                  <div className="flex justify-between items-center gap-4">
+                    <div>
+                      <h2 className="text-xl font-bold mb-1">Phase: {selectedPhase.phase_name}</h2>
+                      {selectedPhase.description && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{selectedPhase.description}</p>
+                      )}
+                      <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {selectedPhase.duration_days && `Duration: ${selectedPhase.duration_days} days`}
+                        {selectedPhase.start_offset_days > 0 && ` • Start: +${selectedPhase.start_offset_days} days`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Scrollable kanban container */}
+              <div ref={kanbanContainerRef} className={styles.kanbanContainer}>
+                {!selectedPhase ? (
+                  <div className="flex items-center justify-center h-64 bg-gray-100 dark:bg-[rgb(var(--color-border-100))] rounded-lg">
+                    <div className="text-center">
+                      <p className="text-xl text-gray-600 dark:text-gray-400">
+                        Please select a phase to view the template details.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.kanbanWrapper}>
+                    {statusMappings.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        No status columns defined
+                      </div>
+                    ) : (
+                      <div className={styles.kanbanBoard} style={{ flex: 1 }}>
+                        {statusMappings
+                          .sort((a, b) => a.display_order - b.display_order)
+                          .map((statusMapping, index) => {
+                            const isFirstColumn = index === 0;
+                            const statusTasks = phaseTasks.filter(
+                              task => task.template_status_mapping_id === statusMapping.template_status_mapping_id ||
+                                (isFirstColumn && !task.template_status_mapping_id)
+                            );
+
+                            const displayName = statusMapping.status_name || statusMapping.custom_status_name || 'Status';
+                            const statusColor = statusMapping.color || '#6B7280';
+
+                            return (
+                              <div
+                                key={statusMapping.template_status_mapping_id}
+                                className={`${styles.kanbanColumn} rounded-lg transition-all duration-200`}
+                                style={{ backgroundColor: isDark ? darkenColor(statusColor, 0.75) : lightenColor(statusColor, 0.85) }}
+                              >
+                                {/* Status Column Header */}
+                                <div className="font-bold text-sm p-3 rounded-t-lg flex items-center justify-between relative">
+                                  <div
+                                    className="flex rounded-[20px] border-2 shadow-sm items-center ps-3 py-3 pe-4"
+                                    style={{
+                                      backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
+                                      borderColor: isDark ? darkenColor(statusColor, 0.40) : lightenColor(statusColor, 0.40)
+                                    }}
+                                  >
+                                    <Circle className="w-4 h-4 mr-2" fill={statusColor} stroke={statusColor} />
+                                    <span className="ml-2">{displayName}</span>
+                                  </div>
+                                  <div className={styles.taskCount}>
+                                    {statusTasks.length}
+                                  </div>
+                                </div>
+
+                                {/* Tasks in this status */}
+                                <div className={`${styles.kanbanTasks} ${styles.taskList}`} data-kanban-column-tasks="true">
+                                  {statusTasks.map((task) => (
+                                    <TaskCard key={task.template_task_id} task={task} />
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
