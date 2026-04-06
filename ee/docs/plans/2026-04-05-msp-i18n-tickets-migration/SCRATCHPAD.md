@@ -731,6 +731,17 @@ the one-liner. Keep the validator green before committing.
   src/components/ticket/AgentScheduleDrawer.test.tsx`. The re-export/scheduling shim still passes
   unchanged (`2` tests), confirming the `F050` zero-string audit did not disturb the drawer
   wrapper.
+- **(2026-04-06, T124)** Repaired and re-ran the project-task regression tests:
+  `TicketDetailsContainerCreateTask.test.tsx` and `TicketDetailsCreateTask.test.tsx` now pass
+  together (`3` tests) under `cd packages/tickets && npx vitest run
+  src/components/ticket/__tests__/TicketDetailsContainerCreateTask.test.tsx
+  src/components/ticket/__tests__/TicketDetailsCreateTask.test.tsx`. The fixes were again
+  test-only: add the missing `next/server` / `next-auth` / router mocks to the container harness,
+  align the `TicketDetailsCreateTask` child mocks with the component’s actual import paths, and
+  update that test to assert the current contract (`renderCreateProjectTask` is passed through to
+  `TicketInfo.renderProjectTaskActions`) instead of the retired header-button placement. The suite
+  still logs pre-existing secret/auth fallback warnings from ticket display-settings side effects,
+  but those no longer block execution.
 - **(2026-04-06, T100)** Added
   `server/src/test/unit/app/msp/tickets/page.i18n.test.tsx` as a page+layout integration harness
   for `/msp/tickets`. The test runs `server/src/app/msp/tickets/page.tsx` with mocked ticket-data

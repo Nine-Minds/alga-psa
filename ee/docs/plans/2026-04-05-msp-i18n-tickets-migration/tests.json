@@ -55,7 +55,7 @@
   {"id": "T121", "description": "Regression: existing ticket render tests (TicketOriginBadge.render, ResponseSourceBadge.render) still pass after badge i18n wiring", "implemented": true, "featureIds": ["F049"]},
   {"id": "T122", "description": "Regression: CommentMetadataDebugModal.test still passes after dev-facing translation wiring", "implemented": true, "featureIds": ["F046"]},
   {"id": "T123", "description": "Regression: AgentScheduleDrawer.test still passes (re-export shim)", "implemented": true, "featureIds": ["F050"]},
-  {"id": "T124", "description": "Regression: TicketDetailsContainerCreateTask.test and TicketDetailsCreateTask.test pass (project-tickets integration)", "implemented": false, "featureIds": ["F025"]},
+  {"id": "T124", "description": "Regression: TicketDetailsContainerCreateTask.test and TicketDetailsCreateTask.test pass (project-tickets integration)", "implemented": true, "featureIds": ["F025"]},
 
   {"id": "T130", "description": "Manual: visual diff on /msp/tickets in en between main and PR branch — no layout shifts from key length differences", "implemented": false, "featureIds": ["F020", "F021", "F022"]},
   {"id": "T131", "description": "Manual: visual diff on /msp/tickets in de — long German strings do not break button/column widths", "implemented": false, "featureIds": ["F020", "F021", "F022"]},

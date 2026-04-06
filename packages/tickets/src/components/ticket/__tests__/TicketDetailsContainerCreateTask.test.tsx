@@ -7,6 +7,46 @@ import TicketDetailsContainer from '../TicketDetailsContainer';
 
 let lastTicketDetailsProps: any = null;
 
+vi.mock('next/server', () => ({
+  NextRequest: class NextRequest {},
+  NextResponse: {
+    next: vi.fn(),
+    json: vi.fn(),
+  },
+}));
+
+vi.mock('next-auth', () => ({
+  __esModule: true,
+  default: vi.fn(() => ({
+    handlers: {},
+    auth: vi.fn(),
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+  })),
+}));
+
+vi.mock('next-auth/lib/env', () => ({
+  setEnvDefaults: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ back: vi.fn(), refresh: vi.fn() }),
+}));
+
+vi.mock('next-auth/react', () => ({
+  useSession: () => ({ data: { user: { id: 'user-1' } } }),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (_key: string, fallback?: string) => fallback ?? _key,
+  }),
+}));
+
+vi.mock('@alga-psa/ui/context', () => ({
+  UnsavedChangesProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 vi.mock('../TicketDetails', () => ({
   __esModule: true,
   default: (props: any) => {
