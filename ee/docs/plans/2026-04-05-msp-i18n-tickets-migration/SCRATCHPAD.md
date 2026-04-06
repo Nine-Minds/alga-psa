@@ -693,6 +693,9 @@ the one-liner. Keep the validator green before committing.
   `TicketDetailsContainer.tsx`: auth-required toasts, update/comment success messages, field-
   update/save failure handling, and the added `messages.commentAdded` copy are all pinned to the
   shared ticket namespace.
+- **(2026-04-05, T095)** The shared small-component contract now also covers
+  `CategoryPicker.tsx`: title, default placeholder, `No Category`, ITIL badge, selected/excluding
+  summary builders, and the add-new label are all asserted against translation calls.
 
 ## Risks
 
