@@ -608,6 +608,10 @@ the one-liner. Keep the validator green before committing.
   dashboard-local loading/error/empty feedback branches: client drawer loading/not-found/load-
   failed copy, bundled-ticket and deletion error paths, and the bulk move/delete “No tickets
   selected” empty states now all have explicit `t(...)` source assertions.
+- **(2026-04-05, T020)** Added `QuickAddTicket.i18n.test.ts` as a source-contract test for the
+  quick-add dialog shell. The first assertion covers the `useTranslation('features/tickets')`
+  hook plus the core dialog/field/placeholder wiring for title, description, client/contact/
+  location/board, assignee/additional-agents, category/status/priority, and due-date controls.
 
 ## Risks
 
