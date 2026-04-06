@@ -623,6 +623,10 @@ the one-liner. Keep the validator green before committing.
   against `xx/features/tickets.json`. The test verifies that the core dialog labels/placeholders
   plus the `quickAdd.tagCreatePartialFailure_*` entries collapse to pseudo-fill values rather
   than English.
+- **(2026-04-05, T030)** Added `ticket/TicketInfo.i18n.test.ts` as the TicketInfo source-
+  contract harness. The first assertion covers the detail header and field chrome across the
+  mixed `fields.*`, `info.*`, `itil.*`, and `settings.display.columns.tags` keys used by the
+  main detail pane.
 
 ## Risks
 
