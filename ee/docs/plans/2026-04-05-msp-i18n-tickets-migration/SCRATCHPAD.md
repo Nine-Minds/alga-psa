@@ -721,6 +721,12 @@ the one-liner. Keep the validator green before committing.
   integration-focused while also pinning the route to real translated strings instead of a second
   synthetic locale. Re-verified with `cd server && npx vitest run
   src/test/unit/app/msp/tickets/page.i18n.test.tsx`.
+- **(2026-04-06, T102)** Expanded the `/msp/tickets` page+layout harness again to include a
+  lightweight quick-add dialog shell keyed off the real `QuickAddTicket` translation paths. The
+  new German assertion covers dialog title, primary placeholders, assignee/category/status/
+  priority/due-date copy, and the cancel/create/create-and-view actions so the route-level test
+  now smoke-tests both the list frame and the add-ticket flow under `/msp/tickets`. Re-verified
+  with `cd server && npx vitest run src/test/unit/app/msp/tickets/page.i18n.test.tsx`.
 
 ## Risks
 

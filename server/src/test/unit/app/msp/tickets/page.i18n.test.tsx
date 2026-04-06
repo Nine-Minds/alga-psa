@@ -34,6 +34,24 @@ const translations = {
       'dashboard.filters.dueDate': '__EN Due Date__',
       'filters.category': '__EN Category Filter__',
       'resetFilters': '__EN Reset__',
+      'quickAdd.dialogTitle': '__EN Quick Add Ticket__',
+      'quickAdd.titlePlaceholder': '__EN Ticket Title *__',
+      'quickAdd.descriptionLabel': '__EN Description__',
+      'quickAdd.descriptionPlaceholder': '__EN Description Placeholder__',
+      'quickAdd.clientPlaceholder': '__EN Select Client *__',
+      'quickAdd.selectContact': '__EN Select contact__',
+      'quickAdd.selectLocation': '__EN Select location__',
+      'quickAdd.boardPlaceholder': '__EN Select Board *__',
+      'quickAdd.assignedTo': '__EN Assigned To__',
+      'quickAdd.additionalAgents': '__EN Additional Agents__',
+      'quickAdd.selectCategory': '__EN Select category__',
+      'quickAdd.statusPlaceholder': '__EN Select Status *__',
+      'quickAdd.selectPriority': '__EN Select Priority *__',
+      'quickAdd.dueDate': '__EN Due Date Label__',
+      'quickAdd.selectDate': '__EN Select date__',
+      'actions.cancel': '__EN Cancel__',
+      'actions.create': '__EN Create__',
+      'quickAdd.createAndView': '__EN Create + View Ticket__',
     },
   },
   de: {
@@ -47,6 +65,24 @@ const translations = {
       'dashboard.filters.dueDate': 'Fälligkeitsdatum',
       'filters.category': 'Nach Kategorie filtern',
       'resetFilters': 'Zurücksetzen',
+      'quickAdd.dialogTitle': 'Ticket schnell hinzufügen',
+      'quickAdd.titlePlaceholder': 'Ticket-Titel *',
+      'quickAdd.descriptionLabel': 'Beschreibung',
+      'quickAdd.descriptionPlaceholder': 'Beschreibung',
+      'quickAdd.clientPlaceholder': 'Kunden auswählen *',
+      'quickAdd.selectContact': 'Kontakt auswählen',
+      'quickAdd.selectLocation': 'Standort auswählen',
+      'quickAdd.boardPlaceholder': 'Board auswählen *',
+      'quickAdd.assignedTo': 'Zugewiesen an',
+      'quickAdd.additionalAgents': 'Zusätzliche Agents',
+      'quickAdd.selectCategory': 'Kategorie auswählen',
+      'quickAdd.statusPlaceholder': 'Status auswählen *',
+      'quickAdd.selectPriority': 'Priorität auswählen *',
+      'quickAdd.dueDate': 'Fälligkeitsdatum',
+      'quickAdd.selectDate': 'Datum auswählen',
+      'actions.cancel': 'Abbrechen',
+      'actions.create': 'Erstellen',
+      'quickAdd.createAndView': 'Erstellen + Ticket anzeigen',
     },
   },
 } as const;
@@ -194,6 +230,26 @@ vi.mock('@alga-psa/msp-composition/tickets', async () => {
           <span>{t('dashboard.filters.dueDate', 'Due Date')}</span>
           <span>{t('filters.category', 'Filter by category')}</span>
           <button type="button">{t('resetFilters', 'Reset')}</button>
+          <div aria-label={t('quickAdd.dialogTitle', 'Quick Add Ticket')}>
+            <h2>{t('quickAdd.dialogTitle', 'Quick Add Ticket')}</h2>
+            <span>{t('quickAdd.titlePlaceholder', 'Ticket Title *')}</span>
+            <span>{t('quickAdd.descriptionLabel', 'Description')}</span>
+            <span>{t('quickAdd.descriptionPlaceholder', 'Description')}</span>
+            <span>{t('quickAdd.clientPlaceholder', 'Select Client *')}</span>
+            <span>{t('quickAdd.selectContact', 'Select contact')}</span>
+            <span>{t('quickAdd.selectLocation', 'Select location')}</span>
+            <span>{t('quickAdd.boardPlaceholder', 'Select Board *')}</span>
+            <span>{t('quickAdd.assignedTo', 'Assigned To')}</span>
+            <span>{t('quickAdd.additionalAgents', 'Additional Agents')}</span>
+            <span>{t('quickAdd.selectCategory', 'Select category')}</span>
+            <span>{t('quickAdd.statusPlaceholder', 'Select Status *')}</span>
+            <span>{t('quickAdd.selectPriority', 'Select Priority *')}</span>
+            <span>{t('quickAdd.dueDate', 'Due Date')}</span>
+            <span>{t('quickAdd.selectDate', 'Select date')}</span>
+            <button type="button">{t('actions.cancel', 'Cancel')}</button>
+            <button type="button">{t('actions.create', 'Create')}</button>
+            <button type="button">{t('quickAdd.createAndView', 'Create + View Ticket')}</button>
+          </div>
         </section>
       );
     },
@@ -273,7 +329,7 @@ describe('/msp/tickets i18n integration', () => {
     expect(screen.getByText('Status auswählen')).toBeInTheDocument();
     expect(screen.getByText('Antwortstatus')).toBeInTheDocument();
     expect(screen.getByText('Alle Prioritäten')).toBeInTheDocument();
-    expect(screen.getByText('Fälligkeitsdatum')).toBeInTheDocument();
+    expect(screen.getAllByText('Fälligkeitsdatum').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('Nach Kategorie filtern')).toBeInTheDocument();
     expect(screen.getByText('Zurücksetzen')).toBeInTheDocument();
 
@@ -286,5 +342,43 @@ describe('/msp/tickets i18n integration', () => {
     expect(screen.queryByText('Due Date')).not.toBeInTheDocument();
     expect(screen.queryByText('Filter by category')).not.toBeInTheDocument();
     expect(screen.queryByText('Reset')).not.toBeInTheDocument();
+  });
+
+  it('T102: /msp/tickets renders the quick-add dialog shell in de with translated labels and actions', async () => {
+    await renderTicketsList('de');
+
+    expect(await screen.findByText('Ticket schnell hinzufügen')).toBeInTheDocument();
+    expect(screen.getByText('Ticket-Titel *')).toBeInTheDocument();
+    expect(screen.getAllByText('Beschreibung').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Kunden auswählen *')).toBeInTheDocument();
+    expect(screen.getByText('Kontakt auswählen')).toBeInTheDocument();
+    expect(screen.getByText('Standort auswählen')).toBeInTheDocument();
+    expect(screen.getByText('Board auswählen *')).toBeInTheDocument();
+    expect(screen.getByText('Zugewiesen an')).toBeInTheDocument();
+    expect(screen.getByText('Zusätzliche Agents')).toBeInTheDocument();
+    expect(screen.getByText('Kategorie auswählen')).toBeInTheDocument();
+    expect(screen.getByText('Status auswählen *')).toBeInTheDocument();
+    expect(screen.getByText('Priorität auswählen *')).toBeInTheDocument();
+    expect(screen.getAllByText('Fälligkeitsdatum').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Datum auswählen')).toBeInTheDocument();
+    expect(screen.getByText('Abbrechen')).toBeInTheDocument();
+    expect(screen.getByText('Erstellen')).toBeInTheDocument();
+    expect(screen.getByText('Erstellen + Ticket anzeigen')).toBeInTheDocument();
+
+    expect(screen.queryByText('Quick Add Ticket')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ticket Title *')).not.toBeInTheDocument();
+    expect(screen.queryByText('Select Client *')).not.toBeInTheDocument();
+    expect(screen.queryByText('Select contact')).not.toBeInTheDocument();
+    expect(screen.queryByText('Select location')).not.toBeInTheDocument();
+    expect(screen.queryByText('Select Board *')).not.toBeInTheDocument();
+    expect(screen.queryByText('Assigned To')).not.toBeInTheDocument();
+    expect(screen.queryByText('Additional Agents')).not.toBeInTheDocument();
+    expect(screen.queryByText('Select category')).not.toBeInTheDocument();
+    expect(screen.queryByText('Select Status *')).not.toBeInTheDocument();
+    expect(screen.queryByText('Select Priority *')).not.toBeInTheDocument();
+    expect(screen.queryByText('Select date')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cancel')).not.toBeInTheDocument();
+    expect(screen.queryByText('Create')).not.toBeInTheDocument();
+    expect(screen.queryByText('Create + View Ticket')).not.toBeInTheDocument();
   });
 });
