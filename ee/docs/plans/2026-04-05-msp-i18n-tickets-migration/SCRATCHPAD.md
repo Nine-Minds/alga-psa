@@ -686,6 +686,9 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, T092)** The shared small-component contract file also now covers
   `ResponseStateSelect.tsx`: awaiting-client/awaiting-internal/clear option labels, the select
   placeholder, the response-state heading, and the `Not set` fallback text.
+- **(2026-04-05, T093)** The same shared contract file now covers `QuickAddCategory.tsx` too:
+  dialog title, field labels/placeholders, board/parent helpers, validation errors, success
+  toast, and generic create failure copy are all asserted through `t(...)`.
 
 ## Risks
 
