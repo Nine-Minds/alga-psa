@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@alga-psa/ui/components/DropdownMenu";
 import { ApplyTemplateDialog } from './ApplyTemplateDialog';
+import { useKanbanPan } from '../useKanbanPan';
 import styles from '../ProjectDetail.module.css';
 
 interface TemplateDetailProps {
@@ -36,6 +37,8 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
   const [selectedPhase, setSelectedPhase] = useState<IProjectTemplatePhase | null>(
     template.phases?.[0] || null
   );
+  const kanbanContainerRef = useRef<HTMLDivElement>(null);
+  useKanbanPan(kanbanContainerRef);
 
   async function handleDelete() {
     try {
@@ -187,7 +190,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
         initialTemplateId={template.template_id}
       />
 
-      <div className={styles.pageContainer}>
+      <div className={`${styles.pageContainer} ${styles.pageContainerKanban}`}>
         {/* Template Header - Top */}
         <div className="border-b px-6 py-4">
           <div className="flex items-center justify-between">
@@ -275,7 +278,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
             </div>
 
             {/* Kanban Board - Right Side */}
-            <div className={styles.kanbanContainer}>
+            <div ref={kanbanContainerRef} className={styles.kanbanContainer}>
               {renderPhaseContent()}
             </div>
           </div>

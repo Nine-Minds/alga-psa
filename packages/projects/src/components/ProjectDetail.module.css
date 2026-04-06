@@ -5,6 +5,13 @@
   flex-direction: column;
 }
 
+/* In kanban mode, lock page to viewport so columns scroll internally */
+.pageContainerKanban {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
 .mainContent {
   display: flex;
   flex-direction: column;
@@ -363,6 +370,7 @@
   overflow-y: hidden;
   /* Hide the native scrollbar - using the custom track in the header instead */
   scrollbar-width: none; /* Firefox */
+  cursor: grab;
 }
 
 .kanbanContainer::-webkit-scrollbar {
@@ -374,10 +382,18 @@
   display: flex;
   gap: 1rem;
   min-width: min-content;
-  flex: 1;
-  min-height: 0;
-  height: 100%;
+  min-height: 100%; /* At least as tall as container; can grow beyond */
   padding-bottom: 0.5rem; /* Space for scrollbar */
+}
+
+/* Override cursor while user is actively panning the board */
+:global(body.kanban-panning),
+:global(body.kanban-panning) * {
+  cursor: grabbing !important;
+}
+
+:global(body.kanban-panning) {
+  user-select: none !important;
 }
 
 .kanbanColumn {
@@ -387,8 +403,7 @@
   min-width: 350px; /* Ensure minimum width */
   max-width: 350px; /* Prevent columns from growing */
   flex-shrink: 0; /* Prevent columns from shrinking */
-  height: 100%;
-  max-height: 100%;
+  /* Height determined by flex stretch — all columns match the tallest */
   overflow: hidden; /* Prevent overflow on the column itself */
 }
 
