@@ -727,6 +727,14 @@ the one-liner. Keep the validator green before committing.
   priority/due-date copy, and the cancel/create/create-and-view actions so the route-level test
   now smoke-tests both the list frame and the add-ticket flow under `/msp/tickets`. Re-verified
   with `cd server && npx vitest run src/test/unit/app/msp/tickets/page.i18n.test.tsx`.
+- **(2026-04-06, T103)** Added
+  `server/src/test/unit/app/msp/tickets/detail.page.i18n.test.tsx` as the detail-route companion
+  harness for `/msp/tickets/[id]`. It runs
+  `server/src/app/msp/tickets/[id]/page.tsx` under `MspLayoutClient`, stubs the detail container,
+  and asserts German ticket-detail chrome drawn from the `TicketInfo`, `TicketProperties`,
+  `TicketMaterialsCard`, and `TicketWatchListCard` key families so the shared
+  `/msp/tickets/:id -> features/tickets` namespace path is covered end-to-end. Verified with
+  `cd server && npx vitest run src/test/unit/app/msp/tickets/detail.page.i18n.test.tsx`.
 
 ## Risks
 
