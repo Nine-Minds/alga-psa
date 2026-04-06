@@ -8,7 +8,7 @@
 
   {"id": "T020", "description": "Unit: QuickAddTicket.i18n.test — dialog title, field labels, placeholders rendered via t() in en", "implemented": true, "featureIds": ["F023"]},
   {"id": "T021", "description": "Unit: QuickAddTicket.i18n.test — validation errors (title required, etc.) appear in current locale", "implemented": true, "featureIds": ["F024"]},
-  {"id": "T022", "description": "Unit: QuickAddTicket.i18n.test — tag creation failure toast uses interpolation for failed count", "implemented": false, "featureIds": ["F024"]},
+  {"id": "T022", "description": "Unit: QuickAddTicket.i18n.test — tag creation failure toast uses interpolation for failed count", "implemented": true, "featureIds": ["F024"]},
   {"id": "T023", "description": "Unit: QuickAddTicket.i18n.test — pseudo-locale (xx) covers all visible strings", "implemented": false, "featureIds": ["F023", "F024"]},
 
   {"id": "T030", "description": "Unit: TicketInfo.i18n.test — detail header, field labels rendered via t()", "implemented": false, "featureIds": ["F025"]},

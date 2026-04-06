@@ -45,4 +45,14 @@ describe('quick add ticket i18n wiring contract', () => {
     expect(source).toContain("validationErrors.push(t('validation.quickAdd.clientRequired', 'Please select a client'))");
     expect(source).toContain("t('quickAdd.requiredFieldsHeading', 'Please fill in the required fields:')");
   });
+
+  it('T022: uses count interpolation for quick-add tag creation partial-failure toasts', () => {
+    const source = read('./QuickAddTicket.tsx');
+
+    expect(source).toContain("toast.error(t('quickAdd.tagCreatePartialFailure', {");
+    expect(source).toContain('count: failedCount');
+    expect(source).toContain("defaultValue: failedCount === 1 ? '{{count}} tag could not be created' : '{{count}} tags could not be created'");
+    expect(source).toContain('count: pendingTags.length');
+    expect(source).toContain("defaultValue: pendingTags.length === 1 ? '{{count}} tag could not be created' : '{{count}} tags could not be created'");
+  });
 });

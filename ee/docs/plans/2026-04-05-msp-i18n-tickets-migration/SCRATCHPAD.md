@@ -615,6 +615,10 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, T021)** Extended `QuickAddTicket.i18n.test.ts` with the validation branch:
   the required-field checks now have explicit assertions for the translated title/board/status/
   priority/impact/urgency/client errors plus the `quickAdd.requiredFieldsHeading` banner text.
+- **(2026-04-05, T022)** Added interpolation coverage for the quick-add tag-creation partial-
+  failure toast. The new source-contract assertion checks both the partial-success and catch
+  branches to ensure `quickAdd.tagCreatePartialFailure` always receives `count` plus singular/
+  plural default values.
 
 ## Risks
 
