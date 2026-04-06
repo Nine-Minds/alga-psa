@@ -735,6 +735,13 @@ the one-liner. Keep the validator green before committing.
   `TicketMaterialsCard`, and `TicketWatchListCard` key families so the shared
   `/msp/tickets/:id -> features/tickets` namespace path is covered end-to-end. Verified with
   `cd server && npx vitest run src/test/unit/app/msp/tickets/detail.page.i18n.test.tsx`.
+- **(2026-04-06, T104)** Added
+  `server/src/test/unit/app/msp/settings/ticketing.i18n.test.tsx` to cover the ticket-settings
+  route under `MspLayoutClient`. This harness keeps the real `TicketingSettings` shell and tab
+  routing, but stubs `CategoriesSettings` and `DisplaySettings` with `features/tickets`-backed
+  content so `/msp/settings -> features/tickets` is proven for the two MSP ticket settings
+  surfaces added in `F030`-`F037`. Verified with `cd server && npx vitest run
+  src/test/unit/app/msp/settings/ticketing.i18n.test.tsx`.
 
 ## Risks
 
