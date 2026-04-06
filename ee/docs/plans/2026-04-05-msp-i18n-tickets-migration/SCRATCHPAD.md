@@ -612,6 +612,9 @@ the one-liner. Keep the validator green before committing.
   quick-add dialog shell. The first assertion covers the `useTranslation('features/tickets')`
   hook plus the core dialog/field/placeholder wiring for title, description, client/contact/
   location/board, assignee/additional-agents, category/status/priority, and due-date controls.
+- **(2026-04-05, T021)** Extended `QuickAddTicket.i18n.test.ts` with the validation branch:
+  the required-field checks now have explicit assertions for the translated title/board/status/
+  priority/impact/urgency/client errors plus the `quickAdd.requiredFieldsHeading` banner text.
 
 ## Risks
 

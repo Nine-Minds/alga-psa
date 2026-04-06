@@ -32,4 +32,17 @@ describe('quick add ticket i18n wiring contract', () => {
     expect(source).toContain("t('quickAdd.selectDate', 'Select date')");
     expect(source).toContain("t('quickAdd.timePlaceholder', 'Time')");
   });
+
+  it('T021: routes quick-add validation and required-fields messaging through translations', () => {
+    const source = read('./QuickAddTicket.tsx');
+
+    expect(source).toContain("validationErrors.push(t('create.errors.titleRequired', 'Title is required'))");
+    expect(source).toContain("validationErrors.push(t('validation.quickAdd.boardRequired', 'Please select a board'))");
+    expect(source).toContain("validationErrors.push(t('validation.quickAdd.statusRequired', 'Please select a status'))");
+    expect(source).toContain("validationErrors.push(t('validation.quickAdd.priorityRequired', 'Please select a priority'))");
+    expect(source).toContain("validationErrors.push(t('validation.quickAdd.impactRequired', 'Please select an impact'))");
+    expect(source).toContain("validationErrors.push(t('validation.quickAdd.urgencyRequired', 'Please select an urgency'))");
+    expect(source).toContain("validationErrors.push(t('validation.quickAdd.clientRequired', 'Please select a client'))");
+    expect(source).toContain("t('quickAdd.requiredFieldsHeading', 'Please fill in the required fields:')");
+  });
 });
