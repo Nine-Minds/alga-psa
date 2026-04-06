@@ -668,6 +668,10 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, T071)** Extended the materials card contract with the error/validation/empty-
   state path: load/add/remove failures, form validation toasts, remove-success copy, the loading
   and empty helpers, and the `materials.clientRequired` guard are now all asserted.
+- **(2026-04-05, T080)** Added `settings/DisplaySettings.i18n.test.ts` as a source-contract
+  test for the display-settings chrome: response-state tracking copy, preferences/date-time
+  labels, column section heading, required suffix, and tags layout toggles are all now pinned to
+  `t(...)` calls.
 
 ## Risks
 
