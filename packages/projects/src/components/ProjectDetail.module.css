@@ -378,16 +378,6 @@
   padding-bottom: 0.5rem; /* Space for scrollbar */
 }
 
-/* Override cursor while user is actively panning the board */
-:global(body.kanban-panning),
-:global(body.kanban-panning) * {
-  cursor: grabbing !important;
-}
-
-:global(body.kanban-panning) {
-  user-select: none !important;
-}
-
 .kanbanColumn {
   display: flex;
   flex-direction: column;

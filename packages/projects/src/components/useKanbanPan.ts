@@ -48,8 +48,19 @@ export function useKanbanPan(containerRef: RefObject<HTMLDivElement | null>, ena
       board.style.transform = offset === 0 ? '' : `translateY(${offset}px)`;
     };
 
+    const setPanningCursor = (panning: boolean) => {
+      if (panning) {
+        document.body.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
+      } else {
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+
     const cleanupPanning = () => {
       state.active = false;
+      setPanningCursor(false);
       document.body.classList.remove('kanban-panning');
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -65,6 +76,7 @@ export function useKanbanPan(containerRef: RefObject<HTMLDivElement | null>, ena
         }
         state.active = true;
         state.hasMoved = true;
+        setPanningCursor(true);
         document.body.classList.add('kanban-panning');
       }
 
