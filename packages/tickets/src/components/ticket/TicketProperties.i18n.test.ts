@@ -8,6 +8,19 @@ function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
 }
 
+function readJson<T>(relativePath: string): T {
+  return JSON.parse(read(relativePath)) as T;
+}
+
+function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
+  return dottedPath.split('.').reduce<unknown>((value, key) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return undefined;
+    }
+    return (value as Record<string, unknown>)[key];
+  }, record);
+}
+
 describe('ticket properties i18n wiring contract', () => {
   it('T040: routes the side-panel labels and select placeholders through features/tickets translations', () => {
     const source = read('./TicketProperties.tsx');
@@ -37,5 +50,33 @@ describe('ticket properties i18n wiring contract', () => {
     expect(source).toContain("t('properties.noTeamMembersFound', 'No team members found on this ticket.')");
     expect(source).toContain("t('actions.cancel', 'Cancel')");
     expect(source).toContain("t('actions.confirm', 'Confirm')");
+  });
+
+  it('T042: keeps the TicketProperties side panel backed by xx pseudo-locale strings', () => {
+    const source = read('./TicketProperties.tsx');
+    const pseudo = readJson<Record<string, unknown>>('../../../../../server/public/locales/xx/features/tickets.json');
+
+    const pseudoKeys = [
+      'properties.timeEntry',
+      'properties.contactInfo',
+      'properties.location',
+      'properties.agentTeam',
+      'properties.primaryAgent',
+      'properties.additionalAgents',
+      'properties.selectAdditionalAgents',
+      'properties.removeTeamAssignment',
+      'properties.removeTeamMode.removeAll',
+      'properties.noTeamMembersFound',
+      'quickAdd.addTeamMembers',
+      'actions.cancel',
+      'actions.confirm',
+    ];
+
+    for (const key of pseudoKeys) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(pseudo, key)).toBe('11111');
+    }
+
+    expect(getLeaf(pseudo, 'properties.ticketTimer')).toBe('11111 {{ticketNumber}} 11111');
   });
 });

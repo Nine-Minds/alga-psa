@@ -643,6 +643,9 @@ the one-liner. Keep the validator green before committing.
   but this component’s actual translated confirmation flow is the team-assignment removal/switch
   dialog; the test now asserts that title, option labels, empty state, and confirm/cancel
   actions all route through `t(...)`.
+- **(2026-04-05, T042)** Finished the TicketProperties contract set with an `xx` pseudo-locale
+  check covering the side-panel headings, additional-agent picker, team-removal dialog strings,
+  shared action labels, and the interpolated `properties.ticketTimer` value.
 
 ## Risks
 
