@@ -696,6 +696,9 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, T095)** The shared small-component contract now also covers
   `CategoryPicker.tsx`: title, default placeholder, `No Category`, ITIL badge, selected/excluding
   summary builders, and the add-new label are all asserted against translation calls.
+- **(2026-04-05, T096)** `ticket/TicketSmallComponents.i18n.test.ts` also covers
+  `TicketNavigation.tsx`, asserting that both previous/next button `aria-label` values resolve
+  through `navigation.previousTicket` / `navigation.nextTicket`.
 
 ## Risks
 

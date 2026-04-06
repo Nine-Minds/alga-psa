@@ -37,7 +37,7 @@
   {"id": "T093", "description": "Unit: QuickAddCategory.i18n.test — inline creation dialog and validation translated", "implemented": true, "featureIds": ["F043"]},
   {"id": "T094", "description": "Unit: TicketDetailsContainer.i18n.test — loading/error/not-found states translated", "implemented": true, "featureIds": ["F044"]},
   {"id": "T095", "description": "Unit: CategoryPicker.i18n.test — placeholder, empty state, search label translated", "implemented": true, "featureIds": ["F045"]},
-  {"id": "T096", "description": "Unit: TicketNavigation.i18n.test — prev/next button aria-labels translated", "implemented": false, "featureIds": ["F047"]},
+  {"id": "T096", "description": "Unit: TicketNavigation.i18n.test — prev/next button aria-labels translated", "implemented": true, "featureIds": ["F047"]},
   {"id": "T097", "description": "Unit: TicketOriginBadge.i18n.test — all origin enum values render localized labels", "implemented": false, "featureIds": ["F049"]},
   {"id": "T098", "description": "Unit: ResponseSourceBadge.i18n.test — all source enum values render localized labels", "implemented": false, "featureIds": ["F049"]},
 
