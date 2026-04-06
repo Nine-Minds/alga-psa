@@ -706,6 +706,15 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, T098)** Re-ran `ResponseSourceBadge.render.test.tsx` alongside the origin badge
   test. All portal/email source variants still render correctly after making the component’s
   `labels` prop optional and translation-backed.
+- **(2026-04-06, T100)** Added
+  `server/src/test/unit/app/msp/tickets/page.i18n.test.tsx` as a page+layout integration harness
+  for `/msp/tickets`. The test runs `server/src/app/msp/tickets/page.tsx` with mocked ticket-data
+  actions, wraps the result in `MspLayoutClient`, and uses a lightweight in-memory
+  `@alga-psa/ui/lib/i18n/client` mock that only returns sentinel strings when
+  `I18nWrapper -> getNamespacesForRoute('/msp/tickets')` includes `features/tickets`. That makes
+  the assertion stronger than a source grep: the dashboard frame must render translated values for
+  title/add/filter/reset chrome instead of falling back to raw English literals. Verified with
+  `cd server && npx vitest run src/test/unit/app/msp/tickets/page.i18n.test.tsx`.
 
 ## Risks
 
