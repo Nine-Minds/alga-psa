@@ -150,6 +150,33 @@ function buildPersistedRowAttribution(row: PersistedRecurringDueWorkDbRow): NonN
     };
 }
 
+function buildBackfillSuppressionKey(input: {
+    clientId: string;
+    billingCycleId?: string | null;
+    servicePeriodStart: ISO8601String;
+    servicePeriodEnd: ISO8601String;
+    invoiceWindowStart: ISO8601String;
+    invoiceWindowEnd: ISO8601String;
+}) {
+    const servicePeriodStart = normalizeDateOnly(input.servicePeriodStart);
+    const servicePeriodEnd = normalizeDateOnly(input.servicePeriodEnd);
+    const invoiceWindowStart = normalizeDateOnly(input.invoiceWindowStart);
+    const invoiceWindowEnd = normalizeDateOnly(input.invoiceWindowEnd);
+
+    if (!servicePeriodStart || !servicePeriodEnd || !invoiceWindowStart || !invoiceWindowEnd) {
+        return null;
+    }
+
+    return [
+        input.clientId,
+        input.billingCycleId ?? '',
+        servicePeriodStart,
+        servicePeriodEnd,
+        invoiceWindowStart,
+        invoiceWindowEnd,
+    ].join('|');
+}
+
 function buildUnresolvedRowAttribution(): NonNullable<IRecurringDueWorkRow['attribution']> {
     return {
         source: 'unresolved',
@@ -372,6 +399,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'rsp.period_key',
             'rsp.lifecycle_state',
             'rsp.reason_code',
+            'rsp.charge_family',
             'rsp.cadence_owner',
             'rsp.due_position',
             'rsp.service_period_start',
@@ -441,6 +469,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'rsp.period_key',
             'rsp.lifecycle_state',
             'rsp.reason_code',
+            'rsp.charge_family',
             'rsp.cadence_owner',
             'rsp.due_position',
             'rsp.service_period_start',
@@ -1263,14 +1292,44 @@ export const getAvailableRecurringDueWork = withAuth(async (
             asOf,
             groupingMetadataByRecordId,
         );
-        const compatibilityBackfillRecordIds = new Set(
-            persistedDbRows
-                .filter((row) => row.reason_code === 'backfill_materialization')
-                .map((row) => row.record_id),
+        const persistedIdentityKeys = new Set(
+            persistedRows.map((row) => row.executionIdentityKey),
         );
-        const readyPersistedRows = persistedRows.filter(
-            (row) => !row.recordId || !compatibilityBackfillRecordIds.has(row.recordId),
+        const materializationGaps = rawMaterializationGaps.filter(
+            (gap) => !persistedIdentityKeys.has(gap.executionIdentityKey),
         );
+        const backfillSuppressionKeys = new Set(
+            materializationGaps
+                .map((gap) =>
+                    buildBackfillSuppressionKey({
+                        clientId: gap.clientId,
+                        billingCycleId: gap.billingCycleId ?? null,
+                        servicePeriodStart: gap.servicePeriodStart,
+                        servicePeriodEnd: gap.servicePeriodEnd,
+                        invoiceWindowStart: gap.invoiceWindowStart,
+                        invoiceWindowEnd: gap.invoiceWindowEnd,
+                    }),
+                )
+                .filter((key): key is string => Boolean(key)),
+        );
+        const readyPersistedRows = persistedRows.filter((row) => {
+            const dbRow = row.recordId
+                ? persistedDbRows.find((candidate) => candidate.record_id === row.recordId)
+                : null;
+            if (!dbRow || dbRow.reason_code !== 'backfill_materialization') {
+                return true;
+            }
+
+            const suppressionKey = buildBackfillSuppressionKey({
+                clientId: dbRow.client_id,
+                billingCycleId: dbRow.billing_cycle_id ?? null,
+                servicePeriodStart: dbRow.service_period_start,
+                servicePeriodEnd: dbRow.service_period_end,
+                invoiceWindowStart: dbRow.invoice_window_start,
+                invoiceWindowEnd: dbRow.invoice_window_end,
+            });
+            return !suppressionKey || !backfillSuppressionKeys.has(suppressionKey);
+        });
         const unresolvedNonContractRows = await fetchUnresolvedNonContractDueWorkRows(
             candidateBillingPeriods,
             asOf,
@@ -1280,12 +1339,6 @@ export const getAvailableRecurringDueWork = withAuth(async (
         const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(
             [...readyPersistedRows, ...unresolvedNonContractRows],
             groupingMetadataByRecordId,
-        );
-        const persistedIdentityKeys = new Set(
-            persistedRows.map((row) => row.executionIdentityKey),
-        );
-        const materializationGaps = rawMaterializationGaps.filter(
-            (gap) => !persistedIdentityKeys.has(gap.executionIdentityKey),
         );
         const blockedInvoiceCandidates = applyClientCadenceMaterializationGapBlocks(
             invoiceCandidates,
