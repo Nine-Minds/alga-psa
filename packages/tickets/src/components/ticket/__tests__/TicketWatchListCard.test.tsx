@@ -9,6 +9,26 @@ import type { IContact, IUser } from '@alga-psa/types';
 import TicketWatchListCard from '../TicketWatchListCard';
 import { setTicketWatchListOnAttributes, type TicketWatchListEntry } from '@shared/lib/tickets/watchList';
 
+vi.mock('@alga-psa/ui/hooks', () => ({
+  useFeatureFlag: () => ({ enabled: false, loading: false, error: null }),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (_key: string, fallback?: string, options?: Record<string, unknown>) => {
+      if (!fallback) {
+        return _key;
+      }
+
+      let value = fallback;
+      if (options) {
+        value = value.replace(/\{\{(\w+)\}\}/g, (_match, name) => String(options[name] ?? ''));
+      }
+      return value;
+    },
+  }),
+}));
+
 vi.mock('@alga-psa/ui/components/UserPicker', () => ({
   __esModule: true,
   default: ({ id, value, onValueChange, users, placeholder, disabled }: any) => (

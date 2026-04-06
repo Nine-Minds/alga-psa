@@ -674,6 +674,11 @@ the one-liner. Keep the validator green before committing.
   `t(...)` calls.
 - **(2026-04-05, T081)** Extended the display-settings contract with the save path. The test now
   asserts the translated success toast, failure message, saving state, and save button label.
+- **(2026-04-05, T090)** Added `ticket/TicketWatchListCard.i18n.test.ts` as a source-contract
+  test covering the watch-list title, tabs, scope toggles, picker placeholders, add buttons,
+  empty state, and remove-button copy. While checking the older jsdom harness for later
+  regression work, I also restored its missing `useFeatureFlag` / `useTranslation` test mocks so
+  it can be repaired incrementally under `T120` instead of crashing immediately on mount.
 
 ## Risks
 
