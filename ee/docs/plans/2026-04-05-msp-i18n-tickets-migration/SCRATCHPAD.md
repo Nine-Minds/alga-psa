@@ -689,6 +689,10 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, T093)** The same shared contract file now covers `QuickAddCategory.tsx` too:
   dialog title, field labels/placeholders, board/parent helpers, validation errors, success
   toast, and generic create failure copy are all asserted through `t(...)`.
+- **(2026-04-05, T094)** `ticket/TicketSmallComponents.i18n.test.ts` also covers
+  `TicketDetailsContainer.tsx`: auth-required toasts, update/comment success messages, field-
+  update/save failure handling, and the added `messages.commentAdded` copy are all pinned to the
+  shared ticket namespace.
 
 ## Risks
 
