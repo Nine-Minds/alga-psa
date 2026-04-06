@@ -2,55 +2,55 @@
   {
     "id": "T001",
     "description": "Unit: the shared RMM provider registry exposes Tanium metadata/capability flags and the settings selector renders provider options from the registry rather than hard-coded branches",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F003", "F004"]
   },
   {
     "id": "T002",
     "description": "DB-backed integration: the shared RMM ingestion service creates a new asset, extension data, and `tenant_external_entity_mappings` row from a normalized device snapshot",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F006", "F007"]
   },
   {
     "id": "T003",
     "description": "DB-backed integration: re-ingesting an already-mapped normalized device snapshot updates the existing asset and mapping instead of creating a duplicate asset",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F008"]
   },
   {
     "id": "T004",
     "description": "DB-backed integration: Tanium scope discovery creates or refreshes `rmm_organization_mappings` while preserving existing client assignment and auto-sync flags on previously mapped scopes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F015"]
   },
   {
     "id": "T005",
     "description": "DB-backed integration: Tanium full inventory sync happy path uses the Gateway fetcher plus shared ingestion pipeline to create assets and mark integration sync status completed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F011", "F016", "F020"]
   },
   {
     "id": "T006",
     "description": "DB-backed integration: when Tanium Gateway does not return a needed endpoint because of documented aged-out coverage limitations, the sync path falls back to Asset API and still updates the mapped asset correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F017"]
   },
   {
     "id": "T007",
     "description": "Integration: Tanium connection test/auth failure leaves the integration inactive, does not write a false connected state, and returns an actionable error to the settings surface",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F012", "F013"]
   },
   {
     "id": "T008",
     "description": "Playwright or equivalent UI integration: a tenant admin can configure Tanium credentials, run connection test, trigger scope discovery, and reach the shared mapping manager from the Tanium settings surface",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F014", "F015"]
   },
   {
     "id": "T009",
     "description": "Integration: new shared sync orchestration runs provider fetch/normalize logic through one transport seam without duplicating business logic between provider-specific execution paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F019"]
   }
 ]

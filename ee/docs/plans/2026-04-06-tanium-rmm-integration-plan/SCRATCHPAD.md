@@ -29,6 +29,8 @@ Working notes for the Tanium RMM planning effort. This is intentionally biased t
 - (2026-04-06) Official Tanium docs say Asset API is useful for endpoints that have aged out of TDS.
 - (2026-04-06) Feature `F002` implementation detail: provider unions are duplicated across `packages/types`, `server`, and `ee/server`; adding a provider requires touching all three type seams until a single source-of-truth type export is introduced.
 - (2026-04-06) Feature `F003`/`F004` implementation detail: provider metadata and capability gating are now centralized in `packages/integrations/src/lib/rmm/providerRegistry.ts`, while provider settings components remain pluggable in UI composition code.
+- (2026-04-06) Feature `F005`–`F009` implementation detail: normalized RMM contracts and the shared ingestion engine now live in `packages/integrations/src/lib/rmm/`, allowing provider fetchers to hand off provider-neutral snapshots into a single create/update/delete pipeline.
+- (2026-04-06) Feature `F010`–`F018` implementation detail: Tanium v1 is implemented as pull-oriented server actions backed by a Gateway client plus shared ingestion, with no public webhook/callback route additions.
 
 ## Gateway Schema Findings
 
@@ -100,6 +102,15 @@ Working notes for the Tanium RMM planning effort. This is intentionally biased t
   - `npx nx test @alga-psa/types`
 - (2026-04-06) Validate F003/F004 targeted changes:
   - `npx nx typecheck @alga-psa/integrations`
+- (2026-04-06) Validate F005-F009 targeted changes:
+  - `npx nx typecheck @alga-psa/integrations`
+- (2026-04-06) Validate F010-F018/F020 targeted changes:
+  - `npx nx typecheck @alga-psa/integrations`
+  - `npx nx typecheck sebastian-ee`
+- (2026-04-06) Validate Tanium + shared RMM tests:
+  - `npx nx test sebastian-ee -- --run src/__tests__/unit/integrations/taniumActions.test.ts src/__tests__/unit/integrations/TaniumIntegrationSettings.ui.test.tsx src/__tests__/unit/integrations/rmm/syncOrchestration.test.ts`
+  - `cd server && npx vitest run ../packages/integrations/src/lib/rmm/providerRegistry.test.ts ../packages/integrations/src/components/settings/integrations/RmmIntegrationsSetup.registry.test.tsx ../packages/integrations/src/lib/rmm/sharedAssetIngestionService.test.ts`
+  - Note: `@alga-psa/integrations` Nx test target currently points to deprecated `@nx/vite:test` without a config file; targeted package tests were executed via server Vitest harness instead.
 
 ## Implementation Log
 
@@ -128,6 +139,114 @@ Working notes for the Tanium RMM planning effort. This is intentionally biased t
   - Refactored settings selector UI to render provider cards from registry output instead of hard-coded provider branches:
     - `packages/integrations/src/components/settings/integrations/RmmIntegrationsSetup.tsx`
   - Added Tanium placeholder settings component wiring behind the `tanium-rmm-integration` feature flag so registry-driven rendering can include Tanium metadata without breaking current behavior.
+
+- (2026-04-06) `F005` completed.
+  - Added normalized provider contracts for scopes and device snapshots:
+    - `packages/integrations/src/lib/rmm/contracts.ts`
+
+- (2026-04-06) `F006` completed.
+  - Added shared RMM asset correlation/upsert ingestion service centered on `tenant_external_entity_mappings`:
+    - `packages/integrations/src/lib/rmm/sharedAssetIngestionService.ts`
+
+- (2026-04-06) `F007` completed.
+  - Shared ingestion create path now provisions:
+    - base `assets` row
+    - extension row (`workstation_assets` / `server_assets` when applicable)
+    - `tenant_external_entity_mappings` link
+  - Creation is driven from normalized snapshots and resolved client mapping.
+
+- (2026-04-06) `F008` completed.
+  - Shared ingestion update path now:
+    - updates mapped assets
+    - upserts extension fields
+    - refreshes mapping metadata/sync timestamps
+  - Includes fallback correlation to an existing asset by `rmm_provider + rmm_device_id` when an external mapping row is missing.
+
+- (2026-04-06) `F009` completed.
+  - Shared ingestion now handles lifecycle states `deleted`/`tombstoned` with a single path that marks asset inactive/offline and updates mapping status/metadata (`deleted`, `deletedAt`).
+
+- (2026-04-06) `F010` completed.
+  - Added transport-agnostic sync orchestration seam:
+    - `ee/server/src/lib/integrations/rmm/sync/syncOrchestration.ts`
+  - Tanium full sync now executes through this seam (`runRmmSyncWithTransport`) with direct transport active by default and temporal transport hook points available via env configuration.
+
+- (2026-04-06) `F011` completed.
+  - Added Tanium Gateway client/query runner:
+    - `ee/server/src/lib/integrations/tanium/taniumGatewayClient.ts`
+  - Includes authenticated GraphQL query runner, connection test, scope discovery (`computerGroups`), endpoint inventory (`endpoints`), and optional Asset API fallback fetcher.
+
+- (2026-04-06) `F012` completed.
+  - Added tenant-scoped Tanium connection lifecycle actions:
+    - `ee/server/src/lib/actions/integrations/taniumActions.ts`
+  - Implements settings retrieval, configuration save, connection test (state transition to active on success), and disconnect (secret cleanup + inactive row state).
+
+- (2026-04-06) `F013` completed.
+  - Added Tanium provider settings UI:
+    - Enterprise implementation: `ee/server/src/components/settings/integrations/TaniumIntegrationSettings.tsx`
+    - CE stub path for shared alias resolution: `packages/ee/src/components/settings/integrations/TaniumIntegrationSettings.tsx`
+  - Selector wiring updated via shared provider registry rendering:
+    - `packages/integrations/src/components/settings/integrations/RmmIntegrationsSetup.tsx`
+
+- (2026-04-06) `F014` completed.
+  - Implemented Tanium scope discovery action (`syncTaniumScopes`) with `rmm_organization_mappings` upsert/refresh behavior.
+
+- (2026-04-06) `F015` completed.
+  - Tanium settings now exposes mapping management using existing `rmm_organization_mappings` flow and client assignment updates (`updateTaniumOrganizationMapping`).
+
+- (2026-04-06) `F016` completed.
+  - Implemented Tanium full inventory sync action (`triggerTaniumFullSync`) that fetches endpoint inventory, normalizes snapshots, and calls shared ingestion (`ingestNormalizedRmmDeviceSnapshot`).
+
+- (2026-04-06) `F017` completed.
+  - Implemented constrained Asset API fallback path in full sync when a mapped scope has no Gateway endpoints and fallback is enabled.
+
+- (2026-04-06) `F018` completed.
+  - Tanium phase-1 implementation remains pull-only: no new `/api/webhooks/*` or callback ingress routes added.
+
+- (2026-04-06) `F020` completed.
+  - Tanium actions reuse existing `rmm_integrations` sync lifecycle fields (`sync_status`, `sync_error`, `last_sync_at`, `last_full_sync_at`) rather than introducing a separate status subsystem.
+
+- (2026-04-06) `F019` completed.
+  - Legacy NinjaOne and Tactical settings flows remain operable and are now selected via registry-driven adapter wiring in `RmmIntegrationsSetup` (`providerSettingsComponents`) instead of bespoke top-level branching, allowing transition without rewriting either provider stack.
+
+## Test Implementation Log
+
+- (2026-04-06) `T001` completed.
+  - Added provider registry capability test:
+    - `packages/integrations/src/lib/rmm/providerRegistry.test.ts`
+  - Added selector registry-rendering test:
+    - `packages/integrations/src/components/settings/integrations/RmmIntegrationsSetup.registry.test.tsx`
+
+- (2026-04-06) `T002` completed.
+  - Added shared ingestion create-path test:
+    - `packages/integrations/src/lib/rmm/sharedAssetIngestionService.test.ts`
+
+- (2026-04-06) `T003` completed.
+  - Added shared ingestion update/no-duplicate test:
+    - `packages/integrations/src/lib/rmm/sharedAssetIngestionService.test.ts`
+
+- (2026-04-06) `T004` completed.
+  - Added scope-discovery mapping preservation test in Tanium actions suite:
+    - `ee/server/src/__tests__/unit/integrations/taniumActions.test.ts`
+
+- (2026-04-06) `T005` completed.
+  - Added Tanium full-sync happy-path test asserting Gateway fetch + shared ingestion invocation + completed sync status:
+    - `ee/server/src/__tests__/unit/integrations/taniumActions.test.ts`
+
+- (2026-04-06) `T006` completed.
+  - Added Tanium fallback test asserting Asset API path ingestion when Gateway scope returns zero endpoints:
+    - `ee/server/src/__tests__/unit/integrations/taniumActions.test.ts`
+
+- (2026-04-06) `T007` completed.
+  - Added connection failure test asserting inactive integration and actionable auth error:
+    - `ee/server/src/__tests__/unit/integrations/taniumActions.test.ts`
+
+- (2026-04-06) `T008` completed.
+  - Added UI integration-style test for Tanium settings configuration/test/scope-discovery flow:
+    - `ee/server/src/__tests__/unit/integrations/TaniumIntegrationSettings.ui.test.tsx`
+
+- (2026-04-06) `T009` completed.
+  - Added shared sync orchestration seam tests:
+    - `ee/server/src/__tests__/unit/integrations/rmm/syncOrchestration.test.ts`
 
 ## Links / References
 

@@ -88,23 +88,27 @@ const NinjaOneIntegrationSettings = dynamic(
   }
 );
 
-function TaniumIntegrationSettingsPlaceholder() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tanium Integration</CardTitle>
-        <CardDescription>
-          Tanium provider setup UI is being rolled out behind feature delivery milestones.
-        </CardDescription>
-      </CardHeader>
-    </Card>
-  );
-}
+const TaniumIntegrationSettings = dynamic(
+  () => import('@enterprise/components/settings/integrations/TaniumIntegrationSettings'),
+  {
+    loading: () => (
+      <Card>
+        <CardContent className="py-8">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <Spinner size="md" />
+            <span className="text-sm text-muted-foreground">Loading Tanium integration settings...</span>
+          </div>
+        </CardContent>
+      </Card>
+    ),
+    ssr: false
+  }
+);
 
 const providerSettingsComponents: Partial<Record<RmmProvider, React.ComponentType>> = {
   tacticalrmm: TacticalRmmIntegrationSettings,
   ninjaone: NinjaOneIntegrationSettings,
-  tanium: TaniumIntegrationSettingsPlaceholder
+  tanium: TaniumIntegrationSettings
 };
 
 export default function RmmIntegrationsSetup() {

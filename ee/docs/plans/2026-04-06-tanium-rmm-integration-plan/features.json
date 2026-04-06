@@ -26,97 +26,97 @@
   {
     "id": "F005",
     "description": "Define normalized provider contracts for external scopes and external device snapshots so new RMM providers feed one shared pipeline",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
     "id": "F006",
     "description": "Extract a shared RMM asset correlation/upsert service that uses `tenant_external_entity_mappings` as the external identity backbone",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F007",
     "description": "Shared RMM ingestion creates a new Alga asset, extension row, and external mapping from a normalized device snapshot when no prior mapping exists",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
     "id": "F008",
     "description": "Shared RMM ingestion updates an existing mapped asset and refreshes mapping metadata without creating duplicates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
     "id": "F009",
     "description": "Shared RMM ingestion provides a common path for offline/tombstone/delete handling instead of provider-specific asset deletion logic",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
     "id": "F010",
     "description": "Introduce a shared sync orchestration seam so provider fetch/normalize logic can run through a pluggable direct or Temporal transport",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Non-functional Requirements"]
   },
   {
     "id": "F011",
     "description": "Implement a Tanium Gateway client/query runner using documented Tanium auth and permission expectations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Security / Permissions"]
   },
   {
     "id": "F012",
     "description": "Implement Tanium connection status, test, and disconnect actions using tenant-scoped secret storage",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Security / Permissions"]
   },
   {
     "id": "F013",
     "description": "Add a Tanium provider settings UI that exposes credential entry, connection status, sync controls, and capability-aware guidance",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "UX / UI Notes"]
   },
   {
     "id": "F014",
     "description": "Implement Tanium scope discovery and persist discovered external scopes into `rmm_organization_mappings`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Users and Primary Flows"]
   },
   {
     "id": "F015",
     "description": "Reuse the shared organization mapping flow so tenant admins can map Tanium scopes to Alga clients",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "UX / UI Notes"]
   },
   {
     "id": "F016",
     "description": "Implement Tanium full inventory sync over Gateway that normalizes device snapshots and runs them through the shared ingestion pipeline",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Rollout / Migration"]
   },
   {
     "id": "F017",
     "description": "Implement an Asset API fallback path only for documented aged-out endpoint coverage gaps where Gateway/TDS data is insufficient",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F018",
     "description": "Phase-1 Tanium integration remains pull-oriented and does not add a public callback or webhook ingress path unless a later capability explicitly requires it",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Security / Permissions"]
   },
   {
     "id": "F019",
     "description": "Existing NinjaOne and Tactical RMM integrations continue to operate during the transition through wrappers or adapters behind the shared provider registry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Rollout / Migration"]
   },
   {
     "id": "F020",
     "description": "Reuse the existing RMM sync status and integration event patterns instead of introducing a new Tanium-specific status subsystem",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Observability"]
   }
 ]
