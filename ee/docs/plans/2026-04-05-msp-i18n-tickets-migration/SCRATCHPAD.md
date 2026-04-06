@@ -742,6 +742,13 @@ the one-liner. Keep the validator green before committing.
   content so `/msp/settings -> features/tickets` is proven for the two MSP ticket settings
   surfaces added in `F030`-`F037`. Verified with `cd server && npx vitest run
   src/test/unit/app/msp/settings/ticketing.i18n.test.tsx`.
+- **(2026-04-06, T105)** Added
+  `server/src/test/unit/app/msp/service-requests/editor.i18n.test.tsx` to cover the
+  `/msp/service-requests/[definitionId]` reuse path introduced by `F010`. The route harness mocks
+  `ServiceRequestDefinitionEditorPage` down to a `CategoryPicker`-shaped shell, then verifies the
+  German picker placeholder/badge/summary/add-new copy only renders when `MspLayoutClient` loads
+  `features/tickets` for `/msp/service-requests/*`. Verified with `cd server && npx vitest run
+  src/test/unit/app/msp/service-requests/editor.i18n.test.tsx`.
 
 ## Risks
 
