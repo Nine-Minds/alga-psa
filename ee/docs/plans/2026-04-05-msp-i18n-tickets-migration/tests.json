@@ -16,7 +16,7 @@
   {"id": "T032", "description": "Unit: TicketInfo.i18n.test — pseudo-locale coverage", "implemented": true, "featureIds": ["F025", "F026"]},
 
   {"id": "T040", "description": "Unit: TicketProperties.i18n.test — side panel labels, status/priority/board select placeholders render via t()", "implemented": true, "featureIds": ["F027"]},
-  {"id": "T041", "description": "Unit: TicketProperties.i18n.test — board change reselection prompt translated", "implemented": false, "featureIds": ["F028"]},
+  {"id": "T041", "description": "Unit: TicketProperties.i18n.test — board change reselection prompt translated", "implemented": true, "featureIds": ["F028"]},
   {"id": "T042", "description": "Unit: TicketProperties.i18n.test — pseudo-locale coverage for inline edit controls", "implemented": false, "featureIds": ["F027", "F028"]},
 
   {"id": "T050", "description": "Unit: CategoriesSettings.i18n.test — board/channel scope selector and tree labels translated", "implemented": false, "featureIds": ["F030"]},

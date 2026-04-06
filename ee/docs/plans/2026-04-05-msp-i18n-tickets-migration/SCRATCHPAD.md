@@ -638,6 +638,11 @@ the one-liner. Keep the validator green before committing.
   side-panel chrome: time-entry/timer labels, work-description placeholder, contact/location/
   agent-team headings, primary/additional-agent copy, the additional-agent picker placeholder,
   and the shared quick-add team-section label all now have direct source assertions.
+- **(2026-04-05, T041)** Extended `TicketProperties.i18n.test.ts` with the interactive dialog
+  surface from `F028`. The checklist wording still mentions a board-change reselection prompt,
+  but this component’s actual translated confirmation flow is the team-assignment removal/switch
+  dialog; the test now asserts that title, option labels, empty state, and confirm/cancel
+  actions all route through `t(...)`.
 
 ## Risks
 
