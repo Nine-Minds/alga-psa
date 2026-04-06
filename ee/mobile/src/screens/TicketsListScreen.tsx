@@ -2,6 +2,7 @@ import { useFocusEffect, type CompositeScreenProps } from "@react-navigation/nat
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { EmptyState, ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import type { RootStackParamList, TabsParamList, TicketsStackParamList } from "../navigation/types";
@@ -144,10 +145,21 @@ export function TicketsListScreen({ navigation }: Props) {
     void setSecureJson(`alga.mobile.tickets.filters.${userId}`, filters);
   }, [filters, filtersLoaded, session?.user?.id]);
 
-  useEffect(() => {
-    const handle = setTimeout(() => setSearch(searchInput.trim()), 350);
-    return () => clearTimeout(handle);
+  const commitSearch = useCallback(() => {
+    setSearch(searchInput.trim());
   }, [searchInput]);
+
+  const clearSearch = useCallback(() => {
+    setSearchInput("");
+    setSearch("");
+  }, []);
+
+  // If the user fully clears the input, drop the committed search immediately.
+  useEffect(() => {
+    if (searchInput === "" && search !== "") {
+      setSearch("");
+    }
+  }, [searchInput, search]);
 
   const apiFilters = useMemo(() => {
     if (!session) return undefined;
@@ -472,24 +484,32 @@ export function TicketsListScreen({ navigation }: Props) {
         <View style={{ padding: theme.spacing.lg }}>
           <View style={{ flexDirection: "row" }}>
             <View style={{ flex: 1 }}>
-              <TextInput
+              <SearchField
+                theme={theme}
                 value={searchInput}
                 onChangeText={setSearchInput}
+                onSubmit={commitSearch}
+                onClear={clearSearch}
                 placeholder={t("list.searchPlaceholder")}
-                placeholderTextColor={theme.colors.placeholder}
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={{
-                  paddingVertical: theme.spacing.sm,
-                  paddingHorizontal: theme.spacing.md,
-                  borderRadius: theme.borderRadius.lg,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  backgroundColor: theme.colors.background,
-                  color: theme.colors.text,
-                }}
               />
             </View>
+            <View style={{ width: theme.spacing.sm }} />
+            <Pressable
+              onPress={commitSearch}
+              accessibilityRole="button"
+              accessibilityLabel={t("list.searchAccessibility")}
+              style={({ pressed }) => ({
+                paddingHorizontal: theme.spacing.md,
+                borderRadius: theme.borderRadius.lg,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.card,
+                justifyContent: "center",
+                opacity: pressed ? 0.95 : 1,
+              })}
+            >
+              <Feather name="search" size={16} color={theme.colors.text} />
+            </Pressable>
             <View style={{ width: theme.spacing.sm }} />
             <Pressable
               onPress={() => setFiltersOpen(true)}
@@ -514,7 +534,7 @@ export function TicketsListScreen({ navigation }: Props) {
             onPress={() => setFiltersOpen(true)}
             onClearAll={() => {
               setFilters({ ...DEFAULT_FILTERS });
-              setSearchInput("");
+              clearSearch();
             }}
           />
         </View>
@@ -567,25 +587,33 @@ export function TicketsListScreen({ navigation }: Props) {
       ) : null}
       <View style={{ flexDirection: "row" }}>
         <View style={{ flex: 1 }}>
-          <TextInput
+          <SearchField
+            theme={theme}
             value={searchInput}
             onChangeText={setSearchInput}
+            onSubmit={commitSearch}
+            onClear={clearSearch}
             placeholder={t("list.searchPlaceholder")}
-            placeholderTextColor={theme.colors.placeholder}
-            autoCapitalize="none"
-            autoCorrect={false}
             accessibilityLabel={t("list.searchAccessibility")}
-            style={{
-              paddingVertical: theme.spacing.sm,
-              paddingHorizontal: theme.spacing.md,
-              borderRadius: theme.borderRadius.lg,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              backgroundColor: theme.colors.background,
-              color: theme.colors.text,
-            }}
           />
         </View>
+        <View style={{ width: theme.spacing.sm }} />
+        <Pressable
+          onPress={commitSearch}
+          accessibilityRole="button"
+          accessibilityLabel={t("list.searchAccessibility")}
+          style={({ pressed }) => ({
+            paddingHorizontal: theme.spacing.md,
+            borderRadius: theme.borderRadius.lg,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.card,
+            justifyContent: "center",
+            opacity: pressed ? 0.95 : 1,
+          })}
+        >
+          <Feather name="search" size={16} color={theme.colors.text} />
+        </Pressable>
         <View style={{ width: theme.spacing.sm }} />
         <Pressable
           onPress={() => setFiltersOpen(true)}
@@ -1224,6 +1252,66 @@ const TicketRow = memo(function TicketRow({
     </Pressable>
   );
 });
+
+function SearchField({
+  theme,
+  value,
+  onChangeText,
+  onSubmit,
+  onClear,
+  placeholder,
+  accessibilityLabel,
+}: {
+  theme: Theme;
+  value: string;
+  onChangeText: (text: string) => void;
+  onSubmit: () => void;
+  onClear: () => void;
+  placeholder: string;
+  accessibilityLabel?: string;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        borderRadius: theme.borderRadius.lg,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.background,
+        paddingHorizontal: theme.spacing.md,
+      }}
+    >
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        onSubmitEditing={onSubmit}
+        returnKeyType="search"
+        placeholder={placeholder}
+        placeholderTextColor={theme.colors.placeholder}
+        autoCapitalize="none"
+        autoCorrect={false}
+        accessibilityLabel={accessibilityLabel}
+        style={{
+          flex: 1,
+          paddingVertical: theme.spacing.sm,
+          color: theme.colors.text,
+        }}
+      />
+      {value.length > 0 ? (
+        <Pressable
+          onPress={onClear}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+          hitSlop={8}
+          style={{ padding: theme.spacing.xs }}
+        >
+          <Feather name="x" size={16} color={theme.colors.textSecondary} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
 
 function priorityTone(priorityName: string): "neutral" | "success" | "warning" | "danger" {
   const normalized = priorityName.trim().toLowerCase();

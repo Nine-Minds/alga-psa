@@ -166,6 +166,12 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
     });
 
     // Mention suggestion state
+    // Track the full content height so the WebView can stay at its natural
+    // size even when the outer container clips (collapse).  This prevents the
+    // WebView from reflowing its HTML on every expand/collapse, eliminating
+    // the sluggish "slow scroll" effect.
+    const [naturalHeight, setNaturalHeight] = useState(0);
+
     const [mentionState, setMentionState] = useState<TicketMobileEditorMentionQueryPayload | null>(null);
     const mentionStateRef = useRef<TicketMobileEditorMentionQueryPayload | null>(null);
     const [mentionResults, setMentionResults] = useState<MentionSuggestionItem[]>([]);
@@ -219,6 +225,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
           callbacksRef.current.onContentChange?.(payload);
         },
         onContentHeight(payload) {
+          setNaturalHeight(Math.ceil(payload.height));
           callbacksRef.current.onContentHeight?.(payload);
         },
         onError: reportError,
@@ -510,7 +517,9 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
             {...(Platform.OS === "android" ? { androidLayerType: "hardware" } : {})}
             style={{
               backgroundColor: "transparent",
-              ...(editable ? { minHeight: height } : { height }),
+              ...(editable
+                ? { minHeight: height }
+                : { height: naturalHeight > height ? naturalHeight : height }),
             }}
           />
           {!ready ? (
