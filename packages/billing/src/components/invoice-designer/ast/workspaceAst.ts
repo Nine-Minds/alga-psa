@@ -1766,7 +1766,7 @@ export const importTemplateAstToWorkspace = (
           if (inputNode.borderStyle) {
             metadata.fieldBorderStyle = inputNode.borderStyle;
           } else {
-            delete metadata.fieldBorderStyle;
+            metadata.fieldBorderStyle = 'none';
           }
           if (inputNode.label) {
             metadata.label = inputNode.label;

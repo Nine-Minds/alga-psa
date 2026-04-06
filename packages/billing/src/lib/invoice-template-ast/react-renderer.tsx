@@ -11,6 +11,7 @@ import type {
 import { formatTemplateFieldValue } from './fieldFormatting';
 import type { TemplateEvaluationResult } from './evaluator';
 import { decodeTemplatePathExpression } from './templateInterpolationFilters';
+import { normalizeTemplateAstFieldBorderDefaults } from './normalize';
 import { resolveTemplatePrintSettingsFromAst } from './printSettings';
 
 type UnknownRecord = Record<string, unknown>;
@@ -617,8 +618,9 @@ export const renderEvaluatedTemplateAst = async (
   // Next.js app router disallows static imports from react-dom/server in shared modules.
   // Use a dynamic import so this renderer remains server-only at call sites.
   const { renderToStaticMarkup } = await import('react-dom/server');
+  const normalizedAst = normalizeTemplateAstFieldBorderDefaults(ast);
   return {
-    html: renderToStaticMarkup(<TemplateAstRenderer ast={ast} evaluation={evaluation} />),
-    css: buildAstCss(ast),
+    html: renderToStaticMarkup(<TemplateAstRenderer ast={normalizedAst} evaluation={evaluation} />),
+    css: buildAstCss(normalizedAst),
   };
 };
