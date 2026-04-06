@@ -8,6 +8,19 @@ function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
 }
 
+function readJson<T>(relativePath: string): T {
+  return JSON.parse(read(relativePath)) as T;
+}
+
+function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
+  return dottedPath.split('.').reduce<unknown>((value, key) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return undefined;
+    }
+    return (value as Record<string, unknown>)[key];
+  }, record);
+}
+
 describe('quick add ticket i18n wiring contract', () => {
   it('T020: wires the dialog shell, field labels, and primary placeholders through features/tickets translations', () => {
     const source = read('./QuickAddTicket.tsx');
@@ -54,5 +67,30 @@ describe('quick add ticket i18n wiring contract', () => {
     expect(source).toContain("defaultValue: failedCount === 1 ? '{{count}} tag could not be created' : '{{count}} tags could not be created'");
     expect(source).toContain('count: pendingTags.length');
     expect(source).toContain("defaultValue: pendingTags.length === 1 ? '{{count}} tag could not be created' : '{{count}} tags could not be created'");
+  });
+
+  it('T023: keeps the quick-add dialog backed by xx pseudo-locale strings', () => {
+    const source = read('./QuickAddTicket.tsx');
+    const pseudo = readJson<Record<string, unknown>>('../../../../server/public/locales/xx/features/tickets.json');
+
+    const pseudoKeys = [
+      'quickAdd.dialogTitle',
+      'quickAdd.titlePlaceholder',
+      'quickAdd.clientPlaceholder',
+      'quickAdd.boardPlaceholder',
+      'quickAdd.statusPlaceholder',
+      'quickAdd.selectPriority',
+      'quickAdd.dueDate',
+      'quickAdd.createAndView',
+      'quickAdd.continueEditing',
+    ];
+
+    for (const key of pseudoKeys) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(pseudo, key)).toBe('11111');
+    }
+
+    expect(getLeaf(pseudo, 'quickAdd.tagCreatePartialFailure_one')).toBe('11111 {{count}} 11111');
+    expect(getLeaf(pseudo, 'quickAdd.tagCreatePartialFailure_other')).toBe('11111 {{count}} 11111');
   });
 });

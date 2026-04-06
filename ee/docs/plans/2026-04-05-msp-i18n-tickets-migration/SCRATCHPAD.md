@@ -619,6 +619,10 @@ the one-liner. Keep the validator green before committing.
   failure toast. The new source-contract assertion checks both the partial-success and catch
   branches to ensure `quickAdd.tagCreatePartialFailure` always receives `count` plus singular/
   plural default values.
+- **(2026-04-05, T023)** Finished the QuickAdd source-contract set with a pseudo-locale check
+  against `xx/features/tickets.json`. The test verifies that the core dialog labels/placeholders
+  plus the `quickAdd.tagCreatePartialFailure_*` entries collapse to pseudo-fill values rather
+  than English.
 
 ## Risks
 
