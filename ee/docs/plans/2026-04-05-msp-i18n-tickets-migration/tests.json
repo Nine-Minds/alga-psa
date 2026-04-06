@@ -52,7 +52,7 @@
   {"id": "T108", "description": "Integration: xx pseudo-locale smoke test across /msp/tickets list, detail, settings renders pseudo-text everywhere", "implemented": true, "featureIds": ["F009", "F020", "F023", "F025", "F027", "F030", "F032", "F034", "F036"]},
 
   {"id": "T120", "description": "Regression: existing ticket unit tests (TicketDetailsContainer.description.test, TicketInfo.boardChangeStatusReselection.test, TicketProperties.liveTimerPolicy.test, QuickAddTicket.boardScopedStatuses.test, TicketWatchListCard.test, ticket-properties-inline-contact.test, ticket-inline-add-prefill.test, etc.) still pass", "implemented": true, "featureIds": ["F020", "F023", "F025", "F027", "F040"]},
-  {"id": "T121", "description": "Regression: existing ticket render tests (TicketOriginBadge.render, ResponseSourceBadge.render) still pass after badge i18n wiring", "implemented": false, "featureIds": ["F049"]},
+  {"id": "T121", "description": "Regression: existing ticket render tests (TicketOriginBadge.render, ResponseSourceBadge.render) still pass after badge i18n wiring", "implemented": true, "featureIds": ["F049"]},
   {"id": "T122", "description": "Regression: CommentMetadataDebugModal.test still passes after dev-facing translation wiring", "implemented": false, "featureIds": ["F046"]},
   {"id": "T123", "description": "Regression: AgentScheduleDrawer.test still passes (re-export shim)", "implemented": false, "featureIds": ["F050"]},
   {"id": "T124", "description": "Regression: TicketDetailsContainerCreateTask.test and TicketDetailsCreateTask.test pass (project-tickets integration)", "implemented": false, "featureIds": ["F025"]},

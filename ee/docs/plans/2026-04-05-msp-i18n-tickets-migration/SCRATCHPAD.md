@@ -716,6 +716,13 @@ the one-liner. Keep the validator green before committing.
   `packages/tickets/vitest.config.ts`, updated the quick-add tests to mock the current quick-add
   client context and rich-text upload session, and refreshed stale watch-list expectations for the
   collapsed-by-default card, tabbed add modes, filtered duplicate users, and localized badge text.
+- **(2026-04-06, T121)** Re-ran the badge regression suite after the optional-`labels` fallback
+  wiring: `TicketOriginBadge.render.test.tsx` and `ResponseSourceBadge.render.test.tsx` both pass
+  unchanged (`12` tests total) under `cd packages/tickets && npx vitest run
+  src/components/TicketOriginBadge.render.test.tsx
+  src/components/ResponseSourceBadge.render.test.tsx`. The usual `react-i18next` no-instance
+  warning still appears in this server-render harness, but it remains non-fatal because the tests
+  assert the fallback labels directly.
 - **(2026-04-06, T100)** Added
   `server/src/test/unit/app/msp/tickets/page.i18n.test.tsx` as a page+layout integration harness
   for `/msp/tickets`. The test runs `server/src/app/msp/tickets/page.tsx` with mocked ticket-data
