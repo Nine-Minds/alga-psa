@@ -36,6 +36,19 @@ const translations = {
       'resetFilters': '__EN Reset__',
     },
   },
+  de: {
+    'features/tickets': {
+      'dashboard.title': 'Ticket-Dashboard',
+      'dashboard.addTicket': 'Ticket hinzufügen',
+      'dashboard.filters.allAssignees': 'Alle Zuständigen',
+      'dashboard.filters.selectStatus': 'Status auswählen',
+      'dashboard.filters.responseState': 'Antwortstatus',
+      'filters.allPriorities': 'Alle Prioritäten',
+      'dashboard.filters.dueDate': 'Fälligkeitsdatum',
+      'filters.category': 'Nach Kategorie filtern',
+      'resetFilters': 'Zurücksetzen',
+    },
+  },
 } as const;
 
 const interpolate = (template: string, values: Record<string, unknown> = {}) =>
@@ -190,7 +203,7 @@ vi.mock('@alga-psa/msp-composition/tickets', async () => {
 const { default: TicketsPage } = await import('server/src/app/msp/tickets/page');
 const { MspLayoutClient } = await import('server/src/app/msp/MspLayoutClient');
 
-async function renderTicketsList(locale: 'en' = 'en') {
+async function renderTicketsList(locale: keyof typeof translations = 'en') {
   const page = await TicketsPage({ searchParams: Promise.resolve({}) });
 
   render(
@@ -239,6 +252,30 @@ describe('/msp/tickets i18n integration', () => {
     expect(screen.getByText('__EN Due Date__')).toBeInTheDocument();
     expect(screen.getByText('__EN Category Filter__')).toBeInTheDocument();
     expect(screen.getByText('__EN Reset__')).toBeInTheDocument();
+
+    expect(screen.queryByText('Ticketing Dashboard')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add Ticket')).not.toBeInTheDocument();
+    expect(screen.queryByText('All Assignees')).not.toBeInTheDocument();
+    expect(screen.queryByText('Select Status')).not.toBeInTheDocument();
+    expect(screen.queryByText('Response State')).not.toBeInTheDocument();
+    expect(screen.queryByText('All Priorities')).not.toBeInTheDocument();
+    expect(screen.queryByText('Due Date')).not.toBeInTheDocument();
+    expect(screen.queryByText('Filter by category')).not.toBeInTheDocument();
+    expect(screen.queryByText('Reset')).not.toBeInTheDocument();
+  });
+
+  it('T101: /msp/tickets loads the dashboard frame in de with translated title, add button, and filters', async () => {
+    await renderTicketsList('de');
+
+    expect(await screen.findByText('Ticket-Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Ticket hinzufügen')).toBeInTheDocument();
+    expect(screen.getByText('Alle Zuständigen')).toBeInTheDocument();
+    expect(screen.getByText('Status auswählen')).toBeInTheDocument();
+    expect(screen.getByText('Antwortstatus')).toBeInTheDocument();
+    expect(screen.getByText('Alle Prioritäten')).toBeInTheDocument();
+    expect(screen.getByText('Fälligkeitsdatum')).toBeInTheDocument();
+    expect(screen.getByText('Nach Kategorie filtern')).toBeInTheDocument();
+    expect(screen.getByText('Zurücksetzen')).toBeInTheDocument();
 
     expect(screen.queryByText('Ticketing Dashboard')).not.toBeInTheDocument();
     expect(screen.queryByText('Add Ticket')).not.toBeInTheDocument();

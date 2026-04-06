@@ -42,7 +42,7 @@
   {"id": "T098", "description": "Unit: ResponseSourceBadge.i18n.test — all source enum values render localized labels", "implemented": true, "featureIds": ["F049"]},
 
   {"id": "T100", "description": "Integration: /msp/tickets list loads in en with no hardcoded English visible in the dashboard frame", "implemented": true, "featureIds": ["F020", "F021", "F022", "F042", "F045"]},
-  {"id": "T101", "description": "Integration: /msp/tickets list loads in de with translated page title, add button, filters", "implemented": false, "featureIds": ["F020", "F021", "F022"]},
+  {"id": "T101", "description": "Integration: /msp/tickets list loads in de with translated page title, add button, filters", "implemented": true, "featureIds": ["F020", "F021", "F022"]},
   {"id": "T102", "description": "Integration: /msp/tickets quick-add dialog renders translated labels in de", "implemented": false, "featureIds": ["F023", "F024"]},
   {"id": "T103", "description": "Integration: /msp/tickets/[id] detail page renders TicketInfo/TicketProperties/TicketMaterialsCard/TicketWatchListCard in de with no English leakage", "implemented": false, "featureIds": ["F025", "F026", "F027", "F028", "F034", "F035", "F040"]},
   {"id": "T104", "description": "Integration: /msp/settings/ticketing renders CategoriesSettings + DisplaySettings in de with translated labels", "implemented": false, "featureIds": ["F030", "F031", "F036", "F037"]},

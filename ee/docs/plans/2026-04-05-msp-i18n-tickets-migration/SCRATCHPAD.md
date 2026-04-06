@@ -715,6 +715,12 @@ the one-liner. Keep the validator green before committing.
   the assertion stronger than a source grep: the dashboard frame must render translated values for
   title/add/filter/reset chrome instead of falling back to raw English literals. Verified with
   `cd server && npx vitest run src/test/unit/app/msp/tickets/page.i18n.test.tsx`.
+- **(2026-04-06, T101)** Extended the same `/msp/tickets` page+layout harness with a German
+  locale case that checks the shipped `de/features/tickets.json` copy used for the visible list
+  frame (`Ticket-Dashboard`, `Ticket hinzufügen`, `Alle Zuständigen`, etc.). This keeps the test
+  integration-focused while also pinning the route to real translated strings instead of a second
+  synthetic locale. Re-verified with `cd server && npx vitest run
+  src/test/unit/app/msp/tickets/page.i18n.test.tsx`.
 
 ## Risks
 
