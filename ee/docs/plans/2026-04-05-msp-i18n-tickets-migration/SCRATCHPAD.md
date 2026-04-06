@@ -634,6 +634,10 @@ the one-liner. Keep the validator green before committing.
   check. The test verifies that the component’s mixed `fields.*`, `info.*`, `itil.*`,
   `conversation.*`, and `quickAdd.*` dependencies all resolve to pseudo-fill values instead of
   leaking English defaults.
+- **(2026-04-05, T040)** Added `ticket/TicketProperties.i18n.test.ts` and covered the core
+  side-panel chrome: time-entry/timer labels, work-description placeholder, contact/location/
+  agent-team headings, primary/additional-agent copy, the additional-agent picker placeholder,
+  and the shared quick-add team-section label all now have direct source assertions.
 
 ## Risks
 

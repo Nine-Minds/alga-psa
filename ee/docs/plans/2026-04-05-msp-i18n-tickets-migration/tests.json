@@ -15,7 +15,7 @@
   {"id": "T031", "description": "Unit: TicketInfo.i18n.test — confirmation dialogs and inline edit prompts translated", "implemented": true, "featureIds": ["F026"]},
   {"id": "T032", "description": "Unit: TicketInfo.i18n.test — pseudo-locale coverage", "implemented": true, "featureIds": ["F025", "F026"]},
 
-  {"id": "T040", "description": "Unit: TicketProperties.i18n.test — side panel labels, status/priority/board select placeholders render via t()", "implemented": false, "featureIds": ["F027"]},
+  {"id": "T040", "description": "Unit: TicketProperties.i18n.test — side panel labels, status/priority/board select placeholders render via t()", "implemented": true, "featureIds": ["F027"]},
   {"id": "T041", "description": "Unit: TicketProperties.i18n.test — board change reselection prompt translated", "implemented": false, "featureIds": ["F028"]},
   {"id": "T042", "description": "Unit: TicketProperties.i18n.test — pseudo-locale coverage for inline edit controls", "implemented": false, "featureIds": ["F027", "F028"]},
 
