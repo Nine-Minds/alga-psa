@@ -3,16 +3,17 @@ import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, Sc
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Avatar } from "../../../ui/components/Avatar";
-import { getUserDisplayName, listUsers, type UserListItem } from "../../../api/users";
+import { listContacts, type ContactListItem } from "../../../api/referenceData";
 import type { ApiClient } from "../../../api/client";
 
-export function AgentPickerModal({
+export function ContactPickerModal({
   visible,
   updating,
   updateError,
-  currentAssignedToName,
+  currentContactName,
+  clientId,
   onSelect,
-  onUnassign,
+  onRemove,
   onClose,
   client,
   apiKey,
@@ -21,9 +22,10 @@ export function AgentPickerModal({
   visible: boolean;
   updating: boolean;
   updateError: string | null;
-  currentAssignedToName: string | null | undefined;
-  onSelect: (userId: string, displayName: string) => void;
-  onUnassign: () => void;
+  currentContactName: string | null | undefined;
+  clientId: string | null | undefined;
+  onSelect: (contactNameId: string, displayName: string) => void;
+  onRemove: () => void;
   onClose: () => void;
   client: ApiClient | null;
   apiKey: string;
@@ -32,14 +34,14 @@ export function AgentPickerModal({
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
 
-  const [users, setUsers] = useState<UserListItem[]>([]);
+  const [contacts, setContacts] = useState<ContactListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const fetchUsers = useCallback(async (query: string) => {
+  const fetchContacts = useCallback(async (query: string) => {
     if (!client || !apiKey) return;
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -47,44 +49,52 @@ export function AgentPickerModal({
     setLoading(true);
     setError(null);
     try {
-      const res = await listUsers(client, {
+      const res = await listContacts(client, {
         apiKey,
+        clientId: clientId ?? undefined,
         search: query || undefined,
         limit: 50,
         signal: controller.signal,
       });
       if (!res.ok) {
-        setError(t("agentPicker.unableToLoad"));
+        setError(t("contactPicker.unableToLoad"));
         return;
       }
-      setUsers(res.data.data);
+      // Deduplicate
+      const seen = new Set<string>();
+      const unique = res.data.data.filter((c) => {
+        if (seen.has(c.contact_name_id)) return false;
+        seen.add(c.contact_name_id);
+        return true;
+      });
+      setContacts(unique);
     } catch {
       if (!controller.signal.aborted) {
-        setError(t("agentPicker.unableToLoad"));
+        setError(t("contactPicker.unableToLoad"));
       }
     } finally {
       if (!controller.signal.aborted) {
         setLoading(false);
       }
     }
-  }, [client, apiKey, t]);
+  }, [client, apiKey, clientId, t]);
 
   useEffect(() => {
     if (visible) {
       setSearch("");
-      void fetchUsers("");
+      void fetchContacts("");
     } else {
       abortRef.current?.abort();
-      setUsers([]);
+      setContacts([]);
       setError(null);
     }
-  }, [visible, fetchUsers]);
+  }, [visible, fetchContacts]);
 
   const handleSearchChange = (text: string) => {
     setSearch(text);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      void fetchUsers(text.trim());
+      void fetchContacts(text.trim());
     }, 350);
   };
 
@@ -99,7 +109,7 @@ export function AgentPickerModal({
       <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }} onPress={onClose} />
       <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: spacing.xl, maxHeight: "70%" }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.lg, paddingBottom: spacing.sm }}>
-          <Text style={{ ...typography.title, color: colors.text }}>{t("agentPicker.title")}</Text>
+          <Text style={{ ...typography.title, color: colors.text }}>{t("contactPicker.title")}</Text>
           <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t("common:close")} hitSlop={12}>
             <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600" }}>{t("common:close")}</Text>
           </Pressable>
@@ -107,7 +117,7 @@ export function AgentPickerModal({
 
         <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
           <TextInput
-            placeholder={t("agentPicker.searchPlaceholder")}
+            placeholder={t("contactPicker.searchPlaceholder")}
             placeholderTextColor={colors.textSecondary}
             value={search}
             onChangeText={handleSearchChange}
@@ -126,12 +136,12 @@ export function AgentPickerModal({
           />
         </View>
 
-        {currentAssignedToName ? (
+        {currentContactName ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t("agentPicker.unassign")}
+            accessibilityLabel={t("contactPicker.remove")}
             disabled={busy}
-            onPress={onUnassign}
+            onPress={onRemove}
             style={({ pressed }) => ({
               paddingVertical: spacing.sm,
               paddingHorizontal: spacing.lg,
@@ -145,10 +155,10 @@ export function AgentPickerModal({
             })}
           >
             <Text style={{ ...typography.body, color: colors.danger }}>
-              {t("agentPicker.unassign")}
+              {t("contactPicker.remove")}
             </Text>
             <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
-              {t("agentPicker.currentlyAssigned", { name: currentAssignedToName })}
+              {t("contactPicker.currentContact", { name: currentContactName })}
             </Text>
           </Pressable>
         ) : null}
@@ -159,7 +169,7 @@ export function AgentPickerModal({
           </Text>
         ) : null}
 
-        {loading && users.length === 0 ? (
+        {loading && contacts.length === 0 ? (
           <View style={{ paddingVertical: spacing.lg, alignItems: "center" }}>
             <ActivityIndicator />
             <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.textSecondary }}>
@@ -172,21 +182,20 @@ export function AgentPickerModal({
           </Text>
         ) : (
           <ScrollView style={{ paddingHorizontal: spacing.lg }} keyboardShouldPersistTaps="handled">
-            {users.length === 0 && !loading ? (
+            {contacts.length === 0 && !loading ? (
               <Text style={{ ...typography.body, color: colors.textSecondary, paddingVertical: spacing.sm }}>
-                {t("agentPicker.noResults")}
+                {t("contactPicker.noResults")}
               </Text>
             ) : null}
-            {users.map((user) => {
-              const displayName = getUserDisplayName(user);
-              const avatarUri = user.avatarUrl && baseUrl ? `${baseUrl}${user.avatarUrl}` : undefined;
+            {contacts.map((contact) => {
+              const avatarUri = contact.avatarUrl && baseUrl ? `${baseUrl}${contact.avatarUrl}` : undefined;
               return (
                 <Pressable
-                  key={user.user_id}
+                  key={contact.contact_name_id}
                   accessibilityRole="button"
-                  accessibilityLabel={t("agentPicker.assignTo", { name: displayName })}
+                  accessibilityLabel={t("contactPicker.selectContact", { name: contact.full_name })}
                   disabled={busy}
-                  onPress={() => onSelect(user.user_id, displayName)}
+                  onPress={() => onSelect(contact.contact_name_id, contact.full_name)}
                   style={({ pressed }) => ({
                     flexDirection: "row",
                     alignItems: "center",
@@ -200,10 +209,12 @@ export function AgentPickerModal({
                     marginBottom: spacing.sm,
                   })}
                 >
-                  <Avatar name={displayName} imageUri={avatarUri} size="sm" />
+                  <Avatar name={contact.full_name} imageUri={avatarUri} size="sm" />
                   <View style={{ marginLeft: spacing.sm, flex: 1 }}>
-                    <Text style={{ ...typography.body, color: colors.text }}>{displayName}</Text>
-                    <Text style={{ ...typography.caption, color: colors.textSecondary }}>{user.email}</Text>
+                    <Text style={{ ...typography.body, color: colors.text }}>{contact.full_name}</Text>
+                    {contact.email ? (
+                      <Text style={{ ...typography.caption, color: colors.textSecondary }}>{contact.email}</Text>
+                    ) : null}
                   </View>
                   {busy ? <ActivityIndicator size="small" /> : null}
                 </Pressable>

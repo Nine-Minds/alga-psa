@@ -96,6 +96,8 @@
     "assignedTo": "Assigned to {{name}}",
     "unassigned": "Unassigned",
     "reassign": "Reassign",
+    "changeContact": "Change contact",
+    "removeContact": "Remove contact",
     "editTitle": "Edit title",
     "requester": "Contact",
     "contact": "Contact",
@@ -142,7 +144,10 @@
       "titleEmpty": "Title cannot be empty.",
       "titlePermission": "You don't have permission to edit this ticket's title.",
       "titleValidation": "Title change was rejected by the server.",
-      "titleGeneric": "Unable to update title. Please try again."
+      "titleGeneric": "Unable to update title. Please try again.",
+      "contactPermission": "You don't have permission to update this ticket's contact.",
+      "contactValidation": "Contact change was rejected by the server.",
+      "contactGeneric": "Unable to update contact. Please try again."
     }
   },
   "description": {
@@ -316,6 +321,15 @@
     "currentlyAssigned": "Currently assigned to {{name}}",
     "unableToLoad": "Unable to load agents.",
     "noResults": "No agents found."
+  },
+  "contactPicker": {
+    "title": "Change contact",
+    "searchPlaceholder": "Search contacts\u2026",
+    "selectContact": "Select {{name}}",
+    "remove": "Remove contact",
+    "currentContact": "Current contact: {{name}}",
+    "unableToLoad": "Unable to load contacts.",
+    "noResults": "No contacts found."
   },
   "dueDateModal": {
     "title": "Due date",

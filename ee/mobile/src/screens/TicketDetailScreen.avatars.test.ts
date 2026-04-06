@@ -239,6 +239,62 @@ vi.mock("../features/ticketDetail/components/MaterialsSection", () => ({
   MaterialsSection: (props: Record<string, unknown>) => React.createElement("MockMaterialsSection", props),
 }));
 
+vi.mock("../storage/secureStorage", () => ({
+  secureStorage: {
+    getItem: async () => null,
+    setItem: async () => undefined,
+    deleteItem: async () => undefined,
+  },
+  getSecureJson: async () => null,
+  setSecureJson: async () => undefined,
+}));
+
+vi.mock("../config/appConfig", () => ({
+  getAppConfig: () => ({ ok: true, baseUrl: "https://example.com" }),
+}));
+
+vi.mock("../auth/AuthContext", () => ({
+  useAuth: () => ({ session: null, refreshSession: () => undefined }),
+}));
+
+vi.mock("../api", () => ({
+  createApiClient: vi.fn(),
+}));
+
+vi.mock("../api/users", () => ({
+  listUsers: vi.fn(),
+  getUserDisplayName: (u: Record<string, unknown>) => u.first_name ?? u.username ?? "",
+}));
+
+vi.mock("../device/clientMetadata", () => ({
+  getClientMetadataHeaders: async () => ({}),
+}));
+
+vi.mock("../cache/ticketsCache", () => ({
+  getCachedTicketDetail: () => null,
+  invalidateTicketsListCache: () => undefined,
+  setCachedTicketDetail: () => undefined,
+}));
+
+vi.mock("../features/ticketDetail/hooks/useTicketContact", () => ({
+  useTicketContact: () => ({
+    contactUpdating: false,
+    contactError: null,
+    contactPickerOpen: false,
+    updateContact: vi.fn(),
+    setContactPickerOpen: vi.fn(),
+  }),
+}));
+
+vi.mock("../features/ticketDetail/components/ContactPickerModal", () => ({
+  ContactPickerModal: (props: Record<string, unknown>) => React.createElement("MockContactPickerModal", props),
+}));
+
+vi.mock("../features/ticketDetail/components/KeyValue", () => ({
+  KeyValue: (props: Record<string, unknown>) =>
+    React.createElement("MockKeyValue", null, props.value as React.ReactNode, props.children as React.ReactNode),
+}));
+
 import { TicketDetailBody } from "./TicketDetailScreen";
 
 function render(node: React.ReactElement): ReactTestRenderer {

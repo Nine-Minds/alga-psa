@@ -143,7 +143,7 @@ export function DescriptionSection({
                 onLinkPress={onLinkPress}
                 qaAutoPressFirstLink={qaAutoPressFirstLink}
                 imageAuth={imageAuth}
-                onContentHeight={({ height }) => setContentHeight(height)}
+                onContentHeight={({ height }) => setContentHeight(Math.ceil(height))}
               />
             </Pressable>
             {needsExpansion ? (
