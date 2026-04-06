@@ -727,6 +727,10 @@ the one-liner. Keep the validator green before committing.
   src/components/ticket/CommentMetadataDebugModal.test.tsx`. The single debug-modal regression
   test still passes after the translation wiring, again with the expected non-fatal
   `react-i18next` no-instance warning from this lightweight render harness.
+- **(2026-04-06, T123)** Re-ran `cd packages/tickets && npx vitest run
+  src/components/ticket/AgentScheduleDrawer.test.tsx`. The re-export/scheduling shim still passes
+  unchanged (`2` tests), confirming the `F050` zero-string audit did not disturb the drawer
+  wrapper.
 - **(2026-04-06, T100)** Added
   `server/src/test/unit/app/msp/tickets/page.i18n.test.tsx` as a page+layout integration harness
   for `/msp/tickets`. The test runs `server/src/app/msp/tickets/page.tsx` with mocked ticket-data
