@@ -14,6 +14,8 @@ export default defineConfig({
       "expo-localization": path.resolve(__dirname, "test/mocks/expo-localization.ts"),
       "rn-emoji-keyboard": path.resolve(__dirname, "test/mocks/rn-emoji-keyboard.ts"),
       "@expo/vector-icons": path.resolve(__dirname, "test/mocks/expo-vector-icons.ts"),
+      "@sentry/react-native": path.resolve(__dirname, "test/mocks/sentry-react-native.ts"),
+      "expo-constants": path.resolve(__dirname, "test/mocks/expo-constants.ts"),
     },
   },
   test: {
