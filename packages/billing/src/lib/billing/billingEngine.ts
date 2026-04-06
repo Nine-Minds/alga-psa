@@ -1977,9 +1977,14 @@ export class BillingEngine {
           })
           .whereNot("sc.item_kind", "product")
           .orderBy("sc.service_id", "asc")
-          .first("sc.service_id", "sc.service_name", "sc.tax_rate_id");
+          .first(
+            "sc.service_id",
+            "sc.service_name",
+            "sc.tax_rate_id",
+            "cls_fallback.config_id",
+          );
 
-        if (!fallbackService?.service_id) {
+        if (!fallbackService?.service_id || !fallbackService?.config_id) {
           return [];
         }
 
@@ -2005,6 +2010,7 @@ export class BillingEngine {
           {
             type: "fixed",
             serviceId: fallbackService.service_id,
+            config_id: fallbackService.config_id,
             serviceName:
               fallbackService.service_name ||
               clientContractLine.contract_line_name ||
@@ -3272,6 +3278,7 @@ export class BillingEngine {
         return {
           serviceId: entry.service_id,
           serviceName: entry.service_name,
+          config_id: serviceConfig?.config.config_id,
           client_contract_line_id: clientContractLine.client_contract_line_id,
           userId: entry.user_id,
           duration,

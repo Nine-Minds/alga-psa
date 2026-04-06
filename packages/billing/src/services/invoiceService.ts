@@ -837,6 +837,9 @@ async function persistFixedInvoiceCharges(
       if (!detail.serviceId) {
         throw new Error('Internal error: Detailed fixed recurring charge must include a serviceId.');
       }
+      if (!detail.config_id) {
+        throw new Error('Internal error: Detailed fixed recurring charge must include a config_id.');
+      }
       const unitPriceCents = detailQuantity !== 0
         ? Math.round(allocatedAmountCents / detailQuantity)
         : allocatedAmountCents;
@@ -845,7 +848,7 @@ async function persistFixedInvoiceCharges(
         item_detail_id: detailId,
         item_id: parentItemId,
         service_id: detail.serviceId,
-        config_id: detail.config_id ?? null,
+        config_id: detail.config_id,
         quantity: detailQuantity,
         rate: unitPriceCents,
         service_period_start: detail.servicePeriodStart ?? null,
@@ -875,7 +878,7 @@ async function persistFixedInvoiceCharges(
         invoiceId,
         invoiceChargeId: parentItemId,
         invoiceChargeDetailId: detailId,
-        configId: detail.config_id ?? null,
+        configId: detail.config_id,
         contractLineId: detail.client_contract_line_id ?? null,
         chargeFamily: 'fixed',
         servicePeriodStart: detail.servicePeriodStart ?? null,
@@ -981,12 +984,15 @@ export async function persistInvoiceCharges(
 
     if (shouldPersistDetail) {
       const detailId = uuidv4();
+      if (!charge.config_id) {
+        throw new Error(`Internal error: Recurring ${charge.type} charge must include a config_id.`);
+      }
 
       await tx('invoice_charge_details').insert({
         item_detail_id: detailId,
         item_id: invoiceItem.item_id,
         service_id: charge.serviceId,
-        config_id: charge.config_id ?? null,
+        config_id: charge.config_id,
         quantity: charge.quantity ?? 1,
         rate: charge.rate ?? 0,
         service_period_start: charge.servicePeriodStart ?? null,
@@ -1004,7 +1010,7 @@ export async function persistInvoiceCharges(
         invoiceId,
         invoiceChargeId: invoiceItem.item_id,
         invoiceChargeDetailId: detailId,
-        configId: charge.config_id ?? null,
+        configId: charge.config_id,
         contractLineId: charge.client_contract_line_id ?? null,
         chargeFamily: recurringChargeFamily,
         servicePeriodStart: charge.servicePeriodStart ?? null,

@@ -74,6 +74,7 @@ const installFixedChargeMocks = (
       service_id: service.service_id,
       service_name: service.service_name,
       tax_rate_id: service.tax_rate_id ?? null,
+      config_id: service.config_id,
     }));
 
   (engine as any).tenant = "test_tenant";
@@ -809,6 +810,7 @@ describe("BillingEngine billing timing", () => {
           service_id: "service-fallback",
           service_name: "Base Rate Only Fixed Fee",
           tax_rate_id: null,
+          config_id: "config-fallback",
         },
       ],
       enableProration: false,
@@ -840,6 +842,7 @@ describe("BillingEngine billing timing", () => {
       expect.objectContaining({
         type: "fixed",
         serviceId: "service-fallback",
+        config_id: "config-fallback",
         serviceName: "Base Rate Only Fixed Fee",
         rate: 12000,
         total: 12000,
