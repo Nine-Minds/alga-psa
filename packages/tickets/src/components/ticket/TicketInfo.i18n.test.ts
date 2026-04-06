@@ -8,6 +8,19 @@ function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
 }
 
+function readJson<T>(relativePath: string): T {
+  return JSON.parse(read(relativePath)) as T;
+}
+
+function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
+  return dottedPath.split('.').reduce<unknown>((value, key) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return undefined;
+    }
+    return (value as Record<string, unknown>)[key];
+  }, record);
+}
+
 describe('ticket info i18n wiring contract', () => {
   it('T030: routes the detail header and core field chrome through features/tickets translations', () => {
     const source = read('./TicketInfo.tsx');
@@ -43,5 +56,30 @@ describe('ticket info i18n wiring contract', () => {
     expect(source).toContain("t('info.keepEditing', 'Keep Editing')");
     expect(source).toContain("t('info.clipboardDraftMessage', 'This description includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?')");
     expect(source).toContain("t('quickAdd.continueEditing', 'Continue Editing')");
+  });
+
+  it('T032: keeps the mixed TicketInfo key families backed by xx pseudo-locale strings', () => {
+    const source = read('./TicketInfo.tsx');
+    const pseudo = readJson<Record<string, unknown>>('../../../../../server/public/locales/xx/features/tickets.json');
+
+    const pseudoKeys = [
+      'fields.status',
+      'fields.assignedTo',
+      'fields.priority',
+      'fields.dueDate',
+      'fields.description',
+      'info.board',
+      'itil.impact',
+      'itil.urgency',
+      'info.saveChanges',
+      'info.discardChangesTitle',
+      'conversation.clipboardDraftCancelTitle',
+      'quickAdd.continueEditing',
+    ];
+
+    for (const key of pseudoKeys) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(pseudo, key)).toBe('11111');
+    }
   });
 });

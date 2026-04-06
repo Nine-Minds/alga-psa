@@ -630,6 +630,10 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, T031)** Extended `TicketInfo.i18n.test.ts` with the save/cancel/editing
   surface: title-edit affordances, description edit controls, footer save state, unsaved-changes
   discard dialog, and the pasted-images cleanup dialog now all have direct `t(...)` assertions.
+- **(2026-04-05, T032)** Finished the TicketInfo contract set with an `xx` pseudo-locale
+  check. The test verifies that the component’s mixed `fields.*`, `info.*`, `itil.*`,
+  `conversation.*`, and `quickAdd.*` dependencies all resolve to pseudo-fill values instead of
+  leaking English defaults.
 
 ## Risks
 
