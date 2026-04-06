@@ -662,6 +662,9 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, T061)** Extended the export dialog contract with the action-state and error
   path: export failure handling, exporting-state copy, completion title/message, done button, and
   shared cancel action are now explicitly asserted in `TicketExportDialog.tsx`.
+- **(2026-04-05, T070)** Added `ticket/TicketMaterialsCard.i18n.test.ts` to cover the
+  materials card’s main chrome: card title, add-material dialog labels/placeholders, price/
+  quantity/total/description labels, materials table headers, and billed/pending status badges.
 
 ## Risks
 
