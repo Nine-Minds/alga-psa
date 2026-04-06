@@ -22,7 +22,7 @@
   {"id": "T050", "description": "Unit: CategoriesSettings.i18n.test — board/channel scope selector and tree labels translated", "implemented": true, "featureIds": ["F030"]},
   {"id": "T051", "description": "Unit: CategoriesSettings.i18n.test — add/edit/delete dialogs render validation messages in current locale", "implemented": true, "featureIds": ["F031"]},
 
-  {"id": "T060", "description": "Unit: TicketExportDialog.i18n.test — format options (CSV/XLSX), column picker, date range labels translated", "implemented": false, "featureIds": ["F032"]},
+  {"id": "T060", "description": "Unit: TicketExportDialog.i18n.test — format options (CSV/XLSX), column picker, date range labels translated", "implemented": true, "featureIds": ["F032"]},
   {"id": "T061", "description": "Unit: TicketExportDialog.i18n.test — download failure toast translated", "implemented": false, "featureIds": ["F033"]},
 
   {"id": "T070", "description": "Unit: TicketMaterialsCard.i18n.test — materials list, add dialog, cost labels translated", "implemented": false, "featureIds": ["F034"]},

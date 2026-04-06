@@ -654,6 +654,11 @@ the one-liner. Keep the validator green before committing.
   delete validation and toast surface: fetch/validate/delete failures, name-required validation,
   the edit-dialog title, delete-dialog entity fallback, and the save/delete success copy all have
   explicit `t(...)` assertions.
+- **(2026-04-05, T060)** Added `TicketExportDialog.i18n.test.ts` as a source-contract test for
+  the export configure step. It covers the dialog title, selected-ticket/applied-filter summary
+  copy, field-picker heading, select-all toggles, selected-count text, export CTA, and the
+  column label-key wiring that reuses `fields.*`, `properties.contact`, and
+  `settings.display.columns.tags`.
 
 ## Risks
 
