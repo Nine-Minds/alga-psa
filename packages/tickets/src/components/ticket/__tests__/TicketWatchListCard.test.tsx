@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { IContact, IUser } from '@alga-psa/types';
 import TicketWatchListCard from '../TicketWatchListCard';
@@ -114,7 +114,13 @@ function renderWatchListCard(args?: {
     );
   }
 
-  return render(<Wrapper />);
+  const utils = render(<Wrapper />);
+
+  if (!screen.queryByRole('tab', { name: 'Contact' })) {
+    fireEvent.click(screen.getByRole('button', { name: 'Watch List' }));
+  }
+
+  return utils;
 }
 
 describe('TicketWatchListCard', () => {
@@ -145,7 +151,7 @@ describe('TicketWatchListCard', () => {
       onPersist,
     });
 
-    await user.click(screen.getByRole('radio', { name: 'Email' }));
+    await user.click(screen.getByRole('tab', { name: 'Email' }));
     await user.type(screen.getByPlaceholderText('name@example.com'), 'newwatch@example.com');
     await user.click(screen.getByRole('button', { name: 'Add Email' }));
 
@@ -166,7 +172,7 @@ describe('TicketWatchListCard', () => {
       onPersist,
     });
 
-    await user.click(screen.getByRole('radio', { name: 'Email' }));
+    await user.click(screen.getByRole('tab', { name: 'Email' }));
     await user.type(screen.getByPlaceholderText('name@example.com'), 'not-an-email');
     await user.click(screen.getByRole('button', { name: 'Add Email' }));
 
@@ -185,7 +191,7 @@ describe('TicketWatchListCard', () => {
       onPersist,
     });
 
-    await user.click(screen.getByRole('radio', { name: 'Email' }));
+    await user.click(screen.getByRole('tab', { name: 'Email' }));
     await user.type(screen.getByPlaceholderText('name@example.com'), 'REACTIVATE@example.com');
     await user.click(screen.getByRole('button', { name: 'Add Email' }));
 
@@ -263,7 +269,7 @@ describe('TicketWatchListCard', () => {
       onPersist,
     });
 
-    await user.click(screen.getByRole('radio', { name: 'Email' }));
+    await user.click(screen.getByRole('tab', { name: 'Email' }));
     await user.click(screen.getByRole('checkbox'));
 
     expect(screen.getByPlaceholderText('name@example.com')).toBeDisabled();
@@ -288,7 +294,7 @@ describe('TicketWatchListCard', () => {
       onPersist,
     });
 
-    await user.click(screen.getByRole('radio', { name: 'Email' }));
+    await user.click(screen.getByRole('tab', { name: 'Email' }));
     await user.type(screen.getByPlaceholderText('name@example.com'), 'tech@internal.example');
     await user.click(screen.getByRole('button', { name: 'Add Email' }));
 
@@ -316,12 +322,12 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
-    expect(screen.getByRole('radio', { name: 'Client' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'Internal' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'Email' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Select client contact')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Contact' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Internal' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Email' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Select contact')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add Contact' })).toBeInTheDocument();
-    expect(screen.queryByLabelText('Select internal user')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Select user')).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText('name@example.com')).not.toBeInTheDocument();
   });
 
@@ -343,8 +349,8 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
-    await user.click(screen.getByRole('radio', { name: 'Internal' }));
-    await user.selectOptions(screen.getByLabelText('Select internal user'), 'user-42');
+    await user.click(screen.getByRole('tab', { name: 'Internal' }));
+    await user.selectOptions(screen.getByLabelText('Select user'), 'user-42');
     await user.click(screen.getByRole('button', { name: 'Add User' }));
 
     await waitFor(() => {
@@ -373,7 +379,7 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
-    expect(screen.getByLabelText('Select client contact')).toBeInTheDocument();
+    expect(screen.getByLabelText('Select contact')).toBeInTheDocument();
     const addContactButton = document.querySelector(
       '[data-automation-id="ticket-watch-list-add-contact-btn"]'
     );
@@ -396,7 +402,7 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
-    await user.selectOptions(screen.getByLabelText('Select client contact'), 'contact-44');
+    await user.selectOptions(screen.getByLabelText('Select contact'), 'contact-44');
     const addContactButton = document.querySelector(
       '[data-automation-id="ticket-watch-list-add-contact-btn"]'
     ) as HTMLButtonElement;
@@ -432,11 +438,11 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
-    expect(screen.getByRole('radio', { name: 'Ticket Client' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'All Contacts' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ticket client' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All contacts' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Search all contacts')).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText('Select client contact'), 'contact-local');
+    await user.selectOptions(screen.getByLabelText('Select contact'), 'contact-local');
     const addContactButton = document.querySelector(
       '[data-automation-id="ticket-watch-list-add-contact-btn"]'
     ) as HTMLButtonElement;
@@ -468,7 +474,7 @@ describe('TicketWatchListCard', () => {
       onLoadAllContacts,
     });
 
-    await user.click(screen.getByRole('radio', { name: 'All Contacts' }));
+    await user.click(screen.getByRole('button', { name: 'All contacts' }));
     await waitFor(() => {
       expect(onLoadAllContacts).toHaveBeenCalledTimes(1);
     });
@@ -511,8 +517,8 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
-    await user.click(screen.getByRole('radio', { name: 'Internal' }));
-    await user.selectOptions(screen.getByLabelText('Select internal user'), 'user-no-email');
+    await user.click(screen.getByRole('tab', { name: 'Internal' }));
+    await user.selectOptions(screen.getByLabelText('Select user'), 'user-no-email');
     await user.click(screen.getByRole('button', { name: 'Add User' }));
 
     expect(screen.getByText('Selected user does not have a valid email address.')).toBeInTheDocument();
@@ -535,7 +541,7 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
-    await user.selectOptions(screen.getByLabelText('Select client contact'), 'contact-no-email');
+    await user.selectOptions(screen.getByLabelText('Select contact'), 'contact-no-email');
     const addContactButton = document.querySelector(
       '[data-automation-id="ticket-watch-list-add-contact-btn"]'
     ) as HTMLButtonElement;
@@ -563,19 +569,16 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
-    await user.click(screen.getByRole('radio', { name: 'Email' }));
+    await user.click(screen.getByRole('tab', { name: 'Email' }));
     await user.type(screen.getByPlaceholderText('name@example.com'), 'dup.user@example.com');
     await user.click(screen.getByRole('button', { name: 'Add Email' }));
     await waitFor(() => expect(onPersist).toHaveBeenCalledTimes(1));
 
-    await user.click(screen.getByRole('radio', { name: 'Internal' }));
-    await user.selectOptions(screen.getByLabelText('Select internal user'), 'user-dup');
-    await user.click(screen.getByRole('button', { name: 'Add User' }));
-
-    await waitFor(() => {
-      expect(onPersist).toHaveBeenCalledTimes(2);
-      expect(screen.getAllByText('dup.user@example.com')).toHaveLength(1);
-    });
+    await user.click(screen.getByRole('tab', { name: 'Internal' }));
+    expect(screen.queryByRole('option', { name: 'Dup User' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add User' })).toBeDisabled();
+    expect(onPersist).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByText('dup.user@example.com')).toHaveLength(1);
   });
 
   it('T064: watcher row shows name/type hint for picker-added entries while still displaying canonical email', () => {
@@ -595,6 +598,6 @@ describe('TicketWatchListCard', () => {
 
     expect(screen.getByText('hinted@example.com')).toBeInTheDocument();
     expect(screen.getByText('Hinted Contact')).toBeInTheDocument();
-    expect(screen.getByText('contact')).toBeInTheDocument();
+    expect(screen.getAllByText('Contact')).toHaveLength(2);
   });
 });

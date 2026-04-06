@@ -706,6 +706,16 @@ the one-liner. Keep the validator green before committing.
 - **(2026-04-05, T098)** Re-ran `ResponseSourceBadge.render.test.tsx` alongside the origin badge
   test. All portal/email source variants still render correctly after making the component’s
   `labels` prop optional and translation-backed.
+- **(2026-04-06, T120)** Repaired the pre-existing package-level ticket regression harnesses and
+  re-ran the planned subset successfully: `QuickAddTicket.boardScopedStatuses.test.tsx`,
+  `ticket-inline-add-prefill.test.tsx`, `TicketDetailsContainer.description.test.tsx`,
+  `TicketInfo.boardChangeStatusReselection.test.tsx`,
+  `TicketProperties.liveTimerPolicy.test.tsx`, `TicketWatchListCard.test.tsx`, and
+  `ticket-properties-inline-contact.test.tsx` now pass together (`43` tests total). The fixes were
+  test-only: added the missing `@alga-psa/core/server` vitest alias in
+  `packages/tickets/vitest.config.ts`, updated the quick-add tests to mock the current quick-add
+  client context and rich-text upload session, and refreshed stale watch-list expectations for the
+  collapsed-by-default card, tabbed add modes, filtered duplicate users, and localized badge text.
 - **(2026-04-06, T100)** Added
   `server/src/test/unit/app/msp/tickets/page.i18n.test.tsx` as a page+layout integration harness
   for `/msp/tickets`. The test runs `server/src/app/msp/tickets/page.tsx` with mocked ticket-data
