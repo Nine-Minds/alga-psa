@@ -8,7 +8,12 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { FileText, Settings } from 'lucide-react';
 import type { IInvoiceTemplate, IQuote, TaxSource } from '@alga-psa/types';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
-import { getInvoiceForRendering, getInvoicePurchaseOrderSummary, type InvoicePurchaseOrderSummary } from '@alga-psa/billing/actions/invoiceQueries';
+import {
+  getInvoiceForRendering,
+  getInvoicePurchaseOrderSummary,
+  getResolvedInvoiceTemplateId,
+  type InvoicePurchaseOrderSummary
+} from '@alga-psa/billing/actions/invoiceQueries';
 import { getQuoteByConvertedInvoiceId } from '@alga-psa/billing/actions/quoteActions';
 import { mapDbInvoiceToWasmViewModel } from '../../../lib/adapters/invoiceAdapters';
 import { PurchaseOrderSummaryBanner } from './PurchaseOrderSummaryBanner';
@@ -52,6 +57,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const router = useRouter();
   const [detailedInvoiceData, setDetailedInvoiceData] = useState<WasmInvoiceViewModel | null>(null);
   const [poSummary, setPoSummary] = useState<InvoicePurchaseOrderSummary | null>(null);
+  const [resolvedTemplateId, setResolvedTemplateId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -60,10 +66,13 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [sourceQuote, setSourceQuote] = useState<IQuote | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // Match Drafts/Finalized row selection: default to first template when URL has invoiceId but no templateId (e.g. deep link from recurring history).
+  // Match invoice/PDF rendering: honor an explicit URL template selection first,
+  // then fall back to the invoice's resolved client/default template.
   const effectiveTemplateId =
     selectedTemplateId && templates.some((t) => t.template_id === selectedTemplateId)
       ? selectedTemplateId
+      : resolvedTemplateId && templates.some((t) => t.template_id === resolvedTemplateId)
+        ? resolvedTemplateId
       : templates[0]?.template_id ?? null;
 
   const selectedTemplate = effectiveTemplateId
@@ -95,6 +104,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
       if (!invoiceId) {
         setDetailedInvoiceData(null);
         setTaxSource('internal');
+        setResolvedTemplateId(null);
         return;
       }
 
@@ -104,7 +114,11 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
       setPoSummary(null);
 
       try {
-        const dbInvoiceData = await getInvoiceForRendering(invoiceId);
+        const [dbInvoiceData, summary, templateId] = await Promise.all([
+          getInvoiceForRendering(invoiceId),
+          getInvoicePurchaseOrderSummary(invoiceId),
+          getResolvedInvoiceTemplateId(invoiceId),
+        ]);
 
         if (!dbInvoiceData) {
           throw new Error(`Invoice data for ID ${invoiceId} not found.`);
@@ -119,8 +133,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           throw new Error(`Failed to map invoice data for ID ${invoiceId} to view model.`);
         }
 
-        const summary = await getInvoicePurchaseOrderSummary(invoiceId);
         setPoSummary(summary);
+        setResolvedTemplateId(templateId);
 
         setDetailedInvoiceData(viewModel);
       } catch (err) {
@@ -129,6 +143,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         setError(`Failed to load preview: ${message}`);
         setDetailedInvoiceData(null);
         setPoSummary(null);
+        setResolvedTemplateId(null);
       } finally {
         setIsLoading(false);
       }
