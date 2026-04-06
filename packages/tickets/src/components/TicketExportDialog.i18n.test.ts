@@ -25,4 +25,16 @@ describe('ticket export dialog i18n wiring contract', () => {
     expect(source).toContain("labelKey: 'properties.contact'");
     expect(source).toContain("labelKey: 'settings.display.columns.tags'");
   });
+
+  it('T061: routes export progress/completion and failure handling through translations', () => {
+    const source = read('./TicketExportDialog.tsx');
+
+    expect(source).toContain("t('export.failed', 'Failed to export tickets')");
+    expect(source).toContain("handleError(err, t('export.failed', 'Failed to export tickets'))");
+    expect(source).toContain("t('export.exporting', 'Exporting tickets...')");
+    expect(source).toContain("t('export.completeTitle', 'Export Complete')");
+    expect(source).toContain("t('export.completeMessage', 'Successfully exported {{count}} ticket to CSV.'");
+    expect(source).toContain("t('export.done', 'Done')");
+    expect(source).toContain("t('actions.cancel', 'Cancel')");
+  });
 });

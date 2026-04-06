@@ -659,6 +659,9 @@ the one-liner. Keep the validator green before committing.
   copy, field-picker heading, select-all toggles, selected-count text, export CTA, and the
   column label-key wiring that reuses `fields.*`, `properties.contact`, and
   `settings.display.columns.tags`.
+- **(2026-04-05, T061)** Extended the export dialog contract with the action-state and error
+  path: export failure handling, exporting-state copy, completion title/message, done button, and
+  shared cancel action are now explicitly asserted in `TicketExportDialog.tsx`.
 
 ## Risks
 
