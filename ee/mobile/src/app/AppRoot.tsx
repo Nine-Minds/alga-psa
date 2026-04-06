@@ -4,6 +4,7 @@ import { NavigationContainer, useNavigationContainerRef } from "@react-navigatio
 import type { InitialState } from "@react-navigation/native";
 import { getAppConfig } from "../config/appConfig";
 import { linking } from "../navigation/linking";
+import type { RootStackParamList } from "../navigation/types";
 import { RootNavigator } from "../navigation/RootNavigator";
 import { ErrorState, LoadingState } from "../ui/states";
 import { useNetworkStatus } from "../network/useNetworkStatus";
@@ -47,7 +48,7 @@ export function AppRoot() {
   const lastRevocationCheckAtMs = useRef(0);
   const lastBiometricUnlockAtMs = useRef(0);
 
-  const navigationRef = useNavigationContainerRef();
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const baseUrl = config.ok ? config.baseUrl : null;
 
   const setSession = useCallback(

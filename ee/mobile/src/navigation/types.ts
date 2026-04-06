@@ -30,3 +30,4 @@ export type TabsParamList = {
   TicketsTab: undefined;
   SettingsTab: undefined;
 };
+
