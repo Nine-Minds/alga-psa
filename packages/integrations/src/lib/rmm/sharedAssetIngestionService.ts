@@ -24,6 +24,7 @@ type ExternalMappingRow = {
 type ExistingAssetRow = {
   asset_id: string;
   asset_type: SupportedAssetType;
+  client_id?: string | null;
 };
 
 function parseIsoDate(value?: string | null): Date | null {
@@ -150,7 +151,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
   const assetType = normalizeAssetType(snapshot.assetType);
 
   return knex.transaction(async (trx) => {
-    const existingMapping = await trx('tenant_external_entity_mappings')
+    const exactMapping = await trx('tenant_external_entity_mappings')
       .where({
         tenant,
         integration_type: snapshot.provider,
@@ -159,6 +160,19 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         external_realm_id: snapshot.externalScopeId,
       })
       .first<ExternalMappingRow>('id', 'alga_entity_id', 'external_realm_id');
+
+    const anyRealmMapping = exactMapping
+      ? null
+      : await trx('tenant_external_entity_mappings')
+          .where({
+            tenant,
+            integration_type: snapshot.provider,
+            alga_entity_type: 'asset',
+            external_entity_id: snapshot.externalDeviceId,
+          })
+          .first<ExternalMappingRow>('id', 'alga_entity_id', 'external_realm_id');
+
+    const existingMapping = exactMapping ?? anyRealmMapping;
 
     if (snapshot.lifecycleState === 'deleted' || snapshot.lifecycleState === 'tombstoned') {
       if (!existingMapping?.alga_entity_id) {
@@ -186,7 +200,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
     if (existingMapping?.alga_entity_id) {
       existingAsset = await trx('assets')
         .where({ tenant, asset_id: existingMapping.alga_entity_id })
-        .first<ExistingAssetRow>('asset_id', 'asset_type');
+        .first<ExistingAssetRow>('asset_id', 'asset_type', 'client_id');
       mappingId = existingMapping.id;
     }
 
@@ -197,30 +211,56 @@ export async function ingestNormalizedRmmDeviceSnapshot(
           rmm_provider: snapshot.provider,
           rmm_device_id: snapshot.externalDeviceId,
         })
-        .first<ExistingAssetRow>('asset_id', 'asset_type');
+        .first<ExistingAssetRow>('asset_id', 'asset_type', 'client_id');
+    }
+
+    if (!mappingId && existingAsset?.asset_id) {
+      const assetScopedMapping = await trx('tenant_external_entity_mappings')
+        .where({
+          tenant,
+          integration_type: snapshot.provider,
+          alga_entity_type: 'asset',
+          alga_entity_id: existingAsset.asset_id,
+        })
+        .first<ExternalMappingRow>('id', 'alga_entity_id', 'external_realm_id');
+
+      if (assetScopedMapping?.id) {
+        mappingId = assetScopedMapping.id;
+      }
     }
 
     const lastSeenAt = parseIsoDate(snapshot.lastSeenAt);
     const assetStatus = snapshot.status || (snapshot.lifecycleState === 'offline' ? 'inactive' : 'active');
     const agentStatus = snapshot.agentStatus ?? (snapshot.lifecycleState === 'offline' ? 'offline' : 'online');
+    const resolvedClientId = await resolveClientIdForScope(trx, {
+      tenant,
+      integrationId: snapshot.integrationId,
+      externalScopeId: snapshot.externalScopeId,
+      resolvedClientId: input.resolvedClientId,
+    });
 
     if (existingAsset?.asset_id) {
       const assetId = String(existingAsset.asset_id);
+      const assetPatch: Record<string, unknown> = {
+        name: snapshot.displayName,
+        serial_number: snapshot.serialNumber ?? '',
+        status: assetStatus,
+        location: snapshot.location ?? '',
+        rmm_provider: snapshot.provider,
+        rmm_device_id: snapshot.externalDeviceId,
+        rmm_organization_id: snapshot.externalScopeId,
+        agent_status: agentStatus,
+        last_seen_at: lastSeenAt,
+        last_rmm_sync_at: trx.fn.now(),
+      };
+
+      if (resolvedClientId) {
+        assetPatch.client_id = resolvedClientId;
+      }
 
       await trx('assets')
         .where({ tenant, asset_id: assetId })
-        .update({
-          name: snapshot.displayName,
-          serial_number: snapshot.serialNumber ?? '',
-          status: assetStatus,
-          location: snapshot.location ?? '',
-          rmm_provider: snapshot.provider,
-          rmm_device_id: snapshot.externalDeviceId,
-          rmm_organization_id: snapshot.externalScopeId,
-          agent_status: agentStatus,
-          last_seen_at: lastSeenAt,
-          last_rmm_sync_at: trx.fn.now(),
-        });
+        .update(assetPatch);
 
       await upsertAssetExtension(trx, {
         tenant,
@@ -259,14 +299,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
       };
     }
 
-    const clientId = await resolveClientIdForScope(trx, {
-      tenant,
-      integrationId: snapshot.integrationId,
-      externalScopeId: snapshot.externalScopeId,
-      resolvedClientId: input.resolvedClientId,
-    });
-
-    if (!clientId) {
+    if (!resolvedClientId) {
       return {
         externalDeviceId: snapshot.externalDeviceId,
         action: 'skipped',
@@ -279,7 +312,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
       .insert({
         tenant,
         asset_type: assetType,
-        client_id: clientId,
+        client_id: resolvedClientId,
         asset_tag: snapshot.assetTag || `${snapshot.provider}:${snapshot.externalDeviceId}`,
         serial_number: snapshot.serialNumber ?? '',
         name: snapshot.displayName,

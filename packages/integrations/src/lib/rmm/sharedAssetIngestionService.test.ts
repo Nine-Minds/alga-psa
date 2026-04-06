@@ -230,4 +230,70 @@ describe('sharedAssetIngestionService', () => {
     expect(state.tenant_external_entity_mappings).toHaveLength(1);
     expect(state.tenant_external_entity_mappings[0].sync_status).toBe('synced');
   });
+
+  it('updates the existing mapping and asset ownership when a device moves to a new mapped scope', async () => {
+    const state: DbState = {
+      assets: [
+        {
+          tenant: 'tenant_1',
+          asset_id: 'asset_existing',
+          asset_type: 'workstation',
+          client_id: 'client_old',
+          name: 'Old Name',
+          serial_number: 'OLD',
+          status: 'active',
+          location: 'Old',
+          rmm_provider: 'tanium',
+          rmm_device_id: 'device_1',
+        },
+      ],
+      workstation_assets: [],
+      server_assets: [],
+      tenant_external_entity_mappings: [
+        {
+          id: 'map_existing',
+          tenant: 'tenant_1',
+          integration_type: 'tanium',
+          alga_entity_type: 'asset',
+          alga_entity_id: 'asset_existing',
+          external_entity_id: 'device_1',
+          external_realm_id: 'scope_old',
+          sync_status: 'pending',
+        },
+      ],
+      rmm_organization_mappings: [
+        {
+          tenant: 'tenant_1',
+          integration_id: 'integration_1',
+          external_organization_id: 'scope_new',
+          client_id: 'client_new',
+        },
+      ],
+    };
+    const knex = createFakeKnex(state);
+
+    const result = await ingestNormalizedRmmDeviceSnapshot({
+      tenant: 'tenant_1',
+      snapshot: buildSnapshot({
+        externalScopeId: 'scope_new',
+        displayName: 'Moved Endpoint',
+      }),
+      knex,
+    });
+
+    expect(result.action).toBe('updated');
+    expect(state.assets).toHaveLength(1);
+    expect(state.assets[0]).toMatchObject({
+      client_id: 'client_new',
+      name: 'Moved Endpoint',
+      rmm_organization_id: 'scope_new',
+    });
+    expect(state.tenant_external_entity_mappings).toHaveLength(1);
+    expect(state.tenant_external_entity_mappings[0]).toMatchObject({
+      id: 'map_existing',
+      external_entity_id: 'device_1',
+      external_realm_id: 'scope_new',
+      sync_status: 'synced',
+    });
+  });
 });

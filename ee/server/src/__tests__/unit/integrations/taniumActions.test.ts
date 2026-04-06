@@ -14,6 +14,17 @@ let gatewayGroups: Array<{ id: string; name: string }> = [];
 let gatewayEndpointsByScope: Record<string, any[]> = {};
 let fallbackEndpointsByScope: Record<string, any[]> = {};
 let testConnectionError: Error | null = null;
+const assertTierAccessMock = vi.fn(async () => undefined);
+const listEndpointsMock = vi.fn(async (input?: { computerGroupId?: string | null }) => {
+  if (input?.computerGroupId) {
+    return gatewayEndpointsByScope[input.computerGroupId] || [];
+  }
+
+  return Object.values(gatewayEndpointsByScope).flat();
+});
+const listAgedOutAssetFallbackMock = vi.fn(async (input?: { computerGroupId?: string | null }) => {
+  return fallbackEndpointsByScope[input?.computerGroupId || ''] || [];
+});
 
 const ingestNormalizedRmmDeviceSnapshotMock = vi.fn();
 
@@ -82,6 +93,25 @@ function createFakeKnex(db: DbState) {
     insert(data: any) {
       const rows = rowsFor(this.table);
       const inserted = { ...data };
+      const existingIntegration =
+        this.table === 'rmm_integrations'
+          ? rows.find(
+              (row: any) => row.tenant === inserted.tenant && row.provider === inserted.provider
+            )
+          : null;
+
+      if (existingIntegration) {
+        return {
+          onConflict: () => ({
+            merge: (patch: Record<string, unknown>) => {
+              Object.assign(existingIntegration, patch);
+              return { returning: async () => [existingIntegration] };
+            },
+          }),
+          returning: async () => [existingIntegration],
+        };
+      }
+
       if (this.table === 'rmm_integrations') {
         inserted.integration_id = inserted.integration_id || 'integration_tanium';
       }
@@ -139,6 +169,12 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => fn,
 }));
 
+vi.mock('@alga-psa/types', () => ({
+  TIER_FEATURES: {
+    ADVANCED_ASSETS: 'ADVANCED_ASSETS',
+  },
+}));
+
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
 }));
@@ -159,6 +195,10 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })),
 }));
 
+vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
+  assertTierAccess: (...args: any[]) => assertTierAccessMock(...args),
+}));
+
 vi.mock('../../../lib/integrations/tanium/taniumGatewayClient', () => ({
   normalizeTaniumGatewayUrl: (value: string) => value.trim(),
   TaniumGatewayClient: class {
@@ -169,10 +209,10 @@ vi.mock('../../../lib/integrations/tanium/taniumGatewayClient', () => ({
       return gatewayGroups;
     }
     async listEndpoints(input?: { computerGroupId?: string | null }) {
-      return gatewayEndpointsByScope[input?.computerGroupId || ''] || [];
+      return listEndpointsMock(input);
     }
     async listAgedOutAssetFallback(input?: { computerGroupId?: string | null }) {
-      return fallbackEndpointsByScope[input?.computerGroupId || ''] || [];
+      return listAgedOutAssetFallbackMock(input);
     }
   },
 }));
@@ -182,6 +222,7 @@ vi.mock('@alga-psa/integrations/lib/rmm/sharedAssetIngestionService', () => ({
 }));
 
 import {
+  saveTaniumConfiguration,
   syncTaniumScopes,
   testTaniumConnection,
   triggerTaniumFullSync,
@@ -194,6 +235,9 @@ describe('taniumActions', () => {
     gatewayEndpointsByScope = {};
     fallbackEndpointsByScope = {};
     testConnectionError = null;
+    assertTierAccessMock.mockClear();
+    listEndpointsMock.mockClear();
+    listAgedOutAssetFallbackMock.mockClear();
     ingestNormalizedRmmDeviceSnapshotMock.mockReset();
 
     state = {
@@ -249,12 +293,13 @@ describe('taniumActions', () => {
       client_id: 'client_1',
       auto_sync_assets: true,
     });
-    gatewayEndpointsByScope.scope_1 = [{ id: 'endpoint_1', name: 'Endpoint 1', online: true }];
+    gatewayEndpointsByScope.scope_1 = [{ id: 'endpoint_1', name: 'Endpoint 1', online: true, computerGroupId: 'scope_1' }];
     ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'created' });
 
     const result = await triggerTaniumFullSync({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
 
     expect(result.success).toBe(true);
+    expect(listEndpointsMock).toHaveBeenCalledTimes(1);
     expect(ingestNormalizedRmmDeviceSnapshotMock).toHaveBeenCalled();
     expect(state.rmm_integrations[0].sync_status).toBe('completed');
   });
@@ -270,7 +315,9 @@ describe('taniumActions', () => {
     });
     state.rmm_integrations[0].settings.provider_settings.tanium.use_asset_api_fallback = true;
     gatewayEndpointsByScope.scope_1 = [];
-    fallbackEndpointsByScope.scope_1 = [{ id: 'asset_fallback_1', name: 'Fallback Endpoint', online: false }];
+    fallbackEndpointsByScope.scope_1 = [
+      { id: 'asset_fallback_1', name: 'Fallback Endpoint', online: false, computerGroupId: 'scope_1' },
+    ];
     ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'updated' });
 
     const result = await triggerTaniumFullSync({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
@@ -279,6 +326,55 @@ describe('taniumActions', () => {
     expect(ingestNormalizedRmmDeviceSnapshotMock).toHaveBeenCalled();
     const call = ingestNormalizedRmmDeviceSnapshotMock.mock.calls[0]?.[0];
     expect(call?.snapshot?.externalDeviceId).toBe('asset_fallback_1');
+  });
+
+  it('uses advanced-assets tier gating for Tanium actions', async () => {
+    await syncTaniumScopes({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+
+    expect(assertTierAccessMock).toHaveBeenCalledWith('ADVANCED_ASSETS');
+  });
+
+  it('clears saved Asset API secret when configuration is saved with an empty fallback URL', async () => {
+    secrets.set('tenant_1:tanium_asset_api_url', 'https://old-asset.example');
+
+    const result = await saveTaniumConfiguration(
+      { user_id: 'u1' } as any,
+      { tenant: 'tenant_1' },
+      {
+        gatewayUrl: 'https://tanium.example',
+        assetApiUrl: '',
+        useAssetApiFallback: false,
+      }
+    );
+
+    expect(result.success).toBe(true);
+    expect(secrets.has('tenant_1:tanium_asset_api_url')).toBe(false);
+  });
+
+  it('classifies Windows Server endpoints as server assets during sync', async () => {
+    state.rmm_organization_mappings.push({
+      tenant: 'tenant_1',
+      mapping_id: 'map_1',
+      integration_id: 'integration_tanium',
+      external_organization_id: 'scope_1',
+      client_id: 'client_1',
+      auto_sync_assets: true,
+    });
+    gatewayEndpointsByScope.scope_1 = [
+      {
+        id: 'server_1',
+        name: 'Server 1',
+        online: true,
+        osName: 'Windows Server 2022',
+        computerGroupId: 'scope_1',
+      },
+    ];
+    ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'created' });
+
+    const result = await triggerTaniumFullSync({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+
+    expect(result.success).toBe(true);
+    expect(ingestNormalizedRmmDeviceSnapshotMock.mock.calls[0]?.[0]?.snapshot?.assetType).toBe('server');
   });
 
   it('T007: connection test failure keeps integration inactive and returns actionable error', async () => {

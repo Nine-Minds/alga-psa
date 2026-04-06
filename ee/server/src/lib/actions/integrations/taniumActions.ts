@@ -3,6 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { createTenantKnex } from '@/lib/db';
 import {
   ingestNormalizedRmmDeviceSnapshot,
@@ -15,6 +16,7 @@ import {
   type TaniumEndpointRecord,
 } from '../../integrations/tanium/taniumGatewayClient';
 import { runRmmSyncWithTransport } from '../../integrations/rmm/sync/syncOrchestration';
+import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 const PROVIDER = 'tanium' as const;
 
@@ -24,6 +26,52 @@ const TANIUM_ASSET_API_URL_SECRET = 'tanium_asset_api_url';
 
 function sanitizeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function withAdvancedAssetsAccess<TArgs extends unknown[], TResult>(
+  handler: (user: any, context: { tenant: string }, ...args: TArgs) => Promise<TResult>,
+) {
+  return withAuth(async (user, context, ...args: TArgs): Promise<TResult> => {
+    await assertTierAccess(TIER_FEATURES.ADVANCED_ASSETS);
+    return handler(user, context as { tenant: string }, ...args);
+  });
+}
+
+function inferTaniumAssetType(endpoint: TaniumEndpointRecord): NormalizedRmmExternalDeviceSnapshot['assetType'] {
+  const fingerprint = [
+    endpoint.osName,
+    endpoint.osVersion,
+    endpoint.metadata ? JSON.stringify(endpoint.metadata) : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (
+    fingerprint.includes('switch') ||
+    fingerprint.includes('router') ||
+    fingerprint.includes('firewall') ||
+    fingerprint.includes('access point') ||
+    fingerprint.includes('load balancer')
+  ) {
+    return 'network_device';
+  }
+
+  if (
+    fingerprint.includes('android') ||
+    fingerprint.includes('ios') ||
+    fingerprint.includes('ipad') ||
+    fingerprint.includes('iphone') ||
+    fingerprint.includes('mobile')
+  ) {
+    return 'mobile_device';
+  }
+
+  if (fingerprint.includes('server')) {
+    return 'server';
+  }
+
+  return 'workstation';
 }
 
 function mapEndpointToSnapshot(args: {
@@ -40,7 +88,7 @@ function mapEndpointToSnapshot(args: {
     externalDeviceId: String(endpoint.id),
     externalScopeId: args.scopeId,
     lifecycleState: isOffline ? 'offline' : 'active',
-    assetType: 'workstation',
+    assetType: inferTaniumAssetType(endpoint),
     displayName: endpoint.name || endpoint.id,
     serialNumber: endpoint.serialNumber ?? null,
     status: isOffline ? 'inactive' : 'active',
@@ -127,7 +175,7 @@ async function buildConfiguredTaniumClient(args: { tenant: string; gatewayUrl?: 
   });
 }
 
-export const getTaniumSettings = withAuth(async (user, { tenant }) => {
+export const getTaniumSettings = withAdvancedAssetsAccess(async (user, { tenant }) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'read');
   if (!permitted) return { success: false, error: 'Forbidden' };
 
@@ -168,7 +216,7 @@ export const getTaniumSettings = withAuth(async (user, { tenant }) => {
   }
 });
 
-export const saveTaniumConfiguration = withAuth(async (
+export const saveTaniumConfiguration = withAdvancedAssetsAccess(async (
   user,
   { tenant },
   input: {
@@ -198,6 +246,8 @@ export const saveTaniumConfiguration = withAuth(async (
       const normalizedAssetUrl = normalizeTaniumGatewayUrl(input.assetApiUrl);
       if (normalizedAssetUrl) {
         await secretProvider.setTenantSecret(tenant, TANIUM_ASSET_API_URL_SECRET, normalizedAssetUrl);
+      } else {
+        await secretProvider.deleteTenantSecret(tenant, TANIUM_ASSET_API_URL_SECRET);
       }
     }
 
@@ -218,7 +268,7 @@ export const saveTaniumConfiguration = withAuth(async (
   }
 });
 
-export const testTaniumConnection = withAuth(async (user, { tenant }) => {
+export const testTaniumConnection = withAdvancedAssetsAccess(async (user, { tenant }) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
 
@@ -259,7 +309,7 @@ export const testTaniumConnection = withAuth(async (user, { tenant }) => {
   }
 });
 
-export const disconnectTaniumIntegration = withAuth(async (user, { tenant }) => {
+export const disconnectTaniumIntegration = withAdvancedAssetsAccess(async (user, { tenant }) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
 
@@ -288,7 +338,7 @@ export const disconnectTaniumIntegration = withAuth(async (user, { tenant }) => 
   }
 });
 
-export const syncTaniumScopes = withAuth(async (user, { tenant }) => {
+export const syncTaniumScopes = withAdvancedAssetsAccess(async (user, { tenant }) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
 
@@ -384,7 +434,7 @@ export const syncTaniumScopes = withAuth(async (user, { tenant }) => {
   }
 });
 
-export const getTaniumOrganizationMappings = withAuth(async (user, { tenant }) => {
+export const getTaniumOrganizationMappings = withAdvancedAssetsAccess(async (user, { tenant }) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'read');
   if (!permitted) return { success: false, error: 'Forbidden' };
 
@@ -429,7 +479,7 @@ export const getTaniumOrganizationMappings = withAuth(async (user, { tenant }) =
   }
 });
 
-export const updateTaniumOrganizationMapping = withAuth(async (
+export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
   user,
   { tenant },
   input: {
@@ -461,7 +511,7 @@ export const updateTaniumOrganizationMapping = withAuth(async (
   }
 });
 
-export const triggerTaniumFullSync = withAuth(async (user, { tenant }) => {
+export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { tenant }) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
 
@@ -506,6 +556,22 @@ export const triggerTaniumFullSync = withAuth(async (user, { tenant }) => {
       assetApiUrl: taniumSettings.asset_api_url || undefined,
     });
 
+    const gatewayEndpoints = await client.listEndpoints();
+    const endpointsByScope = new Map<string, TaniumEndpointRecord[]>();
+    for (const endpoint of gatewayEndpoints) {
+      if (!endpoint.computerGroupId) {
+        continue;
+      }
+
+      const groupKey = String(endpoint.computerGroupId);
+      const bucket = endpointsByScope.get(groupKey);
+      if (bucket) {
+        bucket.push(endpoint);
+      } else {
+        endpointsByScope.set(groupKey, [endpoint]);
+      }
+    }
+
     let processed = 0;
     let created = 0;
     let updated = 0;
@@ -515,7 +581,7 @@ export const triggerTaniumFullSync = withAuth(async (user, { tenant }) => {
     for (const scope of mappedScopes) {
       const externalScopeId = String(scope.external_organization_id);
       const resolvedClientId = String(scope.client_id);
-      let endpoints = await client.listEndpoints({ computerGroupId: externalScopeId });
+      let endpoints = endpointsByScope.get(externalScopeId) ?? [];
 
       if (endpoints.length === 0 && useAssetApiFallback) {
         const fallbackEndpoints = await client.listAgedOutAssetFallback({ computerGroupId: externalScopeId });
