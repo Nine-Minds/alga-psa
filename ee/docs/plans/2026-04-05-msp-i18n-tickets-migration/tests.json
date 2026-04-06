@@ -20,7 +20,7 @@
   {"id": "T042", "description": "Unit: TicketProperties.i18n.test — pseudo-locale coverage for inline edit controls", "implemented": true, "featureIds": ["F027", "F028"]},
 
   {"id": "T050", "description": "Unit: CategoriesSettings.i18n.test — board/channel scope selector and tree labels translated", "implemented": true, "featureIds": ["F030"]},
-  {"id": "T051", "description": "Unit: CategoriesSettings.i18n.test — add/edit/delete dialogs render validation messages in current locale", "implemented": false, "featureIds": ["F031"]},
+  {"id": "T051", "description": "Unit: CategoriesSettings.i18n.test — add/edit/delete dialogs render validation messages in current locale", "implemented": true, "featureIds": ["F031"]},
 
   {"id": "T060", "description": "Unit: TicketExportDialog.i18n.test — format options (CSV/XLSX), column picker, date range labels translated", "implemented": false, "featureIds": ["F032"]},
   {"id": "T061", "description": "Unit: TicketExportDialog.i18n.test — download failure toast translated", "implemented": false, "featureIds": ["F033"]},

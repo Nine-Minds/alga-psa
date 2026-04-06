@@ -650,6 +650,10 @@ the one-liner. Keep the validator green before committing.
   `settings/__tests__/CategoriesSettings.contract.test.ts` source-contract file with a
   board-scope/tree-label assertion covering the page title, the `All Boards` scope selector
   label, and the translated Name/Board/Order/Actions table headings used by the category tree.
+- **(2026-04-05, T051)** The same CategoriesSettings contract file now also covers the add/edit/
+  delete validation and toast surface: fetch/validate/delete failures, name-required validation,
+  the edit-dialog title, delete-dialog entity fallback, and the save/delete success copy all have
+  explicit `t(...)` assertions.
 
 ## Risks
 
