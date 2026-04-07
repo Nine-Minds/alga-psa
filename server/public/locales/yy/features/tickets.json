@@ -125,7 +125,12 @@
     "closedAt": "55555",
     "responseSource": "55555",
     "ticketOrigin": "55555",
-    "isClosed": "55555"
+    "isClosed": "55555",
+    "tags": "55555",
+    "sla": "55555",
+    "updated": "55555",
+    "openInNewTab": "55555",
+    "actions": "55555"
   },
   "actions": {
     "view": "55555",

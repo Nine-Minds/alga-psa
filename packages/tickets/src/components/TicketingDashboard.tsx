@@ -943,6 +943,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       teamAvatarUrls,
       isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
       onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
+      t,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {

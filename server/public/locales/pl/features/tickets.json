@@ -125,7 +125,12 @@
     "closedAt": "Zamknięto o",
     "responseSource": "Źródło odpowiedzi",
     "ticketOrigin": "Źródło zgłoszenia",
-    "isClosed": "Zamknięte"
+    "isClosed": "Zamknięte",
+    "tags": "Tagi",
+    "sla": "SLA",
+    "updated": "Zaktualizowano",
+    "openInNewTab": "Otwórz w nowej karcie",
+    "actions": "Akcje"
   },
   "actions": {
     "view": "Wyświetl",

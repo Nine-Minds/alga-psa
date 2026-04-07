@@ -125,7 +125,12 @@
     "closedAt": "Fermé à",
     "responseSource": "Source de réponse",
     "ticketOrigin": "Origine du ticket",
-    "isClosed": "Est fermé"
+    "isClosed": "Est fermé",
+    "tags": "Tags",
+    "sla": "SLA",
+    "updated": "Mis à jour",
+    "openInNewTab": "Ouvrir dans un nouvel onglet",
+    "actions": "Actions"
   },
   "actions": {
     "view": "Voir",

@@ -125,7 +125,12 @@
     "closedAt": "Closed At",
     "responseSource": "Response Source",
     "ticketOrigin": "Ticket Origin",
-    "isClosed": "Is Closed"
+    "isClosed": "Is Closed",
+    "tags": "Tags",
+    "sla": "SLA",
+    "updated": "Updated",
+    "openInNewTab": "Open in new tab",
+    "actions": "Actions"
   },
   "actions": {
     "view": "View",

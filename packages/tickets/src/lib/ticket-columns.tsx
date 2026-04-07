@@ -126,6 +126,7 @@ interface CreateTicketColumnsOptions {
   teamAvatarUrls?: Record<string, string | null>;
   isBundleExpanded?: (masterTicketId: string) => boolean;
   onToggleBundleExpanded?: (masterTicketId: string) => void;
+  t?: (key: string, fallback: string) => string;
 }
 
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
@@ -145,7 +146,10 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     teamAvatarUrls = {},
     isBundleExpanded,
     onToggleBundleExpanded,
+    t: _t,
   } = options;
+
+  const t = _t ?? ((_key: string, fallback: string) => fallback);
 
   const columnVisibility = displaySettings?.list?.columnVisibility || {
     ticket_number: true,
@@ -174,7 +178,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'ticket_number',
       col: {
-        title: 'Ticket Number',
+        title: t('fields.ticketNumber', 'Ticket Number'),
         dataIndex: 'ticket_number',
         width: '7%',
         render: (value: string, record: ITicketListItem) => (
@@ -247,7 +251,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
   columns.push({
     key: 'title',
     col: {
-      title: 'Title',
+      title: t('fields.title', 'Title'),
       dataIndex: 'title',
       width: tagsInlineUnderTitle ? '20%' : '16%',
       render: (value: string, record: ITicketListItem) => (
@@ -283,7 +287,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'status',
       col: {
-        title: 'Status',
+        title: t('fields.status', 'Status'),
         dataIndex: 'status_name',
         width: '8%',
         render: (value: string, record: ITicketListItem) => {
@@ -312,7 +316,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'priority',
       col: {
-        title: 'Priority',
+        title: t('fields.priority', 'Priority'),
         dataIndex: 'priority_name',
         width: '7%',
         render: (value: string, record: ITicketListItem) => {
@@ -336,7 +340,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'sla',
       col: {
-        title: 'SLA',
+        title: t('fields.sla', 'SLA'),
         dataIndex: 'sla_policy_id',
         width: '5%',
         sortable: false,
@@ -364,7 +368,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'board',
       col: {
-        title: 'Board',
+        title: t('fields.board', 'Board'),
         dataIndex: 'board_name',
         width: '7%',
       }
@@ -376,7 +380,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'category',
       col: {
-        title: 'Category',
+        title: t('fields.category', 'Category'),
         dataIndex: 'category_name',
         width: '7%',
         render: (_value: string, record: ITicketListItem) => {
@@ -408,7 +412,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'client',
       col: {
-        title: 'Client',
+        title: t('fields.client', 'Client'),
         dataIndex: 'client_name',
         width: '9%',
         render: onClientClick ? (value: string, record: ITicketListItem) => (
@@ -444,7 +448,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'assigned_to',
       col: {
-        title: 'Assigned To',
+        title: t('fields.assignedTo', 'Assigned To'),
         dataIndex: 'assigned_to_name',
         width: '8%',
         render: (value: string | null, record: ITicketListItem) => {
@@ -507,7 +511,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'due_date',
       col: {
-        title: 'Due Date',
+        title: t('fields.dueDate', 'Due Date'),
         dataIndex: 'due_date',
         width: '9%',
         render: (value: string | null) => {
@@ -552,7 +556,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'created',
       col: {
-        title: 'Created',
+        title: t('fields.created', 'Created'),
         dataIndex: 'entered_at',
         width: '10%',
         render: (value: string | null) => (
@@ -569,7 +573,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'created_by',
       col: {
-        title: 'Created By',
+        title: t('fields.createdBy', 'Created By'),
         dataIndex: 'entered_by_name',
         width: '6%',
       }
@@ -581,7 +585,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'tags',
       col: {
-        title: 'Tags',
+        title: t('fields.tags', 'Tags'),
         dataIndex: 'tags',
         width: '8%',
         sortable: false,
@@ -607,7 +611,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'actions',
       col: {
-        title: 'Actions',
+        title: t('fields.actions', 'Actions'),
         dataIndex: 'actions',
         width: '3%',
         sortable: false,

@@ -125,7 +125,12 @@
     "closedAt": "Gesloten om",
     "responseSource": "Antwoordbron",
     "ticketOrigin": "Ticket Herkomst",
-    "isClosed": "is gesloten"
+    "isClosed": "is gesloten",
+    "tags": "Tags",
+    "sla": "SLA",
+    "updated": "Bijgewerkt",
+    "openInNewTab": "Openen in nieuw tabblad",
+    "actions": "Acties"
   },
   "actions": {
     "view": "Bekijken",
