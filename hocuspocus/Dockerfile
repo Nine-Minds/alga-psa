@@ -2,8 +2,8 @@ FROM node:22.5.1 AS builder
 
 WORKDIR /app/hocuspocus
 
-COPY package.json ./
-RUN npm install --omit=dev --no-package-lock
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
 FROM node:22.5.1-slim
 
