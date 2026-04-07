@@ -57,7 +57,7 @@ const expectedPseudoValue = (value: string, fill: '11111' | '55555'): string => 
     return fill;
   }
 
-  return `${fill} ${variables.join(' ')} ${fill}`;
+  return variables.map((v) => `${fill} ${v}`).join(' ') + ` ${fill}`;
 };
 
 describe('MSP dashboard locale batch 2b-1', () => {
