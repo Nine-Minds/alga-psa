@@ -5,7 +5,7 @@
 
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { StatusService } from '../services/StatusService';
-import { statusListQuerySchema } from '../schemas/status';
+import { statusListQuerySchema, createStatusSchema, updateStatusSchema } from '../schemas/status';
 
 export class ApiStatusController extends ApiBaseController {
   constructor() {
@@ -13,9 +13,14 @@ export class ApiStatusController extends ApiBaseController {
 
     super(statusService, {
       resource: 'status',
+      createSchema: createStatusSchema,
+      updateSchema: updateStatusSchema,
       querySchema: statusListQuerySchema,
       permissions: {
+        create: 'create',
         read: 'read',
+        update: 'update',
+        delete: 'delete',
         list: 'read'
       }
     });

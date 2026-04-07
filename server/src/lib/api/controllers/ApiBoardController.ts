@@ -5,7 +5,7 @@
 
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { BoardService } from '../services/BoardService';
-import { boardListQuerySchema } from '../schemas/board';
+import { boardListQuerySchema, createBoardSchema, updateBoardSchema } from '../schemas/board';
 
 export class ApiBoardController extends ApiBaseController {
   constructor() {
@@ -13,9 +13,14 @@ export class ApiBoardController extends ApiBaseController {
 
     super(boardService, {
       resource: 'board',
+      createSchema: createBoardSchema,
+      updateSchema: updateBoardSchema,
       querySchema: boardListQuerySchema,
       permissions: {
+        create: 'create',
         read: 'read',
+        update: 'update',
+        delete: 'delete',
         list: 'read'
       }
     });
