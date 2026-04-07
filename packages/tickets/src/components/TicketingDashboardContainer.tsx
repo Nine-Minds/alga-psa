@@ -10,6 +10,7 @@ import { IUser } from '@alga-psa/types';
 import { IBoard } from '@alga-psa/types';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketFormOptions, type TicketFormOptions } from '../hooks/useTicketFormOptions';
 import {
   isTicketStatusOpenFilter,
@@ -149,6 +150,7 @@ export default function TicketingDashboardContainer({
   canUpdateTickets,
   renderClientDetails,
 }: TicketingDashboardContainerProps) {
+  const { t } = useTranslation('features/tickets');
   const initialStatusId = initialFilters?.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const latestFetchRequestIdRef = useRef(0);
   const pendingFetchCountRef = useRef(0);
@@ -294,7 +296,7 @@ export default function TicketingDashboardContainer({
   ) => {
     console.log('[Container] fetchTickets called with:', { filters, page, pageSize });
     if (!currentUser) {
-      toast.error('You must be logged in to perform this action');
+      toast.error(t('errors.performActionAuthRequired', 'You must be logged in to perform this action'));
       return;
     }
     const requestId = ++latestFetchRequestIdRef.current;
@@ -353,7 +355,7 @@ export default function TicketingDashboardContainer({
       if (requestId !== latestFetchRequestIdRef.current) {
         return;
       }
-      handleError(error, 'Failed to fetch tickets');
+      handleError(error, t('errors.fetchTickets', 'Failed to fetch tickets'));
       setTickets([]);
       setTotalCount(0);
     } finally {
@@ -363,7 +365,7 @@ export default function TicketingDashboardContainer({
         setIsLoading(false);
       }
     }
-  }, [currentUser]);
+  }, [currentUser, sortBy, sortDirection, t]);
 
   // Refs to avoid putting activeFilters/fetchTickets in the storedPageSize effect deps.
   // These values are needed when the effect fires, but changes to them should NOT re-trigger it.
@@ -565,7 +567,7 @@ export default function TicketingDashboardContainer({
   const mappedAndFilteredBoards = effectiveOptions.boardOptions.map(board => ({
     ...board,
     board_id: board.board_id || '',
-    board_name: board.board_name || 'Unnamed Board',
+    board_name: board.board_name || t('bulk.move.unnamedBoard', 'Unnamed board'),
     tenant: board.tenant || currentUser.tenant || '',
     is_inactive: board.is_inactive || false,
   })).filter(board => board.board_id !== '');

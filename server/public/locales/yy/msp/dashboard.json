@@ -52,7 +52,7 @@
     },
     "progress": {
       "label": "55555",
-      "steps": "55555 {{completed}} {{total}} 55555",
+      "steps": "55555 {{completed}} 55555 {{total}} 55555",
       "messageStart": "55555",
       "messageComplete": "55555",
       "messageInProgress": "55555"
@@ -91,7 +91,7 @@
     },
     "checklist": {
       "title": "55555",
-      "progress": "55555 {{completed}} {{total}} 55555",
+      "progress": "55555 {{completed}} 55555 {{total}} 55555",
       "completeTitle": "55555",
       "completeDescription": "55555",
       "inviteCta": "55555",

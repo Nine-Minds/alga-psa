@@ -1,533 +1,533 @@
 {
   "page": {
-    "title": "11111",
+    "title": "55555",
     "actions": {
-      "configureAvailability": "11111",
-      "appointmentRequests": "11111"
+      "configureAvailability": "55555",
+      "appointmentRequests": "55555"
     }
   },
   "sidebar": {
     "actions": {
-      "compareAll": "11111",
-      "clearAll": "11111",
-      "viewWeek": "11111",
-      "compare": "11111",
-      "stopComparing": "11111"
+      "compareAll": "55555",
+      "clearAll": "55555",
+      "viewWeek": "55555",
+      "compare": "55555",
+      "stopComparing": "55555"
     },
     "labels": {
-      "inactive": "11111"
+      "inactive": "55555"
     },
     "aria": {
-      "viewWeek": "11111",
-      "compare": "11111"
+      "viewWeek": "55555 {{name}} 55555",
+      "compare": "55555 {{name}} 55555"
     }
   },
   "agentView": {
-    "loading": "11111",
+    "loading": "55555",
     "errors": {
-      "loadPermissions": "11111",
-      "forbidden": "11111"
+      "loadPermissions": "55555",
+      "forbidden": "55555"
     }
   },
   "calendar": {
     "legend": {
       "types": {
-        "ticket": "11111",
-        "projectTask": "11111",
-        "nonBillableCategory": "11111",
-        "adHoc": "11111",
-        "interaction": "11111",
-        "appointmentRequest": "11111"
+        "ticket": "55555",
+        "projectTask": "55555",
+        "nonBillableCategory": "55555",
+        "adHoc": "55555",
+        "interaction": "55555",
+        "appointmentRequest": "55555"
       },
-      "showInactiveUsers": "11111"
+      "showInactiveUsers": "55555"
     },
     "loading": {
-      "initial": "11111",
-      "overlay": "11111"
+      "initial": "55555",
+      "overlay": "55555"
     },
     "errors": {
-      "validateDeletion": "11111",
-      "loadPermissions": "11111",
-      "loadCurrentUser": "11111",
-      "unknown": "11111",
-      "deleteFailed": "11111",
-      "deleteUnexpected": "11111",
-      "updateFailed": "11111",
-      "createFailed": "11111",
-      "saveUnexpected": "11111"
+      "validateDeletion": "55555",
+      "loadPermissions": "55555",
+      "loadCurrentUser": "55555",
+      "unknown": "55555",
+      "deleteFailed": "55555",
+      "deleteUnexpected": "55555",
+      "updateFailed": "55555 {{error}} 55555",
+      "createFailed": "55555 {{error}} 55555",
+      "saveUnexpected": "55555"
     },
     "toolbar": {
-      "previousAria": "11111",
-      "previous": "11111",
-      "today": "11111",
-      "nextAria": "11111",
-      "next": "11111",
+      "previousAria": "55555 {{view}} 55555",
+      "previous": "55555",
+      "today": "55555",
+      "nextAria": "55555 {{view}} 55555",
+      "next": "55555",
       "views": {
-        "month": "11111",
-        "week": "11111",
-        "day": "11111"
+        "month": "55555",
+        "week": "55555",
+        "day": "55555"
       }
     },
     "event": {
       "fallbacks": {
-        "unknownTechnician": "11111",
-        "unassigned": "11111",
-        "untitled": "11111"
+        "unknownTechnician": "55555",
+        "unassigned": "55555",
+        "untitled": "55555"
       },
       "tooltip": {
-        "scheduledFor": "11111",
-        "start": "11111",
-        "end": "11111",
-        "multiDay": "11111"
+        "scheduledFor": "55555 {{technicians}} 55555",
+        "start": "55555 {{dateTime}} 55555",
+        "end": "55555 {{dateTime}} 55555",
+        "multiDay": "55555"
       }
     },
     "deleteDialog": {
-      "title": "11111",
-      "messageRecurring": "11111",
-      "messageSingle": "11111",
-      "confirm": "11111",
-      "entityFallback": "11111",
+      "title": "55555",
+      "messageRecurring": "55555",
+      "messageSingle": "55555",
+      "confirm": "55555",
+      "entityFallback": "55555",
       "options": {
-        "single": "11111",
-        "future": "11111",
-        "all": "11111"
+        "single": "55555",
+        "future": "55555",
+        "all": "55555"
       }
     }
   },
   "weeklyEvent": {
     "actions": {
-      "delete": "11111"
+      "delete": "55555"
     },
     "continuation": {
-      "previousWeek": "11111"
+      "previousWeek": "55555"
     }
   },
   "requests": {
     "errors": {
-      "load": "11111",
-      "ticketNotFound": "11111",
-      "loadTicket": "11111",
-      "assignTechnicianRequired": "11111",
-      "approve": "11111",
-      "declineReasonRequired": "11111",
-      "decline": "11111"
+      "load": "55555",
+      "ticketNotFound": "55555",
+      "loadTicket": "55555",
+      "assignTechnicianRequired": "55555",
+      "approve": "55555",
+      "declineReasonRequired": "55555",
+      "decline": "55555"
     },
     "feedback": {
-      "approved": "11111",
-      "declined": "11111"
+      "approved": "55555",
+      "declined": "55555"
     },
     "filters": {
-      "statusLabel": "11111",
+      "statusLabel": "55555",
       "statusOptions": {
-        "all": "11111",
-        "pending": "11111",
-        "approved": "11111",
-        "declined": "11111",
-        "cancelled": "11111"
+        "all": "55555",
+        "pending": "55555",
+        "approved": "55555",
+        "declined": "55555",
+        "cancelled": "55555"
       }
     },
     "fallbacks": {
-      "invalidDateTime": "11111"
+      "invalidDateTime": "55555"
     },
     "list": {
-      "title": "11111",
-      "badgeTotal": "11111",
-      "loading": "11111",
-      "empty": "11111",
-      "duration": "11111",
-      "ticketFallback": "11111",
+      "title": "55555",
+      "badgeTotal": "55555",
+      "loading": "55555",
+      "empty": "55555 {{status}} 55555",
+      "duration": "55555 {{count}} 55555",
+      "ticketFallback": "55555 {{ticket}} 55555",
       "fallbacks": {
-        "publicRequest": "11111"
+        "publicRequest": "55555"
       }
     },
     "detail": {
-      "back": "11111",
-      "title": "11111",
+      "back": "55555",
+      "title": "55555",
       "section": {
-        "requestInformation": "11111"
+        "requestInformation": "55555"
       },
       "labels": {
-        "reference": "11111",
-        "client": "11111",
-        "contact": "11111",
-        "email": "11111",
-        "phone": "11111",
-        "service": "11111",
-        "requestedTime": "11111",
-        "duration": "11111",
-        "status": "11111",
-        "linkedTicket": "11111",
-        "description": "11111"
+        "reference": "55555",
+        "client": "55555",
+        "contact": "55555",
+        "email": "55555",
+        "phone": "55555",
+        "service": "55555",
+        "requestedTime": "55555",
+        "duration": "55555",
+        "status": "55555",
+        "linkedTicket": "55555",
+        "description": "55555"
       }
     },
     "approval": {
-      "title": "11111",
+      "title": "55555",
       "fields": {
-        "assignedTechnician": "11111",
-        "finalDateTime": "11111",
-        "internalNotes": "11111",
-        "linkedTicket": "11111"
+        "assignedTechnician": "55555",
+        "finalDateTime": "55555",
+        "internalNotes": "55555",
+        "linkedTicket": "55555"
       },
       "placeholders": {
-        "assignedTechnician": "11111",
-        "internalNotes": "11111",
-        "linkedTicket": "11111"
+        "assignedTechnician": "55555",
+        "internalNotes": "55555",
+        "linkedTicket": "55555"
       },
       "actions": {
-        "approve": "11111",
-        "decline": "11111"
+        "approve": "55555",
+        "decline": "55555"
       }
     },
     "decline": {
-      "title": "11111",
+      "title": "55555",
       "fields": {
-        "reason": "11111"
+        "reason": "55555"
       },
       "placeholders": {
-        "reason": "11111"
+        "reason": "55555"
       },
       "actions": {
-        "confirm": "11111",
-        "cancel": "11111"
+        "confirm": "55555",
+        "cancel": "55555"
       }
     }
   },
   "availabilitySettings": {
     "dialog": {
-      "title": "11111"
+      "title": "55555"
     },
-    "loading": "11111",
+    "loading": "55555",
     "tabs": {
-      "general": "11111",
-      "userHours": "11111",
-      "serviceRules": "11111",
-      "exceptions": "11111"
+      "general": "55555",
+      "userHours": "55555",
+      "serviceRules": "55555",
+      "exceptions": "55555"
     },
     "days": {
-      "sunday": "11111",
-      "monday": "11111",
-      "tuesday": "11111",
-      "wednesday": "11111",
-      "thursday": "11111",
-      "friday": "11111",
-      "saturday": "11111"
+      "sunday": "55555",
+      "monday": "55555",
+      "tuesday": "55555",
+      "wednesday": "55555",
+      "thursday": "55555",
+      "friday": "55555",
+      "saturday": "55555"
     },
     "common": {
-      "yes": "11111",
-      "no": "11111",
+      "yes": "55555",
+      "no": "55555",
       "columns": {
-        "action": "11111"
+        "action": "55555"
       },
       "actions": {
-        "edit": "11111"
+        "edit": "55555"
       },
       "defaultApprover": {
-        "placeholder": "11111"
+        "placeholder": "55555"
       },
       "teamSelect": {
-        "label": "11111",
-        "placeholder": "11111"
+        "label": "55555",
+        "placeholder": "55555"
       }
     },
     "feedback": {
-      "loadError": "11111"
+      "loadError": "55555"
     },
     "general": {
       "autoApproval": {
-        "title": "11111",
-        "description": "11111",
-        "criteriaTitle": "11111",
+        "title": "55555",
+        "description": "55555",
+        "criteriaTitle": "55555",
         "criteria": {
-          "requireAvailability": "11111",
-          "requireContract": "11111",
-          "checkConflicts": "11111",
-          "respectBuffers": "11111"
+          "requireAvailability": "55555",
+          "requireContract": "55555",
+          "checkConflicts": "55555",
+          "respectBuffers": "55555"
         }
       },
       "defaultApprover": {
-        "label": "11111",
-        "help": "11111"
+        "label": "55555",
+        "help": "55555"
       },
       "advanceBookingDays": {
-        "label": "11111"
+        "label": "55555"
       },
       "minimumNoticeHours": {
-        "label": "11111"
+        "label": "55555"
       },
       "actions": {
-        "save": "11111"
+        "save": "55555"
       },
       "feedback": {
-        "saveSuccess": "11111",
-        "saveError": "11111"
+        "saveSuccess": "55555",
+        "saveError": "55555"
       }
     },
     "userHours": {
       "roleManager": {
-        "label": "11111",
-        "description": "11111"
+        "label": "55555",
+        "description": "55555"
       },
       "roleAdmin": {
-        "label": "11111",
-        "description": "11111"
+        "label": "55555",
+        "description": "55555"
       },
       "userSelect": {
-        "label": "11111",
-        "placeholderSelectTeamFirst": "11111",
-        "placeholder": "11111"
+        "label": "55555",
+        "placeholderSelectTeamFirst": "55555",
+        "placeholder": "55555"
       },
       "appointmentSettings": {
-        "title": "11111",
+        "title": "55555",
         "defaultDuration": {
-          "label": "11111",
-          "help": "11111",
-          "placeholder": "11111"
+          "label": "55555",
+          "help": "55555",
+          "placeholder": "55555"
         },
         "bufferAfter": {
-          "label": "11111",
-          "placeholder": "11111"
+          "label": "55555",
+          "placeholder": "55555"
         },
         "defaultApprover": {
-          "label": "11111",
-          "help": "11111"
+          "label": "55555",
+          "help": "55555"
         },
         "allowClientPreference": {
-          "label": "11111",
-          "help": "11111"
+          "label": "55555",
+          "help": "55555"
         }
       },
       "schedule": {
-        "timezoneNotice": "11111",
+        "timezoneNotice": "55555 {{timeZone}} 55555",
         "columns": {
-          "day": "11111",
-          "available": "11111",
-          "startTime": "11111",
-          "endTime": "11111"
+          "day": "55555",
+          "available": "55555",
+          "startTime": "55555",
+          "endTime": "55555"
         }
       },
       "configuredUsers": {
-        "title": "11111",
-        "description": "11111",
-        "empty": "11111",
+        "title": "55555",
+        "description": "55555",
+        "empty": "55555",
         "columns": {
-          "userName": "11111",
-          "status": "11111"
+          "userName": "55555",
+          "status": "55555"
         },
         "status": {
-          "configured": "11111"
+          "configured": "55555"
         }
       },
       "actions": {
-        "save": "11111"
+        "save": "55555"
       },
       "feedback": {
-        "selectUserError": "11111",
-        "saveSuccess": "11111",
-        "saveError": "11111"
+        "selectUserError": "55555",
+        "saveSuccess": "55555",
+        "saveError": "55555"
       }
     },
     "serviceRules": {
       "serviceSelect": {
-        "label": "11111",
-        "placeholder": "11111"
+        "label": "55555",
+        "placeholder": "55555"
       },
       "editor": {
-        "title": "11111",
+        "title": "55555 {{serviceName}} 55555",
         "allowWithoutContract": {
-          "label": "11111"
+          "label": "55555"
         },
         "maxAppointmentsPerDay": {
-          "label": "11111"
+          "label": "55555"
         },
         "defaultDuration": {
-          "label": "11111",
-          "help": "11111",
-          "placeholder": "11111"
+          "label": "55555",
+          "help": "55555",
+          "placeholder": "55555"
         }
       },
       "configuredServices": {
-        "title": "11111",
-        "description": "11111",
-        "empty": "11111",
+        "title": "55555",
+        "description": "55555",
+        "empty": "55555",
         "columns": {
-          "serviceName": "11111",
-          "duration": "11111",
-          "withoutContract": "11111",
-          "maxPerDay": "11111"
+          "serviceName": "55555",
+          "duration": "55555",
+          "withoutContract": "55555",
+          "maxPerDay": "55555"
         }
       },
       "common": {
-        "noLimit": "11111"
+        "noLimit": "55555"
       },
       "actions": {
-        "save": "11111"
+        "save": "55555"
       },
       "feedback": {
-        "selectServiceError": "11111",
-        "saveSuccess": "11111",
-        "saveError": "11111"
+        "selectServiceError": "55555",
+        "saveSuccess": "55555",
+        "saveError": "55555"
       }
     },
     "exceptions": {
       "form": {
-        "title": "11111",
+        "title": "55555",
         "date": {
-          "label": "11111"
+          "label": "55555"
         },
         "user": {
-          "label": "11111",
-          "placeholder": "11111"
+          "label": "55555",
+          "placeholder": "55555"
         },
         "isAvailable": {
-          "label": "11111"
+          "label": "55555"
         },
         "reason": {
-          "label": "11111",
-          "placeholder": "11111"
+          "label": "55555",
+          "placeholder": "55555"
         }
       },
       "common": {
-        "companyWide": "11111"
+        "companyWide": "55555"
       },
       "actions": {
-        "add": "11111"
+        "add": "55555"
       },
       "list": {
-        "title": "11111",
-        "empty": "11111",
+        "title": "55555",
+        "empty": "55555",
         "status": {
-          "available": "11111",
-          "unavailable": "11111"
+          "available": "55555",
+          "unavailable": "55555"
         }
       },
       "feedback": {
-        "selectDateError": "11111",
-        "addSuccess": "11111",
-        "addError": "11111",
-        "deleteSuccess": "11111",
-        "deleteError": "11111"
+        "selectDateError": "55555",
+        "addSuccess": "55555",
+        "addError": "55555",
+        "deleteSuccess": "55555",
+        "deleteError": "55555"
       }
     }
   },
   "entryPopup": {
     "title": {
-      "appointmentRequest": "11111",
-      "view": "11111",
-      "edit": "11111",
-      "new": "11111"
+      "appointmentRequest": "55555",
+      "view": "55555",
+      "edit": "55555",
+      "new": "55555"
     },
     "alerts": {
-      "privateEntryOnlyCreator": "11111"
+      "privateEntryOnlyCreator": "55555"
     },
     "validation": {
-      "summaryTitle": "11111",
-      "titleRequiredForAdHoc": "11111",
-      "startRequired": "11111",
-      "endRequired": "11111",
-      "assigneeRequired": "11111",
-      "startInvalid": "11111",
-      "endInvalid": "11111",
-      "endAfterStart": "11111",
-      "recurrenceIntervalPositive": "11111",
-      "recurrenceCountPositive": "11111",
-      "recurrenceEndInvalid": "11111",
-      "recurrenceEndAfterStart": "11111"
+      "summaryTitle": "55555",
+      "titleRequiredForAdHoc": "55555",
+      "startRequired": "55555",
+      "endRequired": "55555",
+      "assigneeRequired": "55555",
+      "startInvalid": "55555",
+      "endInvalid": "55555",
+      "endAfterStart": "55555",
+      "recurrenceIntervalPositive": "55555",
+      "recurrenceCountPositive": "55555",
+      "recurrenceEndInvalid": "55555",
+      "recurrenceEndAfterStart": "55555"
     },
     "fields": {
-      "title": "11111",
-      "assignedUsers": "11111",
-      "privateEntry": "11111",
-      "start": "11111",
-      "end": "11111",
-      "notes": "11111"
+      "title": "55555",
+      "assignedUsers": "55555",
+      "privateEntry": "55555",
+      "start": "55555",
+      "end": "55555",
+      "notes": "55555"
     },
     "actions": {
-      "cancel": "11111",
-      "close": "11111",
-      "save": "11111",
-      "delete": "11111"
+      "cancel": "55555",
+      "close": "55555",
+      "save": "55555",
+      "delete": "55555"
     },
     "workItem": {
-      "adHocFallback": "11111",
-      "openDetails": "11111"
+      "adHocFallback": "55555",
+      "openDetails": "55555"
     },
     "appointmentRequest": {
       "approved": {
-        "title": "11111",
-        "descriptionWithDate": "11111",
-        "description": "11111"
+        "title": "55555",
+        "descriptionWithDate": "55555 {{date}} 55555",
+        "description": "55555"
       },
       "pending": {
-        "title": "11111",
-        "description": "11111"
+        "title": "55555",
+        "description": "55555"
       },
       "declined": {
-        "title": "11111",
-        "descriptionWithReason": "11111",
-        "description": "11111"
+        "title": "55555",
+        "descriptionWithReason": "55555 {{reason}} 55555",
+        "description": "55555"
       },
       "cancelled": {
-        "title": "11111",
-        "description": "11111"
+        "title": "55555",
+        "description": "55555"
       },
-      "requestedDateTimeLabel": "11111",
-      "assignTechnicianLabel": "11111",
-      "assignTechnicianPlaceholder": "11111",
-      "scheduledDateTimeLabel": "11111",
-      "noNotes": "11111",
-      "declineReasonLabel": "11111",
-      "declineReasonPlaceholder": "11111",
+      "requestedDateTimeLabel": "55555",
+      "assignTechnicianLabel": "55555",
+      "assignTechnicianPlaceholder": "55555",
+      "scheduledDateTimeLabel": "55555",
+      "noNotes": "55555",
+      "declineReasonLabel": "55555",
+      "declineReasonPlaceholder": "55555",
       "actions": {
-        "approve": "11111",
-        "decline": "11111",
-        "confirmDecline": "11111"
+        "approve": "55555",
+        "decline": "55555",
+        "confirmDecline": "55555"
       },
       "toasts": {
-        "assignTechnicianRequired": "11111",
-        "approved": "11111",
-        "approveFailed": "11111",
-        "declineReasonRequired": "11111",
-        "declined": "11111",
-        "declineFailed": "11111"
+        "assignTechnicianRequired": "55555",
+        "approved": "55555",
+        "approveFailed": "55555",
+        "declineReasonRequired": "55555",
+        "declined": "55555",
+        "declineFailed": "55555"
       }
     },
     "recurrence": {
-      "label": "11111",
-      "intervalLabel": "11111",
-      "endLabel": "11111",
-      "endDateLabel": "11111",
-      "occurrencesLabel": "11111",
-      "workdaysOnly": "11111",
+      "label": "55555",
+      "intervalLabel": "55555",
+      "endLabel": "55555",
+      "endDateLabel": "55555",
+      "occurrencesLabel": "55555",
+      "workdaysOnly": "55555",
       "options": {
-        "none": "11111",
-        "daily": "11111",
-        "weekly": "11111",
-        "monthly": "11111",
-        "yearly": "11111"
+        "none": "55555",
+        "daily": "55555",
+        "weekly": "55555",
+        "monthly": "55555",
+        "yearly": "55555"
       },
       "endOptions": {
-        "never": "11111",
-        "date": "11111",
-        "count": "11111"
+        "never": "55555",
+        "date": "55555",
+        "count": "55555"
       },
       "applyDialog": {
-        "title": "11111",
-        "message": "11111"
+        "title": "55555",
+        "message": "55555"
       }
     },
     "delete": {
-      "validationFailed": "11111",
-      "entityFallback": "11111",
+      "validationFailed": "55555",
+      "entityFallback": "55555",
       "scopeDialog": {
-        "title": "11111",
-        "message": "11111",
-        "confirm": "11111"
+        "title": "55555",
+        "message": "55555",
+        "confirm": "55555"
       }
     },
     "scopeOptions": {
-      "single": "11111",
-      "future": "11111",
-      "all": "11111"
+      "single": "55555",
+      "future": "55555",
+      "all": "55555"
     }
   }
 }

@@ -83,8 +83,8 @@
       }
     },
     "footer": {
-      "lastUpdated": "55555",
-      "updatedBy": "55555"
+      "lastUpdated": "55555 {{value}} 55555",
+      "updatedBy": "55555 {{user}} 55555"
     },
     "errors": {
       "loadTenantTelemetrySettings": "55555",
@@ -95,7 +95,7 @@
   },
   "email": {
     "loading": "55555",
-    "error": "55555",
+    "error": "55555 {{error}} 55555",
     "tabs": {
       "inbound": "55555",
       "outbound": "55555"
@@ -117,7 +117,7 @@
         "resend": "55555"
       },
       "status": {
-        "provider": "55555"
+        "provider": "55555 {{provider}} 55555"
       }
     },
     "smtp": {
@@ -186,7 +186,7 @@
       "provider": "55555",
       "mailbox": "55555",
       "overall": "55555",
-      "resource": "55555",
+      "resource": "55555 {{resource}} 55555",
       "recommendations": "55555",
       "error": "55555"
     },

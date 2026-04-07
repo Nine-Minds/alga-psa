@@ -4,6 +4,7 @@ import React, { useCallback, useState } from 'react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import type { IComment } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   formatCommentMetadataJson,
   summarizeCommentMetadataForDebug,
@@ -22,6 +23,7 @@ export function CommentMetadataDebugModal({
   isOpen,
   onClose,
 }: CommentMetadataDebugModalProps): React.ReactElement {
+  const { t } = useTranslation('features/tickets');
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const summaryRows = summarizeCommentMetadataForDebug(metadata);
   const jsonText = formatCommentMetadataJson(metadata);
@@ -41,17 +43,21 @@ export function CommentMetadataDebugModal({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title="Comment metadata"
+      title={t('debug.commentMetadata', 'Comment metadata')}
       className="max-w-2xl"
       id={`${commentId}-metadata-debug-dialog`}
       draggable={false}
     >
       <DialogContent>
         <div className="space-y-4">
-          <section aria-label="Summary">
-            <h3 className="text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">Summary</h3>
+          <section aria-label={t('debug.summary', 'Summary')}>
+            <h3 className="text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">
+              {t('debug.summary', 'Summary')}
+            </h3>
             {summaryRows.length === 0 ? (
-              <p className="text-sm text-[rgb(var(--color-text-500))]">No prioritized fields present.</p>
+              <p className="text-sm text-[rgb(var(--color-text-500))]">
+                {t('debug.noPrioritizedFields', 'No prioritized fields present.')}
+              </p>
             ) : (
               <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
                 {summaryRows.map((row) => (
@@ -65,9 +71,11 @@ export function CommentMetadataDebugModal({
               </dl>
             )}
           </section>
-          <section aria-label="Raw metadata">
+          <section aria-label={t('debug.rawMetadata', 'Raw metadata')}>
             <div className="flex items-center justify-between gap-2 mb-2">
-              <h3 className="text-sm font-medium text-[rgb(var(--color-text-700))]">Raw JSON</h3>
+              <h3 className="text-sm font-medium text-[rgb(var(--color-text-700))]">
+                {t('debug.rawJson', 'Raw JSON')}
+              </h3>
               <Button
                 type="button"
                 variant="outline"
@@ -75,7 +83,11 @@ export function CommentMetadataDebugModal({
                 id={`${commentId}-metadata-copy`}
                 onClick={() => void handleCopy()}
               >
-                {copyState === 'copied' ? 'Copied' : copyState === 'error' ? 'Copy failed' : 'Copy'}
+                {copyState === 'copied'
+                  ? t('debug.copied', 'Copied')
+                  : copyState === 'error'
+                    ? t('debug.copyFailed', 'Copy failed')
+                    : t('debug.copy', 'Copy')}
               </Button>
             </div>
             <pre
@@ -89,7 +101,7 @@ export function CommentMetadataDebugModal({
       </DialogContent>
       <DialogFooter>
         <Button type="button" id={`${commentId}-metadata-debug-close`} onClick={onClose}>
-          Close
+          {t('debug.close', 'Close')}
         </Button>
       </DialogFooter>
     </Dialog>

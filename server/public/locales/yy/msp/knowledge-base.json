@@ -1,289 +1,289 @@
 {
   "page": {
-    "title": "11111",
-    "subtitle": "11111",
+    "title": "55555",
+    "subtitle": "55555",
     "actions": {
-      "import": "11111",
-      "newArticle": "11111"
+      "import": "55555",
+      "newArticle": "55555"
     },
     "tabs": {
-      "articles": "11111",
-      "reviewDashboard": "11111"
+      "articles": "55555",
+      "reviewDashboard": "55555"
     },
     "feedback": {
-      "loadError": "11111",
-      "createError": "11111",
-      "userLoadError": "11111"
+      "loadError": "55555",
+      "createError": "55555",
+      "userLoadError": "55555"
     },
-    "newArticleTitle": "11111"
+    "newArticleTitle": "55555"
   },
   "shared": {
     "statusLabels": {
-      "draft": "11111",
-      "review": "11111",
-      "published": "11111",
-      "archived": "11111"
+      "draft": "55555",
+      "review": "55555",
+      "published": "55555",
+      "archived": "55555"
     },
     "audienceLabels": {
-      "internal": "11111",
-      "client": "11111",
-      "public": "11111"
+      "internal": "55555",
+      "client": "55555",
+      "public": "55555"
     },
     "typeLabels": {
-      "how_to": "11111",
-      "faq": "11111",
-      "troubleshooting": "11111",
-      "reference": "11111"
+      "how_to": "55555",
+      "faq": "55555",
+      "troubleshooting": "55555",
+      "reference": "55555"
     },
     "reviewCycleOptions": {
-      "30": "11111",
-      "60": "11111",
-      "90": "11111",
-      "180": "11111",
-      "365": "11111",
-      "none": "11111"
+      "30": "55555",
+      "60": "55555",
+      "90": "55555",
+      "180": "55555",
+      "365": "55555",
+      "none": "55555"
     },
     "fallbacks": {
-      "emptyDate": "11111"
+      "emptyDate": "55555"
     }
   },
   "list": {
-    "title": "11111",
-    "countSummary": "11111",
-    "itemLabel": "11111",
-    "empty": "11111",
-    "createFirst": "11111",
+    "title": "55555",
+    "countSummary": "55555 {{count}} 55555",
+    "itemLabel": "55555",
+    "empty": "55555",
+    "createFirst": "55555",
     "table": {
-      "title": "11111",
-      "type": "11111",
-      "audience": "11111",
-      "status": "11111",
-      "tags": "11111",
-      "stats": "11111",
-      "updated": "11111",
-      "actions": "11111"
+      "title": "55555",
+      "type": "55555",
+      "audience": "55555",
+      "status": "55555",
+      "tags": "55555",
+      "stats": "55555",
+      "updated": "55555",
+      "actions": "55555"
     },
     "stats": {
-      "views": "11111",
-      "helpful": "11111",
-      "notHelpful": "11111"
+      "views": "55555",
+      "helpful": "55555",
+      "notHelpful": "55555"
     },
     "actions": {
-      "edit": "11111",
-      "submitForReview": "11111",
-      "publish": "11111",
-      "archive": "11111"
+      "edit": "55555",
+      "submitForReview": "55555",
+      "publish": "55555",
+      "archive": "55555"
     },
     "pagination": {
       "itemsPerPage": {
-        "10": "11111",
-        "20": "11111",
-        "50": "11111"
+        "10": "55555",
+        "20": "55555",
+        "50": "55555"
       }
     },
     "stale": {
-      "reviewOverdue": "11111"
+      "reviewOverdue": "55555"
     },
     "dialogs": {
       "archive": {
-        "title": "11111",
-        "message": "11111"
+        "title": "55555",
+        "message": "55555 {{title}} 55555"
       }
     },
     "feedback": {
-      "archiveError": "11111",
-      "archiveSuccess": "11111"
+      "archiveError": "55555",
+      "archiveSuccess": "55555"
     }
   },
   "editor": {
     "header": {
-      "untitled": "11111",
-      "back": "11111"
+      "untitled": "55555",
+      "back": "55555"
     },
     "actions": {
-      "submitForReview": "11111",
-      "publish": "11111",
-      "archive": "11111",
-      "saveMetadata": "11111",
-      "saving": "11111"
+      "submitForReview": "55555",
+      "publish": "55555",
+      "archive": "55555",
+      "saveMetadata": "55555",
+      "saving": "55555"
     },
     "feedback": {
-      "permissionDenied": "11111",
-      "notFound": "11111",
-      "loadError": "11111",
-      "noChanges": "11111",
-      "saveError": "11111",
-      "saveSuccess": "11111",
-      "publishError": "11111",
-      "publishSuccess": "11111",
-      "statusChangeError": "11111",
-      "submitForReviewSuccess": "11111",
-      "archiveSuccess": "11111"
+      "permissionDenied": "55555",
+      "notFound": "55555",
+      "loadError": "55555",
+      "noChanges": "55555",
+      "saveError": "55555",
+      "saveSuccess": "55555",
+      "publishError": "55555",
+      "publishSuccess": "55555",
+      "statusChangeError": "55555",
+      "submitForReviewSuccess": "55555",
+      "archiveSuccess": "55555"
     },
     "badges": {
-      "reviewOverdue": "11111"
+      "reviewOverdue": "55555"
     },
     "stats": {
-      "title": "11111",
-      "views": "11111",
-      "helpful": "11111",
-      "notHelpful": "11111",
-      "published": "11111"
+      "title": "55555",
+      "views": "55555",
+      "helpful": "55555",
+      "notHelpful": "55555",
+      "published": "55555"
     },
     "metadata": {
-      "title": "11111",
+      "title": "55555",
       "fields": {
-        "title": "11111",
-        "slug": "11111",
-        "articleType": "11111",
-        "audience": "11111",
-        "category": "11111",
-        "reviewCycle": "11111",
-        "nextReview": "11111",
-        "noCategory": "11111"
+        "title": "55555",
+        "slug": "55555",
+        "articleType": "55555",
+        "audience": "55555",
+        "category": "55555",
+        "reviewCycle": "55555",
+        "nextReview": "55555",
+        "noCategory": "55555"
       }
     },
     "tags": {
-      "title": "11111"
+      "title": "55555"
     }
   },
   "filters": {
-    "title": "11111",
+    "title": "55555",
     "actions": {
-      "clear": "11111"
+      "clear": "55555"
     },
     "labels": {
-      "search": "11111",
-      "status": "11111",
-      "audience": "11111",
-      "articleType": "11111",
-      "category": "11111",
-      "tags": "11111"
+      "search": "55555",
+      "status": "55555",
+      "audience": "55555",
+      "articleType": "55555",
+      "category": "55555",
+      "tags": "55555"
     },
     "placeholders": {
-      "search": "11111",
-      "status": "11111",
-      "audience": "11111",
-      "articleType": "11111",
-      "category": "11111",
-      "tags": "11111"
+      "search": "55555",
+      "status": "55555",
+      "audience": "55555",
+      "articleType": "55555",
+      "category": "55555",
+      "tags": "55555"
     },
     "options": {
       "status": {
-        "all": "11111"
+        "all": "55555"
       },
       "audience": {
-        "all": "11111"
+        "all": "55555"
       },
       "articleType": {
-        "all": "11111"
+        "all": "55555"
       },
       "category": {
-        "all": "11111"
+        "all": "55555"
       }
     }
   },
   "categoryTree": {
-    "allCategories": "11111",
-    "empty": "11111"
+    "allCategories": "55555",
+    "empty": "55555"
   },
   "publishing": {
-    "title": "11111",
-    "currentStatus": "11111",
+    "title": "55555",
+    "currentStatus": "55555",
     "actions": {
-      "submitForReview": "11111",
-      "publish": "11111",
-      "approveAndPublish": "11111",
-      "archive": "11111",
-      "republish": "11111"
+      "submitForReview": "55555",
+      "publish": "55555",
+      "approveAndPublish": "55555",
+      "archive": "55555",
+      "republish": "55555"
     },
     "flow": {
-      "draft": "11111",
-      "review": "11111",
-      "published": "11111"
+      "draft": "55555",
+      "review": "55555",
+      "published": "55555"
     },
     "warnings": {
-      "audience": "11111"
+      "audience": "55555 {{audience}} 55555"
     },
     "dialogs": {
       "publish": {
-        "title": "11111",
-        "message": "11111",
-        "messageWithAudience": "11111"
+        "title": "55555",
+        "message": "55555",
+        "messageWithAudience": "55555 {{audience}} 55555"
       },
       "archive": {
-        "title": "11111",
-        "message": "11111"
+        "title": "55555",
+        "message": "55555"
       }
     },
     "feedback": {
-      "publishError": "11111",
-      "publishSuccess": "11111",
-      "archiveError": "11111",
-      "archiveSuccess": "11111"
+      "publishError": "55555",
+      "publishSuccess": "55555",
+      "archiveError": "55555",
+      "archiveSuccess": "55555"
     }
   },
   "reviewDashboard": {
     "summary": {
-      "awaitingReview": "11111",
-      "overdueReviews": "11111"
+      "awaitingReview": "55555",
+      "overdueReviews": "55555"
     },
-    "empty": "11111",
+    "empty": "55555",
     "sections": {
-      "awaitingReview": "11111",
-      "overdue": "11111"
+      "awaitingReview": "55555",
+      "overdue": "55555"
     },
     "labels": {
-      "submitted": "11111",
-      "due": "11111",
-      "lastReviewed": "11111",
-      "never": "11111"
+      "submitted": "55555",
+      "due": "55555",
+      "lastReviewed": "55555",
+      "never": "55555"
     },
     "actions": {
-      "view": "11111",
-      "review": "11111",
-      "reviewNow": "11111"
+      "view": "55555",
+      "review": "55555",
+      "reviewNow": "55555"
     },
     "feedback": {
-      "loadError": "11111"
+      "loadError": "55555"
     }
   },
   "importDialog": {
-    "title": "11111",
+    "title": "55555",
     "dropzone": {
-      "title": "11111",
-      "formats": "11111"
+      "title": "55555",
+      "formats": "55555"
     },
     "fields": {
-      "audience": "11111",
-      "articleType": "11111"
+      "audience": "55555",
+      "articleType": "55555"
     },
     "actions": {
-      "import": "11111",
-      "importing": "11111"
+      "import": "55555 {{count}} 55555",
+      "importing": "55555"
     },
     "feedback": {
-      "unsupportedFileType": "11111",
-      "permissionDenied": "11111",
-      "importSuccess": "11111",
-      "allFailed": "11111",
-      "importError": "11111"
+      "unsupportedFileType": "55555 {{fileName}} 55555",
+      "permissionDenied": "55555",
+      "importSuccess": "55555 {{imported}} 55555 {{total}} 55555",
+      "allFailed": "55555",
+      "importError": "55555"
     },
     "results": {
-      "summary": "11111",
-      "failedCount": "11111"
+      "summary": "55555 {{imported}} 55555 {{total}} 55555",
+      "failedCount": "55555 {{count}} 55555"
     }
   },
   "staleness": {
     "badges": {
-      "reviewOverdue": "11111",
-      "reviewDueSoon": "11111",
-      "overdueBy": "11111",
-      "dueIn": "11111"
+      "reviewOverdue": "55555",
+      "reviewDueSoon": "55555",
+      "overdueBy": "55555 {{count}} 55555",
+      "dueIn": "55555 {{count}} 55555"
     },
     "tooltips": {
-      "reviewOverdue": "11111",
-      "reviewDue": "11111"
+      "reviewOverdue": "55555 {{date}} 55555",
+      "reviewDue": "55555 {{date}} 55555"
     }
   }
 }

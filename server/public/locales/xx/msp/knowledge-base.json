@@ -49,7 +49,7 @@
   },
   "list": {
     "title": "11111",
-    "countSummary": "11111",
+    "countSummary": "11111 {{count}} 11111",
     "itemLabel": "11111",
     "empty": "11111",
     "createFirst": "11111",
@@ -87,7 +87,7 @@
     "dialogs": {
       "archive": {
         "title": "11111",
-        "message": "11111"
+        "message": "11111 {{title}} 11111"
       }
     },
     "feedback": {
@@ -203,13 +203,13 @@
       "published": "11111"
     },
     "warnings": {
-      "audience": "11111"
+      "audience": "11111 {{audience}} 11111"
     },
     "dialogs": {
       "publish": {
         "title": "11111",
         "message": "11111",
-        "messageWithAudience": "11111"
+        "messageWithAudience": "11111 {{audience}} 11111"
       },
       "archive": {
         "title": "11111",
@@ -259,31 +259,31 @@
       "articleType": "11111"
     },
     "actions": {
-      "import": "11111",
+      "import": "11111 {{count}} 11111",
       "importing": "11111"
     },
     "feedback": {
-      "unsupportedFileType": "11111",
+      "unsupportedFileType": "11111 {{fileName}} 11111",
       "permissionDenied": "11111",
-      "importSuccess": "11111",
+      "importSuccess": "11111 {{imported}} 11111 {{total}} 11111",
       "allFailed": "11111",
       "importError": "11111"
     },
     "results": {
-      "summary": "11111",
-      "failedCount": "11111"
+      "summary": "11111 {{imported}} 11111 {{total}} 11111",
+      "failedCount": "11111 {{count}} 11111"
     }
   },
   "staleness": {
     "badges": {
       "reviewOverdue": "11111",
       "reviewDueSoon": "11111",
-      "overdueBy": "11111",
-      "dueIn": "11111"
+      "overdueBy": "11111 {{count}} 11111",
+      "dueIn": "11111 {{count}} 11111"
     },
     "tooltips": {
-      "reviewOverdue": "11111",
-      "reviewDue": "11111"
+      "reviewOverdue": "11111 {{date}} 11111",
+      "reviewDue": "11111 {{date}} 11111"
     }
   }
 }

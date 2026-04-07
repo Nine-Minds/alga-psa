@@ -14,8 +14,8 @@
     "pagination": {
       "previous": "11111",
       "next": "11111",
-      "pageInfo": "11111",
-      "showing": "11111"
+      "pageInfo": "11111 {{current}} 11111 {{total}} 11111",
+      "showing": "11111 {{count}} 11111 {{total}} 11111"
     }
   },
   "schedule": {
@@ -25,17 +25,17 @@
     "today": "11111",
     "viewDay": "11111",
     "viewWeek": "11111",
-    "prevAria": "11111",
-    "nextAria": "11111",
+    "prevAria": "11111 {{mode}} 11111",
+    "nextAria": "11111 {{mode}} 11111",
     "viewWeekTooltip": "11111",
-    "viewWeekAria": "11111",
-    "viewWeekAriaInactive": "11111",
+    "viewWeekAria": "11111 {{name}} 11111",
+    "viewWeekAriaInactive": "11111 {{name}} 11111",
     "compareAll": "11111",
     "clearAll": "11111",
     "compare": "11111",
     "stopComparing": "11111",
-    "compareAria": "11111",
-    "compareAriaInactive": "11111"
+    "compareAria": "11111 {{name}} 11111",
+    "compareAriaInactive": "11111 {{name}} 11111"
   },
   "details": {
     "appointmentRequest": {
@@ -132,8 +132,8 @@
       "thisScheduleEntry": "11111"
     },
     "tooltip": {
-      "privateEvent": "11111",
-      "eventDetails": "11111"
+      "privateEvent": "11111 {{start}} 11111 {{end}} 11111",
+      "eventDetails": "11111 {{title}} 11111 {{assigned}} 11111 {{start}} 11111 {{end}} 11111"
     },
     "errors": {
       "validateDeletion": "11111"
@@ -141,7 +141,7 @@
   },
   "badges": {
     "needsDispatch": "11111",
-    "needsDispatchFor": "11111"
+    "needsDispatchFor": "11111 {{agents}} 11111"
   },
   "time": {
     "suffixes": {

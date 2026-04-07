@@ -31,8 +31,10 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import QuickAddCategory from '../QuickAddCategory';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const CategoriesSettings = (): React.JSX.Element => {
+  const { t } = useTranslation('features/tickets');
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState({
@@ -101,7 +103,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       setCategories(organizedCategories);
     } catch (error) {
       console.error('Error fetching categories:', error);
-      setError('Failed to fetch categories');
+      setError(t('settings.categories.fetchFailed', 'Failed to fetch categories'));
     }
   };
 
@@ -145,13 +147,15 @@ const CategoriesSettings = (): React.JSX.Element => {
       setDeleteValidation(validation);
     } catch (error) {
       console.error('Error validating category deletion:', error);
-      setDeleteValidation({
-        canDelete: false,
-        code: 'VALIDATION_FAILED',
-        message: error instanceof Error ? error.message : 'Failed to validate category deletion.',
-        dependencies: [],
-        alternatives: []
-      });
+        setDeleteValidation({
+          canDelete: false,
+          code: 'VALIDATION_FAILED',
+          message: error instanceof Error
+            ? error.message
+            : t('settings.categories.validateDeleteFailed', 'Failed to validate category deletion.'),
+          dependencies: [],
+          alternatives: []
+        });
     } finally {
       setIsDeleteValidating(false);
     }
@@ -163,7 +167,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       const result = await deleteCategory(deleteDialog.categoryId, force);
 
       if (result.deleted || result.success) {
-        toast.success(result.message || 'Category deleted successfully');
+        toast.success(result.message || t('settings.categories.deleteSuccess', 'Category deleted successfully'));
         resetDeleteDialog();
         await fetchCategories();
         return;
@@ -171,7 +175,7 @@ const CategoriesSettings = (): React.JSX.Element => {
 
       setDeleteValidation(result);
     } catch (error) {
-      handleError(error, 'Failed to delete category');
+      handleError(error, t('settings.categories.deleteFailed', 'Failed to delete category'));
       resetDeleteDialog();
     } finally {
       setIsDeleteProcessing(false);
@@ -191,7 +195,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       }
 
       if (!formData.category_name.trim()) {
-        setError('Category name is required');
+        setError(t('settings.categories.nameRequired', 'Category name is required'));
         return;
       }
 
@@ -205,7 +209,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       }
       
       await updateCategory(editingCategory.category_id, updateData);
-      toast.success('Category updated successfully');
+      toast.success(t('settings.categories.saveSuccess', 'Category updated successfully'));
       
       setShowAddEditDialog(false);
       setEditingCategory(null);
@@ -213,14 +217,14 @@ const CategoriesSettings = (): React.JSX.Element => {
       await fetchCategories();
     } catch (error) {
       console.error('Error saving category:', error);
-      setError(error instanceof Error ? error.message : 'Failed to save category');
+      setError(error instanceof Error ? error.message : t('settings.categories.saveFailed', 'Failed to save category'));
     }
   };
 
   const handleImport = async () => {
     try {
       if (!importTargetBoard) {
-        toast.error('Please select a board for the imported categories');
+        toast.error(t('settings.categories.importBoardRequired', 'Please select a board for the imported categories'));
         return;
       }
 
@@ -237,9 +241,15 @@ const CategoriesSettings = (): React.JSX.Element => {
       if (missingParents.length > 0) {
         const parentNames = missingParents.map(subcat => {
           const parent = availableReferenceCategories.find(c => c.id === subcat.parent_category_uuid);
-          return parent?.category_name || 'Unknown parent';
+          return parent?.category_name || t('settings.categories.name', 'Name');
         });
-        toast.error(`Cannot import subcategories without their parent categories. Please also select: ${[...new Set(parentNames)].join(', ')}`);
+        toast.error(
+          t(
+            'settings.categories.importMissingParents',
+            'Cannot import subcategories without their parent categories. Please also select: {{parents}}',
+            { parents: [...new Set(parentNames)].join(', ') }
+          )
+        );
         return;
       }
 
@@ -256,7 +266,7 @@ const CategoriesSettings = (): React.JSX.Element => {
         await importReferenceData('categories', selectedImportCategories, importOptions);
       }
       
-      toast.success('Categories imported successfully');
+      toast.success(t('settings.categories.importSuccess', 'Categories imported successfully'));
       setShowImportDialog(false);
       setSelectedImportCategories([]);
       setImportTargetBoard('');
@@ -264,7 +274,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       setConflictResolutions({});
       await fetchCategories();
     } catch (error) {
-      handleError(error, 'Failed to import categories');
+      handleError(error, t('settings.categories.importFailed', 'Failed to import categories'));
     }
   };
 
@@ -296,7 +306,7 @@ const CategoriesSettings = (): React.JSX.Element => {
 
   const columns: ColumnDefinition<ITicketCategory>[] = [
     {
-      title: 'Name',
+      title: t('settings.categories.name', 'Name'),
       dataIndex: 'category_name',
       render: (value: string, record: ITicketCategory) => (
         <div className="flex items-center">
@@ -315,7 +325,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       ),
     },
     {
-      title: 'Board',
+      title: t('fields.board', 'Board'),
       dataIndex: 'board_id',
       render: (value: string) => {
         const board = boards.find(ch => ch.board_id === value);
@@ -323,7 +333,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       },
     },
     {
-      title: 'Order',
+      title: t('settings.categories.orderColumn', 'Order'),
       dataIndex: 'display_order',
       render: (value: number, record: ITicketCategory) => {
         if (!record.parent_category) {
@@ -349,7 +359,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       },
     },
     {
-      title: 'Actions',
+      title: t('settings.display.columns.actions', 'Actions'),
       dataIndex: 'category_id',
       width: '10%',
       render: (value: string, record: ITicketCategory) => (
@@ -363,14 +373,14 @@ const CategoriesSettings = (): React.JSX.Element => {
             <DropdownMenuItem
               id={`edit-category-${value}-button`}
               onClick={() => startEditing(record)}>
-              Edit
+              {t('actions.edit', 'Edit')}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-category-${value}-button`}
               onClick={() => openDeleteDialog(record)}
               className="text-red-600"
             >
-              Delete
+              {t('actions.delete', 'Delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -382,18 +392,18 @@ const CategoriesSettings = (): React.JSX.Element => {
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <div>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Categories</h3>
+          <h3 className="text-lg font-semibold text-gray-800">{t('settings.categories.title', 'Categories')}</h3>
           <CustomSelect
             value={boardFilter}
             onValueChange={setBoardFilter}
             options={[
-              { value: 'all', label: 'All Boards' },
+              { value: 'all', label: t('settings.categories.allBoards', 'All Boards') },
               ...boards.map(ch => ({
                 value: ch.board_id || '',
                 label: ch.board_name || ''
               }))
             ]}
-            placeholder="Filter by board"
+            placeholder={t('settings.categories.filterByBoard', 'Filter by board')}
             className="w-64"
           />
         </div>
@@ -424,7 +434,7 @@ const CategoriesSettings = (): React.JSX.Element => {
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"
           >
-            <Plus className="h-4 w-4 mr-2" /> Add Category
+            <Plus className="h-4 w-4 mr-2" /> {t('settings.categories.addCategory', 'Add Category')}
           </Button>
           <Button 
             id="import-categories-button"
@@ -436,11 +446,11 @@ const CategoriesSettings = (): React.JSX.Element => {
                 setSelectedImportCategories([]);
                 setShowImportDialog(true);
               } catch (error) {
-                handleError(error, 'Failed to fetch available categories for import');
+                handleError(error, t('settings.categories.fetchAvailableFailed', 'Failed to fetch available categories for import'));
               }
             }}
           >
-            Import from Standard Categories
+            {t('settings.categories.importStandardCategories', 'Import from Standard Categories')}
           </Button>
         </div>
       </div>
@@ -451,7 +461,7 @@ const CategoriesSettings = (): React.JSX.Element => {
         onClose={resetDeleteDialog}
         onConfirmDelete={() => handleDeleteCategory(false)}
         onAlternativeAction={handleDeleteAlternativeAction}
-        entityName={deleteDialog.categoryName || 'category'}
+        entityName={deleteDialog.categoryName || t('fields.category', 'Category')}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}
@@ -482,7 +492,7 @@ const CategoriesSettings = (): React.JSX.Element => {
             setFormData({ category_name: '', display_order: 0, board_id: '', parent_category: '' });
             setError(null);
           }} 
-          title="Edit Category"
+          title={t('settings.categories.editTitle', 'Edit Category')}
         >
           <DialogContent>
             <div className="space-y-4">
@@ -492,18 +502,18 @@ const CategoriesSettings = (): React.JSX.Element => {
                 </Alert>
               )}
               <div>
-                <Label htmlFor="category_name">Category Name *</Label>
+                <Label htmlFor="category_name">{t('settings.categories.categoryName', 'Category Name *')}</Label>
                 <Input
                   id="category_name"
                   value={formData.category_name}
                   onChange={(e) => setFormData({ ...formData, category_name: e.target.value })}
-                  placeholder="Enter category name"
+                  placeholder={t('settings.categories.enterCategoryName', 'Enter category name')}
                 />
               </div>
               {!editingCategory.parent_category && (
                 <>
                   <div>
-                    <Label htmlFor="board_id">Board</Label>
+                    <Label htmlFor="board_id">{t('fields.board', 'Board')}</Label>
                     <CustomSelect
                       value={formData.board_id}
                       onValueChange={(value) => setFormData({ ...formData, board_id: value })}
@@ -513,30 +523,30 @@ const CategoriesSettings = (): React.JSX.Element => {
                           value: ch.board_id || '',
                           label: ch.board_name || ''
                         }))}
-                      placeholder="Select a board"
+                      placeholder={t('settings.categories.selectBoard', 'Select a board')}
                       className="w-full"
                     />
                   </div>
                   {formData.board_id !== editingCategory.board_id && (
                     <Alert>
                       <AlertDescription>
-                        Changing the board for this parent category will also update all its subcategories to the same board.
+                        {t('settings.categories.boardChangeWarning', 'Changing the board for this parent category will also update all its subcategories to the same board.')}
                       </AlertDescription>
                     </Alert>
                   )}
                 </>
               )}
               <div>
-                <Label htmlFor="display_order">Display Order</Label>
+                <Label htmlFor="display_order">{t('settings.categories.displayOrder', 'Display Order')}</Label>
                 <Input
                   id="display_order"
                   type="number"
                   value={formData.display_order}
                   onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
-                  placeholder="Enter display order"
+                  placeholder={t('settings.categories.enterDisplayOrder', 'Enter display order')}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Controls the order in which categories appear in dropdown menus throughout the platform. Lower numbers appear first.
+                  {t('settings.categories.displayOrderHelp', 'Controls the order in which categories appear in dropdown menus throughout the platform. Lower numbers appear first.')}
                 </p>
               </div>
             </div>
@@ -552,10 +562,10 @@ const CategoriesSettings = (): React.JSX.Element => {
                 setError(null);
               }}
             >
-              Cancel
+              {t('actions.cancel', 'Cancel')}
             </Button>
             <Button id="save-category-button" onClick={handleSaveCategory}>
-              Update
+              {t('actions.update', 'Update')}
             </Button>
           </DialogFooter>
         </Dialog>
@@ -569,21 +579,21 @@ const CategoriesSettings = (): React.JSX.Element => {
           setSelectedImportCategories([]);
           setImportTargetBoard('');
         }} 
-        title="Import Standard Categories"
+        title={t('settings.categories.importTitle', 'Import Standard Categories')}
         className="max-w-3xl"
       >
         <DialogContent>
           <div className="space-y-4">
             {!availableReferenceCategories || availableReferenceCategories.length === 0 ? (
-              <p className="text-muted-foreground">No standard categories available to import.</p>
+              <p className="text-muted-foreground">{t('settings.categories.noStandardCategories', 'No standard categories available to import.')}</p>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Select standard categories to import into your organization:
+                  {t('settings.categories.importDescription', 'Select standard categories to import into your organization:')}
                 </p>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Target Board *</label>
+                  <label className="text-sm font-medium">{t('settings.categories.targetBoard', 'Target Board *')}</label>
                   <CustomSelect
                     value={importTargetBoard}
                     onValueChange={setImportTargetBoard}
@@ -593,11 +603,11 @@ const CategoriesSettings = (): React.JSX.Element => {
                         value: ch.board_id || '',
                         label: ch.board_name || ''
                       }))}
-                    placeholder="Select a board for imported categories"
+                    placeholder={t('settings.categories.targetBoardPlaceholder', 'Select a board for imported categories')}
                     className="w-full"
                   />
                   <p className="text-xs text-muted-foreground">
-                    All imported categories will be assigned to this board
+                    {t('settings.categories.targetBoardHelp', 'All imported categories will be assigned to this board')}
                   </p>
                 </div>
                 <div className="border rounded-md">
@@ -615,9 +625,9 @@ const CategoriesSettings = (): React.JSX.Element => {
                         }}
                       />
                     </div>
-                    <div className="flex-1">Name</div>
-                    <div className="flex-1">Description</div>
-                    <div className="w-24 text-center">Order</div>
+                    <div className="flex-1">{t('settings.categories.nameColumn', 'Name')}</div>
+                    <div className="flex-1">{t('settings.categories.descriptionColumn', 'Description')}</div>
+                    <div className="w-24 text-center">{t('settings.categories.orderColumn', 'Order')}</div>
                   </div>
                   <div className="max-h-[350px] overflow-y-auto">
                     {(() => {
@@ -738,14 +748,14 @@ const CategoriesSettings = (): React.JSX.Element => {
               setImportTargetBoard('');
             }}
           >
-            Cancel
+            {t('actions.cancel', 'Cancel')}
           </Button>
           <Button 
             id="import-selected-categories"
             onClick={handleImport} 
             disabled={selectedImportCategories.length === 0 || !importTargetBoard}
           >
-            Import Selected
+            {t('settings.categories.importSelected', 'Import Selected')}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -757,12 +767,12 @@ const CategoriesSettings = (): React.JSX.Element => {
           setImportConflicts([]);
           setConflictResolutions({});
         }} 
-        title="Resolve Import Conflicts"
+        title={t('settings.categories.conflictsTitle', 'Resolve Import Conflicts')}
       >
         <DialogContent>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              The following items have conflicts. Choose how to resolve each:
+              {t('settings.categories.importConflictDescription', 'The following items have conflicts. Choose how to resolve each:')}
             </p>
             <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {importConflicts.map((conflict) => {
@@ -776,7 +786,7 @@ const CategoriesSettings = (): React.JSX.Element => {
                     {conflict.conflictType === 'name' && (
                       <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                          A category with this name already exists.
+                          {t('settings.categories.categoryNameConflict', 'A category with this name already exists.')}
                         </p>
                         <div className="space-y-2">
                           <label className="flex items-center space-x-2">
@@ -789,7 +799,7 @@ const CategoriesSettings = (): React.JSX.Element => {
                                 [itemId]: { action: 'skip' }
                               })}
                             />
-                            <span>Skip this item</span>
+                            <span>{t('settings.categories.skipItem', 'Skip this item')}</span>
                           </label>
                           <label className="flex items-center space-x-2">
                             <input
@@ -801,7 +811,7 @@ const CategoriesSettings = (): React.JSX.Element => {
                                 [itemId]: { action: 'rename', newName: conflict.referenceItem.category_name + ' (2)' }
                               })}
                             />
-                            <span>Import with new name:</span>
+                            <span>{t('settings.categories.renameTo', 'Import with new name:')}</span>
                           </label>
                           {resolution?.action === 'rename' && (
                             <Input
@@ -820,7 +830,11 @@ const CategoriesSettings = (): React.JSX.Element => {
                     {conflict.conflictType === 'order' && (
                       <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                          Display order {conflict.referenceItem.display_order} is already in use.
+                          {t(
+                            'settings.categories.displayOrderConflict',
+                            'Display order {{order}} is already in use.',
+                            { order: conflict.referenceItem.display_order }
+                          )}
                         </p>
                         <label className="flex items-center space-x-2">
                           <input
@@ -832,7 +846,11 @@ const CategoriesSettings = (): React.JSX.Element => {
                               [itemId]: { action: 'reorder', newOrder: conflict.suggestedOrder }
                             })}
                           />
-                          <span>Import with order {conflict.suggestedOrder}</span>
+                          <span>
+                            {t('settings.categories.importWithOrder', 'Import with order {{order}}', {
+                              order: conflict.suggestedOrder,
+                            })}
+                          </span>
                         </label>
                       </div>
                     )}
@@ -851,10 +869,10 @@ const CategoriesSettings = (): React.JSX.Element => {
               setConflictResolutions({});
             }}
           >
-            Cancel
+            {t('actions.cancel', 'Cancel')}
           </Button>
           <Button id="import-categories-with-resolutions" onClick={handleImport}>
-            Import with Resolutions
+            {t('settings.categories.importWithResolutions', 'Import With Resolutions')}
           </Button>
         </DialogFooter>
       </Dialog>

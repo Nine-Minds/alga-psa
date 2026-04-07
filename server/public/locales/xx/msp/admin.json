@@ -83,8 +83,8 @@
       }
     },
     "footer": {
-      "lastUpdated": "11111",
-      "updatedBy": "11111"
+      "lastUpdated": "11111 {{value}} 11111",
+      "updatedBy": "11111 {{user}} 11111"
     },
     "errors": {
       "loadTenantTelemetrySettings": "11111",
@@ -95,7 +95,7 @@
   },
   "email": {
     "loading": "11111",
-    "error": "11111",
+    "error": "11111 {{error}} 11111",
     "tabs": {
       "inbound": "11111",
       "outbound": "11111"
@@ -117,7 +117,7 @@
         "resend": "11111"
       },
       "status": {
-        "provider": "11111"
+        "provider": "11111 {{provider}} 11111"
       }
     },
     "smtp": {
@@ -186,7 +186,7 @@
       "provider": "11111",
       "mailbox": "11111",
       "overall": "11111",
-      "resource": "11111",
+      "resource": "11111 {{resource}} 11111",
       "recommendations": "11111",
       "error": "11111"
     },

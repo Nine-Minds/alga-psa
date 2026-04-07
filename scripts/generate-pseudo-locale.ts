@@ -33,7 +33,7 @@ const replaceLeafStrings = (input: unknown, fill: string): unknown => {
     if (variables.length === 0) {
       return fill;
     }
-    return `${fill} ${variables.join(' ')} ${fill}`.trim();
+    return variables.map((v) => `${fill} ${v}`).join(' ') + ` ${fill}`;
   }
 
   if (Array.isArray(input)) {
