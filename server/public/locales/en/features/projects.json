@@ -118,18 +118,25 @@
     "searchTasksPlaceholder": "Search tasks...",
     "caseSensitive": "Case sensitive",
     "wholeWord": "Whole word",
+    "wholeWordShort": "Word",
     "clearSearch": "Clear search",
     "taskList": "Task List",
     "kanbanBoard": "Kanban Board",
+    "kanbanBoardWithPhase": "Kanban Board: {{phaseName}}",
     "selectPhaseToViewKanban": "Please select or create a phase to view the Kanban board.",
     "selectPhaseToAddCard": "Please select a phase before adding a card.",
     "selectPhaseToAddTask": "Please select a phase before adding a task.",
+    "showPhasesPanel": "Show phases panel",
+    "hidePhasesPanel": "Hide phases panel",
+    "phaseHelp": "A phase is a distinct stage or milestone in your project timeline. Each phase can contain multiple tasks and helps organize work into manageable sections.",
     "phaseNameRequired": "Phase name cannot be empty",
     "phaseAddedSuccess": "New phase added successfully!",
     "phaseUpdatedSuccess": "Phase updated successfully!",
     "phaseDeletedSuccess": "Phase deleted successfully!",
     "phaseReorderedSuccess": "Phase reordered successfully",
     "taskAddedSuccess": "New task added successfully!",
+    "taskPhaseMismatch": "Error adding new task: Phase mismatch",
+    "taskDeletedGeneric": "Task deleted successfully!",
     "taskDeletedSuccess": "Task \"{{taskName}}\" deleted successfully!",
     "taskMovedSuccess": "Task \"{{taskName}}\" moved successfully!",
     "taskMovedCrossPhaseSuccess": "Task \"{{taskName}}\" moved to different phase successfully! Switch to the target phase to see it.",
@@ -139,21 +146,31 @@
     "taskMovedToNewStatus": "Task moved to new status",
     "taskReordered": "Task reordered",
     "tasksReorderedSuccess": "Tasks reordered successfully",
+    "commentCountsLoadError": "Failed to load comment counts",
     "taskAssigneeUpdatedSuccess": "Task assignee updated successfully!",
     "taskDuplicatedSuccess": "Task \"{{taskName}}\" duplicated successfully!",
     "duplicateNoTargetPhase": "Could not find a target phase to duplicate to.",
     "taskNotFound": "Task not found",
     "taskPhaseNotFound": "Task phase not found",
+    "allTypes": "All Types",
+    "primaryShort": "Primary",
     "deletePhaseTitle": "Delete Phase",
+    "deletePhaseMessage": "Are you sure you want to delete phase \"{{phaseName}}\"? This will also delete all tasks and their checklists in this phase.",
     "deleteTaskTitle": "Delete Task",
+    "deleteTaskMessage": "Are you sure you want to delete task \"{{taskName}}\"? This action cannot be undone.",
     "moveTaskTitle": "Move Task",
+    "confirmMoveTaskMessage": "Are you sure you want to move task \"{{taskName}}\" from phase \"{{sourcePhase}}\" to \"{{targetPhase}}\"?",
+    "moveTaskFailed": "Failed to move task. Please try again.",
     "loadingListView": "Loading list view...",
     "importSuccess": "Imported {{phases}} phases and {{tasks}} tasks",
+    "importFailed": "Import failed: {{error}}",
     "completionSummary": "{{completed}} / {{total}} Done",
+    "selectedPhaseCompletionHelp": "Shows the percentage of completed tasks for the selected phase \"{{phaseName}}\" only",
     "showStickyStatusNames": "Show sticky status names",
     "hideStickyStatusNames": "Hide sticky status names",
     "pinHeader": "Pin header to top",
-    "unpinHeader": "Unpin header"
+    "unpinHeader": "Unpin header",
+    "taskUpdatedSuccess": "Task updated successfully!"
   },
   "taskForm": {
     "addTitle": "Add New Task",
@@ -394,7 +411,8 @@
       "title": "Link Ticket to Task",
       "projectPlaceholder": "Select a project",
       "phasePlaceholder": "All phases",
-      "taskPlaceholder": "Select a task"
+      "taskPlaceholder": "Select a task",
+      "linkedSuccess": "Ticket linked to task successfully"
     },
     "prefillFromTicket": {
       "title": "Prefill From Ticket",
@@ -403,6 +421,11 @@
       "linkTicketLabel": "Link this ticket to the task",
       "allStatuses": "All Statuses",
       "allPriorities": "All Priorities"
+    },
+    "ticketLinkedTasks": {
+      "title": "Linked Project Tasks",
+      "loadFailed": "Failed to load task",
+      "phaseNotFound": "Task phase not found"
     }
   },
   "filters": {
@@ -530,7 +553,9 @@
       "neverUsed": "Never",
       "edit": "Edit",
       "applyTemplate": "Apply Template",
-      "addTemplate": "Add Template"
+      "addTemplate": "Add Template",
+      "createFromProject": "Create from Project",
+      "allCategories": "All Categories"
     },
     "create": {
       "title": "Create Template from Project",
@@ -585,7 +610,9 @@
         "none": "Do not copy assignments",
         "primary": "Copy primary assignment only",
         "all": "Copy all assignments"
-      }
+      },
+      "fixErrors": "Please fix the following errors:",
+      "addStatus": "Add new status"
     },
     "detail": {
       "description": "Description:",
@@ -593,7 +620,10 @@
       "times": "times",
       "projectPhases": "Project Phases",
       "noPhasesDefined": "No phases defined",
-      "phasePrefix": "Phase:"
+      "phasePrefix": "Phase:",
+      "deleteTitle": "Delete Template",
+      "deletedSuccess": "Template deleted successfully",
+      "usedCount": "Used: {{count}} times"
     },
     "editor": {
       "deletedSuccess": "Template deleted successfully",
@@ -646,7 +676,19 @@
       "dependencies": "Dependencies",
       "removeDependency": "Remove dependency",
       "selectTaskPlaceholder": "Select task...",
-      "cancelEditTitle": "Cancel Edit"
+      "cancelEditTitle": "Cancel Edit",
+      "serviceLabel": "Service (for time entries)",
+      "noService": "No service",
+      "serviceHint": "When set, this service will be automatically selected when creating time entries from tasks created using this template.",
+      "statusColumnLabel": "Status Column",
+      "estimatedHoursLabel": "Estimated Hours",
+      "durationLabel": "Duration (days)",
+      "taskTypeLabel": "Task Type",
+      "priorityLabel": "Priority",
+      "primaryAgentLabel": "Primary Agent",
+      "additionalAgentsLabel": "Additional Agents",
+      "assignedWhenApplied": "This user will be assigned when the template is applied",
+      "dependenciesLabel": "Dependencies"
     },
     "wizard": {
       "next": "Next",
@@ -678,7 +720,7 @@
         "selectPhase": "Select Phase",
         "taskName": "Task Name *",
         "taskNamePlaceholder": "e.g., Design database schema",
-        "description": "Description",
+        "description": "Add tasks to each phase. You can also add checklist items to break down tasks further.",
         "descriptionPlaceholder": "Describe what needs to be done...",
         "service": "Service (for time entries)",
         "estimatedHours": "Estimated Hours",
@@ -692,13 +734,16 @@
         "statusPlaceholder": "Select status column",
         "checklist": "Checklist",
         "checklistItemPlaceholder": "Checklist item",
-        "tipTitle": "Tip"
+        "tipTitle": "Tip",
+        "emptyDescription": "Please add at least one phase in the previous step before adding tasks.",
+        "addFirstTask": "Add First Task",
+        "serviceHint": "Auto-fills service when creating time entries from tasks."
       },
       "review": {
         "title": "Review Your Template",
         "templateInformation": "Template Information",
         "name": "Name:",
-        "description": "Description:",
+        "description": "Review your template details before creating. You can edit any section by going back.",
         "category": "Category:",
         "statusColumns": "Status Columns ({{count}})",
         "tasksSummary": "Tasks Summary",
@@ -711,6 +756,18 @@
       "clientPortal": {
         "title": "Client Portal Visibility",
         "aboutTitle": "About Client Portal Visibility"
+      },
+      "steps": {
+        "basics": "Template Basics",
+        "statusColumns": "Task Status Columns",
+        "phases": "Phases",
+        "tasks": "Tasks",
+        "clientPortal": "Client Portal",
+        "reviewCreate": "Review & Create"
+      },
+      "errors": {
+        "loadRequiredData": "Failed to load required data",
+        "templateNameRequired": "Template name is required"
       }
     }
   },
@@ -774,5 +831,15 @@
   "hoursUsed": "{{spent}} of {{budgeted}} hours",
   "hoursUsage": "Hours Usage",
   "hoursUsedDetail": "{{spent}} of {{budgeted}} hours used",
-  "hoursRemaining": "{{remaining}} hours remaining"
+  "hoursRemaining": "{{remaining}} hours remaining",
+  "projectInfo": {
+    "client": "Client:",
+    "contact": "Contact:",
+    "budget": "Budget:",
+    "hoursUsageDescription": "Shows budget hours usage for the entire project",
+    "templateCreatedSuccess": "Template created successfully"
+  },
+  "projectPhases": {
+    "addTask": "Add Task"
+  }
 }

@@ -5,7 +5,7 @@
   {"id": "F004", "description": "Run `node scripts/generate-pseudo-locales.cjs` to regenerate xx/ and yy/ pseudo-locales from updated English source (do NOT hand-edit pseudo-locales)", "implemented": true, "prdRefs": ["2b-21b/non-functional"]},
   {"id": "F005", "description": "Verify /msp/projects/templates, /msp/projects/templates/[id], /msp/projects/templates/create routes transitively load features/projects via /msp/projects prefix match; add explicit ROUTE_NAMESPACES entries if not", "implemented": true, "prdRefs": ["2b-21b/open-questions"]},
 
-  {"id": "F020", "description": "Wire useTranslation(['features/projects', 'common']) in ProjectDetail.tsx — tabs, budget/hours display, phase management, task panels (~50 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-A"]},
+  {"id": "F020", "description": "Wire useTranslation(['features/projects', 'common']) in ProjectDetail.tsx — tabs, budget/hours display, phase management, task panels (~50 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-A"]},
   {"id": "F021", "description": "Wire TaskForm.tsx — all fields, placeholders, validation errors, toast messages, save/cancel buttons (~39 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-A"]},
   {"id": "F022", "description": "Wire PhaseTaskImportDialog.tsx — CSV import flow, preview, validation errors, toast messages (~21 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-A"]},
   {"id": "F023", "description": "Wire Projects.tsx — list page filters, search placeholder, empty state, status tabs (~21 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-A"]},

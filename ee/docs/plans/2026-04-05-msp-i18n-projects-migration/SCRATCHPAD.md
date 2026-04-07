@@ -158,6 +158,17 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   `/msp/projects/templates/create` → `["common","msp/core","features/projects"]`
   No explicit `ROUTE_NAMESPACES` entries are needed; longest-prefix matching against
   `/msp/projects` already loads `features/projects` correctly.
+- **(2026-04-07, F020)** Wired `packages/projects/src/components/ProjectDetail.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Translated the project-detail
+  header/view controls, search/filter chrome, sticky-status/pin controls, selected-phase
+  completion summary, empty-state guidance, confirmation dialogs, and the main toast copy
+  for task/phase move/update/delete/import flows.
+- **(2026-04-07, F020)** Added the missing `projectDetail.*` leaves required by the
+  `ProjectDetail.tsx` wiring to English, re-synced `fr/es/de/nl/it/pl` via the merge
+  script, regenerated pseudo-locales, and re-ran translation validation successfully.
+- **(2026-04-07, F020 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/ProjectDetail.tsx` passes with pre-existing warnings
+  only (no new lint errors introduced by the i18n wiring).
 
 ## Commands / Runbooks
 

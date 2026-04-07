@@ -118,18 +118,25 @@
     "searchTasksPlaceholder": "11111",
     "caseSensitive": "11111",
     "wholeWord": "11111",
+    "wholeWordShort": "11111",
     "clearSearch": "11111",
     "taskList": "11111",
     "kanbanBoard": "11111",
+    "kanbanBoardWithPhase": "11111 {{phaseName}} 11111",
     "selectPhaseToViewKanban": "11111",
     "selectPhaseToAddCard": "11111",
     "selectPhaseToAddTask": "11111",
+    "showPhasesPanel": "11111",
+    "hidePhasesPanel": "11111",
+    "phaseHelp": "11111",
     "phaseNameRequired": "11111",
     "phaseAddedSuccess": "11111",
     "phaseUpdatedSuccess": "11111",
     "phaseDeletedSuccess": "11111",
     "phaseReorderedSuccess": "11111",
     "taskAddedSuccess": "11111",
+    "taskPhaseMismatch": "11111",
+    "taskDeletedGeneric": "11111",
     "taskDeletedSuccess": "11111 {{taskName}} 11111",
     "taskMovedSuccess": "11111 {{taskName}} 11111",
     "taskMovedCrossPhaseSuccess": "11111 {{taskName}} 11111",
@@ -139,17 +146,26 @@
     "taskMovedToNewStatus": "11111",
     "taskReordered": "11111",
     "tasksReorderedSuccess": "11111",
+    "commentCountsLoadError": "11111",
     "taskAssigneeUpdatedSuccess": "11111",
     "taskDuplicatedSuccess": "11111 {{taskName}} 11111",
     "duplicateNoTargetPhase": "11111",
     "taskNotFound": "11111",
     "taskPhaseNotFound": "11111",
+    "allTypes": "11111",
+    "primaryShort": "11111",
     "deletePhaseTitle": "11111",
+    "deletePhaseMessage": "11111 {{phaseName}} 11111",
     "deleteTaskTitle": "11111",
+    "deleteTaskMessage": "11111 {{taskName}} 11111",
     "moveTaskTitle": "11111",
+    "confirmMoveTaskMessage": "11111 {{taskName}} 11111 {{sourcePhase}} 11111 {{targetPhase}} 11111",
+    "moveTaskFailed": "11111",
     "loadingListView": "11111",
     "importSuccess": "11111 {{phases}} 11111 {{tasks}} 11111",
+    "importFailed": "11111 {{error}} 11111",
     "completionSummary": "11111 {{completed}} 11111 {{total}} 11111",
+    "selectedPhaseCompletionHelp": "11111 {{phaseName}} 11111",
     "showStickyStatusNames": "11111",
     "hideStickyStatusNames": "11111",
     "pinHeader": "11111",
@@ -394,7 +410,8 @@
       "title": "11111",
       "projectPlaceholder": "11111",
       "phasePlaceholder": "11111",
-      "taskPlaceholder": "11111"
+      "taskPlaceholder": "11111",
+      "linkedSuccess": "11111"
     },
     "prefillFromTicket": {
       "title": "11111",
@@ -403,6 +420,11 @@
       "linkTicketLabel": "11111",
       "allStatuses": "11111",
       "allPriorities": "11111"
+    },
+    "ticketLinkedTasks": {
+      "title": "11111",
+      "loadFailed": "11111",
+      "phaseNotFound": "11111"
     }
   },
   "filters": {
@@ -530,7 +552,9 @@
       "neverUsed": "11111",
       "edit": "11111",
       "applyTemplate": "11111",
-      "addTemplate": "11111"
+      "addTemplate": "11111",
+      "createFromProject": "11111",
+      "allCategories": "11111"
     },
     "create": {
       "title": "11111",
@@ -585,7 +609,9 @@
         "none": "11111",
         "primary": "11111",
         "all": "11111"
-      }
+      },
+      "fixErrors": "11111",
+      "addStatus": "11111"
     },
     "detail": {
       "description": "11111",
@@ -593,7 +619,10 @@
       "times": "11111",
       "projectPhases": "11111",
       "noPhasesDefined": "11111",
-      "phasePrefix": "11111"
+      "phasePrefix": "11111",
+      "deleteTitle": "11111",
+      "deletedSuccess": "11111",
+      "usedCount": "11111 {{count}} 11111"
     },
     "editor": {
       "deletedSuccess": "11111",
@@ -646,7 +675,19 @@
       "dependencies": "11111",
       "removeDependency": "11111",
       "selectTaskPlaceholder": "11111",
-      "cancelEditTitle": "11111"
+      "cancelEditTitle": "11111",
+      "serviceLabel": "11111",
+      "noService": "11111",
+      "serviceHint": "11111",
+      "statusColumnLabel": "11111",
+      "estimatedHoursLabel": "11111",
+      "durationLabel": "11111",
+      "taskTypeLabel": "11111",
+      "priorityLabel": "11111",
+      "primaryAgentLabel": "11111",
+      "additionalAgentsLabel": "11111",
+      "assignedWhenApplied": "11111",
+      "dependenciesLabel": "11111"
     },
     "wizard": {
       "next": "11111",
@@ -692,7 +733,10 @@
         "statusPlaceholder": "11111",
         "checklist": "11111",
         "checklistItemPlaceholder": "11111",
-        "tipTitle": "11111"
+        "tipTitle": "11111",
+        "emptyDescription": "11111",
+        "addFirstTask": "11111",
+        "serviceHint": "11111"
       },
       "review": {
         "title": "11111",
@@ -711,6 +755,18 @@
       "clientPortal": {
         "title": "11111",
         "aboutTitle": "11111"
+      },
+      "steps": {
+        "basics": "11111",
+        "statusColumns": "11111",
+        "phases": "11111",
+        "tasks": "11111",
+        "clientPortal": "11111",
+        "reviewCreate": "11111"
+      },
+      "errors": {
+        "loadRequiredData": "11111",
+        "templateNameRequired": "11111"
       }
     }
   },
@@ -774,5 +830,12 @@
   "hoursUsed": "11111 {{spent}} 11111 {{budgeted}} 11111",
   "hoursUsage": "11111",
   "hoursUsedDetail": "11111 {{spent}} 11111 {{budgeted}} 11111",
-  "hoursRemaining": "11111 {{remaining}} 11111"
+  "hoursRemaining": "11111 {{remaining}} 11111",
+  "projectInfo": {
+    "client": "11111",
+    "contact": "11111",
+    "budget": "11111",
+    "hoursUsageDescription": "11111",
+    "templateCreatedSuccess": "11111"
+  }
 }
