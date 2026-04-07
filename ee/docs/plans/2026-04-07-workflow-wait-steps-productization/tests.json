@@ -62,7 +62,7 @@
   {
     "id": "T007",
     "description": "Playwright smoke: the workflow designer palette exposes `Wait for Event` and `Wait for Time`, and each step’s custom editor persists its key fields into the workflow definition.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F014",
@@ -74,7 +74,7 @@
   {
     "id": "T008",
     "description": "E2E: an onboarding-style workflow waiting on `project.status.changed` with a `newStatus in [\"Live\", \"Complete\"]` filter resumes only on the first matching event and continues its downstream action path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F015",
@@ -85,7 +85,7 @@
   {
     "id": "T009",
     "description": "Playwright smoke: when an event field exposes supported picker metadata, the wait-filter editor renders the corresponding typed value control, such as a status dropdown, rather than a raw text or JSON input.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F019",
@@ -95,7 +95,7 @@
   {
     "id": "T010",
     "description": "Playwright smoke: when an event field has no picker metadata, the wait-filter editor falls back to enum or primitive controls and still allows a valid filter to be authored.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F022"

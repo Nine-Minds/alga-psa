@@ -94,6 +94,7 @@ import { PaletteItemWithTooltip } from './PaletteItemWithTooltip';
 import { WorkflowStepNameField } from './WorkflowStepNameField';
 import { WorkflowStepSaveOutputSection } from './WorkflowStepSaveOutputSection';
 import { WorkflowActionInputSection } from './WorkflowActionInputSection';
+import { WorkflowActionInputFixedPicker } from './WorkflowActionInputFixedPicker';
 import { buildWorkflowReferenceFieldOptions } from './workflowReferenceOptions';
 import { shouldRenderWorkflowAiSchemaSection } from './workflowAiStepUtils';
 import { applyWorkflowActionPresentationHintsToList } from './workflowActionPresentation';
@@ -5115,6 +5116,9 @@ type EventSchemaScalarField = {
   path: string;
   type: 'string' | 'number' | 'boolean' | 'unknown';
   enumValues?: Array<string | number | boolean>;
+  pickerKind?: string;
+  pickerDependencies?: string[];
+  pickerFixedValueHint?: string;
 };
 
 const WAIT_FILTER_OPERATOR_OPTIONS: Array<{ value: WaitFilterOperator; label: string }> = [
@@ -5153,6 +5157,21 @@ const collectEventSchemaScalarFields = (
     const nextPath = pathPrefix ? `${pathPrefix}.${key}` : key;
     if (isEventScalarSchema(prop)) {
       const type = normalizeSchemaType(prop);
+      const workflowEditor = (prop as any)['x-workflow-editor'] as
+        | { picker?: { resource?: string }; dependencies?: string[]; fixedValueHint?: string }
+        | undefined;
+      const legacyPickerKind = typeof (prop as any)['x-workflow-picker-kind'] === 'string'
+        ? String((prop as any)['x-workflow-picker-kind'])
+        : undefined;
+      const pickerKind = workflowEditor?.picker?.resource ?? legacyPickerKind;
+      const pickerDependenciesRaw = workflowEditor?.dependencies ?? (prop as any)['x-workflow-picker-dependencies'];
+      const pickerDependencies = Array.isArray(pickerDependenciesRaw)
+        ? pickerDependenciesRaw.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
+        : undefined;
+      const pickerFixedValueHint = workflowEditor?.fixedValueHint
+        ?? (typeof (prop as any)['x-workflow-picker-fixed-value-hint'] === 'string'
+          ? String((prop as any)['x-workflow-picker-fixed-value-hint'])
+          : undefined);
       fields.push({
         path: nextPath,
         type: type === 'number' || type === 'integer'
@@ -5166,7 +5185,10 @@ const collectEventSchemaScalarFields = (
           ? prop.enum.filter((item): item is string | number | boolean =>
             typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean'
           )
-          : undefined
+          : undefined,
+        pickerKind,
+        pickerDependencies,
+        pickerFixedValueHint
       });
       continue;
     }
@@ -5179,7 +5201,7 @@ const collectEventSchemaScalarFields = (
   return fields;
 };
 
-const StepConfigPanel: React.FC<{
+export const StepConfigPanel: React.FC<{
   step: Step;
   stepPath?: string;
   errors: PublishError[];
@@ -5729,7 +5751,7 @@ const StepConfigPanel: React.FC<{
             dropdownMode="overlay"
             options={eventCatalogOptions.map((option) => ({
               value: option.event_type,
-              label: option.label || option.event_type
+              label: option.name || option.event_type
             }))}
             disabled={!editable}
           />
@@ -5822,7 +5844,25 @@ const StepConfigPanel: React.FC<{
 
                   {showValue && (
                     <div>
-                      {enumOptions.length > 0 && !expectsArray ? (
+                      {fieldMeta?.pickerKind && !expectsArray ? (
+                        <WorkflowActionInputFixedPicker
+                          idPrefix={`event-wait-filter-value-${step.id}-${index}`}
+                          field={{
+                            name: filter.path || 'value',
+                            editor: {
+                              kind: 'picker',
+                              picker: { resource: fieldMeta.pickerKind },
+                              dependencies: fieldMeta.pickerDependencies,
+                              fixedValueHint: fieldMeta.pickerFixedValueHint,
+                              allowsDynamicReference: false
+                            }
+                          }}
+                          value={valueAsString || null}
+                          onChange={(nextValue) => updateEventFilterClause(index, { value: nextValue ?? '' })}
+                          rootInputMapping={{}}
+                          disabled={!editable}
+                        />
+                      ) : enumOptions.length > 0 && !expectsArray ? (
                         <CustomSelect
                           id={`event-wait-filter-value-${step.id}-${index}`}
                           label="Value"

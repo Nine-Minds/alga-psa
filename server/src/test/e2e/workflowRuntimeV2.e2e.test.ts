@@ -453,6 +453,46 @@ describe('workflow runtime v2 E2E tests', () => {
     expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('SUCCEEDED');
   });
 
+  it('T008: onboarding-style event.wait resumes only on first matching event and runs downstream path once. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        eventWaitStep('wait-1', {
+          eventName: 'project.status.changed',
+          correlationKeyExpr: { $expr: '"project-008"' },
+          filters: [{ path: 'newStatus', op: 'in', value: ['Live', 'Complete'] }]
+        }),
+        actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })
+      ]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'project.status.changed',
+      correlationKey: 'project-008',
+      payload: { newStatus: 'Pending' }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+    expect(getSideEffectCount()).toBe(0);
+
+    await submitWorkflowEventAction({
+      eventName: 'project.status.changed',
+      correlationKey: 'project-008',
+      payload: { newStatus: 'Live' }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('SUCCEEDED');
+    expect(getSideEffectCount()).toBe(1);
+
+    await submitWorkflowEventAction({
+      eventName: 'project.status.changed',
+      correlationKey: 'project-008',
+      payload: { newStatus: 'Complete' }
+    });
+    expect(getSideEffectCount()).toBe(1);
+  });
+
   it('E2E: timeout on event.wait routes to catch pipe and completes with handled error. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [tryCatchStep('try-1', { trySteps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' }, timeoutMs: 1 })], catchSteps: [stateSetStep('state-1', 'TIMEOUT_HANDLED')] })]

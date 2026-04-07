@@ -148,3 +148,32 @@ Working notes for productizing workflow wait steps in the EE workflow system.
 
 - `F021` / `F022` remain open: this pass adds schema-informed field selection and primitive/enum value controls, but does not yet implement picker-metadata-driven typed controls for wait filters.
 - `F017` remains open pending broader run-detail metadata surfacing beyond current pipeline summaries.
+
+## Progress Log — 2026-04-07 (Implementation Pass 3)
+
+### Completed Plan Items
+
+- Additional feature completed: `F017`, `F021`, `F022`.
+- Additional tests implemented: `T007`, `T008`, `T009`, `T010`.
+
+### What Changed
+
+- Enhanced wait metadata rendering in run details:
+  - event waits now show filter count from wait payload
+  - time waits now show mode and scheduled resume timestamp
+- Extended wait filter field extraction to honor event schema picker metadata:
+  - supports `x-workflow-picker-kind`
+  - supports `x-workflow-editor.picker.resource`
+  - passes optional dependencies and fixed value hints into picker controls
+- Updated wait filter value editor fallback order:
+  1) typed picker when picker metadata exists
+  2) enum dropdown when schema enum exists
+  3) primitive controls (boolean/number/text)
+- Added focused workflow wait editor component tests in:
+  - `ee/server/src/components/workflow-designer/__tests__/WorkflowWaitEditors.test.tsx`
+- Added onboarding-style first-match integration test (`T008`) in runtime E2E test suite.
+
+### Remaining
+
+- Feature checklist: all complete.
+- Test checklist: all complete.

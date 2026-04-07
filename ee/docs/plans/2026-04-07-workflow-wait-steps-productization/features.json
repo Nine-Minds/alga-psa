@@ -137,7 +137,7 @@
   {
     "id": "F017",
     "description": "Show useful wait metadata in pipeline cards and run detail surfaces, including event name, filter count, timeout, and scheduled resume time as appropriate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 16",
       "Observability"
@@ -171,7 +171,7 @@
   {
     "id": "F021",
     "description": "Define and support event-field presentation metadata for wait filters so eligible event fields can render typed picker controls such as status, client, contact, or user pickers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements 19",
@@ -181,7 +181,7 @@
   {
     "id": "F022",
     "description": "Make the wait-filter editor fall back cleanly from picker metadata to enum or primitive controls when no typed picker is available for an event field.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 20",
       "Data / API / Integrations",
