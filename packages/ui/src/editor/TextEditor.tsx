@@ -275,11 +275,29 @@ export default function TextEditor({
 
             return true;
           },
-        },
-        handlePaste: (view, event, slice) => {
-          // Detect markdown in pasted plain text and convert to rich blocks
-          const plainText = event.clipboardData?.getData('text/plain');
-          if (plainText && markdownPattern.test(plainText) && bnEditorRef.current) {
+          paste: (_view, event) => {
+            // Detect markdown in pasted text and convert to rich blocks.
+            // This runs at the DOM level (before BlockNote's internal paste
+            // handler) so it reliably intercepts clipboard content regardless
+            // of whether BlockNote would otherwise consume the event.
+            const plainText = event.clipboardData?.getData('text/plain');
+            if (!plainText || !markdownPattern.test(plainText) || !bnEditorRef.current) {
+              return false;
+            }
+
+            const htmlText = event.clipboardData?.getData('text/html');
+            if (htmlText) {
+              // If the clipboard carries HTML with semantic block-level markup
+              // (headings, lists, etc.), the source app already structured the
+              // content — let BlockNote handle it via its default HTML paste.
+              const hasSemanticHtml = /<(h[1-6]|ul|ol|li|blockquote|pre|table)[\s>]/i.test(htmlText);
+              if (hasSemanticHtml) {
+                return false;
+              }
+              // Otherwise the HTML is trivial wrapping (e.g. VS Code's
+              // syntax-highlighted spans) — prefer the markdown conversion.
+            }
+
             event.preventDefault();
             const ed = bnEditorRef.current;
             (async () => {
@@ -294,8 +312,9 @@ export default function TextEditor({
               }
             })();
             return true;
-          }
-
+          },
+        },
+        handlePaste: (view, event, slice) => {
           // Handle pasting into empty blocks
           const { state, dispatch } = view;
           const { selection } = state;

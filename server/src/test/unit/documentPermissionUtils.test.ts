@@ -28,6 +28,8 @@ import { hasPermission } from '@/lib/auth/rbac';
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import { createTenantKnex } from '@/lib/db';
 
+const mockKnexInstance = {} as any;
+
 describe('documentPermissionUtils', () => {
   const mockUser: IUser = {
     user_id: 'user-123',
@@ -53,6 +55,7 @@ describe('documentPermissionUtils', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex: mockKnexInstance, tenant: 'tenant-123' });
   });
 
   describe('canAccessDocument', () => {
@@ -72,7 +75,7 @@ describe('documentPermissionUtils', () => {
       const result = await canAccessDocument(mockUser, mockDocument);
 
       expect(result).toBe(true);
-      expect(DocumentAssociation.getByDocumentId).toHaveBeenCalledWith('doc-123');
+      expect(DocumentAssociation.getByDocumentId).toHaveBeenCalledWith(mockKnexInstance, 'doc-123');
     });
 
     it('should allow access if user has permission for associated entity (contract)', async () => {
