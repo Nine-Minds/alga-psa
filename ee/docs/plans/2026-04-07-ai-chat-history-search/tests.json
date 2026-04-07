@@ -1,0 +1,89 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed integration: migrated-schema search returns chats matched by title and by message body, deduplicates to one row per chat, preserves latest `preview_text`, and orders results by relevance then recency.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F009"
+    ],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/chatHistorySearch.integration.test.ts"
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed guard integration: search excludes another user's matching chat and returns no rows for a non-matching query.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F009"
+    ],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/chatHistorySearch.integration.test.ts"
+  },
+  {
+    "id": "T003",
+    "description": "Unit: the history sidebar keeps showing recent chats for an empty query and switches to debounced search results once the query reaches 2 characters.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/RightSidebar.historySearch.test.tsx"
+  },
+  {
+    "id": "T004",
+    "description": "Unit: a 1-character query shows the query-too-short helper without calling search, and clearing the query restores the recent-chat dataset.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F017",
+      "F019"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/RightSidebar.historySearch.test.tsx"
+  },
+  {
+    "id": "T005",
+    "description": "Unit: search-mode no-results renders correctly and clicking a matching search result loads the persisted chat through `getChatMessagesAction`.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/RightSidebar.historySearch.test.tsx"
+  },
+  {
+    "id": "T006",
+    "description": "Unit: rename and delete actions rerun the active search query and keep the sidebar in search mode after the mutation completes.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F018"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/RightSidebar.historySearch.test.tsx"
+  },
+  {
+    "id": "T007",
+    "description": "Unit: `searchCurrentUserChatsAction` fails closed when chat persistence is unavailable or when the search columns are missing during rollout.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/chatActions.searchCurrentUserChatsAction.test.ts"
+  }
+]
