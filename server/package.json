@@ -66,6 +66,7 @@
     "@blocknote/core": "^0.47.0",
     "@blocknote/mantine": "^0.47.0",
     "@blocknote/react": "^0.47.0",
+    "@blocknote/server-util": "^0.47.0",
     "@eslint/plugin-kit": "^0.3.5",
     "@hocuspocus/provider": "^2.15.2",
     "@hookform/resolvers": "^5.0.1",
