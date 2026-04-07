@@ -14,6 +14,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 
 type EditableAdditionalEmailRow = ContactEmailAddressInput & {
@@ -337,6 +338,7 @@ interface ContactEmailRowProps {
   isExpanded?: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
+  showReorderControls: boolean;
   onChange: (updates: Partial<EditableAdditionalEmailRow>) => void;
   onBlur: () => void;
   onToggleExpanded?: () => void;
@@ -356,6 +358,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
   isExpanded = true,
   canMoveUp,
   canMoveDown,
+  showReorderControls,
   onChange,
   onBlur,
   onToggleExpanded,
@@ -391,16 +394,21 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            <Button
-              id={`${id}-promote-${index}`}
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={onPromote}
+            <RadioGroup
+              id={`${id}-default-${index}`}
+              name={`${id}-default-email`}
+              value={undefined}
+              onChange={() => onPromote()}
+              options={[
+                {
+                  value: `email-${index}`,
+                  label: 'Default',
+                },
+              ]}
+              orientation="horizontal"
+              className="gap-2"
               disabled={disabled}
-            >
-              Make Default
-            </Button>
+            />
             <Button
               id={`${id}-toggle-${index}`}
               type="button"
@@ -413,39 +421,43 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
               <ChevronDown className="h-4 w-4" />
               Edit
             </Button>
-            <Button
-              id={`${id}-move-up-${index}`}
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onMoveUp}
-              disabled={disabled || !canMoveUp}
-              aria-label={`Move additional email ${index + 1} up`}
-            >
-              <ArrowUp className="h-4 w-4" />
-            </Button>
-            <Button
-              id={`${id}-move-down-${index}`}
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onMoveDown}
-              disabled={disabled || !canMoveDown}
-              aria-label={`Move additional email ${index + 1} down`}
-            >
-              <ArrowDown className="h-4 w-4" />
-            </Button>
-            <Button
-              id={`${id}-remove-${index}`}
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onRemove}
-              disabled={disabled}
-              aria-label={`Remove additional email ${index + 1}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {showReorderControls && (
+              <>
+                <Button
+                  id={`${id}-move-up-${index}`}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onMoveUp}
+                  disabled={disabled || !canMoveUp}
+                  aria-label={`Move additional email ${index + 1} up`}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  id={`${id}-move-down-${index}`}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onMoveDown}
+                  disabled={disabled || !canMoveDown}
+                  aria-label={`Move additional email ${index + 1} down`}
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </Button>
+                <Button
+                  id={`${id}-remove-${index}`}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRemove}
+                  disabled={disabled}
+                  aria-label={`Remove additional email ${index + 1}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </Card>
@@ -460,16 +472,21 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
           <div className="text-xs text-muted-foreground">Stored as a non-default email address</div>
         </div>
         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-          <Button
-            id={`${id}-promote-${index}`}
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onPromote}
+          <RadioGroup
+            id={`${id}-default-expanded-${index}`}
+            name={`${id}-default-email`}
+            value={undefined}
+            onChange={() => onPromote()}
+            options={[
+              {
+                value: `email-${index}`,
+                label: 'Default',
+              },
+            ]}
+            orientation="horizontal"
+            className="gap-2"
             disabled={disabled}
-          >
-            Make Default
-          </Button>
+          />
           {compact && (
             <Button
               id={`${id}-toggle-${index}`}
@@ -484,39 +501,43 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
               Done
             </Button>
           )}
-          <Button
-            id={`${id}-move-up-${index}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onMoveUp}
-            disabled={disabled || !canMoveUp}
-            aria-label={`Move additional email ${index + 1} up`}
-          >
-            <ArrowUp className="h-4 w-4" />
-          </Button>
-          <Button
-            id={`${id}-move-down-${index}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onMoveDown}
-            disabled={disabled || !canMoveDown}
-            aria-label={`Move additional email ${index + 1} down`}
-          >
-            <ArrowDown className="h-4 w-4" />
-          </Button>
-          <Button
-            id={`${id}-remove-${index}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onRemove}
-            disabled={disabled}
-            aria-label={`Remove additional email ${index + 1}`}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {showReorderControls && (
+            <>
+              <Button
+                id={`${id}-move-up-${index}`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onMoveUp}
+                disabled={disabled || !canMoveUp}
+                aria-label={`Move additional email ${index + 1} up`}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+              <Button
+                id={`${id}-move-down-${index}`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onMoveDown}
+                disabled={disabled || !canMoveDown}
+                aria-label={`Move additional email ${index + 1} down`}
+              >
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+              <Button
+                id={`${id}-remove-${index}`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onRemove}
+                disabled={disabled}
+                aria-label={`Remove additional email ${index + 1}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -813,15 +834,50 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <Label className="text-sm font-medium text-gray-900">
+            Email Addresses
+          </Label>
+          <p className="text-xs text-gray-500">
+            Add one or more email addresses and choose exactly one default.
+          </p>
+        </div>
+        <Button
+          id={`${id}-add`}
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={handleAdd}
+          disabled={disabled}
+          className="inline-flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Add Email
+        </Button>
+      </div>
+
       <Card className="p-4" data-testid={`${id}-primary-row`}>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div>
             <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Primary email</div>
             <div className="text-xs text-muted-foreground">This remains the default address stored on the contact record</div>
           </div>
-          <div className="rounded-full bg-[rgb(var(--color-primary-100))] px-3 py-1 text-xs font-medium text-[rgb(var(--color-primary-700))]">
-            Default
-          </div>
+          <RadioGroup
+            id={`${id}-default-primary`}
+            name={`${id}-default-email`}
+            value="email-primary"
+            onChange={() => {}}
+            options={[
+              {
+                value: 'email-primary',
+                label: 'Default',
+              },
+            ]}
+            orientation="horizontal"
+            className="gap-2"
+            disabled={disabled}
+          />
         </div>
 
         <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(240px,0.9fr)] xl:items-start">
@@ -888,6 +944,7 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
             isExpanded={!compactAdditionalRows || expandedRowKey === getRowKey(row, index)}
             canMoveUp={index > 0}
             canMoveDown={index < draftRows.length - 1}
+            showReorderControls={draftRows.length > 1}
             onChange={(updates) => handleAdditionalRowChange(index, updates)}
             onBlur={() => handleAdditionalRowBlur(index)}
             onToggleExpanded={() => {
@@ -901,17 +958,6 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
           />
         ))}
 
-        <Button
-          id={`${id}-add`}
-          type="button"
-          variant="secondary"
-          onClick={handleAdd}
-          disabled={disabled}
-          className="inline-flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Add Email
-        </Button>
       </div>
 
       {displayedErrors.length > 0 && (
