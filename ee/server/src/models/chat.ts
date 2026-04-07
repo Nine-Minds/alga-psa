@@ -59,6 +59,66 @@ const Chat = {
     }
   },
 
+  searchByUser: async (userId: string, query: string, limit = 20): Promise<IChatHistoryItem[]> => {
+    try {
+      const { knex: db } = await createTenantKnex();
+      const rows = await db.raw<IChatHistoryItem[]>(
+        `
+          with search_query as (
+            select websearch_to_tsquery('english', ?) as query
+          )
+          select
+            chats.*,
+            (
+              select m_latest.content
+              from messages m_latest
+              where m_latest.chat_id = chats.id
+                and m_latest.tenant = chats.tenant
+              order by m_latest.message_order desc nulls last, m_latest.id desc
+              limit 1
+            ) as preview_text,
+            greatest(
+              ts_rank_cd(chats.title_index, search_query.query),
+              coalesce(
+                (
+                  select max(ts_rank_cd(m_rank.content_index, search_query.query))
+                  from messages m_rank
+                  where m_rank.chat_id = chats.id
+                    and m_rank.tenant = chats.tenant
+                    and m_rank.content_index @@ search_query.query
+                ),
+                0
+              )
+            ) as relevance_rank
+          from chats
+          cross join search_query
+          where chats.user_id = ?
+            and (
+              chats.title_index @@ search_query.query
+              or exists (
+                select 1
+                from messages m_match
+                where m_match.chat_id = chats.id
+                  and m_match.tenant = chats.tenant
+                  and m_match.content_index @@ search_query.query
+              )
+            )
+          order by
+            relevance_rank desc,
+            coalesce(chats.updated_at, chats.created_at) desc nulls last,
+            chats.id desc
+          limit ?
+        `,
+        [query, userId, limit]
+      );
+
+      return rows.rows;
+    } catch (error) {
+      console.error(`Error searching chats for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
   insert: async (Chat: IChat): Promise<Pick<Omit<IChat, 'tenant'>, "id">> => {
     try {
       const {knex: db, tenant} = await createTenantKnex();
