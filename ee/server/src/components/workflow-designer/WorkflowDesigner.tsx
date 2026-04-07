@@ -3266,6 +3266,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     nodeRegistry={nodeRegistryMap}
                     actionRegistry={actionRegistry}
                     designerActionCatalog={designerActionCatalog}
+                    eventCatalogOptions={eventCatalogOptions}
                     fieldOptions={fieldOptions}
                     payloadSchema={payloadSchema}
                     definition={activeDefinition}
@@ -5089,6 +5090,95 @@ const BlockSection: React.FC<{ title: string; idPrefix: string; children: React.
   );
 };
 
+type WaitFilterOperator =
+  | '='
+  | '!='
+  | 'in'
+  | 'not_in'
+  | 'exists'
+  | 'not_exists'
+  | '>'
+  | '>='
+  | '<'
+  | '<='
+  | 'contains'
+  | 'starts_with'
+  | 'ends_with';
+
+type EventWaitFilterClause = {
+  path: string;
+  op: WaitFilterOperator;
+  value?: unknown;
+};
+
+type EventSchemaScalarField = {
+  path: string;
+  type: 'string' | 'number' | 'boolean' | 'unknown';
+  enumValues?: Array<string | number | boolean>;
+};
+
+const WAIT_FILTER_OPERATOR_OPTIONS: Array<{ value: WaitFilterOperator; label: string }> = [
+  { value: '=', label: 'equals' },
+  { value: '!=', label: 'not equals' },
+  { value: 'in', label: 'in' },
+  { value: 'not_in', label: 'not in' },
+  { value: 'exists', label: 'exists' },
+  { value: 'not_exists', label: 'not exists' },
+  { value: '>', label: 'greater than' },
+  { value: '>=', label: 'greater than or equal' },
+  { value: '<', label: 'less than' },
+  { value: '<=', label: 'less than or equal' },
+  { value: 'contains', label: 'contains' },
+  { value: 'starts_with', label: 'starts with' },
+  { value: 'ends_with', label: 'ends with' }
+];
+
+const isEventScalarSchema = (schema: JsonSchema): boolean => {
+  const type = normalizeSchemaType(schema);
+  return type === 'string' || type === 'number' || type === 'integer' || type === 'boolean' || Boolean(schema.enum?.length);
+};
+
+const collectEventSchemaScalarFields = (
+  schema: JsonSchema | null,
+  rootSchema: JsonSchema | null,
+  pathPrefix = ''
+): EventSchemaScalarField[] => {
+  if (!schema || !rootSchema) return [];
+  const resolved = resolveSchema(schema, rootSchema);
+  const properties = resolved.properties ?? {};
+  const fields: EventSchemaScalarField[] = [];
+
+  for (const [key, value] of Object.entries(properties)) {
+    const prop = resolveSchema(value as JsonSchema, rootSchema);
+    const nextPath = pathPrefix ? `${pathPrefix}.${key}` : key;
+    if (isEventScalarSchema(prop)) {
+      const type = normalizeSchemaType(prop);
+      fields.push({
+        path: nextPath,
+        type: type === 'number' || type === 'integer'
+          ? 'number'
+          : type === 'boolean'
+            ? 'boolean'
+            : type === 'string'
+              ? 'string'
+              : 'unknown',
+        enumValues: Array.isArray(prop.enum)
+          ? prop.enum.filter((item): item is string | number | boolean =>
+            typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean'
+          )
+          : undefined
+      });
+      continue;
+    }
+
+    if (normalizeSchemaType(prop) === 'object') {
+      fields.push(...collectEventSchemaScalarFields(prop, rootSchema, nextPath));
+    }
+  }
+
+  return fields;
+};
+
 const StepConfigPanel: React.FC<{
   step: Step;
   stepPath?: string;
@@ -5096,6 +5186,7 @@ const StepConfigPanel: React.FC<{
   nodeRegistry: Record<string, NodeRegistryItem>;
   actionRegistry: ActionRegistryItem[];
   designerActionCatalog: WorkflowDesignerCatalogRecord[];
+  eventCatalogOptions: WorkflowEventCatalogOptionV2[];
   fieldOptions: SelectOption[];
   payloadSchema: JsonSchema | null;
   definition: WorkflowDefinition;
@@ -5108,6 +5199,7 @@ const StepConfigPanel: React.FC<{
   nodeRegistry,
   actionRegistry,
   designerActionCatalog,
+  eventCatalogOptions,
   fieldOptions,
   payloadSchema,
   definition,
@@ -5286,6 +5378,111 @@ const StepConfigPanel: React.FC<{
 
     return null;
   }, [saveAs, dataContext.steps]);
+
+  const eventWaitConfig = step.type === 'event.wait'
+    ? (((step as NodeStep).config as Record<string, unknown> | undefined) ?? {})
+    : null;
+  const timeWaitConfig = step.type === 'time.wait'
+    ? (((step as NodeStep).config as Record<string, unknown> | undefined) ?? {})
+    : null;
+  const selectedWaitEventName = typeof eventWaitConfig?.eventName === 'string' ? eventWaitConfig.eventName : '';
+  const selectedWaitEventOption = useMemo(
+    () => eventCatalogOptions.find((option) => option.event_type === selectedWaitEventName) ?? null,
+    [eventCatalogOptions, selectedWaitEventName]
+  );
+  const [eventWaitPayloadSchema, setEventWaitPayloadSchema] = useState<JsonSchema | null>(null);
+  const [eventWaitPayloadSchemaStatus, setEventWaitPayloadSchemaStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+
+  useEffect(() => {
+    if (step.type !== 'event.wait') return;
+    if (!selectedWaitEventName) {
+      setEventWaitPayloadSchema(null);
+      setEventWaitPayloadSchemaStatus('idle');
+      return;
+    }
+    let cancelled = false;
+    setEventWaitPayloadSchemaStatus('loading');
+    (async () => {
+      try {
+        if (selectedWaitEventOption?.payload_schema_ref_status === 'known' && selectedWaitEventOption.payload_schema_ref) {
+          const result = await getWorkflowSchemaAction({ schemaRef: selectedWaitEventOption.payload_schema_ref });
+          if (!cancelled) {
+            setEventWaitPayloadSchema(((result as any)?.schema ?? null) as JsonSchema | null);
+            setEventWaitPayloadSchemaStatus('loaded');
+          }
+          return;
+        }
+        const entry = await getEventCatalogEntryByEventType(selectedWaitEventName);
+        if (!cancelled) {
+          setEventWaitPayloadSchema((((entry as any)?.payload_schema ?? null) as JsonSchema | null));
+          setEventWaitPayloadSchemaStatus(((entry as any)?.payload_schema ? 'loaded' : 'error'));
+        }
+      } catch {
+        if (!cancelled) {
+          setEventWaitPayloadSchema(null);
+          setEventWaitPayloadSchemaStatus('error');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedWaitEventName, selectedWaitEventOption?.payload_schema_ref, selectedWaitEventOption?.payload_schema_ref_status, step.type]);
+
+  const eventFilterFields = useMemo(
+    () => collectEventSchemaScalarFields(eventWaitPayloadSchema, eventWaitPayloadSchema),
+    [eventWaitPayloadSchema]
+  );
+  const eventFilterFieldOptions = useMemo(
+    () => eventFilterFields.map((field) => ({ value: field.path, label: field.path })),
+    [eventFilterFields]
+  );
+
+  const updateWaitNodeConfig = useCallback((nextConfig: Record<string, unknown>) => {
+    const nodeStep = step as NodeStep;
+    onChange({
+      ...nodeStep,
+      config: nextConfig
+    });
+  }, [onChange, step]);
+
+  const eventFilters = useMemo(() => {
+    if (!eventWaitConfig) return [] as EventWaitFilterClause[];
+    const raw = Array.isArray(eventWaitConfig.filters) ? eventWaitConfig.filters : [];
+    return raw
+      .filter((item): item is EventWaitFilterClause =>
+        !!item
+        && typeof item === 'object'
+        && typeof (item as any).path === 'string'
+        && typeof (item as any).op === 'string'
+      );
+  }, [eventWaitConfig]);
+
+  const updateEventFilterClause = useCallback((index: number, patch: Partial<EventWaitFilterClause>) => {
+    if (!eventWaitConfig) return;
+    const next = eventFilters.map((filter, currentIndex) => (
+      currentIndex === index
+        ? { ...filter, ...patch }
+        : filter
+    ));
+    updateWaitNodeConfig({ ...eventWaitConfig, filters: next });
+  }, [eventFilters, eventWaitConfig, updateWaitNodeConfig]);
+
+  const removeEventFilterClause = useCallback((index: number) => {
+    if (!eventWaitConfig) return;
+    const next = eventFilters.filter((_, currentIndex) => currentIndex !== index);
+    updateWaitNodeConfig({ ...eventWaitConfig, filters: next });
+  }, [eventFilters, eventWaitConfig, updateWaitNodeConfig]);
+
+  const addEventFilterClause = useCallback(() => {
+    if (!eventWaitConfig) return;
+    const defaultPath = eventFilterFields[0]?.path ?? '';
+    const next = [
+      ...eventFilters,
+      { path: defaultPath, op: '=', value: '' } as EventWaitFilterClause
+    ];
+    updateWaitNodeConfig({ ...eventWaitConfig, filters: next });
+  }, [eventFilterFields, eventFilters, eventWaitConfig, updateWaitNodeConfig]);
 
   const handleNodeConfigChange = (config: Record<string, unknown>) => {
     onChange({ ...step, config });
@@ -5514,7 +5711,267 @@ const StepConfigPanel: React.FC<{
         <div className="text-sm text-gray-500">Return stops workflow execution.</div>
       )}
 
-      {nodeSchema && step.type !== 'control.return' && step.type !== 'control.callWorkflow' && (
+      {step.type === 'event.wait' && eventWaitConfig && (
+        <div className="space-y-3">
+          <SearchableSelect
+            id={`event-wait-event-${step.id}`}
+            label="Event"
+            value={selectedWaitEventName}
+            onChange={(value) => {
+              const eventName = value.trim();
+              updateWaitNodeConfig({
+                ...eventWaitConfig,
+                eventName,
+                filters: []
+              });
+            }}
+            placeholder="Select event"
+            dropdownMode="overlay"
+            options={eventCatalogOptions.map((option) => ({
+              value: option.event_type,
+              label: option.label || option.event_type
+            }))}
+            disabled={!editable}
+          />
+
+          <ExpressionField
+            idPrefix={`event-wait-correlation-${step.id}`}
+            label="Correlation Key Expression"
+            value={ensureExpr((eventWaitConfig.correlationKey as Expr | undefined) ?? { $expr: '' })}
+            onChange={(expr) => updateWaitNodeConfig({ ...eventWaitConfig, correlationKey: expr })}
+            fieldOptions={enhancedFieldOptions}
+            context={expressionContext}
+            disabled={!editable}
+          />
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Payload Filters</Label>
+              <Button
+                id={`event-wait-filter-add-${step.id}`}
+                variant="outline"
+                size="sm"
+                onClick={addEventFilterClause}
+                disabled={!editable}
+              >
+                Add filter
+              </Button>
+            </div>
+            {eventWaitPayloadSchemaStatus === 'loading' && (
+              <div className="text-xs text-gray-500">Loading event schema fields...</div>
+            )}
+            {eventFilters.length === 0 && (
+              <div className="text-xs text-gray-400">No filters configured.</div>
+            )}
+            {eventFilters.map((filter, index) => {
+              const fieldMeta = eventFilterFields.find((field) => field.path === filter.path);
+              const showValue = filter.op !== 'exists' && filter.op !== 'not_exists';
+              const expectsArray = filter.op === 'in' || filter.op === 'not_in';
+              const enumOptions = (fieldMeta?.enumValues ?? []).map((item) => ({ value: String(item), label: String(item) }));
+              const valueAsString = Array.isArray(filter.value)
+                ? filter.value.map((item) => String(item)).join(', ')
+                : filter.value === undefined || filter.value === null
+                  ? ''
+                  : String(filter.value);
+
+              return (
+                <Card key={`event-filter-${index}`} className="p-3 space-y-2">
+                  <div className="grid grid-cols-12 gap-2">
+                    <div className="col-span-5">
+                      {eventFilterFieldOptions.length > 0 ? (
+                        <CustomSelect
+                          id={`event-wait-filter-path-${step.id}-${index}`}
+                          label={index === 0 ? 'Field' : undefined}
+                          options={eventFilterFieldOptions}
+                          value={filter.path}
+                          onValueChange={(nextPath) => updateEventFilterClause(index, { path: nextPath })}
+                          disabled={!editable}
+                        />
+                      ) : (
+                        <Input
+                          id={`event-wait-filter-path-${step.id}-${index}`}
+                          label={index === 0 ? 'Field path' : undefined}
+                          value={filter.path}
+                          disabled={!editable}
+                          onChange={(event) => updateEventFilterClause(index, { path: event.target.value })}
+                        />
+                      )}
+                    </div>
+                    <div className="col-span-4">
+                      <CustomSelect
+                        id={`event-wait-filter-op-${step.id}-${index}`}
+                        label={index === 0 ? 'Operator' : undefined}
+                        options={WAIT_FILTER_OPERATOR_OPTIONS}
+                        value={filter.op}
+                        onValueChange={(value) => updateEventFilterClause(index, { op: value as WaitFilterOperator })}
+                        disabled={!editable}
+                      />
+                    </div>
+                    <div className="col-span-3 flex items-end justify-end">
+                      <Button
+                        id={`event-wait-filter-remove-${step.id}-${index}`}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeEventFilterClause(index)}
+                        disabled={!editable}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+
+                  {showValue && (
+                    <div>
+                      {enumOptions.length > 0 && !expectsArray ? (
+                        <CustomSelect
+                          id={`event-wait-filter-value-${step.id}-${index}`}
+                          label="Value"
+                          options={enumOptions}
+                          value={valueAsString}
+                          onValueChange={(value) => {
+                            const matching = fieldMeta?.enumValues?.find((item) => String(item) === value);
+                            updateEventFilterClause(index, { value: matching ?? value });
+                          }}
+                          disabled={!editable}
+                        />
+                      ) : fieldMeta?.type === 'boolean' && !expectsArray ? (
+                        <CustomSelect
+                          id={`event-wait-filter-value-${step.id}-${index}`}
+                          label="Value"
+                          options={[
+                            { value: 'true', label: 'true' },
+                            { value: 'false', label: 'false' }
+                          ]}
+                          value={valueAsString}
+                          onValueChange={(value) => updateEventFilterClause(index, { value: value === 'true' })}
+                          disabled={!editable}
+                        />
+                      ) : fieldMeta?.type === 'number' && !expectsArray ? (
+                        <Input
+                          id={`event-wait-filter-value-${step.id}-${index}`}
+                          label="Value"
+                          type="number"
+                          value={valueAsString}
+                          disabled={!editable}
+                          onChange={(event) => updateEventFilterClause(index, { value: Number(event.target.value) })}
+                        />
+                      ) : (
+                        <Input
+                          id={`event-wait-filter-value-${step.id}-${index}`}
+                          label={expectsArray ? 'Values (comma separated)' : 'Value'}
+                          value={valueAsString}
+                          disabled={!editable}
+                          onChange={(event) => {
+                            const raw = event.target.value;
+                            if (expectsArray) {
+                              const values = raw
+                                .split(',')
+                                .map((item) => item.trim())
+                                .filter((item) => item.length > 0);
+                              updateEventFilterClause(index, { value: values });
+                            } else {
+                              updateEventFilterClause(index, { value: raw });
+                            }
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+
+          <Input
+            id={`event-wait-timeout-${step.id}`}
+            label="Timeout (ms)"
+            type="number"
+            value={typeof eventWaitConfig.timeoutMs === 'number' ? eventWaitConfig.timeoutMs : ''}
+            disabled={!editable}
+            onChange={(event) => {
+              const raw = event.target.value.trim();
+              updateWaitNodeConfig({
+                ...eventWaitConfig,
+                timeoutMs: raw ? Number(raw) : undefined
+              });
+            }}
+          />
+
+          <MappingExprEditor
+            idPrefix={`event-wait-assign-${step.id}`}
+            label="Assign on resume"
+            value={(eventWaitConfig.assign as Record<string, Expr>) ?? {}}
+            onChange={(assign) => updateWaitNodeConfig({ ...eventWaitConfig, assign })}
+            fieldOptions={enhancedFieldOptions}
+            context={expressionContext}
+            disabled={!editable}
+          />
+        </div>
+      )}
+
+      {step.type === 'time.wait' && timeWaitConfig && (
+        <div className="space-y-3">
+          <CustomSelect
+            id={`time-wait-mode-${step.id}`}
+            label="Mode"
+            options={[
+              { value: 'duration', label: 'Duration' },
+              { value: 'until', label: 'Until' }
+            ]}
+            value={typeof timeWaitConfig.mode === 'string' ? timeWaitConfig.mode : 'duration'}
+            onValueChange={(mode) => updateWaitNodeConfig({
+              ...timeWaitConfig,
+              mode,
+              durationMs: mode === 'duration' ? (timeWaitConfig.durationMs ?? 1000) : undefined,
+              until: mode === 'until' ? (timeWaitConfig.until ?? { $expr: '' }) : undefined
+            })}
+            disabled={!editable}
+          />
+          {(timeWaitConfig.mode ?? 'duration') === 'duration' ? (
+            <Input
+              id={`time-wait-duration-${step.id}`}
+              label="Duration (ms)"
+              type="number"
+              value={typeof timeWaitConfig.durationMs === 'number' ? timeWaitConfig.durationMs : ''}
+              disabled={!editable}
+              onChange={(event) => {
+                const raw = event.target.value.trim();
+                updateWaitNodeConfig({
+                  ...timeWaitConfig,
+                  durationMs: raw ? Number(raw) : undefined
+                });
+              }}
+            />
+          ) : (
+            <ExpressionField
+              idPrefix={`time-wait-until-${step.id}`}
+              label="Until expression"
+              value={ensureExpr((timeWaitConfig.until as Expr | undefined) ?? { $expr: '' })}
+              onChange={(untilExpr) => updateWaitNodeConfig({ ...timeWaitConfig, until: untilExpr })}
+              fieldOptions={enhancedFieldOptions}
+              context={expressionContext}
+              disabled={!editable}
+            />
+          )}
+
+          <MappingExprEditor
+            idPrefix={`time-wait-assign-${step.id}`}
+            label="Assign on resume"
+            value={(timeWaitConfig.assign as Record<string, Expr>) ?? {}}
+            onChange={(assign) => updateWaitNodeConfig({ ...timeWaitConfig, assign })}
+            fieldOptions={enhancedFieldOptions}
+            context={expressionContext}
+            disabled={!editable}
+          />
+        </div>
+      )}
+
+      {nodeSchema
+        && step.type !== 'control.return'
+        && step.type !== 'control.callWorkflow'
+        && step.type !== 'event.wait'
+        && step.type !== 'time.wait'
+        && (
         <SchemaForm
           schema={nodeSchema}
           rootSchema={nodeSchema}

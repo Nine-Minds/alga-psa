@@ -119,3 +119,32 @@ Working notes for productizing workflow wait steps in the EE workflow system.
 
 - Avoid blindly mass-editing plan JSON booleans; use explicit ID-based updates.
 - `time.wait` until-mode requires guardrails both in schema and handler because runtime may still receive invalid/legacy drafts.
+
+## Progress Log — 2026-04-07 (Implementation Pass 2)
+
+### Completed Plan Items
+
+- Additional features completed in this pass: `F015`, `F016`, `F019`.
+
+### What Changed
+
+- Added curated `event.wait` editor in `StepConfigPanel`:
+  - event catalog-backed event selector
+  - correlation key expression field
+  - structured filter row editor (`path`, `op`, `value`)
+  - timeout input
+  - assign-on-resume mapping editor
+- Added schema-informed filter field authoring:
+  - resolves selected event payload schema (registry ref preferred, event-catalog inline fallback)
+  - extracts scalar payload paths for field selection
+  - preserves free-text path fallback when schema fields are unavailable
+- Added curated `time.wait` editor in `StepConfigPanel`:
+  - mode selector (`duration`/`until`)
+  - mode-specific duration input or until-expression editor
+  - assign-on-resume mapping editor
+- Disabled generic `SchemaForm` rendering for `event.wait`/`time.wait` to avoid conflicting duplicate controls.
+
+### Notes
+
+- `F021` / `F022` remain open: this pass adds schema-informed field selection and primitive/enum value controls, but does not yet implement picker-metadata-driven typed controls for wait filters.
+- `F017` remains open pending broader run-detail metadata surfacing beyond current pipeline summaries.

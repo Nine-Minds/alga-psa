@@ -119,7 +119,7 @@
   {
     "id": "F015",
     "description": "Provide a curated config editor for `event.wait` covering event selection, correlation key, filters, timeout, and assign-on-resume.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 15",
       "UX / UI Notes"
@@ -128,7 +128,7 @@
   {
     "id": "F016",
     "description": "Provide a curated config editor for `time.wait` covering mode selection and duration or until-expression entry.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 15",
       "UX / UI Notes"
@@ -154,7 +154,7 @@
   {
     "id": "F019",
     "description": "Keep event-catalog-driven authoring compatible with `event.wait`, including event selection and schema-informed payload-path authoring.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 18"
     ]
