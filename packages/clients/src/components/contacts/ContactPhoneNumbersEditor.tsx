@@ -302,6 +302,7 @@ interface ContactPhoneRowProps {
   canMoveUp: boolean;
   canMoveDown: boolean;
   canRemove: boolean;
+  showReorderControls: boolean;
   onChange: (updates: Partial<EditablePhoneRow>) => void;
   onBlur: () => void;
   onSetDefault: () => void;
@@ -320,6 +321,7 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   canMoveUp,
   canMoveDown,
   canRemove,
+  showReorderControls,
   onChange,
   onBlur,
   onSetDefault,
@@ -396,63 +398,69 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-          <RadioGroup
-            id={`${id}-default-${index}`}
-            name={`${id}-default-phone`}
-            value={row.is_default ? `phone-${index}` : undefined}
-            onChange={() => onSetDefault()}
-            options={[
-              {
-                value: `phone-${index}`,
-                label: t('contactPhoneNumbersEditor.row.defaultLabel', { defaultValue: 'Default' }),
-              },
-            ]}
-            orientation="horizontal"
-            className="gap-2"
-            disabled={disabled}
-          />
-          <Button
-            id={`${id}-move-up-${index}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onMoveUp}
-            disabled={disabled || !canMoveUp}
-            aria-label={t('contactPhoneNumbersEditor.row.moveUp', {
-              defaultValue: 'Move phone {{number}} up',
-              number: index + 1,
-            })}
-          >
-            <ArrowUp className="h-4 w-4" />
-          </Button>
-          <Button
-            id={`${id}-move-down-${index}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onMoveDown}
-            disabled={disabled || !canMoveDown}
-            aria-label={t('contactPhoneNumbersEditor.row.moveDown', {
-              defaultValue: 'Move phone {{number}} down',
-              number: index + 1,
-            })}
-          >
-            <ArrowDown className="h-4 w-4" />
-          </Button>
-          <Button
-            id={`${id}-remove-${index}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onRemove}
-            disabled={disabled || !canRemove}
-            aria-label={t('contactPhoneNumbersEditor.row.remove', {
-              defaultValue: 'Remove phone {{number}}',
-              number: index + 1,
-            })}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {showReorderControls && (
+            <RadioGroup
+              id={`${id}-default-${index}`}
+              name={`${id}-default-phone`}
+              value={row.is_default ? `phone-${index}` : undefined}
+              onChange={() => onSetDefault()}
+              options={[
+                {
+                  value: `phone-${index}`,
+                  label: t('contactPhoneNumbersEditor.row.defaultLabel', { defaultValue: 'Default' }),
+                },
+              ]}
+              orientation="horizontal"
+              className="gap-2"
+              disabled={disabled}
+            />
+          )}
+          {showReorderControls && (
+            <>
+              <Button
+                id={`${id}-move-up-${index}`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onMoveUp}
+                disabled={disabled || !canMoveUp}
+                aria-label={t('contactPhoneNumbersEditor.row.moveUp', {
+                  defaultValue: 'Move phone {{number}} up',
+                  number: index + 1,
+                })}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+              <Button
+                id={`${id}-move-down-${index}`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onMoveDown}
+                disabled={disabled || !canMoveDown}
+                aria-label={t('contactPhoneNumbersEditor.row.moveDown', {
+                  defaultValue: 'Move phone {{number}} down',
+                  number: index + 1,
+                })}
+              >
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+              <Button
+                id={`${id}-remove-${index}`}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onRemove}
+                disabled={disabled || !canRemove}
+                aria-label={t('contactPhoneNumbersEditor.row.remove', {
+                  defaultValue: 'Remove phone {{number}}',
+                  number: index + 1,
+                })}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -803,6 +811,7 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
               canMoveUp={index > 0}
               canMoveDown={index < draftRows.length - 1}
               canRemove={draftRows.length > 0}
+              showReorderControls={draftRows.length > 1}
               onChange={(updates) => handleRowChange(index, updates)}
               onBlur={() => handleRowBlur(index)}
               onSetDefault={() => handleSetDefault(index)}
