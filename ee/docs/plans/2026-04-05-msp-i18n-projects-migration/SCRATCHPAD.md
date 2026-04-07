@@ -150,6 +150,14 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   generator rewrites every pseudo-locale file from current English sources in one pass.
 - **(2026-04-07, validation)** `node scripts/validate-translations.cjs` passes after the
   locale propagation + pseudo generation (8 locales checked, 0 errors, 0 warnings).
+- **(2026-04-07, F005)** Verified template-route namespace loading with the actual
+  resolver via `node_modules/.bin/tsx -e ...getNamespacesForRoute(...)`.
+  Results:
+  `/msp/projects/templates` → `["common","msp/core","features/projects"]`
+  `/msp/projects/templates/123` → `["common","msp/core","features/projects"]`
+  `/msp/projects/templates/create` → `["common","msp/core","features/projects"]`
+  No explicit `ROUTE_NAMESPACES` entries are needed; longest-prefix matching against
+  `/msp/projects` already loads `features/projects` correctly.
 
 ## Commands / Runbooks
 
