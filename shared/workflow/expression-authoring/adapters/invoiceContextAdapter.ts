@@ -8,6 +8,18 @@ const createInvoiceRootSchema = (): SharedExpressionSchemaNode => ({
     number: { type: 'string', description: 'Primary invoice identifier.' },
     issueDate: { type: 'string', description: 'Date the invoice was issued.' },
     dueDate: { type: 'string', description: 'Date the invoice is due.' },
+    recurringServicePeriodStart: {
+      type: 'string',
+      description: 'Canonical recurring invoice service period start date when available.',
+    },
+    recurringServicePeriodEnd: {
+      type: 'string',
+      description: 'Canonical recurring invoice service period end date when available.',
+    },
+    recurringServicePeriodLabel: {
+      type: 'string',
+      description: 'Formatted canonical recurring invoice service period label when available.',
+    },
     poNumber: { type: 'string', description: 'Purchase order number.' },
     subtotal: { type: 'number', description: 'Subtotal before tax and discounts.' },
     tax: { type: 'number', description: 'Tax amount.' },
@@ -33,6 +45,9 @@ const createItemSchema = (): SharedExpressionSchemaNode => ({
     quantity: { type: 'number', description: 'Line item quantity.' },
     unitPrice: { type: 'number', description: 'Line item unit price.' },
     total: { type: 'number', description: 'Line item total.' },
+    servicePeriodStart: { type: 'string', description: 'Line item recurring service period start date when available.' },
+    servicePeriodEnd: { type: 'string', description: 'Line item recurring service period end date when available.' },
+    billingTiming: { type: 'string', description: 'Line item billing timing when available.' },
   },
 });
 

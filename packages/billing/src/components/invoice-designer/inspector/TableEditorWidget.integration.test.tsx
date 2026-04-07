@@ -244,6 +244,14 @@ describe('TableEditorWidget (schema widget integration)', () => {
     });
   });
 
+  it('includes service period row bindings in non-grouped table mapping suggestions', () => {
+    mountTableInspectorAndCanvas({ columns: [] });
+
+    expect(screen.getAllByText('item.servicePeriodStart').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('item.servicePeriodEnd').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('item.billingTiming').length).toBeGreaterThan(0);
+  });
+
   it('reorders columns with move up/down controls', async () => {
     mountTableInspectorAndCanvas({ columns: [
       { id: 'col-description', header: 'Description', key: 'item.description', type: 'text', width: 280 },

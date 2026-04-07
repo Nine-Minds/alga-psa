@@ -82,6 +82,24 @@ const FIELD_DEFINITIONS: Record<string, TemplateFieldDefinition> = {
     category: 'Invoice',
     description: 'The ISO currency code for this invoice.',
   },
+  'invoice.recurringServicePeriodStart': {
+    path: 'invoice.recurringServicePeriodStart',
+    label: 'Recurring Service Period Start',
+    category: 'Invoice',
+    description: 'The canonical recurring invoice service period start date when available.',
+  },
+  'invoice.recurringServicePeriodEnd': {
+    path: 'invoice.recurringServicePeriodEnd',
+    label: 'Recurring Service Period End',
+    category: 'Invoice',
+    description: 'The canonical recurring invoice service period end date when available.',
+  },
+  'invoice.recurringServicePeriodLabel': {
+    path: 'invoice.recurringServicePeriodLabel',
+    label: 'Recurring Service Period',
+    category: 'Invoice',
+    description: 'A formatted canonical recurring invoice service period label when available.',
+  },
   'customer.name': {
     path: 'customer.name',
     label: 'Customer Name',
