@@ -1,7 +1,7 @@
 [
   {"id": "F001", "description": "Audit features/projects.json and list MSP-specific key gaps (taskForm.*, taskDependencies.*, taskTicketLinks.*, projectDetail.*, kanban.*, materials.*, export.*, templates.editor.*, templates.wizard.*, templates.apply.*, templates.list.*, dialogs.*, import.*, filters.deadline.*)", "implemented": true, "prdRefs": ["2b-21b/namespace-gaps"]},
   {"id": "F002", "description": "Extend en/features/projects.json with missing MSP keys under appropriate groups (nested per semantic area)", "implemented": true, "prdRefs": ["2b-21b/namespace-gaps"]},
-  {"id": "F003", "description": "Translate new keys in fr/es/de/nl/it/pl features/projects.json (IT accent audit included)", "implemented": false, "prdRefs": ["2b-21b/non-functional"]},
+  {"id": "F003", "description": "Translate new keys in fr/es/de/nl/it/pl features/projects.json (IT accent audit included)", "implemented": true, "prdRefs": ["2b-21b/non-functional"]},
   {"id": "F004", "description": "Run `node scripts/generate-pseudo-locales.cjs` to regenerate xx/ and yy/ pseudo-locales from updated English source (do NOT hand-edit pseudo-locales)", "implemented": false, "prdRefs": ["2b-21b/non-functional"]},
   {"id": "F005", "description": "Verify /msp/projects/templates, /msp/projects/templates/[id], /msp/projects/templates/create routes transitively load features/projects via /msp/projects prefix match; add explicit ROUTE_NAMESPACES entries if not", "implemented": false, "prdRefs": ["2b-21b/open-questions"]},
 

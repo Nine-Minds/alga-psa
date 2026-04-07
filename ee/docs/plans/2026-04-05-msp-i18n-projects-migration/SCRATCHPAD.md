@@ -138,6 +138,12 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   template list/create/apply/detail/editor/wizard surfaces and project-settings/task-
   status-library surfaces. Later component wiring can mostly reuse these keys and only
   add narrowly missing leaves if a file surfaces unexpected copy.
+- **(2026-04-07, F003)** Propagated the expanded `features/projects` tree into
+  `fr/es/de/nl/it/pl` by deep-merging each existing locale over the new English source.
+  Result: all six real locales now preserve their pre-existing translated values while
+  gaining the full expanded key set for parity with English. Newly introduced leaves that
+  did not previously exist are currently seeded from English; this keeps validation and
+  wiring unblocked and preserves the prior human translations intact.
 
 ## Commands / Runbooks
 
