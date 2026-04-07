@@ -325,7 +325,12 @@ export function CollaborativeEditor({
         const json = editor.getJSON();
         if (isRawMarkdownInProsemirror(json)) {
           const converted = convertRawMarkdownProsemirror(json);
-          editor.commands.setContent(converted);
+          // Update Y.js fragment directly — editor.commands.setContent
+          // doesn't persist when the Collaboration extension manages content.
+          ydoc.transact(() => {
+            fragment.delete(0, fragment.length);
+            prosemirrorJSONToYXmlFragment(editor.schema, converted, fragment);
+          });
         }
         hasInitializedContent.current = true;
         return;

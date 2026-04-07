@@ -15,6 +15,10 @@ const DOCUMENT_ASSIST_SYSTEM_PROMPT = `You are Alga AI, an intelligent assistant
 
 Your role is to help users write, edit, and improve document content. You receive the full document context and a specific instruction from the user.
 
+You may also have access to information about entities associated with this document (tickets, clients, assets, contracts, quotes, etc.) including ticket comment history.
+When the user's instruction references "this ticket", "the client", "the asset", "the resolution", etc., use the entity data provided.
+The "User" field identifies who is writing in the document. You may address them by name when appropriate.
+
 Guidelines:
 - ALWAYS produce document content directly. NEVER ask clarifying questions, present options, or ask what the user wants. If the instruction is ambiguous, make the most reasonable interpretation and act on it.
 - Do not include greetings, sign-offs, or meta-commentary like "Here is..." or "Sure, I can help with that."
@@ -68,6 +72,7 @@ export async function POST(req: NextRequest) {
     documentContext: string;
     documentId?: string;
     tenantId: string;
+    connectedUserNames?: string[];
   };
 
   try {
@@ -79,7 +84,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { instruction, documentContext, documentId, tenantId } = body;
+  const { instruction, documentContext, documentId, tenantId, connectedUserNames } = body;
 
   if (!instruction || !tenantId) {
     return new Response(
@@ -123,6 +128,33 @@ export async function POST(req: NextRequest) {
     ? await resolveDocumentName(tenantId, documentId)
     : 'Untitled';
 
+  // Resolve entity context (best-effort — proceed without on failure)
+  let entityContext = '';
+  if (documentId) {
+    try {
+      const { resolveDocumentEntityContext } = await import('@ee/services/documentAssistContextService');
+      entityContext = await runWithTenant(tenantId, async () => {
+        const { knex } = await createTenantKnex();
+        return resolveDocumentEntityContext(knex, documentId, tenantId);
+      });
+    } catch (error) {
+      console.error('[document-assist] Failed to resolve entity context:', error);
+    }
+  }
+
+  // Build user identity line
+  let userLine = '';
+  if (connectedUserNames && connectedUserNames.length === 1) {
+    userLine = `\nUser: "${connectedUserNames[0]}"`;
+  } else if (connectedUserNames && connectedUserNames.length > 1) {
+    userLine = `\nUsers currently editing: ${connectedUserNames.map(n => `"${n}"`).join(', ')}`;
+  }
+
+  // Build entity context section
+  const entitySection = entityContext
+    ? `\n\n--- Associated Entities ---\n${entityContext}\n--- End Associated Entities ---`
+    : '';
+
   // Resolve AI provider and stream response
   try {
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
@@ -132,11 +164,11 @@ export async function POST(req: NextRequest) {
       { role: 'system' as const, content: DOCUMENT_ASSIST_SYSTEM_PROMPT },
       {
         role: 'user' as const,
-        content: `Document: "${documentName}"
+        content: `Document: "${documentName}"${userLine}
 
 --- Document Content ---
 ${documentContext || '(empty document)'}
---- End Document Content ---
+--- End Document Content ---${entitySection}
 
 Instruction: ${instruction}`,
       },
@@ -145,7 +177,7 @@ Instruction: ${instruction}`,
     const stream = await provider.client.chat.completions.create({
       model: provider.model,
       messages,
-      max_tokens: 2048,
+      max_tokens: 4096,
       temperature: 0.55,
       stream: true,
       ...provider.requestOverrides.resolveTurnOverrides(),

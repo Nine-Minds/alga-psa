@@ -1,4 +1,4 @@
-import TurndownService from 'turndown';
+import { ServerBlockNoteEditor } from '@blocknote/server-util';
 
 export interface BlockNoteBlock {
   type: string;
@@ -7,24 +7,34 @@ export interface BlockNoteBlock {
   children?: BlockNoteBlock[];
 }
 
-export function convertHtmlToBlockNote(html: string): BlockNoteBlock[] {
+// Lazy singleton — avoids re-creating jsdom + Tiptap extensions per call.
+let _serverEditor: ReturnType<typeof ServerBlockNoteEditor.create> | null = null;
+function getServerEditor() {
+  if (!_serverEditor) {
+    _serverEditor = ServerBlockNoteEditor.create();
+  }
+  return _serverEditor;
+}
+
+/**
+ * Convert HTML to BlockNote blocks using BlockNote's own parser.
+ * Handles Outlook CSS, HTML comments, `<style>` blocks, etc. natively.
+ */
+export async function convertHtmlToBlockNote(html: string): Promise<BlockNoteBlock[]> {
   if (!html) return [];
+  const editor = getServerEditor();
+  const blocks = await editor.tryParseHTMLToBlocks(html);
+  return blocks as BlockNoteBlock[];
+}
 
-  // Preprocess HTML to strip newlines from href attributes which break markdown generation
-  const cleanHtml = html.replace(/href="([^"]*)"/g, (match, url) => {
-    return `href="${url.replace(/[\r\n]+/g, '')}"`;
-  });
-
-  const turndownService = new TurndownService({
-    headingStyle: 'atx',
-    codeBlockStyle: 'fenced',
-    bulletListMarker: '-',
-    emDelimiter: '_',
-    strongDelimiter: '**'
-  });
-
-  const markdown = turndownService.turndown(cleanHtml);
-  return convertMarkdownToBlocks(markdown);
+/**
+ * Convert markdown to BlockNote blocks using BlockNote's own parser.
+ */
+export async function convertMarkdownToBlockNote(markdown: string): Promise<BlockNoteBlock[]> {
+  if (!markdown) return [];
+  const editor = getServerEditor();
+  const blocks = await editor.tryParseMarkdownToBlocks(markdown);
+  return blocks as BlockNoteBlock[];
 }
 
 function sanitizeUrl(url: string): string {
