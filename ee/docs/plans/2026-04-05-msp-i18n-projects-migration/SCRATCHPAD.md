@@ -127,6 +127,17 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   buttons, remove actions, document-name placeholder, and unsaved-change dialog.
   `PhaseTaskImportDialog.tsx` needs a large `import.*` subtree for CSV instructions,
   mapping labels, preview stats, unmatched agents/statuses, and completion summaries.
+- **(2026-04-07, F002)** Expanded `server/public/locales/en/features/projects.json`
+  from 128 leaf keys to 665 leaf keys. Added new top-level groups:
+  `projectList`, `quickAdd`, `edit`, `projectDetail`, `taskForm`,
+  `taskDependencies`, `taskTicketLinks`, `taskDocuments`, `materials`, `export`,
+  `import`, `dialogs`, `filters`, `projectInfo`, `projectPhases`, `selectors`,
+  plus large `settings.*` and `templates.*` extensions.
+- **(2026-04-07, F002)** Chose pragmatic scaffolding over late piecemeal key creation:
+  the English namespace now contains concrete fallbacks for all plan groups, including
+  template list/create/apply/detail/editor/wizard surfaces and project-settings/task-
+  status-library surfaces. Later component wiring can mostly reuse these keys and only
+  add narrowly missing leaves if a file surfaces unexpected copy.
 
 ## Commands / Runbooks
 
