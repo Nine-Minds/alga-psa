@@ -86,6 +86,47 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   TaskPrioritySettings. Most are layout/style-only or re-export shims.
 - **(2026-04-05)** `ProjectSettings` is exported from `@alga-psa/projects/components` and
   imported by `server/src/components/settings/SettingsPage.tsx` (Settings page wiring).
+- **(2026-04-07, F001 audit)** Existing `features/projects` keys are enough for:
+  base projects list chrome (`title`, `subtitle`, `searchPlaceholder`, `allStatuses`,
+  `resetFilters`), generic project fields (`fields.*`), summary cards
+  (`taskCompletion`, `budgetHours`, `hoursUsage`, etc.), base task table headers
+  (`tasks.*`), phase shell (`phases.*`), attachments shell (`documents.*`),
+  template status-column management (`templates.statuses.*`), and project/phase status
+  settings (`settings.statuses.*`).
+- **(2026-04-07, F001 audit)** Confirmed missing MSP key groups for sub-batch A:
+  `projectList.*` (filters, empty-state CTAs, row actions, deletion toasts),
+  `quickAdd.*`, `projectDetail.*` (header actions, tabs, metrics, phase actions, search),
+  `taskForm.*` (field labels/placeholders, validation, checklist/deletion/move/duplicate
+  confirmations, prefill copy), `taskDependencies.*`, `taskTicketLinks.*`,
+  `materials.*`, `export.*`, `import.*`, `dialogs.*`, and `filters.deadline.*`.
+- **(2026-04-07, F001 audit)** Confirmed missing MSP key groups for sub-batch B:
+  `templates.list.*`, `templates.create.*`, `templates.apply.*`, `templates.detail.*`,
+  `templates.editor.*`, `templates.taskForm.*`, and `templates.wizard.*` with nested
+  per-step groups (`basics`, `phases`, `tasks`, `review`, `clientPortal`).
+- **(2026-04-07, F001 audit)** Confirmed missing MSP key groups for sub-batch C:
+  `settings.statuses.tenant.*` / project-settings page copy, plus small dialog/filter
+  leaf keys reused by `CreateTaskFromTicketDialog`, `LinkTicketToTaskDialog`,
+  `MoveTaskDialog`, `DuplicateTaskDialog`, `ProjectInfo`, `ProjectTaskStatusSelector`,
+  `ProjectPhases`, `TaskStatusSelect`, `TicketSelect`, and `TaskTypeSelector`.
+- **(2026-04-07, F001 audit)** Reuse decisions from current inventory:
+  keep attachments copy under existing `documents.*` where strings match; add
+  `taskDocuments.*` only for task-specific actions if required.
+  Keep shared generic buttons in `common`.
+  Reuse `tasks.*`, `fields.*`, `phases.*`, and `status.*` before adding narrower keys.
+  Keep all template-related strings in `features/projects` under `templates.*`.
+- **(2026-04-07, F001 audit)** Representative concrete gaps seen in code:
+  `Projects.tsx` needs translations for `Projects`, search/filter placeholders,
+  `Open menu`, and delete success toast.
+  `ProjectQuickAdd.tsx` / `ProjectDetailsEdit.tsx` need full form labels, placeholders,
+  unsaved/save confirmation copy, and portal visibility label.
+  `TaskDependencies.tsx` lacks keys for section title, dependency editor actions, and
+  task picker placeholders.
+  `TaskTicketLinks.tsx` lacks keys for duplicate/invalid ticket toasts, section title,
+  link/create dialog labels, and ticket search filters.
+  `TaskDocumentsSimple.tsx` lacks keys for auth/validation toasts, create/upload/link
+  buttons, remove actions, document-name placeholder, and unsaved-change dialog.
+  `PhaseTaskImportDialog.tsx` needs a large `import.*` subtree for CSV instructions,
+  mapping labels, preview stats, unmatched agents/statuses, and completion summaries.
 
 ## Commands / Runbooks
 
