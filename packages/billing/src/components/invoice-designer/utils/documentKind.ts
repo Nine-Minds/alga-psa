@@ -10,14 +10,34 @@ const hasQuoteBindingCatalog = (bindings: unknown): boolean => {
 
   const values = (bindings as { values?: Record<string, unknown> }).values;
   const collections = (bindings as { collections?: Record<string, unknown> }).collections;
-  return Boolean(
-    (values &&
+
+  const hasQuoteSpecificValueBinding = Boolean(
+    values &&
       typeof values === 'object' &&
-      ('quoteNumber' in values || 'recurringTotal' in values || 'clientName' in values)) ||
-      (collections &&
-        typeof collections === 'object' &&
-        ('lineItems' in collections || 'recurringItems' in collections || 'serviceItems' in collections))
+      (
+        'quoteNumber' in values ||
+        'quoteDate' in values ||
+        'validUntil' in values ||
+        'clientName' in values ||
+        'contactName' in values ||
+        'tenantName' in values ||
+        'discountTotal' in values ||
+        'serviceSubtotal' in values ||
+        'productSubtotal' in values
+      )
   );
+
+  const hasQuoteSpecificCollectionBinding = Boolean(
+    collections &&
+      typeof collections === 'object' &&
+      (
+        'phases' in collections ||
+        'serviceItems' in collections ||
+        'productItems' in collections
+      )
+  );
+
+  return hasQuoteSpecificValueBinding || hasQuoteSpecificCollectionBinding;
 };
 
 export const resolveDesignerDocumentKind = (nodes: DesignerNode[]): DesignerDocumentKind => {

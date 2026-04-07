@@ -312,6 +312,18 @@ const Invoice = {
       return 0;
     };
     const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+    const normalizeDateLikeString = (value: unknown): string => {
+      if (typeof value === 'string') {
+        return value.trim();
+      }
+      if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        const year = value.getUTCFullYear();
+        const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(value.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      return '';
+    };
 
     const invoice = await knexOrTrx('invoices')
       .select(
@@ -331,7 +343,7 @@ const Invoice = {
       throw new Error('Invoice not found');
     }
 
-    const [invoiceChargesRaw, client, contact, logoUrl, tenantClientDetails] = await Promise.all([
+    const [invoiceChargesRaw, client, contact, logoUrl, tenantClientDetails, recurringInvoiceSummaryRows] = await Promise.all([
       Invoice.getInvoiceCharges(knexOrTrx, tenant, invoiceId),
       knexOrTrx('clients as c')
         .leftJoin('client_locations as cl', function () {
@@ -396,6 +408,18 @@ const Invoice = {
         .whereNull('tc.deleted_at')
         .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
         .first(),
+      knexOrTrx('recurring_service_periods')
+        .select(
+          'service_period_start',
+          'service_period_end',
+          'invoice_window_start',
+          'invoice_window_end',
+          'cadence_owner'
+        )
+        .where({
+          tenant,
+          invoice_id: invoiceId,
+        }),
     ]);
 
     if (!client) {
@@ -447,6 +471,32 @@ const Invoice = {
       tenantClient = await resolveTenantNameFallback();
     }
 
+    const recurringSummaryRows = Array.isArray(recurringInvoiceSummaryRows) ? recurringInvoiceSummaryRows : [];
+    const recurringServicePeriodStarts = recurringSummaryRows
+      .map((row) => normalizeDateLikeString(row.service_period_start))
+      .filter((value) => value.length > 0)
+      .sort();
+    const recurringServicePeriodEnds = recurringSummaryRows
+      .map((row) => normalizeDateLikeString(row.service_period_end))
+      .filter((value) => value.length > 0)
+      .sort();
+    const recurringInvoiceWindowStarts = recurringSummaryRows
+      .map((row) => normalizeDateLikeString(row.invoice_window_start))
+      .filter((value) => value.length > 0)
+      .sort();
+    const recurringInvoiceWindowEnds = recurringSummaryRows
+      .map((row) => normalizeDateLikeString(row.invoice_window_end))
+      .filter((value) => value.length > 0)
+      .sort();
+    const cadenceOwners = Array.from(
+      new Set(
+        recurringSummaryRows
+          .map((row) => asTrimmedString(row.cadence_owner))
+          .filter((value) => value === 'contract' || value === 'client')
+      )
+    );
+    const recurringCadenceOwner = cadenceOwners.length === 1 ? cadenceOwners[0] : null;
+
     const invoiceCharges: IInvoiceCharge[] = invoiceChargesRaw.map((item) => ({
       ...item,
       quantity: parseMinorUnit(item.quantity),
@@ -493,7 +543,23 @@ const Invoice = {
       credit_applied: creditApplied,
       billing_cycle_id: invoice.billing_cycle_id,
       is_manual: Boolean(invoice.is_manual),
-      tax_source: invoice.tax_source || 'internal'
+      tax_source: invoice.tax_source || 'internal',
+      recurring_service_period_start: recurringServicePeriodStarts[0] || null,
+      recurring_service_period_end: recurringServicePeriodEnds[recurringServicePeriodEnds.length - 1] || null,
+      recurring_invoice_window_start: recurringInvoiceWindowStarts[0] || null,
+      recurring_invoice_window_end: recurringInvoiceWindowEnds[recurringInvoiceWindowEnds.length - 1] || null,
+      recurring_execution_window_kind:
+        recurringCadenceOwner === 'contract'
+          ? 'contract_cadence_window'
+          : recurringCadenceOwner === 'client'
+            ? 'client_cadence_window'
+            : null,
+      recurring_cadence_source:
+        recurringCadenceOwner === 'contract'
+          ? 'contract_anniversary'
+          : recurringCadenceOwner === 'client'
+            ? 'client_schedule'
+            : null,
     };
   },
 
