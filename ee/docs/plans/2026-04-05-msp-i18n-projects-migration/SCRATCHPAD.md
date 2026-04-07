@@ -144,6 +144,12 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   gaining the full expanded key set for parity with English. Newly introduced leaves that
   did not previously exist are currently seeded from English; this keeps validation and
   wiring unblocked and preserves the prior human translations intact.
+- **(2026-04-07, F004)** Ran `node scripts/generate-pseudo-locales.cjs` after the
+  namespace expansion. Regenerated `xx/features/projects.json` and
+  `yy/features/projects.json`; the run also refreshed `xx/common.json` because the pseudo
+  generator rewrites every pseudo-locale file from current English sources in one pass.
+- **(2026-04-07, validation)** `node scripts/validate-translations.cjs` passes after the
+  locale propagation + pseudo generation (8 locales checked, 0 errors, 0 warnings).
 
 ## Commands / Runbooks
 
