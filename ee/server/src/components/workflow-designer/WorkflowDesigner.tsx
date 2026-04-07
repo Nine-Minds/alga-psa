@@ -3080,6 +3080,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       case 'state.set': return <Database className={iconClass} />;
       case 'transform.assign': return <Settings className={iconClass} />;
       case 'event.wait': return <Clock className={iconClass} />;
+      case 'time.wait': return <Clock className={iconClass} />;
       case 'human.task': return <User className={iconClass} />;
       case 'action.call': return <Zap className={iconClass} />;
       default: return <Box className={iconClass} />;
@@ -5626,7 +5627,11 @@ const FIELD_METADATA: Record<string, { label: string; description?: string; adva
   onError: { label: 'Error Handling', description: 'How to handle errors', advanced: true },
   eventName: { label: 'Event Name', description: 'Name of the event to wait for' },
   correlationKey: { label: 'Correlation Key', description: 'Expression to match incoming events' },
+  filters: { label: 'Payload Filters', description: 'Optional event payload filters (AND semantics)' },
   timeoutMs: { label: 'Timeout (ms)', description: 'Maximum time to wait in milliseconds', advanced: true },
+  mode: { label: 'Wait Mode', description: 'Duration or until time' },
+  durationMs: { label: 'Duration (ms)', description: 'Relative duration in milliseconds' },
+  until: { label: 'Until', description: 'Expression resolving to an absolute date/time' },
   state: { label: 'State Name', description: 'The state to transition to' },
   assign: { label: 'Assignments', description: 'Variables to assign' },
   taskType: { label: 'Task Type', description: 'Type of human task' },

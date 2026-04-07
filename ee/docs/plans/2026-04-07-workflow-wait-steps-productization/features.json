@@ -1,0 +1,191 @@
+[
+  {
+    "id": "F001",
+    "description": "Formalize workflow shared typing so `event.wait` is explicitly recognized as a supported step shape instead of only a generic node fallback.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 1",
+      "Functional Requirements 2"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Extend the `event.wait` config schema to support an optional structured `filters` array.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 3"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Support the agreed v1 filter operators for `event.wait`: equals, not-equals, in/not-in, existence, relational, and string-prefix/suffix/contains operators.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 4"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Constrain v1 event filters to scalar payload-field matching with array literals allowed on the right side for `in` and `not_in`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 5",
+      "Functional Requirements 6"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Apply all `event.wait` filter clauses using AND semantics.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 7"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Update event-ingestion matching so it evaluates `eventName`, `correlationKey`, tenant scope, and payload filters before resuming a wait.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 8"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Keep `event.wait` timeout and try/catch behavior compatible with existing runtime semantics.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 9"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Preserve backward compatibility so existing `event.wait` definitions without filters continue to publish and run unchanged.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 1",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Add a new `time.wait` node step to the default workflow node registry.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 10"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Support relative-duration waits in `time.wait`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 11"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Support absolute or computed until-date waits in `time.wait`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 12"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Resume due `time.wait` entries through the existing worker/runtime wait pickup flow.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 13"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Expose `Wait for Event` as a first-class palette step in the workflow designer.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 14",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Expose `Wait for Time` as a first-class palette step in the workflow designer.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 14",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Provide a curated config editor for `event.wait` covering event selection, correlation key, filters, timeout, and assign-on-resume.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 15",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Provide a curated config editor for `time.wait` covering mode selection and duration or until-expression entry.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 15",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Show useful wait metadata in pipeline cards and run detail surfaces, including event name, filter count, timeout, and scheduled resume time as appropriate.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 16",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Add publish-time validation for malformed wait configuration and keep assignment-path validation for both wait step types.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 17"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Keep event-catalog-driven authoring compatible with `event.wait`, including event selection and schema-informed payload-path authoring.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 18"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Use existing wait persistence columns where practical, storing filter and time-wait metadata in wait payloads and introducing a `time` wait type rather than broad schema churn.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Define and support event-field presentation metadata for wait filters so eligible event fields can render typed picker controls such as status, client, contact, or user pickers.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements 19",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Make the wait-filter editor fall back cleanly from picker metadata to enum or primitive controls when no typed picker is available for an event field.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 20",
+      "Data / API / Integrations",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]

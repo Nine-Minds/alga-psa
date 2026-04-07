@@ -123,6 +123,50 @@ export class WorkflowRuntimeV2Worker {
       await this.runtime.executeRun(knex, wait.run_id, this.workerId);
     }
 
+    // Process due time waits
+    const timeWaits = await WorkflowRunWaitModelV2.listDueTimeWaits(knex);
+    if (this.verbose && timeWaits.length > 0) {
+      logger.info('[WorkflowRuntimeV2Worker] Due time waits', { workerId: this.workerId, count: timeWaits.length });
+    } else {
+      logger.debug('[WorkflowRuntimeV2Worker] Due time waits', { workerId: this.workerId, count: timeWaits.length });
+    }
+    for (const wait of timeWaits) {
+      const run = await WorkflowRunModelV2.getById(knex, wait.run_id);
+      if (!run) {
+        await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'RESOLVED', resolved_at: new Date().toISOString() });
+        continue;
+      }
+      if (run.status === 'CANCELED') {
+        await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'CANCELED', resolved_at: new Date().toISOString() });
+        continue;
+      }
+      logger.debug('[WorkflowRuntimeV2Worker] Resolving time wait', {
+        workerId: this.workerId,
+        waitId: wait.wait_id,
+        runId: wait.run_id,
+        stepPath: wait.step_path,
+        timeoutAt: wait.timeout_at ?? null,
+      });
+      await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'RESOLVED', resolved_at: new Date().toISOString() });
+      await WorkflowRunModelV2.update(knex, wait.run_id, {
+        status: 'RUNNING',
+        resume_error: null,
+        resume_event_name: 'TIME_WAIT_RESUMED',
+        resume_event_payload: wait.payload ?? { dueAt: wait.timeout_at ?? null }
+      });
+      await WorkflowRunLogModelV2.create(knex, {
+        run_id: run.run_id,
+        tenant_id: run.tenant_id ?? null,
+        step_path: wait.step_path,
+        level: 'INFO',
+        message: 'Time wait resolved',
+        context_json: { waitId: wait.wait_id, dueAt: wait.timeout_at ?? null },
+        source: 'worker'
+      });
+      logger.debug('[WorkflowRuntimeV2Worker] Executing run (time wait)', { workerId: this.workerId, runId: wait.run_id });
+      await this.runtime.executeRun(knex, wait.run_id, this.workerId);
+    }
+
     // Process runnable runs
     let runnableCount = 0;
     while (true) {
@@ -137,6 +181,7 @@ export class WorkflowRuntimeV2Worker {
       workerId: this.workerId,
       dueRetries: retryWaits.length,
       dueTimeouts: timeoutWaits.length,
+      dueTimeWaits: timeWaits.length,
       acquiredRuns: runnableCount,
       durationMs: Date.now() - tickStartedAt,
     });

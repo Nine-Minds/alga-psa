@@ -705,7 +705,7 @@ export class WorkflowRuntimeV2 {
           );
         }
       },
-      publishWait: async (wait: { type: 'event' | 'human'; key?: string; eventName?: string; timeoutAt?: string; payload?: unknown }) => {
+      publishWait: async (wait: { type: 'event' | 'human' | 'time'; key?: string; eventName?: string; timeoutAt?: string; payload?: unknown }) => {
         const waitRecord = await WorkflowRunWaitModelV2.create(knex, {
           run_id: run.run_id,
           step_path: path,

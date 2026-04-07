@@ -23,7 +23,7 @@ export type NodeHandlerContext = {
       options?: { idempotencyKey?: string; stepConfig?: unknown }
     ) => Promise<any>;
   };
-  publishWait: (wait: { type: 'event' | 'human'; key?: string; eventName?: string; timeoutAt?: string; payload?: unknown }) => Promise<void>;
+  publishWait: (wait: { type: 'event' | 'human' | 'time'; key?: string; eventName?: string; timeoutAt?: string; payload?: unknown }) => Promise<void>;
   resumeEvent?: { name: string; payload: unknown } | null;
   resumeError?: { category?: string; message?: string } | null;
   knex?: any;

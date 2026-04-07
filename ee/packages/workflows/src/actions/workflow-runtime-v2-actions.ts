@@ -27,8 +27,10 @@ import {
   validateWorkflowDefinition,
   validateInputMapping,
   resolveInputMapping,
+  evaluateEventWaitFilters,
   createSecretResolverFromProvider,
   verifySecretsExist,
+  type EventWaitFilter,
   type WorkflowTrigger,
   type PublishError
 } from '@alga-psa/workflows/runtime';
@@ -3075,13 +3077,20 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
     });
 
     try {
-      const wait = await WorkflowRunWaitModelV2.findEventWait(
+      const waits = await WorkflowRunWaitModelV2.listEventWaitCandidates(
         trx,
         parsed.eventName,
         parsed.correlationKey,
         tenant,
         ['event', 'human']
       );
+      const wait = waits.find((candidate) => {
+        if (candidate.wait_type !== 'event') {
+          return true;
+        }
+        const payload = candidate.payload as { filters?: EventWaitFilter[] } | null | undefined;
+        return evaluateEventWaitFilters(parsed.payload, payload?.filters);
+      }) ?? null;
       if (!wait) {
         return;
       }

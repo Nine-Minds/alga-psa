@@ -70,6 +70,30 @@ const WorkflowRunWaitModelV2 = {
     return record || null;
   },
 
+  listEventWaitCandidates: async (
+    knex: Knex,
+    eventName: string,
+    key: string,
+    tenantId?: string | null,
+    waitTypes: string[] = ['event']
+  ): Promise<WorkflowRunWaitRecord[]> => {
+    let query = knex<WorkflowRunWaitRecord>('workflow_run_waits')
+      .whereIn('workflow_run_waits.wait_type', waitTypes)
+      .where('workflow_run_waits.event_name', eventName)
+      .where('workflow_run_waits.key', key)
+      .where('workflow_run_waits.status', 'WAITING')
+      .orderBy('workflow_run_waits.created_at', 'asc');
+
+    if (tenantId) {
+      query = query
+        .join('workflow_runs', 'workflow_run_waits.run_id', 'workflow_runs.run_id')
+        .where('workflow_runs.tenant_id', tenantId)
+        .select('workflow_run_waits.*');
+    }
+
+    return query;
+  },
+
   listDueRetries: async (knex: Knex): Promise<WorkflowRunWaitRecord[]> => {
     return knex<WorkflowRunWaitRecord>('workflow_run_waits')
       .where({
@@ -83,6 +107,16 @@ const WorkflowRunWaitModelV2 = {
     return knex<WorkflowRunWaitRecord>('workflow_run_waits')
       .where({
         wait_type: 'event',
+        status: 'WAITING'
+      })
+      .whereNotNull('timeout_at')
+      .andWhere('timeout_at', '<=', knex.fn.now());
+  },
+
+  listDueTimeWaits: async (knex: Knex): Promise<WorkflowRunWaitRecord[]> => {
+    return knex<WorkflowRunWaitRecord>('workflow_run_waits')
+      .where({
+        wait_type: 'time',
         status: 'WAITING'
       })
       .whereNotNull('timeout_at')

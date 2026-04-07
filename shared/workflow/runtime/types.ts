@@ -111,16 +111,151 @@ export type ControlStepType =
   | 'control.callWorkflow'
   | 'control.return';
 
+export const eventWaitFilterOperatorSchema = z.enum([
+  '=',
+  '!=',
+  'in',
+  'not_in',
+  'exists',
+  'not_exists',
+  '>',
+  '>=',
+  '<',
+  '<=',
+  'contains',
+  'starts_with',
+  'ends_with'
+]);
+
+export type EventWaitFilterOperator = z.infer<typeof eventWaitFilterOperatorSchema>;
+
+export const eventWaitFilterScalarSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+export type EventWaitFilterScalar = z.infer<typeof eventWaitFilterScalarSchema>;
+
+export const eventWaitFilterSchema = z.object({
+  path: z.string().min(1),
+  op: eventWaitFilterOperatorSchema,
+  value: z.union([eventWaitFilterScalarSchema, z.array(eventWaitFilterScalarSchema)]).optional()
+}).strict().superRefine((filter, ctx) => {
+  if (filter.op === 'in' || filter.op === 'not_in') {
+    if (!Array.isArray(filter.value)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['value'],
+        message: `${filter.op} requires an array value`
+      });
+    }
+    return;
+  }
+
+  if (filter.op === 'exists' || filter.op === 'not_exists') {
+    if (filter.value !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['value'],
+        message: `${filter.op} does not accept a value`
+      });
+    }
+    return;
+  }
+
+  if (Array.isArray(filter.value)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['value'],
+      message: `${filter.op} does not accept an array value`
+    });
+    return;
+  }
+
+  if (filter.value === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['value'],
+      message: `${filter.op} requires a value`
+    });
+    return;
+  }
+
+  if ((filter.op === 'contains' || filter.op === 'starts_with' || filter.op === 'ends_with') && typeof filter.value !== 'string') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['value'],
+      message: `${filter.op} requires a string value`
+    });
+  }
+});
+
+export type EventWaitFilter = z.infer<typeof eventWaitFilterSchema>;
+
+export const eventWaitConfigSchema = z.object({
+  eventName: z.string().min(1),
+  correlationKey: exprSchema,
+  filters: z.array(eventWaitFilterSchema).optional(),
+  timeoutMs: z.number().int().positive().optional(),
+  assign: z.record(exprSchema).optional()
+}).strict();
+
+export type EventWaitConfig = z.infer<typeof eventWaitConfigSchema>;
+
+export const timeWaitConfigSchema = z.object({
+  mode: z.enum(['duration', 'until']),
+  durationMs: z.number().int().positive().optional(),
+  until: exprSchema.optional(),
+  assign: z.record(exprSchema).optional()
+}).strict().superRefine((config, ctx) => {
+  if (config.mode === 'duration') {
+    if (!config.durationMs) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['durationMs'],
+        message: 'duration mode requires durationMs'
+      });
+    }
+    return;
+  }
+
+  if (!config.until) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['until'],
+      message: 'until mode requires an until expression'
+    });
+  }
+});
+
+export type TimeWaitConfig = z.infer<typeof timeWaitConfigSchema>;
+
 export type NodeStepType = Exclude<string, ControlStepType>;
 
-export type NodeStep = {
+export type GenericNodeStep = {
   id: string;
-  type: NodeStepType;
+  type: Exclude<NodeStepType, 'event.wait' | 'time.wait'>;
   name?: string;
   config?: unknown;
   retry?: RetryPolicy;
   onError?: OnErrorPolicy;
 };
+
+export type EventWaitStep = {
+  id: string;
+  type: 'event.wait';
+  name?: string;
+  config: EventWaitConfig;
+  retry?: RetryPolicy;
+  onError?: OnErrorPolicy;
+};
+
+export type TimeWaitStep = {
+  id: string;
+  type: 'time.wait';
+  name?: string;
+  config: TimeWaitConfig;
+  retry?: RetryPolicy;
+  onError?: OnErrorPolicy;
+};
+
+export type NodeStep = GenericNodeStep | EventWaitStep | TimeWaitStep;
 
 export type IfBlock = {
   id: string;
@@ -174,6 +309,24 @@ export const nodeStepSchema = z.object({
   ),
   name: z.string().optional(),
   config: z.unknown().optional(),
+  retry: retryPolicySchema.optional(),
+  onError: onErrorPolicySchema.optional()
+}).strict();
+
+export const eventWaitStepSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('event.wait'),
+  name: z.string().optional(),
+  config: eventWaitConfigSchema,
+  retry: retryPolicySchema.optional(),
+  onError: onErrorPolicySchema.optional()
+}).strict();
+
+export const timeWaitStepSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('time.wait'),
+  name: z.string().optional(),
+  config: timeWaitConfigSchema,
   retry: retryPolicySchema.optional(),
   onError: onErrorPolicySchema.optional()
 }).strict();
@@ -250,6 +403,10 @@ const stepSchemaInner = z.unknown().transform((val, ctx) => {
       return parseAndReturn(callWorkflowBlockSchema);
     case 'control.return':
       return parseAndReturn(returnStepSchema);
+    case 'event.wait':
+      return parseAndReturn(eventWaitStepSchema);
+    case 'time.wait':
+      return parseAndReturn(timeWaitStepSchema);
     default:
       return parseAndReturn(nodeStepSchema);
   }

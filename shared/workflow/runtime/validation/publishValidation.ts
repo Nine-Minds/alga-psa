@@ -298,6 +298,28 @@ function validateNodeStep(
         }
       }
     }
+
+    if (step.type === 'time.wait') {
+      const config = step.config as { assign?: Record<string, { $expr: string }> };
+      if (config?.assign) {
+        for (const path of Object.keys(config.assign)) {
+          validateAssignmentPath(path, stepPath, step.id, errors);
+        }
+      }
+      if (config?.assign && payloadSchemaJson) {
+        for (const path of Object.keys(config.assign)) {
+          if (!isAllowedAssignPath(path, payloadSchemaJson)) {
+            warnings.push({
+              severity: 'warning',
+              stepPath,
+              stepId: step.id,
+              code: 'ASSIGN_PATH_UNKNOWN',
+              message: `Assign path may be invalid: ${path}`
+            });
+          }
+        }
+      }
+    }
   }
 }
 
