@@ -543,6 +543,10 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-08, F063 check)** `node_modules/.bin/eslint
   packages/projects/src/components/project-templates/wizard-steps/TemplateBasicsStep.tsx`
   passes cleanly with 0 warnings / 0 errors.
+- **(2026-04-08, F064)** Confirmed
+  `packages/projects/src/components/project-templates/AddTemplateDialog.tsx` is a zero-
+  string wrapper around `TemplateCreationWizard`. It introduces no user-visible copy and
+  requires no i18n wiring of its own, so this item is N/A by design.
 
 ## Commands / Runbooks
 
