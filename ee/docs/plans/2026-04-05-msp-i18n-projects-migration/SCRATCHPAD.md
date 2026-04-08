@@ -471,6 +471,20 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   packages/projects/src/components/project-templates/wizard-steps/TemplateReviewStep.tsx`
   passes with pre-existing warnings only (unused `Layers` import and unused `index`
   callback arg; 4 warnings, 0 errors).
+- **(2026-04-08, F058)** Wired
+  `packages/projects/src/components/project-templates/wizard-steps/TemplatePhasesStep.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the step title and
+  intro, empty state, phase-form labels/placeholders/help copy, validation message,
+  done/cancel actions, duration/start/task summaries, add-phase buttons, reorder hint,
+  recalculate CTAs, and the phase-timing explainer alert.
+- **(2026-04-08, F058)** Extended `templates.wizard.phases.*` for the wizard-step gaps
+  only: `intro`, `addFirstPhase`, `phaseNameRequired`, `daysAfterProjectStart`,
+  `tasksCount`, reorder/recalculate copy, and the structured about-timing labels/help
+  text. Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran
+  translation validation successfully.
+- **(2026-04-08, F058 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/wizard-steps/TemplatePhasesStep.tsx`
+  passes cleanly with 0 warnings / 0 errors.
 
 ## Commands / Runbooks
 

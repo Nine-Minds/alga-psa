@@ -8,6 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Plus, Trash2, Edit2, Check, X, GripVertical, Layers, Calculator } from 'lucide-react';
 import type { TemplatePhase, TemplateWizardData } from '../../../types/templateWizard';
+import { useTranslation } from 'react-i18next';
 
 interface TemplatePhasesStepProps {
   data: TemplateWizardData;
@@ -47,6 +48,7 @@ export function TemplatePhasesStep({
   data,
   updateData,
 }: TemplatePhasesStepProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [editingPhaseId, setEditingPhaseId] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [saveAttempted, setSaveAttempted] = useState<Set<string>>(new Set());
@@ -130,9 +132,11 @@ export function TemplatePhasesStep({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Project Phases</h3>
+        <h3 className="text-lg font-semibold">
+          {t('templates.wizard.phases.title', 'Project Phases')}
+        </h3>
         <p className="text-sm text-gray-600">
-          Break down your project into phases. Each phase can have its own tasks and timeline.
+          {t('templates.wizard.phases.intro', 'Break down your project into phases. Each phase can have its own tasks and timeline.')}
         </p>
       </div>
 
@@ -140,10 +144,12 @@ export function TemplatePhasesStep({
         {data.phases.length === 0 ? (
           <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
             <Layers className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-600 mb-4">No phases added yet</p>
+            <p className="text-gray-600 mb-4">
+              {t('templates.wizard.phases.empty', 'No phases added yet')}
+            </p>
             <Button id="add-first-phase" onClick={addPhase}>
               <Plus className="w-4 h-4 mr-2" />
-              Add First Phase
+              {t('templates.wizard.phases.addFirstPhase', 'Add First Phase')}
             </Button>
           </div>
         ) : (
@@ -164,32 +170,32 @@ export function TemplatePhasesStep({
                   {editingPhaseId === phase.temp_id ? (
                     <div className="space-y-3">
                       <div>
-                        <Label>Phase Name *</Label>
+                        <Label>{t('templates.wizard.phases.phaseName', 'Phase Name *')}</Label>
                         <Input
                           value={phase.phase_name}
                           onChange={(e) =>
                             updatePhase(phase.temp_id, { phase_name: e.target.value })
                           }
-                          placeholder="e.g., Planning, Development, Testing"
+                          placeholder={t('templates.wizard.phases.phaseNamePlaceholder', 'e.g., Planning, Development, Testing')}
                           autoFocus
                         />
                       </div>
 
                       <div>
-                        <Label>Description</Label>
+                        <Label>{t('templates.wizard.phases.descriptionLabel', 'Description')}</Label>
                         <TextArea
                           value={phase.description || ''}
                           onChange={(e) =>
                             updatePhase(phase.temp_id, { description: e.target.value })
                           }
-                          placeholder="Describe what happens in this phase..."
+                          placeholder={t('templates.wizard.phases.descriptionPlaceholder', 'Describe what happens in this phase...')}
                           rows={2}
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label>Duration (days)</Label>
+                          <Label>{t('templates.wizard.phases.duration', 'Duration (days)')}</Label>
                           <Input
                             type="number"
                             min="0"
@@ -199,12 +205,12 @@ export function TemplatePhasesStep({
                                 duration_days: e.target.value ? parseInt(e.target.value) : undefined,
                               })
                             }
-                            placeholder="Optional"
+                            placeholder={t('templates.wizard.phases.optionalPlaceholder', 'Optional')}
                           />
                         </div>
 
                         <div>
-                          <Label>Start Offset (days)</Label>
+                          <Label>{t('templates.wizard.phases.startOffset', 'Start Offset (days)')}</Label>
                           <Input
                             type="number"
                             min="0"
@@ -216,7 +222,7 @@ export function TemplatePhasesStep({
                             }
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            Days after project start
+                            {t('templates.wizard.phases.daysAfterProjectStart', 'Days after project start')}
                           </p>
                         </div>
                       </div>
@@ -224,7 +230,7 @@ export function TemplatePhasesStep({
                       <div>
                         {!phase.phase_name.trim() && saveAttempted.has(phase.temp_id) && (
                           <p className="text-sm text-destructive mb-2">
-                            Phase name is required
+                            {t('templates.wizard.phases.phaseNameRequired', 'Phase name is required')}
                           </p>
                         )}
                         <div className="flex gap-2">
@@ -245,7 +251,7 @@ export function TemplatePhasesStep({
                             }}
                           >
                             <Check className="w-4 h-4 mr-1" />
-                            Done
+                            {t('templates.wizard.tasks.done', 'Done')}
                           </Button>
                           <Button
                             id={`cancel-phase-${phase.temp_id}`}
@@ -265,7 +271,7 @@ export function TemplatePhasesStep({
                             }}
                           >
                             <X className="w-4 h-4 mr-1" />
-                            Cancel
+                            {t('common:actions.cancel', 'Cancel')}
                           </Button>
                         </div>
                       </div>
@@ -308,14 +314,23 @@ export function TemplatePhasesStep({
 
                         <div className="flex gap-4 text-sm text-gray-600">
                           {phase.duration_days && (
-                            <span>Duration: {phase.duration_days} days</span>
+                            <span>
+                              {t('templates.wizard.phases.durationSummary', 'Duration: {{days}} days', {
+                                days: phase.duration_days,
+                              })}
+                            </span>
                           )}
                           {phase.start_offset_days > 0 && (
-                            <span>Starts: +{phase.start_offset_days} days</span>
+                            <span>
+                              {t('templates.wizard.phases.startSummary', 'Starts: +{{days}} days', {
+                                days: phase.start_offset_days,
+                              })}
+                            </span>
                           )}
                           <span>
-                            Tasks:{' '}
-                            {data.tasks.filter((t) => t.phase_temp_id === phase.temp_id).length}
+                            {t('templates.wizard.phases.tasksCount', 'Tasks: {{count}}', {
+                              count: data.tasks.filter((t) => t.phase_temp_id === phase.temp_id).length,
+                            })}
                           </span>
                         </div>
                       </div>
@@ -331,7 +346,7 @@ export function TemplatePhasesStep({
               className="w-full"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Phase
+              {t('projectPhases.addPhase', 'Add Phase')}
             </Button>
           </>
         )}
@@ -341,7 +356,7 @@ export function TemplatePhasesStep({
       {showRecalculateHint && data.phases.length > 1 && (
         <Alert variant="warning" className="flex items-center justify-between">
           <AlertDescription>
-            Phases reordered. Would you like to recalculate offsets based on phase order and durations?
+            {t('templates.wizard.phases.reorderedHint', 'Phases reordered. Would you like to recalculate offsets based on phase order and durations?')}
           </AlertDescription>
           <div className="flex gap-2">
             <Button
@@ -351,7 +366,7 @@ export function TemplatePhasesStep({
               onClick={handleRecalculateOffsets}
             >
               <Calculator className="w-4 h-4 mr-1" />
-              Recalculate
+              {t('templates.wizard.phases.recalculate', 'Recalculate')}
             </Button>
             <Button
               id="dismiss-recalculate"
@@ -376,22 +391,22 @@ export function TemplatePhasesStep({
             className="text-gray-600"
           >
             <Calculator className="w-4 h-4 mr-1" />
-            Recalculate Offsets
+            {t('templates.wizard.phases.recalculateOffsets', 'Recalculate Offsets')}
           </Button>
         </div>
       )}
 
       <Alert variant="info">
-        <AlertTitle>About Phase Timing</AlertTitle>
+        <AlertTitle>{t('templates.wizard.phases.aboutTimingTitle', 'About Phase Timing')}</AlertTitle>
         <AlertDescription>
-          <strong>Start Offset:</strong> Days after the project start date when this phase begins.
-          New phases auto-calculate their offset based on preceding phases.
+          <strong>{t('templates.wizard.phases.startOffsetLabel', 'Start Offset')}:</strong>{' '}
+          {t('templates.wizard.phases.aboutTimingStartOffset', 'Days after the project start date when this phase begins. New phases auto-calculate their offset based on preceding phases.')}
           <br />
-          <strong>Duration:</strong> How long this phase typically takes. Used to calculate the next
-          phase's offset.
+          <strong>{t('templates.wizard.phases.durationLabel', 'Duration')}:</strong>{' '}
+          {t('templates.wizard.phases.aboutTimingDuration', `How long this phase typically takes. Used to calculate the next phase's offset.`)}
           <br />
-          <strong>Tip:</strong> After reordering phases, use "Recalculate Offsets" to update timing
-          based on the new order.
+          <strong>{t('templates.wizard.phases.tipLabel', 'Tip')}:</strong>{' '}
+          {t('templates.wizard.phases.aboutTimingTip', 'After reordering phases, use "Recalculate Offsets" to update timing based on the new order.')}
         </AlertDescription>
       </Alert>
     </div>
