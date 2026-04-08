@@ -582,7 +582,9 @@
       "selectTargetError": "Veuillez sélectionner une phase cible.",
       "selectDifferentTargetError": "Veuillez sélectionner une phase ou un statut différent pour déplacer la tâche.",
       "message": "Déplacer la tâche \"{{taskName}}\" vers une nouvelle phase/un nouveau statut :",
-      "placeholder": "Sélectionner le projet/la phase/le statut cible..."
+      "placeholder": "Sélectionner le projet/la phase/le statut cible...",
+      "moving": "Moving...",
+      "confirm": "Confirm Move"
     },
     "duplicateTask": {
       "title": "Dupliquer la tâche",

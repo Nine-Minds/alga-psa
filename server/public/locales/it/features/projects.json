@@ -582,7 +582,9 @@
       "selectTargetError": "Seleziona una fase di destinazione.",
       "selectDifferentTargetError": "Seleziona una fase o uno stato diverso per spostare l’attività.",
       "message": "Sposta l’attività \"{{taskName}}\" in una nuova fase/stato:",
-      "placeholder": "Seleziona progetto/fase/stato di destinazione..."
+      "placeholder": "Seleziona progetto/fase/stato di destinazione...",
+      "moving": "Moving...",
+      "confirm": "Confirm Move"
     },
     "duplicateTask": {
       "title": "Duplica attività",

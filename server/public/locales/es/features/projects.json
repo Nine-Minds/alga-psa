@@ -582,7 +582,9 @@
       "selectTargetError": "Selecciona una fase de destino.",
       "selectDifferentTargetError": "Selecciona una fase o estado diferente para mover la tarea.",
       "message": "Mover la tarea \"{{taskName}}\" a una nueva fase/estado:",
-      "placeholder": "Seleccionar proyecto/fase/estado de destino..."
+      "placeholder": "Seleccionar proyecto/fase/estado de destino...",
+      "moving": "Moving...",
+      "confirm": "Confirm Move"
     },
     "duplicateTask": {
       "title": "Duplicar tarea",

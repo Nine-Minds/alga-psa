@@ -577,13 +577,15 @@
     }
   },
   "dialogs": {
-    "moveTask": {
-      "title": "Move Task",
-      "selectTargetError": "Please select a target phase.",
-      "selectDifferentTargetError": "Please select a different phase or status to move the task.",
-      "message": "Move task \"{{taskName}}\" to a new phase/status:",
-      "placeholder": "Select target project/phase/status..."
-    },
+  "moveTask": {
+    "title": "Move Task",
+    "selectTargetError": "Please select a target phase.",
+    "selectDifferentTargetError": "Please select a different phase or status to move the task.",
+    "message": "Move task \"{{taskName}}\" to a new phase/status:",
+    "placeholder": "Select target project/phase/status...",
+    "moving": "Moving...",
+    "confirm": "Confirm Move"
+  },
     "duplicateTask": {
       "title": "Duplicate Task",
       "selectTargetError": "Please select a target phase.",

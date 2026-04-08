@@ -582,7 +582,9 @@
       "selectTargetError": "Bitte wählen Sie eine Zielphase aus.",
       "selectDifferentTargetError": "Bitte wählen Sie eine andere Phase oder einen anderen Status, um die Aufgabe zu verschieben.",
       "message": "Aufgabe \"{{taskName}}\" in eine neue Phase/einen neuen Status verschieben:",
-      "placeholder": "Zielprojekt/Zielphase/Zielstatus auswählen..."
+      "placeholder": "Zielprojekt/Zielphase/Zielstatus auswählen...",
+      "moving": "Moving...",
+      "confirm": "Confirm Move"
     },
     "duplicateTask": {
       "title": "Aufgabe duplizieren",

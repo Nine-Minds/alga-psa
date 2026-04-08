@@ -582,7 +582,9 @@
       "selectTargetError": "Selecteer een doelfase.",
       "selectDifferentTargetError": "Selecteer een andere fase of status om de taak te verplaatsen.",
       "message": "Verplaats taak \"{{taskName}}\" naar een nieuwe fase/status:",
-      "placeholder": "Selecteer doelproject/fase/status..."
+      "placeholder": "Selecteer doelproject/fase/status...",
+      "moving": "Moving...",
+      "confirm": "Confirm Move"
     },
     "duplicateTask": {
       "title": "Dubbele taak",

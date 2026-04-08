@@ -582,7 +582,9 @@
       "selectTargetError": "55555",
       "selectDifferentTargetError": "55555",
       "message": "55555 {{taskName}} 55555",
-      "placeholder": "55555"
+      "placeholder": "55555",
+      "moving": "55555",
+      "confirm": "55555"
     },
     "duplicateTask": {
       "title": "55555",

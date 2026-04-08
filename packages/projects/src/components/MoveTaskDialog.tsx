@@ -7,6 +7,7 @@ import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/compo
 import { toast } from 'react-hot-toast';
 import { moveTaskToPhase } from '../actions/projectTaskActions';
 import { IProjectTask } from '@alga-psa/types';
+import { useTranslation } from 'react-i18next';
 
 interface MoveTaskDialogProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export default function MoveTaskDialog({
   projectTreeData,
   onConfirm: onConfirmProp,
 }: MoveTaskDialogProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [selectedTargetPath, setSelectedTargetPath] = useState<TreeSelectPath | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCrossProjectMove, setIsCrossProjectMove] = useState<boolean>(false);
@@ -51,7 +53,7 @@ export default function MoveTaskDialog({
 
   const handleConfirm = async () => {
     if (!selectedTargetPath || !selectedTargetPath['phase']) {
-        toast.error("Please select a target phase.");
+        toast.error(t('dialogs.moveTask.selectTargetError', 'Please select a target phase.'));
         return;
     }
 
@@ -60,7 +62,7 @@ export default function MoveTaskDialog({
 
     // Check if moving to the same phase AND same status (or no status specified)
     if (targetPhaseId === task.phase_id && (!targetStatusId || targetStatusId === task.project_status_mapping_id)) {
-        toast.error("Please select a different phase or status to move the task.");
+        toast.error(t('dialogs.moveTask.selectDifferentTargetError', 'Please select a different phase or status to move the task.'));
         return;
     }
 
@@ -78,12 +80,14 @@ export default function MoveTaskDialog({
     <Dialog 
       isOpen={isOpen} 
       onClose={onClose}
-      title="Move Task"
+      title={t('dialogs.moveTask.title', 'Move Task')}
       className="max-w-lg max-h-[90vh] overflow-y-auto"
     >
       <DialogContent>
         <div className="mb-2 text-sm text-gray-600">
-          Move task <span className="font-medium">"{task.task_name}"</span> to a new phase/status:
+          {t('dialogs.moveTask.message', 'Move task "{{taskName}}" to a new phase/status:', {
+            taskName: task.task_name,
+          })}
         </div>
 
           <div className="mb-6"> {/* Increased bottom margin */}
@@ -92,7 +96,7 @@ export default function MoveTaskDialog({
                 value={selectedTargetPath?.['status'] || selectedTargetPath?.['phase'] || ''}
                 onValueChange={handleTreeSelect}
                 options={projectTreeData}
-                placeholder="Select target project/phase/status..."
+                placeholder={t('dialogs.moveTask.placeholder', 'Select target project/phase/status...')}
                 className="w-full"
                 multiSelect={false}
                 showExclude={false}
@@ -105,7 +109,7 @@ export default function MoveTaskDialog({
 
         <div className="flex justify-end space-x-2">
           <Button id='cancel-move-button' variant="ghost" onClick={onClose} disabled={isSubmitting}>
-            Cancel
+            {t('common:actions.cancel', 'Cancel')}
           </Button>
           <Button
             id='confirm-move-button'
@@ -117,7 +121,9 @@ export default function MoveTaskDialog({
               isSubmitting
             }
           >
-            {isSubmitting ? 'Moving...' : 'Confirm Move'}
+            {isSubmitting
+              ? t('dialogs.moveTask.moving', 'Moving...')
+              : t('dialogs.moveTask.confirm', 'Confirm Move')}
           </Button>
         </div>
       </DialogContent>

@@ -582,7 +582,9 @@
       "selectTargetError": "Wybierz fazę docelową.",
       "selectDifferentTargetError": "Aby przenieść zadanie, wybierz inny etap lub status.",
       "message": "Przenieś zadanie „{{taskName}}” do nowego etapu/stanu:",
-      "placeholder": "Wybierz docelowy projekt/fazę/stan..."
+      "placeholder": "Wybierz docelowy projekt/fazę/stan...",
+      "moving": "Moving...",
+      "confirm": "Confirm Move"
     },
     "duplicateTask": {
       "title": "Zduplikowane zadanie",
