@@ -592,6 +592,7 @@
       "searchTicketsPlaceholder": "Tickets suchen...",
       "selectTicket": "Ticket auswählen",
       "linkTicketLabel": "Dieses Ticket mit der Aufgabe verknüpfen",
+      "confirm": "Prefill",
       "allStatuses": "Alle Status",
       "allPriorities": "Alle Prioritäten"
     },

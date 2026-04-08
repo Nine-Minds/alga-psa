@@ -592,6 +592,7 @@
       "searchTicketsPlaceholder": "Rechercher des tickets...",
       "selectTicket": "Sélectionner un ticket",
       "linkTicketLabel": "Lier ce ticket à la tâche",
+      "confirm": "Prefill",
       "allStatuses": "Tous les statuts",
       "allPriorities": "Toutes les priorités"
     },

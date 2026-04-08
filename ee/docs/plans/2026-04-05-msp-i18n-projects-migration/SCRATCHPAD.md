@@ -309,6 +309,18 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F030 check)** `node_modules/.bin/eslint
   packages/projects/src/components/ProjectDetailsEdit.tsx` passes with a pre-existing
   hooks warning only (1 warning, 0 errors).
+- **(2026-04-07, F031)** Wired `packages/projects/src/components/PrefillFromTicketDialog.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the dialog title,
+  search/filter labels, active-filter chips, ticket selector label, link-checkbox copy,
+  reset/cancel action labels, and the confirm CTA.
+- **(2026-04-07, F031)** Reused the existing `taskTicketLinks.*` filter chrome instead of
+  adding a parallel prefill-specific subtree for shared ticket filter labels. Added only
+  `dialogs.prefillFromTicket.confirm` for the domain-specific confirm button text, then
+  re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran translation
+  validation successfully.
+- **(2026-04-07, F031 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/PrefillFromTicketDialog.tsx` passes with pre-existing
+  warnings only (4 warnings, 0 errors).
 
 ## Commands / Runbooks
 

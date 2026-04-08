@@ -592,6 +592,7 @@
       "searchTicketsPlaceholder": "Zoek kaartjes...",
       "selectTicket": "Selecteer Ticket",
       "linkTicketLabel": "Koppel dit ticket aan de taak",
+      "confirm": "Prefill",
       "allStatuses": "Alle statussen",
       "allPriorities": "Alle prioriteiten"
     },

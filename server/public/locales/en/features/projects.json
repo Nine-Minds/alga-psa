@@ -592,6 +592,7 @@
       "searchTicketsPlaceholder": "Search tickets...",
       "selectTicket": "Select Ticket",
       "linkTicketLabel": "Link this ticket to the task",
+      "confirm": "Prefill",
       "allStatuses": "All Statuses",
       "allPriorities": "All Priorities"
     },
