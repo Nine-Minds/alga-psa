@@ -651,9 +651,11 @@
         "add_from_library": "Dodaj status"
       },
       "closed": "Zamknięty",
+      "open": "Open",
       "confirm_delete_title": "Usuń status",
       "confirm_delete": "Usunąć \"{{statusName}}\"?",
       "delete_error": "Nie udało się usunąć statusu",
+      "delete_validation_failed": "Failed to validate deletion. Please try again.",
       "scope_label": "Zakres statusu",
       "scope_placeholder": "Wybierz zakres statusu",
       "scope_project_defaults": "Domyślne ustawienia projektu",
@@ -715,6 +717,11 @@
       "import_failed": "Failed to import statuses",
       "update_status": "Update Status",
       "project_statuses_title": "Statusy projektów",
+      "project_statuses_description": "Define the workflow stages for your projects. Mark statuses as \"closed\" to indicate project completion.",
+      "project_closed_hint": "Projects with this status will be marked as closed",
+      "project_open_hint": "Projects with this status will remain open",
+      "order": "Order",
+      "this_status": "this status",
       "last_closed_error": "Przynajmniej jeden status musi pozostać oznaczony jako zamknięty",
       "last_closed_delete_error": "Nie można usunąć ostatniego statusu zamkniętego dla tego typu."
     }

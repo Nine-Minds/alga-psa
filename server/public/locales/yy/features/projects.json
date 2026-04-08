@@ -651,9 +651,11 @@
         "add_from_library": "55555"
       },
       "closed": "55555",
+      "open": "55555",
       "confirm_delete_title": "55555",
       "confirm_delete": "55555 {{statusName}} 55555",
       "delete_error": "55555",
+      "delete_validation_failed": "55555",
       "scope_label": "55555",
       "scope_placeholder": "55555",
       "scope_project_defaults": "55555",
@@ -715,6 +717,11 @@
       "import_failed": "55555",
       "update_status": "55555",
       "project_statuses_title": "55555",
+      "project_statuses_description": "55555",
+      "project_closed_hint": "55555",
+      "project_open_hint": "55555",
+      "order": "55555",
+      "this_status": "55555",
       "last_closed_error": "55555",
       "last_closed_delete_error": "55555"
     }

@@ -563,6 +563,21 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   packages/projects/src/components/settings/projects/TenantProjectTaskStatusSettings.tsx`
   passes with pre-existing warnings only (`any` usages in legacy import/conflict code;
   8 warnings, 0 errors).
+- **(2026-04-08, F081)** Wired
+  `packages/projects/src/components/settings/projects/ProjectStatusSettings.tsx` to
+  `useTranslation(['features/projects', 'common'])`. Localized the table headers, open/
+  closed labels and project-status hints, actions-menu SR copy, card title/description,
+  add/import buttons, delete-dialog fallback entity name, and the update/delete/import
+  toast / error / validation feedback.
+- **(2026-04-08, F081)** Extended `settings.statuses.*` with the small project-status
+  page gaps surfaced by the audit: `open`, `order`, project-status description/hints,
+  delete-validation failure, and `this_status`. Re-synced `fr/es/de/nl/it/pl`,
+  regenerated pseudo-locales, and re-ran translation validation successfully.
+- **(2026-04-08, F081 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/settings/projects/ProjectStatusSettings.tsx` passes
+  with pre-existing warnings only (legacy non-null assertion and `any` usages; 4
+  warnings, 0 errors). Also fixed the new `useCallback(... t ...)` dependency warning
+  introduced by the i18n wiring.
 
 ## Commands / Runbooks
 
