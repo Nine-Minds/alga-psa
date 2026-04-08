@@ -163,10 +163,10 @@ extraEnv: []
 portalDomain:
   # Namespace where TLS certificates are issued (source secrets)
   certificateNamespace: ""  # Set to your certificate namespace
-  # Namespace where Istio gateway resources (and replicated TLS secrets) live
-  gatewayNamespace: istio-system
+  # Namespace where gateway resources (and replicated TLS secrets) live when secret replication is enabled
+  gatewayNamespace: ""
   # Whether to create RBAC bindings that allow the worker to sync TLS secrets
-  secretReplicationEnabled: true
+  secretReplicationEnabled: false
 
 # Additional volumes
 extraVolumes: []

@@ -26,3 +26,8 @@ db:
     key: DB_PASSWORD_SUPERUSER
 
 applicationUrl: http://alga-core.msp.svc.cluster.local:3000
+
+portalDomain:
+  certificateNamespace: ""
+  gatewayNamespace: ""
+  secretReplicationEnabled: false
