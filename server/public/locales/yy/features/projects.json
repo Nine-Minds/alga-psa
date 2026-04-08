@@ -730,7 +730,9 @@
       "searchPlaceholder": "55555",
       "categoryPlaceholder": "55555",
       "loading": "55555",
+      "loadFailed": "55555",
       "deletedSuccess": "55555",
+      "deleteFailed": "55555",
       "deleteTitle": "55555",
       "deleteMessage": "55555 {{templateName}} 55555",
       "columns": {

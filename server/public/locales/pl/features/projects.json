@@ -730,7 +730,9 @@
       "searchPlaceholder": "Wyszukaj szablony...",
       "categoryPlaceholder": "Filtruj według kategorii",
       "loading": "Załadunek...",
+      "loadFailed": "Failed to load templates",
       "deletedSuccess": "Szablon został pomyślnie usunięty",
+      "deleteFailed": "Failed to delete template",
       "deleteTitle": "Usuń szablon",
       "deleteMessage": "Czy na pewno chcesz usunąć szablon „{{templateName}}”? Tej akcji nie można cofnąć.",
       "columns": {

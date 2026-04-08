@@ -730,7 +730,9 @@
       "searchPlaceholder": "Buscar plantillas...",
       "categoryPlaceholder": "Filtrar por categoría",
       "loading": "Cargando...",
+      "loadFailed": "Failed to load templates",
       "deletedSuccess": "Plantilla eliminada correctamente",
+      "deleteFailed": "Failed to delete template",
       "deleteTitle": "Eliminar plantilla",
       "deleteMessage": "¿Seguro que quieres eliminar la plantilla \"{{templateName}}\"? Esta acción no se puede deshacer.",
       "columns": {

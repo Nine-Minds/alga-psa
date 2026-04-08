@@ -728,10 +728,12 @@
     "list": {
       "title": "Project Templates",
       "searchPlaceholder": "Search templates...",
-      "categoryPlaceholder": "Filter by category",
-      "loading": "Loading...",
-      "deletedSuccess": "Template deleted successfully",
-      "deleteTitle": "Delete Template",
+    "categoryPlaceholder": "Filter by category",
+    "loading": "Loading...",
+    "loadFailed": "Failed to load templates",
+    "deletedSuccess": "Template deleted successfully",
+    "deleteFailed": "Failed to delete template",
+    "deleteTitle": "Delete Template",
       "deleteMessage": "Are you sure you want to delete template \"{{templateName}}\"? This action cannot be undone.",
       "columns": {
         "name": "Name",

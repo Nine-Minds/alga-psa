@@ -730,7 +730,9 @@
       "searchPlaceholder": "Sjablonen zoeken...",
       "categoryPlaceholder": "Filter op categorie",
       "loading": "Laden...",
+      "loadFailed": "Failed to load templates",
       "deletedSuccess": "Sjabloon succesvol verwijderd",
+      "deleteFailed": "Failed to delete template",
       "deleteTitle": "Sjabloon verwijderen",
       "deleteMessage": "Weet u zeker dat u sjabloon \"{{templateName}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
       "columns": {

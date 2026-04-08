@@ -730,7 +730,9 @@
       "searchPlaceholder": "Rechercher des modèles...",
       "categoryPlaceholder": "Filtrer par catégorie",
       "loading": "Chargement...",
+      "loadFailed": "Failed to load templates",
       "deletedSuccess": "Modèle supprimé avec succès",
+      "deleteFailed": "Failed to delete template",
       "deleteTitle": "Supprimer le modèle",
       "deleteMessage": "Voulez-vous vraiment supprimer le modèle \"{{templateName}}\" ? Cette action est irréversible.",
       "columns": {

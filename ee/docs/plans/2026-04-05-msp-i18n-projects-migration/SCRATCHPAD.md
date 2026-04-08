@@ -418,6 +418,19 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-08, F053 check)** `node_modules/.bin/eslint
   packages/projects/src/components/project-templates/ApplyTemplateDialog.tsx` passes
   with a pre-existing hooks warning only (1 warning, 0 errors).
+- **(2026-04-08, F054)** Wired `packages/projects/src/components/project-templates/ProjectTemplatesList.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the page title,
+  toolbar buttons, search/category filters, table column headers, never-used fallback,
+  row-action menu labels, delete-confirm dialog, loading state, and the user-facing
+  load/delete error-handler copy.
+- **(2026-04-08, F054)** Extended `templates.list.*` with the only missing list-page
+  leaves surfaced by the audit: `loadFailed` and `deleteFailed`. Re-synced
+  `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran translation validation
+  successfully.
+- **(2026-04-08, F054 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/ProjectTemplatesList.tsx` passes
+  with pre-existing warnings only (unused `getTemplateCategories` import, existing
+  `loadData` hooks warning; 3 warnings, 0 errors).
 
 ## Commands / Runbooks
 
