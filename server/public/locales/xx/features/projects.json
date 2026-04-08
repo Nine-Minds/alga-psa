@@ -693,6 +693,8 @@
       "move_up": "11111",
       "move_down": "11111",
       "remove": "11111",
+      "add_existing": "11111",
+      "create_new": "11111",
       "task_statuses_label": "11111",
       "phase_task_statuses_label": "11111",
       "customize": "11111",

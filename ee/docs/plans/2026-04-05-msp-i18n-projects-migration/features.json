@@ -44,7 +44,7 @@
   {"id": "F084", "description": "Wire LinkTicketToTaskDialog.tsx — link ticket to task (~5 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
   {"id": "F085", "description": "Wire DeadlineFilter.tsx — deadline filter dropdown options (~5 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
   {"id": "F086", "description": "Wire settings/ProjectSettings.tsx — top-level project settings page (~5 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
-  {"id": "F087", "description": "Wire ProjectTaskStatusSelector.tsx — status select dropdown (~4 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},
+  {"id": "F087", "description": "Wire ProjectTaskStatusSelector.tsx — status select dropdown (~4 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
   {"id": "F088", "description": "Wire MoveTaskDialog.tsx — move task to phase (~4 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},
   {"id": "F089", "description": "Wire ProjectInfo.tsx — project info card (~3 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},
   {"id": "F090", "description": "Wire DuplicateTaskDialog.tsx — duplicate task dialog (~3 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},

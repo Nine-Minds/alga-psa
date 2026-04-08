@@ -693,6 +693,8 @@
       "move_up": "Monter",
       "move_down": "Descendre",
       "remove": "Supprimer le statut",
+      "add_existing": "Add Existing",
+      "create_new": "Create New",
       "task_statuses_label": "Task Statuses",
       "phase_task_statuses_label": "Phase Task Statuses",
       "customize": "Customize",

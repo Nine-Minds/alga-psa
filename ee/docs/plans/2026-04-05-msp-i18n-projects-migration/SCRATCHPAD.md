@@ -634,6 +634,17 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-08, F086 check)** `node_modules/.bin/eslint
   packages/projects/src/components/settings/ProjectSettings.tsx` passes cleanly with 0
   warnings / 0 errors.
+- **(2026-04-08, F087)** Wired `packages/projects/src/components/ProjectTaskStatusSelector.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the label, customize
+  helper copy, add-existing/create-new CTAs, available-statuses heading, closed badge,
+  move/remove titles, empty-state hint, and ordering help text.
+- **(2026-04-08, F087)** Extended `settings.statuses.*` only for the selector-specific
+  CTAs: `add_existing` and `create_new`. Re-synced `fr/es/de/nl/it/pl`, regenerated
+  pseudo-locales, and re-ran translation validation successfully.
+- **(2026-04-08, F087 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/ProjectTaskStatusSelector.tsx` passes with a pre-
+  existing hooks warning only (legacy initialization effect dependencies; 1 warning, 0
+  errors).
 
 ## Commands / Runbooks
 
