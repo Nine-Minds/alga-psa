@@ -1032,7 +1032,9 @@
       },
       "clientPortal": {
         "title": "11111",
-        "aboutTitle": "11111"
+        "description": "11111",
+        "aboutTitle": "11111",
+        "aboutDescription": "11111"
       },
       "steps": {
         "basics": "11111",

@@ -1032,7 +1032,9 @@
       },
       "clientPortal": {
         "title": "Visibilità portale cliente",
-        "aboutTitle": "Informazioni sulla visibilità del portale cliente"
+        "description": "Configure what information clients can see when viewing projects created from this template in the client portal.",
+        "aboutTitle": "Informazioni sulla visibilità del portale cliente",
+        "aboutDescription": "These settings control what project information is visible to clients when they access the client portal. You can choose to show phases, task completion progress, and specific task details. These settings will be applied to all projects created from this template but can be customized per project."
       },
       "steps": {
         "basics": "Nozioni di base del modello",

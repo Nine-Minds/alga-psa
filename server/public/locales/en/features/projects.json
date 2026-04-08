@@ -1032,7 +1032,9 @@
     },
       "clientPortal": {
         "title": "Client Portal Visibility",
-        "aboutTitle": "About Client Portal Visibility"
+        "description": "Configure what information clients can see when viewing projects created from this template in the client portal.",
+        "aboutTitle": "About Client Portal Visibility",
+        "aboutDescription": "These settings control what project information is visible to clients when they access the client portal. You can choose to show phases, task completion progress, and specific task details. These settings will be applied to all projects created from this template but can be customized per project."
       },
       "steps": {
         "basics": "Template Basics",

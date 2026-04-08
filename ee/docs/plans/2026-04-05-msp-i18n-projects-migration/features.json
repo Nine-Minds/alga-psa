@@ -32,7 +32,7 @@
   {"id": "F058", "description": "Wire wizard-steps/TemplatePhasesStep.tsx — wizard phases step (~6 strings)", "implemented": true, "prdRefs": ["2b-21c/sub-batch-B"]},
   {"id": "F059", "description": "Wire CreateTemplateForm.tsx — template create form body (~6 strings)", "implemented": true, "prdRefs": ["2b-21c/sub-batch-B"]},
   {"id": "F060", "description": "Wire TemplateDetail.tsx — template detail sidebar (~4 strings)", "implemented": true, "prdRefs": ["2b-21c/sub-batch-B"]},
-  {"id": "F061", "description": "Wire wizard-steps/TemplateClientPortalStep.tsx — client portal exposure toggle (~2 strings)", "implemented": false, "prdRefs": ["2b-21c/sub-batch-B"]},
+  {"id": "F061", "description": "Wire wizard-steps/TemplateClientPortalStep.tsx — client portal exposure toggle (~2 strings)", "implemented": true, "prdRefs": ["2b-21c/sub-batch-B"]},
   {"id": "F062", "description": "Wire TemplateCreationWizard.tsx — wizard shell, nav buttons (~1 string)", "implemented": false, "prdRefs": ["2b-21c/sub-batch-B"]},
   {"id": "F063", "description": "Wire wizard-steps/TemplateBasicsStep.tsx — wizard basics step (~1 string)", "implemented": false, "prdRefs": ["2b-21c/sub-batch-B"]},
   {"id": "F064", "description": "Confirm AddTemplateDialog.tsx has zero user-visible strings (re-export shim)", "implemented": false, "prdRefs": ["2b-21c/sub-batch-B"]},

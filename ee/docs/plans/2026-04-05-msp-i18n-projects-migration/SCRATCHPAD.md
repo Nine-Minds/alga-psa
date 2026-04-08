@@ -509,6 +509,17 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   packages/projects/src/components/project-templates/TemplateDetail.tsx` passes with
   pre-existing warnings only (unused dropdown-menu imports and unused
   `onTemplateUpdated`; 12 warnings, 0 errors).
+- **(2026-04-08, F061)** Wired
+  `packages/projects/src/components/project-templates/wizard-steps/TemplateClientPortalStep.tsx`
+  to `useTranslation('features/projects')`. Localized the step title, intro paragraph,
+  and the explanatory info alert above `ClientPortalConfigEditor`.
+- **(2026-04-08, F061)** Extended `templates.wizard.clientPortal.*` with the only
+  missing step leaves: `description` and `aboutDescription`. Re-synced
+  `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran translation validation
+  successfully.
+- **(2026-04-08, F061 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/wizard-steps/TemplateClientPortalStep.tsx`
+  passes cleanly with 0 warnings / 0 errors.
 
 ## Commands / Runbooks
 
