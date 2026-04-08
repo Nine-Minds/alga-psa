@@ -390,6 +390,20 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F051 check)** `node_modules/.bin/eslint
   packages/projects/src/components/project-templates/TemplateTaskForm.tsx` passes with
   pre-existing warnings only (3 warnings, 0 errors).
+- **(2026-04-07, F052)** Wired
+  `packages/projects/src/components/project-templates/wizard-steps/TemplateTasksStep.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the step title and
+  description, phase selector, empty states, task editor labels/placeholders, service and
+  assignment copy, checklist controls, inline validation, per-task summary text, add-task
+  CTA, and the concluding tip callout.
+- **(2026-04-07, F052)** Extended `templates.wizard.tasks.*` only for wizard-step-specific
+  gaps: `noTasksInPhase`, `thisPhase`, `durationSummaryShort`, `noPriority`,
+  `checklistItemsSummary`, `tipDescription`, `done`, and `addTaskToPhase`. Re-synced
+  `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran translation validation
+  successfully.
+- **(2026-04-07, F052 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/wizard-steps/TemplateTasksStep.tsx`
+  passes cleanly with 0 warnings / 0 errors.
 
 ## Commands / Runbooks
 
