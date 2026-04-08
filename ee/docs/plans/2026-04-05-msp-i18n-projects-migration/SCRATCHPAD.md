@@ -262,6 +262,19 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F026 check)** `node_modules/.bin/eslint
   packages/projects/src/components/TaskDependencies.tsx` passes with pre-existing
   warnings only (14 warnings, 0 errors).
+- **(2026-04-07, F027)** Wired `packages/projects/src/components/ProjectMaterialsDrawer.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the drawer header,
+  add-form labels and placeholders, loading/empty states, add/remove toast copy, table
+  headers/status badges, and the unbilled-total summary.
+- **(2026-04-07, F027)** Extended `materials.*` with the small gaps surfaced by the
+  component audit: product-search copy, add/remove failure messages, `adding` /
+  `addMaterial`, and `unknownProduct`.
+- **(2026-04-07, F027)** Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and
+  re-ran `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  successfully after the `materials.*` additions.
+- **(2026-04-07, F027 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/ProjectMaterialsDrawer.tsx` passes cleanly with 0
+  warnings / 0 errors after wrapping the translation helper in `useCallback`.
 
 ## Commands / Runbooks
 
