@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { getTicketDocuments, uploadTicketDocument } from "./documents";
+import { deleteTicketDocument, getTicketDocuments, uploadTicketDocument } from "./documents";
 import type { ApiClient } from "./client";
 
 function mockClient(response: unknown): ApiClient {
@@ -47,5 +47,23 @@ describe("documents api", () => {
       },
     });
     expect(request?.body).toBeInstanceOf(FormData);
+  });
+
+  it("calls DELETE /api/v1/tickets/{id}/documents/{documentId}", async () => {
+    const client = mockClient({ ok: true, data: { data: null } });
+
+    await deleteTicketDocument(client, {
+      apiKey: "api-key-1",
+      ticketId: "ticket-1",
+      documentId: "doc-1",
+    });
+
+    expect(client.request).toHaveBeenCalledWith({
+      method: "DELETE",
+      path: "/api/v1/tickets/ticket-1/documents/doc-1",
+      headers: {
+        "x-api-key": "api-key-1",
+      },
+    });
   });
 });

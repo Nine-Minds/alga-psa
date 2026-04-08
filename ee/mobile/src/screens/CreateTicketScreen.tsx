@@ -374,6 +374,7 @@ export function CreateTicketScreen({ navigation }: Props) {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: spacing.lg }}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         {/* Title */}
         <Text style={{ ...typography.caption, color: colors.textSecondary }}>{t("create.titleLabel")} *</Text>

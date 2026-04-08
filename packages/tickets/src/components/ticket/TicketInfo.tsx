@@ -82,6 +82,7 @@ interface TicketInfoProps {
   onRemoveTeamAssignment?: () => Promise<void>;
   onClipboardImageUploaded?: () => Promise<void> | void;
   onOpenEmailNotificationLogs?: () => void;
+  titleRef?: React.Ref<HTMLHeadingElement>;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -115,6 +116,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onRemoveTeamAssignment,
   onClipboardImageUploaded,
   onOpenEmailNotificationLogs,
+  titleRef,
 }) => {
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
@@ -915,6 +917,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             ) : (
               <>
                 <h1
+                  ref={titleRef}
                   className="text-2xl font-bold break-words max-w-full min-w-0 flex-1"
                   style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}
                 >

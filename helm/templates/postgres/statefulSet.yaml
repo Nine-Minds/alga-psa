@@ -23,7 +23,7 @@ spec:
       initContainers:
         - name: volume-prep
           image: busybox
-          command: ['sh', '-c', 'mkdir -p /data']
+          command: ['sh', '-c', 'mkdir -p /data/data']
           volumeMounts:
             - name: db-data
               mountPath: /data    

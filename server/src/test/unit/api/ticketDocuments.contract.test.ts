@@ -12,6 +12,11 @@ function readTicketDocumentsRouteSource(): string {
   return fs.readFileSync(filePath, 'utf8');
 }
 
+function readTicketDocumentByIdRouteSource(): string {
+  const filePath = path.resolve(__dirname, '../../../app/api/v1/tickets/[id]/documents/[documentId]/route.ts');
+  return fs.readFileSync(filePath, 'utf8');
+}
+
 describe('Ticket documents API contract', () => {
   it('T061: getById enriches tickets with associated documents', () => {
     const source = readTicketServiceSource();
@@ -37,5 +42,23 @@ describe('Ticket documents API contract', () => {
     expect(source).toContain('POST /api/v1/tickets/{id}/documents');
     expect(source).toContain('export const GET = controller.getDocuments();');
     expect(source).toContain('export const POST = controller.uploadDocument();');
+  });
+
+  it('T064: ticket document by ID route delegates DELETE handler to controller.deleteDocument', () => {
+    const source = readTicketDocumentByIdRouteSource();
+
+    expect(source).toContain('DELETE /api/v1/tickets/{id}/documents/{documentId}');
+    expect(source).toContain('export const DELETE = controller.deleteDocument();');
+  });
+
+  it('T065: deleteTicketDocument removes association and cleans up orphaned documents', () => {
+    const source = readTicketServiceSource();
+
+    expect(source).toContain('async deleteTicketDocument(');
+    expect(source).toContain("'da.entity_type': 'ticket'");
+    // Removes the association
+    expect(source).toContain("('document_associations')");
+    // Checks for remaining associations before deleting the document
+    expect(source).toContain("Number(remaining.count) === 0");
   });
 });

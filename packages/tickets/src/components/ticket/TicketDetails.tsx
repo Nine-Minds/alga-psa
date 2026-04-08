@@ -227,6 +227,18 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         setHasHydrated(true);
     }, []);
 
+    // Show title in sticky header only when the card title scrolls out of view
+    useEffect(() => {
+        const el = cardTitleRef.current;
+        if (!el) return;
+        const observer = new IntersectionObserver(
+            ([entry]) => setCardTitleVisible(entry.isIntersecting),
+            { threshold: 0 }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
+
     useEffect(() => {
         let cancelled = false;
         void getCurrentUserPermissions().then((perms) => {
@@ -245,6 +257,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const [ticket, setTicket] = useState(initialTicket);
     const [bundle, setBundle] = useState<any>(initialBundle);
+    const [cardTitleVisible, setCardTitleVisible] = useState(true);
+    const cardTitleRef = useRef<HTMLHeadingElement>(null);
     const [isEmailNotificationLogsDrawerOpen, setIsEmailNotificationLogsDrawerOpen] = useState(false);
     const [conversations, setConversations] = useState<IComment[]>(initialComments);
     const [documents, setDocuments] = useState<any[]>(initialDocuments);
@@ -1815,48 +1829,57 @@ const handleClose = () => {
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100 dark:bg-gray-900">
-                <div className="sticky top-0 z-10 bg-gray-100 dark:bg-gray-900 py-2 flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                        {/* Only show the Back button if NOT in a drawer, using BackNav */}
-                        {!isInDrawer && (
-                            <BackNav href="/msp/tickets">← {t('backToTickets', 'Back to Tickets')}</BackNav>
-                        )}
-                        {!isInDrawer && ticket.ticket_id && (
-                            <TicketNavigation currentTicketId={ticket.ticket_id} />
-                        )}
-                        <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
-                        {responseStateTrackingEnabled && ticket.response_state ? (
-                            <ResponseStateBadge
-                                responseState={ticket.response_state}
-                                size="sm"
-                                showTooltip={false}
-                                className="flex-shrink-0"
-                            />
-                        ) : null}
-                        <TicketOriginBadge
-                            origin={ticketOrigin}
-                            labels={ticketOriginLabels}
-                            size="sm"
-                            className="flex-shrink-0"
-                        />
-                        <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
-                    </div>
+                <div className="sticky top-0 z-10 bg-gray-100 dark:bg-gray-900 py-2 flex gap-3">
+                    {!isInDrawer && (
+                        <div className="flex-shrink-0 self-start">
+                            <BackNav href="/msp/tickets"><span className="text-right">← Back to<br />Tickets </span></BackNav>
+                        </div>
+                    )}
+                    <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                {!isInDrawer && ticket.ticket_id && (
+                                    <TicketNavigation currentTicketId={ticket.ticket_id} />
+                                )}
+                                <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
+                                {responseStateTrackingEnabled && ticket.response_state ? (
+                                    <ResponseStateBadge
+                                        responseState={ticket.response_state}
+                                        size="sm"
+                                        showTooltip={false}
+                                        className="flex-shrink-0"
+                                    />
+                                ) : null}
+                                <TicketOriginBadge
+                                    origin={ticketOrigin}
+                                    labels={ticketOriginLabels}
+                                    size="sm"
+                                    className="flex-shrink-0"
+                                />
+                            </div>
 
-                    <div className="flex items-center gap-2">
-                        {/* Add popout button only when in drawer */}
-                        {isInDrawer && (
-                            <Button
-                                id="ticket-popout-button"
-                                variant="outline"
-                                size="sm"
-                                onClick={openTicketInNewWindow}
-                                className="flex items-center gap-2"
-                                aria-label="Open in new tab"
-                            >
-                                <ExternalLink className="h-4 w-4" />
-                                <span>{t('fields.openInNewTab', 'Open in new tab')}</span>
-                            </Button>
-                        )}
+                            <div className="flex items-center gap-2">
+                                {/* Add popout button only when in drawer */}
+                                {isInDrawer && (
+                                    <Button
+                                        id="ticket-popout-button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={openTicketInNewWindow}
+                                        className="flex items-center gap-2"
+                                        aria-label="Open in new tab"
+                                    >
+                                        <ExternalLink className="h-4 w-4" />
+                                        <span>{t('fields.openInNewTab', 'Open in new tab')}</span>
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                        <h1
+                            className={`text-lg font-bold truncate transition-all duration-200 ${cardTitleVisible ? 'opacity-0 max-h-0 overflow-hidden' : 'opacity-100 max-h-8'}`}
+                        >
+                            {ticket.title}
+                        </h1>
                     </div>
                 </div>
 
@@ -2100,6 +2123,7 @@ const handleClose = () => {
 
                                 <TicketInfo
                                     id={`${id}-info`}
+                                    titleRef={cardTitleRef}
                                     ticket={ticket}
                                     conversations={conversations}
                                     statusOptions={statusOptions}

@@ -6,6 +6,8 @@ export function getRmmProviderDisplayName(provider?: RmmProvider | string): stri
       return 'NinjaOne';
     case 'tacticalrmm':
       return 'Tactical RMM';
+    case 'tanium':
+      return 'Tanium';
     case 'datto':
       return 'Datto';
     case 'connectwise_automate':
@@ -14,4 +16,3 @@ export function getRmmProviderDisplayName(provider?: RmmProvider | string): stri
       return provider || 'Unknown';
   }
 }
-
