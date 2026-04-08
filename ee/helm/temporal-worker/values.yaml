@@ -65,6 +65,7 @@ vault:
 secrets:
   internalApiSharedSecret: "change-me-in-production"
   algaAuthKey: "change-me-in-production"
+  nextauthSecret: "change-me-in-production"
 
 # Service Account configuration
 serviceAccount:
@@ -159,6 +160,12 @@ extraEnv: []
   # - name: EXTRA_VAR
   #   value: "extra-value"
 
+# Auth configuration
+auth:
+  nextauthSecretSecret:
+    name: ""
+    key: NEXTAUTH_SECRET
+
 # Portal domain management configuration
 portalDomain:
   # Namespace where TLS certificates are issued (source secrets)
@@ -167,6 +174,9 @@ portalDomain:
   gatewayNamespace: ""
   # Whether to create RBAC bindings that allow the worker to sync TLS secrets
   secretReplicationEnabled: false
+  # Optional base VirtualService reference (<namespace>/<name>) for portal-domain workflows.
+  # Leave empty when portal-domain routing is not managed in this environment.
+  baseVirtualService: ""
 
 # Additional volumes
 extraVolumes: []
