@@ -457,6 +457,20 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   packages/projects/src/components/project-templates/TemplateTaskListView.tsx` passes
   with pre-existing warnings only (unused `taskTypes`, `priorities`, and
   `getAssigneeName`; 6 warnings, 0 errors).
+- **(2026-04-08, F057)** Wired
+  `packages/projects/src/components/project-templates/wizard-steps/TemplateReviewStep.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the step title and
+  intro, template-information labels, status-columns header, task summary cards,
+  task-details-by-phase heading, checklist-item count suffix, and the final ready-to-
+  create callout.
+- **(2026-04-08, F057)** Extended `templates.wizard.review.*` with only the review-step
+  gaps surfaced by the audit: `descriptionLabel` for the summary block and
+  `readyDescription` for the final creation callout. Re-synced `fr/es/de/nl/it/pl`,
+  regenerated pseudo-locales, and re-ran translation validation successfully.
+- **(2026-04-08, F057 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/wizard-steps/TemplateReviewStep.tsx`
+  passes with pre-existing warnings only (unused `Layers` import and unused `index`
+  callback arg; 4 warnings, 0 errors).
 
 ## Commands / Runbooks
 

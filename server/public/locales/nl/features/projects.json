@@ -1002,6 +1002,7 @@
         "title": "Controleer uw sjabloon",
         "templateInformation": "Sjablooninformatie",
         "name": "Naam:",
+        "descriptionLabel": "Description:",
         "description": "Controleer de details van je sjabloon voordat je het aanmaakt. Je kunt elke sectie bewerken door terug te gaan.",
         "category": "Categorie:",
         "statusColumns": "Statuskolommen ({{count}})",
@@ -1010,7 +1011,8 @@
         "checklistItems": "Controlelijstitems",
         "estimatedHours": "Geschat. Uur",
         "taskDetailsByPhase": "Taakdetails per fase",
-        "readyToCreate": "Klaar om te creëren"
+        "readyToCreate": "Klaar om te creëren",
+        "readyDescription": "Once you create this template, you'll be able to use it to quickly start new projects with this structure. Click \"{{action}}\" to finish."
       },
       "clientPortal": {
         "title": "Zichtbaarheid van het klantportaal",

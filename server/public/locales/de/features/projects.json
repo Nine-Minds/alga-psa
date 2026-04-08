@@ -1002,6 +1002,7 @@
         "title": "Ihre Vorlage prüfen",
         "templateInformation": "Vorlageninformationen",
         "name": "Name:",
+        "descriptionLabel": "Description:",
         "description": "Beschreibung:",
         "category": "Kategorie:",
         "statusColumns": "Statusspalten ({{count}})",
@@ -1010,7 +1011,8 @@
         "checklistItems": "Checklistenpunkte",
         "estimatedHours": "Geschätzte Std.",
         "taskDetailsByPhase": "Aufgabendetails nach Phase",
-        "readyToCreate": "Bereit zum Erstellen"
+        "readyToCreate": "Bereit zum Erstellen",
+        "readyDescription": "Once you create this template, you'll be able to use it to quickly start new projects with this structure. Click \"{{action}}\" to finish."
       },
       "clientPortal": {
         "title": "Sichtbarkeit im Kundenportal",

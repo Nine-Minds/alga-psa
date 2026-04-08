@@ -4,6 +4,7 @@ import React from 'react';
 import { FileText, Layers, CheckSquare, Circle } from 'lucide-react';
 import type { TemplateWizardData } from '../../../types/templateWizard';
 import { getEffectiveTemplateStatusMappings } from '../../../lib/templateStatusMappingUtils';
+import { useTranslation } from 'react-i18next';
 
 interface TemplateReviewStepProps {
   data: TemplateWizardData;
@@ -11,6 +12,7 @@ interface TemplateReviewStepProps {
 }
 
 export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewStepProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const totalTasks = data.tasks.length;
   const totalChecklistItems = data.checklist_items.length;
   // Convert from minutes (storage) to hours (display)
@@ -33,9 +35,11 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Review Your Template</h3>
+        <h3 className="text-lg font-semibold">
+          {t('templates.wizard.review.title', 'Review Your Template')}
+        </h3>
         <p className="text-sm text-gray-600">
-          Review your template details before creating. You can edit any section by going back.
+          {t('templates.wizard.review.description', 'Review your template details before creating. You can edit any section by going back.')}
         </p>
       </div>
 
@@ -43,22 +47,26 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
       <div className="bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-lg p-4">
         <div className="flex items-center gap-2 mb-3">
           <FileText className="w-5 h-5 text-purple-600" />
-          <h4 className="font-semibold">Template Information</h4>
+          <h4 className="font-semibold">
+            {t('templates.wizard.review.templateInformation', 'Template Information')}
+          </h4>
         </div>
         <dl className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <dt className="text-gray-600">Name:</dt>
+            <dt className="text-gray-600">{t('templates.wizard.review.name', 'Name:')}</dt>
             <dd className="font-medium">{data.template_name}</dd>
           </div>
           {data.description && (
             <div className="flex justify-between">
-              <dt className="text-gray-600">Description:</dt>
+              <dt className="text-gray-600">
+                {t('templates.wizard.review.descriptionLabel', 'Description:')}
+              </dt>
               <dd className="font-medium text-right max-w-md">{data.description}</dd>
             </div>
           )}
           {data.category && (
             <div className="flex justify-between">
-              <dt className="text-gray-600">Category:</dt>
+              <dt className="text-gray-600">{t('templates.wizard.review.category', 'Category:')}</dt>
               <dd className="font-medium">{data.category}</dd>
             </div>
           )}
@@ -68,10 +76,14 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
       {/* Status Columns */}
       {data.status_mappings.length > 0 && (
         <div className="bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Circle className="w-5 h-5 text-blue-600" />
-            <h4 className="font-semibold">Status Columns ({data.status_mappings.length})</h4>
-          </div>
+        <div className="flex items-center gap-2 mb-3">
+          <Circle className="w-5 h-5 text-blue-600" />
+          <h4 className="font-semibold">
+            {t('templates.wizard.review.statusColumns', 'Status Columns ({{count}})', {
+              count: data.status_mappings.length,
+            })}
+          </h4>
+        </div>
           <div className="flex flex-wrap gap-2">
             {data.status_mappings
               .sort((a, b) => a.display_order - b.display_order)
@@ -116,22 +128,28 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
       <div className="bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-lg p-4">
         <div className="flex items-center gap-2 mb-3">
           <CheckSquare className="w-5 h-5 text-orange-600" />
-          <h4 className="font-semibold">Tasks Summary</h4>
+          <h4 className="font-semibold">{t('templates.wizard.review.tasksSummary', 'Tasks Summary')}</h4>
         </div>
         <div className="grid grid-cols-3 gap-4 text-center">
           <div className="p-3 bg-orange-500/10 rounded-lg">
             <div className="text-2xl font-bold text-orange-600">{totalTasks}</div>
-            <div className="text-xs text-[rgb(var(--color-text-600))]">Total Tasks</div>
+            <div className="text-xs text-[rgb(var(--color-text-600))]">
+              {t('templates.wizard.review.totalTasks', 'Total Tasks')}
+            </div>
           </div>
           <div className="p-3 bg-blue-500/10 rounded-lg">
             <div className="text-2xl font-bold text-blue-600">{totalChecklistItems}</div>
-            <div className="text-xs text-[rgb(var(--color-text-600))]">Checklist Items</div>
+            <div className="text-xs text-[rgb(var(--color-text-600))]">
+              {t('templates.wizard.review.checklistItems', 'Checklist Items')}
+            </div>
           </div>
           <div className="p-3 bg-green-500/10 rounded-lg">
             <div className="text-2xl font-bold text-green-600">
               {totalEstimatedHours.toFixed(1)}h
             </div>
-            <div className="text-xs text-[rgb(var(--color-text-600))]">Est. Hours</div>
+            <div className="text-xs text-[rgb(var(--color-text-600))]">
+              {t('templates.wizard.review.estimatedHours', 'Est. Hours')}
+            </div>
           </div>
         </div>
       </div>
@@ -139,7 +157,9 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
       {/* Task Details by Phase and Status */}
       {data.phases.length > 0 && data.tasks.length > 0 && (
         <div className="bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-lg p-4">
-          <h4 className="font-semibold mb-3">Task Details by Phase</h4>
+          <h4 className="font-semibold mb-3">
+            {t('templates.wizard.review.taskDetailsByPhase', 'Task Details by Phase')}
+          </h4>
           <div className="space-y-6">
             {data.phases
               .sort((a, b) => a.order_number - b.order_number)
@@ -180,7 +200,7 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
                                   )}
                                   {taskChecklists.length > 0 && (
                                     <span className="text-gray-500 ml-2">
-                                      [{taskChecklists.length} items]
+                                      [{taskChecklists.length} {t('common:pagination.itemsLabel', 'items')}]
                                     </span>
                                   )}
                                 </div>
@@ -279,10 +299,13 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
       )}
 
       <div className="bg-success/10 border border-success/30 rounded-lg p-4">
-        <h4 className="font-medium text-[rgb(var(--color-text-900))] mb-2">Ready to Create</h4>
+        <h4 className="font-medium text-[rgb(var(--color-text-900))] mb-2">
+          {t('templates.wizard.review.readyToCreate', 'Ready to Create')}
+        </h4>
         <p className="text-sm text-[rgb(var(--color-text-700))]">
-          Once you create this template, you'll be able to use it to quickly start new projects
-          with this structure. Click "Create Template" to finish.
+          {t('templates.wizard.review.readyDescription', `Once you create this template, you'll be able to use it to quickly start new projects with this structure. Click "{{action}}" to finish.`, {
+            action: t('templates.wizard.create', 'Create Template'),
+          })}
         </p>
       </div>
     </div>

@@ -999,19 +999,21 @@
         "addTaskToPhase": "Add Task to {{phaseName}}"
       },
       "review": {
-        "title": "Review Your Template",
-        "templateInformation": "Template Information",
-        "name": "Name:",
-        "description": "Review your template details before creating. You can edit any section by going back.",
-        "category": "Category:",
-        "statusColumns": "Status Columns ({{count}})",
+      "title": "Review Your Template",
+      "templateInformation": "Template Information",
+      "name": "Name:",
+      "descriptionLabel": "Description:",
+      "description": "Review your template details before creating. You can edit any section by going back.",
+      "category": "Category:",
+      "statusColumns": "Status Columns ({{count}})",
         "tasksSummary": "Tasks Summary",
         "totalTasks": "Total Tasks",
         "checklistItems": "Checklist Items",
-        "estimatedHours": "Est. Hours",
-        "taskDetailsByPhase": "Task Details by Phase",
-        "readyToCreate": "Ready to Create"
-      },
+      "estimatedHours": "Est. Hours",
+      "taskDetailsByPhase": "Task Details by Phase",
+      "readyToCreate": "Ready to Create",
+      "readyDescription": "Once you create this template, you'll be able to use it to quickly start new projects with this structure. Click \"{{action}}\" to finish."
+    },
       "clientPortal": {
         "title": "Client Portal Visibility",
         "aboutTitle": "About Client Portal Visibility"

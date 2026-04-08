@@ -1002,6 +1002,7 @@
         "title": "Vérifiez votre modèle",
         "templateInformation": "Informations du modèle",
         "name": "Nom :",
+        "descriptionLabel": "Description:",
         "description": "Vérifiez les détails de votre modèle avant sa création. Vous pouvez modifier n'importe quelle section en revenant en arrière.",
         "category": "Catégorie :",
         "statusColumns": "Colonnes de statut ({{count}})",
@@ -1010,7 +1011,8 @@
         "checklistItems": "Éléments de checklist",
         "estimatedHours": "Heures estimées",
         "taskDetailsByPhase": "Détails des tâches par phase",
-        "readyToCreate": "Prêt à créer"
+        "readyToCreate": "Prêt à créer",
+        "readyDescription": "Once you create this template, you'll be able to use it to quickly start new projects with this structure. Click \"{{action}}\" to finish."
       },
       "clientPortal": {
         "title": "Visibilité sur le portail client",

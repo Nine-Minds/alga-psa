@@ -1002,6 +1002,7 @@
         "title": "Revisa tu plantilla",
         "templateInformation": "Información de la plantilla",
         "name": "Nombre:",
+        "descriptionLabel": "Description:",
         "description": "Revisa los detalles de tu plantilla antes de crearla. Puedes editar cualquier sección volviendo atrás.",
         "category": "Categoría:",
         "statusColumns": "Columnas de estado ({{count}})",
@@ -1010,7 +1011,8 @@
         "checklistItems": "Elementos de la lista",
         "estimatedHours": "Horas est.",
         "taskDetailsByPhase": "Detalles de tareas por fase",
-        "readyToCreate": "Listo para crear"
+        "readyToCreate": "Listo para crear",
+        "readyDescription": "Once you create this template, you'll be able to use it to quickly start new projects with this structure. Click \"{{action}}\" to finish."
       },
       "clientPortal": {
         "title": "Visibilidad en el portal del cliente",

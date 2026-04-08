@@ -1002,6 +1002,7 @@
         "title": "55555",
         "templateInformation": "55555",
         "name": "55555",
+        "descriptionLabel": "55555",
         "description": "55555",
         "category": "55555",
         "statusColumns": "55555 {{count}} 55555",
@@ -1010,7 +1011,8 @@
         "checklistItems": "55555",
         "estimatedHours": "55555",
         "taskDetailsByPhase": "55555",
-        "readyToCreate": "55555"
+        "readyToCreate": "55555",
+        "readyDescription": "55555 {{action}} 55555"
       },
       "clientPortal": {
         "title": "55555",

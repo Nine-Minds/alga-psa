@@ -1002,6 +1002,7 @@
         "title": "Przejrzyj swój szablon",
         "templateInformation": "Informacje o szablonie",
         "name": "Nazwa:",
+        "descriptionLabel": "Description:",
         "description": "Przed utworzeniem sprawdź szczegóły szablonu. Możesz edytować dowolną sekcję, wracając do poprzednich kroków.",
         "category": "Kategoria:",
         "statusColumns": "Kolumny stanu ({{count}})",
@@ -1010,7 +1011,8 @@
         "checklistItems": "Elementy listy kontrolnej",
         "estimatedHours": "Szac. Godziny",
         "taskDetailsByPhase": "Szczegóły zadania według etapów",
-        "readyToCreate": "Gotowy do tworzenia"
+        "readyToCreate": "Gotowy do tworzenia",
+        "readyDescription": "Once you create this template, you'll be able to use it to quickly start new projects with this structure. Click \"{{action}}\" to finish."
       },
       "clientPortal": {
         "title": "Widoczność Portalu Klienta",

@@ -1002,6 +1002,7 @@
         "title": "Rivedi il tuo modello",
         "templateInformation": "Informazioni modello",
         "name": "Nome:",
+        "descriptionLabel": "Description:",
         "description": "Rivedi i dettagli del modello prima di crearlo. Puoi modificare qualsiasi sezione tornando indietro.",
         "category": "Categoria:",
         "statusColumns": "Colonne stato ({{count}})",
@@ -1010,7 +1011,8 @@
         "checklistItems": "Elementi checklist",
         "estimatedHours": "Ore stimate",
         "taskDetailsByPhase": "Dettagli attività per fase",
-        "readyToCreate": "Pronto per la creazione"
+        "readyToCreate": "Pronto per la creazione",
+        "readyDescription": "Once you create this template, you'll be able to use it to quickly start new projects with this structure. Click \"{{action}}\" to finish."
       },
       "clientPortal": {
         "title": "Visibilità portale cliente",
