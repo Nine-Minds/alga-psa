@@ -654,8 +654,6 @@ export function TicketDetailBody({
           <KeyValue label={t("detail.due")} value={formatDateTimeWithRelative(getDueDateIso(ticket))} />
           <View style={{ height: spacing.sm }} />
           <KeyValue label={t("detail.closed")} value={formatDateTimeWithRelative(ticket.closed_at)} />
-          <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.ticketId")} value={ticket.ticket_id} />
         </View>
       </ScrollView>
 

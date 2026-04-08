@@ -497,6 +497,50 @@ export class TicketService extends BaseService<ITicket> {
     };
   }
 
+  async deleteTicketDocument(
+    ticketId: string,
+    documentId: string,
+    context: ServiceContext
+  ): Promise<void> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const doc = await knex('documents as d')
+      .join('document_associations as da', function () {
+        this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
+      })
+      .where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.document_id': documentId,
+        'd.tenant': context.tenant,
+      })
+      .select('d.document_id', 'd.file_id', 'da.association_id')
+      .first();
+
+    if (!doc) {
+      throw new NotFoundError('Document not found');
+    }
+
+    await withTransaction(knex, async (trx) => {
+      await trx('document_associations')
+        .where({ association_id: doc.association_id, tenant: context.tenant })
+        .del();
+
+      // Only delete the document itself if no other associations remain
+      const remaining = await trx('document_associations')
+        .where({ document_id: documentId, tenant: context.tenant })
+        .count('* as count')
+        .first();
+
+      if (!remaining || Number(remaining.count) === 0) {
+        await trx('documents')
+          .where({ document_id: documentId, tenant: context.tenant })
+          .del();
+      }
+    });
+  }
+
   async getTicketMaterials(ticketId: string, context: ServiceContext): Promise<ITicketMaterial[]> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
