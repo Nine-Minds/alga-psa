@@ -287,6 +287,17 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F028 check)** `node_modules/.bin/eslint
   packages/projects/src/components/ProjectTaskExportDialog.tsx` passes with pre-existing
   warnings only (2 warnings, 0 errors).
+- **(2026-04-07, F029)** Wired `packages/projects/src/components/ProjectQuickAdd.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the quick-add dialog
+  title, field labels/placeholders, validation banner/errors, project-status add-new
+  affordance, client-portal section header, and create/cancel button + toast copy used
+  both on `/msp/projects` and in the global quick-create dialog.
+- **(2026-04-07, F029)** No new locale keys were required. Existing `quickAdd.*`,
+  `settings.statuses.addStatus`, and `common:actions.*` leaves fully covered the dialog,
+  so this item was a pure component-wiring pass with English fallbacks preserved.
+- **(2026-04-07, F029 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/ProjectQuickAdd.tsx` passes with a pre-existing hooks
+  warning only (1 warning, 0 errors).
 
 ## Commands / Runbooks
 
