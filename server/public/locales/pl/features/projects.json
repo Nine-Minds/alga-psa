@@ -893,6 +893,10 @@
       "blocks": "Bloki:",
       "seeMore": "See more",
       "seeLess": "See less",
+      "noPhasesFound": "No phases found",
+      "untitledPhase": "Untitled Phase",
+      "taskCount_one": "1 task",
+      "taskCount_other": "{{count}} tasks",
       "unknownUser": "Unknown",
       "unknownTask": "Unknown task",
       "checklistCountTitle": "{{count}} checklist item"

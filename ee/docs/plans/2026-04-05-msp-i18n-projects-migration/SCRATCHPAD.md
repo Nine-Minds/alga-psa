@@ -442,6 +442,21 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-08, F055 check)** `node_modules/.bin/eslint
   packages/projects/src/components/project-templates/CreateTemplateDialog.tsx` passes
   cleanly with 0 warnings / 0 errors.
+- **(2026-04-08, F056)** Wired `packages/projects/src/components/project-templates/TemplateTaskListView.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the responsive table
+  headers, hidden-columns alert, empty state, phase/task add CTAs, untitled-phase/task-
+  count chrome, phase timing summaries, dependency/checklist/additional-agent tooltips,
+  unassigned fallback, status fallback, and edit/delete task action titles.
+- **(2026-04-08, F056)** Reused existing `tasks.*`, `projectPhases.*`,
+  `taskDependencies.*`, `projectDetail.*`, and `templates.editor.*` leaves where
+  possible. Added only `templates.editor.noPhasesFound`, `untitledPhase`,
+  `taskCount_one`, and `taskCount_other` for the template list-view-specific fallbacks.
+  Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran translation
+  validation successfully.
+- **(2026-04-08, F056 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/TemplateTaskListView.tsx` passes
+  with pre-existing warnings only (unused `taskTypes`, `priorities`, and
+  `getAssigneeName`; 6 warnings, 0 errors).
 
 ## Commands / Runbooks
 
