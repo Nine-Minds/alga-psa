@@ -171,7 +171,7 @@ export default function TaniumIntegrationSettings() {
       setError(null);
       setSuccess(null);
       const result = await triggerTaniumFullSync();
-      if ('success' in result && result.success) {
+      if (result.success && 'items_processed' in result) {
         setSuccess(
           `Inventory sync completed. Processed: ${result.items_processed}, Created: ${result.items_created}, Updated: ${result.items_updated}`
         );

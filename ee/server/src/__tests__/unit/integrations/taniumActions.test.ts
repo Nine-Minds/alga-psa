@@ -273,7 +273,7 @@ describe('taniumActions', () => {
     });
     gatewayGroups = [{ id: 'scope_1', name: 'New Name' }];
 
-    const result = await syncTaniumScopes({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+    const result = await (syncTaniumScopes as any)();
 
     expect(result.success).toBe(true);
     expect(state.rmm_organization_mappings[0]).toMatchObject({
@@ -296,7 +296,7 @@ describe('taniumActions', () => {
     gatewayEndpointsByScope.scope_1 = [{ id: 'endpoint_1', name: 'Endpoint 1', online: true, computerGroupId: 'scope_1' }];
     ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'created' });
 
-    const result = await triggerTaniumFullSync({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+    const result = await (triggerTaniumFullSync as any)();
 
     expect(result.success).toBe(true);
     expect(listEndpointsMock).toHaveBeenCalledTimes(1);
@@ -320,7 +320,7 @@ describe('taniumActions', () => {
     ];
     ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'updated' });
 
-    const result = await triggerTaniumFullSync({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+    const result = await (triggerTaniumFullSync as any)();
 
     expect(result.success).toBe(true);
     expect(ingestNormalizedRmmDeviceSnapshotMock).toHaveBeenCalled();
@@ -329,7 +329,7 @@ describe('taniumActions', () => {
   });
 
   it('uses advanced-assets tier gating for Tanium actions', async () => {
-    await syncTaniumScopes({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+    await (syncTaniumScopes as any)();
 
     expect(assertTierAccessMock).toHaveBeenCalledWith('ADVANCED_ASSETS');
   });
@@ -337,9 +337,7 @@ describe('taniumActions', () => {
   it('clears saved Asset API secret when configuration is saved with an empty fallback URL', async () => {
     secrets.set('tenant_1:tanium_asset_api_url', 'https://old-asset.example');
 
-    const result = await saveTaniumConfiguration(
-      { user_id: 'u1' } as any,
-      { tenant: 'tenant_1' },
+    const result = await (saveTaniumConfiguration as any)(
       {
         gatewayUrl: 'https://tanium.example',
         assetApiUrl: '',
@@ -371,7 +369,7 @@ describe('taniumActions', () => {
     ];
     ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'created' });
 
-    const result = await triggerTaniumFullSync({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+    const result = await (triggerTaniumFullSync as any)();
 
     expect(result.success).toBe(true);
     expect(ingestNormalizedRmmDeviceSnapshotMock.mock.calls[0]?.[0]?.snapshot?.assetType).toBe('server');
@@ -380,7 +378,7 @@ describe('taniumActions', () => {
   it('T007: connection test failure keeps integration inactive and returns actionable error', async () => {
     testConnectionError = new Error('Unauthorized: invalid token');
 
-    const result = await testTaniumConnection({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+    const result = await (testTaniumConnection as any)();
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('Unauthorized');

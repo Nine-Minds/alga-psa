@@ -20,7 +20,7 @@ import TaniumIntegrationSettings from '../../../components/settings/integrations
 
 describe('TaniumIntegrationSettings UI flow', () => {
   beforeEach(() => {
-    Object.values(actions).forEach((fn) => fn.mockReset());
+    (Object.values(actions) as Array<{ mockReset: () => void }>).forEach((fn) => fn.mockReset());
 
     actions.getTaniumSettings.mockResolvedValue({
       success: true,
