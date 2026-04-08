@@ -189,7 +189,7 @@ describe('chat history search (db-backed)', () => {
         tenant: TEST_TENANT,
         chat_id: messageMatchChatId,
         chat_role: 'bot',
-        content: 'Contains runbook keyword for message match.',
+        content: 'Printer maintenance alert for the overnight shift.',
         message_order: 1,
       },
       {
@@ -197,7 +197,7 @@ describe('chat history search (db-backed)', () => {
         tenant: TEST_TENANT,
         chat_id: messageMatchChatId,
         chat_role: 'bot',
-        content: 'Another runbook mention to verify dedupe.',
+        content: 'Outage escalation steps were documented separately.',
         message_order: 2,
       },
       {
@@ -205,8 +205,16 @@ describe('chat history search (db-backed)', () => {
         tenant: TEST_TENANT,
         chat_id: messageMatchChatId,
         chat_role: 'bot',
-        content: 'Latest preview should come from this non-matching message.',
+        content: 'Consult the runbook checklist before paging the vendor.',
         message_order: 3,
+      },
+      {
+        id: randomUUID(),
+        tenant: TEST_TENANT,
+        chat_id: messageMatchChatId,
+        chat_role: 'bot',
+        content: 'Latest preview should come from this non-matching message.',
+        message_order: 4,
       },
     ]);
 

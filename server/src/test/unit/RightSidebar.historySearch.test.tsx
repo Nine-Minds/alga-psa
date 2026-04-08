@@ -240,6 +240,56 @@ describe('RightSidebarContent history search', () => {
     expect(screen.getByText('Recent chat')).toBeInTheDocument();
   });
 
+  it('ignores stale search results after the query becomes too short', async () => {
+    let resolveSearch:
+      | ((value: Array<{
+          id: string;
+          title_text: string;
+          title_is_locked: boolean;
+          created_at: string;
+          updated_at: string;
+          preview_text: string;
+        }>) => void)
+      | undefined;
+
+    vi.mocked(listCurrentUserChatsAction).mockResolvedValue([]);
+    vi.mocked(searchCurrentUserChatsAction).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSearch = resolve;
+        }),
+    );
+
+    render(<RightSidebarContent {...baseProps} />);
+    await openHistory();
+
+    fireEvent.change(screen.getByLabelText('Search chat history'), { target: { value: 'op' } });
+    await runSearchDebounce();
+
+    await waitFor(() => {
+      expect(searchCurrentUserChatsAction).toHaveBeenCalledWith('op', 20);
+    });
+
+    fireEvent.change(screen.getByLabelText('Search chat history'), { target: { value: 'o' } });
+    expect(await screen.findByText('Type at least 2 characters to search saved chats.')).toBeInTheDocument();
+
+    resolveSearch?.([
+      {
+        id: 'stale-chat',
+        title_text: 'Stale search result',
+        title_is_locked: false,
+        created_at: '2026-03-02T00:00:00.000Z',
+        updated_at: '2026-03-02T00:00:00.000Z',
+        preview_text: 'Should never render',
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(screen.getByText('Type at least 2 characters to search saved chats.')).toBeInTheDocument();
+      expect(screen.queryByText('Stale search result')).not.toBeInTheDocument();
+    });
+  });
+
   it('renders no-results in search mode and loads persisted chat when a search result is clicked', async () => {
     vi.mocked(listCurrentUserChatsAction).mockResolvedValue([]);
     vi.mocked(searchCurrentUserChatsAction).mockImplementation(async (query) => {

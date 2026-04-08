@@ -166,6 +166,10 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
     showHistoryRef.current = showHistory;
   }, [showHistory]);
 
+  const invalidateHistoryRequests = useCallback(() => {
+    historyRequestSequenceRef.current += 1;
+  }, []);
+
   const resetChatSession = useCallback(() => {
     activeChatIdRef.current = null;
     setActiveChatId(null);
@@ -176,6 +180,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
 
   const loadHistory = useCallback(async (searchQuery: string) => {
     if (!userId) {
+      invalidateHistoryRequests();
       setHistoryItems([]);
       setHistoryError(null);
       setIsHistoryLoading(false);
@@ -222,7 +227,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
       return;
     }
     void loadHistory(trimmedHistoryQuery);
-  }, [loadHistory, trimmedHistoryQuery]);
+  }, [invalidateHistoryRequests, loadHistory, trimmedHistoryQuery]);
 
   const loadPersistedChat = useCallback(async (chatId: string) => {
     if (!chatId) {
@@ -330,6 +335,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
     }
 
     if (trimmedHistoryQuery.length < MIN_HISTORY_SEARCH_CHARS) {
+      invalidateHistoryRequests();
       setIsHistoryLoading(false);
       setHistoryError(null);
       setHistoryItems([]);
@@ -343,7 +349,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
     return () => {
       clearTimeout(timer);
     };
-  }, [isOpen, showHistory, loadHistory, trimmedHistoryQuery]);
+  }, [invalidateHistoryRequests, isOpen, showHistory, loadHistory, trimmedHistoryQuery]);
 
   useEffect(() => {
     if (!isOpen) {
