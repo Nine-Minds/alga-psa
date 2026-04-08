@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { extractTaskDescriptionText } from '../../lib/taskRichText';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -214,7 +215,7 @@ export function TemplateTaskForm({
 
       if (task) {
         const taskNameVal = task.task_name || '';
-        const descriptionVal = task.description || '';
+        const descriptionVal = extractTaskDescriptionText(task.description) || '';
         const estimatedHoursVal = task.estimated_hours ? (Number(task.estimated_hours) / 60).toString() : '';
         const durationDaysVal = task.duration_days?.toString() || '';
         const taskTypeKeyVal = task.task_type_key || '';

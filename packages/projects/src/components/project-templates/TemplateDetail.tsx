@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { extractTaskDescriptionText } from '../../lib/taskRichText';
 import { useTheme } from 'next-themes';
 import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -282,7 +283,7 @@ function TaskCard({ task }: { task: IProjectTemplateTask }) {
     <div className="bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
       <div className="font-medium text-sm mb-1">{task.task_name}</div>
       {task.description && (
-        <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</div>
+        <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">{extractTaskDescriptionText(task.description)}</div>
       )}
       <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
         {task.estimated_hours && (

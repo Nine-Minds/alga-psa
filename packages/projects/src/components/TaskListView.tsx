@@ -5,6 +5,7 @@ import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTaskDependency } fr
 import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
 import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus, CheckSquare, Paperclip, Zap } from 'lucide-react';
+import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -143,7 +144,8 @@ export default function TaskListView({
 
     tasks.forEach(task => {
       const matchesName = regex.test(task.task_name);
-      const matchesDescription = task.description ? regex.test(task.description) : false;
+      const descText = extractTaskDescriptionText(task.description);
+      const matchesDescription = descText ? regex.test(descText) : false;
 
       // Auto-expand title if it matches and is long enough to be truncated
       if (matchesName && task.task_name.length > 50) {
@@ -228,15 +230,16 @@ export default function TaskListView({
       const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
       filtered = filtered.filter(task => {
         const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
+        const descText = extractTaskDescriptionText(task.description);
         const taskDescription = searchCaseSensitive
-          ? (task.description ?? '')
-          : (task.description?.toLowerCase() ?? '');
+          ? descText
+          : descText.toLowerCase();
 
         if (searchWholeWord) {
           // Use word boundary regex for whole word matching
           const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
-          return wordRegex.test(task.task_name) || wordRegex.test(task.description ?? '');
+          return wordRegex.test(task.task_name) || wordRegex.test(descText);
         } else {
           return taskName.includes(query) || taskDescription.includes(query);
         }
@@ -922,6 +925,7 @@ export default function TaskListView({
                             const additionalCount = resources.length;
                             const checklist = checklistItems[task.task_id];
                             const docCount = documentCounts[task.task_id] || 0;
+                            const descText = extractTaskDescriptionText(task.description);
                             const isDragging = draggedTask?.task_id === task.task_id;
                             const showDropIndicator = isDropTarget && dropIndicatorIndex === taskIndex;
 
@@ -986,15 +990,15 @@ export default function TaskListView({
                                         </button>
                                       )}
                                     </div>
-                                    {task.description && (
+                                    {descText && (
                                       <div className="mt-0.5">
                                         <p
                                           className={`text-xs text-gray-500 ${!expandedDescriptions.has(task.task_id) ? 'line-clamp-1' : ''}`}
-                                          title={!expandedDescriptions.has(task.task_id) ? task.description : undefined}
+                                          title={!expandedDescriptions.has(task.task_id) ? descText : undefined}
                                         >
-                                          {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive, searchWholeWord)}
+                                          {highlightSearchMatch(descText, searchQuery, searchCaseSensitive, searchWholeWord)}
                                         </p>
-                                        {task.description.length > 80 && (
+                                        {descText.length > 80 && (
                                           <button
                                             type="button"
                                             onClick={(e) => {

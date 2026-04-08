@@ -28,13 +28,15 @@ import {
   getTaskDependencies,
   addTaskDependency
 } from '../actions/projectTaskActions';
-import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getCurrentUser, getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityId, createTagsForEntity } from '@alga-psa/tags/actions';
 import { QuickAddTagPicker, TagManager } from '@alga-psa/tags/components';
 import type { PendingTag } from '@alga-psa/types';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { TextEditor } from '@alga-psa/ui/editor';
+import { PartialBlock } from '@blocknote/core';
 import { ListChecks, Plus, Trash2, Clock, Ticket } from 'lucide-react';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -69,6 +71,11 @@ import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions'
 import type { ITeam } from '@alga-psa/types';
 import { TaskPrefillFields } from '../lib/taskTicketMapping';
 import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
+import {
+  parseTaskRichTextContent,
+  serializeTaskRichTextContent,
+  isTaskRichTextEmpty,
+} from '../lib/taskRichText';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -114,7 +121,9 @@ export default function TaskForm({
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [taskName, setTaskName] = useState(task?.task_name || prefillData?.task_name || '');
-  const [description, setDescription] = useState(task?.description || prefillData?.description || '');
+  const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
+    parseTaskRichTextContent(task?.description || prefillData?.description || null)
+  );
   const [projectTreeOptions, setProjectTreeOptions] = useState<Array<TreeSelectOption<'project' | 'phase' | 'status'>>>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>(phase.phase_id);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,6 +132,7 @@ export default function TaskForm({
   const [assignedUser, setAssignedUser] = useState<string | null>(task?.assigned_to ?? prefillData?.assigned_to ?? null);
   const [assignedTeamId, setAssignedTeamId] = useState<string | null>(task?.assigned_team_id ?? null);
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
+  const [descriptionEditorKey, setDescriptionEditorKey] = useState(0);
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase>(phase);
   const [showMoveConfirmation, setShowMoveConfirmation] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -234,7 +244,8 @@ export default function TaskForm({
   }) => {
     const { prefillData, ticket, shouldLink } = payload;
     setTaskName(prefillData.task_name);
-    setDescription(prefillData.description);
+    setDescriptionContent(parseTaskRichTextContent(prefillData.description || null));
+    setDescriptionEditorKey(prev => prev + 1);
     setAssignedUser(prefillData.assigned_to);
     setDueDate(prefillData.due_date ?? undefined);
     setEstimatedHours(prefillData.estimated_hours);
@@ -548,7 +559,7 @@ export default function TaskForm({
         // Update task with all fields preserved
         const taskData: Partial<IProjectTask> = {
           task_name: taskName,
-          description: description,
+          description: isTaskRichTextEmpty(descriptionContent) ? null : serializeTaskRichTextContent(descriptionContent),
           assigned_to: assignedUser || null,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
@@ -702,7 +713,7 @@ export default function TaskForm({
         // Always update the task data (whether moved or not)
         const taskData: Partial<IProjectTask> = {
           task_name: taskName,
-          description: description,
+          description: isTaskRichTextEmpty(descriptionContent) ? null : serializeTaskRichTextContent(descriptionContent),
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
@@ -730,7 +741,7 @@ export default function TaskForm({
           task_name: taskName,
           project_status_mapping_id: selectedStatusId,
           wbs_code: `${phase.wbs_code}.0`,
-          description: description,
+          description: isTaskRichTextEmpty(descriptionContent) ? null : serializeTaskRichTextContent(descriptionContent),
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
@@ -819,7 +830,7 @@ export default function TaskForm({
     if (mode === 'create') {
       // For new tasks, only show confirmation if user has entered any data
       if (taskName.trim() !== '') return true;
-      if (description.trim() !== '') return true;
+      if (!isTaskRichTextEmpty(descriptionContent)) return true;
       if (assignedUser !== null && assignedUser !== currentUserId) return true; // Only if explicitly selected
       if (assignedTeamId !== null) return true;
       if (checklistItems.length > 0) return true;
@@ -845,7 +856,9 @@ export default function TaskForm({
     const normalizeNullable = <T,>(val: T | null | undefined): T | null => val ?? null;
 
     if (taskName !== (task.task_name || '')) return true;
-    if (normalizeString(description) !== normalizeString(task.description)) return true;
+    const currentDescriptionSerialized = isTaskRichTextEmpty(descriptionContent) ? '' : serializeTaskRichTextContent(descriptionContent);
+    const originalDescriptionSerialized = !task.description ? '' : serializeTaskRichTextContent(parseTaskRichTextContent(task.description));
+    if (currentDescriptionSerialized !== originalDescriptionSerialized) return true;
     if (selectedPhaseId !== task.phase_id) return true;
     if (selectedStatusId !== task.project_status_mapping_id) return true;
     // Use || 0 to handle null/undefined consistently with initial state
@@ -1344,12 +1357,13 @@ export default function TaskForm({
           {/* Full width Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <TextArea
-              value={description}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
+            <TextEditor
+              key={descriptionEditorKey}
+              id={`task-description-${task?.task_id || 'new'}`}
+              initialContent={descriptionContent}
+              onContentChange={setDescriptionContent}
+              searchMentions={searchUsersForMentions}
               placeholder="Add task description..."
-              className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 whitespace-pre-wrap break-words"
-              rows={3}
             />
           </div>
 
@@ -1803,7 +1817,7 @@ export default function TaskForm({
               mode === 'edit'
                 ? {
                     task_name: taskName,
-                    description,
+                    description: isTaskRichTextEmpty(descriptionContent) ? '' : serializeTaskRichTextContent(descriptionContent),
                     assigned_to: assignedUser,
                     due_date: dueDate ?? null,
                     additional_agents: ([...taskResources, ...tempTaskResources]).map(r => ({

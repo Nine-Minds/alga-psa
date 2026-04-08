@@ -7,6 +7,7 @@ import { IUserWithRoles } from '@alga-psa/types';
 import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2, Tag, MessageSquare } from 'lucide-react';
+import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -127,9 +128,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   };
   const tagSize = getTagSize();
 
+  const descriptionPlainText = extractTaskDescriptionText(task.description);
+
   // Auto-expand description when search matches in description
   useEffect(() => {
-    if (!searchQuery.trim() || !task.description) {
+    if (!searchQuery.trim() || !descriptionPlainText) {
       setIsDescriptionExpanded(false);
       return;
     }
@@ -140,14 +143,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     const regex = new RegExp(pattern, searchCaseSensitive ? '' : 'i');
 
     // Auto-expand description if the match is in the description
-    const matchesDescription = regex.test(task.description);
+    const matchesDescription = regex.test(descriptionPlainText);
 
     if (matchesDescription) {
       setIsDescriptionExpanded(true);
     } else {
       setIsDescriptionExpanded(false);
     }
-  }, [searchQuery, searchCaseSensitive, searchWholeWord, task.description]);
+  }, [searchQuery, searchCaseSensitive, searchWholeWord, descriptionPlainText]);
 
   // Update documentCount when providedDocumentCount changes
   useEffect(() => {
@@ -339,13 +342,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </Button>
         )}
       </div>
-      {task.description && zoomScales.showDescription && (
+      {descriptionPlainText && zoomScales.showDescription && (
         <div className={isCompact ? 'mb-0.5' : 'mb-2'}>
           <p
             ref={descriptionRef}
             className={`${zoomScales.descSize} text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
-            {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive, searchWholeWord)}
+            {highlightSearchMatch(descriptionPlainText, searchQuery, searchCaseSensitive, searchWholeWord)}
           </p>
           {(isDescriptionTruncated || isDescriptionExpanded) && (
             <Button

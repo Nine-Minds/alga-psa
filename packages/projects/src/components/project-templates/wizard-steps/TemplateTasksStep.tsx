@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { extractTaskDescriptionText } from '../../../lib/taskRichText';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -219,7 +220,7 @@ export function TemplateTasksStep({
                         <div>
                           <Label>Description</Label>
                           <TextArea
-                            value={task.description || ''}
+                            value={extractTaskDescriptionText(task.description) || ''}
                             onChange={(e) =>
                               updateTask(task.temp_id, { description: e.target.value })
                             }
@@ -511,7 +512,7 @@ export function TemplateTasksStep({
                             </h4>
                             {task.description && (
                               <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                                {task.description}
+                                {extractTaskDescriptionText(task.description)}
                               </p>
                             )}
                             <div className="flex gap-4 mt-2 text-xs text-gray-600">
