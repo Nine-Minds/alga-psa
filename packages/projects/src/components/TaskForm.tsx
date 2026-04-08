@@ -69,6 +69,7 @@ import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions'
 import type { ITeam } from '@alga-psa/types';
 import { TaskPrefillFields } from '../lib/taskTicketMapping';
 import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
+import { useTranslation } from 'react-i18next';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -109,6 +110,7 @@ export default function TaskForm({
   prefillData,
   onCommentCountChange
 }: TaskFormProps): React.JSX.Element {
+  const { t } = useTranslation(['features/projects', 'common']);
   const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
@@ -219,6 +221,9 @@ export default function TaskForm({
   );
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  const taskFormT = (key: string, fallback: string, options?: Record<string, unknown>) =>
+    t(`taskForm.${key}`, { defaultValue: fallback, ...(options ?? {}) });
 
   const handlePrefillFromTicket = (payload: {
     prefillData: TaskFormPrefillData;
@@ -414,11 +419,11 @@ export default function TaskForm({
               setProjectTreeOptions(treeData);
             } else {
               console.error('Invalid or empty tree data received:', treeData);
-              toast.error('No projects available with valid phases and statuses');
+              toast.error(t('taskForm.noValidProjects', 'No projects available with valid phases and statuses'));
               setProjectTreeOptions([]);
             }
           } catch (error) {
-            handleError(error, 'Error loading project data. Please try again.');
+            handleError(error, t('taskForm.loadProjectDataFailed', 'Error loading project data. Please try again.'));
             setProjectTreeOptions([]);
           }
         }
@@ -426,7 +431,7 @@ export default function TaskForm({
     };
 
     fetchProjectsData();
-  }, [mode, projectTreeData.length]);
+  }, [mode, projectTreeData, t]);
 
   const handleTreeSelectChange = async (
     value: string,
@@ -563,10 +568,10 @@ export default function TaskForm({
         onSubmit(updatedTask);
       }
 
-      toast.success('Task moved successfully');
+      toast.success(taskFormT('movedSuccess', 'Task moved successfully'));
       onClose();
     } catch (error) {
-      handleError(error, 'Failed to move task');
+      handleError(error, taskFormT('moveFailed', 'Failed to move task'));
     } finally {
       setIsSubmitting(false);
       setShowMoveConfirmation(false);
@@ -589,10 +594,10 @@ export default function TaskForm({
         const resources = await getTaskResourcesAction(task.task_id);
         setTaskResources(resources);
         setInitialTaskResources(resources);
-        toast.success('Team assigned successfully');
+        toast.success(taskFormT('teamAssignedSuccess', 'Team assigned successfully'));
       } catch (error) {
         console.error('Failed to assign team:', error);
-        toast.error('Failed to assign team');
+        toast.error(taskFormT('assignTeamFailed', 'Failed to assign team'));
       }
     } else {
       // New task: populate tempTaskResources with team members (excluding lead who becomes primary)
@@ -628,10 +633,10 @@ export default function TaskForm({
     setHasAttemptedSubmit(true);
 
     const errors: string[] = [];
-    if (!taskName.trim()) errors.push('Task name');
+    if (!taskName.trim()) errors.push(taskFormT('taskNameRequired', 'Task name'));
     const currentAgents = [...taskResources, ...tempTaskResources];
     if (currentAgents.length > 0 && !assignedUser) {
-      toast.error('Primary agent is required when additional agents are assigned');
+      toast.error(taskFormT('primaryAgentRequired', 'Primary agent is required when additional agents are assigned'));
       return;
     }
 
@@ -776,7 +781,7 @@ export default function TaskForm({
               }
             }
           } catch (error) {
-            handleError(error, 'Task created but failed to link some items');
+            handleError(error, taskFormT('linkingPartialFailure', 'Task created but failed to link some items'));
             linkingFailed = true;
           }
 
@@ -786,7 +791,9 @@ export default function TaskForm({
             try {
               createdTags = await createTagsForEntity(resultTask.task_id, 'project_task', pendingTags);
               if (createdTags.length < pendingTags.length) {
-                toast.error(`${pendingTags.length - createdTags.length} tag(s) could not be created`);
+                toast.error(taskFormT('tagCreationPartialFailure', '{{count}} tag(s) could not be created', {
+                  count: pendingTags.length - createdTags.length,
+                }));
               }
             } catch (tagError) {
               console.error("Error creating task tags:", tagError);
@@ -799,7 +806,7 @@ export default function TaskForm({
         }
       }
     } catch (error) {
-      handleError(error, 'Failed to save task');
+      handleError(error, taskFormT('saveFailed', 'Failed to save task'));
     } finally {
       setIsSubmitting(false);
     }
@@ -964,7 +971,10 @@ export default function TaskForm({
       }
 
       if (failureCount > 0) {
-        toast.error(`${failureCount} document${failureCount !== 1 ? 's' : ''} could not be deleted and will remain in Documents`);
+        toast.error(taskFormT('documentCleanupFailure', '{{count}} document{{plural}} could not be deleted and will remain in Documents', {
+          count: failureCount,
+          plural: failureCount === 1 ? '' : 's',
+        }));
       }
     } finally {
       setIsDeletingDocuments(false);
@@ -995,7 +1005,10 @@ export default function TaskForm({
       }
 
       if (failureCount > 0) {
-        toast.error(`${failureCount} ticket${failureCount !== 1 ? 's' : ''} could not be deleted`);
+        toast.error(taskFormT('ticketCleanupFailure', '{{count}} ticket{{plural}} could not be deleted', {
+          count: failureCount,
+          plural: failureCount === 1 ? '' : 's',
+        }));
       }
     } finally {
       setIsDeletingTickets(false);
@@ -1060,11 +1073,11 @@ export default function TaskForm({
     setIsSubmitting(true);
     try {
       await deleteTask(task.task_id);
-      toast.success('Task deleted successfully');
+      toast.success(taskFormT('deletedSuccess', 'Task deleted successfully'));
       onSubmit(null);
       onClose();
     } catch (error) {
-      handleError(error, 'Failed to delete task');
+      handleError(error, taskFormT('deleteFailed', 'Failed to delete task'));
     } finally {
       setIsSubmitting(false);
       setShowDeleteConfirm(false);
@@ -1077,7 +1090,7 @@ export default function TaskForm({
 
   const handleAddTimeEntry = async () => {
     if (!task?.task_id) {
-      toast.error('Please save the task before adding time entries');
+      toast.error(taskFormT('saveBeforeTimeEntry', 'Please save the task before adding time entries'));
       return;
     }
 
@@ -1111,7 +1124,7 @@ export default function TaskForm({
         }),
       });
     } catch (error) {
-      handleError(error, 'Failed to prepare time entry. Please try again.');
+      handleError(error, taskFormT('prepareTimeEntryFailed', 'Failed to prepare time entry. Please try again.'));
     }
   };
 
@@ -1123,7 +1136,7 @@ export default function TaskForm({
         await addTaskResourceAction(task.task_id, userId);
         const updatedResources = await getTaskResourcesAction(task.task_id);
         setTaskResources(updatedResources);
-        toast.success('Agent added successfully');
+        toast.success(taskFormT('agentAddedSuccess', 'Agent added successfully'));
       } else {
         // New task, no primary agent, or primary has changed: store temporarily
         // When primary has changed, we must defer saving to avoid CHECK constraint
@@ -1137,11 +1150,11 @@ export default function TaskForm({
             assignment_id: `temp-${Date.now()}`
           };
           setTempTaskResources(prev => [...prev, tempResource]);
-          toast.success('Agent will be added when task is saved');
+          toast.success(taskFormT('agentPendingSave', 'Agent will be added when task is saved'));
         }
       }
     } catch (error: any) {
-      handleError(error, 'Failed to add agent');
+      handleError(error, taskFormT('addAgentFailed', 'Failed to add agent'));
     }
   };
 
@@ -1154,7 +1167,7 @@ export default function TaskForm({
         setTaskResources(taskResources.filter(r => r.assignment_id !== assignmentId));
       }
     } catch (error) {
-      handleError(error, 'Failed to remove agent');
+      handleError(error, taskFormT('removeAgentFailed', 'Failed to remove agent'));
     }
   };
 
@@ -1190,7 +1203,7 @@ export default function TaskForm({
                 if (textContent) return textContent;
               }
             }
-            return 'Unknown Phase';
+            return taskFormT('unknownPhase', 'Unknown Phase');
           }
           if (opt.children) {
             const found = findPhaseName(opt.children, id);
@@ -1199,7 +1212,7 @@ export default function TaskForm({
         }
         return undefined;
       };
-      const targetPhaseName = findPhaseName(projectTreeOptions, targetPhaseId) || 'Unknown Phase';
+      const targetPhaseName = findPhaseName(projectTreeOptions, targetPhaseId) || taskFormT('unknownPhase', 'Unknown Phase');
 
       // Prepare details for the confirmation dialog
       const details = {
@@ -1236,7 +1249,7 @@ export default function TaskForm({
             onClick={handleCancelClick}
             disabled={isSubmitting}
           >
-            Cancel
+            {t('common:actions.cancel', 'Cancel')}
           </Button>
         )}
         {mode === 'edit' && !inDrawer && (
@@ -1247,7 +1260,7 @@ export default function TaskForm({
             onClick={() => setShowDeleteConfirm(true)}
             disabled={isSubmitting}
           >
-            Delete
+            {t('common:actions.delete', 'Delete')}
           </Button>
         )}
       </div>
@@ -1261,7 +1274,7 @@ export default function TaskForm({
             disabled={isSubmitting || !task?.task_id}
           >
             <Clock className="h-4 w-4 mr-2" />
-            Add Time Entry
+            {taskFormT('addTimeEntry', 'Add Time Entry')}
           </Button>
         )}
         <Button
@@ -1271,7 +1284,13 @@ export default function TaskForm({
           className={!taskName.trim() ? 'opacity-50' : ''}
           {...(outsideForm ? { onClick: () => (document.getElementById('task-form') as HTMLFormElement | null)?.requestSubmit() } : {})}
         >
-          {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
+          {isSubmitting
+            ? (mode === 'edit'
+              ? taskFormT('updating', 'Updating...')
+              : taskFormT('adding', 'Adding...'))
+            : (mode === 'edit'
+              ? taskFormT('update', 'Update')
+              : taskFormT('save', 'Save'))}
         </Button>
       </div>
     </div>
@@ -1291,7 +1310,7 @@ export default function TaskForm({
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>
-              <p className="font-medium mb-2">Please fill in the required fields:</p>
+              <p className="font-medium mb-2">{taskFormT('validationTitle', 'Please fill in the required fields:')}</p>
               <ul className="list-disc list-inside space-y-1">
                 {validationErrors.map((err, index) => (
                   <li key={index}>{err}</li>
@@ -1305,7 +1324,7 @@ export default function TaskForm({
           <div>
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <label className="block text-sm font-medium text-gray-700">Task Name *</label>
+                <label className="block text-sm font-medium text-gray-700">{taskFormT('taskNameLabel', 'Task Name *')}</label>
                 {mode === 'create' && (
                   <Button
                     id="task-create-from-ticket"
@@ -1313,7 +1332,7 @@ export default function TaskForm({
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowPrefillDialog(true)}
-                    title="Create from ticket"
+                    title={taskFormT('createFromTicket', 'Create from ticket')}
                   >
                     <Ticket className="h-4 w-4" />
                   </Button>
@@ -1333,7 +1352,7 @@ export default function TaskForm({
                 setTaskName(e.target.value);
                 clearErrorIfSubmitted();
               }}
-              placeholder="Enter task name..."
+              placeholder={taskFormT('taskNamePlaceholder', 'Enter task name...')}
               className={`w-full text-2xl font-bold p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                 hasAttemptedSubmit && !taskName.trim() ? 'border-destructive' : 'border-gray-300'
               }`}
@@ -1343,11 +1362,11 @@ export default function TaskForm({
 
           {/* Full width Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('descriptionLabel', 'Description')}</label>
             <TextArea
               value={description}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
-              placeholder="Add task description..."
+              placeholder={taskFormT('descriptionPlaceholder', 'Add task description...')}
               className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 whitespace-pre-wrap break-words"
               rows={3}
             />
@@ -1356,25 +1375,25 @@ export default function TaskForm({
           {/* Service (for time entry prefill) - right under description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Service (for time entries)
+              {taskFormT('serviceLabel', 'Service (for time entries)')}
             </label>
             <SearchableSelect
               id="task-service-select"
               value={selectedServiceId || ''}
               onChange={(value) => setSelectedServiceId(value || null)}
               options={[
-                { value: '', label: 'No service' },
+                { value: '', label: taskFormT('noService', 'No service') },
                 ...availableServices.map(s => ({
                   value: s.service_id,
                   label: s.service_name
                 }))
               ]}
-              placeholder="Select service for time entry prefill..."
+              placeholder={taskFormT('servicePlaceholder', 'Select service for time entry prefill...')}
               className="w-full"
               dropdownMode="overlay"
             />
             <p className="text-xs text-gray-500 mt-1">
-              When set, this service will be automatically selected when creating time entries from this task.
+              {taskFormT('serviceHelp', 'When set, this service will be automatically selected when creating time entries from this task.')}
             </p>
           </div>
 
@@ -1382,7 +1401,7 @@ export default function TaskForm({
           <div className="grid grid-cols-2 gap-4">
             {/* Row 1: Task Type and Priority */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Task Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('taskTypeLabel', 'Task Type')}</label>
               <TaskTypeSelector
                 value={selectedTaskType}
                 taskTypes={taskTypes}
@@ -1391,7 +1410,7 @@ export default function TaskForm({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('priorityLabel', 'Priority')}</label>
               {renderPrioritySelect({
                 value: selectedPriorityId,
                 options: priorities
@@ -1402,7 +1421,7 @@ export default function TaskForm({
                     color: p.color
                   })),
                 onValueChange: (value) => setSelectedPriorityId(value || null),
-                placeholder: 'Select priority',
+                placeholder: taskFormT('selectPriorityPlaceholder', 'Select priority'),
                 className: 'w-full',
               })}
             </div>
@@ -1411,13 +1430,13 @@ export default function TaskForm({
             {mode === 'edit' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Move to</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('moveToLabel', 'Move to')}</label>
                   {projectTreeOptions.length > 0 ? (
                     <TreeSelect<ProjectTreeTypes>
                       value={selectedPhaseId}
                       onValueChange={handleTreeSelectChange}
                       options={projectTreeOptions}
-                      placeholder="Select move destination..."
+                      placeholder={taskFormT('moveToPlaceholder', 'Select move destination...')}
                       className="w-full"
                       multiSelect={false}
                       showExclude={false}
@@ -1425,17 +1444,17 @@ export default function TaskForm({
                       allowEmpty={false}
                     />
                   ) : (
-                    <div className="text-sm text-gray-500">Loading...</div>
+                    <div className="text-sm text-gray-500">{taskFormT('loading', 'Loading...')}</div>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Duplicate to</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('duplicateToLabel', 'Duplicate to')}</label>
                   {projectTreeOptions.length > 0 ? (
                     <TreeSelect<ProjectTreeTypes>
                       value={selectedDuplicatePhaseId || ''}
                       onValueChange={handleDuplicateTreeSelectChange}
                       options={projectTreeOptions}
-                      placeholder="Select duplicate destination..."
+                      placeholder={taskFormT('duplicateToPlaceholder', 'Select duplicate destination...')}
                       className="w-full"
                       multiSelect={false}
                       showExclude={false}
@@ -1443,7 +1462,7 @@ export default function TaskForm({
                       allowEmpty={true}
                     />
                   ) : (
-                    <div className="text-sm text-gray-500">Loading...</div>
+                    <div className="text-sm text-gray-500">{taskFormT('loading', 'Loading...')}</div>
                   )}
                 </div>
               </>
@@ -1451,7 +1470,7 @@ export default function TaskForm({
 
             {/* Row 3: Created At (Edit mode only) and Due Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Created At</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('createdAtLabel', 'Created At')}</label>
               {mode === 'edit' && task ? (
                 <div className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-700">
                   {new Date(task.created_at).toLocaleDateString('en-US', {
@@ -1464,18 +1483,18 @@ export default function TaskForm({
                 </div>
               ) : (
                 <div className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-500">
-                  Will be set on creation
+                  {taskFormT('willBeSetOnCreate', 'Will be set on creation')}
                 </div>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('dueDateLabel', 'Due Date')}</label>
               <DatePicker
                 value={dueDate}
                 onChange={setDueDate}
                 id="task-due-date-picker"
-                label="Task Due Date"
-                placeholder="Select due date"
+                label={taskFormT('taskDueDateLabel', 'Task Due Date')}
+                placeholder={taskFormT('dueDatePlaceholder', 'Select due date')}
                 required={true}
                 disabled={isSubmitting}
               />
@@ -1484,7 +1503,7 @@ export default function TaskForm({
             {/* Row 4: Estimated Hours and Actual Hours */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estimated Hours
+                {taskFormT('estimatedHoursLabel', 'Estimated Hours')}
               </label>
               <Input
                 type="number"
@@ -1497,7 +1516,7 @@ export default function TaskForm({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Actual Hours
+                {taskFormT('actualHoursLabel', 'Actual Hours')}
               </label>
               <Input
                 type="number"
@@ -1512,7 +1531,7 @@ export default function TaskForm({
             <div className="col-span-2">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('assignedToLabel', 'Assigned To')}</label>
                   {teamsV2Enabled ? (
                     <UserAndTeamPicker
                       label=""
@@ -1562,7 +1581,7 @@ export default function TaskForm({
                   })()}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Additional Agents</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('additionalAgentsLabel', 'Additional Agents')}</label>
                   {teamsV2Enabled ? (
                     <MultiUserAndTeamPicker
                       id="task-additional-agents"
@@ -1570,7 +1589,7 @@ export default function TaskForm({
                       getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                       getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                       teams={teams}
-                      teamSectionLabel="Add Team Members"
+                      teamSectionLabel={taskFormT('addTeamMembers', 'Add Team Members')}
                       onTeamValuesChange={(selectedTeamIds) => {
                         // When a team is selected, use handleAssignTeam which already
                         // expands team members into task_resources server-side.
@@ -1613,7 +1632,7 @@ export default function TaskForm({
                       }}
                       users={users.filter(u => u.user_id !== assignedUser)}
                       size="sm"
-                      placeholder="Select additional agents..."
+                      placeholder={taskFormT('additionalAgentsPlaceholder', 'Select additional agents...')}
                     />
                   ) : (
                     <MultiUserPicker
@@ -1649,7 +1668,7 @@ export default function TaskForm({
                       }}
                       users={users.filter(u => u.user_id !== assignedUser)}
                       size="sm"
-                      placeholder="Select additional agents..."
+                      placeholder={taskFormT('additionalAgentsPlaceholder', 'Select additional agents...')}
                     />
                   )}
                 </div>
@@ -1660,7 +1679,7 @@ export default function TaskForm({
           {/* Full width Tags section */}
           {mode === 'edit' && task?.task_id ? (
             <div>
-              <h3 className="font-semibold mb-2">Tags</h3>
+              <h3 className="font-semibold mb-2">{taskFormT('tagsTitle', 'Tags')}</h3>
               <TagManager
                 id="task-tags-edit"
                 entityId={task.task_id}
@@ -1672,7 +1691,7 @@ export default function TaskForm({
             </div>
           ) : mode === 'create' && (
             <div>
-              <h3 className="font-semibold mb-2">Tags</h3>
+              <h3 className="font-semibold mb-2">{taskFormT('tagsTitle', 'Tags')}</h3>
               <QuickAddTagPicker
                 id="task-tags-create"
                 entityType="project_task"
@@ -1687,7 +1706,7 @@ export default function TaskForm({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <ListChecks className="h-5 w-5 text-gray-500" />
-              <h3 className='font-semibold'>Checklist</h3>
+              <h3 className='font-semibold'>{taskFormT('checklistTitle', 'Checklist')}</h3>
               <Button
                 id="add-checklist-item-header"
                 type="button"
@@ -1718,7 +1737,7 @@ export default function TaskForm({
                             <TextArea
                               value={item.item_name}
                               onChange={(e) => updateChecklistItem(index, 'item_name', e.target.value)}
-                              placeholder="Checklist item"
+                              placeholder={taskFormT('checklistItemPlaceholder', 'Checklist item')}
                               className="w-full"
                               wrapperClassName="!mb-0 !px-0"
                               onBlur={() => setEditingChecklistItemId(null)} // Stop editing when focus is lost
@@ -1731,7 +1750,7 @@ export default function TaskForm({
                             onClick={() => removeChecklistItem(index)}
                             className="text-destructive flex-none"
                           >
-                            Remove
+                            {t('common:actions.remove', 'Remove')}
                           </button>
                         </>
                       ) : (
@@ -1857,7 +1876,9 @@ export default function TaskForm({
           isOpen={true}
           onClose={handleCancelClick}
           className="max-w-3xl"
-          title={mode === 'create' ? 'Add New Task' : 'Edit Task'}
+          title={mode === 'create'
+            ? taskFormT('addTitle', 'Add New Task')
+            : taskFormT('editTitle', 'Edit Task')}
           disableFocusTrap
           footer={renderActionButtons(true)}
         >
@@ -1871,10 +1892,12 @@ export default function TaskForm({
         isOpen={showCancelConfirm}
         onClose={handleCancelDismiss}
         onConfirm={handleCancelConfirm}
-        title={mode === 'create' ? "Cancel Task Creation" : "Cancel Edit"}
-        message="Are you sure you want to cancel? Any unsaved changes will be lost."
-        confirmLabel="Discard changes"
-        cancelLabel="Continue editing"
+        title={mode === 'create'
+          ? taskFormT('cancelCreateTitle', 'Cancel Task Creation')
+          : taskFormT('cancelEditTitle', 'Cancel Edit')}
+        message={taskFormT('cancelMessage', 'Are you sure you want to cancel? Any unsaved changes will be lost.')}
+        confirmLabel={taskFormT('discardChanges', 'Discard changes')}
+        cancelLabel={taskFormT('continueEditing', 'Continue editing')}
       />
 
       {/* Document cleanup confirmation - shown when canceling with new documents (uploaded/created) */}
@@ -1883,35 +1906,49 @@ export default function TaskForm({
         onClose={() => setShowDocumentCleanupConfirm(false)}
         onConfirm={handleDocumentCleanupDelete}
         onCancel={handleDocumentCleanupKeep}
-        title="Keep Uploaded Documents?"
+        title={taskFormT('keepUploadedDocumentsTitle', 'Keep Uploaded Documents?')}
         message={(() => {
           const allDocs = mode === 'create' ? pendingDocuments : sessionAddedDocuments;
           // Only show uploaded and created documents - linked docs don't need cleanup
           const docsToShow = allDocs.filter(d => d.type === 'uploaded' || d.type === 'block');
+          const cleanupType = docsToShow.some(d => d.type === 'block') && docsToShow.some(d => d.type === 'uploaded')
+            ? taskFormT('uploadedOrCreated', 'uploaded or created')
+            : docsToShow.some(d => d.type === 'block')
+              ? taskFormT('createdOnly', 'created')
+              : taskFormT('uploadedOnly', 'uploaded');
 
           return (
             <div>
-              <p>You have {docsToShow.length} document{docsToShow.length !== 1 ? 's' : ''} that {docsToShow.length !== 1 ? 'were' : 'was'} {docsToShow.some(d => d.type === 'block') && docsToShow.some(d => d.type === 'uploaded') ? 'uploaded or created' : docsToShow.some(d => d.type === 'block') ? 'created' : 'uploaded'}:</p>
+              <p>{taskFormT('documentsCleanupIntro', 'You have {{count}} document{{plural}} that {{wasWere}} {{cleanupType}}:', {
+                count: docsToShow.length,
+                plural: docsToShow.length === 1 ? '' : 's',
+                wasWere: docsToShow.length === 1 ? 'was' : 'were',
+                cleanupType,
+              })}</p>
               <ul className="list-disc list-inside mt-2 text-sm">
                 {docsToShow.slice(0, 5).map(doc => (
                   <li key={doc.document_id} className="truncate">
                     {doc.document_name}
                     <span className="text-gray-400 ml-1">
-                      ({doc.type === 'block' ? 'created' : 'uploaded'})
+                      ({doc.type === 'block'
+                        ? taskFormT('createdDocumentTag', 'created')
+                        : taskFormT('uploadedDocumentTag', 'uploaded')})
                     </span>
                   </li>
                 ))}
                 {docsToShow.length > 5 && (
-                  <li className="text-gray-500">...and {docsToShow.length - 5} more</li>
+                  <li className="text-gray-500">{taskFormT('andMore', '...and {{count}} more', { count: docsToShow.length - 5 })}</li>
                 )}
               </ul>
-              <p className="mt-3">Would you like to keep these in the Documents section or delete them?</p>
+              <p className="mt-3">{taskFormT('keepUploadedDocumentsMessage', 'Would you like to keep these documents in the Documents section or delete them?')}</p>
             </div>
           );
         })()}
-        confirmLabel={isDeletingDocuments ? "Deleting..." : "Delete documents"}
-        cancelLabel="Continue editing"
-        thirdButtonLabel="Keep documents"
+        confirmLabel={isDeletingDocuments
+          ? taskFormT('deleting', 'Deleting...')
+          : taskFormT('deleteDocumentsLabel', 'Delete documents')}
+        cancelLabel={taskFormT('continueEditing', 'Continue editing')}
+        thirdButtonLabel={taskFormT('keepDocumentsLabel', 'Keep documents')}
         isConfirming={isDeletingDocuments}
       />
 
@@ -1921,11 +1958,14 @@ export default function TaskForm({
         onClose={() => setShowTicketCleanupConfirm(false)}
         onConfirm={handleTicketCleanupDelete}
         onCancel={handleTicketCleanupKeep}
-        title="Keep Created Tickets?"
+        title={taskFormT('keepCreatedTicketsTitle', 'Keep Created Tickets?')}
         message={(() => {
           return (
             <div>
-              <p>You created {sessionCreatedTickets.length} ticket{sessionCreatedTickets.length !== 1 ? 's' : ''} during this session:</p>
+              <p>{taskFormT('createdTicketsIntro', 'You created {{count}} ticket{{plural}} during this session:', {
+                count: sessionCreatedTickets.length,
+                plural: sessionCreatedTickets.length === 1 ? '' : 's',
+              })}</p>
               <ul className="list-disc list-inside mt-2 text-sm">
                 {sessionCreatedTickets.slice(0, 5).map(ticket => (
                   <li key={ticket.ticket_id} className="truncate">
@@ -1933,16 +1973,18 @@ export default function TaskForm({
                   </li>
                 ))}
                 {sessionCreatedTickets.length > 5 && (
-                  <li className="text-gray-500">...and {sessionCreatedTickets.length - 5} more</li>
+                  <li className="text-gray-500">{taskFormT('andMore', '...and {{count}} more', { count: sessionCreatedTickets.length - 5 })}</li>
                 )}
               </ul>
-              <p className="mt-3">Would you like to keep these tickets or delete them?</p>
+              <p className="mt-3">{taskFormT('keepCreatedTicketsMessage', 'Would you like to keep these tickets or delete them?')}</p>
             </div>
           );
         })()}
-        confirmLabel={isDeletingTickets ? "Deleting..." : "Delete tickets"}
-        cancelLabel="Continue editing"
-        thirdButtonLabel="Keep tickets"
+        confirmLabel={isDeletingTickets
+          ? taskFormT('deleting', 'Deleting...')
+          : taskFormT('deleteTicketsLabel', 'Delete tickets')}
+        cancelLabel={taskFormT('continueEditing', 'Continue editing')}
+        thirdButtonLabel={taskFormT('keepTicketsLabel', 'Keep tickets')}
         isConfirming={isDeletingTickets}
       />
 
@@ -1950,10 +1992,12 @@ export default function TaskForm({
         isOpen={showDeleteConfirm}
         onClose={handleDeleteDismiss}
         onConfirm={handleDeleteConfirm}
-        title="Delete Task"
-        message={`Are you sure you want to delete task "${taskName}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={taskFormT('deletingTitle', 'Delete Task')}
+        message={taskFormT('deleteMessage', 'Are you sure you want to delete task "{{taskName}}"? This action cannot be undone.', {
+          taskName,
+        })}
+        confirmLabel={t('common:actions.delete', 'Delete')}
+        cancelLabel={t('common:actions.cancel', 'Cancel')}
       />
 
       {mode === 'edit' && (
@@ -1964,10 +2008,13 @@ export default function TaskForm({
             setSelectedPhase(phase);
           }}
           onConfirm={handleMoveConfirm}
-          title="Move Task"
-          message={`Are you sure you want to move task "${taskName}" to phase "${selectedPhase.phase_name}"?`}
-          confirmLabel="Move"
-          cancelLabel="Cancel"
+          title={taskFormT('movingTitle', 'Move Task')}
+          message={taskFormT('moveMessage', 'Are you sure you want to move task "{{taskName}}" to phase "{{phaseName}}"?', {
+            taskName,
+            phaseName: selectedPhase.phase_name,
+          })}
+          confirmLabel={taskFormT('move', 'Move')}
+          cancelLabel={t('common:actions.cancel', 'Cancel')}
         />
       )}
 
@@ -1993,13 +2040,15 @@ export default function TaskForm({
                 targetPhaseId,
                 options
               );
-              toast.success(`Task "${duplicateTaskDetails.originalTaskName}" duplicated successfully!`);
+              toast.success(taskFormT('duplicatedSuccess', 'Task "{{taskName}}" duplicated successfully!', {
+                taskName: duplicateTaskDetails.originalTaskName,
+              }));
               setShowDuplicateConfirm(false);
               setDuplicateTaskDetails(null);
               onSubmit(duplicatedTask);
               onClose();
             } catch (error) {
-              handleError(error, "Failed to duplicate task.");
+              handleError(error, taskFormT('duplicateFailed', 'Failed to duplicate task.'));
               setShowDuplicateConfirm(false);
               setDuplicateTaskDetails(null);
             } finally {
@@ -2013,10 +2062,10 @@ export default function TaskForm({
         isOpen={showDependencyConfirmation}
         onClose={handleDependencyCancel}
         onConfirm={handleDependencyConfirm}
-        title="Unsaved Changes"
-        message="You have a dependency selected but not yet added. Click the purple + button to add it, or discard the selection and save."
-        confirmLabel="Discard changes"
-        cancelLabel="Continue editing"
+        title={taskFormT('unsavedTitle', 'Unsaved Changes')}
+        message={taskFormT('dependencyUnsavedMessage', 'You have a dependency selected but not yet added. Click the purple + button to add it, or discard the selection and save.')}
+        confirmLabel={taskFormT('discardChanges', 'Discard changes')}
+        cancelLabel={taskFormT('continueEditing', 'Continue editing')}
       />
 
     </>

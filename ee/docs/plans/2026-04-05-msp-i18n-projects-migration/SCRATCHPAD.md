@@ -169,6 +169,24 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F020 check)** `node_modules/.bin/eslint
   packages/projects/src/components/ProjectDetail.tsx` passes with pre-existing warnings
   only (no new lint errors introduced by the i18n wiring).
+- **(2026-04-07, F021)** Wired `packages/projects/src/components/TaskForm.tsx` to
+  `useTranslation(['features/projects', 'common'])`. Localized the form labels,
+  placeholders, save/delete/time-entry actions, validation copy, checklist chrome,
+  document/ticket cleanup confirmations, dependency-unsaved prompt, and task-level toast
+  / error fallback copy for move/save/delete/duplicate/agent flows.
+- **(2026-04-07, F021)** Extended `taskForm.*` with the missing leaves surfaced by the
+  TaskForm audit: field labels (`descriptionLabel`, `dueDateLabel`, `taskTypeLabel`,
+  `priorityLabel`), picker/help copy (`noService`, `addTeamMembers`, `loading`),
+  confirmation/dialog strings (`deleteMessage`, `moveMessage`, `cancelMessage`,
+  `dependencyUnsavedMessage`, keep/delete document/ticket actions), and operational
+  fallback/toast strings (`saveFailed`, `deleteFailed`, `moveFailed`, `duplicateFailed`,
+  `linkingPartialFailure`, `tagCreationPartialFailure`, `prepareTimeEntryFailed`, etc.).
+- **(2026-04-07, F021)** Re-synced `fr/es/de/nl/it/pl` by deep-merging each locale over
+  the updated English `features/projects` tree, regenerated `xx/yy` via
+  `node scripts/generate-pseudo-locales.cjs`, and re-validated translations successfully.
+- **(2026-04-07, F021 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/TaskForm.tsx` passes with pre-existing warnings only
+  (25 warnings, 0 errors). The new i18n wiring did not add fresh lint failures.
 
 ## Commands / Runbooks
 
