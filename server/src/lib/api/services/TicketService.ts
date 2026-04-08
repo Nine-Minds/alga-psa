@@ -1123,6 +1123,7 @@ export class TicketService extends BaseService<ITicket> {
     return comments.map(comment => ({
       ...comment,
       comment_text: comment.note,
+      markdown_content: comment.markdown_content || null,
       comment_html: renderTicketRichTextHtml(comment.note),
       created_by: comment.user_id ?? null,
       created_by_name: comment.created_by_name || comment.author_contact_name || null,

@@ -130,7 +130,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   onRegisterCancelHandler,
 }) => {
   const [chatKey, setChatKey] = useState(0);
-  const [width, setWidth] = useState(384);
+  const [width, setWidth] = useState(560);
   const [isResizing, setIsResizing] = useState(false);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [activeChatMessages, setActiveChatMessages] = useState<any[]>([]);
@@ -247,7 +247,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
     const handleMouseMove = (event: MouseEvent) => {
       if (!isResizing) return;
       const delta = startXRef.current - event.clientX;
-      const newWidth = Math.min(Math.max(startWidthRef.current + delta, 280), 640);
+      const newWidth = Math.min(Math.max(startWidthRef.current + delta, 320), 800);
       if (newWidth !== width) {
         setWidth(newWidth);
       }
