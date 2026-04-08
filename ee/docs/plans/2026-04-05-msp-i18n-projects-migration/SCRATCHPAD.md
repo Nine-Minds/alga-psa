@@ -321,6 +321,21 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F031 check)** `node_modules/.bin/eslint
   packages/projects/src/components/PrefillFromTicketDialog.tsx` passes with pre-existing
   warnings only (4 warnings, 0 errors).
+- **(2026-04-07, F032)** Wired `packages/projects/src/components/TaskListView.tsx` to
+  `useTranslation(['features/projects', 'common'])`. Localized the responsive table
+  headers, hidden-columns alert, phase empty state, phase/task add buttons, badge/date/
+  completion chrome, expand/collapse affordances, checklist/dependency tooltip copy, and
+  task action titles.
+- **(2026-04-07, F032)** Added a small list-view extension to the namespace:
+  `projectDetail.hiddenColumnsAlert`, `projectDetail.listViewEmptyMessage`,
+  `projectDetail.seeMore`, `projectDetail.seeLess`, `projectDetail.checklistItems`,
+  `projectDetail.checklistSummary`, `projectDetail.unknownUser`, `projectDetail.blocksLabel`,
+  plus `taskDependencies.dependsOn`, `taskDependencies.unknownTask`, and
+  `projectPhases.addPhase`. Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales,
+  and re-ran translation validation successfully.
+- **(2026-04-07, F032 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/TaskListView.tsx` passes with pre-existing warnings
+  only (4 warnings, 0 errors).
 
 ## Commands / Runbooks
 

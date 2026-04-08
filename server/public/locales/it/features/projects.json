@@ -195,7 +195,15 @@
     "hideStickyStatusNames": "Nascondi nomi stato fissi",
     "pinHeader": "Fissa intestazione in alto",
     "unpinHeader": "Rimuovi fissaggio intestazione",
-    "taskUpdatedSuccess": "Attività aggiornata con successo!"
+    "taskUpdatedSuccess": "Attività aggiornata con successo!",
+    "hiddenColumnsAlert": "{{count}} columns hidden due to limited space. Resize browser to see more.",
+    "listViewEmptyMessage": "Create phases and add tasks to see them here",
+    "seeMore": "See more",
+    "seeLess": "See less",
+    "checklistItems": "Checklist Items:",
+    "checklistSummary": "{{completed}} of {{total}} complete",
+    "unknownUser": "Unknown",
+    "blocksLabel": "Blocks:"
   },
   "taskForm": {
     "addTitle": "Aggiungi attività",
@@ -293,9 +301,11 @@
   },
   "taskDependencies": {
     "title": "Dipendenze",
+    "dependsOn": "Depends on:",
     "blocks": "Blocca",
     "blockedBy": "Bloccata da",
     "relatedTo": "Correlata a",
+    "unknownTask": "Unknown task",
     "noOtherTasks": "Nessun’altra attività disponibile per le dipendenze",
     "selectTaskPlaceholder": "Seleziona attività...",
     "selectNewTaskPlaceholder": "Seleziona nuova attività...",
@@ -1014,6 +1024,7 @@
     "templateCreatedSuccess": "Modello creato con successo"
   },
   "projectPhases": {
-    "addTask": "Aggiungi attività"
+    "addTask": "Aggiungi attività",
+    "addPhase": "Add Phase"
   }
 }

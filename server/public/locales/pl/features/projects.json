@@ -195,7 +195,15 @@
     "hideStickyStatusNames": "Ukryj trwałe nazwy statusów",
     "pinHeader": "Przypnij nagłówek do góry",
     "unpinHeader": "Odepnij nagłówek",
-    "taskUpdatedSuccess": "Zadanie zaktualizowano pomyślnie!"
+    "taskUpdatedSuccess": "Zadanie zaktualizowano pomyślnie!",
+    "hiddenColumnsAlert": "{{count}} columns hidden due to limited space. Resize browser to see more.",
+    "listViewEmptyMessage": "Create phases and add tasks to see them here",
+    "seeMore": "See more",
+    "seeLess": "See less",
+    "checklistItems": "Checklist Items:",
+    "checklistSummary": "{{completed}} of {{total}} complete",
+    "unknownUser": "Unknown",
+    "blocksLabel": "Blocks:"
   },
   "taskForm": {
     "addTitle": "Dodaj nowe zadanie",
@@ -293,9 +301,11 @@
   },
   "taskDependencies": {
     "title": "Zależności",
+    "dependsOn": "Depends on:",
     "blocks": "Bloki",
     "blockedBy": "Zablokowany przez",
     "relatedTo": "Związane z",
+    "unknownTask": "Unknown task",
     "noOtherTasks": "Żadne inne zadania nie są dostępne dla zależności",
     "selectTaskPlaceholder": "Wybierz zadanie...",
     "selectNewTaskPlaceholder": "Wybierz nowe zadanie...",
@@ -1014,6 +1024,7 @@
     "templateCreatedSuccess": "Szablon utworzono pomyślnie"
   },
   "projectPhases": {
-    "addTask": "Dodaj zadanie"
+    "addTask": "Dodaj zadanie",
+    "addPhase": "Add Phase"
   }
 }

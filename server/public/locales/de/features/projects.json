@@ -195,7 +195,15 @@
     "hideStickyStatusNames": "Fixierte Statusnamen ausblenden",
     "pinHeader": "Kopfzeile oben anheften",
     "unpinHeader": "Kopfzeile lösen",
-    "taskUpdatedSuccess": "Aufgabe erfolgreich aktualisiert!"
+    "taskUpdatedSuccess": "Aufgabe erfolgreich aktualisiert!",
+    "hiddenColumnsAlert": "{{count}} columns hidden due to limited space. Resize browser to see more.",
+    "listViewEmptyMessage": "Create phases and add tasks to see them here",
+    "seeMore": "See more",
+    "seeLess": "See less",
+    "checklistItems": "Checklist Items:",
+    "checklistSummary": "{{completed}} of {{total}} complete",
+    "unknownUser": "Unknown",
+    "blocksLabel": "Blocks:"
   },
   "taskForm": {
     "addTitle": "Aufgabe hinzufügen",
@@ -293,9 +301,11 @@
   },
   "taskDependencies": {
     "title": "Abhängigkeiten",
+    "dependsOn": "Depends on:",
     "blocks": "Blockiert",
     "blockedBy": "Blockiert durch",
     "relatedTo": "Verknüpft mit",
+    "unknownTask": "Unknown task",
     "noOtherTasks": "Keine weiteren Aufgaben für Abhängigkeiten verfügbar",
     "selectTaskPlaceholder": "Aufgabe auswählen...",
     "selectNewTaskPlaceholder": "Neue Aufgabe auswählen...",
@@ -1014,6 +1024,7 @@
     "templateCreatedSuccess": "Vorlage erfolgreich erstellt"
   },
   "projectPhases": {
-    "addTask": "Aufgabe hinzufügen"
+    "addTask": "Aufgabe hinzufügen",
+    "addPhase": "Add Phase"
   }
 }

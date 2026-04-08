@@ -195,7 +195,15 @@
     "hideStickyStatusNames": "Verberg sticky statusnamen",
     "pinHeader": "Kop vastzetten aan de bovenkant",
     "unpinHeader": "Kop losmaken",
-    "taskUpdatedSuccess": "Taak succesvol bijgewerkt!"
+    "taskUpdatedSuccess": "Taak succesvol bijgewerkt!",
+    "hiddenColumnsAlert": "{{count}} columns hidden due to limited space. Resize browser to see more.",
+    "listViewEmptyMessage": "Create phases and add tasks to see them here",
+    "seeMore": "See more",
+    "seeLess": "See less",
+    "checklistItems": "Checklist Items:",
+    "checklistSummary": "{{completed}} of {{total}} complete",
+    "unknownUser": "Unknown",
+    "blocksLabel": "Blocks:"
   },
   "taskForm": {
     "addTitle": "Nieuwe taak toevoegen",
@@ -293,9 +301,11 @@
   },
   "taskDependencies": {
     "title": "Afhankelijkheden",
+    "dependsOn": "Depends on:",
     "blocks": "Blokken",
     "blockedBy": "Geblokkeerd door",
     "relatedTo": "Gerelateerd aan",
+    "unknownTask": "Unknown task",
     "noOtherTasks": "Er zijn geen andere taken beschikbaar voor afhankelijkheden",
     "selectTaskPlaceholder": "Taak selecteren...",
     "selectNewTaskPlaceholder": "Selecteer nieuwe taak...",
@@ -1014,6 +1024,7 @@
     "templateCreatedSuccess": "Sjabloon succesvol aangemaakt"
   },
   "projectPhases": {
-    "addTask": "Taak toevoegen"
+    "addTask": "Taak toevoegen",
+    "addPhase": "Add Phase"
   }
 }

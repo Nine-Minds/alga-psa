@@ -195,7 +195,15 @@
     "hideStickyStatusNames": "55555",
     "pinHeader": "55555",
     "unpinHeader": "55555",
-    "taskUpdatedSuccess": "55555"
+    "taskUpdatedSuccess": "55555",
+    "hiddenColumnsAlert": "55555 {{count}} 55555",
+    "listViewEmptyMessage": "55555",
+    "seeMore": "55555",
+    "seeLess": "55555",
+    "checklistItems": "55555",
+    "checklistSummary": "55555 {{completed}} 55555 {{total}} 55555",
+    "unknownUser": "55555",
+    "blocksLabel": "55555"
   },
   "taskForm": {
     "addTitle": "55555",
@@ -293,9 +301,11 @@
   },
   "taskDependencies": {
     "title": "55555",
+    "dependsOn": "55555",
     "blocks": "55555",
     "blockedBy": "55555",
     "relatedTo": "55555",
+    "unknownTask": "55555",
     "noOtherTasks": "55555",
     "selectTaskPlaceholder": "55555",
     "selectNewTaskPlaceholder": "55555",
@@ -1014,6 +1024,7 @@
     "templateCreatedSuccess": "55555"
   },
   "projectPhases": {
-    "addTask": "55555"
+    "addTask": "55555",
+    "addPhase": "55555"
   }
 }

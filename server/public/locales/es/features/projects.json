@@ -195,7 +195,15 @@
     "hideStickyStatusNames": "Ocultar nombres de estado fijos",
     "pinHeader": "Fijar encabezado arriba",
     "unpinHeader": "Desfijar encabezado",
-    "taskUpdatedSuccess": "¡Tarea actualizada correctamente!"
+    "taskUpdatedSuccess": "¡Tarea actualizada correctamente!",
+    "hiddenColumnsAlert": "{{count}} columns hidden due to limited space. Resize browser to see more.",
+    "listViewEmptyMessage": "Create phases and add tasks to see them here",
+    "seeMore": "See more",
+    "seeLess": "See less",
+    "checklistItems": "Checklist Items:",
+    "checklistSummary": "{{completed}} of {{total}} complete",
+    "unknownUser": "Unknown",
+    "blocksLabel": "Blocks:"
   },
   "taskForm": {
     "addTitle": "Agregar tarea",
@@ -293,9 +301,11 @@
   },
   "taskDependencies": {
     "title": "Dependencias",
+    "dependsOn": "Depends on:",
     "blocks": "Bloquea",
     "blockedBy": "Bloqueada por",
     "relatedTo": "Relacionada con",
+    "unknownTask": "Unknown task",
     "noOtherTasks": "No hay otras tareas disponibles para dependencias",
     "selectTaskPlaceholder": "Seleccionar tarea...",
     "selectNewTaskPlaceholder": "Seleccionar nueva tarea...",
@@ -1014,6 +1024,7 @@
     "templateCreatedSuccess": "Plantilla creada correctamente"
   },
   "projectPhases": {
-    "addTask": "Agregar tarea"
+    "addTask": "Agregar tarea",
+    "addPhase": "Add Phase"
   }
 }
