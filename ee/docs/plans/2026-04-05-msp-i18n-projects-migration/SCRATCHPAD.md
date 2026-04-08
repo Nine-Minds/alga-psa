@@ -377,6 +377,19 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F050 check)** `node_modules/.bin/eslint
   packages/projects/src/components/project-templates/TemplateEditor.tsx` passes with
   pre-existing warnings only (8 warnings, 0 errors).
+- **(2026-04-07, F051)** Wired `packages/projects/src/components/project-templates/TemplateTaskForm.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the create/edit title,
+  all field labels/placeholders, validation and save-error copy, checklist/dependency
+  section chrome, additional-agent guidance, form action buttons, and the unsaved-change
+  confirmation dialog.
+- **(2026-04-07, F051)** Extended `templates.taskForm.*` only where the existing subtree
+  had gaps: `addAction`, `updateAction`, `saving`, `saveFailed`, `taskNameRequired`,
+  `addChecklistItem`, `dependenciesHelp`, `cancelEditMessage`, `discardChanges`,
+  `continueEditing`, and `additionalAgentsHelp`. Re-synced `fr/es/de/nl/it/pl`,
+  regenerated pseudo-locales, and re-ran translation validation successfully.
+- **(2026-04-07, F051 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/TemplateTaskForm.tsx` passes with
+  pre-existing warnings only (3 warnings, 0 errors).
 
 ## Commands / Runbooks
 
