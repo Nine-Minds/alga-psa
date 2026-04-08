@@ -203,7 +203,14 @@
     "checklistItems": "55555",
     "checklistSummary": "55555 {{completed}} 55555 {{total}} 55555",
     "unknownUser": "55555",
-    "blocksLabel": "55555"
+    "blocksLabel": "55555",
+    "taskCardAria": "55555 {{taskName}} 55555",
+    "taskActions": "55555",
+    "priorityLevel": "55555 {{priority}} 55555",
+    "dueLabel": "55555",
+    "noDueDate": "55555",
+    "hideTags": "55555",
+    "criticalPath": "55555"
   },
   "taskForm": {
     "addTitle": "55555",

@@ -203,7 +203,14 @@
     "checklistItems": "Checklist Items:",
     "checklistSummary": "{{completed}} of {{total}} complete",
     "unknownUser": "Unknown",
-    "blocksLabel": "Blocks:"
+    "blocksLabel": "Blocks:",
+    "taskCardAria": "Task: {{taskName}}. Drag to reorder or use menu for actions.",
+    "taskActions": "Task Actions",
+    "priorityLevel": "Priority level: {{priority}}",
+    "dueLabel": "Due",
+    "noDueDate": "No due date",
+    "hideTags": "Hide tags",
+    "criticalPath": "Critical Path"
   },
   "taskForm": {
     "addTitle": "Aufgabe hinzufügen",
