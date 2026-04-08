@@ -187,6 +187,23 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F021 check)** `node_modules/.bin/eslint
   packages/projects/src/components/TaskForm.tsx` passes with pre-existing warnings only
   (25 warnings, 0 errors). The new i18n wiring did not add fresh lint failures.
+- **(2026-04-07, F022)** Wired `packages/projects/src/components/PhaseTaskImportDialog.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the upload step,
+  field-mapping table, preview summary/table chrome, invalid-row / unmatched-agent /
+  unmatched-status guidance, large-import confirmations, resolution workflows, importing
+  spinner, and completion summaries.
+- **(2026-04-07, F022)** Extended `import.*` with the dialog-specific gaps surfaced by the
+  audit: CSV read/process/import fallback errors, required/optional field lists,
+  table/tooltip labels, large-import confirmation copy, unmatched agent/status warnings,
+  next-step/import button text, row-limit description, task-count summaries, and
+  `import.fields.*` labels so the field-mapping UI no longer depends on hardcoded English
+  constants from `TASK_IMPORT_FIELDS`.
+- **(2026-04-07, F022)** Re-synced `fr/es/de/nl/it/pl` from the updated English source,
+  regenerated pseudo-locales, and re-ran `node scripts/generate-pseudo-locales.cjs &&
+  node scripts/validate-translations.cjs` successfully.
+- **(2026-04-07, F022 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/PhaseTaskImportDialog.tsx` passes with pre-existing
+  warnings only (6 warnings, 0 errors).
 
 ## Commands / Runbooks
 
