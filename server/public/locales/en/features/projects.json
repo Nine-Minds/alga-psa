@@ -766,12 +766,14 @@
       "copyTasks": "Copy project tasks",
       "copyChecklists": "Copy task checklists",
       "copyServices": "Copy task services",
-      "copyAssignments": "Copy task assignments",
-      "creating": "Creating...",
-      "create": "Create Template",
-      "createdSuccess": "Template created successfully",
-      "projectRequired": "Project and template name are required"
-    },
+    "copyAssignments": "Copy task assignments",
+    "creating": "Creating...",
+    "create": "Create Template",
+    "createdSuccess": "Template created successfully",
+    "createFailed": "Failed to create template",
+    "loadFailed": "Failed to load projects and categories",
+    "projectRequired": "Project and template name are required"
+  },
     "apply": {
       "title": "Create Project from Template",
       "templateLabel": "Template *",

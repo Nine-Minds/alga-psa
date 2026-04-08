@@ -770,6 +770,8 @@
       "creating": "Tworzenie...",
       "create": "Utwórz szablon",
       "createdSuccess": "Szablon został utworzony pomyślnie",
+      "createFailed": "Failed to create template",
+      "loadFailed": "Failed to load projects and categories",
       "projectRequired": "Wymagana jest nazwa projektu i szablonu"
     },
     "apply": {

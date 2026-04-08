@@ -26,7 +26,7 @@
   {"id": "F052", "description": "Wire wizard-steps/TemplateTasksStep.tsx — wizard step 3 (tasks) (~20 strings)", "implemented": true, "prdRefs": ["2b-21c/sub-batch-B"]},
   {"id": "F053", "description": "Wire ApplyTemplateDialog.tsx — apply dialog, project selection, confirmation, toast (~20 strings)", "implemented": true, "prdRefs": ["2b-21c/sub-batch-B"]},
   {"id": "F054", "description": "Wire ProjectTemplatesList.tsx — list page columns (Name/Description/Category/Times Used/Last Used/Actions), search, filter, delete confirm (~12 strings)", "implemented": true, "prdRefs": ["2b-21c/sub-batch-B"]},
-  {"id": "F055", "description": "Wire CreateTemplateDialog.tsx — create template from project dialog (~11 strings)", "implemented": false, "prdRefs": ["2b-21c/sub-batch-B"]},
+  {"id": "F055", "description": "Wire CreateTemplateDialog.tsx — create template from project dialog (~11 strings)", "implemented": true, "prdRefs": ["2b-21c/sub-batch-B"]},
   {"id": "F056", "description": "Wire TemplateTaskListView.tsx — template task list columns, inline actions (~8 strings)", "implemented": false, "prdRefs": ["2b-21c/sub-batch-B"]},
   {"id": "F057", "description": "Wire wizard-steps/TemplateReviewStep.tsx — wizard review summary (~7 strings)", "implemented": false, "prdRefs": ["2b-21c/sub-batch-B"]},
   {"id": "F058", "description": "Wire wizard-steps/TemplatePhasesStep.tsx — wizard phases step (~6 strings)", "implemented": false, "prdRefs": ["2b-21c/sub-batch-B"]},

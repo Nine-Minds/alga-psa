@@ -770,6 +770,8 @@
       "creating": "Creëren...",
       "create": "Sjabloon maken",
       "createdSuccess": "Sjabloon is succesvol aangemaakt",
+      "createFailed": "Failed to create template",
+      "loadFailed": "Failed to load projects and categories",
       "projectRequired": "Project- en sjabloonnaam zijn vereist"
     },
     "apply": {

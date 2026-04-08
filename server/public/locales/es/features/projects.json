@@ -770,6 +770,8 @@
       "creating": "Creando...",
       "create": "Crear plantilla",
       "createdSuccess": "Plantilla creada correctamente",
+      "createFailed": "Failed to create template",
+      "loadFailed": "Failed to load projects and categories",
       "projectRequired": "El proyecto y el nombre de la plantilla son obligatorios"
     },
     "apply": {

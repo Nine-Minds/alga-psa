@@ -770,6 +770,8 @@
       "creating": "Wird erstellt...",
       "create": "Vorlage erstellen",
       "createdSuccess": "Vorlage erfolgreich erstellt",
+      "createFailed": "Failed to create template",
+      "loadFailed": "Failed to load projects and categories",
       "projectRequired": "Projekt und Vorlagenname sind erforderlich"
     },
     "apply": {

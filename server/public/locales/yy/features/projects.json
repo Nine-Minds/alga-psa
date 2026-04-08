@@ -770,6 +770,8 @@
       "creating": "55555",
       "create": "55555",
       "createdSuccess": "55555",
+      "createFailed": "55555",
+      "loadFailed": "55555",
       "projectRequired": "55555"
     },
     "apply": {

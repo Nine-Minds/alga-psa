@@ -431,6 +431,17 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   packages/projects/src/components/project-templates/ProjectTemplatesList.tsx` passes
   with pre-existing warnings only (unused `getTemplateCategories` import, existing
   `loadData` hooks warning; 3 warnings, 0 errors).
+- **(2026-04-08, F055)** Wired `packages/projects/src/components/project-templates/CreateTemplateDialog.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the dialog title,
+  source-project / template-name / description / category fields, copy-options section,
+  create/cancel actions, success toast, and the load/create error-handler copy.
+- **(2026-04-08, F055)** Extended `templates.create.*` with the only missing dialog
+  leaves surfaced by the audit: `loadFailed` and `createFailed`. Re-synced
+  `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran translation validation
+  successfully.
+- **(2026-04-08, F055 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/CreateTemplateDialog.tsx` passes
+  cleanly with 0 warnings / 0 errors.
 
 ## Commands / Runbooks
 

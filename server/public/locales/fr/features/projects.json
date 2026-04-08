@@ -770,6 +770,8 @@
       "creating": "Création...",
       "create": "Créer le modèle",
       "createdSuccess": "Modèle créé avec succès",
+      "createFailed": "Failed to create template",
+      "loadFailed": "Failed to load projects and categories",
       "projectRequired": "Le projet et le nom du modèle sont requis"
     },
     "apply": {
