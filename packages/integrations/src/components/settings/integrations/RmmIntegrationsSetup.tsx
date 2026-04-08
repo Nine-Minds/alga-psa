@@ -8,17 +8,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import type { RmmProvider } from '@alga-psa/types';
+import {
+  getAvailableRmmProviderRegistry,
+  type RmmProviderMetadata
+} from '../../../lib/rmm/providerRegistry';
 
 import TacticalRmmIntegrationSettings from './TacticalRmmIntegrationSettings';
 
-type RmmIntegrationId = 'tacticalrmm' | 'ninjaone';
-
 type RmmIntegrationOption = {
-  id: RmmIntegrationId;
-  title: string;
-  description: string;
-  badge?: { label: string; variant: React.ComponentProps<typeof Badge>['variant'] };
-  highlights: Array<{ label: string; value: string }>;
+  metadata: RmmProviderMetadata;
   component: React.ComponentType;
 };
 
@@ -42,20 +41,28 @@ function BannerIcon({
 }
 
 function IntegrationBanner({ option }: { option: RmmIntegrationOption }) {
-  const icon =
-    option.id === 'tacticalrmm' ? (
-      <BannerIcon className="bg-amber-500 text-[11px] font-bold tracking-wider text-white">
-        TRMM
-      </BannerIcon>
-    ) : (
-      <BannerIcon className="bg-slate-900 text-xl font-bold text-white">N</BannerIcon>
-    );
+  const icon = (() => {
+    switch (option.metadata.icon) {
+      case 'tacticalrmm':
+        return (
+          <BannerIcon className="bg-amber-500 text-[11px] font-bold tracking-wider text-white">
+            TRMM
+          </BannerIcon>
+        );
+      case 'ninjaone':
+        return <BannerIcon className="bg-slate-900 text-xl font-bold text-white">N</BannerIcon>;
+      case 'tanium':
+        return <BannerIcon className="bg-emerald-700 text-sm font-semibold text-white">Tanium</BannerIcon>;
+      default:
+        return <BannerIcon className="bg-muted text-foreground">RMM</BannerIcon>;
+    }
+  })();
 
   return (
     <div className="relative flex h-24 w-full items-center justify-center rounded-lg bg-muted/40">
-      {option.badge ? (
+      {option.metadata.badge ? (
         <div className="absolute right-3 top-3">
-          <Badge variant={option.badge.variant}>{option.badge.label}</Badge>
+          <Badge variant={option.metadata.badge.variant}>{option.metadata.badge.label}</Badge>
         </div>
       ) : null}
       {icon}
@@ -81,56 +88,70 @@ const NinjaOneIntegrationSettings = dynamic(
   }
 );
 
+const TaniumIntegrationSettings = dynamic(
+  () => import('@enterprise/components/settings/integrations/TaniumIntegrationSettings'),
+  {
+    loading: () => (
+      <Card>
+        <CardContent className="py-8">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <Spinner size="md" />
+            <span className="text-sm text-muted-foreground">Loading Tanium integration settings...</span>
+          </div>
+        </CardContent>
+      </Card>
+    ),
+    ssr: false
+  }
+);
+
+const providerSettingsComponents: Partial<Record<RmmProvider, React.ComponentType>> = {
+  tacticalrmm: TacticalRmmIntegrationSettings,
+  ninjaone: NinjaOneIntegrationSettings,
+  tanium: TaniumIntegrationSettings
+};
+
 export default function RmmIntegrationsSetup() {
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const tacticalFlag = useFeatureFlag('tactical-rmm-integration', { defaultValue: false });
+  const taniumFlag = useFeatureFlag('tanium-rmm-integration', { defaultValue: false });
   const isTacticalEnabled = !!tacticalFlag?.enabled;
+  const isTaniumEnabled = !!taniumFlag?.enabled;
 
   const options = useMemo<RmmIntegrationOption[]>(
     () => {
-      const next: RmmIntegrationOption[] = [];
+      const availableProviders = getAvailableRmmProviderRegistry({
+        isEnterprise: isEEAvailable,
+        enabledFeatureFlags: {
+          'tactical-rmm-integration': isTacticalEnabled,
+          'tanium-rmm-integration': isTaniumEnabled
+        }
+      });
 
-      if (isTacticalEnabled) {
-        next.push({
-          id: 'tacticalrmm',
-          title: 'Tactical RMM',
-          description: 'Sync devices and ingest alerts via Tactical RMM (beta API + alert-action webhooks).',
-          highlights: [
-            { label: 'Sync', value: 'Devices' },
-            { label: 'Realtime', value: 'Alerts' }
-          ],
-          component: TacticalRmmIntegrationSettings
-        });
-      }
+      return availableProviders
+        .map((metadata) => {
+          const component = providerSettingsComponents[metadata.id];
+          if (!component) {
+            return null;
+          }
 
-      if (isEEAvailable) {
-        next.push({
-          id: 'ninjaone',
-          title: 'NinjaOne',
-          description: 'Sync devices, receive alerts, and enable remote access (Enterprise).',
-          badge: { label: 'Enterprise', variant: 'secondary' },
-          highlights: [
-            { label: 'Sync', value: 'Devices' },
-            { label: 'Realtime', value: 'Webhooks' }
-          ],
-          component: NinjaOneIntegrationSettings
-        });
-      }
-
-      return next;
+          return { metadata, component };
+        })
+        .filter((option): option is RmmIntegrationOption => option !== null);
     },
-    [isTacticalEnabled, isEEAvailable]
+    [isEEAvailable, isTacticalEnabled, isTaniumEnabled]
   );
 
-  const [selected, setSelected] = useState<RmmIntegrationId>(() => {
+  const [selected, setSelected] = useState<RmmProvider>(() => {
     if (isTacticalEnabled) return 'tacticalrmm';
-    return isEEAvailable ? 'ninjaone' : 'tacticalrmm';
+    if (isEEAvailable) return 'ninjaone';
+    return 'tacticalrmm';
   });
-  const selectedOption = options.find((option) => option.id === selected) ?? options[0];
+  const selectedOption = options.find((option) => option.metadata.id === selected) ?? options[0];
 
   useEffect(() => {
-    if (options.length > 0 && !options.some((option) => option.id === selected)) {
-      setSelected(options[0]?.id ?? 'ninjaone');
+    if (options.length > 0 && !options.some((option) => option.metadata.id === selected)) {
+      setSelected(options[0]?.metadata.id ?? 'ninjaone');
     }
   }, [options, selected]);
 
@@ -153,29 +174,29 @@ export default function RmmIntegrationsSetup() {
     <div className="space-y-6" id="rmm-integrations-setup">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
         {options.map((option) => {
-          const isSelected = option.id === selected;
+          const isSelected = option.metadata.id === selected;
           return (
             <Card
-              key={option.id}
+              key={option.metadata.id}
               className={[
                 'relative overflow-hidden transition-shadow hover:shadow-md',
                 isSelected ? 'ring-2 ring-[rgb(var(--color-primary-500))]' : '',
                 'cursor-pointer'
               ].join(' ')}
-              id={`rmm-integration-card-${option.id}`}
+              id={`rmm-integration-card-${option.metadata.id}`}
             >
               <CardHeader className="space-y-4 pb-3">
                 <IntegrationBanner option={option} />
                 <div className="space-y-1">
-                  <CardTitle className="text-base">{option.title}</CardTitle>
-                  <CardDescription className="text-sm">{option.description}</CardDescription>
+                  <CardTitle className="text-base">{option.metadata.title}</CardTitle>
+                  <CardDescription className="text-sm">{option.metadata.description}</CardDescription>
                 </div>
               </CardHeader>
 
               <CardContent className="space-y-4 pt-0">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  {option.highlights.map((h) => (
-                    <div key={`${option.id}-${h.label}`} className="flex items-center gap-1">
+                  {option.metadata.highlights.map((h) => (
+                    <div key={`${option.metadata.id}-${h.label}`} className="flex items-center gap-1">
                       <span className="font-medium text-foreground/80">{h.label}</span>
                       <span>{h.value}</span>
                     </div>
@@ -187,8 +208,8 @@ export default function RmmIntegrationsSetup() {
                 <Button
                   className="w-full"
                   variant={isSelected ? 'default' : 'outline'}
-                  onClick={() => setSelected(option.id)}
-                  id={`rmm-integration-configure-${option.id}`}
+                  onClick={() => setSelected(option.metadata.id)}
+                  id={`rmm-integration-configure-${option.metadata.id}`}
                 >
                   Configure Integration
                 </Button>
@@ -202,7 +223,7 @@ export default function RmmIntegrationsSetup() {
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="text-base font-semibold">Active Configuration</h3>
           <span className="text-xs text-muted-foreground">
-            {selectedOption ? `${selectedOption.title} selected` : null}
+            {selectedOption ? `${selectedOption.metadata.title} selected` : null}
           </span>
         </div>
 
