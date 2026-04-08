@@ -1123,7 +1123,9 @@
         "loadRequiredData": "Impossibile caricare i dati richiesti",
         "templateNameRequired": "Il nome del modello è obbligatorio",
         "createFailed": "Failed to create template"
-      }
+      },
+      "skip": "Salta",
+      "creating": "Creazione..."
     }
   },
   "documents": {
@@ -1242,5 +1244,65 @@
     "submitting": "Invio...",
     "loading": "Caricamento...",
     "empty": "Nessun commento ancora. Sii il primo a commentare!"
+  },
+  "clientPortal": {
+    "clientsWillSee": "I clienti vedranno:",
+    "showPhases": "Mostra fasi",
+    "showPhasesDescription": "I clienti vedranno schede di fase con nomi, descrizioni e intervalli di date. Possono selezionare le fasi per visualizzare le attività associate.",
+    "showCompletion": "Mostra % completamento",
+    "showCompletionDescription": "Visualizza una barra di avanzamento e percentuale che mostra quante attività sono completate in ogni fase.",
+    "showTasks": "Mostra attività",
+    "showTasksDescription": "I clienti possono visualizzare le singole attività all'interno di ogni fase. Le attività vengono visualizzate in una bacheca Kanban o vista elenco raggruppata per stato.",
+    "visibleTaskFields": "Campi attività visibili",
+    "visibleTaskFieldsDescription": "Seleziona quali dettagli dell'attività sono visibili ai clienti. I campi non selezionati saranno nascosti dalle schede attività.",
+    "required": "(obbligatorio)",
+    "summary": {
+      "projectInfo": "Nome del progetto, descrizione, date e avanzamento complessivo",
+      "phaseInfo": "Nomi delle fasi, descrizioni e intervalli di date",
+      "phaseCompletion": "Percentuale di completamento per ogni fase",
+      "taskDetails": "Dettagli attività: {{fields}}",
+      "fields": {
+        "taskNames": "nomi delle attività",
+        "descriptions": "descrizioni",
+        "dueDates": "date di scadenza",
+        "status": "stato",
+        "assignees": "assegnatari",
+        "estimatedHours": "ore stimate",
+        "actualHours": "ore effettive",
+        "priority": "priorità",
+        "checklist": "nomi e completamento degli elementi checklist",
+        "dependencies": "dipendenze delle attività",
+        "documentUploads": "caricamenti documenti"
+      }
+    },
+    "fieldLabels": {
+      "task_name": "Nome attività",
+      "description": "Descrizione",
+      "due_date": "Data di scadenza",
+      "status": "Stato",
+      "assigned_to": "Assegnato a",
+      "estimated_hours": "Ore stimate",
+      "actual_hours": "Ore effettive",
+      "priority": "Priorità",
+      "checklist_progress": "Checklist",
+      "services": "Servizi",
+      "dependencies": "Dipendenze",
+      "document_uploads": "Caricamenti documenti"
+    }
+  },
+  "quickAddStatus": {
+    "title": "Crea nuovo stato",
+    "statusName": "Nome dello stato",
+    "namePlaceholder": "es. In corso, Revisione, Completato",
+    "statusColor": "Colore dello stato",
+    "changeColor": "Cambia colore",
+    "markClosed": "Segna come stato chiuso",
+    "markClosedDescription": "Le attività negli stati chiusi sono considerate completate",
+    "creating": "Creazione...",
+    "createButton": "Crea stato",
+    "nameRequired": "Il nome dello stato è obbligatorio",
+    "duplicateName": "Esiste già uno stato con questo nome",
+    "createdSuccess": "Stato \"{{name}}\" creato con successo",
+    "createFailed": "Impossibile creare lo stato"
   }
 }

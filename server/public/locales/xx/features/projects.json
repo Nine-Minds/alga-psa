@@ -1012,7 +1012,9 @@
     "wizard": {
       "next": "11111",
       "back": "11111",
+      "skip": "11111",
       "create": "11111",
+      "creating": "11111",
       "title": "11111",
       "basics": {
         "nameLabel": "11111",
@@ -1242,5 +1244,65 @@
     "adding": "11111",
     "addError": "11111",
     "import": "11111"
+  },
+  "clientPortal": {
+    "clientsWillSee": "11111",
+    "showPhases": "11111",
+    "showPhasesDescription": "11111",
+    "showCompletion": "11111",
+    "showCompletionDescription": "11111",
+    "showTasks": "11111",
+    "showTasksDescription": "11111",
+    "visibleTaskFields": "11111",
+    "visibleTaskFieldsDescription": "11111",
+    "required": "11111",
+    "summary": {
+      "projectInfo": "11111",
+      "phaseInfo": "11111",
+      "phaseCompletion": "11111",
+      "taskDetails": "11111 {{fields}} 11111",
+      "fields": {
+        "taskNames": "11111",
+        "descriptions": "11111",
+        "dueDates": "11111",
+        "status": "11111",
+        "assignees": "11111",
+        "estimatedHours": "11111",
+        "actualHours": "11111",
+        "priority": "11111",
+        "checklist": "11111",
+        "dependencies": "11111",
+        "documentUploads": "11111"
+      }
+    },
+    "fieldLabels": {
+      "task_name": "11111",
+      "description": "11111",
+      "due_date": "11111",
+      "status": "11111",
+      "assigned_to": "11111",
+      "estimated_hours": "11111",
+      "actual_hours": "11111",
+      "priority": "11111",
+      "checklist_progress": "11111",
+      "services": "11111",
+      "dependencies": "11111",
+      "document_uploads": "11111"
+    }
+  },
+  "quickAddStatus": {
+    "title": "11111",
+    "statusName": "11111",
+    "namePlaceholder": "11111",
+    "statusColor": "11111",
+    "changeColor": "11111",
+    "markClosed": "11111",
+    "markClosedDescription": "11111",
+    "creating": "11111",
+    "createButton": "11111",
+    "nameRequired": "11111",
+    "duplicateName": "11111",
+    "createdSuccess": "11111 {{name}} 11111",
+    "createFailed": "11111"
   }
 }

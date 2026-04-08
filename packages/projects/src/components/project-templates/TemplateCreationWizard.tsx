@@ -368,6 +368,10 @@ export function TemplateCreationWizard({
             isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
             isLoading={isLoading}
             finishLabel={t('templates.wizard.create', 'Create Template')}
+            backLabel={t('templates.wizard.back', 'Back')}
+            skipLabel={t('templates.wizard.skip', 'Skip')}
+            nextLabel={t('templates.wizard.next', 'Next')}
+            completingLabel={t('templates.wizard.creating', 'Creating...')}
           />
         </div>
       </div>

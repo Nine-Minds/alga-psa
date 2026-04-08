@@ -1123,7 +1123,9 @@
         "loadRequiredData": "Erforderliche Daten konnten nicht geladen werden",
         "templateNameRequired": "Vorlagenname ist erforderlich",
         "createFailed": "Failed to create template"
-      }
+      },
+      "skip": "Überspringen",
+      "creating": "Wird erstellt..."
     }
   },
   "documents": {
@@ -1242,5 +1244,65 @@
     "submitting": "Wird gesendet...",
     "loading": "Laden...",
     "empty": "Noch keine Kommentare. Seien Sie der Erste!"
+  },
+  "clientPortal": {
+    "clientsWillSee": "Kunden werden sehen:",
+    "showPhases": "Phasen anzeigen",
+    "showPhasesDescription": "Kunden sehen Phasenkarten mit Namen, Beschreibungen und Datumsbereichen. Sie können Phasen auswählen, um zugehörige Aufgaben anzuzeigen.",
+    "showCompletion": "Fertigstellung % anzeigen",
+    "showCompletionDescription": "Zeigt einen Fortschrittsbalken und Prozentsatz an, der angibt, wie viele Aufgaben in jeder Phase abgeschlossen sind.",
+    "showTasks": "Aufgaben anzeigen",
+    "showTasksDescription": "Kunden können einzelne Aufgaben innerhalb jeder Phase einsehen. Aufgaben werden in einem Kanban-Board oder einer nach Status gruppierten Listenansicht angezeigt.",
+    "visibleTaskFields": "Sichtbare Aufgabenfelder",
+    "visibleTaskFieldsDescription": "Wählen Sie aus, welche Aufgabendetails für Kunden sichtbar sind. Nicht markierte Felder werden auf den Aufgabenkarten ausgeblendet.",
+    "required": "(erforderlich)",
+    "summary": {
+      "projectInfo": "Projektname, Beschreibung, Daten und Gesamtfortschritt",
+      "phaseInfo": "Phasennamen, Beschreibungen und Datumsbereiche",
+      "phaseCompletion": "Fertigstellungsprozentsatz für jede Phase",
+      "taskDetails": "Aufgabendetails: {{fields}}",
+      "fields": {
+        "taskNames": "Aufgabennamen",
+        "descriptions": "Beschreibungen",
+        "dueDates": "Fälligkeitsdaten",
+        "status": "Status",
+        "assignees": "Zugewiesene",
+        "estimatedHours": "Geschätzte Stunden",
+        "actualHours": "Tatsächliche Stunden",
+        "priority": "Priorität",
+        "checklist": "Checklistennamen und Fertigstellung",
+        "dependencies": "Aufgabenabhängigkeiten",
+        "documentUploads": "Dokumenten-Uploads"
+      }
+    },
+    "fieldLabels": {
+      "task_name": "Aufgabenname",
+      "description": "Beschreibung",
+      "due_date": "Fälligkeitsdatum",
+      "status": "Status",
+      "assigned_to": "Zugewiesen an",
+      "estimated_hours": "Geschätzte Stunden",
+      "actual_hours": "Tatsächliche Stunden",
+      "priority": "Priorität",
+      "checklist_progress": "Checkliste",
+      "services": "Dienste",
+      "dependencies": "Abhängigkeiten",
+      "document_uploads": "Dokumenten-Uploads"
+    }
+  },
+  "quickAddStatus": {
+    "title": "Neuen Status erstellen",
+    "statusName": "Statusname",
+    "namePlaceholder": "z.B. In Bearbeitung, Überprüfung, Erledigt",
+    "statusColor": "Statusfarbe",
+    "changeColor": "Farbe ändern",
+    "markClosed": "Als geschlossenen Status markieren",
+    "markClosedDescription": "Aufgaben in geschlossenen Status gelten als abgeschlossen",
+    "creating": "Wird erstellt...",
+    "createButton": "Status erstellen",
+    "nameRequired": "Statusname ist erforderlich",
+    "duplicateName": "Ein Status mit diesem Namen existiert bereits",
+    "createdSuccess": "Status \"{{name}}\" erfolgreich erstellt",
+    "createFailed": "Status konnte nicht erstellt werden"
   }
 }

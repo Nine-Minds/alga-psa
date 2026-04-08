@@ -1012,7 +1012,9 @@
     "wizard": {
     "next": "Next",
     "back": "Back",
+    "skip": "Skip",
     "create": "Create Template",
+    "creating": "Creating...",
     "title": "Create New Project Template",
       "basics": {
         "nameLabel": "Template Name *",
@@ -1242,5 +1244,65 @@
     "adding": "Adding...",
     "addError": "Failed to add phase. Please try again.",
     "import": "Import"
+  },
+  "clientPortal": {
+    "clientsWillSee": "Clients will see:",
+    "showPhases": "Show Phases",
+    "showPhasesDescription": "Clients will see phase cards with names, descriptions, and date ranges. They can select phases to view associated tasks.",
+    "showCompletion": "Show Completion %",
+    "showCompletionDescription": "Display a progress bar and percentage showing how many tasks are completed in each phase.",
+    "showTasks": "Show Tasks",
+    "showTasksDescription": "Clients can view individual tasks within each phase. Tasks are displayed in a Kanban board or list view grouped by status.",
+    "visibleTaskFields": "Visible Task Fields",
+    "visibleTaskFieldsDescription": "Select which task details are visible to clients. Unchecked fields will be hidden from task cards.",
+    "required": "(required)",
+    "summary": {
+      "projectInfo": "Project name, description, dates, and overall progress",
+      "phaseInfo": "Phase names, descriptions, and date ranges",
+      "phaseCompletion": "Completion percentage for each phase",
+      "taskDetails": "Task details: {{fields}}",
+      "fields": {
+        "taskNames": "task names",
+        "descriptions": "descriptions",
+        "dueDates": "due dates",
+        "status": "status",
+        "assignees": "assignees",
+        "estimatedHours": "estimated hours",
+        "actualHours": "actual hours",
+        "priority": "priority",
+        "checklist": "checklist item names and completion",
+        "dependencies": "task dependencies",
+        "documentUploads": "document uploads"
+      }
+    },
+    "fieldLabels": {
+      "task_name": "Task Name",
+      "description": "Description",
+      "due_date": "Due Date",
+      "status": "Status",
+      "assigned_to": "Assigned To",
+      "estimated_hours": "Estimated Hours",
+      "actual_hours": "Actual Hours",
+      "priority": "Priority",
+      "checklist_progress": "Checklist",
+      "services": "Services",
+      "dependencies": "Dependencies",
+      "document_uploads": "Document Uploads"
+    }
+  },
+  "quickAddStatus": {
+    "title": "Create New Status",
+    "statusName": "Status Name",
+    "namePlaceholder": "e.g., In Progress, Review, Done",
+    "statusColor": "Status Color",
+    "changeColor": "Change color",
+    "markClosed": "Mark as closed status",
+    "markClosedDescription": "Tasks in closed statuses are considered complete",
+    "creating": "Creating...",
+    "createButton": "Create Status",
+    "nameRequired": "Status name is required",
+    "duplicateName": "A status with this name already exists",
+    "createdSuccess": "Status \"{{name}}\" created successfully",
+    "createFailed": "Failed to create status"
   }
 }

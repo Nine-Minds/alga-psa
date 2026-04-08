@@ -1123,7 +1123,9 @@
         "loadRequiredData": "No se pudieron cargar los datos necesarios",
         "templateNameRequired": "El nombre de la plantilla es obligatorio",
         "createFailed": "Failed to create template"
-      }
+      },
+      "skip": "Omitir",
+      "creating": "Creando..."
     }
   },
   "documents": {
@@ -1242,5 +1244,65 @@
     "submitting": "Enviando...",
     "loading": "Cargando...",
     "empty": "Aún no hay comentarios. ¡Sé el primero en comentar!"
+  },
+  "clientPortal": {
+    "clientsWillSee": "Los clientes verán:",
+    "showPhases": "Mostrar fases",
+    "showPhasesDescription": "Los clientes verán tarjetas de fase con nombres, descripciones y rangos de fechas. Pueden seleccionar fases para ver las tareas asociadas.",
+    "showCompletion": "Mostrar % de completado",
+    "showCompletionDescription": "Mostrar una barra de progreso y porcentaje que indica cuántas tareas están completadas en cada fase.",
+    "showTasks": "Mostrar tareas",
+    "showTasksDescription": "Los clientes pueden ver tareas individuales dentro de cada fase. Las tareas se muestran en un tablero Kanban o vista de lista agrupada por estado.",
+    "visibleTaskFields": "Campos de tarea visibles",
+    "visibleTaskFieldsDescription": "Selecciona qué detalles de tarea son visibles para los clientes. Los campos no marcados se ocultarán de las tarjetas de tarea.",
+    "required": "(obligatorio)",
+    "summary": {
+      "projectInfo": "Nombre del proyecto, descripción, fechas y progreso general",
+      "phaseInfo": "Nombres de fase, descripciones y rangos de fechas",
+      "phaseCompletion": "Porcentaje de completado para cada fase",
+      "taskDetails": "Detalles de tareas: {{fields}}",
+      "fields": {
+        "taskNames": "nombres de tareas",
+        "descriptions": "descripciones",
+        "dueDates": "fechas de vencimiento",
+        "status": "estado",
+        "assignees": "asignados",
+        "estimatedHours": "horas estimadas",
+        "actualHours": "horas reales",
+        "priority": "prioridad",
+        "checklist": "nombres y completado de elementos de lista",
+        "dependencies": "dependencias de tareas",
+        "documentUploads": "cargas de documentos"
+      }
+    },
+    "fieldLabels": {
+      "task_name": "Nombre de tarea",
+      "description": "Descripción",
+      "due_date": "Fecha de vencimiento",
+      "status": "Estado",
+      "assigned_to": "Asignado a",
+      "estimated_hours": "Horas estimadas",
+      "actual_hours": "Horas reales",
+      "priority": "Prioridad",
+      "checklist_progress": "Lista de verificación",
+      "services": "Servicios",
+      "dependencies": "Dependencias",
+      "document_uploads": "Cargas de documentos"
+    }
+  },
+  "quickAddStatus": {
+    "title": "Crear nuevo estado",
+    "statusName": "Nombre del estado",
+    "namePlaceholder": "ej. En progreso, Revisión, Completado",
+    "statusColor": "Color del estado",
+    "changeColor": "Cambiar color",
+    "markClosed": "Marcar como estado cerrado",
+    "markClosedDescription": "Las tareas en estados cerrados se consideran completadas",
+    "creating": "Creando...",
+    "createButton": "Crear estado",
+    "nameRequired": "El nombre del estado es obligatorio",
+    "duplicateName": "Ya existe un estado con este nombre",
+    "createdSuccess": "Estado \"{{name}}\" creado correctamente",
+    "createFailed": "Error al crear el estado"
   }
 }

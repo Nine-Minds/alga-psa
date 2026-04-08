@@ -1123,7 +1123,9 @@
         "loadRequiredData": "Échec du chargement des données requises",
         "templateNameRequired": "Le nom du modèle est requis",
         "createFailed": "Failed to create template"
-      }
+      },
+      "skip": "Passer",
+      "creating": "Création..."
     }
   },
   "documents": {
@@ -1242,5 +1244,65 @@
     "submitting": "Envoi...",
     "loading": "Chargement...",
     "empty": "Pas encore de commentaires. Soyez le premier à commenter !"
+  },
+  "clientPortal": {
+    "clientsWillSee": "Les clients verront :",
+    "showPhases": "Afficher les phases",
+    "showPhasesDescription": "Les clients verront des fiches de phase avec noms, descriptions et plages de dates. Ils peuvent sélectionner les phases pour voir les tâches associées.",
+    "showCompletion": "Afficher le % de complétion",
+    "showCompletionDescription": "Afficher une barre de progression et un pourcentage montrant combien de tâches sont terminées dans chaque phase.",
+    "showTasks": "Afficher les tâches",
+    "showTasksDescription": "Les clients peuvent voir les tâches individuelles dans chaque phase. Les tâches sont affichées en tableau Kanban ou en liste groupée par statut.",
+    "visibleTaskFields": "Champs de tâche visibles",
+    "visibleTaskFieldsDescription": "Sélectionnez les détails de tâche visibles pour les clients. Les champs non cochés seront masqués des fiches de tâche.",
+    "required": "(requis)",
+    "summary": {
+      "projectInfo": "Nom du projet, description, dates et progression globale",
+      "phaseInfo": "Noms des phases, descriptions et plages de dates",
+      "phaseCompletion": "Pourcentage de complétion pour chaque phase",
+      "taskDetails": "Détails des tâches : {{fields}}",
+      "fields": {
+        "taskNames": "noms des tâches",
+        "descriptions": "descriptions",
+        "dueDates": "dates d'échéance",
+        "status": "statut",
+        "assignees": "assignés",
+        "estimatedHours": "heures estimées",
+        "actualHours": "heures réelles",
+        "priority": "priorité",
+        "checklist": "noms et complétion des éléments de liste de contrôle",
+        "dependencies": "dépendances de tâches",
+        "documentUploads": "téléchargements de documents"
+      }
+    },
+    "fieldLabels": {
+      "task_name": "Nom de la tâche",
+      "description": "Description",
+      "due_date": "Date d'échéance",
+      "status": "Statut",
+      "assigned_to": "Assigné à",
+      "estimated_hours": "Heures estimées",
+      "actual_hours": "Heures réelles",
+      "priority": "Priorité",
+      "checklist_progress": "Liste de contrôle",
+      "services": "Services",
+      "dependencies": "Dépendances",
+      "document_uploads": "Téléchargements de documents"
+    }
+  },
+  "quickAddStatus": {
+    "title": "Créer un nouveau statut",
+    "statusName": "Nom du statut",
+    "namePlaceholder": "ex. En cours, Révision, Terminé",
+    "statusColor": "Couleur du statut",
+    "changeColor": "Changer la couleur",
+    "markClosed": "Marquer comme statut fermé",
+    "markClosedDescription": "Les tâches dans les statuts fermés sont considérées comme terminées",
+    "creating": "Création...",
+    "createButton": "Créer le statut",
+    "nameRequired": "Le nom du statut est requis",
+    "duplicateName": "Un statut avec ce nom existe déjà",
+    "createdSuccess": "Statut \"{{name}}\" créé avec succès",
+    "createFailed": "Échec de la création du statut"
   }
 }

@@ -1123,7 +1123,9 @@
         "loadRequiredData": "Vereiste gegevens konden niet worden geladen",
         "templateNameRequired": "Sjabloonnaam is verplicht",
         "createFailed": "Failed to create template"
-      }
+      },
+      "skip": "Overslaan",
+      "creating": "Aanmaken..."
     }
   },
   "documents": {
@@ -1242,5 +1244,65 @@
     "submitting": "Verzenden...",
     "loading": "Laden...",
     "empty": "Nog geen opmerkingen. Wees de eerste om te reageren!"
+  },
+  "clientPortal": {
+    "clientsWillSee": "Klanten zullen zien:",
+    "showPhases": "Fasen tonen",
+    "showPhasesDescription": "Klanten zien fasekaarten met namen, beschrijvingen en datumbereiken. Ze kunnen fasen selecteren om bijbehorende taken te bekijken.",
+    "showCompletion": "Voltooiing % tonen",
+    "showCompletionDescription": "Toon een voortgangsbalk en percentage dat aangeeft hoeveel taken in elke fase zijn voltooid.",
+    "showTasks": "Taken tonen",
+    "showTasksDescription": "Klanten kunnen individuele taken binnen elke fase bekijken. Taken worden weergegeven in een Kanban-bord of lijstweergave gegroepeerd op status.",
+    "visibleTaskFields": "Zichtbare taakvelden",
+    "visibleTaskFieldsDescription": "Selecteer welke taakdetails zichtbaar zijn voor klanten. Niet-aangevinkte velden worden verborgen op taakkaarten.",
+    "required": "(verplicht)",
+    "summary": {
+      "projectInfo": "Projectnaam, beschrijving, data en totale voortgang",
+      "phaseInfo": "Fasenamen, beschrijvingen en datumbereiken",
+      "phaseCompletion": "Voltooiingspercentage voor elke fase",
+      "taskDetails": "Taakdetails: {{fields}}",
+      "fields": {
+        "taskNames": "taaknamen",
+        "descriptions": "beschrijvingen",
+        "dueDates": "vervaldata",
+        "status": "status",
+        "assignees": "toegewezenen",
+        "estimatedHours": "geschatte uren",
+        "actualHours": "werkelijke uren",
+        "priority": "prioriteit",
+        "checklist": "checklistnamen en voltooiing",
+        "dependencies": "taakafhankelijkheden",
+        "documentUploads": "documentuploads"
+      }
+    },
+    "fieldLabels": {
+      "task_name": "Taaknaam",
+      "description": "Beschrijving",
+      "due_date": "Vervaldatum",
+      "status": "Status",
+      "assigned_to": "Toegewezen aan",
+      "estimated_hours": "Geschatte uren",
+      "actual_hours": "Werkelijke uren",
+      "priority": "Prioriteit",
+      "checklist_progress": "Checklist",
+      "services": "Diensten",
+      "dependencies": "Afhankelijkheden",
+      "document_uploads": "Documentuploads"
+    }
+  },
+  "quickAddStatus": {
+    "title": "Nieuwe status aanmaken",
+    "statusName": "Statusnaam",
+    "namePlaceholder": "bijv. In uitvoering, Review, Voltooid",
+    "statusColor": "Statuskleur",
+    "changeColor": "Kleur wijzigen",
+    "markClosed": "Markeren als gesloten status",
+    "markClosedDescription": "Taken in gesloten statussen worden als voltooid beschouwd",
+    "creating": "Aanmaken...",
+    "createButton": "Status aanmaken",
+    "nameRequired": "Statusnaam is verplicht",
+    "duplicateName": "Een status met deze naam bestaat al",
+    "createdSuccess": "Status \"{{name}}\" succesvol aangemaakt",
+    "createFailed": "Kan status niet aanmaken"
   }
 }

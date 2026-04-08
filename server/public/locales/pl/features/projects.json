@@ -1123,7 +1123,9 @@
         "loadRequiredData": "Nie udało się załadować wymaganych danych",
         "templateNameRequired": "Nazwa szablonu jest wymagana",
         "createFailed": "Failed to create template"
-      }
+      },
+      "skip": "Pomiń",
+      "creating": "Tworzenie..."
     }
   },
   "documents": {
@@ -1242,5 +1244,65 @@
     "submitting": "Wysyłanie...",
     "loading": "Ładowanie...",
     "empty": "Brak komentarzy. Bądź pierwszym, który skomentuje!"
+  },
+  "clientPortal": {
+    "clientsWillSee": "Klienci zobaczą:",
+    "showPhases": "Pokaż fazy",
+    "showPhasesDescription": "Klienci zobaczą karty faz z nazwami, opisami i zakresami dat. Mogą wybierać fazy, aby zobaczyć powiązane zadania.",
+    "showCompletion": "Pokaż % ukończenia",
+    "showCompletionDescription": "Wyświetl pasek postępu i procent pokazujący, ile zadań jest ukończonych w każdej fazie.",
+    "showTasks": "Pokaż zadania",
+    "showTasksDescription": "Klienci mogą przeglądać poszczególne zadania w każdej fazie. Zadania są wyświetlane na tablicy Kanban lub w widoku listy pogrupowane według statusu.",
+    "visibleTaskFields": "Widoczne pola zadań",
+    "visibleTaskFieldsDescription": "Wybierz, które szczegóły zadań są widoczne dla klientów. Niezaznaczone pola będą ukryte na kartach zadań.",
+    "required": "(wymagane)",
+    "summary": {
+      "projectInfo": "Nazwa projektu, opis, daty i ogólny postęp",
+      "phaseInfo": "Nazwy faz, opisy i zakresy dat",
+      "phaseCompletion": "Procent ukończenia dla każdej fazy",
+      "taskDetails": "Szczegóły zadań: {{fields}}",
+      "fields": {
+        "taskNames": "nazwy zadań",
+        "descriptions": "opisy",
+        "dueDates": "terminy",
+        "status": "status",
+        "assignees": "przypisani",
+        "estimatedHours": "szacowane godziny",
+        "actualHours": "rzeczywiste godziny",
+        "priority": "priorytet",
+        "checklist": "nazwy i ukończenie elementów listy kontrolnej",
+        "dependencies": "zależności zadań",
+        "documentUploads": "przesyłanie dokumentów"
+      }
+    },
+    "fieldLabels": {
+      "task_name": "Nazwa zadania",
+      "description": "Opis",
+      "due_date": "Termin",
+      "status": "Status",
+      "assigned_to": "Przypisany do",
+      "estimated_hours": "Szacowane godziny",
+      "actual_hours": "Rzeczywiste godziny",
+      "priority": "Priorytet",
+      "checklist_progress": "Lista kontrolna",
+      "services": "Usługi",
+      "dependencies": "Zależności",
+      "document_uploads": "Przesyłanie dokumentów"
+    }
+  },
+  "quickAddStatus": {
+    "title": "Utwórz nowy status",
+    "statusName": "Nazwa statusu",
+    "namePlaceholder": "np. W toku, Przegląd, Zakończone",
+    "statusColor": "Kolor statusu",
+    "changeColor": "Zmień kolor",
+    "markClosed": "Oznacz jako status zamknięty",
+    "markClosedDescription": "Zadania w zamkniętych statusach są uważane za ukończone",
+    "creating": "Tworzenie...",
+    "createButton": "Utwórz status",
+    "nameRequired": "Nazwa statusu jest wymagana",
+    "duplicateName": "Status o tej nazwie już istnieje",
+    "createdSuccess": "Status \"{{name}}\" utworzono pomyślnie",
+    "createFailed": "Nie udało się utworzyć statusu"
   }
 }
