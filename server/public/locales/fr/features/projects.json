@@ -302,7 +302,8 @@
     "editDependency": "Modifier la dépendance",
     "removeDependency": "Supprimer la dépendance",
     "addError": "Échec de l’ajout de la dépendance",
-    "removeError": "Échec de la suppression de la dépendance"
+    "removeError": "Échec de la suppression de la dépendance",
+    "updateError": "Failed to update dependency"
   },
   "taskDocuments": {
     "attachmentsTitle": "Attachments",

@@ -11,7 +11,7 @@
   {"id": "F023", "description": "Wire Projects.tsx — list page filters, search placeholder, empty state, status tabs (~21 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-A"]},
   {"id": "F024", "description": "Wire TaskDocumentsSimple.tsx — upload/attach/download/remove controls, empty states (~21 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-A"]},
   {"id": "F025", "description": "Wire TaskTicketLinks.tsx — link/unlink, create ticket from task, search placeholder (~21 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-A"]},
-  {"id": "F026", "description": "Wire TaskDependencies.tsx — dependency add/remove, blocking indicators, cycle warnings (~21 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-A"]},
+  {"id": "F026", "description": "Wire TaskDependencies.tsx — dependency add/remove, blocking indicators, cycle warnings (~21 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-A"]},
   {"id": "F027", "description": "Wire ProjectMaterialsDrawer.tsx — materials list, add/edit dialog, cost labels, delete confirm (~19 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-A"]},
   {"id": "F028", "description": "Wire ProjectTaskExportDialog.tsx — format options, column picker, download toast (~18 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-A"]},
   {"id": "F029", "description": "Wire ProjectQuickAdd.tsx — dialog labels, validation (reused in global QuickCreate) (~15 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-A"]},

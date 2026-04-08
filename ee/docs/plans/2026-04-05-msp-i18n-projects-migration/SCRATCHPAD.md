@@ -249,6 +249,19 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F025 check)** `node_modules/.bin/eslint
   packages/projects/src/components/TaskTicketLinks.tsx` passes with pre-existing warnings
   only (13 warnings, 0 errors).
+- **(2026-04-07, F026)** Wired `packages/projects/src/components/TaskDependencies.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the dependency section
+  title, dependency-type labels, add/edit placeholders, action-button titles, empty
+  state, and inline error fallbacks for add/remove/update flows in both edit and pending
+  modes.
+- **(2026-04-07, F026)** Added the only missing namespace leaf surfaced by the audit:
+  `taskDependencies.updateError`, used when replacing an existing dependency target fails.
+- **(2026-04-07, F026)** Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and
+  re-ran `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  successfully after the `taskDependencies.updateError` addition.
+- **(2026-04-07, F026 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/TaskDependencies.tsx` passes with pre-existing
+  warnings only (14 warnings, 0 errors).
 
 ## Commands / Runbooks
 

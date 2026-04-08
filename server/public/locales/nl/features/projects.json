@@ -302,7 +302,8 @@
     "editDependency": "Afhankelijkheid bewerken",
     "removeDependency": "Verwijder de afhankelijkheid",
     "addError": "Kan afhankelijkheid niet toevoegen",
-    "removeError": "Kan de afhankelijkheid niet verwijderen"
+    "removeError": "Kan de afhankelijkheid niet verwijderen",
+    "updateError": "Failed to update dependency"
   },
   "taskDocuments": {
     "attachmentsTitle": "Attachments",

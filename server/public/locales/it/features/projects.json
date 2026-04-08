@@ -302,7 +302,8 @@
     "editDependency": "Modifica dipendenza",
     "removeDependency": "Rimuovi dipendenza",
     "addError": "Impossibile aggiungere la dipendenza",
-    "removeError": "Impossibile rimuovere la dipendenza"
+    "removeError": "Impossibile rimuovere la dipendenza",
+    "updateError": "Failed to update dependency"
   },
   "taskDocuments": {
     "attachmentsTitle": "Attachments",

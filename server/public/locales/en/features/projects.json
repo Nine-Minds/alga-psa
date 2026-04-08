@@ -302,7 +302,8 @@
     "editDependency": "Edit dependency",
     "removeDependency": "Remove dependency",
     "addError": "Failed to add dependency",
-    "removeError": "Failed to remove dependency"
+    "removeError": "Failed to remove dependency",
+    "updateError": "Failed to update dependency"
   },
   "taskDocuments": {
     "attachmentsTitle": "Attachments",
