@@ -36,7 +36,7 @@ const RightSidebar: React.FC<RightSidebarProps> = (props) => {
 
   return (
     <Suspense fallback={
-      <div className="fixed top-0 right-0 z-[45] h-full bg-gray-50 w-96 shadow-xl">
+      <div className="fixed top-0 right-0 z-[45] h-full bg-gray-50 w-[560px] shadow-xl">
         <div className="flex items-center justify-center h-full">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
         </div>
