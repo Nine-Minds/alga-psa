@@ -32,7 +32,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
@@ -1188,10 +1188,9 @@ const BoardsSettings: React.FC = () => {
             {!editingBoard && (
               <div>
                 <Label>Ticket status setup</Label>
-                <ToggleGroup
-                  type="single"
-                  value={formData.status_seed_mode}
-                  onValueChange={(value) => {
+                <ViewSwitcher
+                  currentView={formData.status_seed_mode}
+                  onChange={(value) => {
                     if (value !== 'copy_existing' && value !== 'create_inline') {
                       return;
                     }
@@ -1204,24 +1203,13 @@ const BoardsSettings: React.FC = () => {
                         : prev.ticket_statuses,
                     }));
                   }}
+                  options={[
+                    { value: 'copy_existing', label: 'Copy from existing board', id: 'ticket-status-seed-mode-copy-existing' },
+                    { value: 'create_inline', label: 'Create statuses inline', id: 'ticket-status-seed-mode-create-inline' },
+                  ]}
                   aria-label="Ticket status setup"
                   className="mt-2 w-full"
-                >
-                  <ToggleGroupItem
-                    id="ticket-status-seed-mode-copy-existing"
-                    value="copy_existing"
-                    className="flex-1 min-w-0"
-                  >
-                    Copy from existing board
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    id="ticket-status-seed-mode-create-inline"
-                    value="create_inline"
-                    className="flex-1 min-w-0"
-                  >
-                    Create statuses inline
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                />
                 <p className="text-xs text-muted-foreground mt-1">
                   Choose whether this board starts from an existing lifecycle or a new inline status list.
                 </p>
