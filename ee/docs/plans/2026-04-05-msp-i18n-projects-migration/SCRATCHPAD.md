@@ -485,6 +485,16 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-08, F058 check)** `node_modules/.bin/eslint
   packages/projects/src/components/project-templates/wizard-steps/TemplatePhasesStep.tsx`
   passes cleanly with 0 warnings / 0 errors.
+- **(2026-04-08, F059)** Wired `packages/projects/src/components/project-templates/CreateTemplateForm.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the page title,
+  field labels/placeholders, create/cancel actions, validation toast, success toast,
+  and create-failure error-handler copy.
+- **(2026-04-08, F059)** No new locale keys were required. The existing
+  `templates.create.*` subtree fully covered the standalone create page after the earlier
+  dialog work, so this item was a pure component-wiring pass.
+- **(2026-04-08, F059 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/CreateTemplateForm.tsx` passes
+  cleanly with 0 warnings / 0 errors.
 
 ## Commands / Runbooks
 
