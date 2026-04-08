@@ -222,11 +222,15 @@
     "empty": "No documents attached.",
     "unknownType": "Unknown type",
     "closePreview": "Close preview",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete document?",
+    "deleteConfirmMessage": "\"{{name}}\" will be removed from this ticket.",
     "errors": {
       "load": "Unable to load documents.",
       "upload": "Unable to upload the document. Please try again.",
       "open": "Unable to open this document right now.",
-      "cameraPermission": "Camera access is required to attach a photo."
+      "cameraPermission": "Camera access is required to attach a photo.",
+      "delete": "Unable to delete the document. Please try again."
     }
   },
   "materials": {
