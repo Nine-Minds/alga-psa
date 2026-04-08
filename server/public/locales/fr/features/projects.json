@@ -437,6 +437,7 @@
     "completeTitle": "Export terminé",
     "success": "Export CSV réussi pour {{count}} tâche{{plural}}.",
     "failed": "Échec de l’export des tâches",
+    "done": "Done",
     "fields": {
       "taskName": "Nom de la tâche",
       "description": "Description",

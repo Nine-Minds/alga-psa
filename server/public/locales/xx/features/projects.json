@@ -437,6 +437,7 @@
     "completeTitle": "11111",
     "success": "11111 {{count}} 11111 {{plural}} 11111",
     "failed": "11111",
+    "done": "11111",
     "fields": {
       "taskName": "11111",
       "description": "11111",

@@ -437,6 +437,7 @@
     "completeTitle": "Exporteren voltooid",
     "success": "{{count}} taak{{plural}} naar CSV geëxporteerd.",
     "failed": "Kan taken niet exporteren",
+    "done": "Done",
     "fields": {
       "taskName": "Taaknaam",
       "description": "Beschrijving",

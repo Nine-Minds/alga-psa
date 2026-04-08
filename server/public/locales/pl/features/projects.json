@@ -437,6 +437,7 @@
     "completeTitle": "Eksport zakończony",
     "success": "Pomyślnie wyeksportowano {{count}} zadanie{{plural}} do pliku CSV.",
     "failed": "Nie udało się wyeksportować zadań",
+    "done": "Done",
     "fields": {
       "taskName": "Nazwa zadania",
       "description": "Opis",

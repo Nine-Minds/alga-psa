@@ -437,6 +437,7 @@
     "completeTitle": "Export abgeschlossen",
     "success": "{{count}} Aufgabe{{plural}} erfolgreich als CSV exportiert.",
     "failed": "Aufgaben konnten nicht exportiert werden",
+    "done": "Done",
     "fields": {
       "taskName": "Aufgabenname",
       "description": "Beschreibung",

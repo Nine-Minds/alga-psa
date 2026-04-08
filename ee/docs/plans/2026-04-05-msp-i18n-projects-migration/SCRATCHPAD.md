@@ -275,6 +275,18 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F027 check)** `node_modules/.bin/eslint
   packages/projects/src/components/ProjectMaterialsDrawer.tsx` passes cleanly with 0
   warnings / 0 errors after wrapping the translation helper in `useCallback`.
+- **(2026-04-07, F028)** Wired `packages/projects/src/components/ProjectTaskExportDialog.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the dialog title,
+  phase/field selection headers, select-all toggles, selected-count summaries, export /
+  exporting / completion copy, and the export-field checkbox labels via `export.fields.*`.
+- **(2026-04-07, F028)** Added the small missing `export.done` leaf so the completion CTA
+  stays `"Done"` instead of drifting to a generic close label.
+- **(2026-04-07, F028)** Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and
+  re-ran `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  successfully after the `export.done` addition.
+- **(2026-04-07, F028 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/ProjectTaskExportDialog.tsx` passes with pre-existing
+  warnings only (2 warnings, 0 errors).
 
 ## Commands / Runbooks
 

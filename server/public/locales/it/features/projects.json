@@ -437,6 +437,7 @@
     "completeTitle": "Esportazione completata",
     "success": "{{count}} attività esportat{{plural}} con successo in CSV.",
     "failed": "Impossibile esportare le attività",
+    "done": "Done",
     "fields": {
       "taskName": "Nome attività",
       "description": "Descrizione",
