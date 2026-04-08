@@ -603,10 +603,16 @@
     },
     "linkTicketToTask": {
       "title": "Collega ticket ad attività",
+      "button": "Link to Task",
+      "projectLabel": "Project",
       "projectPlaceholder": "Seleziona un progetto",
+      "phaseLabel": "Phase (optional filter)",
       "phasePlaceholder": "Tutte le fasi",
+      "taskLabel": "Task",
       "taskPlaceholder": "Seleziona un’attività",
-      "linkedSuccess": "Ticket collegato all'attività con successo"
+      "linkedSuccess": "Ticket collegato all'attività con successo",
+      "linking": "Linking...",
+      "confirm": "Link"
     },
     "prefillFromTicket": {
       "title": "Precompila da ticket",

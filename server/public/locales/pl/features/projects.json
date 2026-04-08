@@ -603,10 +603,16 @@
     },
     "linkTicketToTask": {
       "title": "Połącz bilet z zadaniem",
+      "button": "Link to Task",
+      "projectLabel": "Project",
       "projectPlaceholder": "Wybierz projekt",
+      "phaseLabel": "Phase (optional filter)",
       "phasePlaceholder": "Wszystkie fazy",
+      "taskLabel": "Task",
       "taskPlaceholder": "Wybierz zadanie",
-      "linkedSuccess": "Ticket został pomyślnie powiązany z zadaniem"
+      "linkedSuccess": "Ticket został pomyślnie powiązany z zadaniem",
+      "linking": "Linking...",
+      "confirm": "Link"
     },
     "prefillFromTicket": {
       "title": "Wstępne wypełnienie z biletu",

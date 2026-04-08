@@ -603,10 +603,16 @@
     },
     "linkTicketToTask": {
       "title": "Vincular ticket a tarea",
+      "button": "Link to Task",
+      "projectLabel": "Project",
       "projectPlaceholder": "Seleccionar un proyecto",
+      "phaseLabel": "Phase (optional filter)",
       "phasePlaceholder": "Todas las fases",
+      "taskLabel": "Task",
       "taskPlaceholder": "Seleccionar una tarea",
-      "linkedSuccess": "Ticket vinculado a la tarea correctamente"
+      "linkedSuccess": "Ticket vinculado a la tarea correctamente",
+      "linking": "Linking...",
+      "confirm": "Link"
     },
     "prefillFromTicket": {
       "title": "Rellenar desde ticket",

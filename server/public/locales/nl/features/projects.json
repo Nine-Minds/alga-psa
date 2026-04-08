@@ -603,10 +603,16 @@
     },
     "linkTicketToTask": {
       "title": "Ticket aan taak koppelen",
+      "button": "Link to Task",
+      "projectLabel": "Project",
       "projectPlaceholder": "Selecteer een project",
+      "phaseLabel": "Phase (optional filter)",
       "phasePlaceholder": "Alle fasen",
+      "taskLabel": "Task",
       "taskPlaceholder": "Selecteer een taak",
-      "linkedSuccess": "Ticket succesvol aan taak gekoppeld"
+      "linkedSuccess": "Ticket succesvol aan taak gekoppeld",
+      "linking": "Linking...",
+      "confirm": "Link"
     },
     "prefillFromTicket": {
       "title": "Vooraf invullen vanaf ticket",

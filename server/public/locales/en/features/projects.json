@@ -601,13 +601,19 @@
     "statusPlaceholder": "Select a status",
     "linkTicketLabel": "Link ticket to the created task"
   },
-    "linkTicketToTask": {
-      "title": "Link Ticket to Task",
-      "projectPlaceholder": "Select a project",
-      "phasePlaceholder": "All phases",
-      "taskPlaceholder": "Select a task",
-      "linkedSuccess": "Ticket linked to task successfully"
-    },
+  "linkTicketToTask": {
+    "title": "Link Ticket to Task",
+    "button": "Link to Task",
+    "projectLabel": "Project",
+    "projectPlaceholder": "Select a project",
+    "phaseLabel": "Phase (optional filter)",
+    "phasePlaceholder": "All phases",
+    "taskLabel": "Task",
+    "taskPlaceholder": "Select a task",
+    "linkedSuccess": "Ticket linked to task successfully",
+    "linking": "Linking...",
+    "confirm": "Link"
+  },
     "prefillFromTicket": {
       "title": "Prefill From Ticket",
       "searchTicketsPlaceholder": "Search tickets...",

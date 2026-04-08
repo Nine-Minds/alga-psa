@@ -603,10 +603,16 @@
     },
     "linkTicketToTask": {
       "title": "11111",
+      "button": "11111",
+      "projectLabel": "11111",
       "projectPlaceholder": "11111",
+      "phaseLabel": "11111",
       "phasePlaceholder": "11111",
+      "taskLabel": "11111",
       "taskPlaceholder": "11111",
-      "linkedSuccess": "11111"
+      "linkedSuccess": "11111",
+      "linking": "11111",
+      "confirm": "11111"
     },
     "prefillFromTicket": {
       "title": "11111",

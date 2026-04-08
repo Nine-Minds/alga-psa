@@ -603,10 +603,16 @@
     },
     "linkTicketToTask": {
       "title": "Lier le ticket à la tâche",
+      "button": "Link to Task",
+      "projectLabel": "Project",
       "projectPlaceholder": "Sélectionner un projet",
+      "phaseLabel": "Phase (optional filter)",
       "phasePlaceholder": "Toutes les phases",
+      "taskLabel": "Task",
       "taskPlaceholder": "Sélectionner une tâche",
-      "linkedSuccess": "Ticket lié à la tâche avec succès"
+      "linkedSuccess": "Ticket lié à la tâche avec succès",
+      "linking": "Linking...",
+      "confirm": "Link"
     },
     "prefillFromTicket": {
       "title": "Préremplir depuis un ticket",

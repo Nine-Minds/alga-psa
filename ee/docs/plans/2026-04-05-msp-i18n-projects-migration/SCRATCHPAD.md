@@ -603,6 +603,18 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   packages/projects/src/components/CreateTaskFromTicketDialog.tsx` passes with a pre-
   existing hooks warning only (`ticket.client_id` effect dependency; 1 warning, 0
   errors).
+- **(2026-04-08, F084)** Wired `packages/projects/src/components/LinkTicketToTaskDialog.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the launcher button,
+  dialog title, project/phase/task labels and placeholders, cancel/link actions, and the
+  success/error link feedback.
+- **(2026-04-08, F084)** Extended `dialogs.linkTicketToTask.*` with the missing launcher
+  and field/button leaves: `button`, `projectLabel`, `phaseLabel`, `taskLabel`,
+  `linking`, and `confirm`. Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales,
+  and re-ran translation validation successfully.
+- **(2026-04-08, F084 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/LinkTicketToTaskDialog.tsx` passes with a pre-
+  existing hooks warning only (`ticket.client_id` effect dependency; 1 warning, 0
+  errors).
 
 ## Commands / Runbooks
 

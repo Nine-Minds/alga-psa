@@ -603,10 +603,16 @@
     },
     "linkTicketToTask": {
       "title": "Ticket mit Aufgabe verknüpfen",
+      "button": "Link to Task",
+      "projectLabel": "Project",
       "projectPlaceholder": "Projekt auswählen",
+      "phaseLabel": "Phase (optional filter)",
       "phasePlaceholder": "Alle Phasen",
+      "taskLabel": "Task",
       "taskPlaceholder": "Aufgabe auswählen",
-      "linkedSuccess": "Ticket erfolgreich mit Aufgabe verknüpft"
+      "linkedSuccess": "Ticket erfolgreich mit Aufgabe verknüpft",
+      "linking": "Linking...",
+      "confirm": "Link"
     },
     "prefillFromTicket": {
       "title": "Aus Ticket vorausfüllen",
