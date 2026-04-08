@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -299,18 +300,15 @@ export default function AccountingExportsTab(): React.JSX.Element {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="accounting-export-adapter">Adapter</Label>
-              <select
+              <CustomSelect
                 id="accounting-export-adapter"
-                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                 value={adapterType}
-                onChange={(e) => setAdapterType(e.target.value as any)}
-              >
-                {DEFAULT_ADAPTERS.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                onValueChange={(value) => setAdapterType(value as (typeof DEFAULT_ADAPTERS)[number]['id'])}
+                options={DEFAULT_ADAPTERS.map((opt) => ({
+                  value: opt.id,
+                  label: opt.label,
+                }))}
+              />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
