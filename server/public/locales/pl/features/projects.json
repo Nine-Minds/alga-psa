@@ -946,6 +946,7 @@
       "next": "Następny",
       "back": "Z powrotem",
       "create": "Utwórz szablon",
+      "title": "Create New Project Template",
       "basics": {
         "namePlaceholder": "np. tworzenie stron internetowych, migracja sieci",
         "descriptionPlaceholder": "Opisz, do czego służy ten szablon, i wszelkie ważne szczegóły...",
@@ -1046,7 +1047,8 @@
       },
       "errors": {
         "loadRequiredData": "Nie udało się załadować wymaganych danych",
-        "templateNameRequired": "Nazwa szablonu jest wymagana"
+        "templateNameRequired": "Nazwa szablonu jest wymagana",
+        "createFailed": "Failed to create template"
       }
     }
   },

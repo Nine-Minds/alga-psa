@@ -946,6 +946,7 @@
       "next": "Siguiente",
       "back": "Atrás",
       "create": "Crear plantilla",
+      "title": "Create New Project Template",
       "basics": {
         "namePlaceholder": "p. ej., Desarrollo web, Migración de red",
         "descriptionPlaceholder": "Describe para qué se usa esta plantilla y cualquier detalle importante...",
@@ -1046,7 +1047,8 @@
       },
       "errors": {
         "loadRequiredData": "No se pudieron cargar los datos necesarios",
-        "templateNameRequired": "El nombre de la plantilla es obligatorio"
+        "templateNameRequired": "El nombre de la plantilla es obligatorio",
+        "createFailed": "Failed to create template"
       }
     }
   },

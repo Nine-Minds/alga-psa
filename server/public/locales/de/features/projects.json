@@ -946,6 +946,7 @@
       "next": "Weiter",
       "back": "Zurück",
       "create": "Vorlage erstellen",
+      "title": "Create New Project Template",
       "basics": {
         "namePlaceholder": "z. B. Website-Entwicklung, Netzwerkmigration",
         "descriptionPlaceholder": "Beschreiben Sie, wofür diese Vorlage verwendet wird und wichtige Details...",
@@ -1046,7 +1047,8 @@
       },
       "errors": {
         "loadRequiredData": "Erforderliche Daten konnten nicht geladen werden",
-        "templateNameRequired": "Vorlagenname ist erforderlich"
+        "templateNameRequired": "Vorlagenname ist erforderlich",
+        "createFailed": "Failed to create template"
       }
     }
   },

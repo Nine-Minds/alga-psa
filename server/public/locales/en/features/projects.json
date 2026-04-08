@@ -943,9 +943,10 @@
       "dependenciesLabel": "Dependencies"
     },
     "wizard": {
-      "next": "Next",
-      "back": "Back",
-      "create": "Create Template",
+    "next": "Next",
+    "back": "Back",
+    "create": "Create Template",
+    "title": "Create New Project Template",
       "basics": {
         "namePlaceholder": "e.g., Website Development, Network Migration",
         "descriptionPlaceholder": "Describe what this template is used for and any important details...",
@@ -1045,9 +1046,10 @@
         "reviewCreate": "Review & Create"
       },
       "errors": {
-        "loadRequiredData": "Failed to load required data",
-        "templateNameRequired": "Template name is required"
-      }
+      "loadRequiredData": "Failed to load required data",
+      "templateNameRequired": "Template name is required",
+      "createFailed": "Failed to create template"
+    }
     }
   },
   "documents": {

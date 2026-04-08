@@ -946,6 +946,7 @@
       "next": "Volgende",
       "back": "Rug",
       "create": "Sjabloon maken",
+      "title": "Create New Project Template",
       "basics": {
         "namePlaceholder": "bijvoorbeeld websiteontwikkeling, netwerkmigratie",
         "descriptionPlaceholder": "Beschrijf waarvoor deze sjabloon wordt gebruikt en eventuele belangrijke details...",
@@ -1046,7 +1047,8 @@
       },
       "errors": {
         "loadRequiredData": "Vereiste gegevens konden niet worden geladen",
-        "templateNameRequired": "Sjabloonnaam is verplicht"
+        "templateNameRequired": "Sjabloonnaam is verplicht",
+        "createFailed": "Failed to create template"
       }
     }
   },

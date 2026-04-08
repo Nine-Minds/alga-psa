@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
 import { WizardNavigation } from '@alga-psa/ui/components/onboarding/WizardNavigation';
@@ -28,6 +28,7 @@ import type {
   TemplateTask,
   TemplateWizardData,
 } from '../../types/templateWizard';
+import { useTranslation } from 'react-i18next';
 
 export type {
   TemplateChecklistItem,
@@ -36,15 +37,6 @@ export type {
   TemplateTask,
   TemplateWizardData,
 } from '../../types/templateWizard';
-
-const STEPS = [
-  'Template Basics',
-  'Task Status Columns',
-  'Phases',
-  'Tasks',
-  'Client Portal',
-  'Review & Create',
-] as const;
 
 const REQUIRED_STEPS = [0, 5]; // Basics and Review are required
 
@@ -59,6 +51,7 @@ export function TemplateCreationWizard({
   onOpenChange,
   onComplete,
 }: TemplateCreationWizardProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
@@ -88,6 +81,18 @@ export function TemplateCreationWizard({
     checklist_items: [],
     client_portal_config: DEFAULT_CLIENT_PORTAL_CONFIG,
   });
+
+  const steps = useMemo(
+    () => [
+      t('templates.wizard.steps.basics', 'Template Basics'),
+      t('templates.wizard.steps.statusColumns', 'Task Status Columns'),
+      t('templates.wizard.steps.phases', 'Phases'),
+      t('templates.wizard.steps.tasks', 'Tasks'),
+      t('templates.wizard.steps.clientPortal', 'Client Portal'),
+      t('templates.wizard.steps.reviewCreate', 'Review & Create'),
+    ],
+    [t]
+  );
 
   useEffect(() => {
     if (!open) {
@@ -132,14 +137,17 @@ export function TemplateCreationWizard({
         setServices(servicesResponse.services);
       } catch (error) {
         console.error('Failed to load wizard data', error);
-        setErrors({ [currentStep]: 'Failed to load required data' });
+        setErrors((prev) => ({
+          ...prev,
+          [0]: t('templates.wizard.errors.loadRequiredData', 'Failed to load required data'),
+        }));
       } finally {
         setIsLoadingStatuses(false);
       }
     };
 
     loadData();
-  }, [open]);
+  }, [open, t]);
 
   const resetWizard = () => {
     setWizardData({
@@ -182,7 +190,10 @@ export function TemplateCreationWizard({
     switch (stepIndex) {
       case 0: // Basics
         if (!wizardData.template_name?.trim()) {
-          setErrors((prev) => ({ ...prev, [stepIndex]: 'Template name is required' }));
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('templates.wizard.errors.templateNameRequired', 'Template name is required'),
+          }));
           return false;
         }
         return true;
@@ -206,7 +217,10 @@ export function TemplateCreationWizard({
       case 5: // Review
         // Final validation
         if (!wizardData.template_name?.trim()) {
-          setErrors((prev) => ({ ...prev, [stepIndex]: 'Template name is required' }));
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('templates.wizard.errors.templateNameRequired', 'Template name is required'),
+          }));
           return false;
         }
         return true;
@@ -220,7 +234,7 @@ export function TemplateCreationWizard({
     if (!validateStep(currentStep)) {
       return;
     }
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < steps.length - 1) {
       setCompletedSteps((prev) => new Set([...prev, currentStep]));
       setCurrentStep((prev) => prev + 1);
     }
@@ -233,7 +247,7 @@ export function TemplateCreationWizard({
   };
 
   const handleSkip = () => {
-    if (currentStep < STEPS.length - 1 && !REQUIRED_STEPS.includes(currentStep)) {
+    if (currentStep < steps.length - 1 && !REQUIRED_STEPS.includes(currentStep)) {
       setCurrentStep((prev) => prev + 1);
     }
   };
@@ -263,7 +277,9 @@ export function TemplateCreationWizard({
       console.error('Error creating template', error);
       setErrors((prev) => ({
         ...prev,
-        [currentStep]: error instanceof Error ? error.message : 'Failed to create template',
+        [currentStep]: error instanceof Error
+          ? error.message
+          : t('templates.wizard.errors.createFailed', 'Failed to create template'),
       }));
     } finally {
       setIsLoading(false);
@@ -311,13 +327,13 @@ export function TemplateCreationWizard({
     <Dialog
       isOpen={open}
       onClose={() => onOpenChange(false)}
-      title="Create New Project Template"
+      title={t('templates.wizard.title', 'Create New Project Template')}
       className="max-w-4xl max-h-[90vh]"
     >
       <div className="flex flex-col h-full">
         <div className="flex-shrink-0 px-6 pt-6">
           <WizardProgress
-            steps={STEPS as unknown as string[]}
+            steps={steps}
             currentStep={currentStep}
             completedSteps={completedSteps}
             onStepClick={handleStepClick}
@@ -343,7 +359,7 @@ export function TemplateCreationWizard({
         <div className="flex-shrink-0 px-6 pb-6 bg-white">
           <WizardNavigation
             currentStep={currentStep}
-            totalSteps={STEPS.length}
+            totalSteps={steps.length}
             onBack={handleBack}
             onNext={handleNext}
             onSkip={handleSkip}
@@ -351,7 +367,7 @@ export function TemplateCreationWizard({
             isNextDisabled={isLoading}
             isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
             isLoading={isLoading}
-            finishLabel="Create Template"
+            finishLabel={t('templates.wizard.create', 'Create Template')}
           />
         </div>
       </div>

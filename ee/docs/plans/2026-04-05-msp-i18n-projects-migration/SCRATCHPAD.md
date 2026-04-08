@@ -520,6 +520,17 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-08, F061 check)** `node_modules/.bin/eslint
   packages/projects/src/components/project-templates/wizard-steps/TemplateClientPortalStep.tsx`
   passes cleanly with 0 warnings / 0 errors.
+- **(2026-04-08, F062)** Wired `packages/projects/src/components/project-templates/TemplateCreationWizard.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the wizard dialog
+  title, `WizardProgress` step labels, finish CTA, and the fallback load/validation/
+  create error strings surfaced by the shell.
+- **(2026-04-08, F062)** Extended the wizard namespace with only two shell-level leaves:
+  `templates.wizard.title` and `templates.wizard.errors.createFailed`. Re-synced
+  `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran translation validation
+  successfully.
+- **(2026-04-08, F062 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/TemplateCreationWizard.tsx` passes
+  with pre-existing warnings only (unused exported type imports; 10 warnings, 0 errors).
 
 ## Commands / Runbooks
 

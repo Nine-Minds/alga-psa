@@ -946,6 +946,7 @@
       "next": "Suivant",
       "back": "Retour",
       "create": "Créer le modèle",
+      "title": "Create New Project Template",
       "basics": {
         "namePlaceholder": "ex. Développement de site web, Migration réseau",
         "descriptionPlaceholder": "Décrivez l’usage de ce modèle et les détails importants...",
@@ -1046,7 +1047,8 @@
       },
       "errors": {
         "loadRequiredData": "Échec du chargement des données requises",
-        "templateNameRequired": "Le nom du modèle est requis"
+        "templateNameRequired": "Le nom du modèle est requis",
+        "createFailed": "Failed to create template"
       }
     }
   },
