@@ -19,7 +19,7 @@
   {"id": "F031", "description": "Wire PrefillFromTicketDialog.tsx — field mapping, prefill confirmation (~10 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-A"]},
   {"id": "F032", "description": "Wire TaskListView.tsx — column headers, inline edit prompts, bulk actions (~9 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-A"]},
   {"id": "F033", "description": "Wire TaskCard.tsx — quick-actions menu, drag indicators (~7 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-A"]},
-  {"id": "F034", "description": "Wire PhaseQuickAdd.tsx — inline phase add, placeholder, save (~7 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-A"]},
+  {"id": "F034", "description": "Wire PhaseQuickAdd.tsx — inline phase add, placeholder, save (~7 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-A"]},
 
   {"id": "F050", "description": "Wire TemplateEditor.tsx — editor title, phase/task sections, save/publish/delete actions, validation (~28 strings)", "implemented": false, "prdRefs": ["2b-21c/sub-batch-B"]},
   {"id": "F051", "description": "Wire TemplateTaskForm.tsx — template task create/edit form fields, validation (~22 strings)", "implemented": false, "prdRefs": ["2b-21c/sub-batch-B"]},

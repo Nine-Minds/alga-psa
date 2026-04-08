@@ -1032,6 +1032,10 @@
   },
   "projectPhases": {
     "addTask": "Dodaj zadanie",
-    "addPhase": "Add Phase"
+    "addPhase": "Add Phase",
+    "phaseNamePlaceholder": "Phase name... *",
+    "descriptionPlaceholder": "Description",
+    "adding": "Adding...",
+    "addError": "Failed to add phase. Please try again."
   }
 }

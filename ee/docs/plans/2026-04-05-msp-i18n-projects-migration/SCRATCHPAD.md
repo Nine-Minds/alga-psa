@@ -348,6 +348,17 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F033 check)** `node_modules/.bin/eslint
   packages/projects/src/components/TaskCard.tsx` passes with pre-existing warnings only
   (117 warnings, 0 errors).
+- **(2026-04-07, F034)** Wired `packages/projects/src/components/PhaseQuickAdd.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the dialog title,
+  inline validation, phase-name/description placeholders, date labels/placeholders, save
+  and cancel actions, and the add-phase failure fallback.
+- **(2026-04-07, F034)** Added the small phase-quick-add leaves under `projectPhases.*`:
+  `phaseNamePlaceholder`, `descriptionPlaceholder`, `adding`, and `addError`. Re-synced
+  `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran translation validation
+  successfully.
+- **(2026-04-07, F034 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/PhaseQuickAdd.tsx` passes cleanly with 0 warnings /
+  0 errors.
 
 ## Commands / Runbooks
 

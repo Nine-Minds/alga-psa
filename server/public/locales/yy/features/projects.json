@@ -1032,6 +1032,10 @@
   },
   "projectPhases": {
     "addTask": "55555",
-    "addPhase": "55555"
+    "addPhase": "55555",
+    "phaseNamePlaceholder": "55555",
+    "descriptionPlaceholder": "55555",
+    "adding": "55555",
+    "addError": "55555"
   }
 }
