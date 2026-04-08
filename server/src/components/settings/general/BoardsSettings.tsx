@@ -1208,7 +1208,7 @@ const BoardsSettings: React.FC = () => {
                     { value: 'create_inline', label: 'Create statuses inline', id: 'ticket-status-seed-mode-create-inline' },
                   ]}
                   aria-label="Ticket status setup"
-                  className="mt-2 w-full"
+                  className="mt-2 w-fit"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Choose whether this board starts from an existing lifecycle or a new inline status list.

@@ -116,13 +116,13 @@ export default function TicketNavigation({ currentTicketId }: TicketNavigationPr
       <Button
         id="ticket-nav-prev"
         variant="outline"
-        size="sm"
+        size="xs"
         disabled={!adjacentData.prevTicketId}
         onClick={() => adjacentData.prevTicketId && navigateToTicket(adjacentData.prevTicketId)}
-        className="h-7 w-7 p-0"
+        className="h-5 w-5 p-0"
         aria-label={t('navigation.previousTicket', 'Previous ticket')}
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="h-3 w-3" />
       </Button>
 
       <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap px-1">
@@ -132,13 +132,13 @@ export default function TicketNavigation({ currentTicketId }: TicketNavigationPr
       <Button
         id="ticket-nav-next"
         variant="outline"
-        size="sm"
+        size="xs"
         disabled={!adjacentData.nextTicketId}
         onClick={() => adjacentData.nextTicketId && navigateToTicket(adjacentData.nextTicketId)}
-        className="h-7 w-7 p-0"
+        className="h-5 w-5 p-0"
         aria-label={t('navigation.nextTicket', 'Next ticket')}
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h3 w-3" />
       </Button>
     </div>
   );
