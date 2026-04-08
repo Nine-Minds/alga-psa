@@ -590,7 +590,17 @@
       "title": "Duplicar tarea",
       "selectTargetError": "Selecciona una fase de destino.",
       "message": "Duplicar la tarea \"{{taskName}}\" en:",
-      "placeholder": "Seleccionar proyecto/fase/estado de destino..."
+      "placeholder": "Seleccionar proyecto/fase/estado de destino...",
+      "withChecklist": "Duplicar tarea con elementos de lista de verificación",
+      "withoutChecklist": "Duplicar tarea sin elementos de lista de verificación",
+      "withPrimaryAssignee": "Duplicar tarea con asignado principal",
+      "withoutPrimaryAssignee": "Duplicar tarea sin asignado principal",
+      "withAdditionalAssignees": "Duplicar tarea con asignados adicionales ({{count}})",
+      "withoutAdditionalAssignees": "Duplicar tarea sin asignados adicionales",
+      "withTicketLinks": "Duplicar tarea con enlaces de tickets ({{count}})",
+      "withoutTicketLinks": "Duplicar tarea sin enlaces de tickets",
+      "duplicating": "Duplicando...",
+      "confirm": "Confirmar duplicación"
     },
     "createTaskFromTicket": {
       "title": "Crear tarea desde ticket",
@@ -628,7 +638,12 @@
     "ticketLinkedTasks": {
       "title": "Tareas de proyecto vinculadas",
       "loadFailed": "No se pudo cargar la tarea",
-      "phaseNotFound": "No se encontró la fase de la tarea"
+      "phaseNotFound": "No se encontró la fase de la tarea",
+      "openFailed": "Error al abrir la tarea",
+      "task": "Tarea",
+      "tasks": "Tareas",
+      "badgeCount": "{{count}} Tarea",
+      "badgeCount_other": "{{count}} Tareas"
     }
   },
   "filters": {
@@ -1147,7 +1162,9 @@
     "inProgress": "En progreso",
     "completed": "Completado",
     "onHold": "En espera",
-    "cancelled": "Cancelado"
+    "cancelled": "Cancelado",
+    "active": "Activo",
+    "inactive": "Inactivo"
   },
   "messages": {
     "noProjects": "No se encontraron proyectos",
@@ -1177,7 +1194,10 @@
     "contact": "Contacto:",
     "budget": "Presupuesto:",
     "hoursUsageDescription": "Muestra el uso de las horas presupuestadas para todo el proyecto",
-    "templateCreatedSuccess": "Plantilla creada correctamente"
+    "templateCreatedSuccess": "Plantilla creada correctamente",
+    "notAvailable": "N/D",
+    "saveAsTemplate": "Guardar como plantilla",
+    "materials": "Materiales"
   },
   "projectPhases": {
     "addTask": "Agregar tarea",
@@ -1185,6 +1205,42 @@
     "phaseNamePlaceholder": "Phase name... *",
     "descriptionPlaceholder": "Description",
     "adding": "Adding...",
-    "addError": "Failed to add phase. Please try again."
+    "addError": "Failed to add phase. Please try again.",
+    "title": "Fases del proyecto",
+    "import": "Importar"
+  },
+  "addStatusDialog": {
+    "phaseTitle": "Agregar estado de fase desde la biblioteca",
+    "projectTitle": "Agregar estado desde la biblioteca",
+    "selectLabel": "Seleccionar de la biblioteca de estados",
+    "placeholder": "Elegir un estado",
+    "helpText": "Selecciona un estado de la biblioteca de tu inquilino para agregar a este proyecto.",
+    "noStatusesTitle": "No hay estados disponibles",
+    "noStatusesDescription": "Crea estados en Configuración → Proyectos → Estados.",
+    "adding": "Agregando...",
+    "addStatus": "Agregar estado",
+    "addFailed": "Error al agregar el estado. Inténtalo de nuevo."
+  },
+  "taskStatusSelect": {
+    "ariaLabel": "Estado de la tarea",
+    "selectStatus": "Seleccionar estado"
+  },
+  "ticketSelect": {
+    "placeholder": "Seleccionar un ticket...",
+    "searchPlaceholder": "Buscar tickets...",
+    "noTickets": "No se encontraron tickets"
+  },
+  "taskTypeSelect": {
+    "placeholder": "Seleccionar tipo de tarea"
+  },
+  "comments": {
+    "title": "Comentarios",
+    "internalOnly": "Solo interno",
+    "newestFirst": "Más recientes primero",
+    "oldestFirst": "Más antiguos primero",
+    "addComment": "Agregar comentario",
+    "submitting": "Enviando...",
+    "loading": "Cargando...",
+    "empty": "Aún no hay comentarios. ¡Sé el primero en comentar!"
   }
 }

@@ -46,14 +46,14 @@
   {"id": "F086", "description": "Wire settings/ProjectSettings.tsx — top-level project settings page (~5 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
   {"id": "F087", "description": "Wire ProjectTaskStatusSelector.tsx — status select dropdown (~4 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
   {"id": "F088", "description": "Wire MoveTaskDialog.tsx — move task to phase (~4 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
-  {"id": "F089", "description": "Wire ProjectInfo.tsx — project info card (~3 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},
-  {"id": "F090", "description": "Wire DuplicateTaskDialog.tsx — duplicate task dialog (~3 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},
-  {"id": "F091", "description": "Wire TicketLinkedTasksBadge.tsx — linked tasks badge (~3 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},
-  {"id": "F092", "description": "Wire settings/projects/AddStatusDialog.tsx — add status dialog (~2 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},
-  {"id": "F093", "description": "Wire ProjectPhases.tsx, TaskStatusSelect.tsx, TicketSelect.tsx, TaskTypeSelector.tsx — 1 string each (placeholder/label cleanup)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},
-  {"id": "F094", "description": "Confirm zero-string components (StatusColumn, TaskCommentThread, KanbanBoard, ClientPortalConfigEditor, ProjectPage, KanbanZoomControl, TaskCommentForm, DonutChart, TaskQuickAdd, TaskEdit, HoursProgressBar, ProjectActiveToggle, TaskPrioritySettings) and document as N/A", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},
+  {"id": "F089", "description": "Wire ProjectInfo.tsx — project info card (~12 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
+  {"id": "F090", "description": "Wire DuplicateTaskDialog.tsx — duplicate task dialog (~12 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
+  {"id": "F091", "description": "Wire TicketLinkedTasksBadge.tsx — linked tasks badge (~5 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
+  {"id": "F092", "description": "Wire settings/projects/AddStatusDialog.tsx — add status dialog (~10 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
+  {"id": "F093", "description": "Wire ProjectPhases.tsx, TaskStatusSelect.tsx, TicketSelect.tsx, TaskTypeSelector.tsx — placeholder/label cleanup (~10 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
+  {"id": "F094", "description": "Confirm zero-string components and wire discovered non-zero components (TaskCommentThread, TaskCommentForm, ProjectActiveToggle). Confirmed zero: StatusColumn, KanbanBoard, ProjectPage, KanbanZoomControl, DonutChart, TaskQuickAdd, TaskEdit, HoursProgressBar, TaskPrioritySettings. Deferred: ClientPortalConfigEditor (client-portal config UI, many strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
 
-  {"id": "F100", "description": "Run `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` and resolve any key parity issues (exit code 0 required)", "implemented": false, "prdRefs": ["2b-21b/acceptance"]},
-  {"id": "F101", "description": "Update parent plan .ai/translation/MSP_i18n_plan.md — mark 2b-21b and 2b-21c ✅ DONE with final string count", "implemented": false, "prdRefs": ["2b-21b/acceptance"]},
-  {"id": "F102", "description": "Update SCRATCHPAD.md with final key count, namespace design decisions, deferred items", "implemented": false, "prdRefs": ["2b-21b/acceptance"]}
+  {"id": "F100", "description": "Run `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` and resolve any key parity issues (exit code 0 required)", "implemented": true, "prdRefs": ["2b-21b/acceptance"]},
+  {"id": "F101", "description": "Update parent plan .ai/translation/MSP_i18n_plan.md — mark 2b-21b and 2b-21c ✅ DONE with final string count", "implemented": true, "prdRefs": ["2b-21b/acceptance"]},
+  {"id": "F102", "description": "Update SCRATCHPAD.md with final key count, namespace design decisions, deferred items", "implemented": true, "prdRefs": ["2b-21b/acceptance"]}
 ]

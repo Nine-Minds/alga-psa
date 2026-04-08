@@ -590,7 +590,17 @@
       "title": "Aufgabe duplizieren",
       "selectTargetError": "Bitte wählen Sie eine Zielphase aus.",
       "message": "Aufgabe \"{{taskName}}\" duplizieren nach:",
-      "placeholder": "Zielprojekt/Zielphase/Zielstatus auswählen..."
+      "placeholder": "Zielprojekt/Zielphase/Zielstatus auswählen...",
+      "withChecklist": "Aufgabe mit Checklistenelementen duplizieren",
+      "withoutChecklist": "Aufgabe ohne Checklistenelemente duplizieren",
+      "withPrimaryAssignee": "Aufgabe mit Hauptverantwortlichem duplizieren",
+      "withoutPrimaryAssignee": "Aufgabe ohne Hauptverantwortlichen duplizieren",
+      "withAdditionalAssignees": "Aufgabe mit zusätzlichen Verantwortlichen duplizieren ({{count}})",
+      "withoutAdditionalAssignees": "Aufgabe ohne zusätzliche Verantwortliche duplizieren",
+      "withTicketLinks": "Aufgabe mit Ticket-Verknüpfungen duplizieren ({{count}})",
+      "withoutTicketLinks": "Aufgabe ohne Ticket-Verknüpfungen duplizieren",
+      "duplicating": "Wird dupliziert...",
+      "confirm": "Duplizierung bestätigen"
     },
     "createTaskFromTicket": {
       "title": "Aufgabe aus Ticket erstellen",
@@ -628,7 +638,12 @@
     "ticketLinkedTasks": {
       "title": "Verknüpfte Projektaufgaben",
       "loadFailed": "Aufgabe konnte nicht geladen werden",
-      "phaseNotFound": "Aufgabenphase nicht gefunden"
+      "phaseNotFound": "Aufgabenphase nicht gefunden",
+      "openFailed": "Aufgabe konnte nicht geöffnet werden",
+      "task": "Aufgabe",
+      "tasks": "Aufgaben",
+      "badgeCount": "{{count}} Aufgabe",
+      "badgeCount_other": "{{count}} Aufgaben"
     }
   },
   "filters": {
@@ -1147,7 +1162,9 @@
     "inProgress": "In Bearbeitung",
     "completed": "Abgeschlossen",
     "onHold": "Ausgesetzt",
-    "cancelled": "Abgebrochen"
+    "cancelled": "Abgebrochen",
+    "active": "Aktiv",
+    "inactive": "Inaktiv"
   },
   "messages": {
     "noProjects": "Keine Projekte gefunden",
@@ -1177,7 +1194,10 @@
     "contact": "Kontakt:",
     "budget": "Budget:",
     "hoursUsageDescription": "Zeigt die Nutzung der budgetierten Stunden für das gesamte Projekt",
-    "templateCreatedSuccess": "Vorlage erfolgreich erstellt"
+    "templateCreatedSuccess": "Vorlage erfolgreich erstellt",
+    "notAvailable": "K. A.",
+    "saveAsTemplate": "Als Vorlage speichern",
+    "materials": "Materialien"
   },
   "projectPhases": {
     "addTask": "Aufgabe hinzufügen",
@@ -1185,6 +1205,42 @@
     "phaseNamePlaceholder": "Phase name... *",
     "descriptionPlaceholder": "Description",
     "adding": "Adding...",
-    "addError": "Failed to add phase. Please try again."
+    "addError": "Failed to add phase. Please try again.",
+    "title": "Projektphasen",
+    "import": "Importieren"
+  },
+  "addStatusDialog": {
+    "phaseTitle": "Phasenstatus aus Bibliothek hinzufügen",
+    "projectTitle": "Status aus Bibliothek hinzufügen",
+    "selectLabel": "Aus Statusbibliothek auswählen",
+    "placeholder": "Status wählen",
+    "helpText": "Wählen Sie einen Status aus der Statusbibliothek Ihres Mandanten, um ihn zu diesem Projekt hinzuzufügen.",
+    "noStatusesTitle": "Keine Status verfügbar",
+    "noStatusesDescription": "Erstellen Sie Status unter Einstellungen → Projekte → Status.",
+    "adding": "Wird hinzugefügt...",
+    "addStatus": "Status hinzufügen",
+    "addFailed": "Status konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut."
+  },
+  "taskStatusSelect": {
+    "ariaLabel": "Aufgabenstatus",
+    "selectStatus": "Status auswählen"
+  },
+  "ticketSelect": {
+    "placeholder": "Ticket auswählen...",
+    "searchPlaceholder": "Tickets suchen...",
+    "noTickets": "Keine Tickets gefunden"
+  },
+  "taskTypeSelect": {
+    "placeholder": "Aufgabentyp auswählen"
+  },
+  "comments": {
+    "title": "Kommentare",
+    "internalOnly": "Nur intern",
+    "newestFirst": "Neueste zuerst",
+    "oldestFirst": "Älteste zuerst",
+    "addComment": "Kommentar hinzufügen",
+    "submitting": "Wird gesendet...",
+    "loading": "Laden...",
+    "empty": "Noch keine Kommentare. Seien Sie der Erste!"
   }
 }

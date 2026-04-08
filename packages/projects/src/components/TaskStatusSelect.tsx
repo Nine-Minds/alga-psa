@@ -5,6 +5,7 @@ import { ChevronDown, Check } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { useModality } from '@alga-psa/ui/components/ModalityContext';
 import { ProjectStatus } from '@alga-psa/types';
+import { useTranslation } from 'react-i18next';
 
 // Fallback colors using the same color families as KanbanBoard cycle colors,
 // but with higher saturation (-400 shades) for better visibility in the compact pill
@@ -34,6 +35,7 @@ export const TaskStatusSelect: React.FC<TaskStatusSelectProps> = ({
   disabled = false,
   id
 }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
   const { modal: parentModal } = useModality();
   const generatedId = useId();
   const selectId = id || generatedId;
@@ -99,11 +101,11 @@ export const TaskStatusSelect: React.FC<TaskStatusSelectProps> = ({
           ${textColorClass}
         `}
         style={{ backgroundColor: statusColor }}
-        aria-label="Task status"
+        aria-label={t('taskStatusSelect.ariaLabel', 'Task status')}
         onPointerDown={(e) => e.stopPropagation()}
       >
         <RadixSelect.Value>
-          {selectedStatus ? getDisplayName(selectedStatus) : 'Select status'}
+          {selectedStatus ? getDisplayName(selectedStatus) : t('taskStatusSelect.selectStatus', 'Select status')}
         </RadixSelect.Value>
         <RadixSelect.Icon>
           <ChevronDown className={`w-3 h-3 ${textColorClass}`} />

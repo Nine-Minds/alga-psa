@@ -9,6 +9,7 @@ import {
 } from '@alga-psa/projects/actions/projectTaskStatusActions';
 import type { IStatus } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from 'react-i18next';
 
 interface AddStatusDialogProps {
   projectId: string;
@@ -18,6 +19,7 @@ interface AddStatusDialogProps {
 }
 
 export function AddStatusDialog({ projectId, phaseId, onClose, onAdded }: AddStatusDialogProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [tenantStatuses, setTenantStatuses] = useState<IStatus[]>([]);
   const [selectedStatusId, setSelectedStatusId] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -47,7 +49,7 @@ export function AddStatusDialog({ projectId, phaseId, onClose, onAdded }: AddSta
       onClose();
     } catch (error) {
       console.error('Failed to add status:', error);
-      alert('Failed to add status. Please try again.');
+      alert(t('addStatusDialog.addFailed', 'Failed to add status. Please try again.'));
     } finally {
       setSubmitting(false);
     }
@@ -62,14 +64,14 @@ export function AddStatusDialog({ projectId, phaseId, onClose, onAdded }: AddSta
     <Dialog
       isOpen={true}
       onClose={onClose}
-      title={phaseId ? 'Add Phase Status from Library' : 'Add Status from Library'}
+      title={phaseId ? t('addStatusDialog.phaseTitle', 'Add Phase Status from Library') : t('addStatusDialog.projectTitle', 'Add Status from Library')}
       id="add-status-dialog"
     >
       <div className="space-y-4 p-4">
         {/* Library selection only */}
         <div>
           <label className="block text-sm font-medium mb-2">
-            Select from Status Library
+            {t('addStatusDialog.selectLabel', 'Select from Status Library')}
           </label>
           {statusOptions.length > 0 ? (
             <>
@@ -77,17 +79,17 @@ export function AddStatusDialog({ projectId, phaseId, onClose, onAdded }: AddSta
                 value={selectedStatusId}
                 onValueChange={setSelectedStatusId}
                 options={statusOptions}
-                placeholder="Choose a status"
+                placeholder={t('addStatusDialog.placeholder', 'Choose a status')}
                 id="status-select"
               />
               <p className="text-xs text-gray-500 mt-2">
-                Select a status from your tenant's status library to add to this project.
+                {t('addStatusDialog.helpText', "Select a status from your tenant's status library to add to this project.")}
               </p>
             </>
           ) : (
             <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">
-              <p className="font-medium mb-2">No statuses available</p>
-              <p>Create statuses in Settings → Projects → Statuses first.</p>
+              <p className="font-medium mb-2">{t('addStatusDialog.noStatusesTitle', 'No statuses available')}</p>
+              <p>{t('addStatusDialog.noStatusesDescription', 'Create statuses in Settings → Projects → Statuses first.')}</p>
             </div>
           )}
         </div>
@@ -95,14 +97,14 @@ export function AddStatusDialog({ projectId, phaseId, onClose, onAdded }: AddSta
         {/* Actions */}
         <div className="flex justify-end gap-2 pt-4 border-t">
           <Button variant="outline" onClick={onClose} id="cancel-button">
-            Cancel
+            {t('common:actions.cancel', 'Cancel')}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={submitting || !selectedStatusId}
             id="submit-status-button"
           >
-            {submitting ? 'Adding...' : 'Add Status'}
+            {submitting ? t('addStatusDialog.adding', 'Adding...') : t('addStatusDialog.addStatus', 'Add Status')}
           </Button>
         </div>
       </div>

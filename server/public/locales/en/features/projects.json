@@ -590,7 +590,17 @@
       "title": "Duplicate Task",
       "selectTargetError": "Please select a target phase.",
       "message": "Duplicate task \"{{taskName}}\" to:",
-      "placeholder": "Select target project/phase/status..."
+      "placeholder": "Select target project/phase/status...",
+      "withChecklist": "Duplicate task with checklist items",
+      "withoutChecklist": "Duplicate task without checklist items",
+      "withPrimaryAssignee": "Duplicate task with primary assignee",
+      "withoutPrimaryAssignee": "Duplicate task without primary assignee",
+      "withAdditionalAssignees": "Duplicate task with additional assignees ({{count}})",
+      "withoutAdditionalAssignees": "Duplicate task without additional assignees",
+      "withTicketLinks": "Duplicate task with ticket links ({{count}})",
+      "withoutTicketLinks": "Duplicate task without ticket links",
+      "duplicating": "Duplicating...",
+      "confirm": "Confirm Duplicate"
     },
   "createTaskFromTicket": {
     "title": "Create Task from Ticket",
@@ -628,7 +638,12 @@
     "ticketLinkedTasks": {
       "title": "Linked Project Tasks",
       "loadFailed": "Failed to load task",
-      "phaseNotFound": "Task phase not found"
+      "phaseNotFound": "Task phase not found",
+      "openFailed": "Failed to open task",
+      "task": "Task",
+      "tasks": "Tasks",
+      "badgeCount": "{{count}} Task",
+      "badgeCount_other": "{{count}} Tasks"
     }
   },
   "filters": {
@@ -1147,7 +1162,9 @@
     "inProgress": "In Progress",
     "completed": "Completed",
     "onHold": "On Hold",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "messages": {
     "noProjects": "No projects found",
@@ -1176,15 +1193,54 @@
     "client": "Client:",
     "contact": "Contact:",
     "budget": "Budget:",
+    "notAvailable": "N/A",
+    "saveAsTemplate": "Save as Template",
+    "materials": "Materials",
     "hoursUsageDescription": "Shows budget hours usage for the entire project",
     "templateCreatedSuccess": "Template created successfully"
   },
+  "comments": {
+    "title": "Comments",
+    "internalOnly": "Internal Only",
+    "newestFirst": "Newest first",
+    "oldestFirst": "Oldest first",
+    "addComment": "Add Comment",
+    "submitting": "Submitting...",
+    "loading": "Loading...",
+    "empty": "No comments yet. Be the first to comment!"
+  },
+  "addStatusDialog": {
+    "phaseTitle": "Add Phase Status from Library",
+    "projectTitle": "Add Status from Library",
+    "selectLabel": "Select from Status Library",
+    "placeholder": "Choose a status",
+    "helpText": "Select a status from your tenant's status library to add to this project.",
+    "noStatusesTitle": "No statuses available",
+    "noStatusesDescription": "Create statuses in Settings → Projects → Statuses first.",
+    "adding": "Adding...",
+    "addStatus": "Add Status",
+    "addFailed": "Failed to add status. Please try again."
+  },
+  "taskStatusSelect": {
+    "ariaLabel": "Task status",
+    "selectStatus": "Select status"
+  },
+  "ticketSelect": {
+    "placeholder": "Select a ticket...",
+    "searchPlaceholder": "Search tickets...",
+    "noTickets": "No tickets found"
+  },
+  "taskTypeSelect": {
+    "placeholder": "Select task type"
+  },
   "projectPhases": {
+    "title": "Project Phases",
     "addTask": "Add Task",
     "addPhase": "Add Phase",
     "phaseNamePlaceholder": "Phase name... *",
     "descriptionPlaceholder": "Description",
     "adding": "Adding...",
-    "addError": "Failed to add phase. Please try again."
+    "addError": "Failed to add phase. Please try again.",
+    "import": "Import"
   }
 }

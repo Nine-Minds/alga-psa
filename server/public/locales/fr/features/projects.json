@@ -590,7 +590,17 @@
       "title": "Dupliquer la tâche",
       "selectTargetError": "Veuillez sélectionner une phase cible.",
       "message": "Dupliquer la tâche \"{{taskName}}\" vers :",
-      "placeholder": "Sélectionner le projet/la phase/le statut cible..."
+      "placeholder": "Sélectionner le projet/la phase/le statut cible...",
+      "withChecklist": "Dupliquer la tâche avec les éléments de liste de contrôle",
+      "withoutChecklist": "Dupliquer la tâche sans les éléments de liste de contrôle",
+      "withPrimaryAssignee": "Dupliquer la tâche avec l'assigné principal",
+      "withoutPrimaryAssignee": "Dupliquer la tâche sans l'assigné principal",
+      "withAdditionalAssignees": "Dupliquer la tâche avec les assignés supplémentaires ({{count}})",
+      "withoutAdditionalAssignees": "Dupliquer la tâche sans les assignés supplémentaires",
+      "withTicketLinks": "Dupliquer la tâche avec les liens de tickets ({{count}})",
+      "withoutTicketLinks": "Dupliquer la tâche sans les liens de tickets",
+      "duplicating": "Duplication...",
+      "confirm": "Confirmer la duplication"
     },
     "createTaskFromTicket": {
       "title": "Créer une tâche à partir du ticket",
@@ -628,7 +638,12 @@
     "ticketLinkedTasks": {
       "title": "Tâches de projet liées",
       "loadFailed": "Échec du chargement de la tâche",
-      "phaseNotFound": "Phase de tâche introuvable"
+      "phaseNotFound": "Phase de tâche introuvable",
+      "openFailed": "Impossible d'ouvrir la tâche",
+      "task": "Tâche",
+      "tasks": "Tâches",
+      "badgeCount": "{{count}} Tâche",
+      "badgeCount_other": "{{count}} Tâches"
     }
   },
   "filters": {
@@ -1147,7 +1162,9 @@
     "inProgress": "En cours",
     "completed": "Terminé",
     "onHold": "En pause",
-    "cancelled": "Annulé"
+    "cancelled": "Annulé",
+    "active": "Actif",
+    "inactive": "Inactif"
   },
   "messages": {
     "noProjects": "Aucun projet trouvé",
@@ -1177,7 +1194,10 @@
     "contact": "Contact :",
     "budget": "Budget :",
     "hoursUsageDescription": "Affiche l'utilisation des heures budgétées pour l'ensemble du projet",
-    "templateCreatedSuccess": "Modèle créé avec succès"
+    "templateCreatedSuccess": "Modèle créé avec succès",
+    "notAvailable": "N/D",
+    "saveAsTemplate": "Enregistrer comme modèle",
+    "materials": "Matériaux"
   },
   "projectPhases": {
     "addTask": "Ajouter une tâche",
@@ -1185,6 +1205,42 @@
     "phaseNamePlaceholder": "Phase name... *",
     "descriptionPlaceholder": "Description",
     "adding": "Adding...",
-    "addError": "Failed to add phase. Please try again."
+    "addError": "Failed to add phase. Please try again.",
+    "title": "Phases du projet",
+    "import": "Importer"
+  },
+  "addStatusDialog": {
+    "phaseTitle": "Ajouter un statut de phase depuis la bibliothèque",
+    "projectTitle": "Ajouter un statut depuis la bibliothèque",
+    "selectLabel": "Sélectionner depuis la bibliothèque de statuts",
+    "placeholder": "Choisir un statut",
+    "helpText": "Sélectionnez un statut de la bibliothèque de votre locataire à ajouter à ce projet.",
+    "noStatusesTitle": "Aucun statut disponible",
+    "noStatusesDescription": "Créez des statuts dans Paramètres → Projets → Statuts.",
+    "adding": "Ajout...",
+    "addStatus": "Ajouter un statut",
+    "addFailed": "Échec de l'ajout du statut. Veuillez réessayer."
+  },
+  "taskStatusSelect": {
+    "ariaLabel": "Statut de la tâche",
+    "selectStatus": "Sélectionner le statut"
+  },
+  "ticketSelect": {
+    "placeholder": "Sélectionner un ticket...",
+    "searchPlaceholder": "Rechercher des tickets...",
+    "noTickets": "Aucun ticket trouvé"
+  },
+  "taskTypeSelect": {
+    "placeholder": "Sélectionner le type de tâche"
+  },
+  "comments": {
+    "title": "Commentaires",
+    "internalOnly": "Interne uniquement",
+    "newestFirst": "Plus récents en premier",
+    "oldestFirst": "Plus anciens en premier",
+    "addComment": "Ajouter un commentaire",
+    "submitting": "Envoi...",
+    "loading": "Chargement...",
+    "empty": "Pas encore de commentaires. Soyez le premier à commenter !"
   }
 }

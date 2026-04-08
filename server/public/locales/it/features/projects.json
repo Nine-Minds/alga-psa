@@ -590,7 +590,17 @@
       "title": "Duplica attività",
       "selectTargetError": "Seleziona una fase di destinazione.",
       "message": "Duplica l’attività \"{{taskName}}\" in:",
-      "placeholder": "Seleziona progetto/fase/stato di destinazione..."
+      "placeholder": "Seleziona progetto/fase/stato di destinazione...",
+      "withChecklist": "Duplica attività con elementi checklist",
+      "withoutChecklist": "Duplica attività senza elementi checklist",
+      "withPrimaryAssignee": "Duplica attività con assegnatario principale",
+      "withoutPrimaryAssignee": "Duplica attività senza assegnatario principale",
+      "withAdditionalAssignees": "Duplica attività con assegnatari aggiuntivi ({{count}})",
+      "withoutAdditionalAssignees": "Duplica attività senza assegnatari aggiuntivi",
+      "withTicketLinks": "Duplica attività con collegamenti ticket ({{count}})",
+      "withoutTicketLinks": "Duplica attività senza collegamenti ticket",
+      "duplicating": "Duplicazione...",
+      "confirm": "Conferma duplicazione"
     },
     "createTaskFromTicket": {
       "title": "Crea attività da ticket",
@@ -628,7 +638,12 @@
     "ticketLinkedTasks": {
       "title": "Attività di progetto collegate",
       "loadFailed": "Impossibile caricare l'attività",
-      "phaseNotFound": "Fase attività non trovata"
+      "phaseNotFound": "Fase attività non trovata",
+      "openFailed": "Impossibile aprire l'attività",
+      "task": "Attività",
+      "tasks": "Attività",
+      "badgeCount": "{{count}} Attività",
+      "badgeCount_other": "{{count}} Attività"
     }
   },
   "filters": {
@@ -1147,7 +1162,9 @@
     "inProgress": "In corso",
     "completed": "Completato",
     "onHold": "In attesa",
-    "cancelled": "Annullato"
+    "cancelled": "Annullato",
+    "active": "Attivo",
+    "inactive": "Inattivo"
   },
   "messages": {
     "noProjects": "Nessun progetto trovato",
@@ -1177,7 +1194,10 @@
     "contact": "Contatto:",
     "budget": "Budget:",
     "hoursUsageDescription": "Mostra l'utilizzo delle ore a budget per l'intero progetto",
-    "templateCreatedSuccess": "Modello creato con successo"
+    "templateCreatedSuccess": "Modello creato con successo",
+    "notAvailable": "N/D",
+    "saveAsTemplate": "Salva come modello",
+    "materials": "Materiali"
   },
   "projectPhases": {
     "addTask": "Aggiungi attività",
@@ -1185,6 +1205,42 @@
     "phaseNamePlaceholder": "Phase name... *",
     "descriptionPlaceholder": "Description",
     "adding": "Adding...",
-    "addError": "Failed to add phase. Please try again."
+    "addError": "Failed to add phase. Please try again.",
+    "title": "Fasi del progetto",
+    "import": "Importa"
+  },
+  "addStatusDialog": {
+    "phaseTitle": "Aggiungi stato fase dalla libreria",
+    "projectTitle": "Aggiungi stato dalla libreria",
+    "selectLabel": "Seleziona dalla libreria degli stati",
+    "placeholder": "Scegli uno stato",
+    "helpText": "Seleziona uno stato dalla libreria degli stati del tuo tenant da aggiungere a questo progetto.",
+    "noStatusesTitle": "Nessuno stato disponibile",
+    "noStatusesDescription": "Crea gli stati in Impostazioni → Progetti → Stati.",
+    "adding": "Aggiunta...",
+    "addStatus": "Aggiungi stato",
+    "addFailed": "Impossibile aggiungere lo stato. Riprova."
+  },
+  "taskStatusSelect": {
+    "ariaLabel": "Stato dell'attività",
+    "selectStatus": "Seleziona stato"
+  },
+  "ticketSelect": {
+    "placeholder": "Seleziona un ticket...",
+    "searchPlaceholder": "Cerca ticket...",
+    "noTickets": "Nessun ticket trovato"
+  },
+  "taskTypeSelect": {
+    "placeholder": "Seleziona tipo di attività"
+  },
+  "comments": {
+    "title": "Commenti",
+    "internalOnly": "Solo interno",
+    "newestFirst": "Più recenti",
+    "oldestFirst": "Più vecchi",
+    "addComment": "Aggiungi commento",
+    "submitting": "Invio...",
+    "loading": "Caricamento...",
+    "empty": "Nessun commento ancora. Sii il primo a commentare!"
   }
 }

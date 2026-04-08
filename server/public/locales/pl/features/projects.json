@@ -590,7 +590,17 @@
       "title": "Zduplikowane zadanie",
       "selectTargetError": "Wybierz fazę docelową.",
       "message": "Zduplikuj zadanie „{{taskName}}” do:",
-      "placeholder": "Wybierz docelowy projekt/fazę/stan..."
+      "placeholder": "Wybierz docelowy projekt/fazę/stan...",
+      "withChecklist": "Duplikuj zadanie z elementami listy kontrolnej",
+      "withoutChecklist": "Duplikuj zadanie bez elementów listy kontrolnej",
+      "withPrimaryAssignee": "Duplikuj zadanie z głównym przypisanym",
+      "withoutPrimaryAssignee": "Duplikuj zadanie bez głównego przypisanego",
+      "withAdditionalAssignees": "Duplikuj zadanie z dodatkowymi przypisanymi ({{count}})",
+      "withoutAdditionalAssignees": "Duplikuj zadanie bez dodatkowych przypisanych",
+      "withTicketLinks": "Duplikuj zadanie z powiązaniami zgłoszeń ({{count}})",
+      "withoutTicketLinks": "Duplikuj zadanie bez powiązań zgłoszeń",
+      "duplicating": "Duplikowanie...",
+      "confirm": "Potwierdź duplikację"
     },
     "createTaskFromTicket": {
       "title": "Utwórz zadanie z biletu",
@@ -628,7 +638,12 @@
     "ticketLinkedTasks": {
       "title": "Powiązane zadania projektowe",
       "loadFailed": "Nie udało się załadować zadania",
-      "phaseNotFound": "Nie znaleziono fazy zadania"
+      "phaseNotFound": "Nie znaleziono fazy zadania",
+      "openFailed": "Nie udało się otworzyć zadania",
+      "task": "Zadanie",
+      "tasks": "Zadania",
+      "badgeCount": "{{count}} Zadanie",
+      "badgeCount_other": "{{count}} Zadania"
     }
   },
   "filters": {
@@ -1147,7 +1162,9 @@
     "inProgress": "W toku",
     "completed": "Zakończony",
     "onHold": "Wstrzymany",
-    "cancelled": "Anulowany"
+    "cancelled": "Anulowany",
+    "active": "Aktywny",
+    "inactive": "Nieaktywny"
   },
   "messages": {
     "noProjects": "Brak projektów",
@@ -1177,7 +1194,10 @@
     "contact": "Kontakt:",
     "budget": "Budżet:",
     "hoursUsageDescription": "Pokazuje wykorzystanie godzin budżetowych dla całego projektu",
-    "templateCreatedSuccess": "Szablon utworzono pomyślnie"
+    "templateCreatedSuccess": "Szablon utworzono pomyślnie",
+    "notAvailable": "Brak",
+    "saveAsTemplate": "Zapisz jako szablon",
+    "materials": "Materiały"
   },
   "projectPhases": {
     "addTask": "Dodaj zadanie",
@@ -1185,6 +1205,42 @@
     "phaseNamePlaceholder": "Phase name... *",
     "descriptionPlaceholder": "Description",
     "adding": "Adding...",
-    "addError": "Failed to add phase. Please try again."
+    "addError": "Failed to add phase. Please try again.",
+    "title": "Fazy projektu",
+    "import": "Importuj"
+  },
+  "addStatusDialog": {
+    "phaseTitle": "Dodaj status fazy z biblioteki",
+    "projectTitle": "Dodaj status z biblioteki",
+    "selectLabel": "Wybierz z biblioteki statusów",
+    "placeholder": "Wybierz status",
+    "helpText": "Wybierz status z biblioteki statusów swojego najemcy, aby dodać go do tego projektu.",
+    "noStatusesTitle": "Brak dostępnych statusów",
+    "noStatusesDescription": "Utwórz statusy w Ustawienia → Projekty → Statusy.",
+    "adding": "Dodawanie...",
+    "addStatus": "Dodaj status",
+    "addFailed": "Nie udało się dodać statusu. Spróbuj ponownie."
+  },
+  "taskStatusSelect": {
+    "ariaLabel": "Status zadania",
+    "selectStatus": "Wybierz status"
+  },
+  "ticketSelect": {
+    "placeholder": "Wybierz zgłoszenie...",
+    "searchPlaceholder": "Szukaj zgłoszeń...",
+    "noTickets": "Nie znaleziono zgłoszeń"
+  },
+  "taskTypeSelect": {
+    "placeholder": "Wybierz typ zadania"
+  },
+  "comments": {
+    "title": "Komentarze",
+    "internalOnly": "Tylko wewnętrzne",
+    "newestFirst": "Najnowsze",
+    "oldestFirst": "Najstarsze",
+    "addComment": "Dodaj komentarz",
+    "submitting": "Wysyłanie...",
+    "loading": "Ładowanie...",
+    "empty": "Brak komentarzy. Bądź pierwszym, który skomentuje!"
   }
 }

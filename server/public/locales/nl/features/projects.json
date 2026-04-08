@@ -590,7 +590,17 @@
       "title": "Dubbele taak",
       "selectTargetError": "Selecteer een doelfase.",
       "message": "Dupliceer taak \"{{taskName}}\" naar:",
-      "placeholder": "Selecteer doelproject/fase/status..."
+      "placeholder": "Selecteer doelproject/fase/status...",
+      "withChecklist": "Taak dupliceren met controlelijstitems",
+      "withoutChecklist": "Taak dupliceren zonder controlelijstitems",
+      "withPrimaryAssignee": "Taak dupliceren met primaire toegewezene",
+      "withoutPrimaryAssignee": "Taak dupliceren zonder primaire toegewezene",
+      "withAdditionalAssignees": "Taak dupliceren met extra toegewezenen ({{count}})",
+      "withoutAdditionalAssignees": "Taak dupliceren zonder extra toegewezenen",
+      "withTicketLinks": "Taak dupliceren met ticketkoppelingen ({{count}})",
+      "withoutTicketLinks": "Taak dupliceren zonder ticketkoppelingen",
+      "duplicating": "Dupliceren...",
+      "confirm": "Duplicatie bevestigen"
     },
     "createTaskFromTicket": {
       "title": "Taak maken op basis van ticket",
@@ -628,7 +638,12 @@
     "ticketLinkedTasks": {
       "title": "Gekoppelde projecttaken",
       "loadFailed": "Taak laden mislukt",
-      "phaseNotFound": "Taakfase niet gevonden"
+      "phaseNotFound": "Taakfase niet gevonden",
+      "openFailed": "Kan taak niet openen",
+      "task": "Taak",
+      "tasks": "Taken",
+      "badgeCount": "{{count}} Taak",
+      "badgeCount_other": "{{count}} Taken"
     }
   },
   "filters": {
@@ -1147,7 +1162,9 @@
     "inProgress": "In uitvoering",
     "completed": "Voltooid",
     "onHold": "Gepauzeerd",
-    "cancelled": "Geannuleerd"
+    "cancelled": "Geannuleerd",
+    "active": "Actief",
+    "inactive": "Inactief"
   },
   "messages": {
     "noProjects": "Geen projecten gevonden",
@@ -1177,7 +1194,10 @@
     "contact": "Contact:",
     "budget": "Budget:",
     "hoursUsageDescription": "Toont het gebruik van begrote uren voor het hele project",
-    "templateCreatedSuccess": "Sjabloon succesvol aangemaakt"
+    "templateCreatedSuccess": "Sjabloon succesvol aangemaakt",
+    "notAvailable": "N.v.t.",
+    "saveAsTemplate": "Opslaan als sjabloon",
+    "materials": "Materialen"
   },
   "projectPhases": {
     "addTask": "Taak toevoegen",
@@ -1185,6 +1205,42 @@
     "phaseNamePlaceholder": "Phase name... *",
     "descriptionPlaceholder": "Description",
     "adding": "Adding...",
-    "addError": "Failed to add phase. Please try again."
+    "addError": "Failed to add phase. Please try again.",
+    "title": "Projectfasen",
+    "import": "Importeren"
+  },
+  "addStatusDialog": {
+    "phaseTitle": "Fasestatus toevoegen vanuit bibliotheek",
+    "projectTitle": "Status toevoegen vanuit bibliotheek",
+    "selectLabel": "Selecteer uit statusbibliotheek",
+    "placeholder": "Kies een status",
+    "helpText": "Selecteer een status uit de statusbibliotheek van uw tenant om aan dit project toe te voegen.",
+    "noStatusesTitle": "Geen statussen beschikbaar",
+    "noStatusesDescription": "Maak statussen aan in Instellingen → Projecten → Statussen.",
+    "adding": "Toevoegen...",
+    "addStatus": "Status toevoegen",
+    "addFailed": "Kan status niet toevoegen. Probeer het opnieuw."
+  },
+  "taskStatusSelect": {
+    "ariaLabel": "Taakstatus",
+    "selectStatus": "Selecteer status"
+  },
+  "ticketSelect": {
+    "placeholder": "Selecteer een ticket...",
+    "searchPlaceholder": "Zoek tickets...",
+    "noTickets": "Geen tickets gevonden"
+  },
+  "taskTypeSelect": {
+    "placeholder": "Selecteer taaktype"
+  },
+  "comments": {
+    "title": "Opmerkingen",
+    "internalOnly": "Alleen intern",
+    "newestFirst": "Nieuwste eerst",
+    "oldestFirst": "Oudste eerst",
+    "addComment": "Opmerking toevoegen",
+    "submitting": "Verzenden...",
+    "loading": "Laden...",
+    "empty": "Nog geen opmerkingen. Wees de eerste om te reageren!"
   }
 }

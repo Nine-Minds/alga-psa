@@ -2,6 +2,7 @@
 
 - Plan slug: `2026-04-05-msp-i18n-projects-migration`
 - Created: `2026-04-05`
+- **Status: ✅ COMPLETE** (2026-04-08)
 
 ## What This Is
 
@@ -762,3 +763,21 @@ node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.c
   so rendered text is identical until locale changes; update tests that break.
 - **Template wizard shared state.** Wizard passes step data via parent context — ensure
   `useTranslation` works in all 5 step components independently without state drift.
+
+## Final Status (2026-04-08)
+
+**All features implemented (F001–F102).**
+
+- **Final `en/features/projects.json` key count:** 1,122 leaf keys (up from 128 at start)
+- **Components wired:** ~63 (15 sub-batch A + 15 sub-batch B + ~33 sub-batch C including
+  3 discovered non-zero components)
+- **Confirmed zero-string:** StatusColumn, KanbanBoard, ProjectPage, KanbanZoomControl,
+  DonutChart, TaskQuickAdd, TaskEdit, HoursProgressBar, TaskPrioritySettings (9 files)
+- **Discovered non-zero (wired):** TaskCommentThread (~8 strings), TaskCommentForm
+  (~3 strings), ProjectActiveToggle (~3 strings) — originally listed as zero-string in PRD
+- **Deferred:** ClientPortalConfigEditor.tsx — has many user-visible strings for configuring
+  client portal visibility of project data, but is client-portal config UI. Scope for a
+  future pass.
+- **Validation:** `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  passes (0 errors, 0 warnings)
+- **Parent plan updated:** `.ai/translation/MSP_i18n_plan.md` — 2b-21b/c marked ✅ DONE

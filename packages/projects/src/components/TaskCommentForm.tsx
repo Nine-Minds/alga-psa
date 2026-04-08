@@ -6,6 +6,7 @@ import { DEFAULT_BLOCK, TextEditor } from '@alga-psa/ui/editor';
 import { createTaskComment } from '../actions/projectTaskCommentActions';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { useTranslation } from 'react-i18next';
 
 interface TaskCommentFormProps {
   taskId: string;
@@ -20,6 +21,7 @@ export function TaskCommentForm({
   onCommentAdded,
   onCancel
 }: TaskCommentFormProps): React.JSX.Element {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const editorRef = useRef<BlockNoteEditor<any, any, any> | null>(null);
 
@@ -91,7 +93,7 @@ export function TaskCommentForm({
           disabled={isSubmitting}
           variant="default"
         >
-          {isSubmitting ? 'Submitting...' : 'Add Comment'}
+          {isSubmitting ? t('comments.submitting', 'Submitting...') : t('comments.addComment', 'Add Comment')}
         </Button>
         {onCancel && (
           <Button
@@ -105,7 +107,7 @@ export function TaskCommentForm({
             disabled={isSubmitting}
             variant="outline"
           >
-            Cancel
+            {t('common:actions.cancel', 'Cancel')}
           </Button>
         )}
       </div>

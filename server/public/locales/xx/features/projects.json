@@ -590,7 +590,17 @@
       "title": "11111",
       "selectTargetError": "11111",
       "message": "11111 {{taskName}} 11111",
-      "placeholder": "11111"
+      "placeholder": "11111",
+      "withChecklist": "11111",
+      "withoutChecklist": "11111",
+      "withPrimaryAssignee": "11111",
+      "withoutPrimaryAssignee": "11111",
+      "withAdditionalAssignees": "11111 {{count}} 11111",
+      "withoutAdditionalAssignees": "11111",
+      "withTicketLinks": "11111 {{count}} 11111",
+      "withoutTicketLinks": "11111",
+      "duplicating": "11111",
+      "confirm": "11111"
     },
     "createTaskFromTicket": {
       "title": "11111",
@@ -628,7 +638,12 @@
     "ticketLinkedTasks": {
       "title": "11111",
       "loadFailed": "11111",
-      "phaseNotFound": "11111"
+      "phaseNotFound": "11111",
+      "openFailed": "11111",
+      "task": "11111",
+      "tasks": "11111",
+      "badgeCount": "11111 {{count}} 11111",
+      "badgeCount_other": "11111 {{count}} 11111"
     }
   },
   "filters": {
@@ -1147,7 +1162,9 @@
     "inProgress": "11111",
     "completed": "11111",
     "onHold": "11111",
-    "cancelled": "11111"
+    "cancelled": "11111",
+    "active": "11111",
+    "inactive": "11111"
   },
   "messages": {
     "noProjects": "11111",
@@ -1176,15 +1193,54 @@
     "client": "11111",
     "contact": "11111",
     "budget": "11111",
+    "notAvailable": "11111",
+    "saveAsTemplate": "11111",
+    "materials": "11111",
     "hoursUsageDescription": "11111",
     "templateCreatedSuccess": "11111"
   },
+  "comments": {
+    "title": "11111",
+    "internalOnly": "11111",
+    "newestFirst": "11111",
+    "oldestFirst": "11111",
+    "addComment": "11111",
+    "submitting": "11111",
+    "loading": "11111",
+    "empty": "11111"
+  },
+  "addStatusDialog": {
+    "phaseTitle": "11111",
+    "projectTitle": "11111",
+    "selectLabel": "11111",
+    "placeholder": "11111",
+    "helpText": "11111",
+    "noStatusesTitle": "11111",
+    "noStatusesDescription": "11111",
+    "adding": "11111",
+    "addStatus": "11111",
+    "addFailed": "11111"
+  },
+  "taskStatusSelect": {
+    "ariaLabel": "11111",
+    "selectStatus": "11111"
+  },
+  "ticketSelect": {
+    "placeholder": "11111",
+    "searchPlaceholder": "11111",
+    "noTickets": "11111"
+  },
+  "taskTypeSelect": {
+    "placeholder": "11111"
+  },
   "projectPhases": {
+    "title": "11111",
     "addTask": "11111",
     "addPhase": "11111",
     "phaseNamePlaceholder": "11111",
     "descriptionPlaceholder": "11111",
     "adding": "11111",
-    "addError": "11111"
+    "addError": "11111",
+    "import": "11111"
   }
 }
