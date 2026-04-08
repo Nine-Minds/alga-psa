@@ -359,6 +359,24 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F034 check)** `node_modules/.bin/eslint
   packages/projects/src/components/PhaseQuickAdd.tsx` passes cleanly with 0 warnings /
   0 errors.
+- **(2026-04-07, F050)** Wired `packages/projects/src/components/project-templates/TemplateEditor.tsx`
+  to `useTranslation(['features/projects', 'common'])`, including the embedded
+  `TemplateStatusColumn` and template-task-card helpers in the same file. Localized the
+  editor shell, apply/actions menu, delete confirmations, client-portal dialog, phases
+  sidebar, kanban header controls, empty states, status-column add buttons, and all task-
+  card menu/tooltip chrome.
+- **(2026-04-07, F050)** Expanded `templates.editor.*` with the editor-specific gaps
+  surfaced by the audit: failure toasts (`deleteFailed`, `clientPortalSaveFailed`,
+  `addPhaseFailed`, `updatePhaseFailed`, `deletePhaseFailed`, `moveTaskFailed`,
+  `reorderPhaseFailed`, `taskSaveFailed`, `deleteTaskFailed`, `updateAssigneeFailed`),
+  delete-confirmation messages, badge/action labels, sidebar guidance, status-column
+  summary copy, list/kanban empty states, phase-duration summaries, task-card
+  expand/collapse labels, and fallback labels like `statusFallback`, `unknownUser`, and
+  `unknownTask`. Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran
+  translation validation successfully.
+- **(2026-04-07, F050 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/TemplateEditor.tsx` passes with
+  pre-existing warnings only (8 warnings, 0 errors).
 
 ## Commands / Runbooks
 
