@@ -578,6 +578,18 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   with pre-existing warnings only (legacy non-null assertion and `any` usages; 4
   warnings, 0 errors). Also fixed the new `useCallback(... t ...)` dependency warning
   introduced by the i18n wiring.
+- **(2026-04-08, F082)** Wired `packages/projects/src/components/ProjectTaskStatusEditor.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the inline label,
+  loading state, customize controls, available-statuses prompt, add/remove/reorder
+  feedback, closed badge, empty state, move/remove titles, and the ordering help text.
+- **(2026-04-08, F082)** Extended `settings.statuses.*` with the narrow inline-editor
+  leaves surfaced by the audit: task/phase labels, customize/project/phase helper copy,
+  available-statuses heading, task-status load/add/remove/reorder errors, and the
+  arrange-order hint. Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and
+  re-ran translation validation successfully.
+- **(2026-04-08, F082 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/ProjectTaskStatusEditor.tsx` passes with pre-existing
+  warnings only (legacy non-null assertions; 2 warnings, 0 errors).
 
 ## Commands / Runbooks
 
