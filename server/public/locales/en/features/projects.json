@@ -948,10 +948,17 @@
     "create": "Create Template",
     "title": "Create New Project Template",
       "basics": {
+        "nameLabel": "Template Name *",
         "namePlaceholder": "e.g., Website Development, Network Migration",
+        "nameHelp": "Give your template a descriptive name that reflects the type of project",
+        "descriptionLabel": "Description",
         "descriptionPlaceholder": "Describe what this template is used for and any important details...",
+        "descriptionHelp": "Provide context to help users understand when to use this template",
+        "categoryLabel": "Category",
         "categoryPlaceholder": "e.g., Development, Infrastructure, Consulting",
-        "nextHintTitle": "What's Next?"
+        "categoryHelp": "Organize templates by category for easier filtering",
+        "nextHintTitle": "What's Next?",
+        "nextHintDescription": "After defining the basics, you'll set up status columns, add phases, create tasks, configure client portal visibility, and review your template before saving."
       },
       "phases": {
       "title": "Project Phases",

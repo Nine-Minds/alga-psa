@@ -531,6 +531,18 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-08, F062 check)** `node_modules/.bin/eslint
   packages/projects/src/components/project-templates/TemplateCreationWizard.tsx` passes
   with pre-existing warnings only (unused exported type imports; 10 warnings, 0 errors).
+- **(2026-04-08, F063)** Wired
+  `packages/projects/src/components/project-templates/wizard-steps/TemplateBasicsStep.tsx`
+  to `useTranslation('features/projects')`. Localized the template-name/description/
+  category labels, placeholders, help copy, and the "What's Next?" info alert.
+- **(2026-04-08, F063)** Extended `templates.wizard.basics.*` with the missing step
+  leaves surfaced by the audit: `nameLabel`, `nameHelp`, `descriptionLabel`,
+  `descriptionHelp`, `categoryLabel`, `categoryHelp`, and `nextHintDescription`.
+  Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran translation
+  validation successfully.
+- **(2026-04-08, F063 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/wizard-steps/TemplateBasicsStep.tsx`
+  passes cleanly with 0 warnings / 0 errors.
 
 ## Commands / Runbooks
 

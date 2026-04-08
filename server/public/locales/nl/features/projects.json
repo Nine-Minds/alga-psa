@@ -948,10 +948,17 @@
       "create": "Sjabloon maken",
       "title": "Create New Project Template",
       "basics": {
+        "nameLabel": "Template Name *",
         "namePlaceholder": "bijvoorbeeld websiteontwikkeling, netwerkmigratie",
+        "nameHelp": "Give your template a descriptive name that reflects the type of project",
+        "descriptionLabel": "Description",
         "descriptionPlaceholder": "Beschrijf waarvoor deze sjabloon wordt gebruikt en eventuele belangrijke details...",
+        "descriptionHelp": "Provide context to help users understand when to use this template",
+        "categoryLabel": "Category",
         "categoryPlaceholder": "bijvoorbeeld ontwikkeling, infrastructuur, advies",
-        "nextHintTitle": "Wat is het volgende?"
+        "categoryHelp": "Organize templates by category for easier filtering",
+        "nextHintTitle": "Wat is het volgende?",
+        "nextHintDescription": "After defining the basics, you'll set up status columns, add phases, create tasks, configure client portal visibility, and review your template before saving."
       },
       "phases": {
         "title": "Projectfasen",

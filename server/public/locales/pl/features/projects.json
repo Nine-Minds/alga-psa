@@ -948,10 +948,17 @@
       "create": "Utwórz szablon",
       "title": "Create New Project Template",
       "basics": {
+        "nameLabel": "Template Name *",
         "namePlaceholder": "np. tworzenie stron internetowych, migracja sieci",
+        "nameHelp": "Give your template a descriptive name that reflects the type of project",
+        "descriptionLabel": "Description",
         "descriptionPlaceholder": "Opisz, do czego służy ten szablon, i wszelkie ważne szczegóły...",
+        "descriptionHelp": "Provide context to help users understand when to use this template",
+        "categoryLabel": "Category",
         "categoryPlaceholder": "np. Rozwój, Infrastruktura, Doradztwo",
-        "nextHintTitle": "Co dalej?"
+        "categoryHelp": "Organize templates by category for easier filtering",
+        "nextHintTitle": "Co dalej?",
+        "nextHintDescription": "After defining the basics, you'll set up status columns, add phases, create tasks, configure client portal visibility, and review your template before saving."
       },
       "phases": {
         "title": "Fazy ​​projektu",

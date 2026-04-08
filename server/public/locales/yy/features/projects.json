@@ -948,10 +948,17 @@
       "create": "55555",
       "title": "55555",
       "basics": {
+        "nameLabel": "55555",
         "namePlaceholder": "55555",
+        "nameHelp": "55555",
+        "descriptionLabel": "55555",
         "descriptionPlaceholder": "55555",
+        "descriptionHelp": "55555",
+        "categoryLabel": "55555",
         "categoryPlaceholder": "55555",
-        "nextHintTitle": "55555"
+        "categoryHelp": "55555",
+        "nextHintTitle": "55555",
+        "nextHintDescription": "55555"
       },
       "phases": {
         "title": "55555",

@@ -948,10 +948,17 @@
       "create": "Crea modello",
       "title": "Create New Project Template",
       "basics": {
+        "nameLabel": "Template Name *",
         "namePlaceholder": "es. Sviluppo sito web, Migrazione rete",
+        "nameHelp": "Give your template a descriptive name that reflects the type of project",
+        "descriptionLabel": "Description",
         "descriptionPlaceholder": "Descrivi per cosa viene usato questo modello e i dettagli importanti...",
+        "descriptionHelp": "Provide context to help users understand when to use this template",
+        "categoryLabel": "Category",
         "categoryPlaceholder": "es. Sviluppo, Infrastruttura, Consulenza",
-        "nextHintTitle": "Cosa succede dopo?"
+        "categoryHelp": "Organize templates by category for easier filtering",
+        "nextHintTitle": "Cosa succede dopo?",
+        "nextHintDescription": "After defining the basics, you'll set up status columns, add phases, create tasks, configure client portal visibility, and review your template before saving."
       },
       "phases": {
         "title": "Fasi progetto",

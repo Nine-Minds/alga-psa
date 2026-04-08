@@ -948,10 +948,17 @@
       "create": "Vorlage erstellen",
       "title": "Create New Project Template",
       "basics": {
+        "nameLabel": "Template Name *",
         "namePlaceholder": "z. B. Website-Entwicklung, Netzwerkmigration",
+        "nameHelp": "Give your template a descriptive name that reflects the type of project",
+        "descriptionLabel": "Description",
         "descriptionPlaceholder": "Beschreiben Sie, wofür diese Vorlage verwendet wird und wichtige Details...",
+        "descriptionHelp": "Provide context to help users understand when to use this template",
+        "categoryLabel": "Category",
         "categoryPlaceholder": "z. B. Entwicklung, Infrastruktur, Beratung",
-        "nextHintTitle": "Was kommt als Nächstes?"
+        "categoryHelp": "Organize templates by category for easier filtering",
+        "nextHintTitle": "Was kommt als Nächstes?",
+        "nextHintDescription": "After defining the basics, you'll set up status columns, add phases, create tasks, configure client portal visibility, and review your template before saving."
       },
       "phases": {
         "title": "Projektphasen",
