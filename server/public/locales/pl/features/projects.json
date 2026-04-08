@@ -819,6 +819,7 @@
       "projectPhases": "Fazy ​​projektu",
       "noPhasesDefined": "Nie zdefiniowano faz",
       "phasePrefix": "Faza:",
+      "selectPhase": "Please select a phase to view the template details.",
       "deleteTitle": "Usuń szablon",
       "deletedSuccess": "Szablon usunięto pomyślnie",
       "usedCount": "Użyto: {{count}} razy"

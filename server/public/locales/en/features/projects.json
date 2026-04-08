@@ -819,6 +819,7 @@
       "projectPhases": "Project Phases",
       "noPhasesDefined": "No phases defined",
       "phasePrefix": "Phase:",
+      "selectPhase": "Please select a phase to view the template details.",
       "deleteTitle": "Delete Template",
       "deletedSuccess": "Template deleted successfully",
       "usedCount": "Used: {{count}} times"

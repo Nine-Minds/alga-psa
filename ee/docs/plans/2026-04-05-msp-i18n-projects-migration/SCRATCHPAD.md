@@ -495,6 +495,20 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-08, F059 check)** `node_modules/.bin/eslint
   packages/projects/src/components/project-templates/CreateTemplateForm.tsx` passes
   cleanly with 0 warnings / 0 errors.
+- **(2026-04-08, F060)** Wired `packages/projects/src/components/project-templates/TemplateDetail.tsx`
+  to `useTranslation(['features/projects', 'common'])`, including the inline `TaskCard`
+  helper. Localized the back/use/delete actions, delete confirmation, success/failure
+  delete flows, template metadata labels, project-phases sidebar, phase header/timing
+  summaries, status-column empty state, status fallback, and the phase-selection empty
+  state in the kanban area.
+- **(2026-04-08, F060)** Added one narrow detail-page leaf,
+  `templates.detail.selectPhase`, for the kanban empty-state prompt. Re-synced
+  `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran translation validation
+  successfully.
+- **(2026-04-08, F060 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/TemplateDetail.tsx` passes with
+  pre-existing warnings only (unused dropdown-menu imports and unused
+  `onTemplateUpdated`; 12 warnings, 0 errors).
 
 ## Commands / Runbooks
 

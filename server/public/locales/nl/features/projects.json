@@ -819,6 +819,7 @@
       "projectPhases": "Projectfasen",
       "noPhasesDefined": "Geen fasen gedefinieerd",
       "phasePrefix": "Fase:",
+      "selectPhase": "Please select a phase to view the template details.",
       "deleteTitle": "Sjabloon verwijderen",
       "deletedSuccess": "Sjabloon succesvol verwijderd",
       "usedCount": "Gebruikt: {{count}} keer"

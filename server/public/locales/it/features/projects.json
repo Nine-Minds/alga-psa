@@ -819,6 +819,7 @@
       "projectPhases": "Fasi progetto",
       "noPhasesDefined": "Nessuna fase definita",
       "phasePrefix": "Fase:",
+      "selectPhase": "Please select a phase to view the template details.",
       "deleteTitle": "Elimina modello",
       "deletedSuccess": "Modello eliminato con successo",
       "usedCount": "Utilizzato: {{count}} volte"
