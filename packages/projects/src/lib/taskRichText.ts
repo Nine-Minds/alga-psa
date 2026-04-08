@@ -127,7 +127,7 @@ export function extractTaskDescriptionText(description: string | null | undefine
           lines.push(line);
         }
       }
-      return lines.join('\n');
+      return lines.join('\n').trim();
     } catch {
       return description;
     }
