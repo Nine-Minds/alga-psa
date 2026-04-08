@@ -16,6 +16,7 @@ import type { GetTeamAvatarUrlsBatch } from '@alga-psa/ui/components/UserAndTeam
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IContact, ITeam, IUser } from '@alga-psa/types';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import {
@@ -57,6 +58,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   getUserAvatarUrlsBatch,
   getTeamAvatarUrlsBatch,
 }) => {
+  const { t } = useTranslation('features/tickets');
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [watchListInput, setWatchListInput] = useState('');
   const [watcherAddMode, setWatcherAddMode] = useState<WatcherAddMode>('client-contact');
@@ -112,12 +114,12 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
     try {
       const updated = await onUpdateWatchList(nextWatchList);
       if (!updated) {
-        setWatchListError('Unable to update watch list. Please try again.');
+        setWatchListError(t('watchList.updateFailed', 'Unable to update watch list. Please try again.'));
       }
       return updated;
     } catch (error) {
       console.error('Failed to update watch list:', error);
-      setWatchListError('Unable to update watch list. Please try again.');
+      setWatchListError(t('watchList.updateFailed', 'Unable to update watch list. Please try again.'));
       return false;
     } finally {
       setWatchListSavingInternal(false);
@@ -167,7 +169,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   const handleAddEmailWatcher = async () => {
     const normalizedEmail = normalizeEmailAddress(watchListInput);
     if (!normalizedEmail) {
-      setWatchListError('Enter a valid email address.');
+      setWatchListError(t('watchList.validEmail', 'Enter a valid email address.'));
       return;
     }
 
@@ -189,19 +191,19 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
 
   const handleAddInternalUser = async () => {
     if (!selectedUserId) {
-      setWatchListError('Select a user to add.');
+      setWatchListError(t('watchList.selectUserToAdd', 'Select a user to add.'));
       return;
     }
 
     const selectedUser = internalUsers.find((user) => user.user_id === selectedUserId);
     if (!selectedUser) {
-      setWatchListError('Select a user to add.');
+      setWatchListError(t('watchList.selectUserToAdd', 'Select a user to add.'));
       return;
     }
 
     const normalizedEmail = normalizeEmailAddress(selectedUser?.email);
     if (!normalizedEmail) {
-      setWatchListError('Selected user does not have a valid email address.');
+      setWatchListError(t('watchList.selectedUserInvalidEmail', 'Selected user does not have a valid email address.'));
       return;
     }
 
@@ -226,7 +228,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   const handleAddTeamMembers = async (teamId: string) => {
     const team = teams.find((t) => t.team_id === teamId);
     if (!team || !team.members || team.members.length === 0) {
-      setWatchListError('Team has no members.');
+      setWatchListError(t('watchList.teamHasNoMembers', 'Team has no members.'));
       return;
     }
 
@@ -246,7 +248,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
     }
 
     if (recipients.length === 0) {
-      setWatchListError('No team members with valid email addresses.');
+      setWatchListError(t('watchList.noTeamMembersWithValidEmails', 'No team members with valid email addresses.'));
       return;
     }
 
@@ -258,7 +260,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
 
   const handleAddContact = async () => {
     if (!selectedContactId) {
-      setWatchListError('Select a contact to add.');
+      setWatchListError(t('watchList.selectContactToAdd', 'Select a contact to add.'));
       return;
     }
 
@@ -266,13 +268,13 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
       (contact) => contact.contact_name_id === selectedContactId
     );
     if (!selectedContact) {
-      setWatchListError('Select a contact to add.');
+      setWatchListError(t('watchList.selectContactToAdd', 'Select a contact to add.'));
       return;
     }
 
     const normalizedEmail = normalizeEmailAddress(selectedContact?.email);
     if (!normalizedEmail) {
-      setWatchListError('Selected contact does not have a valid email address.');
+      setWatchListError(t('watchList.selectedContactInvalidEmail', 'Selected contact does not have a valid email address.'));
       return;
     }
 
@@ -324,17 +326,29 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
 
   const addButtonLabel =
     watcherAddMode === 'email'
-      ? 'Add Email'
+      ? t('watchList.addEmail', 'Add Email')
       : watcherAddMode === 'internal-user'
-        ? 'Add User'
-        : 'Add Contact';
+        ? t('watchList.addUser', 'Add User')
+        : t('watchList.addContact', 'Add Contact');
+
+  const getEntityBadgeLabel = (entityType: TicketWatchListEntry['entity_type']) => {
+    if (entityType === 'user') {
+      return t('watchList.userBadge', 'User');
+    }
+
+    if (entityType === 'contact') {
+      return t('watchList.contactBadge', 'Contact');
+    }
+
+    return entityType;
+  };
 
   return (
     <ContentCard
       id={id}
       collapsible
       defaultExpanded={watchList.length > 0}
-      title="Watch List"
+      title={t('watchList.title', 'Watch List')}
       headerIcon={<Eye className="w-5 h-5" />}
       count={watchList.length}
     >
@@ -343,17 +357,23 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
         <Tabs value={watcherAddMode} onValueChange={(value) => handleModeChange(value)}>
           <div className="flex items-center -mx-6 px-6">
             <TabsList className="gap-0 w-full">
-              <TabsTrigger value="client-contact" className="px-2 py-1 text-sm" disabled={isWatchListSaving}>Contact</TabsTrigger>
-              <TabsTrigger value="internal-user" className="px-2 py-1 text-sm" disabled={isWatchListSaving}>Internal</TabsTrigger>
-              <TabsTrigger value="email" className="px-2 py-1 text-sm" disabled={isWatchListSaving}>Email</TabsTrigger>
+              <TabsTrigger value="client-contact" className="px-2 py-1 text-sm" disabled={isWatchListSaving}>
+                {t('watchList.tabs.contact', 'Contact')}
+              </TabsTrigger>
+              <TabsTrigger value="internal-user" className="px-2 py-1 text-sm" disabled={isWatchListSaving}>
+                {t('watchList.tabs.internal', 'Internal')}
+              </TabsTrigger>
+              <TabsTrigger value="email" className="px-2 py-1 text-sm" disabled={isWatchListSaving}>
+                {t('watchList.tabs.email', 'Email')}
+              </TabsTrigger>
             </TabsList>
             {watcherAddMode === 'client-contact' ? (
               <ViewSwitcher
                 currentView={contactScope}
                 onChange={(view) => void handleContactScopeChange(view)}
                 options={[
-                  { value: 'client' as ContactScope, label: 'Ticket client' },
-                  { value: 'all' as ContactScope, label: 'All contacts' },
+                  { value: 'client' as ContactScope, label: t('watchList.scope.ticketClient', 'Ticket client') },
+                  { value: 'all' as ContactScope, label: t('watchList.scope.allContacts', 'All contacts') },
                 ]}
                 className="ml-auto h-7 text-xs flex-shrink-0"
               />
@@ -376,9 +396,9 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
                   placeholder={
                     contactScope === 'all'
                       ? allContactsLoading
-                        ? 'Loading...'
-                        : 'Search all contacts'
-                      : 'Select contact'
+                        ? t('watchList.placeholders.loading', 'Loading...')
+                        : t('watchList.placeholders.searchAllContacts', 'Search all contacts')
+                      : t('watchList.placeholders.selectContact', 'Select contact')
                   }
                   disabled={isWatchListSaving || isContactScopeLoading}
                   buttonWidth="fit"
@@ -397,7 +417,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
                     teams={teams}
                     getUserAvatarUrlsBatch={getUserAvatarUrlsBatch}
                     getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatch}
-                    placeholder="Select user or team"
+                    placeholder={t('watchList.placeholders.selectUserOrTeam', 'Select user or team')}
                     size="sm"
                     labelStyle="none"
                     buttonWidth="fit"
@@ -409,7 +429,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
                     value={selectedUserId}
                     onValueChange={setSelectedUserId}
                     users={filteredInternalUsers}
-                    placeholder="Select user"
+                    placeholder={t('watchList.placeholders.selectUser', 'Select user')}
                     size="sm"
                     buttonWidth="fit"
                     disabled={isWatchListSaving}
@@ -422,7 +442,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
                   {...withDataAutomationId({ id: `${id}-email-input` })}
                   value={watchListInput}
                   onChange={(event) => setWatchListInput(event.target.value)}
-                  placeholder="name@example.com"
+                  placeholder={t('watchList.placeholders.email', 'name@example.com')}
                   disabled={isWatchListSaving}
                   className="w-auto"
                   onKeyDown={async (event) => {
@@ -457,7 +477,9 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
 
         {/* Watch list entries */}
         {watchList.length === 0 ? (
-          <p className="text-sm text-[rgb(var(--color-text-500))]">No watchers added.</p>
+          <p className="text-sm text-[rgb(var(--color-text-500))]">
+            {t('watchList.empty', 'No watchers added.')}
+          </p>
         ) : (
           <div className="space-y-1">
             {watchList.map((entry) => (
@@ -478,9 +500,9 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
                     <span className={`text-sm truncate ${entry.active ? 'text-[rgb(var(--color-text-900))]' : 'text-[rgb(var(--color-text-500))] line-through'}`}>
                       {entry.name || entry.email}
                     </span>
-                    {entry.entity_type ? (
-                      <Badge variant={entry.entity_type === 'user' ? 'info' : 'secondary'} size="sm">
-                        {entry.entity_type}
+                  {entry.entity_type ? (
+                    <Badge variant={entry.entity_type === 'user' ? 'info' : 'secondary'} size="sm">
+                        {getEntityBadgeLabel(entry.entity_type)}
                       </Badge>
                     ) : null}
                   </div>
@@ -496,6 +518,8 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
                   size="icon"
                   disabled={isWatchListSaving}
                   onClick={() => void handleRemoveWatcher(entry.email)}
+                  aria-label={t('watchList.removeWatcher', 'Remove watcher')}
+                  title={t('watchList.removeWatcher', 'Remove watcher')}
                   className="hover:bg-red-50 hover:text-red-600 text-[rgb(var(--color-text-400))]"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

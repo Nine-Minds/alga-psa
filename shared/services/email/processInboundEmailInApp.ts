@@ -467,16 +467,16 @@ function blocksFallbackFromText(text: string) {
   ];
 }
 
-function blocksFromEmailBody(params: {
+async function blocksFromEmailBody(params: {
   html?: string;
   text?: string;
-}): unknown[] {
+}): Promise<unknown[]> {
   const html = params.html?.trim();
   const text = params.text?.trim();
 
   if (html) {
     try {
-      const blocks = convertHtmlToBlockNote(html);
+      const blocks = await convertHtmlToBlockNote(html);
       return blocks.length ? blocks : blocksFallbackFromText(text ?? '');
     } catch {
       return blocksFallbackFromText(text ?? '');
@@ -607,7 +607,7 @@ async function maybeRewriteCommentWithEmbeddedAttachmentUrls(args: {
     return;
   }
 
-  const rewrittenBlocks = blocksFromEmailBody({
+  const rewrittenBlocks = await blocksFromEmailBody({
     html: rewrittenHtml,
     text: args.text,
   });
@@ -908,7 +908,7 @@ export async function processInboundEmailInApp(
 
     const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
     const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
-    const blocks = blocksFromEmailBody({
+    const blocks = await blocksFromEmailBody({
       html: parsedHtml,
       text: parsedText,
     });
@@ -1315,7 +1315,7 @@ export async function processInboundEmailInApp(
 
   const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
   const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
-  const blocks = blocksFromEmailBody({
+  const blocks = await blocksFromEmailBody({
     html: parsedHtml,
     text: parsedText,
   });

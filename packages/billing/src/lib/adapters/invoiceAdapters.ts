@@ -51,6 +51,22 @@ type RendererRecurringDetailPeriod = {
   billingTiming?: 'arrears' | 'advance' | null;
 };
 
+const normalizeDateLikeValue = (value: unknown): string | null => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const year = value.getUTCFullYear();
+    const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(value.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  return null;
+};
+
 const normalizeRecurringDetailPeriods = (item: Record<string, unknown>): RendererRecurringDetailPeriod[] | undefined => {
   const candidate = item.recurringDetailPeriods ?? item.recurring_detail_periods;
   if (!Array.isArray(candidate) || candidate.length === 0) {
@@ -61,17 +77,13 @@ const normalizeRecurringDetailPeriods = (item: Record<string, unknown>): Rendere
     .filter((detail): detail is Record<string, unknown> => !!detail && typeof detail === 'object')
     .map((detail) => ({
       servicePeriodStart:
-        typeof detail.servicePeriodStart === 'string'
-          ? detail.servicePeriodStart
-          : typeof detail.service_period_start === 'string'
-            ? detail.service_period_start
-            : null,
+        normalizeDateLikeValue(detail.servicePeriodStart) ??
+        normalizeDateLikeValue(detail.service_period_start) ??
+        null,
       servicePeriodEnd:
-        typeof detail.servicePeriodEnd === 'string'
-          ? detail.servicePeriodEnd
-          : typeof detail.service_period_end === 'string'
-            ? detail.service_period_end
-            : null,
+        normalizeDateLikeValue(detail.servicePeriodEnd) ??
+        normalizeDateLikeValue(detail.service_period_end) ??
+        null,
       billingTiming:
         detail.billingTiming === 'advance' || detail.billingTiming === 'arrears'
           ? detail.billingTiming
@@ -115,6 +127,62 @@ const resolveTenantClientSnapshot = (source: Record<string, unknown>): WasmInvoi
   };
 };
 
+const recurringServicePeriodDateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+const parseRecurringServicePeriodDate = (value: unknown): Date | null => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  const trimmed = normalizeDateLikeValue(value);
+  if (!trimmed) {
+    return null;
+  }
+
+  const dateOnlyMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  }
+
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const buildRecurringServicePeriodLabel = (start: unknown, end: unknown): string | null => {
+  const parsedStart = parseRecurringServicePeriodDate(start);
+  const parsedEnd = parseRecurringServicePeriodDate(end);
+  if (!parsedStart || !parsedEnd) {
+    return null;
+  }
+
+  return `${recurringServicePeriodDateFormatter.format(parsedStart)} - ${recurringServicePeriodDateFormatter.format(parsedEnd)}`;
+};
+
+const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>) => {
+  const recurringServicePeriodStart =
+    normalizeDateLikeValue(source.recurringServicePeriodStart) ||
+    normalizeDateLikeValue(source.recurring_service_period_start) ||
+    null;
+  const recurringServicePeriodEnd =
+    normalizeDateLikeValue(source.recurringServicePeriodEnd) ||
+    normalizeDateLikeValue(source.recurring_service_period_end) ||
+    null;
+
+  return {
+    recurringServicePeriodStart,
+    recurringServicePeriodEnd,
+    recurringServicePeriodLabel:
+      recurringServicePeriodStart && recurringServicePeriodEnd
+        ? buildRecurringServicePeriodLabel(recurringServicePeriodStart, recurringServicePeriodEnd)
+        : null,
+  };
+};
 
 const isRecurringItem = (item: WasmInvoiceLineItem): boolean =>
   (item.recurringDetailPeriods?.length ?? 0) > 0 || !!item.billingTiming;
@@ -212,15 +280,15 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
       const normalizedItems = (dbData.invoice_charges ?? []).map((item: IInvoiceCharge) => {
         const normalizedDetailPeriods = normalizeRecurringDetailPeriods(item as unknown as Record<string, unknown>);
         const summaryStart =
-          typeof (item as any).servicePeriodStart === 'string'
-            ? (item as any).servicePeriodStart
-            : (item as any).service_period_start ?? normalizedDetailPeriods?.[0]?.servicePeriodStart ?? null;
+          normalizeDateLikeValue((item as any).servicePeriodStart) ??
+          normalizeDateLikeValue((item as any).service_period_start) ??
+          normalizedDetailPeriods?.[0]?.servicePeriodStart ??
+          null;
         const summaryEnd =
-          typeof (item as any).servicePeriodEnd === 'string'
-            ? (item as any).servicePeriodEnd
-            : (item as any).service_period_end ??
-              normalizedDetailPeriods?.[normalizedDetailPeriods.length - 1]?.servicePeriodEnd ??
-              null;
+          normalizeDateLikeValue((item as any).servicePeriodEnd) ??
+          normalizeDateLikeValue((item as any).service_period_end) ??
+          normalizedDetailPeriods?.[normalizedDetailPeriods.length - 1]?.servicePeriodEnd ??
+          null;
         const summaryBillingTiming =
           (item as any).billingTiming ??
           (item as any).billing_timing ??
@@ -249,6 +317,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
       const subtotal = toMinorUnits(rawSubtotal);
       const tax = toMinorUnits(rawTax);
       const total = toMinorUnits(rawTotal);
+      const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(dbRecord);
 
       viewModel = {
         invoiceNumber: String(dbData.invoice_number ?? 'N/A'),
@@ -259,6 +328,9 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           address: String(dbData.client?.address ?? 'N/A'),
         },
         poNumber: (dbData as any).po_number ?? null,
+        recurringServicePeriodStart: recurringServicePeriodSummary.recurringServicePeriodStart,
+        recurringServicePeriodEnd: recurringServicePeriodSummary.recurringServicePeriodEnd,
+        recurringServicePeriodLabel: recurringServicePeriodSummary.recurringServicePeriodLabel,
         tenantClient: resolveTenantClientSnapshot(dbRecord),
         items: normalizedItems,
         subtotal: subtotal !== 0 ? subtotal : computedSubtotal,
@@ -283,6 +355,10 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         viewModel.subtotal = Number(viewModel.subtotal ?? 0);
         viewModel.tax = Number(viewModel.tax ?? 0);
         viewModel.total = Number(viewModel.total ?? 0);
+        const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(wasmRecord);
+        viewModel.recurringServicePeriodStart = recurringServicePeriodSummary.recurringServicePeriodStart;
+        viewModel.recurringServicePeriodEnd = recurringServicePeriodSummary.recurringServicePeriodEnd;
+        viewModel.recurringServicePeriodLabel = recurringServicePeriodSummary.recurringServicePeriodLabel;
         viewModel.tenantClient = resolveTenantClientSnapshot(wasmRecord);
 
     } else {

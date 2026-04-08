@@ -49,7 +49,7 @@
         "fillRequiredFields": "11111",
         "loadFailed": "11111",
         "saveFailed": "11111",
-        "errorPrefix": "11111"
+        "errorPrefix": "11111 {{error}} 11111"
       }
     },
     "validation": {
@@ -126,17 +126,17 @@
       },
       "unnamedUser": "11111",
       "noRolesAssigned": "11111",
-      "removeRole": "11111",
+      "removeRole": "11111 {{role}} 11111",
       "emptyState": {
-        "noUsers": "11111",
+        "noUsers": "11111 {{type}} 11111",
         "inactiveHidden": "11111"
       },
       "inactiveTag": "11111"
     },
     "sessions": {
       "title": "11111",
-      "subtitle": "11111",
-      "subtitle_plural": "11111",
+      "subtitle": "11111 {{sessionCount}} 11111 {{userCount}} 11111",
+      "subtitle_plural": "11111 {{sessionCount}} 11111 {{userCount}} 11111",
       "filters": {
         "search": "11111",
         "searchPlaceholder": "11111",
@@ -164,12 +164,12 @@
       "session": {
         "yourSession": "11111",
         "unknownDevice": "11111",
-        "lastActive": "11111",
+        "lastActive": "11111 {{time}} 11111",
         "logout": "11111",
         "revoke": "11111",
         "revoking": "11111"
       },
-      "oauthWarning": "11111",
+      "oauthWarning": "11111 {{provider}} 11111 {{provider}} 11111",
       "confirmLogout": "11111",
       "messages": {
         "loadFailed": "11111",

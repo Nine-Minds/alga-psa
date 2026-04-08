@@ -18,8 +18,8 @@
       "inactive": "11111"
     },
     "aria": {
-      "viewWeek": "11111",
-      "compare": "11111"
+      "viewWeek": "11111 {{name}} 11111",
+      "compare": "11111 {{name}} 11111"
     }
   },
   "agentView": {
@@ -52,15 +52,15 @@
       "unknown": "11111",
       "deleteFailed": "11111",
       "deleteUnexpected": "11111",
-      "updateFailed": "11111",
-      "createFailed": "11111",
+      "updateFailed": "11111 {{error}} 11111",
+      "createFailed": "11111 {{error}} 11111",
       "saveUnexpected": "11111"
     },
     "toolbar": {
-      "previousAria": "11111",
+      "previousAria": "11111 {{view}} 11111",
       "previous": "11111",
       "today": "11111",
-      "nextAria": "11111",
+      "nextAria": "11111 {{view}} 11111",
       "next": "11111",
       "views": {
         "month": "11111",
@@ -75,9 +75,9 @@
         "untitled": "11111"
       },
       "tooltip": {
-        "scheduledFor": "11111",
-        "start": "11111",
-        "end": "11111",
+        "scheduledFor": "11111 {{technicians}} 11111",
+        "start": "11111 {{dateTime}} 11111",
+        "end": "11111 {{dateTime}} 11111",
         "multiDay": "11111"
       }
     },
@@ -133,9 +133,9 @@
       "title": "11111",
       "badgeTotal": "11111",
       "loading": "11111",
-      "empty": "11111",
-      "duration": "11111",
-      "ticketFallback": "11111",
+      "empty": "11111 {{status}} 11111",
+      "duration": "11111 {{count}} 11111",
+      "ticketFallback": "11111 {{ticket}} 11111",
       "fallbacks": {
         "publicRequest": "11111"
       }
@@ -297,7 +297,7 @@
         }
       },
       "schedule": {
-        "timezoneNotice": "11111",
+        "timezoneNotice": "11111 {{timeZone}} 11111",
         "columns": {
           "day": "11111",
           "available": "11111",
@@ -332,7 +332,7 @@
         "placeholder": "11111"
       },
       "editor": {
-        "title": "11111",
+        "title": "11111 {{serviceName}} 11111",
         "allowWithoutContract": {
           "label": "11111"
         },
@@ -454,7 +454,7 @@
     "appointmentRequest": {
       "approved": {
         "title": "11111",
-        "descriptionWithDate": "11111",
+        "descriptionWithDate": "11111 {{date}} 11111",
         "description": "11111"
       },
       "pending": {
@@ -463,7 +463,7 @@
       },
       "declined": {
         "title": "11111",
-        "descriptionWithReason": "11111",
+        "descriptionWithReason": "11111 {{reason}} 11111",
         "description": "11111"
       },
       "cancelled": {

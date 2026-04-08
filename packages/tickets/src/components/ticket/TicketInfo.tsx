@@ -45,6 +45,7 @@ import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../.
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 
 interface TicketInfoProps {
@@ -116,6 +117,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onOpenEmailNotificationLogs,
 }) => {
   const { data: session } = useSession();
+  const { t } = useTranslation('features/tickets');
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const { deleteDocument } = useDocumentsCrossFeature();
   // Use initialCategories from server to avoid timing issues on first render
@@ -894,7 +896,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   size="sm"
                   onClick={handleTitleSubmit}
                   className="flex-shrink-0"
-                  title="Save title"
+                  title={t('info.saveTitle', 'Save title')}
                 >
                   <Check className="w-4 h-4" />
                 </Button>
@@ -905,7 +907,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   variant="outline"
                   onClick={handleTitleCancel}
                   className="flex-shrink-0"
-                  title="Cancel"
+                  title={t('actions.cancel', 'Cancel')}
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -921,7 +923,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 <button
                   onClick={() => setIsEditingTitle(true)}
                   className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors duration-200 flex-shrink-0"
-                  title="Edit title"
+                  title={t('info.editTitle', 'Edit title')}
                 >
                   <Pencil className="w-4 h-4 text-gray-500" />
                 </button>
@@ -933,7 +935,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             <Alert variant="warning" className="mb-4">
               <AlertDescription className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
-                <span>You have unsaved changes. Click &quot;Save Changes&quot; to apply them.</span>
+                <span>{t('info.unsavedChanges', 'You have unsaved changes. Click "Save Changes" to apply them.')}</span>
               </AlertDescription>
             </Alert>
           )}
@@ -942,7 +944,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           {saveSuccess && (
             <Alert variant="success" className="mb-4">
               <AlertDescription>
-                Changes saved successfully!
+                {t('info.saveSuccess', 'Changes saved successfully!')}
               </AlertDescription>
             </Alert>
           )}
@@ -950,7 +952,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           <div className="grid grid-cols-2 gap-4 mb-4">
             {/* Row 1: Status + Assigned To */}
             <div>
-              <h5 className="font-bold mb-2">Status</h5>
+              <h5 className="font-bold mb-2">{t('fields.status', 'Status')}</h5>
               <CustomSelect
                 value={pendingStatusValue}
                 options={boardScopedStatusOptions}
@@ -961,12 +963,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               />
               {requiresDestinationStatusSelection && (
                 <p className="mt-2 text-sm text-amber-700">
-                  Select a status for the new board before saving.
+                  {t('info.selectStatusForNewBoard', 'Select a status for the new board before saving.')}
                 </p>
               )}
             </div>
             <div>
-              <h5 className="font-bold mb-2">Assigned To</h5>
+              <h5 className="font-bold mb-2">{t('fields.assignedTo', 'Assigned To')}</h5>
               <div className="flex items-center gap-1.5">
                 {teamsV2Enabled ? (
                   <UserAndTeamPicker
@@ -999,7 +1001,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     buttonWidth="fit"
                     size="sm"
                     className="!w-fit"
-                    placeholder="Not assigned"
+                    placeholder={t('info.notAssigned', 'Not assigned')}
                     disabled={workflowLocked}
                   />
                 ) : (
@@ -1012,7 +1014,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     buttonWidth="fit"
                     size="sm"
                     className="!w-fit"
-                    placeholder="Not assigned"
+                    placeholder={t('info.notAssigned', 'Not assigned')}
                     disabled={workflowLocked}
                   />
                 )}
@@ -1037,7 +1039,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 {(additionalAgents?.length ?? 0) > 0 && (
                   <Tooltip content={
                     <div className="text-xs space-y-1.5">
-                      <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                      <div className="font-medium text-gray-300 mb-1">{t('info.additionalAgentsTooltip', 'Additional Agents:')}</div>
                       {additionalAgents!.map((agent, i) => (
                         <div key={i} className="flex items-center gap-2">
                           <UserAvatar
@@ -1061,7 +1063,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
             {/* Row 2: Board + Category */}
             <div>
-              <h5 className="font-bold mb-2">Board</h5>
+              <h5 className="font-bold mb-2">{t('info.board', 'Board')}</h5>
               <CustomSelect
                 value={effectiveBoardId || ''}
                 options={boardOptions}
@@ -1081,11 +1083,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
             {effectiveBoardConfig.category_type && (
               <div>
-                <h5 className="font-bold mb-2">{effectiveBoardConfig.category_type === 'custom' ? 'Category' : 'ITIL Category'}</h5>
+                <h5 className="font-bold mb-2">
+                  {effectiveBoardConfig.category_type === 'custom'
+                    ? t('fields.category', 'Category')
+                    : t('info.itilCategory', 'ITIL Category')}
+                </h5>
                 <div className="w-fit">
                   {isLoadingBoardConfig ? (
                     <div className="h-10 w-48 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-md flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                      Loading...
+                      {t('info.loadingBoardConfig', 'Loading...')}
                     </div>
                   ) : (
                     <CategoryPicker
@@ -1093,7 +1099,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       categories={effectiveCategories}
                       selectedCategories={[getSelectedCategoryId()]}
                       onSelect={handleCategoryChange}
-                      placeholder={effectiveBoardConfig.category_type === 'custom' ? "Select category..." : "Select ITIL category..."}
+                      placeholder={effectiveBoardConfig.category_type === 'custom'
+                        ? t('quickAdd.selectCategory', 'Select category')
+                        : t('quickAdd.selectItilCategory', 'Select ITIL category')}
                       onAddNew={() => setIsQuickAddCategoryOpen(true)}
                     />
                   )}
@@ -1139,7 +1147,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               {effectiveBoardConfig.priority_type === 'itil' ? (
                 <div className="grid grid-cols-2 gap-4 transition-opacity duration-200 ease-in-out">
                   <div>
-                    <h5 className="font-bold mb-2">Impact</h5>
+                    <h5 className="font-bold mb-2">{t('itil.impact', 'Impact')}</h5>
                     <div className="w-fit">
                       <CustomSelect
                         options={[
@@ -1151,12 +1159,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         ]}
                         value={effectiveItilImpact?.toString() || null}
                         onValueChange={(value) => handleLocalItilFieldChange('itil_impact', Number(value))}
-                        placeholder="Select Impact"
+                        placeholder={t('itil.selectImpact', 'Select Impact')}
                       />
                     </div>
                   </div>
                   <div>
-                    <h5 className="font-bold mb-2">Urgency</h5>
+                    <h5 className="font-bold mb-2">{t('itil.urgency', 'Urgency')}</h5>
                     <div className="w-fit">
                       <CustomSelect
                         options={[
@@ -1168,14 +1176,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         ]}
                         value={effectiveItilUrgency?.toString() || null}
                         onValueChange={(value) => handleLocalItilFieldChange('itil_urgency', Number(value))}
-                        placeholder="Select Urgency"
+                        placeholder={t('itil.selectUrgency', 'Select Urgency')}
                       />
                     </div>
                   </div>
                   {/* Calculated ITIL Priority Badge */}
                   {calculatedItilPriority && (
                     <div className="col-span-2 flex items-center gap-2 mt-1">
-                      <span className="text-sm text-gray-500">Calculated Priority:</span>
+                      <span className="text-sm text-gray-500">{t('info.calculatedPriority', 'Calculated Priority:')}</span>
                       <div
                         className="w-3 h-3 rounded-full border border-gray-300"
                         style={{ backgroundColor:
@@ -1187,13 +1195,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         }}
                       />
                       <span className="text-sm font-medium">
-                        {ItilLabels.priority[calculatedItilPriority]}
+                        {t(`itil.priorityLevels.${calculatedItilPriority}` as const, ItilLabels.priority[calculatedItilPriority])}
                       </span>
                       <button
                         type="button"
                         onClick={() => setShowPriorityMatrix(!showPriorityMatrix)}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
-                        title="Show ITIL Priority Matrix"
+                        title={t('quickAdd.showPriorityMatrix', 'Show ITIL Priority Matrix')}
                       >
                         <HelpCircle className="w-4 h-4" />
                       </button>
@@ -1202,7 +1210,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   {/* ITIL Priority Matrix - Show when help icon is clicked */}
                   {showPriorityMatrix && (
                     <div className="col-span-2 mt-3 p-4 bg-gray-50 border rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-800 mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
+                      <h4 className="text-sm font-medium text-gray-800 mb-3">{t('itil.matrixTitle', 'ITIL Priority Matrix (Impact × Urgency)')}</h4>
                       <div className="overflow-x-auto">
                         <table className="min-w-full text-xs">
                           <thead>
@@ -1268,7 +1276,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 </div>
               ) : (
                 <div className="transition-opacity duration-200 ease-in-out">
-                  <h5 className="font-bold mb-2">Priority</h5>
+                  <h5 className="font-bold mb-2">{t('fields.priority', 'Priority')}</h5>
                   <PrioritySelect
                     value={pendingChanges.priority_id ?? originalTicketValues.priority_id ?? null}
                     options={priorityOptions}
@@ -1292,7 +1300,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               </div>
             )}
             <div>
-              <h5 className="font-bold mb-2">Due Date</h5>
+              <h5 className="font-bold mb-2">{t('fields.dueDate', 'Due Date')}</h5>
               {(() => {
                 const effectiveDueDate = pendingChanges.due_date !== undefined
                   ? (pendingChanges.due_date ? new Date(pendingChanges.due_date as string) : undefined)
@@ -1349,8 +1357,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                           id={`${id}-due-date-picker`}
                           value={effectiveDueDate}
                           onChange={handleDateChange}
-                          placeholder="Select date"
-                          label="Due Date"
+                          placeholder={t('quickAdd.selectDate', 'Select date')}
+                          label={t('fields.dueDate', 'Due Date')}
                         />
                       </div>
                       <div className="w-fit">
@@ -1358,7 +1366,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                           id={`${id}-due-time-picker`}
                           value={effectiveDueDate && !isMidnight ? existingTime : undefined}
                           onChange={handleTimeChange}
-                          placeholder="Time"
+                          placeholder={t('quickAdd.timePlaceholder', 'Time')}
                           disabled={!effectiveDueDate}
                         />
                       </div>
@@ -1370,7 +1378,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                           size="sm"
                           onClick={() => handlePendingChange('due_date', null)}
                           className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-600))] px-2"
-                          title="Clear due date"
+                          title={t('info.clearDueDate', 'Clear due date')}
                         >
                           ✕
                         </Button>
@@ -1378,12 +1386,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       {isDueDatePaused && (
                         <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400 px-2 py-1 rounded-full">
                           <PauseCircle className="w-3 h-3" />
-                          Paused
+                          {t('info.paused', 'Paused')}
                         </span>
                       )}
                     </div>
                     {effectiveDueDate && isMidnight && (
-                      <p className="text-xs text-gray-500 mt-1">No time set - defaults to 12:00 AM</p>
+                      <p className="text-xs text-gray-500 mt-1">{t('quickAdd.noTimeDefault', 'No time set - defaults to 12:00 AM')}</p>
                     )}
                   </>
                 );
@@ -1393,7 +1401,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             {/* Row 5: SLA Status */}
             {slaStatus && (
               <div className="col-span-2">
-                <h5 className="font-bold mb-2">SLA Status</h5>
+                <h5 className="font-bold mb-2">{t('info.slaStatus', 'SLA Status')}</h5>
                 <div className="flex items-center gap-3">
                   <SlaStatusBadge
                     status={slaStatus.status}
@@ -1405,12 +1413,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   />
                   {ticket.sla_response_met === false && (
                     <span className="text-xs text-[rgb(var(--badge-error-text))] bg-[rgb(var(--badge-error-bg))] border border-[rgb(var(--badge-error-border))] px-2 py-1 rounded-full">
-                      Response SLA breached
+                      {t('info.responseSlaBreached', 'Response SLA breached')}
                     </span>
                   )}
                   {ticket.sla_resolution_met === false && (
                     <span className="text-xs text-[rgb(var(--badge-error-text))] bg-[rgb(var(--badge-error-bg))] border border-[rgb(var(--badge-error-border))] px-2 py-1 rounded-full">
-                      Resolution SLA breached
+                      {t('info.resolutionSlaBreached', 'Resolution SLA breached')}
                     </span>
                   )}
                 </div>
@@ -1419,7 +1427,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
             {/* Row 6: Tags */}
             <div className="col-span-2">
-              <h5 className="font-bold mb-2">Tags</h5>
+              <h5 className="font-bold mb-2">{t('settings.display.columns.tags', 'Tags')}</h5>
               {onTagsChange && ticket.ticket_id ? (
                 <TagManager
                   entityId={ticket.ticket_id}
@@ -1429,14 +1437,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   useInlineInput={isInDrawer}
                 />
               ) : (
-                <p className="text-sm text-gray-500">Tags cannot be managed</p>
+                <p className="text-sm text-gray-500">{t('info.tagsCannotBeManaged', 'Tags cannot be managed')}</p>
               )}
             </div>
           </div>
 
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-lg font-semibold">Description</h2>
+              <h2 className="text-lg font-semibold">{t('fields.description', 'Description')}</h2>
               {!isEditingDescription && (
                 <button
                   onClick={() => {
@@ -1446,7 +1454,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     setIsEditingDescription(true);
                   }}
                   className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors duration-200"
-                  title="Edit description"
+                  title={t('info.editDescription', 'Edit description')}
                 >
                   <Pencil className="w-4 h-4 text-gray-500" />
                 </button>
@@ -1487,7 +1495,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     }}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Saving...' : 'Save'}
+                    {isSubmitting
+                      ? t('info.saving', 'Saving...')
+                      : t('actions.save', 'Save')}
                   </Button>
                   <Button
                     id={`${id}-cancel-description-btn`}
@@ -1495,7 +1505,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     variant="outline"
                     onClick={descriptionUploadSession.requestDiscard}
                   >
-                    Cancel
+                    {t('actions.cancel', 'Cancel')}
                   </Button>
                 </div>
               </div>
@@ -1505,7 +1515,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   // Get description from ticket attributes
                   const descriptionText = ticket.attributes?.description as string;
 
-                  if (!descriptionText) return 'No description found.';
+                  if (!descriptionText) return t('info.noDescription', 'No description found.');
 
                   return <RichTextViewer content={descriptionText} className="break-words max-w-full min-w-0" />;
                 })()}
@@ -1517,14 +1527,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           <div className="flex items-center gap-3 mt-6 pt-4 border-t border-gray-200">
             {renderProjectTaskActions?.({ ticket, additionalAgents })}
             {ticket.ticket_id && onOpenEmailNotificationLogs ? (
-              <Tooltip content="View email notification logs">
+              <Tooltip content={t('info.openEmailNotificationLogs', 'View email notification logs')}>
                 <Button
                   id={`${id}-open-email-notification-logs`}
                   type="button"
                   variant="soft"
                   size="icon"
                   onClick={onOpenEmailNotificationLogs}
-                  aria-label="View email notification logs"
+                  aria-label={t('info.openEmailNotificationLogs', 'View email notification logs')}
                   className="h-9 w-9"
                 >
                   <Mail className="w-4 h-4" />
@@ -1539,7 +1549,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               onClick={handleCancelClick}
               disabled={isSaving}
             >
-              Cancel
+              {t('actions.cancel', 'Cancel')}
             </Button>
             <Button
               id={`${id}-save-changes-btn`}
@@ -1548,7 +1558,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               disabled={isSaving || requiresDestinationStatusSelection}
             >
               <span className={hasUnsavedChanges ? 'font-bold' : ''}>
-                {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+                {isSaving
+                  ? t('info.saving', 'Saving...')
+                  : hasUnsavedChanges
+                    ? `${t('info.saveChanges', 'Save Changes')} *`
+                    : t('info.saveChanges', 'Save Changes')}
               </span>
               {!isSaving && <Save className="ml-2 h-4 w-4" />}
             </Button>
@@ -1560,10 +1574,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             isOpen={showCancelConfirm}
             onClose={() => setShowCancelConfirm(false)}
             onConfirm={handleCancelConfirm}
-            title="Discard Changes"
-            message="You have unsaved changes. Are you sure you want to discard them?"
-            confirmLabel="Discard"
-            cancelLabel="Keep Editing"
+            title={t('info.discardChangesTitle', 'Discard Changes')}
+            message={t('info.discardChangesMessage', 'You have unsaved changes. Are you sure you want to discard them?')}
+            confirmLabel={t('info.discard', 'Discard')}
+            cancelLabel={t('info.keepEditing', 'Keep Editing')}
           />
           <ConfirmationDialog
             id={`${id}-description-clipboard-draft-cancel-dialog`}
@@ -1571,11 +1585,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             onClose={() => descriptionUploadSession.setShowDraftCancelDialog(false)}
             onConfirm={descriptionUploadSession.deleteTrackedDraftClipboardImages}
             onCancel={descriptionUploadSession.keepDraftClipboardImages}
-            title="Pasted Images Detected"
-            message="This description includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?"
-            confirmLabel="Delete Images"
-            thirdButtonLabel="Keep Images"
-            cancelLabel="Continue Editing"
+            title={t('conversation.clipboardDraftCancelTitle', 'Pasted Images Detected')}
+            message={t('info.clipboardDraftMessage', 'This description includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?')}
+            confirmLabel={t('conversation.deleteUploadedImages', 'Delete Images')}
+            thirdButtonLabel={t('conversation.keepUploadedImages', 'Keep Images')}
+            cancelLabel={t('quickAdd.continueEditing', 'Continue Editing')}
             isConfirming={descriptionUploadSession.isDeletingDraftImages}
           />
         </div>

@@ -43,7 +43,7 @@ export function ExpandableComment({
         loadingLabel={loadingLabel}
         onLinkPress={onLinkPress}
         imageAuth={imageAuth}
-        onContentHeight={({ height }) => setContentHeight(height)}
+        onContentHeight={({ height }) => setContentHeight(Math.ceil(height))}
       />
       {renderFooter ? (
         renderFooter({ needsExpansion, expanded, toggle })

@@ -15,7 +15,7 @@
 
 import * as Y from 'yjs'
 
-const MAX_CONTEXT_CHARS = 8000
+const MAX_CONTEXT_CHARS = 48000
 const STREAM_FLUSH_INTERVAL_MS = 150
 
 export class AiParticipantExtension {
@@ -319,8 +319,8 @@ export class AiParticipantExtension {
   windowDocumentContext(fullText) {
     if (fullText.length <= MAX_CONTEXT_CHARS) return fullText
 
-    const headChars = Math.floor(MAX_CONTEXT_CHARS * 0.35)
-    const tailChars = Math.floor(MAX_CONTEXT_CHARS * 0.6)
+    const headChars = Math.floor(MAX_CONTEXT_CHARS * 0.4)
+    const tailChars = Math.floor(MAX_CONTEXT_CHARS * 0.55)
     const head = fullText.slice(0, headChars)
     const tail = fullText.slice(-tailChars)
 
@@ -597,6 +597,17 @@ export class AiParticipantExtension {
     const fullContext = this.serializeDocument(fragment)
     const documentContext = this.windowDocumentContext(fullContext)
 
+    // Extract connected user names from awareness
+    const connectedUserNames = []
+    const awarenessStates = document.awareness?.getStates?.()
+    if (awarenessStates) {
+      for (const [, state] of awarenessStates) {
+        if (state?.user?.name) {
+          connectedUserNames.push(state.user.name)
+        }
+      }
+    }
+
     console.log(`[AiParticipantExtension] Processing AI mention in ${documentName}: "${instruction.substring(0, 100)}"`)
 
     // Insert streaming container
@@ -624,6 +635,7 @@ export class AiParticipantExtension {
           documentContext,
           documentId,
           tenantId,
+          connectedUserNames,
         }),
       })
 

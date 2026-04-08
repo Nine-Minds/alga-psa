@@ -126,6 +126,9 @@ const normalizeInvoiceBindingPath = (bindingKey: string): string => {
     'invoice.discount': 'discount',
     'invoice.currencyCode': 'currencyCode',
     'invoice.poNumber': 'poNumber',
+    'invoice.recurringServicePeriodStart': 'recurringServicePeriodStart',
+    'invoice.recurringServicePeriodEnd': 'recurringServicePeriodEnd',
+    'invoice.recurringServicePeriodLabel': 'recurringServicePeriodLabel',
     'quote.quoteNumber': 'quoteNumber',
     'quote.quoteDate': 'quoteDate',
     'quote.validUntil': 'validUntil',
@@ -1399,6 +1402,9 @@ const denormalizeBindingPath = (path: string): string => {
     discount: 'invoice.discount',
     currencyCode: 'invoice.currencyCode',
     poNumber: 'invoice.poNumber',
+    recurringServicePeriodStart: 'invoice.recurringServicePeriodStart',
+    recurringServicePeriodEnd: 'invoice.recurringServicePeriodEnd',
+    recurringServicePeriodLabel: 'invoice.recurringServicePeriodLabel',
     quoteNumber: 'quote.quoteNumber',
     quoteDate: 'quote.quoteDate',
     validUntil: 'quote.validUntil',
@@ -1766,7 +1772,7 @@ export const importTemplateAstToWorkspace = (
           if (inputNode.borderStyle) {
             metadata.fieldBorderStyle = inputNode.borderStyle;
           } else {
-            delete metadata.fieldBorderStyle;
+            metadata.fieldBorderStyle = 'none';
           }
           if (inputNode.label) {
             metadata.label = inputNode.label;

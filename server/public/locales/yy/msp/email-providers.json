@@ -1,461 +1,461 @@
 {
   "configuration": {
-    "loading": "11111",
+    "loading": "55555",
     "feedback": {
-      "testingConnection": "11111",
-      "connectionSuccess": "11111",
-      "connectionError": "11111",
-      "refreshWatchError": "11111",
-      "renewalError": "11111",
-      "initiateOauthError": "11111",
-      "resyncing": "11111",
-      "resyncError": "11111",
-      "resyncStarted": "11111",
-      "enterpriseOnly": "11111"
+      "testingConnection": "55555 {{providerName}} 55555",
+      "connectionSuccess": "55555 {{providerName}} 55555",
+      "connectionError": "55555",
+      "refreshWatchError": "55555",
+      "renewalError": "55555",
+      "initiateOauthError": "55555",
+      "resyncing": "55555 {{providerName}} 55555",
+      "resyncError": "55555",
+      "resyncStarted": "55555 {{providerName}} 55555",
+      "enterpriseOnly": "55555"
     },
     "editDrawer": {
-      "title": "11111",
-      "description": "11111"
+      "title": "55555",
+      "description": "55555 {{providerName}} 55555"
     },
     "header": {
-      "title": "11111",
+      "title": "55555",
       "description": {
-        "enterprise": "11111",
-        "standard": "11111"
+        "enterprise": "55555",
+        "standard": "55555"
       },
       "counts": {
-        "enterprise": "11111",
-        "standard": "11111"
+        "enterprise": "55555 {{gmail}} 55555 {{microsoft}} 55555 {{imap}} 55555",
+        "standard": "55555 {{gmail}} 55555 {{imap}} 55555"
       }
     },
     "actions": {
-      "addProvider": "11111"
+      "addProvider": "55555"
     },
     "nav": {
-      "providers": "11111",
-      "defaults": "11111"
+      "providers": "55555",
+      "defaults": "55555"
     },
     "setup": {
-      "title": "11111",
+      "title": "55555",
       "microsoft": {
-        "title": "11111",
+        "title": "55555",
         "steps": {
-          "registerApp": "11111",
-          "permissions": "11111",
-          "redirectUrl": "11111",
-          "credentials": "11111"
+          "registerApp": "55555",
+          "permissions": "55555",
+          "redirectUrl": "55555",
+          "credentials": "55555"
         }
       },
       "gmail": {
-        "title": "11111",
+        "title": "55555",
         "enterpriseSteps": {
-          "enterAddress": "11111",
-          "connect": "11111",
-          "preferences": "11111",
-          "save": "11111"
+          "enterAddress": "55555",
+          "connect": "55555",
+          "preferences": "55555",
+          "save": "55555"
         },
         "standardSteps": {
-          "project": "11111",
-          "oauth": "11111",
-          "pubsub": "11111",
-          "consent": "11111"
+          "project": "55555",
+          "oauth": "55555",
+          "pubsub": "55555",
+          "consent": "55555"
         }
       }
     }
   },
   "list": {
     "header": {
-      "title": "11111"
+      "title": "55555 {{count}} 55555"
     },
     "filters": {
-      "searchPlaceholder": "11111",
-      "allProviders": "11111"
+      "searchPlaceholder": "55555",
+      "allProviders": "55555"
     },
     "actions": {
-      "refresh": "11111"
+      "refresh": "55555"
     }
   },
   "selector": {
     "header": {
-      "title": "11111",
-      "description": "11111"
+      "title": "55555",
+      "description": "55555"
     },
     "cards": {
       "google": {
-        "title": "11111",
-        "description": "11111",
+        "title": "55555",
+        "description": "55555",
         "features": {
-          "accounts": "11111",
-          "filtering": "11111",
-          "processing": "11111",
-          "authentication": "11111"
+          "accounts": "55555",
+          "filtering": "55555",
+          "processing": "55555",
+          "authentication": "55555"
         },
-        "action": "11111"
+        "action": "55555"
       },
       "microsoft": {
-        "title": "11111",
-        "description": "11111",
+        "title": "55555",
+        "description": "55555",
         "features": {
-          "accounts": "11111",
-          "filtering": "11111",
-          "processing": "11111",
-          "authentication": "11111"
+          "accounts": "55555",
+          "filtering": "55555",
+          "processing": "55555",
+          "authentication": "55555"
         },
-        "action": "11111"
+        "action": "55555"
       },
       "imap": {
-        "title": "11111",
-        "description": "11111",
+        "title": "55555",
+        "description": "55555",
         "features": {
-          "accounts": "11111",
-          "filtering": "11111",
-          "authentication": "11111",
-          "listener": "11111"
+          "accounts": "55555",
+          "filtering": "55555",
+          "authentication": "55555",
+          "listener": "55555"
         },
-        "action": "11111"
+        "action": "55555"
       }
     },
     "actions": {
-      "cancel": "11111"
+      "cancel": "55555"
     },
     "help": {
-      "enterprise": "11111",
-      "standard": "11111"
+      "enterprise": "55555",
+      "standard": "55555"
     }
   },
   "wizard": {
     "title": {
-      "select": "11111",
-      "setup": "11111"
+      "select": "55555",
+      "setup": "55555 {{provider}} 55555"
     },
     "actions": {
-      "cancel": "11111",
-      "back": "11111",
-      "close": "11111"
+      "cancel": "55555",
+      "back": "55555",
+      "close": "55555"
     }
   },
   "providerCard": {
     "subscription": {
-      "expired": "11111",
-      "expiresInHours": "11111",
-      "expiresInDays": "11111"
+      "expired": "55555",
+      "expiresInHours": "55555 {{count}} 55555",
+      "expiresInDays": "55555 {{count}} 55555"
     },
     "badges": {
-      "disabled": "11111",
-      "connected": "11111",
-      "disconnected": "11111",
-      "error": "11111",
-      "configuring": "11111",
-      "unknown": "11111"
+      "disabled": "55555",
+      "connected": "55555",
+      "disconnected": "55555",
+      "error": "55555",
+      "configuring": "55555",
+      "unknown": "55555"
     },
     "lastSync": {
-      "never": "11111",
-      "justNow": "11111",
-      "minutesAgo": "11111",
-      "hoursAgo": "11111",
-      "daysAgo": "11111"
+      "never": "55555",
+      "justNow": "55555",
+      "minutesAgo": "55555 {{count}} 55555",
+      "hoursAgo": "55555 {{count}} 55555",
+      "daysAgo": "55555 {{count}} 55555"
     },
     "actions": {
-      "edit": "11111",
-      "testing": "11111",
-      "testConnection": "11111",
-      "refreshWatch": "11111",
-      "retryRenewal": "11111",
-      "runDiagnostics": "11111",
-      "reconnectOauth": "11111",
-      "resyncing": "11111",
-      "resyncMailbox": "11111",
-      "delete": "11111"
+      "edit": "55555",
+      "testing": "55555",
+      "testConnection": "55555",
+      "refreshWatch": "55555",
+      "retryRenewal": "55555",
+      "runDiagnostics": "55555",
+      "reconnectOauth": "55555",
+      "resyncing": "55555",
+      "resyncMailbox": "55555",
+      "delete": "55555"
     },
     "fields": {
-      "status": "11111",
-      "lastSync": "11111",
-      "created": "11111",
-      "subscription": "11111",
-      "defaults": "11111",
-      "error": "11111"
+      "status": "55555",
+      "lastSync": "55555",
+      "created": "55555",
+      "subscription": "55555",
+      "defaults": "55555",
+      "error": "55555"
     },
     "values": {
-      "active": "11111",
-      "inactive": "11111",
-      "disabled": "11111",
-      "error": "11111"
+      "active": "55555",
+      "inactive": "55555",
+      "disabled": "55555",
+      "error": "55555"
     },
     "types": {
-      "google": "11111",
-      "microsoft": "11111",
-      "imap": "11111"
+      "google": "55555",
+      "microsoft": "55555",
+      "imap": "55555"
     },
     "filters": {
-      "folders": "11111",
-      "labels": "11111"
+      "folders": "55555 {{filters}} 55555",
+      "labels": "55555 {{filters}} 55555"
     },
     "warnings": {
-      "inboundDefaults": "11111"
+      "inboundDefaults": "55555"
     },
     "defaults": {
-      "placeholder": "11111",
-      "empty": "11111"
+      "placeholder": "55555",
+      "empty": "55555"
     },
     "empty": {
-      "title": "11111",
-      "description": "11111",
-      "action": "11111"
+      "title": "55555",
+      "description": "55555",
+      "action": "55555"
     }
   },
   "forms": {
     "common": {
       "actions": {
-        "cancel": "11111",
-        "saving": "11111",
-        "updateProvider": "11111",
-        "addProvider": "11111",
-        "createProvider": "11111",
-        "manageDefaults": "11111",
-        "refreshList": "11111",
-        "openProvidersSettings": "11111"
+        "cancel": "55555",
+        "saving": "55555",
+        "updateProvider": "55555",
+        "addProvider": "55555",
+        "createProvider": "55555",
+        "manageDefaults": "55555",
+        "refreshList": "55555",
+        "openProvidersSettings": "55555"
       },
       "validation": {
-        "requiredFieldsTitle": "11111",
-        "fixHighlightedFields": "11111"
+        "requiredFieldsTitle": "55555",
+        "fixHighlightedFields": "55555"
       },
       "ticketDefaults": {
-        "title": "11111",
-        "description": "11111",
-        "label": "11111",
-        "placeholder": "11111",
-        "empty": "11111"
+        "title": "55555",
+        "description": "55555",
+        "label": "55555",
+        "placeholder": "55555",
+        "empty": "55555"
       },
       "oauth": {
-        "authorizing": "11111",
-        "authorized": "11111",
-        "authorizeAccess": "11111"
+        "authorizing": "55555",
+        "authorized": "55555",
+        "authorizeAccess": "55555"
       }
     },
     "microsoft": {
       "validation": {
-        "providerNameRequired": "11111",
-        "emailRequired": "11111",
-        "redirectRequired": "11111",
-        "authorizeRequiresValid": "11111",
-        "oauthInitiateFailed": "11111",
-        "popupBlocked": "11111",
-        "closedEarly": "11111",
-        "authorizationFailed": "11111"
+        "providerNameRequired": "55555",
+        "emailRequired": "55555",
+        "redirectRequired": "55555",
+        "authorizeRequiresValid": "55555",
+        "oauthInitiateFailed": "55555",
+        "popupBlocked": "55555",
+        "closedEarly": "55555",
+        "authorizationFailed": "55555"
       },
       "requiredFields": {
-        "providerName": "11111",
-        "emailAddress": "11111",
-        "redirectUri": "11111"
+        "providerName": "55555",
+        "emailAddress": "55555",
+        "redirectUri": "55555"
       },
       "basic": {
-        "title": "11111",
-        "description": "11111",
-        "providerNameLabel": "11111",
-        "providerNamePlaceholder": "11111",
-        "emailLabel": "11111",
-        "emailPlaceholder": "11111",
-        "enableProvider": "11111"
+        "title": "55555",
+        "description": "55555",
+        "providerNameLabel": "55555",
+        "providerNamePlaceholder": "55555",
+        "emailLabel": "55555",
+        "emailPlaceholder": "55555",
+        "enableProvider": "55555"
       },
       "oauth": {
-        "sectionTitle": "11111",
-        "sectionDescription": "11111",
-        "setupLabel": "11111",
-        "notConfigured": "11111",
-        "setupHelp": "11111",
-        "redirectUriLabel": "11111",
-        "redirectUriPlaceholder": "11111",
-        "authorizationTitle": "11111",
-        "authorizationDescription": "11111"
+        "sectionTitle": "55555",
+        "sectionDescription": "55555",
+        "setupLabel": "55555",
+        "notConfigured": "55555",
+        "setupHelp": "55555",
+        "redirectUriLabel": "55555",
+        "redirectUriPlaceholder": "55555",
+        "authorizationTitle": "55555",
+        "authorizationDescription": "55555"
       },
       "advanced": {
-        "title": "11111",
-        "description": "11111",
-        "folderFiltersLabel": "11111",
-        "folderFiltersPlaceholder": "11111",
-        "folderFiltersHelp": "11111",
-        "maxEmailsPerSync": "11111"
+        "title": "55555",
+        "description": "55555",
+        "folderFiltersLabel": "55555",
+        "folderFiltersPlaceholder": "55555",
+        "folderFiltersHelp": "55555",
+        "maxEmailsPerSync": "55555"
       }
     },
     "gmail": {
       "validation": {
-        "providerNameRequired": "11111",
-        "gmailAddressRequired": "11111",
-        "authorizeRequiresValid": "11111",
-        "googleNotConfigured": "11111",
-        "oauthInitiateFailed": "11111",
-        "popupBlocked": "11111",
-        "closedEarly": "11111",
-        "authorizationFailed": "11111",
-        "popupFailed": "11111"
+        "providerNameRequired": "55555",
+        "gmailAddressRequired": "55555",
+        "authorizeRequiresValid": "55555",
+        "googleNotConfigured": "55555",
+        "oauthInitiateFailed": "55555",
+        "popupBlocked": "55555",
+        "closedEarly": "55555",
+        "authorizationFailed": "55555",
+        "popupFailed": "55555"
       },
       "messages": {
-        "setupIncomplete": "11111",
-        "warningsTitle": "11111",
-        "settingUp": "11111"
+        "setupIncomplete": "55555 {{error}} 55555",
+        "warningsTitle": "55555",
+        "settingUp": "55555"
       },
       "requiredFields": {
-        "providerName": "11111",
-        "gmailAddress": "11111"
+        "providerName": "55555",
+        "gmailAddress": "55555"
       },
       "basic": {
-        "title": "11111",
-        "description": "11111",
-        "providerNameLabel": "11111",
-        "providerNamePlaceholder": "11111",
-        "mailboxLabel": "11111",
-        "mailboxPlaceholder": "11111",
-        "enableProvider": "11111"
+        "title": "55555",
+        "description": "55555",
+        "providerNameLabel": "55555",
+        "providerNamePlaceholder": "55555",
+        "mailboxLabel": "55555",
+        "mailboxPlaceholder": "55555",
+        "enableProvider": "55555"
       },
       "oauth": {
-        "sectionTitle": "11111",
-        "sectionDescription": "11111",
-        "setupLabel": "11111",
-        "notConfigured": "11111",
-        "setupHelp": "11111",
-        "openSettings": "11111",
-        "requiredTitle": "11111",
-        "requiredDescriptionAdd": "11111",
-        "requiredDescriptionUpdate": "11111",
-        "stepTitle": "11111",
-        "stepDescription": "11111",
-        "buttonSuccessSaving": "11111"
+        "sectionTitle": "55555",
+        "sectionDescription": "55555",
+        "setupLabel": "55555",
+        "notConfigured": "55555",
+        "setupHelp": "55555",
+        "openSettings": "55555",
+        "requiredTitle": "55555",
+        "requiredDescriptionAdd": "55555",
+        "requiredDescriptionUpdate": "55555",
+        "stepTitle": "55555",
+        "stepDescription": "55555",
+        "buttonSuccessSaving": "55555"
       },
       "advanced": {
-        "title": "11111",
-        "description": "11111",
-        "completeSetupSuffix": "11111"
+        "title": "55555",
+        "description": "55555",
+        "completeSetupSuffix": "55555"
       },
       "processing": {
-        "labelFiltersLabel": "11111",
-        "labelFiltersPlaceholder": "11111",
-        "labelFiltersHelp": "11111"
+        "labelFiltersLabel": "55555",
+        "labelFiltersPlaceholder": "55555",
+        "labelFiltersHelp": "55555"
       }
     },
     "imap": {
       "validation": {
-        "providerNameRequired": "11111",
-        "mailboxRequired": "11111",
-        "mailboxInvalid": "11111",
-        "hostRequired": "11111",
-        "usernameRequired": "11111",
-        "oauthInitiateFailed": "11111"
+        "providerNameRequired": "55555",
+        "mailboxRequired": "55555",
+        "mailboxInvalid": "55555",
+        "hostRequired": "55555",
+        "usernameRequired": "55555",
+        "oauthInitiateFailed": "55555"
       },
       "basic": {
-        "title": "11111",
-        "description": "11111",
-        "providerName": "11111",
-        "mailboxAddress": "11111",
-        "host": "11111",
-        "port": "11111",
-        "useTls": "11111",
-        "allowStarttls": "11111"
+        "title": "55555",
+        "description": "55555",
+        "providerName": "55555",
+        "mailboxAddress": "55555",
+        "host": "55555",
+        "port": "55555",
+        "useTls": "55555",
+        "allowStarttls": "55555"
       },
       "auth": {
-        "title": "11111",
-        "description": "11111",
-        "typeLabel": "11111",
-        "passwordOption": "11111",
-        "oauth2Option": "11111",
-        "username": "11111",
-        "password": "11111",
-        "passwordHelp": "11111",
-        "oauthStatus": "11111",
-        "connected": "11111",
-        "notConnected": "11111",
-        "reconnectOauth": "11111",
-        "authorizeUrl": "11111",
-        "tokenUrl": "11111",
-        "clientId": "11111",
-        "clientSecret": "11111",
-        "scopes": "11111",
-        "scopesPlaceholder": "11111"
+        "title": "55555",
+        "description": "55555",
+        "typeLabel": "55555",
+        "passwordOption": "55555",
+        "oauth2Option": "55555",
+        "username": "55555",
+        "password": "55555",
+        "passwordHelp": "55555",
+        "oauthStatus": "55555",
+        "connected": "55555",
+        "notConnected": "55555",
+        "reconnectOauth": "55555",
+        "authorizeUrl": "55555",
+        "tokenUrl": "55555",
+        "clientId": "55555",
+        "clientSecret": "55555",
+        "scopes": "55555",
+        "scopesPlaceholder": "55555"
       },
       "processing": {
-        "title": "11111",
-        "description": "11111",
-        "folderFilters": "11111",
-        "folderFiltersPlaceholder": "11111",
-        "active": "11111"
+        "title": "55555",
+        "description": "55555",
+        "folderFilters": "55555",
+        "folderFiltersPlaceholder": "55555",
+        "active": "55555"
       }
     }
   },
   "inboundDefaultsForm": {
     "feedback": {
-      "loadOptionsError": "11111",
-      "loading": "11111"
+      "loadOptionsError": "55555",
+      "loading": "55555"
     },
     "validation": {
-      "nameRequired": "11111",
-      "boardRequired": "11111",
-      "statusRequired": "11111",
-      "priorityRequired": "11111",
-      "clientRequired": "11111"
+      "nameRequired": "55555",
+      "boardRequired": "55555",
+      "statusRequired": "55555",
+      "priorityRequired": "55555",
+      "clientRequired": "55555"
     },
     "fields": {
       "shortName": {
-        "label": "11111",
-        "placeholder": "11111",
-        "help": "11111"
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
       },
       "displayName": {
-        "label": "11111",
-        "placeholder": "11111"
+        "label": "55555",
+        "placeholder": "55555"
       },
       "description": {
-        "label": "11111",
-        "placeholder": "11111"
+        "label": "55555",
+        "placeholder": "55555"
       },
       "active": {
-        "label": "11111"
+        "label": "55555"
       },
       "board": {
-        "label": "11111",
-        "placeholder": "11111"
+        "label": "55555",
+        "placeholder": "55555"
       },
       "status": {
-        "label": "11111",
-        "placeholder": "11111"
+        "label": "55555",
+        "placeholder": "55555"
       },
       "priority": {
-        "label": "11111",
-        "placeholder": "11111"
+        "label": "55555",
+        "placeholder": "55555"
       },
       "client": {
-        "label": "11111",
-        "placeholder": "11111",
-        "help": "11111"
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
       },
       "category": {
-        "label": "11111",
-        "placeholder": "11111",
-        "placeholderNoBoard": "11111",
-        "empty": "11111"
+        "label": "55555",
+        "placeholder": "55555",
+        "placeholderNoBoard": "55555",
+        "empty": "55555"
       },
       "location": {
-        "label": "11111",
-        "placeholder": "11111",
-        "placeholderNoClient": "11111",
-        "help": "11111"
+        "label": "55555",
+        "placeholder": "55555",
+        "placeholderNoClient": "55555",
+        "help": "55555"
       },
       "enteredBy": {
-        "label": "11111",
-        "placeholder": "11111",
-        "help": "11111"
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
       }
     },
     "section": {
-      "ticketDefaults": "11111"
+      "ticketDefaults": "55555"
     },
     "optionSuffix": {
-      "default": "11111"
+      "default": "55555"
     },
     "actions": {
-      "cancel": "11111",
-      "updating": "11111",
-      "creating": "11111",
-      "update": "11111",
-      "create": "11111"
+      "cancel": "55555",
+      "updating": "55555",
+      "creating": "55555",
+      "update": "55555",
+      "create": "55555"
     }
   }
 }

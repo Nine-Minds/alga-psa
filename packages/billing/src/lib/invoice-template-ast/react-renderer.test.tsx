@@ -226,6 +226,37 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(rendered.html).toContain('901 Harbor Ave');
   });
 
+  it('does not render an underline when the field border style is none', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'invoice-number-plain',
+            type: 'field',
+            binding: { bindingId: 'invoiceNumber' },
+            borderStyle: 'none',
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('padding:0');
+    expect(rendered.html).toContain('border:0');
+    expect(rendered.html).not.toContain('border-bottom:1px solid #cbd5e1');
+  });
+
   it('removes single-line inset padding for multiline underlined fields', async () => {
     const ast: TemplateAst = {
       kind: 'invoice-template-ast',

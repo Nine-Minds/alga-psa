@@ -19,6 +19,7 @@ export const Pressable = createMockComponent("Pressable");
 export const TextInput = createMockComponent("TextInput");
 export const ScrollView = createMockComponent("ScrollView");
 export const Modal = createMockComponent("Modal");
+export const KeyboardAvoidingView = createMockComponent("KeyboardAvoidingView");
 export const RefreshControl = createMockComponent("RefreshControl");
 export const Alert = {
   alert: () => undefined,

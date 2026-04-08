@@ -952,21 +952,50 @@ function extractMentionUserIds(content: any): string[] {
 
   try {
     // Parse content if it's a string
-    const blocks = typeof content === 'string' ? JSON.parse(content) : content;
+    const parsed = typeof content === 'string' ? JSON.parse(content) : content;
 
-    if (!Array.isArray(blocks)) return [];
+    // Handle ProseMirror doc wrapper: { type: 'doc', content: [...] }
+    const blocks = parsed?.type === 'doc' && Array.isArray(parsed.content)
+      ? parsed.content
+      : Array.isArray(parsed) ? parsed : [];
 
-    // Traverse blocks to find mention inline content
-    for (const block of blocks) {
-      if (block.content && Array.isArray(block.content)) {
-        for (const inlineContent of block.content) {
-          // Check if this is a mention inline content
-          if (inlineContent.type === 'mention' && inlineContent.props?.userId) {
-            userIds.push(inlineContent.props.userId);
+    // Recursively traverse blocks to find mention inline content
+    function traverseBlocks(blockList: any[]): void {
+      for (const block of blockList) {
+        if (!block || typeof block !== 'object') continue;
+
+        // Check inline content array (BlockNote format)
+        if (block.content && Array.isArray(block.content)) {
+          for (const inlineContent of block.content) {
+            if (inlineContent?.type === 'mention') {
+              // BlockNote format: props.userId
+              const userId = inlineContent.props?.userId
+                // ProseMirror format: attrs.userId or attrs.id
+                || inlineContent.attrs?.userId
+                || inlineContent.attrs?.id;
+              if (userId) {
+                userIds.push(userId);
+              }
+            }
           }
+        }
+
+        // Check ProseMirror node-level mentions (mention as a node, not inline content)
+        if (block.type === 'mention') {
+          const userId = block.props?.userId || block.attrs?.userId || block.attrs?.id;
+          if (userId) {
+            userIds.push(userId);
+          }
+        }
+
+        // Recurse into children (BlockNote nested blocks)
+        if (block.children && Array.isArray(block.children)) {
+          traverseBlocks(block.children);
         }
       }
     }
+
+    traverseBlocks(blocks);
   } catch (error) {
     console.error('[extractMentionUserIds] Error parsing content:', error);
   }

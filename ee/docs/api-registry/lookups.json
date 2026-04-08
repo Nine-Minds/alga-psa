@@ -153,6 +153,258 @@
     {
       "match": {
         "method": "get",
+        "path": "/api/v1/boards"
+      },
+      "metadata": {
+        "displayName": "List Boards",
+        "summary": "Fetch ticket boards",
+        "description": "Returns paginated board records for the current tenant. Use this to discover valid board_id values before creating tickets or statuses. Each board has its own set of statuses, categories, and priorities.",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Case-insensitive search on board name or description.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "include_inactive",
+            "in": "query",
+            "required": false,
+            "description": "When true, include inactive boards (excluded by default).",
+            "schema": { "type": "boolean" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of records per page (default 25, max 100).",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Pagination page number starting at 1.",
+            "schema": { "type": "integer", "minimum": 1 }
+          }
+        ],
+        "examples": [
+          {
+            "name": "List active boards",
+            "request": {
+              "query": {
+                "limit": 10
+              }
+            },
+            "notes": "Use the board_id from the response when creating tickets or querying statuses. The first active board is a safe default if the user does not specify a board."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/boards/{id}"
+      },
+      "metadata": {
+        "displayName": "Get Board",
+        "summary": "Get board by ID",
+        "description": "Returns a single board record by its UUID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Board identifier.",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/boards"
+      },
+      "metadata": {
+        "displayName": "Create Board",
+        "summary": "Create a new ticket board",
+        "description": "Creates a new board. After creating a board, create at least one status for it via POST /api/v1/statuses so tickets can be assigned to the board.",
+        "approvalRequired": true,
+        "requestBodySchema": {
+          "type": "object",
+          "properties": {
+            "board_name": { "type": "string", "description": "Board display name." },
+            "description": { "type": "string", "description": "Optional board description." },
+            "is_default": { "type": "boolean", "description": "Whether this is the default board." },
+            "is_inactive": { "type": "boolean", "description": "Whether the board is inactive." },
+            "category_type": { "type": "string", "enum": ["custom", "itil"], "description": "Category classification type." },
+            "priority_type": { "type": "string", "enum": ["custom", "itil"], "description": "Priority classification type." }
+          },
+          "required": ["board_name"]
+        },
+        "examples": [
+          {
+            "name": "Create a new board",
+            "request": {
+              "body": {
+                "board_name": "Support",
+                "description": "General support board"
+              }
+            },
+            "notes": "After creating, add statuses via POST /api/v1/statuses with the new board_id and status_type 'ticket'."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "put",
+        "path": "/api/v1/boards/{id}"
+      },
+      "metadata": {
+        "displayName": "Update Board",
+        "summary": "Update a board",
+        "description": "Updates an existing board. All fields are optional — only send the fields you want to change.",
+        "approvalRequired": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Board identifier.",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/statuses"
+      },
+      "metadata": {
+        "displayName": "List Statuses",
+        "summary": "Fetch statuses",
+        "description": "Returns paginated status records. For ticket statuses, always filter by board_id to get statuses that belong to a specific board. Use this to resolve a valid status_id before creating or updating tickets.",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "Filter by status type: ticket, project, project_task, or interaction.",
+            "schema": { "type": "string", "enum": ["ticket", "project", "project_task", "interaction"] }
+          },
+          {
+            "name": "board_id",
+            "in": "query",
+            "required": false,
+            "description": "Required when type=ticket. Filter statuses belonging to a specific board.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Case-insensitive search on status name.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of records per page (default 25, max 100).",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Pagination page number starting at 1.",
+            "schema": { "type": "integer", "minimum": 1 }
+          }
+        ],
+        "examples": [
+          {
+            "name": "List ticket statuses for a board",
+            "request": {
+              "query": {
+                "type": "ticket",
+                "board_id": "11111111-1111-1111-1111-111111111111",
+                "limit": 25
+              }
+            },
+            "notes": "Always pair type=ticket with board_id. Use the status_id from results when creating tickets — the status_id must belong to the same board_id used on the ticket."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/statuses"
+      },
+      "metadata": {
+        "displayName": "Create Status",
+        "summary": "Create a new status",
+        "description": "Creates a new status. For ticket statuses, board_id is required. The status_type must be one of: ticket, project, project_task, interaction.",
+        "approvalRequired": true,
+        "requestBodySchema": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "description": "Status display name." },
+            "status_type": { "type": "string", "enum": ["ticket", "project", "project_task", "interaction"], "description": "Type of entity this status applies to." },
+            "board_id": { "type": "string", "format": "uuid", "description": "Required for ticket statuses. The board this status belongs to." },
+            "is_closed": { "type": "boolean", "description": "Whether this status represents a closed state." },
+            "is_default": { "type": "boolean", "description": "Whether this is the default status for the board." },
+            "order_number": { "type": "integer", "description": "Display order position." },
+            "color": { "type": "string", "description": "Hex color code (e.g. #3B82F6)." },
+            "icon": { "type": "string", "description": "Lucide icon name (e.g. Clipboard, PlayCircle)." }
+          },
+          "required": ["name", "status_type"]
+        },
+        "examples": [
+          {
+            "name": "Create a ticket status for a board",
+            "request": {
+              "body": {
+                "name": "In Progress",
+                "status_type": "ticket",
+                "board_id": "11111111-1111-1111-1111-111111111111",
+                "is_closed": false,
+                "color": "#3B82F6"
+              }
+            },
+            "notes": "Use GET /api/v1/boards first to resolve the board_id. The board_id is required for ticket statuses."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "put",
+        "path": "/api/v1/statuses/{id}"
+      },
+      "metadata": {
+        "displayName": "Update Status",
+        "summary": "Update a status",
+        "description": "Updates an existing status. All fields are optional — only send the fields you want to change. Cannot change status_type or board_id after creation.",
+        "approvalRequired": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Status identifier.",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
         "path": "/api/v1/categories/ticket"
       },
       "metadata": {

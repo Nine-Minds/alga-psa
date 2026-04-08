@@ -730,6 +730,19 @@ export class TicketService extends BaseService<ITicket> {
       const { knex } = await this.getKnex();
   
       return withTransaction(knex, async (trx) => {
+        // Validate status belongs to the specified board before proceeding
+        const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
+          data.status_id,
+          data.board_id,
+          context.tenant,
+          trx
+        );
+        if (!statusBelongsToBoard.valid) {
+          throw new ValidationError('Validation failed', [
+            { path: ['status_id'], message: `status_id ${data.status_id} does not belong to board_id ${data.board_id}` }
+          ]);
+        }
+
         // Convert API data format to TicketModel input format
         const createTicketInput: CreateTicketInput = {
           title: data.title,
@@ -926,6 +939,19 @@ export class TicketService extends BaseService<ITicket> {
 
       if (!asset) {
         throw new NotFoundError('Asset not found');
+      }
+
+      // Validate status belongs to the specified board
+      const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
+        data.status_id,
+        data.board_id,
+        context.tenant,
+        trx
+      );
+      if (!statusBelongsToBoard.valid) {
+        throw new ValidationError('Validation failed', [
+          { path: ['status_id'], message: `status_id ${data.status_id} does not belong to board_id ${data.board_id}` }
+        ]);
       }
 
       // Create adapters for API service context

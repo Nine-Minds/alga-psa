@@ -58,6 +58,8 @@ jobs:
       - name: Test
         working-directory: ee/mobile
         run: npm run test
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
 
   mobile-audit:
     name: Mobile dependency audit (report)

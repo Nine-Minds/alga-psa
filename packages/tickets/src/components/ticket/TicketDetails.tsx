@@ -1819,7 +1819,7 @@ const handleClose = () => {
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                         {/* Only show the Back button if NOT in a drawer, using BackNav */}
                         {!isInDrawer && (
-                            <BackNav href="/msp/tickets">← Back to Tickets</BackNav>
+                            <BackNav href="/msp/tickets">← {t('backToTickets', 'Back to Tickets')}</BackNav>
                         )}
                         {!isInDrawer && ticket.ticket_id && (
                             <TicketNavigation currentTicketId={ticket.ticket_id} />
@@ -1854,7 +1854,7 @@ const handleClose = () => {
                                 aria-label="Open in new tab"
                             >
                                 <ExternalLink className="h-4 w-4" />
-                                <span>Open in new tab</span>
+                                <span>{t('fields.openInNewTab', 'Open in new tab')}</span>
                             </Button>
                         )}
                     </div>
@@ -1863,7 +1863,7 @@ const handleClose = () => {
                 <div className="flex items-center space-x-5 mb-5 text-sm text-gray-600">
                     {ticket.entered_at && (
                         <p>
-                            Created {createdRelativeTime || (() => {
+                            {t('fields.created', 'Created')} {createdRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
                                 const localDate = utcToLocal(ticket.entered_at, tz);
                                 return formatDateTime(localDate, tz, dateTimeFormat);
@@ -1872,7 +1872,7 @@ const handleClose = () => {
                     )}
                     {ticket.updated_at && (
                         <p>
-                            Updated {updatedRelativeTime || (() => {
+                            {t('fields.updated', 'Updated')} {updatedRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
                                 const localDate = utcToLocal(ticket.updated_at, tz);
                                 return formatDateTime(localDate, tz, dateTimeFormat);

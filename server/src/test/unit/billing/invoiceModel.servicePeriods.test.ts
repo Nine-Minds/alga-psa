@@ -600,6 +600,26 @@ describe('invoice model recurring service-period projection', () => {
           billing_timing: 'arrears',
         },
       ],
+      recurring_service_periods: [
+        {
+          tenant: 'tenant-1',
+          invoice_id: 'invoice-1',
+          service_period_start: new Date('2025-01-01T00:00:00.000Z'),
+          service_period_end: new Date('2025-02-01T00:00:00.000Z'),
+          invoice_window_start: new Date('2025-02-01T00:00:00.000Z'),
+          invoice_window_end: new Date('2025-03-01T00:00:00.000Z'),
+          cadence_owner: 'client',
+        },
+        {
+          tenant: 'tenant-1',
+          invoice_id: 'invoice-1',
+          service_period_start: new Date('2025-02-01T00:00:00.000Z'),
+          service_period_end: new Date('2025-03-01T00:00:00.000Z'),
+          invoice_window_start: new Date('2025-02-01T00:00:00.000Z'),
+          invoice_window_end: new Date('2025-03-01T00:00:00.000Z'),
+          cadence_owner: 'client',
+        },
+      ],
       clients: [
         {
           client_id: 'client-1',
@@ -640,6 +660,15 @@ describe('invoice model recurring service-period projection', () => {
         billing_timing: 'arrears',
       });
     }
+
+    expect(fullRead).toMatchObject({
+      recurring_service_period_start: '2025-01-01',
+      recurring_service_period_end: '2025-03-01',
+      recurring_invoice_window_start: '2025-02-01',
+      recurring_invoice_window_end: '2025-03-01',
+      recurring_execution_window_kind: 'client_cadence_window',
+      recurring_cadence_source: 'client_schedule',
+    });
   });
 
   it('T091: partially credit-applied recurring invoices keep canonical detail periods on reread', async () => {

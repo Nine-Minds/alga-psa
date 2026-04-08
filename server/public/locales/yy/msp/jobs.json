@@ -1,85 +1,85 @@
 {
   "shared": {
     "fallbacks": {
-      "empty": "11111"
+      "empty": "55555"
     },
     "statusLabels": {
-      "completed": "11111",
-      "failed": "11111",
-      "processing": "11111",
-      "pending": "11111"
+      "completed": "55555",
+      "failed": "55555",
+      "processing": "55555",
+      "pending": "55555"
     },
     "runnerLabels": {
-      "temporal": "11111",
-      "pgboss": "11111"
+      "temporal": "55555",
+      "pgboss": "55555"
     }
   },
   "recentTable": {
     "columns": {
-      "jobName": "11111",
-      "runner": "11111",
-      "status": "11111",
-      "duration": "11111",
-      "started": "11111",
-      "completed": "11111"
+      "jobName": "55555",
+      "runner": "55555",
+      "status": "55555",
+      "duration": "55555",
+      "started": "55555",
+      "completed": "55555"
     },
     "time": {
-      "justNow": "11111",
-      "minutesAgo": "11111",
-      "hoursAgo": "11111"
+      "justNow": "55555",
+      "minutesAgo": "55555 {{count}} 55555",
+      "hoursAgo": "55555 {{count}} 55555"
     },
     "duration": {
-      "milliseconds": "11111",
-      "seconds": "11111",
-      "minutesSeconds": "11111",
-      "hoursMinutes": "11111"
+      "milliseconds": "55555 {{count}} 55555",
+      "seconds": "55555 {{count}} 55555",
+      "minutesSeconds": "55555 {{minutes}} 55555 {{seconds}} 55555",
+      "hoursMinutes": "55555 {{hours}} 55555 {{minutes}} 55555"
     },
-    "externalId": "11111"
+    "externalId": "55555 {{id}} 55555"
   },
   "metrics": {
     "labels": {
-      "totalJobs": "11111",
-      "totalJobsPgBoss": "11111",
-      "totalJobsTemporal": "11111",
-      "completed": "11111",
-      "failed": "11111",
-      "pending": "11111",
-      "processing": "11111",
-      "pgboss": "11111",
-      "temporal": "11111"
+      "totalJobs": "55555",
+      "totalJobsPgBoss": "55555",
+      "totalJobsTemporal": "55555",
+      "completed": "55555",
+      "failed": "55555",
+      "pending": "55555",
+      "processing": "55555",
+      "pgboss": "55555",
+      "temporal": "55555"
     },
-    "successRate": "11111"
+    "successRate": "55555 {{count}} 55555"
   },
   "historyTable": {
     "columns": {
-      "jobName": "11111",
-      "status": "11111",
-      "created": "11111",
-      "started": "11111",
-      "completed": "11111"
+      "jobName": "55555",
+      "status": "55555",
+      "created": "55555",
+      "started": "55555",
+      "completed": "55555"
     }
   },
   "progress": {
-    "loading": "11111",
+    "loading": "55555",
     "labels": {
-      "created": "11111",
-      "jobData": "11111"
+      "created": "55555",
+      "jobData": "55555"
     }
   },
   "drawer": {
-    "title": "11111",
-    "jobId": "11111",
+    "title": "55555",
+    "jobId": "55555 {{id}} 55555",
     "sections": {
-      "progress": "11111",
-      "metrics": "11111",
-      "history": "11111"
+      "progress": "55555",
+      "metrics": "55555",
+      "history": "55555"
     }
   },
   "stepHistory": {
-    "title": "11111",
+    "title": "55555",
     "labels": {
-      "processed": "11111",
-      "retries": "11111"
+      "processed": "55555",
+      "retries": "55555"
     }
   }
 }

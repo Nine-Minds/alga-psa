@@ -526,7 +526,9 @@ function formatTicketDateTime(
 async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
-  
+  // Resolve userId from domain-specific field or base field, falling back to legacy
+  const creatorUserId = (payload as any).createdByUserId || payload.actorUserId || (payload as any).userId;
+
   try {
     console.log('[EmailSubscriber] Creating database connection');
     const db = await getConnection(tenantId);
@@ -647,7 +649,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
 
     const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
 
-    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, payload.userId);
+    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, creatorUserId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -657,7 +659,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     const clientName = safeString(ticket.client_name) || 'Unassigned Client';
 
     const createdAt = formatTicketDateTime(ticket.entered_at as string | Date | null, emailTimeZone);
-    const createdByName = safeString(ticket.created_by_name) || payload.userId || 'System';
+    const createdByName = safeString(ticket.created_by_name) || 'System';
     const createdDetails = `${createdAt} · ${createdByName}`;
 
     const assignedToName = safeString(ticket.assigned_to_name) || 'Unassigned';
@@ -872,6 +874,9 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
   const { payload } = event;
   const { tenantId } = payload;
+  // Resolve userId from domain-specific field (updatedByUserId) or base field (actorUserId),
+  // falling back to legacy userId for backward compatibility
+  const updaterUserId = (payload as any).updatedByUserId || payload.actorUserId || (payload as any).userId;
 
   try {
     console.log('[EmailSubscriber] Creating tenant database connection:', {
@@ -997,7 +1002,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       status: ticket.status_name
     });
 
-    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, payload.userId);
+    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, updaterUserId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -1076,9 +1081,11 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone);
 
     // Get updater's name
-    const updater = await db('users')
-      .where({ user_id: payload.userId, tenant: tenantId })
-      .first();
+    const updater = updaterUserId
+      ? await db('users')
+          .where({ user_id: updaterUserId, tenant: tenantId })
+          .first()
+      : null;
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
@@ -1105,7 +1112,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       categoryDetails,
       locationSummary,
       changes: formattedChanges,
-      updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : payload.userId
+      updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : 'System'
     };
 
     const buildContext = (url: string) => ({
@@ -1151,7 +1158,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
           recipientEmail: email,
           recipientUserId: params.recipientUserId,
           isInternal: params.isInternal,
-          userId: payload.userId,
+          userId: updaterUserId || '',
           changes: payload.changes || {}
         });
       };
@@ -1647,6 +1654,8 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
 async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
+  // Resolve userId from domain-specific field or base field, falling back to legacy
+  const assignerUserId = (payload as any).assignedByUserId || payload.actorUserId || (payload as any).userId;
 
   try {
     const db = await getConnection(tenantId);
@@ -1735,10 +1744,12 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       return;
     }
 
-    const assignerName = await db('users')
-      .where({ user_id: payload.userId, tenant: tenantId })
-      .first()
-      .then(user => user ? `${user.first_name} ${user.last_name}` : 'System');
+    const assignerName = assignerUserId
+      ? await db('users')
+          .where({ user_id: assignerUserId, tenant: tenantId })
+          .first()
+          .then((user: any) => user ? `${user.first_name} ${user.last_name}` : 'System')
+      : 'System';
 
     const safeString = (value?: unknown) => {
       if (typeof value === 'string') {
@@ -1750,7 +1761,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       return String(value).trim();
     };
 
-    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, payload.userId);
+    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, assignerUserId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -2016,6 +2027,8 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
+  // Resolve userId from base field, falling back to legacy
+  const commentUserId = payload.actorUserId || (payload as any).userId;
 
   try {
     const db = await getConnection(tenantId);
@@ -2114,7 +2127,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       return String(value).trim();
     };
 
-    let commentAuthorUserId: string | null = payload.userId || null;
+    let commentAuthorUserId: string | null = commentUserId || null;
     let commentAuthorContactId: string | null = null;
     let commentAuthorEmail = '';
 
@@ -2158,7 +2171,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       commentAuthorEmail = payload.comment.author.trim();
     }
 
-    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, payload.userId);
+    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, commentUserId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -2583,6 +2596,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
+  // Resolve userId from domain-specific field or base field, falling back to legacy
+  const closerUserId = (payload as any).closedByUserId || payload.actorUserId || (payload as any).userId;
 
   try {
     const db = await getConnection(tenantId);
@@ -2681,7 +2696,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       return String(value).trim();
     };
 
-    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, payload.userId);
+    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, closerUserId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -2760,10 +2775,12 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const changes = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone);
 
     // Get closer's name
-    const closer = await db('users')
-      .where({ user_id: payload.userId, tenant: tenantId })
-      .first();
-    const closedBy = closer ? `${closer.first_name} ${closer.last_name}` : payload.userId;
+    const closer = closerUserId
+      ? await db('users')
+          .where({ user_id: closerUserId, tenant: tenantId })
+          .first()
+      : null;
+    const closedBy = closer ? `${closer.first_name} ${closer.last_name}` : 'System';
 
     // Get the resolution comment (most recent comment with is_resolution = true)
     const resolutionComment = await db('comments')

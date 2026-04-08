@@ -8,6 +8,9 @@ const previewInvoice: WasmInvoiceViewModel = {
   dueDate: '2026-02-15',
   currencyCode: 'USD',
   poNumber: 'PO-7781',
+  recurringServicePeriodStart: '2026-01-01',
+  recurringServicePeriodEnd: '2026-02-01',
+  recurringServicePeriodLabel: 'Jan 1, 2026 - Feb 1, 2026',
   customer: {
     name: 'Acme Co.',
     address: '123 Main St',
@@ -66,6 +69,22 @@ describe('previewBindings', () => {
     expect(currencyValue.text).toBe('$21.00');
   });
 
+  it('resolves recurring service period header bindings', () => {
+    const startValue = resolveFieldPreviewValue({
+      invoice: previewInvoice,
+      bindingKey: 'invoice.recurringServicePeriodStart',
+      format: 'date',
+    });
+    const labelValue = resolveFieldPreviewValue({
+      invoice: previewInvoice,
+      bindingKey: 'invoice.recurringServicePeriodLabel',
+      format: 'text',
+    });
+
+    expect(startValue.text).toMatch(/\d{1,2}\/\d{1,2}\/\d{4}/);
+    expect(labelValue.text).toBe('Jan 1, 2026 - Feb 1, 2026');
+  });
+
   it('derives invoice.discount from subtotal + tax - total', () => {
     const value = resolveFieldPreviewValue({
       invoice: {
@@ -79,6 +98,21 @@ describe('previewBindings', () => {
     });
 
     expect(value.text).toBe('$2.00');
+  });
+
+  it('returns null recurring service period header bindings when canonical summary is missing', () => {
+    const value = resolveFieldPreviewValue({
+      invoice: {
+        ...previewInvoice,
+        recurringServicePeriodStart: null,
+        recurringServicePeriodEnd: null,
+        recurringServicePeriodLabel: null,
+      },
+      bindingKey: 'invoice.recurringServicePeriodLabel',
+      format: 'text',
+    });
+
+    expect(value.text).toBeNull();
   });
 
   it('does not mirror customer address when tenant address is missing', () => {

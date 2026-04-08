@@ -186,7 +186,7 @@
       "dayLeft": "11111",
       "daysLeft": "11111 {{count}} 11111",
       "premiumTrial": "11111 {{daysLabel}} 11111",
-      "stripeTrial": "11111 {{tier}} {{daysLabel}} 11111"
+      "stripeTrial": "11111 {{tier}} 11111 {{daysLabel}} 11111"
     },
     "paymentFailed": {
       "message": "11111",

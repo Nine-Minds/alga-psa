@@ -230,10 +230,17 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
     expect(screen.getByText('Current')).toBeTruthy();
 
     const searchInput = screen.getByPlaceholderText('Search fields...') as HTMLInputElement;
+    fireEvent.change(searchInput, { target: { value: 'recurring service period' } });
+    fireEvent.click(screen.getByText('Recurring Service Period'));
+
+    let updated = useInvoiceDesignerStore.getState().nodesById['field-1'];
+    expect((updated.props as any)?.metadata?.bindingKey).toBe('invoice.recurringServicePeriodLabel');
+    expect((updated.props as any)?.metadata?.placeholder).toBe('Recurring Service Period');
+
     fireEvent.change(searchInput, { target: { value: 'customer address' } });
     fireEvent.click(screen.getByText('Customer Address'));
 
-    let updated = useInvoiceDesignerStore.getState().nodesById['field-1'];
+    updated = useInvoiceDesignerStore.getState().nodesById['field-1'];
     expect((updated.props as any)?.metadata?.bindingKey).toBe('customer.address');
     expect((updated.props as any)?.metadata?.placeholder).toBe('Customer Address');
 

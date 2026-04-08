@@ -40,8 +40,10 @@ export const createTicketSchema = z.object({
   tags: z.array(z.string()).optional()
 });
 
-// Update ticket schema (all fields optional)
-export const updateTicketSchema = createUpdateSchema(createTicketSchema);
+// Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared)
+export const updateTicketSchema = createUpdateSchema(createTicketSchema).extend({
+  contact_name_id: uuidSchema.nullable().optional(),
+});
 
 // Ticket status update schema
 export const updateTicketStatusSchema = z.object({

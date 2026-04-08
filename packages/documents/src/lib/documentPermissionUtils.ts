@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: DocumentAssociation model method signature changes
 import type { IUser, IDocument, IDocumentAssociation } from '@alga-psa/types';
 import { hasPermission } from '@alga-psa/auth';
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
@@ -38,7 +36,9 @@ export async function canAccessDocument(
   }
 
   // 2. Get all associations for this document
+  const { knex } = await createTenantKnex();
   const associations = await DocumentAssociation.getByDocumentId(
+    knex,
     document.document_id
   );
 

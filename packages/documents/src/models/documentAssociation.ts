@@ -37,6 +37,16 @@ class DocumentAssociation {
     await knexOrTrx('document_associations').where({ entity_id, entity_type, tenant }).delete();
   }
 
+  static async getByDocumentId(
+    knexOrTrx: Knex | Knex.Transaction,
+    document_id: string
+  ): Promise<IDocumentAssociation[]> {
+    const tenant = await requireTenantId(knexOrTrx);
+    return knexOrTrx('document_associations')
+      .where({ document_id, tenant })
+      .orderBy('created_at', 'desc');
+  }
+
   static async getByEntity(
     knexOrTrx: Knex | Knex.Transaction,
     entity_id: string,

@@ -89,6 +89,18 @@ vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: () => ({ enabled: false }),
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (_key: string, fallback?: string, options?: Record<string, unknown>) => {
+      if (!fallback) {
+        return _key;
+      }
+
+      return fallback.replace(/\{\{(\w+)\}\}/g, (_match, name) => String(options?.[name] ?? ''));
+    },
+  }),
+}));
+
 vi.mock('@alga-psa/ui/context', () => ({
   useQuickAddClient: () => ({
     renderQuickAddClient: () => null,
@@ -313,8 +325,10 @@ describe('QuickAddTicket board-scoped statuses', () => {
     });
 
     expect(screen.getByTestId('board-picker-selected')).toHaveTextContent('board-a');
-    expect(statusSelect).not.toBeDisabled();
-    expect(statusSelect).toHaveValue('status-a-default');
+    await waitFor(() => {
+      expect(statusSelect).not.toBeDisabled();
+      expect(statusSelect).toHaveValue('status-a-default');
+    });
 
     const optionLabels = Array.from(statusSelect.querySelectorAll('option')).map((option) => option.textContent);
     expect(optionLabels).toContain('Board A Default');

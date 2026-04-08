@@ -228,6 +228,9 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
   const bindingKeySuggestions = useMemo(() => {
     const rawSuggestions = getUniqueStrings([
       ...COLUMN_PRESETS.map((preset) => preset.key),
+      'item.servicePeriodStart',
+      'item.servicePeriodEnd',
+      'item.billingTiming',
       ...columns.map((column) => asTrimmedString(column.key)),
     ]);
 

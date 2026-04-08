@@ -824,7 +824,7 @@ export function registerEmailWorkflowActionsV2(): void {
     handler: async (input) => {
       const { convertHtmlToBlockNote } = await import('@alga-psa/shared/lib/utils/contentConversion');
       try {
-        const blocks = convertHtmlToBlockNote(input.html);
+        const blocks = await convertHtmlToBlockNote(input.html);
         return { success: true, blocks };
       } catch (error) {
         return { success: false, blocks: [{ type: 'paragraph', content: [] }] };
