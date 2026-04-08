@@ -33,6 +33,7 @@ import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { useTranslation } from 'react-i18next';
 
 // Column configuration for responsive hiding
 // Lower priority number = higher importance (shown first)
@@ -93,6 +94,7 @@ export default function TemplateTaskListView({
   teamNames = {},
   teamAvatarUrls = {},
 }: TemplateTaskListViewProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
@@ -271,12 +273,20 @@ export default function TemplateTaskListView({
   ): { label: string; icon: React.ReactNode; color: string } => {
     switch (type) {
       case 'blocks':
-        return { label: 'Blocks', icon: <Ban className="h-3 w-3" />, color: 'text-destructive' };
+        return {
+          label: t('taskDependencies.blocks', 'Blocks'),
+          icon: <Ban className="h-3 w-3" />,
+          color: 'text-destructive',
+        };
       case 'blocked_by':
-        return { label: 'Blocked by', icon: <Ban className="h-3 w-3" />, color: 'text-orange-500' };
+        return {
+          label: t('taskDependencies.blockedBy', 'Blocked by'),
+          icon: <Ban className="h-3 w-3" />,
+          color: 'text-orange-500',
+        };
       case 'related_to':
         return {
-          label: 'Related to',
+          label: t('taskDependencies.relatedTo', 'Related to'),
           icon: <GitBranch className="h-3 w-3" />,
           color: 'text-blue-500',
         };
@@ -296,7 +306,9 @@ export default function TemplateTaskListView({
       <div className="text-xs space-y-2 min-w-[220px]">
         {deps.predecessors.length > 0 && (
           <div>
-            <div className="font-medium text-gray-300 mb-1">Depends on:</div>
+            <div className="font-medium text-gray-300 mb-1">
+              {t('taskDependencies.dependsOn', 'Depends on:')}
+            </div>
             {deps.predecessors.map((d, i) => {
               const info = getDependencyTypeInfo(d.dependency_type);
               const predecessorTask = tasks.find(
@@ -305,7 +317,7 @@ export default function TemplateTaskListView({
               return (
                 <div key={i} className="flex items-center gap-1.5 ml-2">
                   <span className={info.color}>{info.icon}</span>
-                  <span>{predecessorTask?.task_name || 'Unknown task'}</span>
+                  <span>{predecessorTask?.task_name || t('templates.editor.unknownTask', 'Unknown task')}</span>
                 </div>
               );
             })}
@@ -313,14 +325,16 @@ export default function TemplateTaskListView({
         )}
         {deps.successors.length > 0 && (
           <div>
-            <div className="font-medium text-gray-300 mb-1">Blocks:</div>
+            <div className="font-medium text-gray-300 mb-1">
+              {t('templates.editor.blocks', 'Blocks:')}
+            </div>
             {deps.successors.map((d, i) => {
               const info = getDependencyTypeInfo(d.dependency_type);
               const successorTask = tasks.find((t) => t.template_task_id === d.successor_task_id);
               return (
                 <div key={i} className="flex items-center gap-1.5 ml-2">
                   <span className={info.color}>{info.icon}</span>
-                  <span>{successorTask?.task_name || 'Unknown task'}</span>
+                  <span>{successorTask?.task_name || t('templates.editor.unknownTask', 'Unknown task')}</span>
                 </div>
               );
             })}
@@ -444,10 +458,12 @@ export default function TemplateTaskListView({
       {/* Hidden columns alert */}
       {hiddenColumnCount > 0 && (
         <Alert variant="info" className="rounded-none border-x-0 border-t-0">
-          <AlertDescription className="flex items-center text-sm">
-            <Zap className="h-4 w-4 mr-1" />
-            {hiddenColumnCount} column{hiddenColumnCount > 1 ? 's' : ''} hidden due to limited space. Resize browser to see more.
-          </AlertDescription>
+            <AlertDescription className="flex items-center text-sm">
+              <Zap className="h-4 w-4 mr-1" />
+              {t('projectDetail.hiddenColumnsAlert', '{{count}} columns hidden due to limited space. Resize browser to see more.', {
+                count: hiddenColumnCount,
+              })}
+            </AlertDescription>
         </Alert>
       )}
       {/* Column headers - sticky */}
@@ -459,35 +475,35 @@ export default function TemplateTaskListView({
             <tr>
               <th className="w-10 px-3 py-3" />
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
-                Name
+                {t('tasks.taskName', 'Name')}
               </th>
               {isColumnVisible('deps') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Deps
+                  {t('tasks.dependencies', 'Deps')}
                 </th>
               )}
               {isColumnVisible('checklist') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Checklist
+                  {t('tasks.checklist', 'Checklist')}
                 </th>
               )}
               {isColumnVisible('assignee') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Assignee
+                  {t('tasks.assignee', 'Assignee')}
                 </th>
               )}
               {isColumnVisible('est_hours') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Est. Hours
+                  {t('tasks.estHours', 'Est. Hours')}
                 </th>
               )}
               {isColumnVisible('duration') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Duration
+                  {t('templates.editor.duration', 'Duration')}
                 </th>
               )}
               <th className="px-3 py-3 text-right text-xs font-medium text-gray-500">
-                Actions
+                {t('templates.list.columns.actions', 'Actions')}
               </th>
             </tr>
           </thead>
@@ -500,8 +516,12 @@ export default function TemplateTaskListView({
         {phaseGroups.length === 0 && (
           <div className="flex items-center justify-center h-full text-gray-500">
             <div className="text-center">
-              <p className="text-base font-medium">No phases found</p>
-              <p className="text-sm mt-1">Create phases and add tasks to see them here</p>
+              <p className="text-base font-medium">
+                {t('templates.editor.noPhasesFound', 'No phases found')}
+              </p>
+              <p className="text-sm mt-1">
+                {t('projectDetail.listViewEmptyMessage', 'Create phases and add tasks to see them here')}
+              </p>
               <Button
                 id="add-phase-empty-state"
                 variant="default"
@@ -510,7 +530,7 @@ export default function TemplateTaskListView({
                 onClick={onAddPhase}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Phase
+                {t('projectPhases.addPhase', 'Add Phase')}
               </Button>
             </div>
           </div>
@@ -545,10 +565,14 @@ export default function TemplateTaskListView({
                             <div>
                               <div className="flex items-center gap-3">
                                 <h4 className="font-semibold text-gray-900">
-                                  {phaseGroup.phase.phase_name || 'Untitled Phase'}
+                                  {phaseGroup.phase.phase_name || t('templates.editor.untitledPhase', 'Untitled Phase')}
                                 </h4>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
-                                  {phaseGroup.totalTasks} {phaseGroup.totalTasks === 1 ? 'task' : 'tasks'}
+                                  {phaseGroup.totalTasks === 1
+                                    ? t('templates.editor.taskCount_one', '1 task')
+                                    : t('templates.editor.taskCount_other', '{{count}} tasks', {
+                                        count: phaseGroup.totalTasks,
+                                      })}
                                 </span>
                               </div>
 
@@ -566,13 +590,17 @@ export default function TemplateTaskListView({
                                   {phaseGroup.phase.duration_days !== undefined && (
                                     <span className="flex items-center gap-1">
                                       <Clock className="w-3.5 h-3.5" />
-                                      Duration: {phaseGroup.phase.duration_days} days
+                                      {t('templates.editor.phaseDurationDays', 'Duration: {{days}} days', {
+                                        days: phaseGroup.phase.duration_days,
+                                      })}
                                     </span>
                                   )}
                                   {phaseGroup.phase.start_offset_days !== undefined &&
                                     phaseGroup.phase.start_offset_days > 0 && (
                                       <span>
-                                        Start offset: +{phaseGroup.phase.start_offset_days} days
+                                        {t('templates.editor.phaseStartDays', 'Start: +{{days}} days', {
+                                          days: phaseGroup.phase.start_offset_days,
+                                        })}
                                       </span>
                                     )}
                                 </div>
@@ -591,7 +619,7 @@ export default function TemplateTaskListView({
                                 }}
                               >
                                 <Plus className="h-4 w-4 mr-1" />
-                                Add Task
+                                {t('projectPhases.addTask', 'Add Task')}
                               </Button>
                             </div>
                           </div>
@@ -611,7 +639,7 @@ export default function TemplateTaskListView({
                       const displayName =
                         statusGroup.status.status_name ||
                         statusGroup.status.custom_status_name ||
-                        'Status';
+                        t('templates.editor.statusFallback', 'Status');
                       const isDropTarget = draggedTask &&
                         dragOverStatus === statusGroup.status.template_status_mapping_id &&
                         dragOverPhase === phaseGroup.phase.template_phase_id;
@@ -760,7 +788,9 @@ export default function TemplateTaskListView({
                                           <Tooltip
                                             content={
                                               <div className="text-xs space-y-1 max-w-xs">
-                                                <div className="font-medium text-gray-300 mb-1">Checklist Items:</div>
+                                                <div className="font-medium text-gray-300 mb-1">
+                                                  {t('projectDetail.checklistItems', 'Checklist Items:')}
+                                                </div>
                                                 {taskChecklistItems.map((item, i) => (
                                                   <div key={i} className="flex items-center gap-1.5">
                                                     <CheckSquare className={`h-3 w-3 ${item.completed ? 'text-green-400' : 'text-gray-400'}`} />
@@ -818,7 +848,9 @@ export default function TemplateTaskListView({
                                               );
                                             }
                                             return (
-                                              <span className="text-sm text-gray-400">Unassigned</span>
+                                              <span className="text-sm text-gray-400">
+                                                {t('projectList.unassigned', 'Unassigned')}
+                                              </span>
                                             );
                                           })()
                                         )}
@@ -840,10 +872,14 @@ export default function TemplateTaskListView({
                                             <Tooltip
                                               content={
                                                 <div className="text-xs space-y-1.5">
-                                                  <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                                                  <div className="font-medium text-gray-300 mb-1">
+                                                    {t('templates.editor.additionalAgents', 'Additional Agents:')}
+                                                  </div>
                                                   {additionalAssignments.map((assignment, i) => {
                                                     const assignmentUser = users.find(u => u.user_id === assignment.user_id);
-                                                    const userName = assignmentUser ? `${assignmentUser.first_name} ${assignmentUser.last_name}` : 'Unknown';
+                                                    const userName = assignmentUser
+                                                      ? `${assignmentUser.first_name} ${assignmentUser.last_name}`
+                                                      : t('templates.editor.unknownUser', 'Unknown');
                                                     return (
                                                       <div key={i} className="flex items-center gap-2">
                                                         <UserAvatar
@@ -906,7 +942,7 @@ export default function TemplateTaskListView({
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => onTaskClick(task)}
-                                        title="Edit task"
+                                        title={t('templates.editor.editTask', 'Edit Task')}
                                       >
                                         <Pencil className="h-3.5 w-3.5" />
                                       </Button>
@@ -915,7 +951,7 @@ export default function TemplateTaskListView({
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => onTaskDelete(task)}
-                                        title="Delete task"
+                                        title={t('templates.editor.deleteTask', 'Delete Task')}
                                       >
                                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
                                       </Button>
@@ -944,7 +980,7 @@ export default function TemplateTaskListView({
             onClick={onAddPhase}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Phase
+            {t('projectPhases.addPhase', 'Add Phase')}
           </Button>
         </div>
       </div>

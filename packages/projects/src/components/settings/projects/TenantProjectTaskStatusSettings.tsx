@@ -22,8 +22,10 @@ import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/Sta
 import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from 'react-i18next';
 
 export function TenantProjectTaskStatusSettings() {
+  const { t } = useTranslation(['features/projects', 'common']);
   const STATUS_TYPE = 'project_task'; // Fixed to project_task type
 
   const [statuses, setStatuses] = useState<IStatus[]>([]);
@@ -103,31 +105,35 @@ export function TenantProjectTaskStatusSettings() {
     try {
       if (editingStatus) {
         await updateTenantProjectStatus(editingStatus.status_id, formData);
-        toast.success('Status updated successfully');
+        toast.success(t('settings.statuses.status_updated_success', 'Status updated successfully'));
       } else {
         await createTenantProjectStatus(formData);
-        toast.success('Status created successfully');
+        toast.success(t('settings.statuses.status_created_success', 'Status created successfully'));
       }
       await loadStatuses();
       setShowDialog(false);
     } catch (error) {
-      handleError(error, 'Failed to save status. Please try again.');
+      handleError(error, t('settings.statuses.save_failed', 'Failed to save status. Please try again.'));
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDelete(statusId: string, statusName: string) {
-    if (!window.confirm(`Are you sure you want to delete the status "${statusName}"? This cannot be undone.`)) {
+    if (!window.confirm(t('settings.statuses.delete_confirm_message', 'Are you sure you want to delete the status "{{statusName}}"? This cannot be undone.', {
+      statusName,
+    }))) {
       return;
     }
 
     try {
       await deleteTenantProjectStatus(statusId);
       setStatuses(statuses.filter(s => s.status_id !== statusId));
-      toast.success(`Status "${statusName}" deleted successfully`);
+      toast.success(t('settings.statuses.status_deleted_success', 'Status "{{statusName}}" deleted successfully', {
+        statusName,
+      }));
     } catch (error: any) {
-      handleError(error, 'Failed to delete status. It may be in use by projects.');
+      handleError(error, t('settings.statuses.delete_in_use', 'Failed to delete status. It may be in use by projects.'));
     }
   }
 
@@ -204,19 +210,24 @@ export function TenantProjectTaskStatusSettings() {
         );
 
         if (result.imported.length > 0) {
-          toast.success(`Successfully imported ${result.imported.length} statuses`);
+          toast.success(t('settings.statuses.status_imported_success', 'Successfully imported {{count}} statuses', {
+            count: result.imported.length,
+          }));
           await loadStatuses();
         }
 
         if (result.skipped.length > 0) {
-          toast.error(`Skipped ${result.skipped.length} statuses (${(result.skipped as any[])[0].reason})`);
+          toast.error(t('settings.statuses.status_import_skipped', 'Skipped {{count}} statuses ({{reason}})', {
+            count: result.skipped.length,
+            reason: (result.skipped as any[])[0].reason,
+          }));
         }
 
         setShowStatusImportDialog(false);
         setSelectedImportStatuses([]);
       }
     } catch (error) {
-      handleError(error, 'Failed to import statuses');
+      handleError(error, t('settings.statuses.import_failed', 'Failed to import statuses'));
     }
   }
 
@@ -230,14 +241,18 @@ export function TenantProjectTaskStatusSettings() {
       );
 
       if (result.imported.length > 0) {
-        toast.success(`Successfully imported ${result.imported.length} statuses`);
+        toast.success(t('settings.statuses.status_imported_success', 'Successfully imported {{count}} statuses', {
+          count: result.imported.length,
+        }));
         await loadStatuses();
         setSelectedImportStatuses([]);
       }
 
       if (result.skipped.length > 0) {
         const skippedNames = (result.skipped as any[]).map((s: any) => s.name).join(', ');
-        toast(`Skipped: ${skippedNames}`, {
+        toast(t('settings.statuses.import_skipped_names', 'Skipped: {{names}}', {
+          names: skippedNames,
+        }), {
           icon: 'ℹ️',
           duration: 4000,
         });
@@ -247,7 +262,7 @@ export function TenantProjectTaskStatusSettings() {
       setImportConflicts([]);
       setConflictResolutions({});
     } catch (error) {
-      handleError(error, 'Failed to import statuses');
+      handleError(error, t('settings.statuses.import_failed', 'Failed to import statuses'));
     }
   }
 
@@ -255,7 +270,7 @@ export function TenantProjectTaskStatusSettings() {
     return (
       <Card>
         <CardContent className="p-6">
-          <div>Loading...</div>
+          <div>{t('settings.statuses.loading', 'Loading...')}</div>
         </CardContent>
       </Card>
     );
@@ -266,18 +281,18 @@ export function TenantProjectTaskStatusSettings() {
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle>Project Task Status Library</CardTitle>
+            <CardTitle>{t('settings.statuses.task_status_library_title', 'Project Task Status Library')}</CardTitle>
             <CardDescription>
-              Manage your organization's project task statuses. These statuses can be used across all projects.
+              {t('settings.statuses.task_status_library_description', `Manage your organization's project task statuses. These statuses can be used across all projects.`)}
             </CardDescription>
           </div>
           <div className="flex gap-2">
             <Button onClick={openCreateDialog} id="create-status-button">
               <Plus className="w-4 h-4 mr-2" />
-              Create Status
+              {t('settings.statuses.create_status_title', 'Create Status')}
             </Button>
             <Button onClick={handleImportStatuses} id="import-task-statuses-button" variant="outline">
-              Import from Standard
+              {t('settings.statuses.import_from_standard', 'Import from Standard')}
             </Button>
           </div>
         </div>
@@ -285,8 +300,10 @@ export function TenantProjectTaskStatusSettings() {
       <CardContent>
         {statuses.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            <p>No project task statuses found</p>
-            <p className="text-sm mt-2">Create your first status to get started</p>
+            <p>{t('settings.statuses.task_status_library_empty', 'No project task statuses found')}</p>
+            <p className="text-sm mt-2">
+              {t('settings.statuses.task_status_library_empty_hint', 'Create your first status to get started')}
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -342,7 +359,7 @@ export function TenantProjectTaskStatusSettings() {
                     <span className="font-medium">{status.name}</span>
                     {status.is_closed && (
                       <span className="ml-2 text-xs px-2 py-1 bg-gray-200 rounded">
-                        Closed
+                        {t('settings.statuses.closed', 'Closed')}
                       </span>
                     )}
                   </div>
@@ -353,18 +370,18 @@ export function TenantProjectTaskStatusSettings() {
                     size="sm"
                     onClick={() => openEditDialog(status)}
                     id={`edit-status-${status.status_id}`}
-                  >
-                    <Edit2 className="w-4 h-4 mr-1" />
-                    Edit
+                    >
+                      <Edit2 className="w-4 h-4 mr-1" />
+                      {t('common:actions.edit', 'Edit')}
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(status.status_id, status.name)}
                     id={`delete-status-${status.status_id}`}
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Delete
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      {t('common:actions.delete', 'Delete')}
                   </Button>
                 </div>
               </div>
@@ -376,18 +393,20 @@ export function TenantProjectTaskStatusSettings() {
           <Dialog
             isOpen={true}
             onClose={() => setShowDialog(false)}
-            title={editingStatus ? 'Edit Status' : 'Create Status'}
+            title={editingStatus
+              ? t('settings.statuses.edit_status_title', 'Edit Status')
+              : t('settings.statuses.create_status_title', 'Create Status')}
             id="status-form-dialog"
           >
             <div className="space-y-6 p-6">
               {/* Status Name */}
               <Input
                 id="status-name"
-                label="Status Name"
+                label={t('settings.statuses.status_name', 'Status Name')}
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., In Progress, Blocked, etc."
+                placeholder={t('settings.statuses.status_name_placeholder', 'e.g., In Progress, Blocked, etc.')}
                 required
                 autoFocus
                 containerClassName="mb-0"
@@ -396,7 +415,7 @@ export function TenantProjectTaskStatusSettings() {
               {/* Preview */}
               <div>
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">
-                  Preview
+                  {t('settings.statuses.preview', 'Preview')}
                 </label>
                 <div
                   className="p-4 rounded-lg border min-h-[120px]"
@@ -427,13 +446,17 @@ export function TenantProjectTaskStatusSettings() {
                         ) : null;
                       })()}
                       <span className="text-sm font-medium" style={{ color: '#ffffff' }}>
-                        {formData.name || 'Status Name'}
+                        {formData.name || t('settings.statuses.status_name', 'Status Name')}
                       </span>
                     </div>
                   </div>
                   <div className="bg-[rgb(var(--color-card))] rounded-lg p-3 shadow-sm">
-                    <div className="text-xs text-[rgb(var(--color-text-500))] mb-1">Sample Task</div>
-                    <div className="text-sm text-[rgb(var(--color-text-700))]">This is how tasks will appear in the column</div>
+                    <div className="text-xs text-[rgb(var(--color-text-500))] mb-1">
+                      {t('settings.statuses.sample_task', 'Sample Task')}
+                    </div>
+                    <div className="text-sm text-[rgb(var(--color-text-700))]">
+                      {t('settings.statuses.sample_task_hint', 'This is how tasks will appear in the column')}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -443,7 +466,7 @@ export function TenantProjectTaskStatusSettings() {
                 {/* Color Picker */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Color
+                    {t('settings.statuses.color', 'Color')}
                   </label>
                   <ColorPicker
                     currentBackgroundColor={formData.color}
@@ -466,7 +489,9 @@ export function TenantProjectTaskStatusSettings() {
                           style={{ backgroundColor: formData.color || '#6B7280' }}
                         />
                         <div className="flex-1 text-left">
-                          <div className="text-xs text-gray-500">Selected Color</div>
+                          <div className="text-xs text-gray-500">
+                            {t('settings.statuses.selected_color', 'Selected Color')}
+                          </div>
                           <div className="text-sm font-medium">{formData.color || '#6B7280'}</div>
                         </div>
                         <Palette className="w-4 h-4 text-gray-400" />
@@ -478,7 +503,7 @@ export function TenantProjectTaskStatusSettings() {
                 {/* Icon Selector */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Icon
+                    {t('settings.statuses.icon', 'Icon')}
                   </label>
                   <Button
                     type="button"
@@ -499,7 +524,9 @@ export function TenantProjectTaskStatusSettings() {
                       ) : null;
                     })()}
                     <div className="flex-1 text-left">
-                      <div className="text-xs text-gray-500">Selected Icon</div>
+                      <div className="text-xs text-gray-500">
+                        {t('settings.statuses.selected_icon', 'Selected Icon')}
+                      </div>
                       <div className="text-sm font-medium">{formData.icon}</div>
                     </div>
                     <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -510,7 +537,9 @@ export function TenantProjectTaskStatusSettings() {
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowIconPicker(false)}>
                       <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[65vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
                         <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between">
-                          <h3 className="text-sm font-semibold">Choose Icon</h3>
+                          <h3 className="text-sm font-semibold">
+                            {t('settings.statuses.choose_icon', 'Choose Icon')}
+                          </h3>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -573,10 +602,10 @@ export function TenantProjectTaskStatusSettings() {
                   label={
                     <div className="flex-1">
                       <span className="text-sm font-medium text-gray-700 cursor-pointer block">
-                        Mark as closed status
+                        {t('settings.statuses.mark_closed', 'Mark as closed status')}
                       </span>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        Tasks with this status will be considered complete
+                        {t('settings.statuses.mark_closed_help', 'Tasks with this status will be considered complete')}
                       </p>
                     </div>
                   }
@@ -586,7 +615,7 @@ export function TenantProjectTaskStatusSettings() {
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button variant="outline" onClick={() => setShowDialog(false)} id="cancel-button">
-                  Cancel
+                  {t('common:actions.cancel', 'Cancel')}
                 </Button>
                 <Button
                   onClick={handleSubmit}
@@ -594,7 +623,11 @@ export function TenantProjectTaskStatusSettings() {
                   id="submit-button"
                   variant="default"
                 >
-                  {submitting ? 'Saving...' : (editingStatus ? 'Update Status' : 'Create Status')}
+                  {submitting
+                    ? t('common:actions.saving', 'Saving...')
+                    : editingStatus
+                      ? t('settings.statuses.update_status', 'Update Status')
+                      : t('settings.statuses.create_status_title', 'Create Status')}
                 </Button>
               </div>
             </div>

@@ -24,12 +24,14 @@ import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
+import { useTranslation } from 'react-i18next';
 
 /**
  * ProjectStatusSettings - Manages project-level statuses
  * This is for project statuses (not project task statuses)
  */
 export function ProjectStatusSettings(): React.JSX.Element {
+  const { t } = useTranslation(['features/projects', 'common']);
   const STATUS_TYPE = 'project'; // Fixed to project type
 
   const [statuses, setStatuses] = useState<IStatus[]>([]);
@@ -69,11 +71,11 @@ export function ProjectStatusSettings(): React.JSX.Element {
       }
     };
     initUser();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchStatuses();
-  }, []);
+  }, [t]);
 
   const fetchStatuses = async (): Promise<void> => {
     try {
@@ -91,10 +93,10 @@ export function ProjectStatusSettings(): React.JSX.Element {
       const otherClosedStatuses = statuses.filter(s =>
         s.status_id !== updatedStatus.status_id && s.is_closed
       );
-      if (otherClosedStatuses.length === 0) {
-        toast.error('At least one status must remain marked as closed');
-        return;
-      }
+        if (otherClosedStatuses.length === 0) {
+          toast.error(t('settings.statuses.last_closed_error', 'At least one status must remain marked as closed'));
+          return;
+        }
     }
 
     try {
@@ -102,9 +104,9 @@ export function ProjectStatusSettings(): React.JSX.Element {
       setStatuses(statuses.map((status): IStatus =>
         status.status_id === updatedStatus.status_id ? updatedStatus : status
       ));
-      toast.success('Status updated successfully');
+      toast.success(t('settings.statuses.status_updated_success', 'Status updated successfully'));
     } catch (error) {
-      handleError(error, 'Failed to update status');
+      handleError(error, t('settings.statuses.save_failed', 'Failed to save status. Please try again.'));
     }
   };
 
@@ -125,14 +127,14 @@ export function ProjectStatusSettings(): React.JSX.Element {
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('settings.statuses.delete_validation_failed', 'Failed to validate deletion. Please try again.'),
         dependencies: [],
         alternatives: []
       });
     } finally {
       setIsDeleteValidating(false);
     }
-  }, []);
+  }, [t]);
 
   const handleDeleteStatusRequest = (statusId: string): void => {
     const status = statuses.find(s => s.status_id === statusId);
@@ -142,7 +144,7 @@ export function ProjectStatusSettings(): React.JSX.Element {
           s.status_id !== statusId && s.is_closed && s.status_type === status.status_type
         );
         if (otherClosedStatuses.length === 0) {
-          toast.error('Cannot delete the last closed status for this type.');
+          toast.error(t('settings.statuses.last_closed_delete_error', 'Cannot delete the last closed status for this type.'));
           return;
         }
       }
@@ -164,14 +166,16 @@ export function ProjectStatusSettings(): React.JSX.Element {
       }
 
       setStatuses(statuses.filter(s => s.status_id !== statusToDelete.status_id));
-      toast.success('Status deleted successfully');
+      toast.success(t('settings.statuses.status_deleted_success', 'Status "{{statusName}}" deleted successfully', {
+        statusName: statusToDelete.name,
+      }));
       resetDeleteState();
     } catch (error) {
       console.error('Error deleting status:', error);
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: error instanceof Error ? error.message : 'Failed to delete status',
+        message: error instanceof Error ? error.message : t('settings.statuses.delete_error', 'Failed to delete status'),
         dependencies: [],
         alternatives: []
       });
@@ -211,19 +215,24 @@ export function ProjectStatusSettings(): React.JSX.Element {
         );
 
         if (result.imported.length > 0) {
-          toast.success(`Successfully imported ${result.imported.length} statuses`);
+          toast.success(t('settings.statuses.status_imported_success', 'Successfully imported {{count}} statuses', {
+            count: result.imported.length,
+          }));
           await fetchStatuses();
         }
 
         if (result.skipped.length > 0) {
-          toast.error(`Skipped ${result.skipped.length} statuses (${(result.skipped as any[])[0].reason})`);
+          toast.error(t('settings.statuses.status_import_skipped', 'Skipped {{count}} statuses ({{reason}})', {
+            count: result.skipped.length,
+            reason: (result.skipped as any[])[0].reason,
+          }));
         }
 
         setShowStatusImportDialog(false);
         setSelectedImportStatuses([]);
       }
     } catch (error) {
-      handleError(error, 'Failed to import statuses');
+      handleError(error, t('settings.statuses.import_failed', 'Failed to import statuses'));
     }
   };
 
@@ -237,14 +246,18 @@ export function ProjectStatusSettings(): React.JSX.Element {
       );
 
       if (result.imported.length > 0) {
-        toast.success(`Successfully imported ${result.imported.length} statuses`);
+        toast.success(t('settings.statuses.status_imported_success', 'Successfully imported {{count}} statuses', {
+          count: result.imported.length,
+        }));
         await fetchStatuses();
         setSelectedImportStatuses([]);
       }
 
       if (result.skipped.length > 0) {
         const skippedNames = (result.skipped as any[]).map((s: any) => s.name).join(', ');
-        toast(`Skipped: ${skippedNames}`, {
+        toast(t('settings.statuses.import_skipped_names', 'Skipped: {{names}}', {
+          names: skippedNames,
+        }), {
           icon: 'ℹ️',
           duration: 4000,
         });
@@ -254,24 +267,24 @@ export function ProjectStatusSettings(): React.JSX.Element {
       setImportConflicts([]);
       setConflictResolutions({});
     } catch (error) {
-      handleError(error, 'Failed to import statuses');
+      handleError(error, t('settings.statuses.import_failed', 'Failed to import statuses'));
     }
   };
 
   const statusColumns: ColumnDefinition<IStatus>[] = [
     {
-      title: 'Name',
+      title: t('tasks.taskName', 'Name'),
       dataIndex: 'name',
       width: '30%',
     },
     {
-      title: 'Status',
+      title: t('tasks.status', 'Status'),
       dataIndex: 'is_closed',
       width: '40%',
       render: (value, record) => (
         <div className="flex items-center space-x-2 text-gray-500">
           <span className="text-sm mr-2">
-            {record.is_closed ? 'Closed' : 'Open'}
+            {record.is_closed ? t('settings.statuses.closed', 'Closed') : t('settings.statuses.open', 'Open')}
           </span>
           <Switch
             checked={record.is_closed}
@@ -280,21 +293,21 @@ export function ProjectStatusSettings(): React.JSX.Element {
           />
           <span className="text-xs text-gray-400 ml-2">
             {record.is_closed
-              ? 'Projects with this status will be marked as closed'
-              : 'Projects with this status will remain open'
+              ? t('settings.statuses.project_closed_hint', 'Projects with this status will be marked as closed')
+              : t('settings.statuses.project_open_hint', 'Projects with this status will remain open')
             }
           </span>
         </div>
       ),
     },
     {
-      title: 'Order',
+      title: t('settings.statuses.order', 'Order'),
       dataIndex: 'order_number',
       width: '10%',
       render: (value) => value || 0,
     },
     {
-      title: 'Actions',
+      title: t('templates.list.columns.actions', 'Actions'),
       dataIndex: 'action',
       width: '10%',
       render: (_, item) => (
@@ -305,8 +318,9 @@ export function ProjectStatusSettings(): React.JSX.Element {
               className="h-8 w-8 p-0"
               id={`status-actions-menu-${item.status_id}`}
               onClick={(e) => e.stopPropagation()}
+              aria-label={t('common:actions.openMenu', 'Open menu')}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('common:actions.openMenu', 'Open menu')}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -319,7 +333,7 @@ export function ProjectStatusSettings(): React.JSX.Element {
                 setShowStatusDialog(true);
               }}
             >
-              Edit
+              {t('common:actions.edit', 'Edit')}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-status-${item.status_id}`}
@@ -329,7 +343,7 @@ export function ProjectStatusSettings(): React.JSX.Element {
                 handleDeleteStatusRequest(item.status_id);
               }}
             >
-              Delete
+              {t('common:actions.delete', 'Delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -340,9 +354,9 @@ export function ProjectStatusSettings(): React.JSX.Element {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Project Statuses</CardTitle>
+        <CardTitle>{t('settings.statuses.project_statuses_title', 'Project Statuses')}</CardTitle>
         <CardDescription>
-          Define the workflow stages for your projects. Mark statuses as "closed" to indicate project completion.
+          {t('settings.statuses.project_statuses_description', 'Define the workflow stages for your projects. Mark statuses as "closed" to indicate project completion.')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -366,14 +380,14 @@ export function ProjectStatusSettings(): React.JSX.Element {
             }}
             className="bg-primary-500 text-white hover:bg-primary-600"
           >
-            <Plus className="h-4 w-4 mr-2" /> Add Status
+            <Plus className="h-4 w-4 mr-2" /> {t('settings.statuses.add_from_library', 'Add Status')}
           </Button>
           <Button
             id='import-project-statuses-button'
             onClick={handleImportStatuses}
             variant="outline"
           >
-            Import from Standard
+            {t('settings.statuses.import_from_standard', 'Import from Standard')}
           </Button>
         </div>
       </CardContent>
@@ -432,7 +446,7 @@ export function ProjectStatusSettings(): React.JSX.Element {
         isOpen={Boolean(statusToDelete)}
         onClose={resetDeleteState}
         onConfirmDelete={confirmDeleteStatus}
-        entityName={statusToDelete?.name || 'this status'}
+        entityName={statusToDelete?.name || t('settings.statuses.this_status', 'this status')}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}

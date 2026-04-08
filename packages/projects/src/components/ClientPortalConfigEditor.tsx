@@ -5,6 +5,7 @@ import { IClientPortalConfig, CONFIGURABLE_TASK_FIELDS } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from 'react-i18next';
 
 interface ClientPortalConfigEditorProps {
   config: IClientPortalConfig;
@@ -17,6 +18,7 @@ export default function ClientPortalConfigEditor({
   onChange,
   disabled = false
 }: ClientPortalConfigEditorProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
 
   const updateConfig = (updates: Partial<IClientPortalConfig>) => {
     onChange({ ...config, ...updates });
@@ -32,32 +34,32 @@ export default function ClientPortalConfigEditor({
 
   // Helper to generate summary of what clients will see
   const getVisibilitySummary = (): string[] => {
-    const summary: string[] = ['Project name, description, dates, and overall progress'];
+    const summary: string[] = [t('clientPortal.summary.projectInfo', 'Project name, description, dates, and overall progress')];
 
     if (config.show_phases) {
-      summary.push('Phase names, descriptions, and date ranges');
+      summary.push(t('clientPortal.summary.phaseInfo', 'Phase names, descriptions, and date ranges'));
       if (config.show_phase_completion) {
-        summary.push('Completion percentage for each phase');
+        summary.push(t('clientPortal.summary.phaseCompletion', 'Completion percentage for each phase'));
       }
     }
 
     if (config.show_tasks && config.show_phases) {
       const fields = config.visible_task_fields || [];
       const fieldLabels: string[] = [];
-      if (fields.includes('task_name')) fieldLabels.push('task names');
-      if (fields.includes('description')) fieldLabels.push('descriptions');
-      if (fields.includes('due_date')) fieldLabels.push('due dates');
-      if (fields.includes('status')) fieldLabels.push('status');
-      if (fields.includes('assigned_to')) fieldLabels.push('assignees');
-      if (fields.includes('estimated_hours')) fieldLabels.push('estimated hours');
-      if (fields.includes('actual_hours')) fieldLabels.push('actual hours');
-      if (fields.includes('priority')) fieldLabels.push('priority');
-      if (fields.includes('checklist_progress')) fieldLabels.push('checklist item names and completion');
-      if (fields.includes('dependencies')) fieldLabels.push('task dependencies');
-      if (fields.includes('document_uploads')) fieldLabels.push('document uploads');
+      if (fields.includes('task_name')) fieldLabels.push(t('clientPortal.summary.fields.taskNames', 'task names'));
+      if (fields.includes('description')) fieldLabels.push(t('clientPortal.summary.fields.descriptions', 'descriptions'));
+      if (fields.includes('due_date')) fieldLabels.push(t('clientPortal.summary.fields.dueDates', 'due dates'));
+      if (fields.includes('status')) fieldLabels.push(t('clientPortal.summary.fields.status', 'status'));
+      if (fields.includes('assigned_to')) fieldLabels.push(t('clientPortal.summary.fields.assignees', 'assignees'));
+      if (fields.includes('estimated_hours')) fieldLabels.push(t('clientPortal.summary.fields.estimatedHours', 'estimated hours'));
+      if (fields.includes('actual_hours')) fieldLabels.push(t('clientPortal.summary.fields.actualHours', 'actual hours'));
+      if (fields.includes('priority')) fieldLabels.push(t('clientPortal.summary.fields.priority', 'priority'));
+      if (fields.includes('checklist_progress')) fieldLabels.push(t('clientPortal.summary.fields.checklist', 'checklist item names and completion'));
+      if (fields.includes('dependencies')) fieldLabels.push(t('clientPortal.summary.fields.dependencies', 'task dependencies'));
+      if (fields.includes('document_uploads')) fieldLabels.push(t('clientPortal.summary.fields.documentUploads', 'document uploads'));
 
       if (fieldLabels.length > 0) {
-        summary.push(`Task details: ${fieldLabels.join(', ')}`);
+        summary.push(t('clientPortal.summary.taskDetails', 'Task details: {{fields}}', { fields: fieldLabels.join(', ') }));
       }
     }
 
@@ -69,7 +71,7 @@ export default function ClientPortalConfigEditor({
 
       {/* What clients will see summary */}
       <Alert variant="info">
-        <AlertTitle>Clients will see:</AlertTitle>
+        <AlertTitle>{t('clientPortal.clientsWillSee', 'Clients will see:')}</AlertTitle>
         <AlertDescription>
           <ul className="space-y-1 mt-1">
             {getVisibilitySummary().map((item, index) => (
@@ -88,10 +90,10 @@ export default function ClientPortalConfigEditor({
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <label htmlFor="show-phases" className="text-sm font-medium text-gray-700">
-                Show Phases
+                {t('clientPortal.showPhases', 'Show Phases')}
               </label>
               <p className="text-xs text-gray-500">
-                Clients will see phase cards with names, descriptions, and date ranges. They can select phases to view associated tasks.
+                {t('clientPortal.showPhasesDescription', 'Clients will see phase cards with names, descriptions, and date ranges. They can select phases to view associated tasks.')}
               </p>
             </div>
             <Switch
@@ -122,10 +124,10 @@ export default function ClientPortalConfigEditor({
                 />
                 <div>
                   <label htmlFor="show-phase-completion" className="text-sm font-medium text-gray-700">
-                    Show Completion %
+                    {t('clientPortal.showCompletion', 'Show Completion %')}
                   </label>
                   <p className="text-xs text-gray-500">
-                    Display a progress bar and percentage showing how many tasks are completed in each phase.
+                    {t('clientPortal.showCompletionDescription', 'Display a progress bar and percentage showing how many tasks are completed in each phase.')}
                   </p>
                 </div>
               </div>
@@ -138,10 +140,10 @@ export default function ClientPortalConfigEditor({
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <label htmlFor="show-tasks" className="text-sm font-medium text-gray-700">
-                Show Tasks
+                {t('clientPortal.showTasks', 'Show Tasks')}
               </label>
               <p className="text-xs text-gray-500">
-                Clients can view individual tasks within each phase. Tasks are displayed in a Kanban board or list view grouped by status.
+                {t('clientPortal.showTasksDescription', 'Clients can view individual tasks within each phase. Tasks are displayed in a Kanban board or list view grouped by status.')}
               </p>
             </div>
             <Switch
@@ -156,10 +158,10 @@ export default function ClientPortalConfigEditor({
           {config.show_tasks && config.show_phases && (
             <div className="ml-6 border-l-2 border-gray-200 pl-4">
               <label className="text-sm font-medium text-gray-700 block mb-1">
-                Visible Task Fields
+                {t('clientPortal.visibleTaskFields', 'Visible Task Fields')}
               </label>
               <p className="text-xs text-gray-500 mb-3">
-                Select which task details are visible to clients. Unchecked fields will be hidden from task cards.
+                {t('clientPortal.visibleTaskFieldsDescription', 'Select which task details are visible to clients. Unchecked fields will be hidden from task cards.')}
               </p>
               <div className="space-y-2">
                 {CONFIGURABLE_TASK_FIELDS.map(field => (
@@ -176,8 +178,8 @@ export default function ClientPortalConfigEditor({
                         htmlFor={`field-${field.key}`}
                         className={`text-sm ${field.required ? 'text-gray-500' : 'text-gray-700'}`}
                       >
-                        {field.label}
-                        {field.required && <span className="text-xs ml-1">(required)</span>}
+                        {t(`clientPortal.fieldLabels.${field.key}`, field.label)}
+                        {field.required && <span className="text-xs ml-1">{t('clientPortal.required', '(required)')}</span>}
                       </label>
                     </div>
                   </div>

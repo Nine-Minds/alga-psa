@@ -17,6 +17,7 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { highlightSearchMatch } from '../lib/searchUtils';
+import { useTranslation } from 'react-i18next';
 
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 80; // Pixels from edge to start scrolling
@@ -119,6 +120,7 @@ export default function TaskListView({
   searchWholeWord = false,
   searchCaseSensitive = false
 }: TaskListViewProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
   const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
@@ -390,20 +392,20 @@ export default function TaskListView({
   };
 
   const getAssigneeName = (userId: string | null) => {
-    if (!userId) return 'Unassigned';
+    if (!userId) return t('projectList.unassigned', 'Unassigned');
     const user = users.find(u => u.user_id === userId);
-    return user ? `${user.first_name} ${user.last_name}` : 'Unknown';
+    return user ? `${user.first_name} ${user.last_name}` : t('projectDetail.unknownUser', 'Unknown');
   };
 
   // Helper to get dependency type info (label and icon)
   const getDependencyTypeInfo = (type: string): { label: string; icon: React.ReactNode; color: string } => {
     switch (type) {
       case 'blocks':
-        return { label: 'Blocks', icon: <Ban className="h-3 w-3" />, color: 'text-destructive' };
+        return { label: t('taskDependencies.blocks', 'Blocks'), icon: <Ban className="h-3 w-3" />, color: 'text-destructive' };
       case 'blocked_by':
-        return { label: 'Blocked by', icon: <Ban className="h-3 w-3" />, color: 'text-orange-500' };
+        return { label: t('taskDependencies.blockedBy', 'Blocked by'), icon: <Ban className="h-3 w-3" />, color: 'text-orange-500' };
       case 'related_to':
-        return { label: 'Related to', icon: <GitBranch className="h-3 w-3" />, color: 'text-blue-500' };
+        return { label: t('taskDependencies.relatedTo', 'Related to'), icon: <GitBranch className="h-3 w-3" />, color: 'text-blue-500' };
       default:
         return { label: type, icon: <Link2 className="h-3 w-3" />, color: 'text-gray-500' };
     }
@@ -420,13 +422,13 @@ export default function TaskListView({
       <div className="text-xs space-y-2 min-w-[220px]">
         {deps.predecessors.length > 0 && (
           <div>
-            <div className="font-medium text-gray-300 mb-1">Depends on:</div>
+            <div className="font-medium text-gray-300 mb-1">{t('taskDependencies.dependsOn', 'Depends on:')}</div>
             {deps.predecessors.map((d, i) => {
               const info = getDependencyTypeInfo(d.dependency_type);
               return (
                 <div key={i} className="flex items-center gap-1.5 ml-2">
                   <span className={info.color}>{info.icon}</span>
-                  <span>{d.predecessor_task?.task_name || 'Unknown task'}</span>
+                  <span>{d.predecessor_task?.task_name || t('taskDependencies.unknownTask', 'Unknown task')}</span>
                   <span className="text-gray-400">({info.label})</span>
                 </div>
               );
@@ -435,13 +437,13 @@ export default function TaskListView({
         )}
         {deps.successors.length > 0 && (
           <div>
-            <div className="font-medium text-gray-300 mb-1">Blocks:</div>
+            <div className="font-medium text-gray-300 mb-1">{t('projectDetail.blocksLabel', 'Blocks:')}</div>
             {deps.successors.map((d, i) => {
               const info = getDependencyTypeInfo(d.dependency_type);
               return (
                 <div key={i} className="flex items-center gap-1.5 ml-2">
                   <span className={info.color}>{info.icon}</span>
-                  <span>{d.successor_task?.task_name || 'Unknown task'}</span>
+                  <span>{d.successor_task?.task_name || t('taskDependencies.unknownTask', 'Unknown task')}</span>
                   <span className="text-gray-400">({info.label})</span>
                 </div>
               );
@@ -672,7 +674,9 @@ export default function TaskListView({
         <Alert variant="info" className="rounded-none border-x-0 border-t-0">
           <AlertDescription className="flex items-center text-sm">
             <Zap className="h-4 w-4 mr-1" />
-            {hiddenColumnCount} column{hiddenColumnCount > 1 ? 's' : ''} hidden due to limited space. Resize browser to see more.
+            {t('projectDetail.hiddenColumnsAlert', '{{count}} column hidden due to limited space. Resize browser to see more.', {
+              count: hiddenColumnCount,
+            })}
           </AlertDescription>
         </Alert>
       )}
@@ -684,50 +688,50 @@ export default function TaskListView({
             <tr>
               <th className="w-10 px-3 py-3" />
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
-                Name
+                {t('tasks.taskName', 'Name')}
               </th>
               {isColumnVisible('deps') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Deps
+                  {t('tasks.dependencies', 'Deps')}
                 </th>
               )}
               {isColumnVisible('checklist') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Checklist
+                  {t('tasks.checklist', 'Checklist')}
                 </th>
               )}
               {isColumnVisible('tags') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Tags
+                  {t('projectList.columns.tags', 'Tags')}
                 </th>
               )}
               {isColumnVisible('assignee') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Assignee
+                  {t('tasks.assignee', 'Assignee')}
                 </th>
               )}
               {isColumnVisible('est_hours') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Est. Hours
+                  {t('tasks.estHours', 'Est. Hours')}
                 </th>
               )}
               {isColumnVisible('actual_hours') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Actual Hours
+                  {t('tasks.actualHours', 'Actual Hours')}
                 </th>
               )}
               {isColumnVisible('due_date') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Due Date
+                  {t('tasks.dueDate', 'Due Date')}
                 </th>
               )}
               {isColumnVisible('attachments') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  Attachments
+                  {t('tasks.attachments', 'Attachments')}
                 </th>
               )}
               <th className="px-3 py-3 text-right text-xs font-medium text-gray-500">
-                Actions
+                {t('projectList.columns.actions', 'Actions')}
               </th>
             </tr>
           </thead>
@@ -740,8 +744,8 @@ export default function TaskListView({
         {phaseGroups.length === 0 && (
           <div className="flex items-center justify-center h-full text-gray-500">
             <div className="text-center">
-              <p className="text-base font-medium">No phases found</p>
-              <p className="text-sm mt-1">Create phases and add tasks to see them here</p>
+              <p className="text-base font-medium">{t('phases.noPhases', 'No phases to display')}</p>
+              <p className="text-sm mt-1">{t('projectDetail.listViewEmptyMessage', 'Create phases and add tasks to see them here')}</p>
               {onAddPhase && (
                 <Button
                   id="add-phase-empty-state"
@@ -751,7 +755,7 @@ export default function TaskListView({
                   onClick={onAddPhase}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Phase
+                  {t('projectPhases.addPhase', 'Add Phase')}
                 </Button>
               )}
             </div>
@@ -787,7 +791,7 @@ export default function TaskListView({
                               <div className="flex items-center gap-3">
                                 <h4 className="font-semibold text-gray-900">{phaseGroup.phase.phase_name}</h4>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
-                                  {phaseGroup.totalTasks} {phaseGroup.totalTasks === 1 ? 'task' : 'tasks'}
+                                  {phaseGroup.totalTasks} {t(phaseGroup.totalTasks === 1 ? 'task' : 'tasks.title', phaseGroup.totalTasks === 1 ? 'task' : 'tasks')}
                                 </span>
                               </div>
 
@@ -802,13 +806,13 @@ export default function TaskListView({
                                   {phaseGroup.phase.start_date && (
                                     <span className="flex items-center gap-1">
                                       <Calendar className="w-3.5 h-3.5" />
-                                      Start: {format(new Date(phaseGroup.phase.start_date), 'PP')}
+                                      {t('startDate', 'Start Date')}: {format(new Date(phaseGroup.phase.start_date), 'PP')}
                                     </span>
                                   )}
                                   {phaseGroup.phase.end_date && (
                                     <span className="flex items-center gap-1">
                                       <Calendar className="w-3.5 h-3.5" />
-                                      End: {format(new Date(phaseGroup.phase.end_date), 'PP')}
+                                      {t('endDate', 'End Date')}: {format(new Date(phaseGroup.phase.end_date), 'PP')}
                                     </span>
                                   )}
                                 </div>
@@ -823,7 +827,7 @@ export default function TaskListView({
                                     {phaseGroup.completionPercentage}%
                                   </div>
                                   <div className="text-xs text-gray-500">
-                                    Complete
+                                    {t('phases.completion', 'Complete')}
                                   </div>
                                 </div>
                               )}
@@ -840,7 +844,7 @@ export default function TaskListView({
                                   }}
                                 >
                                   <Plus className="h-4 w-4 mr-1" />
-                                  Add Task
+                                  {t('projectPhases.addTask', 'Add Task')}
                                 </Button>
                               )}
                             </div>
@@ -979,10 +983,12 @@ export default function TaskListView({
                                               }
                                               return newSet;
                                             });
-                                          }}
+                                        }}
                                           className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-0.5"
                                         >
-                                          {expandedTitles.has(task.task_id) ? 'See less' : 'See more'}
+                                          {expandedTitles.has(task.task_id)
+                                            ? t('projectDetail.seeLess', 'See less')
+                                            : t('projectDetail.seeMore', 'See more')}
                                         </button>
                                       )}
                                     </div>
@@ -1011,7 +1017,9 @@ export default function TaskListView({
                                             }}
                                             className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-0.5"
                                           >
-                                            {expandedDescriptions.has(task.task_id) ? 'See less' : 'See more'}
+                                            {expandedDescriptions.has(task.task_id)
+                                              ? t('projectDetail.seeLess', 'See less')
+                                              : t('projectDetail.seeMore', 'See more')}
                                           </button>
                                         )}
                                       </div>
@@ -1049,7 +1057,7 @@ export default function TaskListView({
                                         content={
                                           checklist.items && checklist.items.length > 0 ? (
                                             <div className="text-xs space-y-1 max-w-xs">
-                                              <div className="font-medium text-gray-300 mb-1">Checklist Items:</div>
+                                              <div className="font-medium text-gray-300 mb-1">{t('projectDetail.checklistItems', 'Checklist Items:')}</div>
                                               {checklist.items.map((item, i) => (
                                                 <div key={i} className="flex items-center gap-1.5">
                                                   {item.completed ? (
@@ -1062,7 +1070,10 @@ export default function TaskListView({
                                               ))}
                                             </div>
                                           ) : (
-                                            <span>{checklist.completed} of {checklist.total} complete</span>
+                                            <span>{t('projectDetail.checklistSummary', '{{completed}} of {{total}} complete', {
+                                              completed: checklist.completed,
+                                              total: checklist.total,
+                                            })}</span>
                                           )
                                         }
                                       >
@@ -1130,7 +1141,7 @@ export default function TaskListView({
                                             );
                                           }
                                           return (
-                                            <span className="text-sm text-gray-400">Unassigned</span>
+                                            <span className="text-sm text-gray-400">{t('projectList.unassigned', 'Unassigned')}</span>
                                           );
                                         })()
                                       )}
@@ -1150,10 +1161,10 @@ export default function TaskListView({
                                         <Tooltip
                                           content={
                                             <div className="text-xs space-y-1.5">
-                                              <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                                              <div className="font-medium text-gray-300 mb-1">{t('taskForm.additionalAgentsLabel', 'Additional Agents')}:</div>
                                               {resources.map((resource, i) => {
                                                 const resourceUser = users.find(u => u.user_id === resource.additional_user_id);
-                                                const userName = resourceUser ? `${resourceUser.first_name} ${resourceUser.last_name}` : 'Unknown';
+                                                const userName = resourceUser ? `${resourceUser.first_name} ${resourceUser.last_name}` : t('projectDetail.unknownUser', 'Unknown');
                                                 return (
                                                   <div key={i} className="flex items-center gap-2">
                                                     <UserAvatar
@@ -1239,7 +1250,7 @@ export default function TaskListView({
                                         e.stopPropagation();
                                         onTaskClick(task);
                                       }}
-                                      title="Edit task"
+                                      title={t('taskForm.editTitle', 'Edit Task')}
                                     >
                                       <Pencil className="h-3.5 w-3.5" />
                                     </Button>
@@ -1251,7 +1262,7 @@ export default function TaskListView({
                                         e.stopPropagation();
                                         onTaskDuplicate(task);
                                       }}
-                                      title="Duplicate task"
+                                      title={t('common:actions.duplicate', 'Duplicate')}
                                     >
                                       <Copy className="h-3.5 w-3.5" />
                                     </Button>
@@ -1263,7 +1274,7 @@ export default function TaskListView({
                                         e.stopPropagation();
                                         onTaskDelete(task);
                                       }}
-                                      title="Delete task"
+                                      title={t('common:actions.delete', 'Delete')}
                                     >
                                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                                     </Button>
@@ -1310,7 +1321,7 @@ export default function TaskListView({
               onClick={onAddPhase}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Phase
+              {t('projectPhases.addPhase', 'Add Phase')}
             </Button>
           </div>
         )}

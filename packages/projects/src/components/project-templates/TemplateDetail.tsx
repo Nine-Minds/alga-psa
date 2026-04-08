@@ -21,6 +21,7 @@ import {
 import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 import { useKanbanPan } from '../useKanbanPan';
 import styles from '../ProjectDetail.module.css';
+import { useTranslation } from 'react-i18next';
 
 interface TemplateDetailProps {
   template: IProjectTemplateWithDetails;
@@ -28,6 +29,7 @@ interface TemplateDetailProps {
 }
 
 export default function TemplateDetail({ template, onTemplateUpdated }: TemplateDetailProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -44,10 +46,10 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
     try {
       setIsDeleting(true);
       await deleteTemplate(template.template_id);
-      toast.success('Template deleted successfully');
+      toast.success(t('templates.detail.deletedSuccess', 'Template deleted successfully'));
       router.push('/msp/projects/templates');
     } catch (error) {
-      handleError(error, 'Failed to delete template');
+      handleError(error, t('templates.editor.deleteFailed', 'Failed to delete template'));
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirmation(false);
@@ -78,10 +80,12 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
           isOpen={true}
           onClose={() => setShowDeleteConfirmation(false)}
           onConfirm={handleDelete}
-          title="Delete Template"
-          message={`Are you sure you want to delete template "${template.template_name}"? This action cannot be undone.`}
-          confirmLabel="Delete"
-          cancelLabel="Cancel"
+          title={t('templates.detail.deleteTitle', 'Delete Template')}
+          message={t('templates.editor.deleteTemplateMessage', 'Are you sure you want to delete template "{{templateName}}"? This action cannot be undone.', {
+            templateName: template.template_name,
+          })}
+          confirmLabel={t('common:actions.delete', 'Delete')}
+          cancelLabel={t('common:actions.cancel', 'Cancel')}
         />
       )}
 
@@ -106,12 +110,12 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                 onClick={() => router.push('/msp/projects/templates')}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+                {t('common:actions.back', 'Back')}
               </Button>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">
                   <FileText className="h-4 w-4" />
-                  Template
+                  {t('templates.editor.templateBadge', 'Template')}
                 </div>
                 <h1 className="text-2xl font-bold">{template.template_name}</h1>
               </div>
@@ -122,7 +126,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                 onClick={() => setShowApplyDialog(true)}
               >
                 <Rocket className="h-4 w-4 mr-2" />
-                Use Template
+                {t('templates.editor.useTemplate', 'Use Template')}
               </Button>
               <Button
                 id="delete-template"
@@ -131,7 +135,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                 disabled={isDeleting}
               >
                 <Trash className="h-4 w-4 mr-2" />
-                Delete
+                {t('common:actions.delete', 'Delete')}
               </Button>
             </div>
           </div>
@@ -140,11 +144,18 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
           <div className="mt-4 flex gap-6 text-sm text-gray-600">
             {template.description && (
               <div>
-                <span className="font-medium">Description:</span> {template.description}
+                <span className="font-medium">
+                  {t('templates.detail.description', 'Description:')}
+                </span>{' '}
+                {template.description}
               </div>
             )}
             <div>
-              <span className="font-medium">Used:</span> {template.use_count} times
+              <span className="font-medium">
+                {t('templates.detail.usedCount', 'Used: {{count}} times', {
+                  count: template.use_count,
+                })}
+              </span>
             </div>
           </div>
         </div>
@@ -154,10 +165,14 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
             {/* Phases List - Left Side */}
             <div className={styles.phasesList}>
               <Card className="p-4">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Project Phases</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  {t('templates.detail.projectPhases', 'Project Phases')}
+                </h3>
                 <div className="space-y-1">
                   {phases.length === 0 ? (
-                    <div className="text-sm text-gray-500 dark:text-gray-400">No phases defined</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('templates.detail.noPhasesDefined', 'No phases defined')}
+                    </div>
                   ) : (
                     phases.map((phase) => (
                       <button
@@ -172,7 +187,9 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                         <div className="text-sm font-medium">{phase.phase_name}</div>
                         {phase.duration_days && (
                           <div className="text-xs text-gray-500 mt-1">
-                            {phase.duration_days} days
+                            {t('templates.editor.phaseDurationDays', 'Duration: {{days}} days', {
+                              days: phase.duration_days,
+                            })}
                           </div>
                         )}
                       </button>
@@ -189,13 +206,21 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                 <div className="flex-shrink-0 px-1 pb-2">
                   <div className="flex justify-between items-center gap-4">
                     <div>
-                      <h2 className="text-xl font-bold mb-1">Phase: {selectedPhase.phase_name}</h2>
+                      <h2 className="text-xl font-bold mb-1">
+                        {t('templates.detail.phasePrefix', 'Phase:')} {selectedPhase.phase_name}
+                      </h2>
                       {selectedPhase.description && (
                         <p className="text-sm text-gray-600 dark:text-gray-400">{selectedPhase.description}</p>
                       )}
                       <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {selectedPhase.duration_days && `Duration: ${selectedPhase.duration_days} days`}
-                        {selectedPhase.start_offset_days > 0 && ` • Start: +${selectedPhase.start_offset_days} days`}
+                        {selectedPhase.duration_days &&
+                          t('templates.editor.phaseDurationDays', 'Duration: {{days}} days', {
+                            days: selectedPhase.duration_days,
+                          })}
+                        {selectedPhase.start_offset_days > 0 &&
+                          ` • ${t('templates.editor.phaseStartDays', 'Start: +{{days}} days', {
+                            days: selectedPhase.start_offset_days,
+                          })}`}
                       </div>
                     </div>
                   </div>
@@ -207,7 +232,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                   <div className="flex items-center justify-center h-64 bg-gray-100 dark:bg-[rgb(var(--color-border-100))] rounded-lg">
                     <div className="text-center">
                       <p className="text-xl text-gray-600 dark:text-gray-400">
-                        Please select a phase to view the template details.
+                        {t('templates.detail.selectPhase', 'Please select a phase to view the template details.')}
                       </p>
                     </div>
                   </div>
@@ -215,7 +240,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                   <div className={styles.kanbanWrapper}>
                     {statusMappings.length === 0 ? (
                       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                        No status columns defined
+                        {t('templates.editor.noStatusColumns', 'No status columns defined')}
                       </div>
                     ) : (
                       <div className={styles.kanbanBoard} style={{ flex: 1 }}>
@@ -228,7 +253,10 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                                 (isFirstColumn && !task.template_status_mapping_id)
                             );
 
-                            const displayName = statusMapping.status_name || statusMapping.custom_status_name || 'Status';
+                            const displayName =
+                              statusMapping.status_name ||
+                              statusMapping.custom_status_name ||
+                              t('templates.editor.statusFallback', 'Status');
                             const statusColor = statusMapping.color || '#6B7280';
 
                             return (
@@ -278,6 +306,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
 
 // Task Card Component
 function TaskCard({ task }: { task: IProjectTemplateTask }) {
+  const { t } = useTranslation(['features/projects']);
   return (
     <div className="bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
       <div className="font-medium text-sm mb-1">{task.task_name}</div>
@@ -291,7 +320,7 @@ function TaskCard({ task }: { task: IProjectTemplateTask }) {
           </span>
         )}
         {task.task_type_key && (
-          <span className="capitalize">{task.task_type_key}</span>
+          <span className="capitalize">{task.task_type_key || t('tasks.taskName', 'Task')}</span>
         )}
       </div>
     </div>

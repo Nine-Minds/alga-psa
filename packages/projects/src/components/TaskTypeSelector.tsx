@@ -3,6 +3,7 @@
 import React from 'react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ITaskType } from '@alga-psa/types';
+import { useTranslation } from 'react-i18next';
 import { CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen, GitBranch } from 'lucide-react';
 
 interface TaskTypeSelectorProps {
@@ -27,6 +28,7 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
   onChange,
   disabled = false
 }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
   const options = taskTypes.map(type => {
     const Icon = taskTypeIcons[type.type_key] || CheckSquare;
     return {
@@ -48,7 +50,7 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
       value={value}
       onValueChange={onChange}
       disabled={disabled}
-      placeholder="Select task type"
+      placeholder={t('taskTypeSelect.placeholder', 'Select task type')}
       options={options}
     />
   );
