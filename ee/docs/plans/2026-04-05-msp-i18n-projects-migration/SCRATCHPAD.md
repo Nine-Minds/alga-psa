@@ -298,6 +298,17 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F029 check)** `node_modules/.bin/eslint
   packages/projects/src/components/ProjectQuickAdd.tsx` passes with a pre-existing hooks
   warning only (1 warning, 0 errors).
+- **(2026-04-07, F030)** Wired `packages/projects/src/components/ProjectDetailsEdit.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the edit-form labels,
+  placeholders, validation banner, active/inactive status chip, client-portal section
+  header, save/cancel confirmation dialogs, and the success/failure/save-button copy.
+- **(2026-04-07, F030)** Added one narrow locale leaf, `projectEdit.updateError`, so the
+  update failure path stays under the project-edit namespace instead of falling back to a
+  generic common save-error message. Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-
+  locales, and re-ran translation validation successfully.
+- **(2026-04-07, F030 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/ProjectDetailsEdit.tsx` passes with a pre-existing
+  hooks warning only (1 warning, 0 errors).
 
 ## Commands / Runbooks
 

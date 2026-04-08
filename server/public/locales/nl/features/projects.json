@@ -125,6 +125,7 @@
     "clientPortalVisibility": "Zichtbaarheid van het klantportaal",
     "validationTitle": "Vul de verplichte velden in:",
     "updatedSuccess": "Project succesvol bijgewerkt",
+    "updateError": "Failed to update project",
     "unsavedTitle": "Niet-opgeslagen wijzigingen",
     "unsavedMessage": "U heeft niet-opgeslagen wijzigingen. Weet u zeker dat u wilt annuleren?",
     "saveTitle": "Wijzigingen opslaan",

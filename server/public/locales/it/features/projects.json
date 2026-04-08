@@ -125,6 +125,7 @@
     "clientPortalVisibility": "Visibilità portale cliente",
     "validationTitle": "Compila i campi obbligatori:",
     "updatedSuccess": "Progetto aggiornato con successo",
+    "updateError": "Failed to update project",
     "unsavedTitle": "Modifiche non salvate",
     "unsavedMessage": "Hai modifiche non salvate. Vuoi davvero annullare?",
     "saveTitle": "Salva modifiche",

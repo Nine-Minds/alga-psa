@@ -125,6 +125,7 @@
     "clientPortalVisibility": "Sichtbarkeit im Kundenportal",
     "validationTitle": "Bitte füllen Sie die Pflichtfelder aus:",
     "updatedSuccess": "Projekt erfolgreich aktualisiert",
+    "updateError": "Failed to update project",
     "unsavedTitle": "Ungespeicherte Änderungen",
     "unsavedMessage": "Sie haben ungespeicherte Änderungen. Möchten Sie wirklich abbrechen?",
     "saveTitle": "Änderungen speichern",

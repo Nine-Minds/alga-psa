@@ -125,6 +125,7 @@
     "clientPortalVisibility": "Client Portal Visibility",
     "validationTitle": "Please fill in the required fields:",
     "updatedSuccess": "Project updated successfully",
+    "updateError": "Failed to update project",
     "unsavedTitle": "Unsaved Changes",
     "unsavedMessage": "You have unsaved changes. Are you sure you want to cancel?",
     "saveTitle": "Save Changes",
