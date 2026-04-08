@@ -218,6 +218,22 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F023 check)** `node_modules/.bin/eslint
   packages/projects/src/components/Projects.tsx` passes with pre-existing warnings only
   (17 warnings, 0 errors).
+- **(2026-04-07, F024)** Wired `packages/projects/src/components/TaskDocumentsSimple.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the attachments section
+  header, create/upload/link controls, empty state, remove/download/save flows, drawer
+  titles and placeholders, file-attachment viewer copy, folder-selector prompt, and the
+  unsaved-changes confirmation dialog shown above the task drawer.
+- **(2026-04-07, F024)** Extended `taskDocuments.*` with the missing attachment-surface
+  leaves surfaced by the audit: `attachmentsTitle`, short button labels (`newButton`,
+  `uploadButton`, `linkButton`), empty-state/fallback names, load/create/save/remove/
+  download failure messages, folder-selection copy, PDF label, and unsaved-change
+  confirm strings.
+- **(2026-04-07, F024)** Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and
+  re-ran `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  successfully after the `taskDocuments.*` additions.
+- **(2026-04-07, F024 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/TaskDocumentsSimple.tsx` passes with pre-existing
+  warnings only (10 warnings, 0 errors).
 
 ## Commands / Runbooks
 
