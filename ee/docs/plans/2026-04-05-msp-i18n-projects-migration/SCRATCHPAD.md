@@ -404,6 +404,20 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F052 check)** `node_modules/.bin/eslint
   packages/projects/src/components/project-templates/wizard-steps/TemplateTasksStep.tsx`
   passes cleanly with 0 warnings / 0 errors.
+- **(2026-04-08, F053)** Wired `packages/projects/src/components/project-templates/ApplyTemplateDialog.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the dialog title,
+  validation banner, template/project/client/status/start-date fields, customization
+  options, assignment radio labels, add-status affordance, submit/cancel actions, and
+  success/error toast copy for load/apply flows.
+- **(2026-04-08, F053)** Extended `templates.apply.*` only where the dialog surfaced
+  small gaps or English drift: added `create`, `creating`, and `createFailed`, and
+  aligned the existing English values for `startDateLabel` and `assignmentOptions.*`
+  to the current UI text so the migration stays fallback-safe without changing the
+  rendered English copy. Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales,
+  and re-ran translation validation successfully.
+- **(2026-04-08, F053 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/project-templates/ApplyTemplateDialog.tsx` passes
+  with a pre-existing hooks warning only (1 warning, 0 errors).
 
 ## Commands / Runbooks
 
