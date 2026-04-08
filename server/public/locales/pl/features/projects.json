@@ -592,8 +592,12 @@
     },
     "createTaskFromTicket": {
       "title": "Utwórz zadanie z biletu",
+      "button": "Create Task",
+      "projectLabel": "Project",
       "projectPlaceholder": "Wybierz projekt",
+      "phaseLabel": "Phase",
       "phasePlaceholder": "Wybierz fazę",
+      "statusLabel": "Status",
       "statusPlaceholder": "Wybierz stan",
       "linkTicketLabel": "Połącz zgłoszenie z utworzonym zadaniem"
     },

@@ -592,8 +592,12 @@
     },
     "createTaskFromTicket": {
       "title": "Crear tarea desde ticket",
+      "button": "Create Task",
+      "projectLabel": "Project",
       "projectPlaceholder": "Seleccionar un proyecto",
+      "phaseLabel": "Phase",
       "phasePlaceholder": "Seleccionar una fase",
+      "statusLabel": "Status",
       "statusPlaceholder": "Seleccionar un estado",
       "linkTicketLabel": "Vincular el ticket a la tarea creada"
     },

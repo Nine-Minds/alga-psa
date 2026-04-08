@@ -590,13 +590,17 @@
       "message": "Duplicate task \"{{taskName}}\" to:",
       "placeholder": "Select target project/phase/status..."
     },
-    "createTaskFromTicket": {
-      "title": "Create Task from Ticket",
-      "projectPlaceholder": "Select a project",
-      "phasePlaceholder": "Select a phase",
-      "statusPlaceholder": "Select a status",
-      "linkTicketLabel": "Link ticket to the created task"
-    },
+  "createTaskFromTicket": {
+    "title": "Create Task from Ticket",
+    "button": "Create Task",
+    "projectLabel": "Project",
+    "projectPlaceholder": "Select a project",
+    "phaseLabel": "Phase",
+    "phasePlaceholder": "Select a phase",
+    "statusLabel": "Status",
+    "statusPlaceholder": "Select a status",
+    "linkTicketLabel": "Link ticket to the created task"
+  },
     "linkTicketToTask": {
       "title": "Link Ticket to Task",
       "projectPlaceholder": "Select a project",

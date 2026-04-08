@@ -592,8 +592,12 @@
     },
     "createTaskFromTicket": {
       "title": "11111",
+      "button": "11111",
+      "projectLabel": "11111",
       "projectPlaceholder": "11111",
+      "phaseLabel": "11111",
       "phasePlaceholder": "11111",
+      "statusLabel": "11111",
       "statusPlaceholder": "11111",
       "linkTicketLabel": "11111"
     },

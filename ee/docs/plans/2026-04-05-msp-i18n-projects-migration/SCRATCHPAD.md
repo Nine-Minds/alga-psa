@@ -590,6 +590,19 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-08, F082 check)** `node_modules/.bin/eslint
   packages/projects/src/components/ProjectTaskStatusEditor.tsx` passes with pre-existing
   warnings only (legacy non-null assertions; 2 warnings, 0 errors).
+- **(2026-04-08, F083)** Wired
+  `packages/projects/src/components/CreateTaskFromTicketDialog.tsx` to
+  `useTranslation(['features/projects', 'common'])`. Localized the launcher button,
+  dialog title, project/phase/status labels and placeholders, link-ticket checkbox, and
+  create/cancel actions.
+- **(2026-04-08, F083)** Extended `dialogs.createTaskFromTicket.*` only for the missing
+  launcher/field-label leaves: `button`, `projectLabel`, `phaseLabel`, and
+  `statusLabel`. Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and re-ran
+  translation validation successfully.
+- **(2026-04-08, F083 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/CreateTaskFromTicketDialog.tsx` passes with a pre-
+  existing hooks warning only (`ticket.client_id` effect dependency; 1 warning, 0
+  errors).
 
 ## Commands / Runbooks
 

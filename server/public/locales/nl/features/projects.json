@@ -592,8 +592,12 @@
     },
     "createTaskFromTicket": {
       "title": "Taak maken op basis van ticket",
+      "button": "Create Task",
+      "projectLabel": "Project",
       "projectPlaceholder": "Selecteer een project",
+      "phaseLabel": "Phase",
       "phasePlaceholder": "Selecteer een fase",
+      "statusLabel": "Status",
       "statusPlaceholder": "Selecteer een status",
       "linkTicketLabel": "Koppel ticket aan de gemaakte taak"
     },
