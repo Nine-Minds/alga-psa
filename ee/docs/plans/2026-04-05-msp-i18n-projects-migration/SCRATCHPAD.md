@@ -204,6 +204,20 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F022 check)** `node_modules/.bin/eslint
   packages/projects/src/components/PhaseTaskImportDialog.tsx` passes with pre-existing
   warnings only (6 warnings, 0 errors).
+- **(2026-04-07, F023)** Wired `packages/projects/src/components/Projects.tsx` to
+  `useTranslation(['features/projects', 'common'])`. Localized the page title, create
+  actions, filter placeholders, table headers, row-value fallbacks, screen-reader menu
+  label, reset button, and the delete-success / delete-validation fallback copy.
+- **(2026-04-07, F023)** Extended `projectList.*` with the list-specific gaps surfaced by
+  the table audit: `columns.*`, `statusOptions.*`, row fallback values (`noClient`,
+  `noContact`, `unassigned`, `notAvailable`, `thisProject`), and delete-validation /
+  delete-failure messages used by `DeleteEntityDialog`.
+- **(2026-04-07, F023)** Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and
+  re-ran `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  successfully after the `projectList.*` additions.
+- **(2026-04-07, F023 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/Projects.tsx` passes with pre-existing warnings only
+  (17 warnings, 0 errors).
 
 ## Commands / Runbooks
 

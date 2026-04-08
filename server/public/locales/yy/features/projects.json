@@ -54,7 +54,31 @@
     "managerPlaceholder": "55555",
     "deadlinePlaceholder": "55555",
     "deletedSuccess": "55555",
-    "statusUnknown": "55555"
+    "deleteValidationFailed": "55555",
+    "deleteFailed": "55555",
+    "statusUnknown": "55555",
+    "notAvailable": "55555",
+    "noClient": "55555",
+    "noContact": "55555",
+    "unassigned": "55555",
+    "thisProject": "55555",
+    "statusOptions": {
+      "all": "55555",
+      "active": "55555",
+      "inactive": "55555"
+    },
+    "columns": {
+      "number": "55555",
+      "projectName": "55555",
+      "client": "55555",
+      "contact": "55555",
+      "status": "55555",
+      "deadline": "55555",
+      "created": "55555",
+      "projectManager": "55555",
+      "tags": "55555",
+      "actions": "55555"
+    }
   },
   "quickAdd": {
     "title": "55555",

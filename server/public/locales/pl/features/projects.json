@@ -54,7 +54,31 @@
     "managerPlaceholder": "Wszyscy menedżerowie",
     "deadlinePlaceholder": "Filtruj według terminu",
     "deletedSuccess": "Projekt został pomyślnie usunięty",
-    "statusUnknown": "Nieznany"
+    "deleteValidationFailed": "Failed to validate deletion. Please try again.",
+    "deleteFailed": "Failed to delete project.",
+    "statusUnknown": "Nieznany",
+    "notAvailable": "N/A",
+    "noClient": "No Client",
+    "noContact": "No Contact",
+    "unassigned": "Unassigned",
+    "thisProject": "this project",
+    "statusOptions": {
+      "all": "All projects",
+      "active": "Active projects",
+      "inactive": "Inactive projects"
+    },
+    "columns": {
+      "number": "Number",
+      "projectName": "Project Name",
+      "client": "Client",
+      "contact": "Contact",
+      "status": "Status",
+      "deadline": "Deadline",
+      "created": "Created",
+      "projectManager": "Project Manager",
+      "tags": "Tags",
+      "actions": "Actions"
+    }
   },
   "quickAdd": {
     "title": "Dodaj nowy projekt",
