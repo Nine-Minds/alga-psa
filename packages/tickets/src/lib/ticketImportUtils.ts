@@ -13,6 +13,7 @@ import {
   ITeamResolution,
   IDateFormatResolution,
   DateFormatInterpretation,
+  IUnmatchedContactCandidate,
 } from '@alga-psa/types';
 
 // ---------------------------------------------------------------------------
@@ -238,6 +239,10 @@ function parseDateWithFormat(val: string, format: DateFormatInterpretation): str
   return isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function buildContactResolutionKey(contactName: string, clientName: string): string {
+  return `${contactName.trim().toLowerCase()}\0${clientName.trim().toLowerCase()}`;
+}
+
 // ---------------------------------------------------------------------------
 // Validation (pure data transformation — no DB access)
 // ---------------------------------------------------------------------------
@@ -253,7 +258,7 @@ export function validateTicketImportData(
     teamLookup,
     priorityLookup,
     clientLookup,
-    contactLookup,
+    contactLookupByClient,
     statusLookupByBoard,
     categoryLookupByBoard,
   } = referenceData;
@@ -266,7 +271,7 @@ export function validateTicketImportData(
   const unmatchedTeamsMap = new Map<string, string>();
   const unmatchedPrioritiesMap = new Map<string, string>();
   const unmatchedCategoriesMap = new Map<string, string>();
-  const unmatchedContactsMap = new Map<string, string>();
+  const unmatchedContactsMap = new Map<string, IUnmatchedContactCandidate>();
   // Track unparsable dates grouped by structural format pattern
   const datePatternGroups = new Map<string, { patternKey: string; patternLabel: string; possibleFormats: DateFormatInterpretation[]; sampleValues: Set<string>; totalCount: number }>();
 
@@ -339,11 +344,25 @@ export function validateTicketImportData(
       }
     }
 
-    // Contact lookup
+    // Contact lookup (client-scoped — same name in different clients are distinct contacts)
     if (row.contact?.trim()) {
       const key = row.contact.trim().toLowerCase();
-      if (!contactLookup[key] && !unmatchedContactsMap.has(key)) {
-        unmatchedContactsMap.set(key, row.contact.trim());
+      const clientName = row.client?.trim();
+      const resolvedClientId = row.client?.trim() ? clientLookup[row.client.trim().toLowerCase()] : undefined;
+      let contactFound = false;
+      if (resolvedClientId) {
+        contactFound = !!(contactLookupByClient[resolvedClientId]?.[key] || contactLookupByClient['_unassigned']?.[key]);
+      }
+      // If client is unmatched or contact doesn't exist for this client, flag as unmatched
+      if (!contactFound && clientName) {
+        const resolutionKey = buildContactResolutionKey(row.contact.trim(), clientName);
+        if (!unmatchedContactsMap.has(resolutionKey)) {
+          unmatchedContactsMap.set(resolutionKey, {
+            resolutionKey,
+            contactName: row.contact.trim(),
+            clientName,
+          });
+        }
       }
     }
 
@@ -419,17 +438,21 @@ export function processTicketRows(
   teamResolutions: ITeamResolution[],
   dateFormatResolutions: IDateFormatResolution[],
   skipInvalidRows: boolean
-): IProcessedTicketData[] {
+): { tickets: IProcessedTicketData[]; preImportSkipped: number } {
   const {
     boardLookup,
     userLookup,
     teamLookup,
     priorityLookup,
     clientLookup,
-    contactLookup,
+    contactLookupByClient,
     statusLookupByBoard,
     categoryLookupByBoard,
   } = referenceData;
+
+  // Reverse map: contact_id → client_id (for cross-client validation of mapped contacts)
+  const contactIdToClientId = new Map<string, string | null>();
+  referenceData.contacts.forEach(c => contactIdToClientId.set(c.contact_name_id, c.client_id));
 
   // Build resolution maps
   const clientResolutionMap = new Map<string, IClientResolution>();
@@ -448,7 +471,7 @@ export function processTicketRows(
   categoryResolutions.forEach(r => categoryResolutionMap.set(r.originalCategoryName.toLowerCase().trim(), r));
 
   const contactResolutionMap = new Map<string, IContactResolution>();
-  contactResolutions.forEach(r => contactResolutionMap.set(r.originalContactName.toLowerCase().trim(), r));
+  contactResolutions.forEach(r => contactResolutionMap.set(r.resolutionKey, r));
 
   const teamResolutionMap = new Map<string, ITeamResolution>();
   teamResolutions.forEach(r => teamResolutionMap.set(r.originalTeamName.toLowerCase().trim(), r));
@@ -479,13 +502,14 @@ export function processTicketRows(
 
 
   const processed: IProcessedTicketData[] = [];
+  let preImportSkipped = 0;
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const rowNumber = i + 2;
 
     if (!row.title?.trim()) {
-      if (skipInvalidRows) continue;
+      if (skipInvalidRows) { preImportSkipped++; continue; }
     }
 
     // Resolve client
@@ -496,7 +520,7 @@ export function processTicketRows(
       if (!clientId) {
         const resolution = clientResolutionMap.get(clientKey);
         if (resolution) {
-          if (resolution.action === 'skip') continue;
+          if (resolution.action === 'skip') { preImportSkipped++; continue; }
           if (resolution.action === 'map_to_existing' && resolution.mappedClientId) {
             clientId = resolution.mappedClientId;
           }
@@ -508,7 +532,7 @@ export function processTicketRows(
     }
 
     if (!clientId && !row.client?.trim()) {
-      if (skipInvalidRows) continue;
+      if (skipInvalidRows) { preImportSkipped++; continue; }
     }
 
     // Resolve board — all tickets go to the selected default board
@@ -565,16 +589,30 @@ export function processTicketRows(
       }
     }
 
-    // Resolve contact (with resolution support)
+    // Resolve contact (client-scoped lookup, then resolution fallback)
     let contactId: string | null = null;
     if (row.contact?.trim()) {
       const contactKey = row.contact.trim().toLowerCase();
-      contactId = contactLookup[contactKey] || null;
+      // Only attempt client-scoped lookup if clientId is a real ID (not a __create__ placeholder)
+      const lookupClientId = clientId && !clientId.startsWith('__create__:') ? clientId : null;
+      if (lookupClientId) {
+        contactId = contactLookupByClient[lookupClientId]?.[contactKey]
+          || contactLookupByClient['_unassigned']?.[contactKey]
+          || null;
+      }
       if (!contactId) {
-        const resolution = contactResolutionMap.get(contactKey);
+        const resolutionKey = row.client?.trim()
+          ? buildContactResolutionKey(row.contact.trim(), row.client.trim())
+          : null;
+        const resolution = resolutionKey ? contactResolutionMap.get(resolutionKey) : undefined;
         if (resolution) {
           if (resolution.action === 'map_to_existing' && resolution.mappedContactId) {
-            contactId = resolution.mappedContactId;
+            const mappedContactClientId = contactIdToClientId.get(resolution.mappedContactId);
+            if (lookupClientId && mappedContactClientId && mappedContactClientId !== lookupClientId) {
+              contactId = null;
+            } else {
+              contactId = resolution.mappedContactId;
+            }
           } else if (resolution.action === 'create') {
             contactId = `__create__:${row.contact.trim()}`;
           }
@@ -642,5 +680,5 @@ export function processTicketRows(
     });
   }
 
-  return processed;
+  return { tickets: processed, preImportSkipped };
 }

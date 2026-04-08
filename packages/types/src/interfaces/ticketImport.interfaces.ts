@@ -336,7 +336,8 @@ export interface ITicketImportReferenceData {
   teamLookup: Record<string, string>;
   priorityLookup: Record<string, string>;
   clientLookup: Record<string, string>;
-  contactLookup: Record<string, string>;
+  /** client_id → (lowercase contact name/email → contact_name_id) */
+  contactLookupByClient: Record<string, Record<string, string>>;
   /** board_id → (lowercase status name → status_id) */
   statusLookupByBoard: Record<string, Record<string, string>>;
   /** board_id → (lowercase category name → category_id) */
@@ -354,7 +355,7 @@ export interface ITicketImportValidationResponse {
   unmatchedTeams: string[];
   unmatchedPriorities: string[];
   unmatchedCategories: string[];
-  unmatchedContacts: string[];
+  unmatchedContacts: IUnmatchedContactCandidate[];
   /** Groups of unparseable dates by structural format pattern */
   unparsableDateGroups: IDateFormatGroup[];
 }
@@ -369,6 +370,17 @@ export interface IUnmatchedEntityInfo {
   ticketTitles: string[];
 }
 
+export interface IUnmatchedContactCandidate {
+  resolutionKey: string;
+  contactName: string;
+  clientName: string;
+}
+
+export interface IUnmatchedContactInfo extends IUnmatchedEntityInfo {
+  resolutionKey: string;
+  clientName: string;
+}
+
 // --- Client Resolution ---
 
 export type ClientResolutionAction = 'skip' | 'create' | 'map_to_existing';
@@ -378,6 +390,8 @@ export interface IClientResolution {
   action: ClientResolutionAction;
   /** If action is 'map_to_existing', the target client ID */
   mappedClientId?: string;
+  /** If action is 'create', the type of client to create (defaults to 'company') */
+  clientType?: 'company' | 'individual';
 }
 
 // --- Agent Resolution ---
@@ -431,7 +445,9 @@ export interface ICategoryResolution {
 export type ContactResolutionAction = 'create' | 'map_to_existing' | 'skip';
 
 export interface IContactResolution {
+  resolutionKey: string;
   originalContactName: string;
+  originalClientName: string;
   action: ContactResolutionAction;
   /** If action is 'map_to_existing', the target contact ID */
   mappedContactId?: string;

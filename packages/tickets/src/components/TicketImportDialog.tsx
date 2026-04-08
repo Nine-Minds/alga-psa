@@ -38,6 +38,8 @@ import {
   ITicketImportReferenceData,
   ITicketImportResult,
   IUnmatchedEntityInfo,
+  IUnmatchedContactCandidate,
+  IUnmatchedContactInfo,
   IClientResolution,
   ClientResolutionAction,
   ITicketAgentResolution,
@@ -130,8 +132,8 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
   const [unmatchedCategoryInfo, setUnmatchedCategoryInfo] = useState<IUnmatchedEntityInfo[]>([]);
   const [categoryResolutions, setCategoryResolutions] = useState<ICategoryResolution[]>([]);
 
-  const [unmatchedContacts, setUnmatchedContacts] = useState<string[]>([]);
-  const [unmatchedContactInfo, setUnmatchedContactInfo] = useState<IUnmatchedEntityInfo[]>([]);
+  const [unmatchedContacts, setUnmatchedContacts] = useState<IUnmatchedContactCandidate[]>([]);
+  const [unmatchedContactInfo, setUnmatchedContactInfo] = useState<IUnmatchedContactInfo[]>([]);
   const [contactResolutions, setContactResolutions] = useState<IContactResolution[]>([]);
 
   const [unmatchedTeams, setUnmatchedTeams] = useState<string[]>([]);
@@ -327,6 +329,41 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         return Array.from(infoMap.values());
       };
 
+      const buildContactInfo = (
+        unmatchedContactCandidates: IUnmatchedContactCandidate[],
+        results: typeof validation.validationResults
+      ): IUnmatchedContactInfo[] => {
+        const infoMap = new Map<string, IUnmatchedContactInfo>();
+        const unmatchedKeySet = new Set(unmatchedContactCandidates.map(candidate => candidate.resolutionKey));
+
+        results.forEach(result => {
+          const contactName = result.data.contact?.trim();
+          const clientName = result.data.client?.trim();
+          if (!contactName || !clientName) return;
+
+          const resolutionKey = `${contactName.toLowerCase()}\0${clientName.toLowerCase()}`;
+          if (!unmatchedKeySet.has(resolutionKey)) return;
+
+          if (!infoMap.has(resolutionKey)) {
+            infoMap.set(resolutionKey, {
+              resolutionKey,
+              name: contactName,
+              clientName,
+              ticketCount: 0,
+              ticketTitles: [],
+            });
+          }
+
+          const info = infoMap.get(resolutionKey)!;
+          info.ticketCount++;
+          if (info.ticketTitles.length < 3) {
+            info.ticketTitles.push(result.data.title || 'Untitled');
+          }
+        });
+
+        return Array.from(infoMap.values());
+      };
+
       setUnmatchedClientInfo(buildEntityInfo(validation.unmatchedClients, r => r.client, validation.validationResults));
       setUnmatchedAgentInfo(buildEntityInfo(validation.unmatchedAgents, r => r.assigned_to, validation.validationResults));
       setUnmatchedStatusInfo(buildEntityInfo(validation.unmatchedStatuses, r => r.status, validation.validationResults));
@@ -335,7 +372,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       setUnmatchedCategories(validation.unmatchedCategories);
       setUnmatchedCategoryInfo(buildEntityInfo(validation.unmatchedCategories, r => r.category, validation.validationResults));
       setUnmatchedContacts(validation.unmatchedContacts);
-      setUnmatchedContactInfo(buildEntityInfo(validation.unmatchedContacts, r => r.contact, validation.validationResults));
+      setUnmatchedContactInfo(buildContactInfo(validation.unmatchedContacts, validation.validationResults));
       setUnmatchedTeams(validation.unmatchedTeams);
       setUnmatchedTeamInfo(buildEntityInfo(validation.unmatchedTeams, r => r.assigned_team, validation.validationResults));
 
@@ -355,9 +392,19 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       });
       setStatusResolutions(prev => {
         const existing = new Map(prev.map(r => [r.originalStatusName.toLowerCase(), r]));
-        return validation.unmatchedStatuses.map(name =>
-          existing.get(name.toLowerCase()) || { originalStatusName: name, boardId: defaultBoardId, action: 'create' as TicketStatusResolutionAction }
-        );
+        const validStatusIds = new Set((refData.statusesByBoard[defaultBoardId] || refData.statusesByBoard['_global'] || []).map(status => status.status_id));
+        return validation.unmatchedStatuses.map(name => {
+          const prev = existing.get(name.toLowerCase());
+          // Always sync boardId to current board — stale boardId from a previous board
+          // selection would create statuses on the wrong board
+          if (prev) {
+            const mappedStatusId = prev.mappedStatusId && validStatusIds.has(prev.mappedStatusId)
+              ? prev.mappedStatusId
+              : undefined;
+            return { ...prev, boardId: defaultBoardId, mappedStatusId };
+          }
+          return { originalStatusName: name, boardId: defaultBoardId, action: 'create' as TicketStatusResolutionAction };
+        });
       });
       setPriorityResolutions(prev => {
         const existing = new Map(prev.map(r => [r.originalPriorityName.toLowerCase(), r]));
@@ -378,14 +425,27 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       });
       setCategoryResolutions(prev => {
         const existing = new Map(prev.map(r => [r.originalCategoryName.toLowerCase(), r]));
-        return validation.unmatchedCategories.map(name =>
-          existing.get(name.toLowerCase()) || { originalCategoryName: name, boardId: defaultBoardId, action: 'create' as CategoryResolutionAction }
-        );
+        const validCategoryIds = new Set((refData.categoriesByBoard[defaultBoardId] || refData.categoriesByBoard['_global'] || []).map(category => category.category_id));
+        return validation.unmatchedCategories.map(name => {
+          const prev = existing.get(name.toLowerCase());
+          if (prev) {
+            const mappedCategoryId = prev.mappedCategoryId && validCategoryIds.has(prev.mappedCategoryId)
+              ? prev.mappedCategoryId
+              : undefined;
+            return { ...prev, boardId: defaultBoardId, mappedCategoryId };
+          }
+          return { originalCategoryName: name, boardId: defaultBoardId, action: 'create' as CategoryResolutionAction };
+        });
       });
       setContactResolutions(prev => {
-        const existing = new Map(prev.map(r => [r.originalContactName.toLowerCase(), r]));
-        return validation.unmatchedContacts.map(name =>
-          existing.get(name.toLowerCase()) || { originalContactName: name, action: 'create' as ContactResolutionAction }
+        const existing = new Map(prev.map(r => [r.resolutionKey, r]));
+        return validation.unmatchedContacts.map(contact =>
+          existing.get(contact.resolutionKey) || {
+            resolutionKey: contact.resolutionKey,
+            originalContactName: contact.contactName,
+            originalClientName: contact.clientName,
+            action: 'create' as ContactResolutionAction,
+          }
         );
       });
       setTeamResolutions(prev => {
@@ -426,8 +486,8 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
   // Resolution handlers
   // -------------------------------------------------------------------------
 
-  const handleClientResolutionChange = useCallback((clientName: string, action: ClientResolutionAction, mappedClientId?: string) => {
-    setClientResolutions(prev => prev.map(r => r.originalClientName === clientName ? { ...r, action, mappedClientId } : r));
+  const handleClientResolutionChange = useCallback((clientName: string, action: ClientResolutionAction, mappedClientId?: string, clientType?: 'company' | 'individual') => {
+    setClientResolutions(prev => prev.map(r => r.originalClientName === clientName ? { ...r, action, mappedClientId, clientType } : r));
   }, []);
 
   const handleAgentResolutionChange = useCallback((agentName: string, action: TicketAgentResolutionAction, mappedUserId?: string) => {
@@ -446,8 +506,8 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     setCategoryResolutions(prev => prev.map(r => r.originalCategoryName === catName ? { ...r, action, mappedCategoryId } : r));
   }, []);
 
-  const handleContactResolutionChange = useCallback((contactName: string, action: ContactResolutionAction, mappedContactId?: string) => {
-    setContactResolutions(prev => prev.map(r => r.originalContactName === contactName ? { ...r, action, mappedContactId } : r));
+  const handleContactResolutionChange = useCallback((resolutionKey: string, action: ContactResolutionAction, mappedContactId?: string) => {
+    setContactResolutions(prev => prev.map(r => r.resolutionKey === resolutionKey ? { ...r, action, mappedContactId } : r));
   }, []);
 
   const handleTeamResolutionChange = useCallback((teamName: string, action: TeamResolutionAction, mappedTeamId?: string) => {
@@ -467,17 +527,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
   }, []);
 
   // -------------------------------------------------------------------------
-  // Step navigation
-  // -------------------------------------------------------------------------
-
-  const hasAnyUnmatched = useMemo(() => {
-    return unmatchedClients.length > 0 || unmatchedPriorities.length > 0 ||
-      unmatchedStatuses.length > 0 || unmatchedCategories.length > 0 ||
-      unmatchedAgents.length > 0 || unmatchedTeams.length > 0 || unmatchedContacts.length > 0 ||
-      unparsableDateGroups.length > 0;
-  }, [unmatchedClients, unmatchedPriorities, unmatchedStatuses, unmatchedCategories, unmatchedAgents, unmatchedTeams, unmatchedContacts, unparsableDateGroups]);
-
-  // -------------------------------------------------------------------------
   // Import
   // -------------------------------------------------------------------------
 
@@ -489,7 +538,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     setErrors([]);
 
     try {
-      const processed = processTicketRows(
+      const { tickets: processed, preImportSkipped } = processTicketRows(
         mappedRows,
         referenceData,
         defaultBoardId,
@@ -508,7 +557,10 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         processed, statusResolutions, clientResolutions, contactResolutions,
         priorityResolutions, categoryResolutions, defaultBoardId
       );
-      setImportResult(result);
+      setImportResult({
+        ...result,
+        ticketsSkipped: result.ticketsSkipped + preImportSkipped,
+      });
       setStep('complete');
     } catch (error) {
       setErrors([error instanceof Error ? error.message : 'Error importing tickets']);
@@ -517,14 +569,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       setIsProcessing(false);
     }
   }, [isProcessing, referenceData, mappedRows, defaultBoardId, clientResolutions, agentResolutions, statusResolutions, priorityResolutions, categoryResolutions, contactResolutions, teamResolutions, dateFormatResolutions, importOptions.skipInvalidRows]);
-
-  const handleProceedFromPreview = useCallback(() => {
-    if (hasAnyUnmatched) {
-      setStep('resolve_data');
-    } else {
-      handleImport();
-    }
-  }, [hasAnyUnmatched, handleImport]);
 
   // -------------------------------------------------------------------------
   // Close
@@ -564,28 +608,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     ).length;
   }, [clientResolutions, validationResults]);
 
-  // Next step label for preview
-  const nextStepLabel = useMemo(() => {
-    if (hasAnyUnmatched) return 'Resolve Unmatched Data';
-    return `Import ${totalTickets} Ticket${totalTickets === 1 ? '' : 's'}`;
-  }, [hasAnyUnmatched, totalTickets]);
-
-  // Check for incomplete mappings across all resolution types
-  const hasIncompleteMappings = useMemo(() => {
-    return clientResolutions.some(r => r.action === 'map_to_existing' && !r.mappedClientId) ||
-      agentResolutions.some(r => r.action === 'map_to_existing' && !r.mappedUserId) ||
-      statusResolutions.some(r => r.action === 'map_to_existing' && !r.mappedStatusId) ||
-      priorityResolutions.some(r => r.action === 'map_to_existing' && !r.mappedPriorityId) ||
-      categoryResolutions.some(r => r.action === 'map_to_existing' && !r.mappedCategoryId) ||
-      contactResolutions.some(r => r.action === 'map_to_existing' && !r.mappedContactId) ||
-      teamResolutions.some(r => r.action === 'map_to_existing' && !r.mappedTeamId);
-  }, [clientResolutions, agentResolutions, statusResolutions, priorityResolutions, categoryResolutions, contactResolutions, teamResolutions]);
-
-  // Total unmatched count for the resolve step header
-  const totalUnmatchedCount = unmatchedClients.length + unmatchedPriorities.length +
-    unmatchedStatuses.length + unmatchedCategories.length + unmatchedAgents.length +
-    unmatchedTeams.length + unmatchedContacts.length + unparsableDateGroups.length;
-
   // Check if the selected board uses ITIL priorities (disables "Create new" for priorities)
   const isItilBoard = useMemo(() => {
     const board = initialBoards.find(b => b.board_id === defaultBoardId);
@@ -623,73 +645,111 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     return map;
   }, [referenceData]);
 
-  // For each unmatched contact: which client(s) reference it, their resolved client_ids,
-  // and whether any clients are being newly created.
+  const resolveClientForContact = useCallback((clientName: string): { id: string | null; isCreating: boolean; displayLabel: string } => {
+    if (!referenceData) return { id: null, isCreating: false, displayLabel: clientName };
+    const directId = referenceData.clientLookup[clientName.toLowerCase().trim()];
+    if (directId) return { id: directId, isCreating: false, displayLabel: clientName };
+
+    const resolution = clientResolutions.find(
+      r => r.originalClientName.toLowerCase() === clientName.toLowerCase()
+    );
+    if (resolution?.action === 'map_to_existing' && resolution.mappedClientId) {
+      const targetName = clientNameMap.get(resolution.mappedClientId);
+      return {
+        id: resolution.mappedClientId,
+        isCreating: false,
+        displayLabel: targetName && targetName.toLowerCase() !== clientName.toLowerCase()
+          ? `${clientName} \u2192 ${targetName}`
+          : clientName,
+      };
+    }
+    if (resolution?.action === 'create') {
+      return { id: null, isCreating: true, displayLabel: `${clientName} (new)` };
+    }
+    return { id: null, isCreating: false, displayLabel: clientName };
+  }, [clientNameMap, clientResolutions, referenceData]);
+
+  // For each unmatched contact/client pair: which client it resolves to and whether that
+  // client is being newly created.
   const contactClientContext = useMemo(() => {
-    // Step 1: collect which CSV client names reference each unmatched contact
-    const clientNamesPerContact = new Map<string, Set<string>>(); // lowercase contact → client names
-    for (const result of validationResults) {
-      const contact = result.data.contact?.trim();
-      const client = result.data.client?.trim();
-      if (!contact || !client) continue;
-      const key = contact.toLowerCase();
-      if (!unmatchedContacts.some(n => n.toLowerCase() === key)) continue;
-      if (!clientNamesPerContact.has(key)) clientNamesPerContact.set(key, new Set());
-      clientNamesPerContact.get(key)!.add(client);
-    }
-
-    // Step 2: resolve each CSV client name → client_id, display label, and creation status
-    const resolveClient = (clientName: string): { id: string | null; isCreating: boolean; displayLabel: string } => {
-      if (!referenceData) return { id: null, isCreating: false, displayLabel: clientName };
-      // Direct match — client exists with this name
-      const directId = referenceData.clientLookup[clientName.toLowerCase().trim()];
-      if (directId) return { id: directId, isCreating: false, displayLabel: clientName };
-      // Check client resolutions
-      const resolution = clientResolutions.find(
-        r => r.originalClientName.toLowerCase() === clientName.toLowerCase()
-      );
-      if (resolution?.action === 'map_to_existing' && resolution.mappedClientId) {
-        const targetName = clientNameMap.get(resolution.mappedClientId);
-        return {
-          id: resolution.mappedClientId,
-          isCreating: false,
-          displayLabel: targetName && targetName.toLowerCase() !== clientName.toLowerCase()
-            ? `${clientName} \u2192 ${targetName}`
-            : clientName,
-        };
-      }
-      if (resolution?.action === 'create') {
-        return { id: null, isCreating: true, displayLabel: `${clientName} (new)` };
-      }
-      return { id: null, isCreating: false, displayLabel: clientName };
-    };
-
-    // Step 3: build per-contact context
     const result = new Map<string, {
-      clientDisplayLabels: string[];
-      resolvedClientIds: Set<string>;
-      hasCreatingClients: boolean;
-      allClientsCreating: boolean;
+      contactKey: string;
+      clientDisplayLabel: string;
+      resolvedClientId: string | null;
+      isCreatingClient: boolean;
     }>();
-    for (const [contactKey, clientNames] of clientNamesPerContact) {
-      const resolvedIds = new Set<string>();
-      const displayLabels: string[] = [];
-      let creatingCount = 0;
-      for (const name of clientNames) {
-        const { id, isCreating, displayLabel } = resolveClient(name);
-        if (id) resolvedIds.add(id);
-        if (isCreating) creatingCount++;
-        displayLabels.push(displayLabel);
-      }
-      result.set(contactKey, {
-        clientDisplayLabels: displayLabels,
-        resolvedClientIds: resolvedIds,
-        hasCreatingClients: creatingCount > 0,
-        allClientsCreating: creatingCount === clientNames.size,
+    unmatchedContacts.forEach(contact => {
+      const { id, isCreating, displayLabel } = resolveClientForContact(contact.clientName);
+      result.set(contact.resolutionKey, {
+        contactKey: contact.contactName.toLowerCase(),
+        clientDisplayLabel: displayLabel,
+        resolvedClientId: id,
+        isCreatingClient: isCreating,
       });
-    }
+    });
     return result;
-  }, [validationResults, unmatchedContacts, referenceData, clientResolutions]);
+  }, [resolveClientForContact, unmatchedContacts]);
+
+  // After client resolutions change, some "unmatched" contacts may now be matched
+  // (e.g. user maps unmatched client → existing client that already has the contact).
+  // Filter those out so the user isn't asked to resolve already-matched contacts.
+  const effectiveUnmatchedContacts = useMemo(() => {
+    if (!referenceData || !contactClientContext.size) return unmatchedContacts;
+    return unmatchedContacts.filter(contact => {
+      const ctx = contactClientContext.get(contact.resolutionKey);
+      if (!ctx || !ctx.resolvedClientId) return true;
+      if (ctx.isCreatingClient) return true;
+      return !referenceData.contactLookupByClient[ctx.resolvedClientId]?.[ctx.contactKey] &&
+        !referenceData.contactLookupByClient['_unassigned']?.[ctx.contactKey];
+    });
+  }, [unmatchedContacts, contactClientContext, referenceData]);
+
+  const effectiveUnmatchedContactInfo = useMemo(() => {
+    const effectiveSet = new Set(effectiveUnmatchedContacts.map(contact => contact.resolutionKey));
+    return unmatchedContactInfo.filter(info => effectiveSet.has(info.resolutionKey));
+  }, [effectiveUnmatchedContacts, unmatchedContactInfo]);
+
+  // -------------------------------------------------------------------------
+  // Step navigation
+  // -------------------------------------------------------------------------
+
+  const hasAnyUnmatched = useMemo(() => {
+    return unmatchedClients.length > 0 || unmatchedPriorities.length > 0 ||
+      unmatchedStatuses.length > 0 || unmatchedCategories.length > 0 ||
+      unmatchedAgents.length > 0 || unmatchedTeams.length > 0 || effectiveUnmatchedContacts.length > 0 ||
+      unparsableDateGroups.length > 0;
+  }, [unmatchedClients, unmatchedPriorities, unmatchedStatuses, unmatchedCategories, unmatchedAgents, unmatchedTeams, effectiveUnmatchedContacts, unparsableDateGroups]);
+
+  const handleProceedFromPreview = useCallback(() => {
+    if (hasAnyUnmatched) {
+      setStep('resolve_data');
+    } else {
+      handleImport();
+    }
+  }, [hasAnyUnmatched, handleImport]);
+
+  // Next step label for preview
+  const nextStepLabel = useMemo(() => {
+    if (hasAnyUnmatched) return 'Resolve Unmatched Data';
+    return `Import ${totalTickets} Ticket${totalTickets === 1 ? '' : 's'}`;
+  }, [hasAnyUnmatched, totalTickets]);
+
+  // Check for incomplete mappings across all resolution types
+  const hasIncompleteMappings = useMemo(() => {
+    const effectiveContactKeys = new Set(effectiveUnmatchedContacts.map(contact => contact.resolutionKey));
+    return clientResolutions.some(r => r.action === 'map_to_existing' && !r.mappedClientId) ||
+      agentResolutions.some(r => r.action === 'map_to_existing' && !r.mappedUserId) ||
+      statusResolutions.some(r => r.action === 'map_to_existing' && !r.mappedStatusId) ||
+      priorityResolutions.some(r => r.action === 'map_to_existing' && !r.mappedPriorityId) ||
+      categoryResolutions.some(r => r.action === 'map_to_existing' && !r.mappedCategoryId) ||
+      contactResolutions.some(r => effectiveContactKeys.has(r.resolutionKey) && r.action === 'map_to_existing' && !r.mappedContactId) ||
+      teamResolutions.some(r => r.action === 'map_to_existing' && !r.mappedTeamId);
+  }, [clientResolutions, agentResolutions, statusResolutions, priorityResolutions, categoryResolutions, contactResolutions, effectiveUnmatchedContacts, teamResolutions]);
+
+  // Total unmatched count for the resolve step header
+  const totalUnmatchedCount = unmatchedClients.length + unmatchedPriorities.length +
+    unmatchedStatuses.length + unmatchedCategories.length + unmatchedAgents.length +
+    unmatchedTeams.length + effectiveUnmatchedContacts.length + unparsableDateGroups.length;
 
   // -------------------------------------------------------------------------
   // Render
@@ -1025,7 +1085,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                     unmatchedCategories.length > 0 && `${unmatchedCategories.length} categor${unmatchedCategories.length > 1 ? 'ies' : 'y'}`,
                     unmatchedAgents.length > 0 && `${unmatchedAgents.length} agent${unmatchedAgents.length > 1 ? 's' : ''}`,
                     unmatchedTeams.length > 0 && `${unmatchedTeams.length} team${unmatchedTeams.length > 1 ? 's' : ''}`,
-                    unmatchedContacts.length > 0 && `${unmatchedContacts.length} contact${unmatchedContacts.length > 1 ? 's' : ''}`,
+                    effectiveUnmatchedContacts.length > 0 && `${effectiveUnmatchedContacts.length} contact${effectiveUnmatchedContacts.length > 1 ? 's' : ''}`,
                     unparsableDateGroups.length > 0 && `${unparsableDateGroups.length} date format${unparsableDateGroups.length > 1 ? 's' : ''}`,
                   ].filter(Boolean).join(', ')}).
                   You&apos;ll resolve these in the next step.
@@ -1135,8 +1195,13 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                                 { value: 'skip', label: `Skip (${info.ticketCount} ticket${info.ticketCount === 1 ? '' : 's'} dropped)` },
                               ]}
                             />
+                            {res.action === 'create' && (
+                              <div className="ml-1 w-fit">
+                                <CustomSelect options={[{ value: 'company', label: 'Company' }, { value: 'individual', label: 'Individual' }]} value={res.clientType || 'company'} onValueChange={(v) => handleClientResolutionChange(info.name, 'create', undefined, v as 'company' | 'individual')} placeholder="Client type" />
+                              </div>
+                            )}
                             {res.action === 'map_to_existing' && (
-                              <div className="ml-1">
+                              <div className="ml-1 w-fit">
                                 <ClientPicker id={`client-res-${info.name}`} clients={initialClients} onSelect={(id) => handleClientResolutionChange(info.name, 'map_to_existing', id || undefined)} selectedClientId={res.mappedClientId || null} filterState="active" onFilterStateChange={() => {}} clientTypeFilter="all" onClientTypeFilterChange={() => {}} placeholder="Select client..." fitContent />
                               </div>
                             )}
@@ -1179,7 +1244,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               ]}
                             />
                             {res.action === 'map_to_existing' && referenceData && (
-                              <div className="ml-1"><CustomSelect options={referenceData.priorities.filter(p => !isItilBoard || p.is_from_itil_standard).map(p => ({ value: p.priority_id, label: p.priority_name }))} value={res.mappedPriorityId || ''} onValueChange={(v) => handlePriorityResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select priority..." /></div>
+                              <div className="ml-1 w-fit"><CustomSelect options={referenceData.priorities.filter(p => !isItilBoard || p.is_from_itil_standard).map(p => ({ value: p.priority_id, label: p.priority_name }))} value={res.mappedPriorityId || ''} onValueChange={(v) => handlePriorityResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select priority..." /></div>
                             )}
                           </div>
                         );
@@ -1217,7 +1282,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               ]}
                             />
                             {res.action === 'map_to_existing' && (
-                              <div className="ml-1"><CustomSelect options={boardStatuses.map(s => ({ value: s.status_id, label: s.name + (s.is_closed ? ' (closed)' : '') }))} value={res.mappedStatusId || ''} onValueChange={(v) => handleStatusResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select status..." /></div>
+                              <div className="ml-1 w-fit"><CustomSelect options={boardStatuses.map(s => ({ value: s.status_id, label: s.name + (s.is_closed ? ' (closed)' : '') }))} value={res.mappedStatusId || ''} onValueChange={(v) => handleStatusResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select status..." /></div>
                             )}
                           </div>
                         );
@@ -1255,7 +1320,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               ]}
                             />
                             {res.action === 'map_to_existing' && (
-                              <div className="ml-1"><CustomSelect options={boardCategories.filter(c => !c.parent_category).map(c => ({ value: c.category_id, label: c.category_name }))} value={res.mappedCategoryId || ''} onValueChange={(v) => handleCategoryResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select category..." /></div>
+                              <div className="ml-1 w-fit"><CustomSelect options={boardCategories.filter(c => !c.parent_category).map(c => ({ value: c.category_id, label: c.category_name }))} value={res.mappedCategoryId || ''} onValueChange={(v) => handleCategoryResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select category..." /></div>
                             )}
                           </div>
                         );
@@ -1292,7 +1357,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               ]}
                             />
                             {res.action === 'map_to_existing' && (
-                              <div className="ml-1">
+                              <div className="ml-1 w-fit">
                                 <UserPicker value={res.mappedUserId || ''} onValueChange={(v) => handleAgentResolutionChange(info.name, 'map_to_existing', v)} users={initialUsers || (referenceData?.users || []).map(u => ({ ...u, is_inactive: u.is_inactive ?? false })) as IUser[]} size="sm" getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction} />
                               </div>
                             )}
@@ -1331,7 +1396,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               ]}
                             />
                             {res.action === 'map_to_existing' && referenceData && (
-                              <div className="ml-1"><CustomSelect options={referenceData.teams.map(t => ({ value: t.team_id, label: t.team_name }))} value={res.mappedTeamId || ''} onValueChange={(v) => handleTeamResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select team..." /></div>
+                              <div className="ml-1 w-fit"><CustomSelect options={referenceData.teams.map(t => ({ value: t.team_id, label: t.team_name }))} value={res.mappedTeamId || ''} onValueChange={(v) => handleTeamResolutionChange(info.name, 'map_to_existing', v)} placeholder="Select team..." /></div>
                             )}
                           </div>
                         );
@@ -1342,24 +1407,23 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               )}
 
               {/* --- Contacts Section --- */}
-              {unmatchedContacts.length > 0 && (
+              {effectiveUnmatchedContacts.length > 0 && (
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('contacts')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
-                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Contacts ({unmatchedContacts.length} unmatched)</span>
+                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">Contacts ({effectiveUnmatchedContacts.length} unmatched)</span>
                     <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('contacts') ? '' : '-rotate-90'}`} />
                   </button>
                   {expandedSections.has('contacts') && (
                     <div className="px-4 pb-4 space-y-3 border-t dark:border-[rgb(var(--color-border-200))]">
-                      {unmatchedContactInfo.map(info => {
-                        const res = contactResolutions.find(r => r.originalContactName.toLowerCase() === info.name.toLowerCase());
+                      {effectiveUnmatchedContactInfo.map(info => {
+                        const res = contactResolutions.find(r => r.resolutionKey === info.resolutionKey);
                         if (!res) return null;
-                        const ctx = contactClientContext.get(info.name.toLowerCase());
-                        const clientLabels = ctx?.clientDisplayLabels ?? [];
-                        const resolvedClientIds = ctx?.resolvedClientIds ?? new Set<string>();
-                        const allClientsCreating = ctx?.allClientsCreating ?? false;
-                        // Filter contacts to those belonging to the resolved client(s)
-                        const filteredContacts = referenceData && resolvedClientIds.size > 0
-                          ? referenceData.contacts.filter(c => c.client_id && resolvedClientIds.has(c.client_id))
+                        const ctx = contactClientContext.get(info.resolutionKey);
+                        const clientLabel = ctx?.clientDisplayLabel;
+                        const resolvedClientId = ctx?.resolvedClientId ?? null;
+                        // Filter contacts to those belonging to the resolved client
+                        const filteredContacts = referenceData && resolvedClientId
+                          ? referenceData.contacts.filter(c => c.client_id === resolvedClientId)
                           : [];
                         const canMapToExisting = filteredContacts.length > 0;
                         return (
@@ -1367,16 +1431,16 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                             <div>
                               <span className="font-medium text-sm">&quot;{info.name}&quot;</span>
                               <span className="text-xs text-gray-500"> ({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span>
-                              {clientLabels.length > 0 && (
+                              {clientLabel && (
                                 <span className="text-xs text-[rgb(var(--color-text-500))] ml-1">
-                                  — on {clientLabels.join(', ')}
+                                  — on {clientLabel}
                                 </span>
                               )}
                             </div>
                             <RadioGroup
-                              name={`contact-${info.name}`}
+                              name={`contact-${info.resolutionKey.replace(/\0/g, '--')}`}
                               value={res.action}
-                              onChange={(value) => handleContactResolutionChange(info.name, value as ContactResolutionAction)}
+                              onChange={(value) => handleContactResolutionChange(info.resolutionKey, value as ContactResolutionAction)}
                               orientation="horizontal"
                               size="sm"
                               options={[
@@ -1386,7 +1450,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               ]}
                             />
                             {res.action === 'map_to_existing' && referenceData && canMapToExisting && (
-                              <div className="ml-1">
+                              <div className="ml-1 w-fit">
                                 <CustomSelect
                                   options={filteredContacts.map(c => {
                                     const cClient = c.client_id ? clientNameMap.get(c.client_id) : null;
@@ -1396,7 +1460,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                                     return { value: c.contact_name_id, label };
                                   })}
                                   value={res.mappedContactId || ''}
-                                  onValueChange={(v) => handleContactResolutionChange(info.name, 'map_to_existing', v)}
+                                  onValueChange={(v) => handleContactResolutionChange(info.resolutionKey, 'map_to_existing', v)}
                                   placeholder="Select contact..."
                                 />
                               </div>

@@ -209,10 +209,12 @@ export const getTicketImportReferenceData = withAuth(async (
       clientLookup[c.client_name.toLowerCase().trim()] = c.client_id;
     });
 
-    const contactLookup: Record<string, string> = {};
-    contacts.forEach((c: { contact_name_id: string; full_name: string; email: string | null }) => {
-      if (c.full_name) contactLookup[c.full_name.toLowerCase().trim()] = c.contact_name_id;
-      if (c.email) contactLookup[c.email.toLowerCase().trim()] = c.contact_name_id;
+    const contactLookupByClient: Record<string, Record<string, string>> = {};
+    contacts.forEach((c: { contact_name_id: string; full_name: string; email: string | null; client_id: string | null }) => {
+      const cid = c.client_id || '_unassigned';
+      if (!contactLookupByClient[cid]) contactLookupByClient[cid] = {};
+      if (c.full_name) contactLookupByClient[cid][c.full_name.toLowerCase().trim()] = c.contact_name_id;
+      if (c.email) contactLookupByClient[cid][c.email.toLowerCase().trim()] = c.contact_name_id;
     });
 
     // Group statuses by board
@@ -272,7 +274,7 @@ export const getTicketImportReferenceData = withAuth(async (
       teamLookup,
       priorityLookup,
       clientLookup,
-      contactLookup,
+      contactLookupByClient,
       statusLookupByBoard,
       categoryLookupByBoard,
     };
@@ -368,7 +370,7 @@ export const importTickets = withAuth(async (
               client_id: trx.raw('gen_random_uuid()'),
               tenant,
               client_name: resolution.originalClientName,
-              client_type: 'company',
+              client_type: resolution.clientType || 'company',
               is_inactive: false,
               created_at: new Date(),
               updated_at: new Date(),
@@ -641,7 +643,7 @@ export const importTickets = withAuth(async (
 
       const result = await TicketModel.createTicket(
         createInput, tenant, trx,
-        { skipLocationValidation: true, skipCategoryValidation: true, skipSubcategoryValidation: true, skipStatusBoardValidation: true },
+        { skipLocationValidation: true, skipCategoryValidation: true, skipSubcategoryValidation: true },
         undefined, undefined, user.user_id
       );
 
