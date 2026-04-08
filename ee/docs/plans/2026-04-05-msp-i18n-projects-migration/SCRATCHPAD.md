@@ -234,6 +234,21 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-07, F024 check)** `node_modules/.bin/eslint
   packages/projects/src/components/TaskDocumentsSimple.tsx` passes with pre-existing
   warnings only (10 warnings, 0 errors).
+- **(2026-04-07, F025)** Wired `packages/projects/src/components/TaskTicketLinks.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the associated-tickets
+  section title, link/create actions, link-existing dialog chrome, filter labels and
+  active-filter chips, select-ticket prompt, cancel/link actions, quick-create checkbox,
+  and ticket-link toast / error fallback copy.
+- **(2026-04-07, F025)** Extended `taskTicketLinks.*` with the remaining filter/dialog
+  leaves surfaced by the audit: category / board / priority labels, active-chip templates,
+  `selectTicketPlaceholder`, error fallbacks for link/remove/new-ticket flows, and small
+  fallbacks like `clientFallback` and `defaultNewStatus`.
+- **(2026-04-07, F025)** Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-locales, and
+  re-ran `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+  successfully after the `taskTicketLinks.*` additions.
+- **(2026-04-07, F025 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/TaskTicketLinks.tsx` passes with pre-existing warnings
+  only (13 warnings, 0 errors).
 
 ## Commands / Runbooks
 
