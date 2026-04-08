@@ -133,7 +133,7 @@ describe("SignInScreen auth flow", () => {
 
   it("handles cancel result from in-app browser", async () => {
     const WebBrowser = await import("expo-web-browser");
-    openAuthSessionResult = { type: "cancel" };
+    openAuthSessionResult = { type: "cancel" } as WebBrowserModule.WebBrowserAuthSessionResult;
 
     const result = await WebBrowser.openAuthSessionAsync("https://example.com", "alga://auth/callback");
 
@@ -142,7 +142,7 @@ describe("SignInScreen auth flow", () => {
 
   it("handles dismiss result from in-app browser", async () => {
     const WebBrowser = await import("expo-web-browser");
-    openAuthSessionResult = { type: "dismiss" };
+    openAuthSessionResult = { type: "dismiss" } as WebBrowserModule.WebBrowserAuthSessionResult;
 
     const result = await WebBrowser.openAuthSessionAsync("https://example.com", "alga://auth/callback");
 
