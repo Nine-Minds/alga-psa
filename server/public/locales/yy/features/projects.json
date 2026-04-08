@@ -652,7 +652,13 @@
   },
   "settings": {
     "page": {
-      "title": "55555"
+      "title": "55555",
+      "tabs": {
+        "projectNumbering": "55555",
+        "projectStatuses": "55555",
+        "taskStatuses": "55555",
+        "taskPriorities": "55555"
+      }
     },
     "statuses": {
       "project": {

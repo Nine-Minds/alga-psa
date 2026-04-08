@@ -624,6 +624,16 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
 - **(2026-04-08, F085 check)** `node_modules/.bin/eslint
   packages/projects/src/components/DeadlineFilter.tsx` passes cleanly with 0 warnings /
   0 errors.
+- **(2026-04-08, F086)** Wired `packages/projects/src/components/settings/ProjectSettings.tsx`
+  to `useTranslation('features/projects')`. Localized the page title and the four top-
+  level tab labels for project numbering, project statuses, task statuses, and task
+  priorities.
+- **(2026-04-08, F086)** Extended `settings.page.*` with a small `tabs.*` group for the
+  settings-shell navigation labels. Re-synced `fr/es/de/nl/it/pl`, regenerated pseudo-
+  locales, and re-ran translation validation successfully.
+- **(2026-04-08, F086 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/settings/ProjectSettings.tsx` passes cleanly with 0
+  warnings / 0 errors.
 
 ## Commands / Runbooks
 

@@ -652,7 +652,13 @@
   },
   "settings": {
     "page": {
-      "title": "Configuración del proyecto"
+      "title": "Configuración del proyecto",
+      "tabs": {
+        "projectNumbering": "Project Numbering",
+        "projectStatuses": "Project Statuses",
+        "taskStatuses": "Task Statuses",
+        "taskPriorities": "Task Priorities"
+      }
     },
     "statuses": {
       "project": {
