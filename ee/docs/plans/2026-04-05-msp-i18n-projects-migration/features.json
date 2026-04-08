@@ -37,7 +37,7 @@
   {"id": "F063", "description": "Wire wizard-steps/TemplateBasicsStep.tsx — wizard basics step (~1 string)", "implemented": true, "prdRefs": ["2b-21c/sub-batch-B"]},
   {"id": "F064", "description": "Confirm AddTemplateDialog.tsx has zero user-visible strings (re-export shim)", "implemented": true, "prdRefs": ["2b-21c/sub-batch-B"]},
 
-  {"id": "F080", "description": "Wire settings/projects/TenantProjectTaskStatusSettings.tsx — tenant-level status defaults (~11 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},
+  {"id": "F080", "description": "Wire settings/projects/TenantProjectTaskStatusSettings.tsx — tenant-level status defaults (~11 strings)", "implemented": true, "prdRefs": ["2b-21b/sub-batch-C"]},
   {"id": "F081", "description": "Wire settings/projects/ProjectStatusSettings.tsx — project status config (~10 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},
   {"id": "F082", "description": "Wire ProjectTaskStatusEditor.tsx — inline status editor (~7 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},
   {"id": "F083", "description": "Wire CreateTaskFromTicketDialog.tsx — create task from ticket (~5 strings)", "implemented": false, "prdRefs": ["2b-21b/sub-batch-C"]},

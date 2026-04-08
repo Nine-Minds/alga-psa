@@ -547,6 +547,22 @@ Consolidates parent plan's 2b-21b (projects, 45 files) and 2b-21c (project-templ
   `packages/projects/src/components/project-templates/AddTemplateDialog.tsx` is a zero-
   string wrapper around `TemplateCreationWizard`. It introduces no user-visible copy and
   requires no i18n wiring of its own, so this item is N/A by design.
+- **(2026-04-08, F080)** Wired
+  `packages/projects/src/components/settings/projects/TenantProjectTaskStatusSettings.tsx`
+  to `useTranslation(['features/projects', 'common'])`. Localized the task-status-library
+  title/description, create/import CTAs, loading and empty states, closed badge, edit/
+  delete actions, create/edit dialog title, status-name/preview/color/icon chrome,
+  closed-status checkbox help, submit/cancel actions, and the save/delete/import toast /
+  error-handler / confirm-dialog copy.
+- **(2026-04-08, F080)** Extended `settings.statuses.*` with the tenant-library-specific
+  gaps surfaced by the audit: task-library description, import button/error copy, dialog
+  preview labels, color/icon field labels, closed-status help text, delete-confirmation
+  message, and update/save helper copy. Re-synced `fr/es/de/nl/it/pl`, regenerated
+  pseudo-locales, and re-ran translation validation successfully.
+- **(2026-04-08, F080 check)** `node_modules/.bin/eslint
+  packages/projects/src/components/settings/projects/TenantProjectTaskStatusSettings.tsx`
+  passes with pre-existing warnings only (`any` usages in legacy import/conflict code;
+  8 warnings, 0 errors).
 
 ## Commands / Runbooks
 
