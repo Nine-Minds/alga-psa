@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AUTHORED_RUNTIME_TASK_QUEUE, getWorkerConfig } from '../workerConfig.js';
 
@@ -28,5 +30,22 @@ describe('temporal worker queue ownership', () => {
     expect(() => getWorkerConfig()).toThrow(
       `temporal-worker is not allowed to poll authored runtime queue "${AUTHORED_RUNTIME_TASK_QUEUE}"`,
     );
+  });
+
+  it('uses non-authored workflow and activity entrypoints and excludes authored runtime modules', () => {
+    const workflowsSource = fs.readFileSync(
+      path.resolve(process.cwd(), 'src/workflows/non-authored-index.ts'),
+      'utf8',
+    );
+    const activitiesSource = fs.readFileSync(
+      path.resolve(process.cwd(), 'src/activities/non-authored-index.ts'),
+      'utf8',
+    );
+    const workerSource = fs.readFileSync(path.resolve(process.cwd(), 'src/worker.ts'), 'utf8');
+
+    expect(workflowsSource).not.toContain('workflow-runtime-v2-run-workflow');
+    expect(activitiesSource).not.toContain('workflow-runtime-v2-activities');
+    expect(workerSource).toContain('./workflows/non-authored-index.js');
+    expect(workerSource).toContain('./activities/non-authored-index.js');
   });
 });

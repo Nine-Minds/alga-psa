@@ -7,7 +7,9 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SERVICE_ROOT = path.resolve(__dirname, '..');
-const DIST_ROOT = path.join(SERVICE_ROOT, 'dist');
+const DIST_ROOT = path.resolve(
+  process.env.WORKFLOW_WORKER_VALIDATE_DIST_ROOT || path.join(SERVICE_ROOT, 'dist'),
+);
 
 const ENTRY_CANDIDATES = [
   path.join(DIST_ROOT, 'services/workflow-worker/src/index.js'),

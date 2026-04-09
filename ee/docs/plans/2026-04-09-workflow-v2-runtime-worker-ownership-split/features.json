@@ -39,7 +39,7 @@
   {
     "id": "F005",
     "description": "Ensure authored Workflow Runtime V2 Temporal runs execute successfully with `workflow-worker` as the only authored queue poller.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow 1",
       "FR-1"
@@ -230,7 +230,7 @@
   {
     "id": "F027",
     "description": "Remove authored-runtime-specific packaging hacks from `temporal-worker` once they are no longer needed for non-authored/domain workflows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2",
       "Integration notes"

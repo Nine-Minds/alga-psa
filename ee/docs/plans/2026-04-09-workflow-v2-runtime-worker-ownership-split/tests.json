@@ -16,7 +16,7 @@
   {
     "id": "T002",
     "description": "Manual/API authored run smoke test: starting an authored Workflow Runtime V2 run results in a Temporal execution that is actually picked up and progressed by `workflow-worker`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F004",
@@ -72,7 +72,7 @@
   {
     "id": "T007",
     "description": "Import-graph regression test: authored runtime startup paths used by `workflow-worker` resolve without `@shared/*` alias failures or repo-layout-relative source hops.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019"

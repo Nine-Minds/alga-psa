@@ -205,3 +205,57 @@ That exposed two separate but related issues:
 - Attempted local compose smoke for `F029`/`T009` with:
   - `docker compose -f docker-compose.ee.yaml -f docker-compose.temporal.ee.yaml up -d --build workflow-worker temporal-worker`
   - Blocked by missing compose env/secret context in this shell (`service "setup" refers to undefined secret postgres_password`).
+
+## Implementation log (2026-04-09, follow-up checkpoint)
+
+### Completed in this checkpoint
+- Feature `F005` implemented via real Temporal integration coverage in `workflow-worker`.
+- Feature `F027` implemented by removing authored-runtime modules from `temporal-worker` startup entrypoints.
+- Test `T002` implemented with an automated authored-run execution smoke test (Temporal test environment + `WorkflowRuntimeV2TemporalWorker`).
+- Test `T007` implemented with import-graph regression tests that validate dist-graph safety against unresolved `@shared/*` aliases and repo-layout-relative source hops.
+
+### Decisions and rationale
+- Added non-authored Temporal worker entrypoint barrels (`non-authored-index.ts`) and pointed `ee/temporal-workflows/src/worker.ts` to those barrels.
+  - Rationale: `temporal-worker` should not carry authored-runtime startup/module baggage once authored queue ownership moved.
+- Added an integration test that starts `WorkflowRuntimeV2TemporalWorker` against `TestWorkflowEnvironment` and executes `workflowRuntimeV2RunWorkflow` on queue `workflow-runtime-v2`.
+  - Rationale: directly proves authored runtime tasks are picked up/progressed by `workflow-worker` without requiring `temporal-worker`.
+- Made `validate-runtime-imports.mjs` accept override env `WORKFLOW_WORKER_VALIDATE_DIST_ROOT`.
+  - Rationale: allows deterministic regression tests against fixture dist trees while preserving production behavior.
+
+### Files changed in this checkpoint
+- `ee/temporal-workflows/src/workflows/non-authored-index.ts` (new)
+- `ee/temporal-workflows/src/activities/non-authored-index.ts` (new)
+- `ee/temporal-workflows/src/worker.ts`
+- `ee/temporal-workflows/src/__tests__/worker-queue-ownership.test.ts`
+- `services/workflow-worker/src/v2/WorkflowRuntimeV2TemporalWorker.integration.test.ts` (new)
+- `services/workflow-worker/src/v2/WorkflowRuntimeV2TemporalWorker.integration.workflows.mjs` (new)
+- `services/workflow-worker/src/v2/WorkflowRuntimeV2TemporalWorker.integration.activities.mjs` (new)
+- `services/workflow-worker/scripts/validate-runtime-imports.mjs`
+- `services/workflow-worker/scripts/validate-runtime-imports.test.ts` (new)
+
+### Commands and checks run
+- `cd services/workflow-worker && npx vitest run src/v2/WorkflowRuntimeV2TemporalWorker.test.ts src/v2/WorkflowRuntimeV2TemporalWorker.integration.test.ts src/index.startup.test.ts scripts/validate-runtime-imports.test.ts`
+- `cd ee/temporal-workflows && npx vitest run src/__tests__/worker-queue-ownership.test.ts`
+- `cd services/workflow-worker && npm run build`
+- `cd ee/temporal-workflows && npm run build`
+
+### Compose smoke attempts and blockers (`F029`, `T009`, `T011`)
+- Brought up compose with full base layering:
+  - `docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml -f docker-compose.temporal.ee.yaml up -d --build workflow-worker temporal-worker temporal-ui temporal-dev`
+- Resolved missing external volume blocker by creating:
+  - `docker volume create workflow-wait-steps-productization_ngrok_data`
+- Resolved Temporal host port collision by running compose with:
+  - `EXPOSE_TEMPORAL_PORT=17233 EXPOSE_TEMPORAL_UI_PORT=18088 TEMPORAL_ADDRESS=temporal-dev:7233 ...`
+- Remaining runtime blockers observed in logs:
+  - `workflow-worker` fails at startup with Temporal native bridge load error:
+    - `Error relocating ... @temporalio/core-bridge ... __register_atfork: symbol not found`
+  - `temporal-worker` fails startup validation due missing required config/secrets in this shell context:
+    - missing `ALGA_AUTH_KEY`, `NEXTAUTH_SECRET`, `APPLICATION_URL`
+- Because workers are not both healthy in this environment, could not complete:
+  - `F029` (UI active authored queue worker confirmation)
+  - `T009` (compose/dev environment authored runtime ownership smoke)
+  - `T011` (DB-backed integration sanity across workflow tables)
+
+### Remaining items after this checkpoint
+- Features not yet implemented/verified: `F029`
+- Tests not yet implemented/verified: `T009`, `T011`

@@ -1,6 +1,6 @@
 import { Worker, NativeConnection } from "@temporalio/worker";
 import { createLogger, format, transports } from "winston";
-import * as activities from "./activities/index.js";
+import * as activities from "./activities/non-authored-index.js";
 import { initializeJobHandlersForWorker } from "./activities/job-activities.js";
 import * as dotenv from "dotenv";
 import express from "express";
@@ -54,7 +54,7 @@ async function createWorkers(config: WorkerConfig): Promise<Worker[]> {
     const worker = await Worker.create({
       connection,
       namespace: config.temporalNamespace,
-      workflowsPath: new URL("./workflows/index.js", import.meta.url).pathname,
+      workflowsPath: new URL("./workflows/non-authored-index.js", import.meta.url).pathname,
       activities,
       taskQueue,
       maxConcurrentActivityTaskExecutions:
