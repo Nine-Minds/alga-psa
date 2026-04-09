@@ -196,7 +196,7 @@
   {
     "id": "T020",
     "description": "DB-backed integration: run, step, wait, action, and event projection tables reflect the Temporal-native lifecycle accurately enough to power existing run-list and run-detail product APIs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054",
       "F055",
@@ -209,7 +209,7 @@
   {
     "id": "T021",
     "description": "Determinism/replay: a run continues to replay successfully after the workflow definition is edited later because the run remains pinned to its original definition version, hash, and runtime semantics version.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F005",
@@ -231,7 +231,7 @@
   {
     "id": "T023",
     "description": "API integration: replay or re-run starts a fresh Temporal-native run from the original normalized input and pinned definition rather than attempting DB snapshot resume.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050",
       "F060",
@@ -241,7 +241,7 @@
   {
     "id": "T024",
     "description": "Cutover integration: new runs no longer depend on lease-based runnable-run acquisition, due-wait polling, or DB wait-resolution worker behavior to make progress.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F063",
@@ -253,7 +253,7 @@
   {
     "id": "T025",
     "description": "Temporal interpreter: workflow cancellation propagates to active child execution when present and terminal run state remains canceled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061",
       "F029"

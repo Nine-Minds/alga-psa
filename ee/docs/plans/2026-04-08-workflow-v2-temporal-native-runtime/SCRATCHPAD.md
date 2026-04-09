@@ -764,3 +764,91 @@ Follow-on blocker observed while moving to `T020`:
 - `npm --prefix server run test -- src/test/integration/workflowRuntimeV2.publish.integration.test.ts src/test/integration/workflowRuntimeV2.control.integration.test.ts -t "Get run server action returns status, nodePath, and timestamps|List run steps server action returns ordered step history with attempts|Workflow runtime event list server action returns recent events|Cancel run server action sets status CANCELED and releases waits"`
   - `workflowRuntimeV2.control.integration.test.ts` target passed.
   - `workflowRuntimeV2.publish.integration.test.ts` failed during DB setup with `ROLLBACK - Connection terminated unexpectedly` and then `db.destroy` on undefined in `afterAll`.
+
+### T020 completed (projection tables + run list/detail/event APIs)
+
+- Added comprehensive DB-backed integration coverage in [server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts):
+  - New test `Run list/detail/event APIs reflect run, step, wait, action, and event projection lifecycle data...` drives a workflow through `action.call` -> `event.wait` -> external event resume -> `control.return`.
+  - Asserts projection-table lifecycle evidence across:
+    - `workflow_runs` (`WAITING` -> `SUCCEEDED`)
+    - `workflow_run_steps` (step timeline rows present)
+    - `workflow_run_waits` (event wait created then `RESOLVED`)
+    - `workflow_action_invocations` (successful action invocation row)
+    - `workflow_runtime_events` (matched inbound event row)
+  - Asserts existing product-facing API surfaces are powered by those projections:
+    - `listWorkflowRunsAction` includes the run
+    - `getWorkflowRunAction` returns terminal run detail
+    - `listWorkflowRunStepsAction` includes step/wait/invocation detail
+    - `listWorkflowRunTimelineEventsAction` includes step + wait timeline events
+    - `listWorkflowEventsAction` returns matched event entry
+- Added required action imports in the same integration suite for `submitWorkflowEventAction`, `listWorkflowRunsAction`, `listWorkflowRunTimelineEventsAction`, and `listWorkflowEventsAction`.
+
+Plan bookkeeping updates:
+- Marked `T020` implemented.
+
+Validation commands:
+- `npm --prefix server run test -- src/test/integration/workflowRuntimeV2.publish.integration.test.ts -t "Run list/detail/event APIs reflect run, step, wait, action, and event projection lifecycle data"`
+- `npm --prefix server run test -- src/test/integration/workflowRuntimeV2.publish.integration.test.ts -t "Run list/detail/event APIs reflect run, step, wait, action, and event projection lifecycle data|Get run server action returns status, nodePath, and timestamps|List run steps server action returns ordered step history with attempts|Cancel run server action sets status CANCELED and releases waits"`
+
+Gotchas:
+- These integration runs still emit high-volume migration/setup logs under the server test harness; assertions are stable but command output is noisy.
+
+### T021 completed (pinned-definition resume after later publish)
+
+- Added integration coverage in [server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts):
+  - New test `Runs remain pinned to their original published version when newer definitions are published before resume...` starts a v1 run that blocks on `event.wait`, publishes a changed v2 definition, then resumes the original run via `submitWorkflowEventAction`.
+  - Verifies the waiting/succeeded run stays on `workflow_version=1` and the resumed payload marker reflects v1 behavior (not v2), demonstrating pinned-definition execution semantics through wait/resume.
+
+Plan bookkeeping updates:
+- Marked `T021` implemented.
+
+Validation commands:
+- `npm --prefix server run test -- src/test/integration/workflowRuntimeV2.publish.integration.test.ts -t "Runs remain pinned to their original published version when newer definitions are published before resume"`
+
+### T023 completed (replay starts fresh Temporal-native run)
+
+- Extended [server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts) with replay integration coverage:
+  - Added test `Replay run server action creates a fresh Temporal-native run from original input instead of DB snapshot resume...`.
+  - Test mutates original run `node_path` to a non-root value, invokes `replayWorkflowRunAction`, and verifies the replayed run:
+    - has a new run ID
+    - keeps original workflow/version identity
+    - reuses original normalized input payload when explicit replay payload is empty
+    - starts at fresh root execution path (`root.steps[0]`) instead of inheriting old node/snapshot progress
+    - records replay linkage metadata (`trigger_metadata_json.replayOfRunId`)
+    - carries Temporal launch identifiers (`temporal_workflow_id`, `temporal_run_id`)
+- Added deterministic test harness mock for Temporal launcher/cancel helpers (`@alga-psa/workflows/lib/workflowRuntimeV2Temporal`) so replay assertions remain stable without requiring external Temporal service availability in this integration suite.
+
+Plan bookkeeping updates:
+- Marked `T023` implemented.
+
+Validation commands:
+- `npm --prefix server run test -- src/test/integration/workflowRuntimeV2.publish.integration.test.ts -t "Replay run server action creates a fresh Temporal-native run from original input instead of DB snapshot resume|Cancel run server action sets status CANCELED and releases waits|Get run server action returns status, nodePath, and timestamps"`
+
+### T024 completed (cutover worker behavior)
+
+- Updated startup coverage in [services/workflow-worker/src/index.startup.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/services/workflow-worker/src/index.startup.test.ts):
+  - Default startup test now asserts only event-ingress worker is started and DB polling worker is not started unless explicitly enabled.
+  - Added explicit opt-in test asserting DB polling worker starts when `WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING=true`.
+- This validates cutover behavior that new run progression is not coupled to lease/polling worker startup in default runtime mode.
+
+Plan bookkeeping updates:
+- Marked `T024` implemented.
+
+Validation commands:
+- `cd services/workflow-worker && npx vitest src/index.startup.test.ts --run`
+
+### T025 completed (child cancellation propagation)
+
+- Added Temporal interpreter test coverage in [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts):
+  - New test `propagates cancellation during active child workflow execution and marks parent run CANCELED` verifies cancellation-class failures during `control.callWorkflow` do not degrade into catchable child errors.
+  - Assertions cover active child-start invocation, canceled step projection status, and terminal parent run status `CANCELED`.
+- Fixed runtime behavior in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - `control.callWorkflow` child-execution catch path now rethrows uncatchable cancellation-class failures before child-error normalization/retry handling.
+  - This preserves operator cancellation semantics and prevents cancellation from being rewritten as `ChildWorkflowError`.
+
+Plan bookkeeping updates:
+- Marked `T025` implemented.
+
+Validation commands:
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run -t "propagates cancellation during active child workflow execution and marks parent run CANCELED|normalizes child workflow failures for parent catch/retry handling"`
+- `npm --prefix ee/temporal-workflows run type-check`

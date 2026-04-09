@@ -1144,6 +1144,89 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     });
   });
 
+  it('propagates cancellation during active child workflow execution and marks parent run CANCELED', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_12b',
+      name: 'child cancellation propagation',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_call_workflow',
+          type: 'control.callWorkflow',
+          workflowId: 'wf_child',
+          workflowVersion: 2,
+        },
+        {
+          id: 'step_return',
+          type: 'control.return',
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_12b',
+          workflowId: 'wf_12b',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_12b',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    mockActivities.startWorkflowRuntimeV2ChildRun.mockResolvedValue({
+      childRunId: 'child-run-12b',
+      rootRunId: 'run_12b',
+      temporalWorkflowId: 'workflow-runtime-v2:run:child-run-12b',
+    });
+
+    const temporalWorkflow = await import('@temporalio/workflow');
+    const executeChildMock = vi.mocked(temporalWorkflow.executeChild);
+    executeChildMock.mockRejectedValueOnce({
+      name: 'CancelledFailure',
+      message: 'parent cancellation propagated to child execution',
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_12b',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_12b',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_12b',
+    })).rejects.toMatchObject({
+      name: 'CancelledFailure',
+    });
+
+    expect(mockActivities.startWorkflowRuntimeV2ChildRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parentRunId: 'run_12b',
+        workflowId: 'wf_child',
+        workflowVersion: 2,
+      })
+    );
+    expect(mockActivities.projectWorkflowRuntimeV2StepCompletion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'run_12b',
+        stepPath: 'root.steps[0]',
+        status: 'CANCELED',
+      })
+    );
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_12b',
+      status: 'CANCELED',
+    });
+  });
+
   it('retries control.callWorkflow using authored retry policy before succeeding', async () => {
     const definition: WorkflowDefinition = {
       id: 'wf_13',

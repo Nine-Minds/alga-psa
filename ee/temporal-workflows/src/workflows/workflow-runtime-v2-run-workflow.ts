@@ -443,6 +443,9 @@ export async function workflowRuntimeV2RunWorkflow(
             }
             break;
           } catch (error) {
+            if (isUncatchableWorkflowError(error)) {
+              throw error;
+            }
             const childError = createChildWorkflowRuntimeError(current.path, {
               workflowId: callWorkflowStep.workflowId,
               workflowVersion: callWorkflowStep.workflowVersion,
