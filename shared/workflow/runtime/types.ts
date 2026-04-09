@@ -347,7 +347,15 @@ export const forEachBlockSchema = z.object({
   concurrency: z.number().int().positive().optional(),
   body: z.array(z.lazy(() => stepSchema)) as z.ZodType<Step[]>,
   onItemError: z.enum(['continue', 'fail']).optional()
-}).strict();
+}).strict().superRefine((step, ctx) => {
+  if (step.concurrency !== undefined && step.concurrency > 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['concurrency'],
+      message: 'control.forEach concurrency > 1 is not supported in Temporal-native runtime v1'
+    });
+  }
+});
 
 export const tryCatchBlockSchema = z.object({
   id: z.string().min(1),
@@ -510,7 +518,7 @@ export function isWorkflowTimeTrigger(trigger: WorkflowTrigger | null | undefine
 
 export type WorkflowRunStatus = 'RUNNING' | 'WAITING' | 'SUCCEEDED' | 'FAILED' | 'CANCELED';
 export type WorkflowRunStepStatus = 'STARTED' | 'SUCCEEDED' | 'FAILED' | 'RETRY_SCHEDULED' | 'CANCELED';
-export type WorkflowRunWaitType = 'event' | 'retry' | 'human' | 'timeout';
+export type WorkflowRunWaitType = 'event' | 'retry' | 'human' | 'timeout' | 'time';
 
 export type WorkflowErrorCategory =
   | 'ValidationError'

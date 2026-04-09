@@ -65,7 +65,7 @@
   {
     "id": "T007",
     "description": "Publish validation or designer smoke: `control.forEach` concurrency greater than 1 is rejected or unavailable in the first Temporal-native release.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]

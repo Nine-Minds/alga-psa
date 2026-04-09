@@ -415,3 +415,25 @@ Validation commands (this checkpoint):
 
 Gotchas:
 - Current forEach-body path parsing is intentionally scoped to top-level `root.steps[n].body.steps[...]` in this slice; nested branch-container forEach path traversal should be generalized when nested branch/loop combinations are implemented more broadly.
+
+### F027 + T007 completed (forEach concurrency guard)
+
+- Added publish/runtime-schema guard in [shared/workflow/runtime/types.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/shared/workflow/runtime/types.ts):
+  - `control.forEach` now rejects `concurrency > 1` via `forEachBlockSchema` validation.
+  - Validation error message explicitly documents first-release Temporal-native constraint.
+- Added unit test coverage in [shared/workflow/runtime/__tests__/types.exprPersistence.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/shared/workflow/runtime/__tests__/types.exprPersistence.test.ts):
+  - verifies parser rejection for `control.forEach` with `concurrency: 2`.
+
+Rationale:
+- First-release runtime intentionally enforces sequential loop semantics; rejecting unsupported concurrency at schema validation time avoids silent semantics drift between designer/runtime expectations.
+
+Plan bookkeeping updates:
+- Marked `F027` implemented.
+- Marked `T007` implemented.
+
+Validation commands (this checkpoint):
+- `cd shared && npx vitest workflow/runtime/__tests__/types.exprPersistence.test.ts --run`
+- `npm --prefix shared run typecheck`
+
+Gotchas:
+- This guard is currently schema-level rejection (publish/runtime parse path), not a UI-only hide; if product wants hide-only UX later, designer-level constraints can be layered on top while keeping parser hard-stop for safety.
