@@ -258,5 +258,14 @@
       "F061",
       "F029"
     ]
+  },
+  {
+    "id": "T026",
+    "description": "Temporal interpreter: `control.callWorkflow` launches a Temporal child execution from a child run record with deterministic child workflow ID and parent/root linkage metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F030"
+    ]
   }
 ]

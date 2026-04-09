@@ -1,5 +1,8 @@
-import { continueAsNew, proxyActivities, sleep } from '@temporalio/workflow';
-import type { WorkflowRuntimeV2TemporalRunInput } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
+import { continueAsNew, executeChild, proxyActivities, sleep } from '@temporalio/workflow';
+import {
+  WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
+  type WorkflowRuntimeV2TemporalRunInput,
+} from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
 import type { Expr, ForEachBlock, IfBlock } from '@alga-psa/workflows/runtime';
 import type { RetryPolicy, OnErrorPolicy } from '@alga-psa/workflows/runtime';
 import type { TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime';
@@ -49,6 +52,18 @@ const activities = proxyActivities<{
     };
     scopes: WorkflowRuntimeV2ScopeState;
   }): Promise<{ output: unknown; saveAsPath: string | null }>;
+  startWorkflowRuntimeV2ChildRun(input: {
+    parentRunId: string;
+    parentStepPath: string;
+    tenantId: string | null;
+    workflowId: string;
+    workflowVersion: number;
+    payload: Record<string, unknown>;
+  }): Promise<{
+    childRunId: string;
+    rootRunId: string;
+    temporalWorkflowId: string;
+  }>;
   completeWorkflowRuntimeV2Run(input: { runId: string; status: 'SUCCEEDED' | 'FAILED' | 'CANCELED' }): Promise<void>;
 }>({
   startToCloseTimeout: '10m',
@@ -193,6 +208,60 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
           });
           state = clearForEachLexicalScope(state, forEachStep.id);
         }
+        await activities.projectWorkflowRuntimeV2StepCompletion({
+          runId: input.runId,
+          stepId: stepProjection.stepId,
+          stepPath: current.path,
+          status: 'SUCCEEDED',
+        });
+        stepCount += 1;
+        continue;
+      }
+
+      if (current.step.type === 'control.callWorkflow') {
+        const callWorkflowStep = current.step as {
+          workflowId: string;
+          workflowVersion: number;
+          inputMapping?: Record<string, Expr>;
+        };
+        const childPayload = await evaluateExpressionMapping(
+          callWorkflowStep.inputMapping ?? {},
+          state.scopes
+        );
+        const childStart = await activities.startWorkflowRuntimeV2ChildRun({
+          parentRunId: state.scopes.system.runId,
+          parentStepPath: current.path,
+          tenantId: state.scopes.system.tenantId,
+          workflowId: callWorkflowStep.workflowId,
+          workflowVersion: callWorkflowStep.workflowVersion,
+          payload: childPayload,
+        });
+
+        try {
+          await executeChild(workflowRuntimeV2RunWorkflow, {
+            workflowId: childStart.temporalWorkflowId,
+            taskQueue: WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
+            args: [{
+              runId: childStart.childRunId,
+              tenantId: state.scopes.system.tenantId,
+              workflowId: callWorkflowStep.workflowId,
+              workflowVersion: callWorkflowStep.workflowVersion,
+              triggerType: null,
+              executionKey: `${input.executionKey}:child:${childStart.childRunId}`,
+            }],
+          });
+        } catch (error) {
+          throw createChildWorkflowRuntimeError(current.path, {
+            workflowId: callWorkflowStep.workflowId,
+            workflowVersion: callWorkflowStep.workflowVersion,
+            childRunId: childStart.childRunId,
+            rootRunId: childStart.rootRunId,
+            cause: error instanceof Error ? error.message : String(error),
+          });
+        }
+
+        state = advanceWorkflowRuntimeV2InterpreterState(state);
+        state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
         await activities.projectWorkflowRuntimeV2StepCompletion({
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -377,6 +446,17 @@ async function evaluateDeterministicArrayExpression(expr: Expr, scopes: Workflow
     throw new Error('control.forEach items did not evaluate to an array');
   }
   return value;
+}
+
+async function evaluateExpressionMapping(
+  mapping: Record<string, Expr>,
+  scopes: WorkflowRuntimeV2ScopeState
+): Promise<Record<string, unknown>> {
+  const context = buildWorkflowRuntimeV2ExpressionContext(scopes);
+  const entries = await Promise.all(Object.entries(mapping).map(async ([key, value]) => {
+    return [key, await evaluateExpression(value.$expr, context)] as const;
+  }));
+  return Object.fromEntries(entries);
 }
 
 function assertDeterministicExpression(source: string): void {
@@ -722,6 +802,16 @@ function isForEachLoopContext(value: unknown): value is ForEachLoopContext {
 
 function isForEachLexicalScope(value: unknown): value is ForEachLexicalScope {
   return isRecord(value) && typeof value.__loopId === 'string';
+}
+
+function createChildWorkflowRuntimeError(stepPath: string, details: Record<string, unknown>): RuntimeErrorLike {
+  return {
+    category: 'ChildWorkflowError',
+    message: 'Child workflow execution failed',
+    nodePath: stepPath,
+    at: new Date().toISOString(),
+    details,
+  };
 }
 
 function routeForEachOnItemError(input: {

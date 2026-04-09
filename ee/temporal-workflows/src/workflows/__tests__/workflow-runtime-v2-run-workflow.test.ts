@@ -7,6 +7,7 @@ type RuntimeV2Activities = {
   projectWorkflowRuntimeV2StepStart: ReturnType<typeof vi.fn>;
   projectWorkflowRuntimeV2StepCompletion: ReturnType<typeof vi.fn>;
   executeWorkflowRuntimeV2ActionStep: ReturnType<typeof vi.fn>;
+  startWorkflowRuntimeV2ChildRun: ReturnType<typeof vi.fn>;
   completeWorkflowRuntimeV2Run: ReturnType<typeof vi.fn>;
 };
 
@@ -14,6 +15,7 @@ let mockActivities: RuntimeV2Activities;
 
 vi.mock('@temporalio/workflow', () => ({
   continueAsNew: vi.fn(async () => undefined),
+  executeChild: vi.fn(async () => undefined),
   proxyActivities: vi.fn(() => mockActivities),
   sleep: vi.fn(async () => undefined),
 }));
@@ -32,6 +34,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       projectWorkflowRuntimeV2StepStart: vi.fn(),
       projectWorkflowRuntimeV2StepCompletion: vi.fn(),
       executeWorkflowRuntimeV2ActionStep: vi.fn(),
+      startWorkflowRuntimeV2ChildRun: vi.fn(),
       completeWorkflowRuntimeV2Run: vi.fn(),
     };
 
@@ -42,6 +45,11 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     mockActivities.completeWorkflowRuntimeV2Run.mockResolvedValue(undefined);
     mockActivities.projectWorkflowRuntimeV2StepCompletion.mockResolvedValue(undefined);
     mockActivities.executeWorkflowRuntimeV2Run.mockResolvedValue(undefined);
+    mockActivities.startWorkflowRuntimeV2ChildRun.mockResolvedValue({
+      childRunId: 'child-run-default',
+      rootRunId: 'root-run-default',
+      temporalWorkflowId: 'workflow-runtime-v2:run:child-run-default',
+    });
   });
 
   it('executes action.call through activity boundary then completes on control.return', async () => {
@@ -912,6 +920,142 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_10',
       status: 'FAILED',
+    });
+  });
+
+  it('executes control.callWorkflow as a Temporal child workflow', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_11',
+      name: 'call workflow',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_call_workflow',
+          type: 'control.callWorkflow',
+          workflowId: 'wf_child',
+          workflowVersion: 7,
+          inputMapping: {
+            ticketId: { $expr: 'payload.ticketId' },
+          },
+        },
+        {
+          id: 'step_return',
+          type: 'control.return',
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: { ticketId: 't_123' },
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_11',
+          workflowId: 'wf_11',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_11',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    mockActivities.startWorkflowRuntimeV2ChildRun.mockResolvedValue({
+      childRunId: 'child-run-11',
+      rootRunId: 'run_11',
+      temporalWorkflowId: 'workflow-runtime-v2:run:child-run-11',
+    });
+
+    const temporalWorkflow = await import('@temporalio/workflow');
+    const executeChildMock = vi.mocked(temporalWorkflow.executeChild);
+    executeChildMock.mockResolvedValueOnce(undefined);
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await workflowRuntimeV2RunWorkflow({
+      runId: 'run_11',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_11',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_11',
+    });
+
+    expect(mockActivities.startWorkflowRuntimeV2ChildRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parentRunId: 'run_11',
+        parentStepPath: 'root.steps[0]',
+        workflowId: 'wf_child',
+        workflowVersion: 7,
+        payload: {
+          ticketId: 't_123',
+        },
+      })
+    );
+    expect(executeChildMock).toHaveBeenCalledTimes(1);
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_11',
+      status: 'SUCCEEDED',
+    });
+  });
+
+  it('normalizes child workflow failures for parent catch/retry handling', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_12',
+      name: 'call workflow failure',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_call_workflow',
+          type: 'control.callWorkflow',
+          workflowId: 'wf_child',
+          workflowVersion: 3,
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_12',
+          workflowId: 'wf_12',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_12',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    mockActivities.startWorkflowRuntimeV2ChildRun.mockResolvedValue({
+      childRunId: 'child-run-12',
+      rootRunId: 'run_12',
+      temporalWorkflowId: 'workflow-runtime-v2:run:child-run-12',
+    });
+
+    const temporalWorkflow = await import('@temporalio/workflow');
+    const executeChildMock = vi.mocked(temporalWorkflow.executeChild);
+    executeChildMock.mockRejectedValueOnce(new Error('child failed'));
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_12',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_12',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_12',
+    })).rejects.toMatchObject({
+      category: 'ChildWorkflowError',
     });
   });
 });

@@ -15,6 +15,7 @@ import { createHash } from 'crypto';
 import type { WorkflowRuntimeV2ScopeState } from '../workflows/workflow-runtime-v2-interpreter.js';
 import {
   WorkflowActionInvocationModelV2,
+  WorkflowDefinitionVersionModelV2,
   WorkflowRunStepModelV2,
   WorkflowRunModelV2,
 } from '@alga-psa/workflows/persistence';
@@ -279,6 +280,67 @@ export async function executeWorkflowRuntimeV2ActionStep(input: {
     });
     throw runtimeError;
   }
+}
+
+export async function startWorkflowRuntimeV2ChildRun(input: {
+  parentRunId: string;
+  parentStepPath: string;
+  tenantId: string | null;
+  workflowId: string;
+  workflowVersion: number;
+  payload: Record<string, unknown>;
+}): Promise<{
+  childRunId: string;
+  rootRunId: string;
+  temporalWorkflowId: string;
+}> {
+  const knex = await getAdminConnection();
+  const parentRun = await WorkflowRunModelV2.getById(knex, input.parentRunId);
+  if (!parentRun) {
+    throw new Error(`Parent workflow run not found: ${input.parentRunId}`);
+  }
+
+  const definitionVersion = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(
+    knex,
+    input.workflowId,
+    input.workflowVersion
+  );
+  if (!definitionVersion) {
+    throw new Error(`Child workflow definition not found: ${input.workflowId}@${input.workflowVersion}`);
+  }
+  const definitionHash = createHash('sha256')
+    .update(JSON.stringify(definitionVersion.definition_json ?? null))
+    .digest('hex');
+
+  const runtime = new WorkflowRuntimeV2();
+  const rootRunId = parentRun.root_run_id ?? parentRun.run_id;
+  const childRunId = await runtime.startRun(knex, {
+    workflowId: input.workflowId,
+    version: input.workflowVersion,
+    payload: input.payload,
+    tenantId: input.tenantId ?? parentRun.tenant_id ?? null,
+    triggerType: null,
+    triggerMetadata: {
+      parentRunId: parentRun.run_id,
+      rootRunId,
+      parentStepPath: input.parentStepPath,
+    },
+    definitionHash,
+    runtimeSemanticsVersion: parentRun.runtime_semantics_version ?? null,
+    engine: 'temporal',
+    parentRunId: parentRun.run_id,
+    rootRunId,
+  });
+  await WorkflowRunModelV2.update(knex, childRunId, {
+    parent_run_id: parentRun.run_id,
+    root_run_id: rootRunId,
+  });
+
+  return {
+    childRunId,
+    rootRunId,
+    temporalWorkflowId: `workflow-runtime-v2:run:${childRunId}`,
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

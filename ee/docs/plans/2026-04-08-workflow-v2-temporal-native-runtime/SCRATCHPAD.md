@@ -437,3 +437,35 @@ Validation commands (this checkpoint):
 
 Gotchas:
 - This guard is currently schema-level rejection (publish/runtime parse path), not a UI-only hide; if product wants hide-only UX later, designer-level constraints can be layered on top while keeping parser hard-stop for safety.
+
+### F029-F030 + T026 completed (Temporal child workflow execution path)
+
+- Implemented `control.callWorkflow` as Temporal child execution in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - parent interpreter evaluates child input mapping deterministically from interpreter scopes
+  - parent starts child run allocation/projection via activity boundary
+  - parent executes child using Temporal `executeChild(...)` on the same runtime workflow type/task queue
+  - removed inline legacy runtime behavior for `control.callWorkflow` in the Temporal-native path
+- Added child run allocation activity in [ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts):
+  - creates child run rows through runtime `startRun(...)`
+  - pins child `definition_hash` and inherits runtime semantics version from parent projection
+  - writes parent/root linkage (`parent_run_id`, `root_run_id`)
+  - returns deterministic Temporal workflow ID `workflow-runtime-v2:run:<childRunId>`
+- Extended start-run inputs in [shared/workflow/runtime/runtime/workflowRuntimeV2.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/shared/workflow/runtime/runtime/workflowRuntimeV2.ts) to support persisted parent/root linkage metadata.
+- Added unit coverage in [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts):
+  - verifies child run start activity invocation and Temporal `executeChild` call for `control.callWorkflow`
+  - verifies structured child failure category (`ChildWorkflowError`) is surfaced to the parent workflow
+
+Rationale:
+- Child orchestration authority now remains inside Temporal instead of falling back to inline DB runtime recursion.
+- Deterministic child IDs + linkage metadata establish the lineage model needed for parent/child observability and future cancellation propagation.
+
+Plan bookkeeping updates:
+- Marked `F029` implemented.
+- Marked `F030` implemented.
+- Added `T026` (implemented:true) for the completed child launch/linkage behavior.
+- Kept `T008` pending because it also requires `F031` (output mapping) and broader projection assertions.
+
+Validation commands (this checkpoint):
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
+- `npm --prefix ee/temporal-workflows run type-check`
+- `npm --prefix shared run typecheck`

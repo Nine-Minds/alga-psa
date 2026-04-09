@@ -170,13 +170,13 @@
   {
     "id": "F029",
     "description": "Execute `control.callWorkflow` as a Temporal child workflow rather than inline child execution inside the parent runtime.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7"]
   },
   {
     "id": "F030",
     "description": "Assign deterministic child workflow and child run identifiers with root/parent linkage metadata for `control.callWorkflow`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7", "Data / API / Integrations"]
   },
   {

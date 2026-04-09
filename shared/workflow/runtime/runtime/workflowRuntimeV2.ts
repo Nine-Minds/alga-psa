@@ -60,6 +60,8 @@ export type StartRunParams = {
   definitionHash?: string | null;
   runtimeSemanticsVersion?: string | null;
   engine?: 'temporal' | 'db';
+  parentRunId?: string | null;
+  rootRunId?: string | null;
   secretResolver?: SecretResolver;
 };
 
@@ -126,6 +128,8 @@ export class WorkflowRuntimeV2 {
       definition_hash: params.definitionHash ?? null,
       runtime_semantics_version: params.runtimeSemanticsVersion ?? null,
       engine: params.engine ?? null,
+      parent_run_id: params.parentRunId ?? null,
+      root_run_id: params.rootRunId ?? null,
       resume_event_name: params.triggerEvent?.name ?? null,
       resume_event_payload: params.triggerEvent?.payload ?? null
     });
