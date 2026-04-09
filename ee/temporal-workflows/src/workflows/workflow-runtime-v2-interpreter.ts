@@ -1,4 +1,4 @@
-import type { IfBlock, Step, WorkflowDefinition } from '@alga-psa/workflows/runtime';
+import type { IfBlock, Step, TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime';
 
 export type WorkflowRuntimeV2SequenceFrame = {
   kind: 'sequence';
@@ -168,7 +168,7 @@ function resolveSequenceByPath(definition: WorkflowDefinition, path: string): St
     return definition.steps;
   }
 
-  const branchMatch = /^root\.steps\[(\d+)\]\.(then|else)\.steps$/.exec(path);
+  const branchMatch = /^root\.steps\[(\d+)\]\.(then|else|try|catch)\.steps$/.exec(path);
   if (!branchMatch) {
     return null;
   }
@@ -180,12 +180,24 @@ function resolveSequenceByPath(definition: WorkflowDefinition, path: string): St
   }
 
   const parentStep = definition.steps[stepIndex];
-  if (!parentStep || parentStep.type !== 'control.if') {
+  if (!parentStep) {
     return null;
   }
 
-  const ifStep = parentStep as IfBlock;
-  const branch = branchName === 'then' ? ifStep.then : (ifStep.else ?? []);
+  if (branchName === 'then' || branchName === 'else') {
+    if (parentStep.type !== 'control.if') {
+      return null;
+    }
+    const ifStep = parentStep as IfBlock;
+    const branch = branchName === 'then' ? ifStep.then : (ifStep.else ?? []);
+    return Array.isArray(branch) ? branch : null;
+  }
+
+  if (parentStep.type !== 'control.tryCatch') {
+    return null;
+  }
+  const tryCatchStep = parentStep as TryCatchBlock;
+  const branch = branchName === 'try' ? tryCatchStep.try : tryCatchStep.catch;
   return Array.isArray(branch) ? branch : null;
 }
 

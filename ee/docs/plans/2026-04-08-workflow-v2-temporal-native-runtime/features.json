@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Support `control.tryCatch` catch routing for catchable runtime failures and bind `captureErrorAs` into workflow scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6"]
   },
   {

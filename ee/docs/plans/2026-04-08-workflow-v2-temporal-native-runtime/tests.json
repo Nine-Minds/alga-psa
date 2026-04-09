@@ -37,7 +37,7 @@
   {
     "id": "T004",
     "description": "Temporal interpreter: `control.tryCatch` catches a catchable step failure, binds `captureErrorAs`, and continues through the catch branch with the expected projection output.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F022",

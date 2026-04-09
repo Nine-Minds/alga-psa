@@ -344,4 +344,100 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       status: 'SUCCEEDED',
     });
   });
+
+  it('routes try branch failures into control.tryCatch catch branch and binds captureErrorAs', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_5',
+      name: 'TryCatch',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_try_catch',
+          type: 'control.tryCatch',
+          captureErrorAs: 'caughtError',
+          try: [
+            {
+              id: 'step_try_action',
+              type: 'action.call',
+              config: {
+                actionId: 'ticket.update',
+                version: 1,
+              },
+            },
+          ],
+          catch: [
+            {
+              id: 'step_catch_action',
+              type: 'action.call',
+              config: {
+                actionId: 'ticket.update',
+                version: 1,
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_5',
+          workflowId: 'wf_5',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_5',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    mockActivities.executeWorkflowRuntimeV2ActionStep
+      .mockRejectedValueOnce({
+        category: 'ActionError',
+        message: 'try branch failed',
+        nodePath: 'root.steps[0].try.steps[0]',
+        at: '2026-04-08T00:00:00.000Z',
+      })
+      .mockResolvedValueOnce({
+        output: { recovered: true },
+        saveAsPath: null,
+      });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await workflowRuntimeV2RunWorkflow({
+      runId: 'run_5',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_5',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_5',
+    });
+
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenCalledTimes(2);
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        stepPath: 'root.steps[0].catch.steps[0]',
+        scopes: expect.objectContaining({
+          workflow: expect.objectContaining({
+            caughtError: expect.objectContaining({
+              message: 'try branch failed',
+              category: 'ActionError',
+            }),
+          }),
+        }),
+      })
+    );
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_5',
+      status: 'SUCCEEDED',
+    });
+  });
 });

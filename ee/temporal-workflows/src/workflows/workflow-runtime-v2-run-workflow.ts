@@ -2,6 +2,7 @@ import { continueAsNew, proxyActivities, sleep } from '@temporalio/workflow';
 import type { WorkflowRuntimeV2TemporalRunInput } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
 import type { Expr, IfBlock } from '@alga-psa/workflows/runtime';
 import type { RetryPolicy, OnErrorPolicy } from '@alga-psa/workflows/runtime';
+import type { TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime';
 import jsonata from 'jsonata';
 import {
   advanceWorkflowRuntimeV2InterpreterState,
@@ -14,7 +15,6 @@ import {
   type WorkflowRuntimeV2InterpreterState,
   type WorkflowRuntimeV2ScopeState,
 } from './workflow-runtime-v2-interpreter.js';
-import type { WorkflowDefinition } from '@alga-psa/workflows/runtime';
 
 const activities = proxyActivities<{
   loadWorkflowRuntimeV2PinnedDefinition(input: {
@@ -130,6 +130,23 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
         continue;
       }
 
+      if (current.step.type === 'control.tryCatch') {
+        const tryCatchStep = current.step as TryCatchBlock;
+        state = advanceWorkflowRuntimeV2InterpreterState(state);
+        state = pushWorkflowRuntimeV2SequenceFrame(state, {
+          path: `${current.path}.try.steps`,
+          totalSteps: tryCatchStep.try.length,
+        });
+        await activities.projectWorkflowRuntimeV2StepCompletion({
+          runId: input.runId,
+          stepId: stepProjection.stepId,
+          stepPath: current.path,
+          status: 'SUCCEEDED',
+        });
+        stepCount += 1;
+        continue;
+      }
+
       if (current.step.type === 'action.call') {
         const retryPolicy = resolveStepRetryPolicy(current.step);
         const onErrorPolicy = resolveStepOnErrorPolicy(current.step);
@@ -207,15 +224,29 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
       });
       stepCount += 1;
     } catch (error) {
+      const runtimeError = normalizeRuntimeError(error, current.path);
       await activities.projectWorkflowRuntimeV2StepCompletion({
         runId: input.runId,
         stepId: stepProjection.stepId,
         stepPath: current.path,
         status: 'FAILED',
-        errorMessage: error instanceof Error ? error.message : String(error),
+        errorMessage: runtimeError.message,
       });
+
+      const tryCatchRoutedState = routeTryCatchFailure({
+        state,
+        definition: pinned.definition,
+        failedStepPath: current.path,
+        runtimeError,
+      });
+      if (tryCatchRoutedState) {
+        state = tryCatchRoutedState;
+        stepCount += 1;
+        continue;
+      }
+
       await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'FAILED' });
-      throw error;
+      throw runtimeError;
     }
 
     if (stepCount > 0 && stepCount % CONTINUE_AS_NEW_EVERY_STEPS === 0) {
@@ -447,4 +478,42 @@ function getRetryBackoffMs(policy: RetryPolicy, attempt: number): number {
   const rawBackoff = policy.backoffMs * Math.pow(multiplier, Math.max(0, attempt - 1));
   const bounded = policy.maxDelayMs ? Math.min(rawBackoff, policy.maxDelayMs) : rawBackoff;
   return Math.max(0, Math.floor(bounded));
+}
+
+function routeTryCatchFailure(input: {
+  state: WorkflowRuntimeV2InterpreterState;
+  definition: WorkflowDefinition;
+  failedStepPath: string;
+  runtimeError: RuntimeErrorLike;
+}): WorkflowRuntimeV2InterpreterState | null {
+  const match = /^root\.steps\[(\d+)\]\.try\.steps\[\d+\](?:\..+)?$/.exec(input.failedStepPath);
+  if (!match) {
+    return null;
+  }
+  const parentIndex = Number(match[1]);
+  const parentStep = input.definition.steps[parentIndex];
+  if (!parentStep || parentStep.type !== 'control.tryCatch') {
+    return null;
+  }
+  const tryCatchStep = parentStep as TryCatchBlock;
+  const tryPathPrefix = `root.steps[${parentIndex}].try.steps`;
+  const nextFrames = [...input.state.frames];
+  while (nextFrames.length > 0 && nextFrames[nextFrames.length - 1].path.startsWith(tryPathPrefix)) {
+    nextFrames.pop();
+  }
+
+  let nextState: WorkflowRuntimeV2InterpreterState = {
+    ...input.state,
+    frames: nextFrames,
+  };
+  if (tryCatchStep.captureErrorAs) {
+    nextState = assignToScopePath(nextState, `vars.${tryCatchStep.captureErrorAs}`, input.runtimeError);
+  }
+  if (tryCatchStep.catch.length > 0) {
+    nextState = pushWorkflowRuntimeV2SequenceFrame(nextState, {
+      path: `root.steps[${parentIndex}].catch.steps`,
+      totalSteps: tryCatchStep.catch.length,
+    });
+  }
+  return nextState;
 }

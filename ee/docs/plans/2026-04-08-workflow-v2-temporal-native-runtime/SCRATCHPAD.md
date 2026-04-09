@@ -326,3 +326,25 @@ Rationale:
 
 - `npm --prefix ee/temporal-workflows run type-check`
 - `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts --run`
+
+### F022 completed (try/catch routing + capture binding)
+
+- Extended branch frame resolution in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-interpreter.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-interpreter.ts) to support:
+  - `root.steps[n].try.steps[m]`
+  - `root.steps[n].catch.steps[m]`
+- Updated [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - added interpreter handling for `control.tryCatch` (pushes try sequence frame)
+  - on step failure in active try scope, routes execution into catch sequence when present
+  - binds structured runtime error into `vars.<captureErrorAs>` before catch execution
+
+### T004 coverage completed
+
+- Extended [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts) with a try/catch routing test that asserts:
+  - try-step action failure is caught
+  - catch branch action executes next
+  - captured error object is present in catch-step workflow scope (`caughtError`)
+
+### Validation commands run (try/catch slice)
+
+- `npm --prefix ee/temporal-workflows run type-check`
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts --run`
