@@ -2,7 +2,7 @@ services:
   temporal-dev:
     image: temporalio/auto-setup:1.24.2
     ports:
-      - "7233:7233"
+      - "${EXPOSE_TEMPORAL_PORT:-7233}:7233"
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -13,7 +13,7 @@ services:
       - -c
       - |
         export POSTGRES_PWD=$(cat /run/secrets/postgres_password)
-        exec /etc/temporal/entrypoint.sh
+        exec /etc/temporal/entrypoint.sh autosetup
     secrets:
       - postgres_password
     depends_on:
@@ -24,13 +24,18 @@ services:
 
   temporal-worker:
     image: temporal-worker-dev
+    build:
+      context: .
+      dockerfile: ee/temporal-workflows/Dockerfile
+      target: production
     working_dir: /app/ee/temporal-workflows
     entrypoint: ["docker-entrypoint.sh"]
     command: ["node", "dist/ee/temporal-workflows/src/worker.js"]
     environment:
       - LOG_LEVEL=INFO
       - SECRET_READ_CHAIN=filesystem,env
-      - APPLICATION_URL=${NEXTAUTH_URL}
+      - APPLICATION_URL=${APPLICATION_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
       - DB_HOST=${DB_HOST:-pgbouncer}
       - DB_PORT=${DB_PORT:-6432}
       - DB_NAME_SERVER=${DB_NAME_SERVER:-server}
@@ -75,7 +80,7 @@ services:
     environment:
       - TEMPORAL_ADDRESS=temporal-dev:7233
     ports:
-      - "8088:8080"
+      - "${EXPOSE_TEMPORAL_UI_PORT:-8088}:8080"
     depends_on:
       temporal-dev:
         condition: service_started

@@ -226,6 +226,33 @@ describe('Workflow run launcher', () => {
     expect(executeRunMock).not.toHaveBeenCalled();
   });
 
+  it('marks the run failed when Temporal start throws after the run row is created', async () => {
+    startRunMock.mockResolvedValue('run-created');
+    startWorkflowRuntimeV2TemporalRunMock.mockRejectedValueOnce(new Error('temporal unavailable'));
+
+    await expect(launchPublishedWorkflowRun(knexMock, {
+      workflowId: 'workflow-1',
+      workflowVersion: 5,
+      tenantId: 'tenant-1',
+      payload: { foo: 'bar' },
+      triggerType: 'event',
+      execute: true,
+      executionKey: 'exec-fail'
+    })).rejects.toThrow('temporal unavailable');
+
+    expect(updateRunMock).toHaveBeenCalledWith(
+      knexMock,
+      'run-created',
+      expect.objectContaining({
+        status: 'FAILED',
+        error_json: expect.objectContaining({
+          message: 'temporal unavailable',
+          stage: 'launch'
+        })
+      })
+    );
+  });
+
   it('records a failed run row for launch-time payload validation failures', async () => {
     const result = await recordFailedWorkflowRunLaunch(knexMock, {
       workflowId: 'workflow-1',

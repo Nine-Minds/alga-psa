@@ -6,14 +6,21 @@ import {
   resolveInputMapping,
   resolveExpressionsWithSecrets,
   getActionRegistryV2,
+  getNodeTypeRegistry,
   generateIdempotencyKey,
   initializeWorkflowRuntimeV2,
+  createSecretResolverFromProvider,
+  type Envelope,
   type InputMapping,
   type SecretResolver,
 } from '@alga-psa/workflows/runtime';
 import type { WorkflowDefinition } from '@alga-psa/workflows/runtime';
 import { createHash } from 'crypto';
-import type { WorkflowRuntimeV2ScopeState } from '../workflows/workflow-runtime-v2-interpreter.js';
+import {
+  buildWorkflowRuntimeV2ExpressionContext,
+  type WorkflowRuntimeV2ScopeState,
+} from '../workflows/workflow-runtime-v2-interpreter.js';
+import { createTenantSecretProvider } from '@alga-psa/shared/workflow/secrets';
 import {
   WorkflowActionInvocationModelV2,
   WorkflowDefinitionVersionModelV2,
@@ -75,6 +82,15 @@ export async function loadWorkflowRuntimeV2PinnedDefinition(input: {
       payload: isRecord(run.input_json) ? run.input_json : {},
       workflow: {},
       lexical: [],
+      meta: {
+        ...(typeof run.source_payload_schema_ref === 'string'
+          ? { sourcePayloadSchemaRef: run.source_payload_schema_ref }
+          : {}),
+        ...(typeof run.trigger_mapping_applied === 'boolean'
+          ? { triggerMappingApplied: run.trigger_mapping_applied }
+          : {}),
+      },
+      error: null,
       system: {
         runId: input.runId,
         workflowId: input.workflowId,
@@ -358,6 +374,95 @@ export async function validateWorkflowRuntimeV2HumanTaskResponse(input: {
   }
 }
 
+export async function executeWorkflowRuntimeV2NodeStep(input: {
+  runId: string;
+  stepPath: string;
+  stepId: string;
+  tenantId: string | null;
+  step: {
+    type: string;
+    config?: unknown;
+  };
+  scopes: WorkflowRuntimeV2ScopeState;
+}): Promise<{ scopes: WorkflowRuntimeV2ScopeState }> {
+  initializeWorkflowRuntimeV2();
+  const knex = await getAdminConnection();
+  const nodeRegistry = getNodeTypeRegistry();
+  const nodeType = nodeRegistry.get(input.step.type);
+  if (!nodeType) {
+    throw new Error(`Unknown node type ${input.step.type}`);
+  }
+
+  const parsedConfig = nodeType.configSchema.parse(input.step.config ?? {});
+  const env: Envelope = {
+    v: 1,
+    run: {
+      id: input.scopes.system.runId,
+      workflowId: input.scopes.system.workflowId,
+      workflowVersion: input.scopes.system.workflowVersion,
+      startedAt: new Date().toISOString(),
+    },
+    payload: input.scopes.payload,
+    meta: (isRecord(input.scopes.meta) ? input.scopes.meta : {}) as Envelope['meta'],
+    vars: input.scopes.workflow,
+    error: input.scopes.error ? {
+      name: typeof input.scopes.error.name === 'string' ? input.scopes.error.name : undefined,
+      message: typeof input.scopes.error.message === 'string' ? input.scopes.error.message : String(input.scopes.error.message ?? ''),
+      stack: typeof input.scopes.error.stack === 'string' ? input.scopes.error.stack : undefined,
+      nodePath: typeof input.scopes.error.nodePath === 'string' ? input.scopes.error.nodePath : undefined,
+      at: typeof input.scopes.error.at === 'string' ? input.scopes.error.at : new Date().toISOString(),
+      data: input.scopes.error.data,
+    } : undefined,
+  };
+  const secretResolver = buildWorkflowRuntimeV2SecretResolver(knex, input.tenantId);
+
+  const result = await nodeType.handler(env, parsedConfig, {
+    runId: input.runId,
+    stepPath: input.stepPath,
+    tenantId: input.tenantId,
+    nowIso: () => new Date().toISOString(),
+    secretResolver,
+    actions: {
+      call: async (actionId: string, version: number, args: unknown, options?: { idempotencyKey?: string; stepConfig?: unknown }) => {
+        return executeActionInvocation({
+          knex,
+          runId: input.runId,
+          stepPath: input.stepPath,
+          tenantId: input.tenantId,
+          actionId,
+          version,
+          args,
+          expressionContext: buildWorkflowRuntimeV2ExpressionContext(input.scopes),
+          stepConfig: options?.stepConfig,
+          idempotencyKey: options?.idempotencyKey,
+        });
+      },
+    },
+    publishWait: async (wait) => {
+      throw new Error(`Node step ${input.step.type} attempted to publish unsupported wait type ${wait.type}`);
+    },
+    resumeEvent: null,
+    resumeError: null,
+    knex,
+  });
+
+  if ('type' in result) {
+    throw new Error(`Node step ${input.step.type} returned unsupported control result ${result.type}`);
+  }
+
+  return {
+    scopes: {
+      ...input.scopes,
+      payload: isRecord(result.payload) ? result.payload : input.scopes.payload,
+      workflow: isRecord(result.vars) ? result.vars : input.scopes.workflow,
+      meta: isRecord(result.meta) ? result.meta : (isRecord(input.scopes.meta) ? input.scopes.meta : {}),
+      error: result.error && typeof result.error === 'object'
+        ? result.error as Record<string, unknown>
+        : null,
+    },
+  };
+}
+
 export async function executeWorkflowRuntimeV2ActionStep(input: {
   runId: string;
   stepPath: string;
@@ -377,107 +482,40 @@ export async function executeWorkflowRuntimeV2ActionStep(input: {
     throw new Error('action.call config requires actionId and version');
   }
 
-  const expressionContext = {
-    ...input.scopes.workflow,
-    ...(input.scopes.lexical[input.scopes.lexical.length - 1] ?? {}),
-    payload: input.scopes.payload,
-    vars: input.scopes.workflow,
-    local: input.scopes.lexical[input.scopes.lexical.length - 1] ?? {},
-    system: input.scopes.system,
-    meta: {
-      runId: input.scopes.system.runId,
-      workflowId: input.scopes.system.workflowId,
-      workflowVersion: input.scopes.system.workflowVersion,
-      tenantId: input.scopes.system.tenantId,
-      definitionHash: input.scopes.system.definitionHash,
-      runtimeSemanticsVersion: input.scopes.system.runtimeSemanticsVersion,
-    },
-  };
+  const expressionContext = buildWorkflowRuntimeV2ExpressionContext(input.scopes);
+  const secretResolver = buildWorkflowRuntimeV2SecretResolver(knex, input.tenantId);
 
   const resolvedInput = await resolveInputMapping(
     (config.inputMapping ?? {}) as InputMapping,
     {
       expressionContext,
-      secretResolver: noSecretResolver,
+      secretResolver,
       workflowRunId: input.runId,
     }
   ) ?? {};
 
-  const actionRegistry = getActionRegistryV2();
-  const action = actionRegistry.get(config.actionId, config.version);
-  if (!action) {
-    throw new Error(`Unknown action ${config.actionId}@${config.version}`);
-  }
-
-  const parsedInput = action.inputSchema.parse(resolvedInput);
   const explicitIdempotency = config.idempotencyKey
-    ? await resolveExpressionsWithSecrets(config.idempotencyKey, expressionContext, noSecretResolver, input.runId)
+    ? await resolveExpressionsWithSecrets(config.idempotencyKey, expressionContext, secretResolver, input.runId)
     : null;
-  const rawKey = explicitIdempotency === null || explicitIdempotency === undefined
-    ? generateIdempotencyKey(input.runId, input.stepPath, config.actionId, config.version, parsedInput)
-    : String(explicitIdempotency);
-  const idempotencyKey = input.tenantId && !rawKey.startsWith(`${input.tenantId}:`)
-    ? `${input.tenantId}:${rawKey}`
-    : rawKey;
-
-  const existing = await WorkflowActionInvocationModelV2.findByIdempotency(
+  const output = await executeActionInvocation({
     knex,
-    config.actionId,
-    config.version,
-    idempotencyKey
-  );
-  if (existing?.status === 'SUCCEEDED') {
-    return {
-      output: action.outputSchema.parse(existing.output_json ?? {}),
-      saveAsPath: typeof config.saveAs === 'string' ? config.saveAs : null,
-    };
-  }
-
-  const invocation = await WorkflowActionInvocationModelV2.create(knex, {
-    run_id: input.runId,
-    step_path: input.stepPath,
-    action_id: config.actionId,
-    action_version: config.version,
-    idempotency_key: idempotencyKey,
-    status: 'STARTED',
-    attempt: 1,
-    input_json: parsedInput as Record<string, unknown>,
-    started_at: new Date().toISOString(),
+    runId: input.runId,
+    stepPath: input.stepPath,
+    tenantId: input.tenantId,
+    actionId: config.actionId,
+    version: config.version,
+    args: resolvedInput,
+    expressionContext,
+    stepConfig: config,
+    idempotencyKey: explicitIdempotency === null || explicitIdempotency === undefined
+      ? undefined
+      : String(explicitIdempotency),
   });
 
-  try {
-    const output = await action.handler(parsedInput, {
-      runId: input.runId,
-      stepPath: input.stepPath,
-      stepConfig: config,
-      expressionContext,
-      tenantId: input.tenantId,
-      idempotencyKey,
-      attempt: invocation.attempt,
-      nowIso: () => new Date().toISOString(),
-      env: {},
-      knex,
-    });
-    const parsedOutput = action.outputSchema.parse(output);
-    await WorkflowActionInvocationModelV2.update(knex, invocation.invocation_id, {
-      status: 'SUCCEEDED',
-      output_json: parsedOutput as Record<string, unknown>,
-      completed_at: new Date().toISOString(),
-    });
-
-    return {
-      output: parsedOutput,
-      saveAsPath: typeof config.saveAs === 'string' ? config.saveAs : null,
-    };
-  } catch (error) {
-    const runtimeError = normalizeActionRuntimeError(error, input.stepPath);
-    await WorkflowActionInvocationModelV2.update(knex, invocation.invocation_id, {
-      status: 'FAILED',
-      error_message: runtimeError.message,
-      completed_at: new Date().toISOString(),
-    });
-    throw runtimeError;
-  }
+  return {
+    output,
+    saveAsPath: typeof config.saveAs === 'string' ? config.saveAs : null,
+  };
 }
 
 export async function startWorkflowRuntimeV2ChildRun(input: {
@@ -617,11 +655,104 @@ function parseActionCallConfig(config: unknown): ActionCallConfig {
   };
 }
 
-const noSecretResolver: SecretResolver = {
-  async resolve(name: string): Promise<string> {
-    throw new Error(`Secret resolution is not available in Temporal workflow runtime activity: ${name}`);
-  },
-};
+function buildWorkflowRuntimeV2SecretResolver(
+  knex: Awaited<ReturnType<typeof getAdminConnection>>,
+  tenantId: string | null
+): SecretResolver {
+  if (!tenantId) {
+    return {
+      async resolve(name: string): Promise<string> {
+        throw new Error(`Cannot resolve tenant secret without tenant context: ${name}`);
+      },
+    };
+  }
+
+  const provider = createTenantSecretProvider(knex, tenantId);
+  return createSecretResolverFromProvider((name, workflowRunId) => provider.getValue(name, workflowRunId));
+}
+
+async function executeActionInvocation(input: {
+  knex: Awaited<ReturnType<typeof getAdminConnection>>;
+  runId: string;
+  stepPath: string;
+  tenantId: string | null;
+  actionId: string;
+  version: number;
+  args: unknown;
+  expressionContext: Record<string, unknown>;
+  stepConfig?: unknown;
+  idempotencyKey?: string;
+}): Promise<unknown> {
+  const actionRegistry = getActionRegistryV2();
+  const action = actionRegistry.get(input.actionId, input.version);
+  if (!action) {
+    throw new Error(`Unknown action ${input.actionId}@${input.version}`);
+  }
+
+  const parsedInput = action.inputSchema.parse(input.args);
+  const rawKey = input.idempotencyKey ?? generateIdempotencyKey(
+    input.runId,
+    input.stepPath,
+    input.actionId,
+    input.version,
+    parsedInput
+  );
+  const idempotencyKey = input.tenantId && !rawKey.startsWith(`${input.tenantId}:`)
+    ? `${input.tenantId}:${rawKey}`
+    : rawKey;
+
+  const existing = await WorkflowActionInvocationModelV2.findByIdempotency(
+    input.knex,
+    input.actionId,
+    input.version,
+    idempotencyKey
+  );
+  if (existing?.status === 'SUCCEEDED') {
+    return action.outputSchema.parse(existing.output_json ?? {});
+  }
+
+  const invocation = await WorkflowActionInvocationModelV2.create(input.knex, {
+    run_id: input.runId,
+    step_path: input.stepPath,
+    action_id: input.actionId,
+    action_version: input.version,
+    idempotency_key: idempotencyKey,
+    status: 'STARTED',
+    attempt: 1,
+    input_json: parsedInput as Record<string, unknown>,
+    started_at: new Date().toISOString(),
+  });
+
+  try {
+    const output = await action.handler(parsedInput, {
+      runId: input.runId,
+      stepPath: input.stepPath,
+      stepConfig: input.stepConfig,
+      expressionContext: input.expressionContext,
+      tenantId: input.tenantId,
+      idempotencyKey,
+      attempt: invocation.attempt,
+      nowIso: () => new Date().toISOString(),
+      env: {},
+      knex: input.knex,
+    });
+    const parsedOutput = action.outputSchema.parse(output);
+    await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, {
+      status: 'SUCCEEDED',
+      output_json: parsedOutput as Record<string, unknown>,
+      completed_at: new Date().toISOString(),
+    });
+    return parsedOutput;
+  } catch (error) {
+    const runtimeError = normalizeActionRuntimeError(error, input.stepPath);
+    await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, {
+      status: 'FAILED',
+      error_message: runtimeError.message,
+      completed_at: new Date().toISOString(),
+    });
+    throw runtimeError;
+  }
+}
 
 type RuntimeErrorPayload = {
   category: string;

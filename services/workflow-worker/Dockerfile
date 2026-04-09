@@ -47,7 +47,8 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=@alga-psa/portal-shared \
   --workspace=@alga-psa/storage \
   --workspace=@alga-psa/types \
-  --workspace=@alga-psa/ui
+  --workspace=@alga-psa/ui \
+  && npm install --no-save @temporalio/client@^1.12.3 openai@^4.104.0
 
 # Copy source code for shared + server workspaces
 COPY ee/packages/workflows/ ./ee/packages/workflows/

@@ -6,7 +6,7 @@
   "types": "./src/streams/index.ts",
   "exports": {
     ".": {
-      "import": "./src/streams/index.ts",
+      "import": "./dist/index.mjs",
       "types": "./src/streams/index.ts"
     },
     "./eventBusSchema": {

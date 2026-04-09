@@ -27,10 +27,8 @@ import {
   validateWorkflowDefinition,
   validateInputMapping,
   resolveInputMapping,
-  evaluateEventWaitFilters,
   createSecretResolverFromProvider,
   verifySecretsExist,
-  type EventWaitFilter,
   type WorkflowTrigger,
   type PublishError
 } from '@alga-psa/workflows/runtime';
@@ -1083,7 +1081,7 @@ const throwUnsupportedTemporalRunControlAction = (
 };
 
 const assertLegacyRunControlSupported = (
-  run: { run_id: string; engine: string | null },
+  run: { run_id: string; engine?: string | null },
   action: string
 ) => {
   if (run.engine === 'temporal') {
@@ -1935,7 +1933,6 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
   if (payloadSize > WORKFLOW_RUN_PAYLOAD_LIMIT) {
     return throwHttpError(413, 'Payload exceeds maximum size');
   }
-  const runtime = new WorkflowRuntimeV2();
 
   const workflow = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
   if (!workflow) {
@@ -2089,14 +2086,15 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
     }
   }
 
-  const runId = await runtime.startRun(knex, {
+  const launchResult = await launchPublishedWorkflowRun(knex, {
     workflowId: parsed.workflowId,
-    version: versionRecord.version,
+    workflowVersion: versionRecord.version,
     payload: finalPayload,
     tenantId: tenant,
     eventType: parsed.eventType ?? null,
     sourcePayloadSchemaRef: inputIsSourcePayload ? effectiveSourceSchemaRef : null,
-    triggerMappingApplied: triggerMappingApplied
+    triggerMappingApplied: triggerMappingApplied,
+    execute: true
   });
 
   try {
@@ -2115,13 +2113,11 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
     // best-effort telemetry
   }
 
-  await runtime.executeRun(knex, runId, `action-${user.user_id}`);
-
-  const run = await WorkflowRunModelV2.getById(knex, runId);
+  const run = await WorkflowRunModelV2.getById(knex, launchResult.runId);
   await auditWorkflowEvent(knex, user, {
     operation: 'workflow_run_start',
     tableName: 'workflow_runs',
-    recordId: runId,
+    recordId: launchResult.runId,
     changedData: { status: run?.status ?? 'RUNNING' },
     details: {
       workflowId: parsed.workflowId,
@@ -2130,7 +2126,7 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
     },
     source: 'ui'
   });
-  return { runId, status: run?.status };
+  return { runId: launchResult.runId, status: run?.status };
 });
 
 export const getWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -3108,10 +3104,10 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
 
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
-  let runId: string | null = null;
-  let eventRecord: Awaited<ReturnType<typeof WorkflowRuntimeEventModelV2.create>> | null = null;
+  let eventId: string | null = null;
   let ingestionError: string | null = null;
   let ingestionErrorStatus = 500;
+  let missingCorrelationWarning: string | null = null;
   const temporalEventSignals: Array<{ runId: string }> = [];
   const temporalHumanSignals: Array<{ runId: string; taskId: string }> = [];
   const signaledTemporalRuns = new Set<string>();
@@ -3141,7 +3137,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
   }
 
   await knex.transaction(async (trx) => {
-    eventRecord = await WorkflowRuntimeEventModelV2.create(trx, {
+    const createdEventRecord = await WorkflowRuntimeEventModelV2.create(trx, {
       tenant_id: tenant,
       event_name: parsed.eventName,
       correlation_key: correlation.key,
@@ -3152,12 +3148,10 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
     });
 
     try {
+      eventId = createdEventRecord.event_id;
+
       if (!correlation.key) {
-        const correlationError = `Missing workflow correlation key (${correlation.detail})`;
-        await WorkflowRuntimeEventModelV2.update(trx, eventRecord.event_id, {
-          error_message: correlationError,
-          processed_at: processedAt
-        });
+        missingCorrelationWarning = `Missing workflow correlation key (${correlation.detail})`;
         return;
       }
 
@@ -3187,80 +3181,15 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
             : '';
           if (taskId) {
             temporalHumanSignals.push({ runId: wait.run_id, taskId });
-            signaledTemporalRuns.add(wait.run_id);
           }
           continue;
         }
         temporalEventSignals.push({ runId: wait.run_id });
-        signaledTemporalRuns.add(wait.run_id);
       }
-
-      let wait: (typeof waits)[number] | null = null;
-      for (const candidate of waits) {
-        const matchedRun = await getRun(candidate.run_id);
-        if (matchedRun?.engine === 'temporal') {
-          continue;
-        }
-        if (candidate.wait_type !== 'event') {
-          wait = candidate;
-          break;
-        }
-        const waitPayload = candidate.payload as { filters?: EventWaitFilter[] } | null | undefined;
-        if (evaluateEventWaitFilters(payload, waitPayload?.filters)) {
-          wait = candidate;
-          break;
-        }
-      }
-      if (!wait) {
-        if (signaledTemporalRuns.size === 1) {
-          const [matchedRunId] = Array.from(signaledTemporalRuns);
-          await WorkflowRuntimeEventModelV2.update(trx, eventRecord.event_id, {
-            matched_run_id: matchedRunId,
-            processed_at: processedAt
-          });
-        }
-        return;
-      }
-
-      await WorkflowRunWaitModelV2.update(trx, wait.wait_id, {
-        status: 'RESOLVED',
-        resolved_at: new Date().toISOString()
-      });
-
-      await WorkflowRunModelV2.update(trx, wait.run_id, {
-        status: 'RUNNING',
-        resume_event_name: parsed.eventName,
-        resume_event_payload: parsed.payload
-      });
-
-      const stepRecord = await WorkflowRunStepModelV2.getLatestByRunAndPath(trx, wait.run_id, wait.step_path);
-      await WorkflowRunLogModelV2.create(trx, {
-        run_id: wait.run_id,
-        tenant_id: tenant,
-        step_id: stepRecord?.step_id ?? null,
-        step_path: wait.step_path,
-        level: 'INFO',
-        message: 'Event wait resolved',
-        correlation_key: correlation.key,
-        event_name: parsed.eventName,
-        context_json: {
-          waitId: wait.wait_id
-        },
-        source: 'event'
-      });
-
-      await WorkflowRuntimeEventModelV2.update(trx, eventRecord.event_id, {
-        matched_run_id: wait.run_id,
-        matched_wait_id: wait.wait_id,
-        matched_step_path: wait.step_path,
-        processed_at: processedAt
-      });
-
-      runId = wait.run_id;
     } catch (error) {
       ingestionError = error instanceof Error ? error.message : String(error);
-      if (eventRecord) {
-        await WorkflowRuntimeEventModelV2.update(trx, eventRecord.event_id, {
+      if (eventId) {
+        await WorkflowRuntimeEventModelV2.update(trx, eventId, {
           error_message: ingestionError,
           processed_at: processedAt
         });
@@ -3272,33 +3201,43 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
     return throwHttpError(ingestionErrorStatus, 'Failed to process workflow event', { error: ingestionError });
   }
 
+  let deliveryError: string | null = null;
+
   for (const signal of temporalEventSignals) {
-    const eventId = String((eventRecord as any)?.event_id ?? '');
     if (!eventId) {
       continue;
     }
-    await signalWorkflowRuntimeV2Event({
-      runId: signal.runId,
-      eventId,
-      eventName: parsed.eventName,
-      correlationKey: correlation.key,
-      payload,
-      receivedAt: processedAt,
-    });
+    try {
+      await signalWorkflowRuntimeV2Event({
+        runId: signal.runId,
+        eventId,
+        eventName: parsed.eventName,
+        correlationKey: correlation.key,
+        payload,
+        receivedAt: processedAt,
+      });
+      signaledTemporalRuns.add(signal.runId);
+    } catch (error) {
+      deliveryError = `Failed to signal Temporal event wait for run ${signal.runId}: ${error instanceof Error ? error.message : String(error)}`;
+      break;
+    }
   }
 
-  for (const signal of temporalHumanSignals) {
-    await signalWorkflowRuntimeV2HumanTask({
-      runId: signal.runId,
-      taskId: signal.taskId,
-      eventName: parsed.eventName,
-      payload,
-    });
-  }
-
-  const runtime = new WorkflowRuntimeV2();
-  if (runId) {
-    await runtime.executeRun(knex, runId, `event-${Date.now()}`);
+  if (!deliveryError) {
+    for (const signal of temporalHumanSignals) {
+      try {
+        await signalWorkflowRuntimeV2HumanTask({
+          runId: signal.runId,
+          taskId: signal.taskId,
+          eventName: parsed.eventName,
+          payload,
+        });
+        signaledTemporalRuns.add(signal.runId);
+      } catch (error) {
+        deliveryError = `Failed to signal Temporal human task for run ${signal.runId}: ${error instanceof Error ? error.message : String(error)}`;
+        break;
+      }
+    }
   }
 
   const triggered = await WorkflowDefinitionModelV2.list(knex);
@@ -3310,6 +3249,9 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
   const schemaRegistry = getSchemaRegistry();
   const startedRuns: string[] = [];
   for (const workflow of matching) {
+    if (deliveryError) {
+      break;
+    }
     const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflow.workflow_id);
     const latest = versions[0];
     if (!latest) continue;
@@ -3318,6 +3260,12 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
     const workflowPayloadSchemaRef: string | null =
       (typeof latestDefinition?.payloadSchemaRef === 'string' ? latestDefinition.payloadSchemaRef : null)
       ?? (typeof workflow.payload_schema_ref === 'string' ? workflow.payload_schema_ref : null);
+    if (!workflowPayloadSchemaRef) {
+      continue;
+    }
+    if (!schemaRegistry.has(workflowPayloadSchemaRef)) {
+      continue;
+    }
 
     const trigger = (latestDefinition?.trigger ?? workflow.trigger ?? null) as WorkflowTrigger | null;
     const eventTrigger = isWorkflowEventTrigger(trigger) ? trigger : null;
@@ -3369,24 +3317,29 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
       }
     }
 
-    const launched = await launchPublishedWorkflowRun(knex, {
-      workflowId: workflow.workflow_id,
-      workflowVersion: latest.version,
-      payload: workflowPayload,
-      tenantId: tenant,
-      triggerType: 'event',
-      triggerMetadata: {
+    try {
+      const launched = await launchPublishedWorkflowRun(knex, {
+        workflowId: workflow.workflow_id,
+        workflowVersion: latest.version,
+        payload: workflowPayload,
+        tenantId: tenant,
+        triggerType: 'event',
+        triggerMetadata: {
+          eventType: parsed.eventName,
+          sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+          triggerMappingApplied: mappingApplied
+        },
         eventType: parsed.eventName,
         sourcePayloadSchemaRef: effectiveSourceSchemaRef,
-        triggerMappingApplied: mappingApplied
-      },
-      eventType: parsed.eventName,
-      sourcePayloadSchemaRef: effectiveSourceSchemaRef,
-      triggerMappingApplied: mappingApplied,
-      execute: true,
-      executionKey: `event-${Date.now()}`
-    });
-    startedRuns.push(launched.runId);
+        triggerMappingApplied: mappingApplied,
+        execute: true,
+        executionKey: `event-${Date.now()}`
+      });
+      startedRuns.push(launched.runId);
+    } catch (error) {
+      deliveryError = `Failed to launch Temporal workflow for workflow ${workflow.workflow_id}: ${error instanceof Error ? error.message : String(error)}`;
+      break;
+    }
 
     try {
       void analytics.capture('workflow.trigger.mapping_applied', {
@@ -3406,9 +3359,30 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
 
   }
 
-  const status = runId || signaledTemporalRuns.size > 0 ? 'resumed' : 'no_wait';
-  const resolvedRunId = runId ?? (signaledTemporalRuns.size === 1 ? Array.from(signaledTemporalRuns)[0] : null);
-  return { status, runId: resolvedRunId, startedRuns, eventId: (eventRecord as any)?.event_id ?? null };
+  const firstSignaledRunId = Array.from(signaledTemporalRuns)[0] ?? null;
+  const resolvedRunId = signaledTemporalRuns.size === 1 ? firstSignaledRunId : null;
+  const matchedRunId = firstSignaledRunId ?? startedRuns[0] ?? null;
+  if (matchedRunId && eventId) {
+    await WorkflowRuntimeEventModelV2.update(knex, eventId, {
+      matched_run_id: matchedRunId,
+      processed_at: processedAt
+    });
+  }
+  if (deliveryError && eventId) {
+    await WorkflowRuntimeEventModelV2.update(knex, eventId, {
+      error_message: deliveryError,
+      processed_at: processedAt
+    });
+    return throwHttpError(500, 'Failed to process workflow event', { error: deliveryError });
+  }
+  const status = signaledTemporalRuns.size > 0 ? 'resumed' : 'no_wait';
+  if (missingCorrelationWarning && !resolvedRunId && startedRuns.length === 0 && eventId) {
+    await WorkflowRuntimeEventModelV2.update(knex, eventId, {
+      error_message: missingCorrelationWarning,
+      processed_at: processedAt
+    });
+  }
+  return { status, runId: resolvedRunId, startedRuns, eventId };
 });
 
 export const listWorkflowEventsAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -3482,7 +3456,7 @@ export const listWorkflowEventsPagedAction = withAuth(async (user, { tenant }, i
   }
   if (parsed.status && parsed.status !== 'all') {
     if (parsed.status === 'matched') {
-      query.whereNotNull('matched_run_id');
+      query.whereNotNull('matched_run_id').whereNull('error_message');
     }
     if (parsed.status === 'unmatched') {
       query.whereNull('matched_run_id').whereNull('error_message');
@@ -3591,7 +3565,7 @@ export const listWorkflowEventSummaryAction = withAuth(async (user, { tenant }, 
   const query = knex('workflow_runtime_events')
     .select(
       knex.raw('count(*) as total'),
-      knex.raw('count(case when matched_run_id is not null then 1 end) as matched'),
+      knex.raw('count(case when matched_run_id is not null and error_message is null then 1 end) as matched'),
       knex.raw("count(case when matched_run_id is null and error_message is null then 1 end) as unmatched"),
       knex.raw('count(case when error_message is not null then 1 end) as error')
     );

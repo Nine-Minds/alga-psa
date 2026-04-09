@@ -43,6 +43,10 @@ const initialScopes: WorkflowRuntimeV2ScopeState = {
     retries: 0,
   },
   lexical: [],
+  meta: {
+    state: 'draft',
+  },
+  error: null,
   system: {
     runId: 'run_123',
     workflowId: 'wf_1',
@@ -105,6 +109,74 @@ describe('workflowRuntimeV2Interpreter', () => {
     expect(step2).toBeNull();
   });
 
+  it('resolves nested sequence paths for deeply nested control flow', () => {
+    const nestedDefinition: WorkflowDefinition = {
+      id: 'wf_nested',
+      name: 'Nested Workflow',
+      version: 1,
+      payloadSchemaRef: 'workflow.payload.ticket.v1',
+      steps: [
+        {
+          id: 'outer_if',
+          type: 'control.if',
+          condition: { $expr: 'payload.enabled = true' },
+          then: [
+            {
+              id: 'inner_if',
+              type: 'control.if',
+              condition: { $expr: 'payload.deep = true' },
+              then: [
+                {
+                  id: 'deep_return',
+                  type: 'control.return',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    let state = initializeWorkflowRuntimeV2InterpreterState({
+      runId: 'run_nested',
+      definition: nestedDefinition,
+      initialScopes,
+    });
+    expect(getWorkflowRuntimeV2CurrentStep({ state, definition: nestedDefinition })?.path).toBe('root.steps[0]');
+
+    state = {
+      ...state,
+      frames: [
+        ...state.frames,
+        {
+          kind: 'sequence',
+          path: 'root.steps[0].then.steps',
+          nextIndex: 0,
+          totalSteps: 1,
+        },
+      ],
+      currentStepPath: 'root.steps[0].then.steps[0]',
+    };
+    expect(getWorkflowRuntimeV2CurrentStep({ state, definition: nestedDefinition })?.path).toBe('root.steps[0].then.steps[0]');
+
+    state = {
+      ...state,
+      frames: [
+        ...state.frames,
+        {
+          kind: 'sequence',
+          path: 'root.steps[0].then.steps[0].then.steps',
+          nextIndex: 0,
+          totalSteps: 1,
+        },
+      ],
+      currentStepPath: 'root.steps[0].then.steps[0].then.steps[0]',
+    };
+    expect(getWorkflowRuntimeV2CurrentStep({ state, definition: nestedDefinition })?.path).toBe(
+      'root.steps[0].then.steps[0].then.steps[0]'
+    );
+  });
+
   it('builds author-friendly expression context from normalized scopes', () => {
     const context = buildWorkflowRuntimeV2ExpressionContext({
       ...initialScopes,
@@ -116,6 +188,10 @@ describe('workflowRuntimeV2Interpreter', () => {
         { item: 'A' },
         { item: 'B', index: 1 },
       ],
+      error: {
+        category: 'ActionError',
+        message: 'boom',
+      },
     });
 
     expect(context.payload).toEqual(initialScopes.payload);
@@ -124,12 +200,17 @@ describe('workflowRuntimeV2Interpreter', () => {
     expect(context.retries).toBe(2);
     expect(context.item).toBe('B');
     expect(context.meta).toEqual({
+      state: 'draft',
       runId: 'run_123',
       workflowId: 'wf_1',
       workflowVersion: 1,
       tenantId: 'tenant_1',
       definitionHash: 'abc123',
       runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+    });
+    expect(context.error).toEqual({
+      category: 'ActionError',
+      message: 'boom',
     });
   });
 

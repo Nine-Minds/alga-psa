@@ -27,7 +27,7 @@
       "types": "./src/components/*.tsx"
     },
     "./runtime": {
-      "import": "./src/runtime/index.ts",
+      "import": "./dist/runtime/index.mjs",
       "types": "./src/runtime/index.ts"
     },
     "./authoring": {
@@ -35,7 +35,7 @@
       "types": "./src/authoring/index.ts"
     },
     "./runtime/*": {
-      "import": "./src/runtime/*.ts",
+      "import": "./dist/runtime/*.mjs",
       "types": "./src/runtime/*.ts"
     },
     "./workers": {
@@ -43,11 +43,11 @@
       "types": "./src/workers/index.ts"
     },
     "./persistence": {
-      "import": "./src/persistence/index.ts",
+      "import": "./dist/persistence/index.mjs",
       "types": "./src/persistence/index.ts"
     },
     "./persistence/*": {
-      "import": "./src/persistence/*.ts",
+      "import": "./dist/persistence/*.mjs",
       "types": "./src/persistence/*.ts"
     },
     "./bundle": {
@@ -79,7 +79,7 @@
       "types": "./src/forms/*.ts"
     },
     "./lib/*": {
-      "import": "./src/lib/*.ts",
+      "import": "./dist/lib/*.mjs",
       "types": "./src/lib/*.ts"
     },
     "./models/*": {

@@ -228,19 +228,34 @@ export async function launchPublishedWorkflowRun(
 
   if (request.execute !== false) {
     const executionKey = request.executionKey ?? `launch-${request.workflowId}-${Date.now()}`;
-    const temporalStart = await startWorkflowRuntimeV2TemporalRun({
-      runId,
-      tenantId: request.tenantId ?? null,
-      workflowId: request.workflowId,
-      workflowVersion: versionRecord.version,
-      triggerType: request.triggerType ?? null,
-      executionKey,
-    });
-    await WorkflowRunModelV2.update(knex, runId, {
-      engine: 'temporal',
-      temporal_workflow_id: temporalStart.workflowId,
-      temporal_run_id: temporalStart.firstExecutionRunId,
-    });
+    try {
+      const temporalStart = await startWorkflowRuntimeV2TemporalRun({
+        runId,
+        tenantId: request.tenantId ?? null,
+        workflowId: request.workflowId,
+        workflowVersion: versionRecord.version,
+        triggerType: request.triggerType ?? null,
+        executionKey,
+      });
+      await WorkflowRunModelV2.update(knex, runId, {
+        engine: 'temporal',
+        temporal_workflow_id: temporalStart.workflowId,
+        temporal_run_id: temporalStart.firstExecutionRunId,
+      });
+    } catch (error) {
+      await WorkflowRunModelV2.update(knex, runId, {
+        status: 'FAILED',
+        completed_at: new Date().toISOString(),
+        error_json: {
+          message: error instanceof Error ? error.message : 'Failed to start Temporal workflow runtime',
+          stage: 'launch',
+          details: error instanceof Error
+            ? { name: error.name, stack: error.stack }
+            : { raw: error }
+        }
+      });
+      throw error;
+    }
   }
 
   return {

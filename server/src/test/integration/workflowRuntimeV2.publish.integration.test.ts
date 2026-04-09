@@ -840,6 +840,33 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(run?.workflow_version).toBe(2);
   });
 
+  it('Start run launches a Temporal-backed workflow run instead of executing through the legacy DB runtime. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    await publishWorkflow(workflowId, 1);
+
+    const executeRunSpy = vi.spyOn(WorkflowRuntimeV2.prototype, 'executeRun');
+    executeRunSpy.mockClear();
+    try {
+      const runResult = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+      const run = await WorkflowRunModelV2.getById(db, runResult.runId);
+
+      expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: runResult.runId,
+          workflowId,
+          workflowVersion: 1,
+        })
+      );
+      expect(executeRunSpy).not.toHaveBeenCalled();
+      expect(run?.engine).toBe('temporal');
+      expect(run?.temporal_workflow_id).toBe('workflow-runtime-v2:run:run-replayed');
+      expect(run?.temporal_run_id).toBe('temporal-run-replayed');
+      expect(run?.status).toBe('RUNNING');
+    } finally {
+      executeRunSpy.mockRestore();
+    }
+  });
+
   it('T045: no-trigger workflows still publish and run correctly after time-trigger support is added. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [stateSetStep('state-1', 'READY')],

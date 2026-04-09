@@ -232,6 +232,9 @@ services:
       WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
       WORKFLOW_REDIS_BATCH_SIZE: "10"
       WORKFLOW_REDIS_IDLE_TIMEOUT_MS: "60000"
+      TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal-dev:7233}
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+      TEMPORAL_JOB_TASK_QUEUE: ${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
       # WorkerServer listens on PORT (defaults to 4000)
       PORT: "4000"
     ports:

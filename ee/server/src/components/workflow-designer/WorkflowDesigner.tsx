@@ -5137,6 +5137,94 @@ const WAIT_FILTER_OPERATOR_OPTIONS: Array<{ value: WaitFilterOperator; label: st
   { value: 'ends_with', label: 'ends with' }
 ];
 
+const SUPPORTED_WAIT_FILTER_PICKER_RESOURCES = new Set([
+  'board',
+  'client',
+  'client-location',
+  'contact',
+  'ticket-category',
+  'ticket-priority',
+  'ticket-status',
+  'ticket-subcategory',
+  'user',
+  'user-or-team'
+]);
+
+const supportsWaitFilterPickerResource = (pickerKind: string | undefined): boolean =>
+  Boolean(pickerKind && SUPPORTED_WAIT_FILTER_PICKER_RESOURCES.has(pickerKind));
+
+const getDefaultWaitFilterScalarValue = (
+  fieldMeta: EventSchemaScalarField | undefined,
+  options?: { preferString?: boolean }
+): string | number | boolean => {
+  if (fieldMeta?.enumValues?.length) {
+    const [firstValue] = fieldMeta.enumValues;
+    if (typeof firstValue === 'string' || typeof firstValue === 'number' || typeof firstValue === 'boolean') {
+      return firstValue;
+    }
+  }
+
+  if (options?.preferString) {
+    return '';
+  }
+
+  if (fieldMeta?.type === 'boolean') {
+    return false;
+  }
+
+  if (fieldMeta?.type === 'number') {
+    return 0;
+  }
+
+  return '';
+};
+
+const normalizeWaitFilterValueForOperator = (
+  op: WaitFilterOperator,
+  currentValue: unknown,
+  fieldMeta: EventSchemaScalarField | undefined
+): string | number | boolean | Array<string | number | boolean> | undefined => {
+  if (op === 'exists' || op === 'not_exists') {
+    return undefined;
+  }
+
+  if (op === 'in' || op === 'not_in') {
+    if (Array.isArray(currentValue)) {
+      return currentValue.filter((item): item is string | number | boolean =>
+        typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean'
+      );
+    }
+    if (typeof currentValue === 'string' || typeof currentValue === 'number' || typeof currentValue === 'boolean') {
+      return [currentValue];
+    }
+    return [getDefaultWaitFilterScalarValue(fieldMeta)];
+  }
+
+  if (Array.isArray(currentValue)) {
+    const [firstValue] = currentValue;
+    if (typeof firstValue === 'string' || typeof firstValue === 'number' || typeof firstValue === 'boolean') {
+      if ((op === 'contains' || op === 'starts_with' || op === 'ends_with') && typeof firstValue !== 'string') {
+        return getDefaultWaitFilterScalarValue(fieldMeta, { preferString: true });
+      }
+      return firstValue;
+    }
+    return getDefaultWaitFilterScalarValue(fieldMeta, {
+      preferString: op === 'contains' || op === 'starts_with' || op === 'ends_with'
+    });
+  }
+
+  if (typeof currentValue === 'string' || typeof currentValue === 'number' || typeof currentValue === 'boolean') {
+    if ((op === 'contains' || op === 'starts_with' || op === 'ends_with') && typeof currentValue !== 'string') {
+      return getDefaultWaitFilterScalarValue(fieldMeta, { preferString: true });
+    }
+    return currentValue;
+  }
+
+  return getDefaultWaitFilterScalarValue(fieldMeta, {
+    preferString: op === 'contains' || op === 'starts_with' || op === 'ends_with'
+  });
+};
+
 const coerceWaitFilterValue = (
   raw: string,
   fieldMeta: EventSchemaScalarField | undefined
@@ -5448,11 +5536,17 @@ export const StepConfigPanel: React.FC<{
     return null;
   }, [saveAs, dataContext.steps]);
 
+  const removeInvalidWaitConfigFields = useCallback((config: Record<string, unknown>): Record<string, unknown> => {
+    const nextConfig = { ...config };
+    delete nextConfig.saveAs;
+    return nextConfig;
+  }, []);
+
   const eventWaitConfig = step.type === 'event.wait'
-    ? (((step as NodeStep).config as Record<string, unknown> | undefined) ?? {})
+    ? removeInvalidWaitConfigFields((((step as NodeStep).config as Record<string, unknown> | undefined) ?? {}))
     : null;
   const timeWaitConfig = step.type === 'time.wait'
-    ? (((step as NodeStep).config as Record<string, unknown> | undefined) ?? {})
+    ? removeInvalidWaitConfigFields((((step as NodeStep).config as Record<string, unknown> | undefined) ?? {}))
     : null;
   const selectedWaitEventName = typeof eventWaitConfig?.eventName === 'string' ? eventWaitConfig.eventName : '';
   const selectedWaitEventOption = useMemo(
@@ -5511,9 +5605,9 @@ export const StepConfigPanel: React.FC<{
     const nodeStep = step as NodeStep;
     onChange({
       ...nodeStep,
-      config: nextConfig
+      config: removeInvalidWaitConfigFields(nextConfig)
     });
-  }, [onChange, step]);
+  }, [onChange, removeInvalidWaitConfigFields, step]);
 
   const eventFilters = useMemo(() => {
     if (!eventWaitConfig) return [] as EventWaitFilterClause[];
@@ -5546,12 +5640,30 @@ export const StepConfigPanel: React.FC<{
   const addEventFilterClause = useCallback(() => {
     if (!eventWaitConfig) return;
     const defaultPath = eventFilterFields[0]?.path ?? '';
+    const defaultFieldMeta = eventFilterFields.find((field) => field.path === defaultPath);
     const next = [
       ...eventFilters,
-      { path: defaultPath, op: '=', value: '' } as EventWaitFilterClause
+      {
+        path: defaultPath,
+        op: '=',
+        value: normalizeWaitFilterValueForOperator('=', undefined, defaultFieldMeta)
+      } as EventWaitFilterClause
     ];
     updateWaitNodeConfig({ ...eventWaitConfig, filters: next });
   }, [eventFilterFields, eventFilters, eventWaitConfig, updateWaitNodeConfig]);
+
+  useEffect(() => {
+    if (step.type !== 'event.wait' && step.type !== 'time.wait') {
+      return;
+    }
+
+    const currentConfig = ((step as NodeStep).config as Record<string, unknown> | undefined) ?? {};
+    if (!Object.prototype.hasOwnProperty.call(currentConfig, 'saveAs')) {
+      return;
+    }
+
+    updateWaitNodeConfig(currentConfig);
+  }, [step, updateWaitNodeConfig]);
 
   const handleNodeConfigChange = (config: Record<string, unknown>) => {
     onChange({ ...step, config });
@@ -5647,7 +5759,7 @@ export const StepConfigPanel: React.FC<{
       )}
 
       {/* §19.4 - Enhanced Save Output section with toggle, preview, and copy */}
-      {!step.type.startsWith('control.') && (() => {
+      {!step.type.startsWith('control.') && step.type !== 'event.wait' && step.type !== 'time.wait' && (() => {
         const nodeStep = step as NodeStep;
         const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
         const actionId = (existingConfig?.actionId as string) ?? '';
@@ -5873,7 +5985,13 @@ export const StepConfigPanel: React.FC<{
                         label={index === 0 ? 'Operator' : undefined}
                         options={WAIT_FILTER_OPERATOR_OPTIONS}
                         value={filter.op}
-                        onValueChange={(value) => updateEventFilterClause(index, { op: value as WaitFilterOperator })}
+                        onValueChange={(value) => {
+                          const nextOp = value as WaitFilterOperator;
+                          updateEventFilterClause(index, {
+                            op: nextOp,
+                            value: normalizeWaitFilterValueForOperator(nextOp, filter.value, fieldMeta)
+                          });
+                        }}
                         disabled={!editable}
                       />
                     </div>
@@ -5892,7 +6010,7 @@ export const StepConfigPanel: React.FC<{
 
                   {showValue && (
                     <div>
-                      {fieldMeta?.pickerKind && !expectsArray ? (
+                      {fieldMeta?.pickerKind && supportsWaitFilterPickerResource(fieldMeta.pickerKind) && !expectsArray ? (
                         <WorkflowActionInputFixedPicker
                           idPrefix={`event-wait-filter-value-${step.id}-${index}`}
                           field={{

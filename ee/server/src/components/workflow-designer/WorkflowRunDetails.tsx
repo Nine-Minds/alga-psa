@@ -105,6 +105,7 @@ type WorkflowRunWaitRecord = {
   key?: string | null;
   timeout_at?: string | null;
   status: string;
+  payload?: Record<string, unknown> | null;
   created_at: string;
   resolved_at?: string | null;
 };

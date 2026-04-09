@@ -13,12 +13,12 @@ type ResolveWorkflowEventCorrelationInput = {
 export function resolveWorkflowEventCorrelation(
   input: ResolveWorkflowEventCorrelationInput
 ): WorkflowEventCorrelationResolution {
-  const explicit = resolveExplicitCorrelation(input.explicitCorrelationKey, input.payload);
+  const explicit = resolveExplicitCorrelation(input.explicitCorrelationKey);
   if (explicit) {
     return {
       key: explicit,
       source: 'explicit',
-      detail: 'event.workflow_correlation_key|payload.workflowCorrelationKey|payload.correlationKey',
+      detail: 'event.workflow_correlation_key',
     };
   }
 
@@ -39,21 +39,10 @@ export function resolveWorkflowEventCorrelation(
 }
 
 function resolveExplicitCorrelation(
-  explicitCorrelationKey: string | null | undefined,
-  payload: Record<string, unknown>
+  explicitCorrelationKey: string | null | undefined
 ): string | null {
   if (typeof explicitCorrelationKey === 'string' && explicitCorrelationKey.trim()) {
     return explicitCorrelationKey.trim();
-  }
-
-  const workflowCorrelationKey = payload.workflowCorrelationKey;
-  if (typeof workflowCorrelationKey === 'string' && workflowCorrelationKey.trim()) {
-    return workflowCorrelationKey.trim();
-  }
-
-  const correlationKey = payload.correlationKey;
-  if (typeof correlationKey === 'string' && correlationKey.trim()) {
-    return correlationKey.trim();
   }
 
   return null;

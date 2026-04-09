@@ -74,7 +74,7 @@ const WorkflowRuntimeEventModelV2 = {
       query.where('created_at', '<=', options.to);
     }
     if (options?.status === 'matched') {
-      query.whereNotNull('matched_run_id');
+      query.whereNotNull('matched_run_id').whereNull('error_message');
     }
     if (options?.status === 'unmatched') {
       query.whereNull('matched_run_id').whereNull('error_message');

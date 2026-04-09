@@ -123,6 +123,7 @@ export function buildWorkflowRuntimeV2ExpressionContext(scopes: WorkflowRuntimeV
     local: lexicalTop,
     system: scopes.system,
     meta: {
+      ...(scopes.meta ?? {}),
       runId: scopes.system.runId,
       workflowId: scopes.system.workflowId,
       workflowVersion: scopes.system.workflowVersion,
@@ -130,6 +131,7 @@ export function buildWorkflowRuntimeV2ExpressionContext(scopes: WorkflowRuntimeV
       definitionHash: scopes.system.definitionHash,
       runtimeSemanticsVersion: scopes.system.runtimeSemanticsVersion,
     },
+    error: scopes.error ?? null,
   };
 }
 
@@ -167,52 +169,83 @@ function resolveSequenceByPath(definition: WorkflowDefinition, path: string): St
   if (path === 'root.steps') {
     return definition.steps;
   }
-
-  const branchMatch = /^root\.steps\[(\d+)\]\.(then|else|try|catch|body)\.steps$/.exec(path);
-  if (!branchMatch) {
+  if (!path.startsWith('root.steps')) {
     return null;
   }
 
-  const [, rawStepIndex, branchName] = branchMatch;
-  const stepIndex = Number(rawStepIndex);
-  if (!Number.isInteger(stepIndex) || stepIndex < 0) {
-    return null;
-  }
+  let sequence: Step[] = definition.steps;
+  let cursor = 'root.steps';
 
-  const parentStep = definition.steps[stepIndex];
-  if (!parentStep) {
-    return null;
-  }
-
-  if (branchName === 'then' || branchName === 'else') {
-    if (parentStep.type !== 'control.if') {
+  while (cursor !== path) {
+    const indexMatch = new RegExp(`^${escapePathForRegex(cursor)}\\[(\\d+)\\]`).exec(path);
+    if (!indexMatch) {
       return null;
     }
-    const ifStep = parentStep as IfBlock;
+
+    const stepIndex = Number(indexMatch[1]);
+    if (!Number.isInteger(stepIndex) || stepIndex < 0) {
+      return null;
+    }
+
+    const step = sequence[stepIndex];
+    if (!step) {
+      return null;
+    }
+
+    const stepPath = `${cursor}[${stepIndex}]`;
+    const branchMatch = new RegExp(`^${escapePathForRegex(stepPath)}\\.(then|else|try|catch|body)\\.steps`).exec(path);
+    if (!branchMatch) {
+      return null;
+    }
+
+    const branchName = branchMatch[1];
+    const branchSequence = resolveStepBranchSequence(step, branchName);
+    if (!branchSequence) {
+      return null;
+    }
+    sequence = branchSequence;
+    cursor = `${stepPath}.${branchName}.steps`;
+  }
+
+  return sequence;
+}
+
+function resolveStepBranchSequence(step: Step, branchName: string): Step[] | null {
+  if (branchName === 'then' || branchName === 'else') {
+    if (step.type !== 'control.if') {
+      return null;
+    }
+    const ifStep = step as IfBlock;
     const branch = branchName === 'then' ? ifStep.then : (ifStep.else ?? []);
     return Array.isArray(branch) ? branch : null;
   }
 
   if (branchName === 'body') {
-    if (parentStep.type !== 'control.forEach') {
+    if (step.type !== 'control.forEach') {
       return null;
     }
-    const forEachStep = parentStep as ForEachBlock;
+    const forEachStep = step as ForEachBlock;
     return Array.isArray(forEachStep.body) ? forEachStep.body : null;
   }
 
-  if (parentStep.type !== 'control.tryCatch') {
+  if (step.type !== 'control.tryCatch') {
     return null;
   }
-  const tryCatchStep = parentStep as TryCatchBlock;
+  const tryCatchStep = step as TryCatchBlock;
   const branch = branchName === 'try' ? tryCatchStep.try : tryCatchStep.catch;
   return Array.isArray(branch) ? branch : null;
+}
+
+function escapePathForRegex(path: string): string {
+  return path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export type WorkflowRuntimeV2ScopeState = {
   payload: Record<string, unknown>;
   workflow: Record<string, unknown>;
   lexical: Array<Record<string, unknown>>;
+  meta?: Record<string, unknown>;
+  error?: Record<string, unknown> | null;
   system: {
     runId: string;
     workflowId: string;

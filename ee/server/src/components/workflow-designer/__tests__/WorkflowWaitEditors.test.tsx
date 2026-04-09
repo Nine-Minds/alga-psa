@@ -203,7 +203,11 @@ vi.mock('../GroupedActionConfigSection', () => ({ GroupedActionConfigSection: ()
 vi.mock('../WorkflowDesignerPalette', () => ({ WorkflowDesignerPalette: () => <div /> }));
 vi.mock('../PaletteItemWithTooltip', () => ({ PaletteItemWithTooltip: () => <div /> }));
 vi.mock('../WorkflowStepNameField', () => ({ WorkflowStepNameField: () => <div /> }));
-vi.mock('../WorkflowStepSaveOutputSection', () => ({ WorkflowStepSaveOutputSection: () => <div /> }));
+vi.mock('../WorkflowStepSaveOutputSection', () => ({
+  WorkflowStepSaveOutputSection: ({ stepId }: { stepId: string }) => (
+    <div data-testid={`workflow-step-save-output-${stepId}`} />
+  )
+}));
 vi.mock('../WorkflowActionInputSection', () => ({ WorkflowActionInputSection: () => <div /> }));
 
 import { StepConfigPanel } from '../WorkflowDesigner';
@@ -235,6 +239,65 @@ describe('Workflow wait editors', () => {
     getEventCatalogEntryByEventTypeMock.mockReset();
     getWorkflowSchemaActionMock.mockResolvedValue({ schema: { type: 'object', properties: {} } });
     getEventCatalogEntryByEventTypeMock.mockResolvedValue(null);
+  });
+
+  it('does not render generic save output controls for wait steps', () => {
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'event-step-no-save-output',
+          type: 'event.wait',
+          config: { eventName: 'project.status.changed', correlationKey: { $expr: 'payload.projectId' }, filters: [] }
+        } as any}
+        eventCatalogOptions={[]}
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId('workflow-step-save-output-event-step-no-save-output')).not.toBeInTheDocument();
+
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'time-step-no-save-output',
+          type: 'time.wait',
+          config: { mode: 'duration', durationMs: 1000 }
+        } as any}
+        eventCatalogOptions={[]}
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId('workflow-step-save-output-time-step-no-save-output')).not.toBeInTheDocument();
+  });
+
+  it('strips stale saveAs values from existing wait-step configs', async () => {
+    const onChange = vi.fn();
+
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'event-step-strip-save-output',
+          type: 'event.wait',
+          config: {
+            eventName: 'project.status.changed',
+            correlationKey: { $expr: 'payload.projectId' },
+            filters: [],
+            saveAs: 'should-be-removed'
+          }
+        } as any}
+        eventCatalogOptions={[]}
+        onChange={onChange}
+      />
+    );
+
+    await waitFor(() => {
+      const lastCall = onChange.mock.calls.at(-1)?.[0];
+      expect(lastCall?.config?.saveAs).toBeUndefined();
+    });
   });
 
   it('T007: curated wait editors persist key event/time fields through onChange', async () => {
@@ -331,6 +394,56 @@ describe('Workflow wait editors', () => {
     });
   });
 
+  it('clears filter values for exists/not_exists operators so the config stays publishable', async () => {
+    const onChange = vi.fn();
+    getWorkflowSchemaActionMock.mockResolvedValue({
+      schema: {
+        type: 'object',
+        properties: {
+          newStatus: {
+            type: 'string',
+            enum: ['Live', 'Complete']
+          }
+        }
+      }
+    });
+
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'event-exists-step',
+          type: 'event.wait',
+          config: {
+            eventName: 'project.status.changed',
+            correlationKey: { $expr: 'payload.projectId' },
+            filters: [{ path: 'newStatus', op: '=', value: 'Live' }]
+          }
+        } as any}
+        eventCatalogOptions={[
+          {
+            event_id: 'evt-exists',
+            event_type: 'project.status.changed',
+            name: 'Project Status Changed',
+            category: 'Project',
+            payload_schema_ref: 'payload.ProjectStatus.v1',
+            payload_schema_ref_status: 'known',
+            source: 'tenant',
+            status: 'active'
+          }
+        ]}
+        onChange={onChange}
+      />
+    );
+
+    const operatorSelect = await screen.findByTestId('event-wait-filter-op-event-exists-step-0');
+    fireEvent.change(operatorSelect, { target: { value: 'exists' } });
+
+    const lastCall = onChange.mock.calls.at(-1)?.[0];
+    expect(lastCall?.config?.filters?.[0]?.op).toBe('exists');
+    expect(lastCall?.config?.filters?.[0]?.value).toBeUndefined();
+  });
+
   it('passes sibling equality filters into typed picker dependency mapping', async () => {
     getWorkflowSchemaActionMock.mockResolvedValue({
       schema: {
@@ -381,6 +494,54 @@ describe('Workflow wait editors', () => {
 
     const picker = await screen.findByTestId('event-wait-filter-value-event-dependency-step-1-typed-picker');
     expect(picker.getAttribute('data-root-input-mapping')).toContain('"board_id":"board-1"');
+  });
+
+  it('falls back to enum/primitive controls when picker metadata is unsupported', async () => {
+    getWorkflowSchemaActionMock.mockResolvedValue({
+      schema: {
+        type: 'object',
+        properties: {
+          newStatus: {
+            type: 'string',
+            enum: ['Live', 'Complete'],
+            'x-workflow-picker-kind': 'unsupported-picker'
+          }
+        }
+      }
+    });
+
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'event-unsupported-picker-step',
+          type: 'event.wait',
+          config: {
+            eventName: 'project.status.changed',
+            correlationKey: { $expr: 'payload.projectId' },
+            filters: [{ path: 'newStatus', op: '=', value: 'Live' }]
+          }
+        } as any}
+        eventCatalogOptions={[
+          {
+            event_id: 'evt-unsupported',
+            event_type: 'project.status.changed',
+            name: 'Project Status Changed',
+            category: 'Project',
+            payload_schema_ref: 'payload.ProjectStatus.v1',
+            payload_schema_ref_status: 'known',
+            source: 'tenant',
+            status: 'active'
+          }
+        ]}
+        onChange={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('event-wait-filter-value-event-unsupported-picker-step-0')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('event-wait-filter-value-event-unsupported-picker-step-0-typed-picker')).not.toBeInTheDocument();
   });
 
   it('T010: wait-filter editor falls back to enum/primitive controls without picker metadata', async () => {

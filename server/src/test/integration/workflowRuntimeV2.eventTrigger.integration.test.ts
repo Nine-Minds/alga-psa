@@ -24,6 +24,12 @@ import {
   TEST_SCHEMA_REF
 } from '../helpers/workflowRuntimeV2TestHelpers';
 
+const {
+  startWorkflowRuntimeV2TemporalRunMock
+} = vi.hoisted(() => ({
+  startWorkflowRuntimeV2TemporalRunMock: vi.fn()
+}));
+
 vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
   return {
@@ -71,6 +77,10 @@ vi.mock('@alga-psa/auth', () => ({
   preCheckDeletion: vi.fn()
 }));
 
+vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
+  startWorkflowRuntimeV2TemporalRun: (...args: unknown[]) => startWorkflowRuntimeV2TemporalRunMock(...args)
+}));
+
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
 const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
 const mockedGetCurrentUser = vi.mocked(getCurrentUser);
@@ -111,6 +121,11 @@ beforeEach(async () => {
   mockedCreateTenantKnex.mockImplementation(async () => ({ knex: db, tenant: tenantId }));
   mockedGetCurrentTenantId.mockImplementation(() => tenantId);
   mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
+  startWorkflowRuntimeV2TemporalRunMock.mockReset();
+  startWorkflowRuntimeV2TemporalRunMock.mockResolvedValue({
+    workflowId: 'workflow-runtime-v2:run:run-replayed',
+    firstExecutionRunId: 'temporal-run-replayed'
+  });
 });
 
 afterAll(async () => {
@@ -135,7 +150,10 @@ describe('workflow runtime v2 event trigger integration tests', () => {
 
     const run = await WorkflowRunModelV2.getById(db, result.startedRuns[0]);
     expect(run?.workflow_id).toBe(workflowId);
-    expect(run?.status).toBe('SUCCEEDED');
+    expect(run?.status).toBe('RUNNING');
+    expect(run?.engine).toBe('temporal');
+    expect(run?.temporal_workflow_id).toBe('workflow-runtime-v2:run:run-replayed');
+    expect(run?.temporal_run_id).toBe('temporal-run-replayed');
   });
 
   it('Event trigger starts runs for all published workflows sharing the trigger. Mocks: non-target dependencies.', async () => {
@@ -210,7 +228,8 @@ describe('workflow runtime v2 event trigger integration tests', () => {
     const run = await WorkflowRunModelV2.getById(db, result.startedRuns[0]);
     expect(run?.workflow_id).toBe(workflowId);
     expect(run?.workflow_version).toBe(1);
-    expect(run?.status).toBe('SUCCEEDED');
+    expect(run?.status).toBe('RUNNING');
+    expect(run?.engine).toBe('temporal');
     expect(run?.trigger_type).toBe('event');
     expect(run?.trigger_metadata_json).toMatchObject({
       eventType: 'REGRESSION',

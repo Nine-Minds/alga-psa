@@ -3,15 +3,26 @@ import {
   RedisStreamClient,
   WorkflowEventBaseSchema,
 } from '@alga-psa/workflow-streams';
-import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
+import {
+  createSecretResolverFromProvider,
+  getSchemaRegistry,
+  initializeWorkflowRuntimeV2,
+  isWorkflowEventTrigger,
+  resolveInputMapping,
+} from '@alga-psa/workflows/runtime';
 import {
   WorkflowDefinitionModelV2,
   WorkflowDefinitionVersionModelV2,
   WorkflowRuntimeEventModelV2,
+  WorkflowRunModelV2,
   WorkflowRunWaitModelV2,
 } from '@alga-psa/workflows/persistence';
+import { createTenantSecretProvider } from '@alga-psa/workflows/secrets';
 import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
-import { signalWorkflowRuntimeV2Event } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
+import {
+  signalWorkflowRuntimeV2Event,
+  signalWorkflowRuntimeV2HumanTask,
+} from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
 import { resolveWorkflowEventCorrelation } from '@alga-psa/workflows/lib/workflowEventCorrelation';
 import { getAdminConnection } from '@shared/db/admin.js';
 import type { Knex } from 'knex';
@@ -20,6 +31,36 @@ type WorkerConfig = {
   consumerGroup: string;
   pollIntervalMs: number;
   batchSize: number;
+};
+
+const expandDottedKeys = (input: Record<string, unknown>): Record<string, unknown> => {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (!key.includes('.')) {
+      result[key] = value;
+      continue;
+    }
+    const parts = key.split('.').filter(Boolean);
+    if (parts.length === 0) continue;
+    let cursor: Record<string, unknown> = result;
+    for (let i = 0; i < parts.length; i += 1) {
+      const part = parts[i]!;
+      const isLeaf = i === parts.length - 1;
+      if (isLeaf) {
+        cursor[part] = value;
+        continue;
+      }
+      const existing = cursor[part];
+      if (existing && typeof existing === 'object' && !Array.isArray(existing)) {
+        cursor = existing as Record<string, unknown>;
+        continue;
+      }
+      const next: Record<string, unknown> = {};
+      cursor[part] = next;
+      cursor = next;
+    }
+  }
+  return result;
 };
 
 export class WorkflowRuntimeV2EventStreamWorker {
@@ -158,26 +199,59 @@ export class WorkflowRuntimeV2EventStreamWorker {
     });
 
     const signaledRuns = new Set<string>();
+    let deliveryError: string | null = null;
+    const missingCorrelationWarning = correlation.key
+      ? null
+      : `Missing workflow correlation key (${correlation.detail})`;
     if (correlation.key) {
       const candidateWaits = await WorkflowRunWaitModelV2.listEventWaitCandidates(
         knex,
         event.event_type,
         correlation.key,
         event.tenant,
-        ['event']
+        ['event', 'human']
       );
+      const waitsByRun = new Map<string, Awaited<ReturnType<typeof WorkflowRunModelV2.getById>>>();
+      const getRun = async (candidateRunId: string) => {
+        if (!waitsByRun.has(candidateRunId)) {
+          waitsByRun.set(candidateRunId, await WorkflowRunModelV2.getById(knex, candidateRunId));
+        }
+        return waitsByRun.get(candidateRunId) ?? null;
+      };
       for (const wait of candidateWaits) {
+        const matchedRun = await getRun(wait.run_id);
+        if (matchedRun?.engine !== 'temporal') {
+          continue;
+        }
         try {
-          await signalWorkflowRuntimeV2Event({
-            runId: wait.run_id,
-            eventId: event.event_id,
-            eventName: event.event_type,
-            correlationKey: correlation.key,
-            payload,
-            receivedAt: processedAt,
-          });
+          if (wait.wait_type === 'human') {
+            const taskId = typeof (wait.payload as Record<string, unknown> | null | undefined)?.taskId === 'string'
+              ? String((wait.payload as Record<string, unknown>).taskId)
+              : '';
+            if (!taskId) {
+              continue;
+            }
+            await signalWorkflowRuntimeV2HumanTask({
+              runId: wait.run_id,
+              taskId,
+              eventName: event.event_type,
+              payload,
+            });
+          } else {
+            await signalWorkflowRuntimeV2Event({
+              runId: wait.run_id,
+              eventId: event.event_id,
+              eventName: event.event_type,
+              correlationKey: correlation.key,
+              payload,
+              receivedAt: processedAt,
+            });
+          }
           signaledRuns.add(wait.run_id);
         } catch (error) {
+          deliveryError = wait.wait_type === 'human'
+            ? `Failed to signal Temporal human task for run ${wait.run_id}: ${error instanceof Error ? error.message : String(error)}`
+            : `Failed to signal Temporal event wait for run ${wait.run_id}: ${error instanceof Error ? error.message : String(error)}`;
           logger.warn('[WorkflowRuntimeV2EventStreamWorker] Failed to signal candidate run', {
             workerId: this.workerId,
             runId: wait.run_id,
@@ -188,14 +262,10 @@ export class WorkflowRuntimeV2EventStreamWorker {
             correlationKey: correlation.key,
             error,
           });
+          break;
         }
       }
     } else {
-      const correlationError = `Missing workflow correlation key (${correlation.detail})`;
-      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: correlationError,
-        processed_at: processedAt,
-      });
       logger.warn('[WorkflowRuntimeV2EventStreamWorker] Correlation key unresolved; skipping wait routing', {
           workerId: this.workerId,
           eventId: event.event_id,
@@ -223,6 +293,10 @@ export class WorkflowRuntimeV2EventStreamWorker {
       payloadValidationFailed: 0,
     };
     for (const workflow of matching) {
+      if (deliveryError) {
+        break;
+      }
+
       const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflow.workflow_id);
       const latest = versions[0];
       if (!latest) {
@@ -235,7 +309,6 @@ export class WorkflowRuntimeV2EventStreamWorker {
         (typeof latestDefinition?.payloadSchemaRef === 'string' ? latestDefinition.payloadSchemaRef : null) ??
         (typeof (workflow as any)?.payload_schema_ref === 'string' ? String((workflow as any).payload_schema_ref) : null);
 
-      // If we can’t validate or don’t have a canonical source schema ref, skip.
       if (!workflowPayloadSchemaRef) {
         skipStats.missingSchemaRef += 1;
         continue;
@@ -245,44 +318,95 @@ export class WorkflowRuntimeV2EventStreamWorker {
         continue;
       }
 
-      // If the event catalog defines a source schema, require it to match for now (no trigger mapping in worker yet).
-      if (payloadSchemaRef && payloadSchemaRef !== workflowPayloadSchemaRef) {
+      const trigger = (latestDefinition?.trigger ?? workflow.trigger ?? null) as any;
+      const eventTrigger = isWorkflowEventTrigger(trigger) ? trigger : null;
+      const overrideSourceSchemaRef = typeof eventTrigger?.sourcePayloadSchemaRef === 'string'
+        ? eventTrigger.sourcePayloadSchemaRef
+        : null;
+      const effectiveSourceSchemaRef = overrideSourceSchemaRef ?? payloadSchemaRef;
+      if (!effectiveSourceSchemaRef) {
+        skipStats.missingSchemaRef += 1;
+        continue;
+      }
+
+      const payloadMapping = eventTrigger?.payloadMapping as any;
+      const mappingProvided = payloadMapping && typeof payloadMapping === 'object' && Object.keys(payloadMapping).length > 0;
+      const refsMatch = effectiveSourceSchemaRef === workflowPayloadSchemaRef;
+      if (!mappingProvided && !refsMatch) {
         skipStats.schemaMismatch += 1;
         continue;
       }
 
-      const validation = schemaRegistry.get(workflowPayloadSchemaRef).safeParse(payload);
+      let workflowPayload: Record<string, unknown> = payload;
+      let mappingApplied = false;
+      if (mappingProvided) {
+        try {
+          const provider = createTenantSecretProvider(knex, event.tenant);
+          const secretResolver = createSecretResolverFromProvider((name, workflowRunId) => provider.getValue(name, workflowRunId));
+          const resolved = await resolveInputMapping(payloadMapping, {
+            expressionContext: {
+              event: {
+                name: event.event_type,
+                correlationKey: correlation.key,
+                payload,
+                payloadSchemaRef: effectiveSourceSchemaRef
+              }
+            },
+            secretResolver
+          });
+          workflowPayload = expandDottedKeys((resolved ?? {}) as Record<string, unknown>);
+          mappingApplied = true;
+        } catch {
+          continue;
+        }
+      }
+
+      const validation = schemaRegistry.get(workflowPayloadSchemaRef).safeParse(workflowPayload);
       if (!validation.success) {
         skipStats.payloadValidationFailed += 1;
         continue;
       }
 
-      const launched = await launchPublishedWorkflowRun(knex, {
-        workflowId: workflow.workflow_id,
-        workflowVersion: latest.version,
-        payload,
-        tenantId: event.tenant,
-        triggerType: 'event',
-        triggerMetadata: {
+      try {
+        const launched = await launchPublishedWorkflowRun(knex, {
+          workflowId: workflow.workflow_id,
+          workflowVersion: latest.version,
+          payload: workflowPayload,
+          tenantId: event.tenant,
+          triggerType: 'event',
+          triggerMetadata: {
+            eventType: event.event_type,
+            sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+            triggerMappingApplied: mappingApplied
+          },
           eventType: event.event_type,
-          sourcePayloadSchemaRef: payloadSchemaRef ?? workflowPayloadSchemaRef,
-          triggerMappingApplied: false
-        },
-        eventType: event.event_type,
-        sourcePayloadSchemaRef: payloadSchemaRef ?? workflowPayloadSchemaRef,
-        triggerMappingApplied: false,
-      });
-      startedRuns.push(launched.runId);
-      if (this.verbose) {
-        logger.info('[WorkflowRuntimeV2EventStreamWorker] Started run', {
+          sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+          triggerMappingApplied: mappingApplied,
+        });
+        startedRuns.push(launched.runId);
+        if (this.verbose) {
+          logger.info('[WorkflowRuntimeV2EventStreamWorker] Started run', {
+            workerId: this.workerId,
+            runId: launched.runId,
+            workflowId: workflow.workflow_id,
+            version: latest.version,
+            eventId: event.event_id,
+            eventType: event.event_type,
+            tenant: event.tenant,
+          });
+        }
+      } catch (error) {
+        deliveryError = `Failed to launch Temporal workflow for workflow ${workflow.workflow_id}: ${error instanceof Error ? error.message : String(error)}`;
+        logger.warn('[WorkflowRuntimeV2EventStreamWorker] Failed to launch workflow', {
           workerId: this.workerId,
-          runId: launched.runId,
           workflowId: workflow.workflow_id,
           version: latest.version,
           eventId: event.event_id,
           eventType: event.event_type,
           tenant: event.tenant,
+          error,
         });
+        break;
       }
     }
 
@@ -298,9 +422,22 @@ export class WorkflowRuntimeV2EventStreamWorker {
       skipStats,
     });
 
-    if (startedRuns.length === 1) {
+    const matchedRunId = Array.from(signaledRuns)[0] ?? startedRuns[0] ?? null;
+    if (matchedRunId) {
       await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        matched_run_id: startedRuns[0],
+        matched_run_id: matchedRunId,
+        processed_at: processedAt,
+      });
+    }
+
+    if (deliveryError) {
+      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
+        error_message: deliveryError,
+        processed_at: processedAt,
+      });
+    } else if (missingCorrelationWarning && startedRuns.length === 0 && signaledRuns.size === 0) {
+      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
+        error_message: missingCorrelationWarning,
         processed_at: processedAt,
       });
     }
