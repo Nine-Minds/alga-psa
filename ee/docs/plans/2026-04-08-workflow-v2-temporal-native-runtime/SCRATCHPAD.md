@@ -157,3 +157,26 @@ Working notes for replacing the current DB-backed Workflow Runtime V2 execution 
 
 - `services/workflow-worker` package test script references a missing `vitest.config.ts`; direct `npx vitest ... --run` works and was used for validation.
 - Existing Temporal integration tests in `ee/temporal-workflows` can time out in local runs due to dockerized Temporal startup hooks; this pass focused on deterministic unit checks + package typecheck.
+
+### F002-F006 completed
+
+- Added explicit runtime semantics constant in [ee/packages/workflows/src/lib/workflowRuntimeV2Semantics.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/packages/workflows/src/lib/workflowRuntimeV2Semantics.ts) and now pin it onto each launched run.
+- Added deterministic definition hashing at launch in [ee/packages/workflows/src/lib/workflowRunLauncher.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/packages/workflows/src/lib/workflowRunLauncher.ts), then persisted `definition_hash` + `runtime_semantics_version` through `startRun(...)`.
+- Run identity mapping is now deterministic: Temporal workflow ID always derives from Alga run ID (`workflow-runtime-v2:run:<run_id>`) and is projected back onto `workflow_runs`.
+- Added projection fields migration [server/migrations/20260408193000_add_temporal_projection_fields_to_workflow_runs.cjs](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/migrations/20260408193000_add_temporal_projection_fields_to_workflow_runs.cjs):
+  - `engine`
+  - `temporal_workflow_id`
+  - `temporal_run_id`
+  - `definition_hash`
+  - `runtime_semantics_version`
+  - `parent_run_id`
+  - `root_run_id`
+- Extended run model typing in [shared/workflow/persistence/workflowRunModelV2.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/shared/workflow/persistence/workflowRunModelV2.ts) for those fields.
+- Added fail-fast pinned-definition hash validation in [shared/workflow/runtime/runtime/workflowRuntimeV2.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/shared/workflow/runtime/runtime/workflowRuntimeV2.ts): runtime now throws a `ValidationError` when the pinned hash and loaded definition diverge.
+- Added launcher unit assertions to confirm hash + semantics pinning and Temporal ID projection in [server/src/test/unit/workflowRunLauncher.unit.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/test/unit/workflowRunLauncher.unit.test.ts).
+
+### Additional validation runbook
+
+- `mkdir -p server/coverage/.tmp && npm --prefix server run test -- src/test/unit/workflowRunLauncher.unit.test.ts`
+- `cd services/workflow-worker && npx vitest src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts --run`
+- `npm --prefix ee/packages/workflows run typecheck`

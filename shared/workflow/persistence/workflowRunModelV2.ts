@@ -13,6 +13,13 @@ export type WorkflowRunRecord = {
   event_type?: string | null;
   source_payload_schema_ref?: string | null;
   trigger_mapping_applied?: boolean | null;
+  engine?: 'temporal' | 'db' | null;
+  temporal_workflow_id?: string | null;
+  temporal_run_id?: string | null;
+  definition_hash?: string | null;
+  runtime_semantics_version?: string | null;
+  parent_run_id?: string | null;
+  root_run_id?: string | null;
   input_json?: Record<string, unknown> | null;
   resume_event_payload?: Record<string, unknown> | null;
   resume_event_name?: string | null;

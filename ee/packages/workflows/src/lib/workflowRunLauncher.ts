@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { createHash } from 'crypto';
 
 import {
   WorkflowDefinitionModelV2,
@@ -8,8 +9,16 @@ import {
 } from '@alga-psa/workflows/persistence';
 import { WorkflowRuntimeV2, getSchemaRegistry } from '@alga-psa/workflows/runtime';
 import { startWorkflowRuntimeV2TemporalRun } from './workflowRuntimeV2Temporal';
+import { WORKFLOW_RUNTIME_V2_SEMANTICS_VERSION } from './workflowRuntimeV2Semantics';
 
 const WORKFLOW_RUN_TRIGGER_FIRE_KEY_UNIQUE = 'workflow_runs_trigger_fire_key_unique';
+const hashDefinition = (definition: unknown): string | null => {
+  try {
+    return createHash('sha256').update(JSON.stringify(definition ?? null)).digest('hex');
+  } catch {
+    return null;
+  }
+};
 
 export type WorkflowRunLaunchRequest = {
   workflowId: string;
@@ -42,6 +51,8 @@ type WorkflowRunLaunchFailureRequest = {
   eventType?: string | null;
   sourcePayloadSchemaRef?: string | null;
   triggerMappingApplied?: boolean;
+  definitionHash?: string | null;
+  runtimeSemanticsVersion?: string | null;
   message: string;
   details?: unknown;
 };
@@ -91,6 +102,8 @@ export async function recordFailedWorkflowRunLaunch(
     event_type: request.eventType ?? null,
     source_payload_schema_ref: request.sourcePayloadSchemaRef ?? null,
     trigger_mapping_applied: request.triggerMappingApplied ?? false,
+    definition_hash: request.definitionHash ?? null,
+    runtime_semantics_version: request.runtimeSemanticsVersion ?? null,
     error_json: {
       message: request.message,
       stage: 'launch',
@@ -135,6 +148,7 @@ export async function launchPublishedWorkflowRun(
   }
 
   const definition = versionRecord.definition_json as Record<string, unknown> | null;
+  const definitionHash = hashDefinition(definition);
   const schemaRefFromDefinition = definition?.payloadSchemaRef;
   const schemaRef =
     typeof schemaRefFromDefinition === 'string'
@@ -156,6 +170,8 @@ export async function launchPublishedWorkflowRun(
         eventType: request.eventType ?? null,
         sourcePayloadSchemaRef: request.sourcePayloadSchemaRef ?? null,
         triggerMappingApplied: request.triggerMappingApplied,
+        definitionHash,
+        runtimeSemanticsVersion: WORKFLOW_RUNTIME_V2_SEMANTICS_VERSION,
         message: 'Workflow payload failed validation',
         details: {
           issues: validation.error.issues
@@ -189,7 +205,10 @@ export async function launchPublishedWorkflowRun(
       triggerFireKey: request.triggerFireKey ?? null,
       eventType: request.eventType ?? null,
       sourcePayloadSchemaRef: request.sourcePayloadSchemaRef ?? null,
-      triggerMappingApplied: Boolean(request.triggerMappingApplied)
+      triggerMappingApplied: Boolean(request.triggerMappingApplied),
+      definitionHash,
+      runtimeSemanticsVersion: WORKFLOW_RUNTIME_V2_SEMANTICS_VERSION,
+      engine: 'temporal'
     });
   } catch (error) {
     if (!request.triggerFireKey || !isTriggerFireKeyDuplicateError(error)) {
@@ -219,7 +238,7 @@ export async function launchPublishedWorkflowRun(
         || String(process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_FALLBACK ?? '').trim().toLowerCase() === 'true';
 
       try {
-        await startWorkflowRuntimeV2TemporalRun({
+        const temporalStart = await startWorkflowRuntimeV2TemporalRun({
           runId,
           tenantId: request.tenantId ?? null,
           workflowId: request.workflowId,
@@ -227,10 +246,20 @@ export async function launchPublishedWorkflowRun(
           triggerType: request.triggerType ?? null,
           executionKey,
         });
+        await WorkflowRunModelV2.update(knex, runId, {
+          engine: 'temporal',
+          temporal_workflow_id: temporalStart.workflowId,
+          temporal_run_id: temporalStart.firstExecutionRunId,
+        });
       } catch (error) {
         if (!allowLegacyFallback) {
           throw error;
         }
+        await WorkflowRunModelV2.update(knex, runId, {
+          engine: 'db',
+          temporal_workflow_id: null,
+          temporal_run_id: null,
+        });
         await runtime.executeRun(knex, runId, executionKey);
       }
     }

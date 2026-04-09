@@ -8,31 +8,31 @@
   {
     "id": "F002",
     "description": "Use the same Temporal-native workflow runtime semantics in hosted EE and appliance EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1"]
   },
   {
     "id": "F003",
     "description": "Allocate a stable Alga `run_id` before Temporal start and deterministically map each Temporal execution to that run ID.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2"]
   },
   {
     "id": "F004",
     "description": "Store pinned workflow definition identity on each run, including workflow ID, published version, definition hash, and runtime semantics version.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2", "FR-4"]
   },
   {
     "id": "F005",
     "description": "Load the pinned published definition through a runtime activity at run start and execute only that version for the life of the run.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2", "FR-4"]
   },
   {
     "id": "F006",
     "description": "Fail fast when the pinned workflow definition cannot be loaded or does not match the expected definition hash.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2", "FR-4"]
   },
   {

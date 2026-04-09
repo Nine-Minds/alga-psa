@@ -6,6 +6,7 @@ const {
   startWorkflowRuntimeV2TemporalRunMock,
   getByTriggerFireKeyMock,
   createRunMock,
+  updateRunMock,
   getWorkflowByIdMock,
   listWorkflowVersionsMock,
   getWorkflowVersionMock
@@ -15,6 +16,7 @@ const {
   startWorkflowRuntimeV2TemporalRunMock: vi.fn(),
   getByTriggerFireKeyMock: vi.fn(),
   createRunMock: vi.fn(),
+  updateRunMock: vi.fn(),
   getWorkflowByIdMock: vi.fn(),
   listWorkflowVersionsMock: vi.fn(),
   getWorkflowVersionMock: vi.fn()
@@ -30,7 +32,8 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   },
   WorkflowRunModelV2: {
     create: (...args: unknown[]) => createRunMock(...args),
-    getByTriggerFireKey: (...args: unknown[]) => getByTriggerFireKeyMock(...args)
+    getByTriggerFireKey: (...args: unknown[]) => getByTriggerFireKeyMock(...args),
+    update: (...args: unknown[]) => updateRunMock(...args)
   }
 }));
 
@@ -86,6 +89,7 @@ describe('Workflow run launcher', () => {
     startWorkflowRuntimeV2TemporalRunMock.mockReset();
     getByTriggerFireKeyMock.mockReset();
     createRunMock.mockReset();
+    updateRunMock.mockReset();
     getWorkflowByIdMock.mockReset();
     listWorkflowVersionsMock.mockReset();
     getWorkflowVersionMock.mockReset();
@@ -121,6 +125,7 @@ describe('Workflow run launcher', () => {
       workflow_version: data.workflow_version,
       ...data
     }));
+    updateRunMock.mockResolvedValue({});
     startWorkflowRuntimeV2TemporalRunMock.mockResolvedValue({
       workflowId: 'workflow-runtime-v2:run:run-created',
       firstExecutionRunId: 'temporal-run-1'
@@ -199,6 +204,25 @@ describe('Workflow run launcher', () => {
       triggerType: 'event',
       executionKey: 'exec-1'
     });
+    expect(startRunMock).toHaveBeenCalledWith(
+      knexMock,
+      expect.objectContaining({
+        workflowId: 'workflow-1',
+        version: 5,
+        definitionHash: expect.any(String),
+        runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        engine: 'temporal'
+      })
+    );
+    expect(updateRunMock).toHaveBeenCalledWith(
+      knexMock,
+      'run-created',
+      expect.objectContaining({
+        engine: 'temporal',
+        temporal_workflow_id: 'workflow-runtime-v2:run:run-created',
+        temporal_run_id: 'temporal-run-1'
+      })
+    );
     expect(executeRunMock).not.toHaveBeenCalled();
   });
 
