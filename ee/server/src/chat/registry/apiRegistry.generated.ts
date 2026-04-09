@@ -11705,7 +11705,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/comments",
     "displayName": "Get Ticket Comments",
     "summary": "List comments for a ticket",
-    "description": "Returns the comments attached to a ticket. Use small limits and field-scoped byte ranges when comment bodies are large.",
+    "description": "Returns the comments attached to a ticket. Always use content_format=markdown to get compact readable responses. Only omit content_format when the caller needs the raw BlockNote JSON.",
     "tags": [
       "tickets"
     ],
@@ -11757,10 +11757,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "content_format",
+        "in": "query",
+        "required": false,
+        "description": "Set to 'markdown' to return compact responses with only markdown_content (readable text) and metadata. Omit or set to 'full' for the complete response with comment_text (raw BlockNote JSON), comment_html, avatars, and reactions. Always use 'markdown' unless the raw format is specifically needed.",
+        "schema": {
+          "type": "string",
+          "enum": ["full", "markdown"]
+        }
+      },
+      {
         "name": "field_ranges[comment_text]",
         "in": "query",
         "required": false,
-        "description": "Optional UTF-8 byte range for comment_text, formatted as start-end (for example 0-4095). Use meta.truncated_fields to continue fetching long comments.",
+        "description": "Deprecated — use content_format=markdown instead. Optional UTF-8 byte range for comment_text.",
         "schema": {
           "type": "string",
           "pattern": "^\\d+-\\d+$"
@@ -11770,7 +11780,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "field_ranges[comment_html]",
         "in": "query",
         "required": false,
-        "description": "Optional UTF-8 byte range for comment_html, formatted as start-end (for example 0-4095).",
+        "description": "Deprecated — use content_format=markdown instead. Optional UTF-8 byte range for comment_html.",
         "schema": {
           "type": "string",
           "pattern": "^\\d+-\\d+$"
@@ -11783,18 +11793,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     },
     "examples": [
       {
-        "name": "Read recent comments with ranged comment text",
+        "name": "Read recent comments as markdown",
         "request": {
           "params": {
             "id": "11111111-1111-1111-1111-111111111111"
           },
           "query": {
-            "limit": 5,
+            "limit": 10,
             "order": "desc",
-            "field_ranges[comment_text]": "0-4095"
+            "content_format": "markdown"
           }
         },
-        "notes": "Prefer this endpoint over large ticket list payloads when the user asks for comment history or long comment bodies."
+        "notes": "Always use content_format=markdown for readable, compact comment responses."
       }
     ]
   },
