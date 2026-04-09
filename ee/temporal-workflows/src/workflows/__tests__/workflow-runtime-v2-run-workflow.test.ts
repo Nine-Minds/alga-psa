@@ -32,6 +32,7 @@ vi.mock('@temporalio/workflow', () => ({
     }
     return false;
   }),
+  defineQuery: vi.fn((name: string) => name),
   defineSignal: vi.fn((name: string) => name),
   executeChild: vi.fn(async () => undefined),
   proxyActivities: vi.fn(() => mockActivities),
@@ -1842,5 +1843,68 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     })).rejects.toMatchObject({
       category: 'ValidationError',
     });
+  });
+
+  it('registers runtime query handlers for current step, wait, and interpreter summary', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_21',
+      name: 'query handlers',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_return',
+          type: 'control.return',
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_21',
+          workflowId: 'wf_21',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_21',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+    await workflowRuntimeV2RunWorkflow({
+      runId: 'run_21',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_21',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_21',
+    });
+
+    expect(workflowSignalHandlers.has('workflowRuntimeV2CurrentStep')).toBe(true);
+    expect(workflowSignalHandlers.has('workflowRuntimeV2CurrentWait')).toBe(true);
+    expect(workflowSignalHandlers.has('workflowRuntimeV2InterpreterSummary')).toBe(true);
+
+    const currentStepQuery = workflowSignalHandlers.get('workflowRuntimeV2CurrentStep');
+    const currentWaitQuery = workflowSignalHandlers.get('workflowRuntimeV2CurrentWait');
+    const summaryQuery = workflowSignalHandlers.get('workflowRuntimeV2InterpreterSummary');
+
+    expect(currentStepQuery?.({})).toEqual(
+      expect.objectContaining({
+        runId: 'run_21',
+      })
+    );
+    expect(currentWaitQuery?.({})).toBeNull();
+    expect(summaryQuery?.({})).toEqual(
+      expect.objectContaining({
+        runId: 'run_21',
+        stepCount: expect.any(Number),
+      })
+    );
   });
 });

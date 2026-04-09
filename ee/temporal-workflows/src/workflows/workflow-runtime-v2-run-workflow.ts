@@ -1,4 +1,4 @@
-import { condition, continueAsNew, defineSignal, executeChild, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
+import { condition, continueAsNew, defineQuery, defineSignal, executeChild, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
 import {
   WORKFLOW_RUNTIME_V2_EVENT_SIGNAL,
   WORKFLOW_RUNTIME_V2_HUMAN_TASK_SIGNAL,
@@ -185,6 +185,24 @@ type WorkflowRuntimeV2HumanTaskSignalPayload = {
 
 const workflowRuntimeV2HumanTaskSignal = defineSignal<[WorkflowRuntimeV2HumanTaskSignalPayload]>(WORKFLOW_RUNTIME_V2_HUMAN_TASK_SIGNAL);
 
+type WorkflowRuntimeV2CurrentWait = {
+  type: 'time.wait' | 'event.wait' | 'human.task';
+  stepPath: string;
+  descriptor: Record<string, unknown>;
+};
+
+const workflowRuntimeV2CurrentStepQuery = defineQuery<{
+  runId: string;
+  currentStepPath: string | null;
+}>('workflowRuntimeV2CurrentStep');
+const workflowRuntimeV2CurrentWaitQuery = defineQuery<WorkflowRuntimeV2CurrentWait | null>('workflowRuntimeV2CurrentWait');
+const workflowRuntimeV2InterpreterSummaryQuery = defineQuery<{
+  runId: string;
+  stepCount: number;
+  currentStepPath: string | null;
+  frameDepth: number;
+}>('workflowRuntimeV2InterpreterSummary');
+
 export type WorkflowRuntimeV2RunWorkflowResult = {
   scopes: WorkflowRuntimeV2ScopeState;
 };
@@ -200,6 +218,21 @@ export async function workflowRuntimeV2RunWorkflow(
   setHandler(workflowRuntimeV2HumanTaskSignal, (signal) => {
     pendingHumanTaskSignals.push(normalizeHumanTaskSignalPayload(signal));
   });
+  let queryCurrentStepPath: string | null = null;
+  let queryStepCount = 0;
+  let queryFrameDepth = 0;
+  let queryCurrentWait: WorkflowRuntimeV2CurrentWait | null = null;
+  setHandler(workflowRuntimeV2CurrentStepQuery, () => ({
+    runId: input.runId,
+    currentStepPath: queryCurrentStepPath,
+  }));
+  setHandler(workflowRuntimeV2CurrentWaitQuery, () => queryCurrentWait);
+  setHandler(workflowRuntimeV2InterpreterSummaryQuery, () => ({
+    runId: input.runId,
+    stepCount: queryStepCount,
+    currentStepPath: queryCurrentStepPath,
+    frameDepth: queryFrameDepth,
+  }));
 
   const pinned = await activities.loadWorkflowRuntimeV2PinnedDefinition({
     runId: input.runId,
@@ -213,6 +246,9 @@ export async function workflowRuntimeV2RunWorkflow(
     initialScopes: pinned.initialScopes,
   });
   let stepCount = input.checkpoint?.stepCount ?? 0;
+  queryStepCount = stepCount;
+  queryFrameDepth = state.frames.length;
+  queryCurrentStepPath = state.currentStepPath;
 
   while (true) {
     const current = getWorkflowRuntimeV2CurrentStep({
@@ -239,6 +275,8 @@ export async function workflowRuntimeV2RunWorkflow(
       ...state,
       currentStepPath: current.path,
     };
+    queryCurrentStepPath = state.currentStepPath;
+    queryFrameDepth = state.frames.length;
 
     const stepProjection = await activities.projectWorkflowRuntimeV2StepStart({
       runId: input.runId,
@@ -431,6 +469,14 @@ export async function workflowRuntimeV2RunWorkflow(
             dueAt,
           },
         });
+        queryCurrentWait = {
+          type: 'time.wait',
+          stepPath: current.path,
+          descriptor: {
+            dueAt,
+            mode: config.mode,
+          },
+        };
 
         const dueAtMs = new Date(dueAt).getTime();
         const nowMs = Date.now();
@@ -443,6 +489,7 @@ export async function workflowRuntimeV2RunWorkflow(
           runId: input.runId,
           status: 'RESOLVED',
         });
+        queryCurrentWait = null;
 
         state = assignToScopePath(state, 'vars.timeWait', {
           mode: config.mode,
@@ -461,6 +508,7 @@ export async function workflowRuntimeV2RunWorkflow(
           status: 'SUCCEEDED',
         });
         stepCount += 1;
+        queryStepCount = stepCount;
         continue;
       }
 
@@ -484,6 +532,15 @@ export async function workflowRuntimeV2RunWorkflow(
             timeoutAt,
           },
         });
+        queryCurrentWait = {
+          type: 'event.wait',
+          stepPath: current.path,
+          descriptor: {
+            eventName: config.eventName,
+            correlationKey,
+            timeoutAt,
+          },
+        };
 
         const matchedSignal = await awaitMatchingEventSignal({
           descriptor: {
@@ -502,6 +559,7 @@ export async function workflowRuntimeV2RunWorkflow(
             status: 'RESOLVED',
             matchedEventId: null,
           });
+          queryCurrentWait = null;
           throw createTimeoutRuntimeError(current.path, config.eventName, correlationKey, timeoutAt);
         }
 
@@ -511,6 +569,7 @@ export async function workflowRuntimeV2RunWorkflow(
           status: 'RESOLVED',
           matchedEventId: matchedSignal.eventId,
         });
+        queryCurrentWait = null;
 
         state = assignToScopePath(state, 'vars.event', matchedSignal.payload);
         state = assignToScopePath(state, 'vars.eventName', matchedSignal.eventName);
@@ -526,6 +585,7 @@ export async function workflowRuntimeV2RunWorkflow(
           status: 'SUCCEEDED',
         });
         stepCount += 1;
+        queryStepCount = stepCount;
         continue;
       }
 
@@ -551,6 +611,14 @@ export async function workflowRuntimeV2RunWorkflow(
           description: descriptionValue === null || descriptionValue === undefined ? null : String(descriptionValue),
           contextData,
         });
+        queryCurrentWait = {
+          type: 'human.task',
+          stepPath: current.path,
+          descriptor: {
+            taskId: createdTask.taskId,
+            taskType: config.taskType,
+          },
+        };
 
         const matchedSignal = await awaitHumanTaskSignal({
           taskId: createdTask.taskId,
@@ -575,6 +643,7 @@ export async function workflowRuntimeV2RunWorkflow(
             response: responsePayload,
           },
         });
+        queryCurrentWait = null;
 
         state = assignToScopePath(state, 'vars.event', responsePayload);
         state = assignToScopePath(state, 'vars.eventName', responseEventName);
@@ -590,6 +659,7 @@ export async function workflowRuntimeV2RunWorkflow(
           status: 'SUCCEEDED',
         });
         stepCount += 1;
+        queryStepCount = stepCount;
         continue;
       }
 
@@ -639,6 +709,7 @@ export async function workflowRuntimeV2RunWorkflow(
               state = advanceWorkflowRuntimeV2InterpreterState(state);
               state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
               stepCount += 1;
+              queryStepCount = stepCount;
               handledByOnError = true;
               break;
             }
@@ -658,6 +729,7 @@ export async function workflowRuntimeV2RunWorkflow(
           status: 'SUCCEEDED',
         });
         stepCount += 1;
+        queryStepCount = stepCount;
         continue;
       }
 
@@ -675,7 +747,9 @@ export async function workflowRuntimeV2RunWorkflow(
         status: 'SUCCEEDED',
       });
       stepCount += 1;
+      queryStepCount = stepCount;
     } catch (error) {
+      queryCurrentWait = null;
       const runtimeError = normalizeRuntimeError(error, current.path);
       if (isCancellationRuntimeError(runtimeError)) {
         await activities.projectWorkflowRuntimeV2StepCompletion({
@@ -718,6 +792,7 @@ export async function workflowRuntimeV2RunWorkflow(
       if (tryCatchRoutedState) {
         state = tryCatchRoutedState;
         stepCount += 1;
+        queryStepCount = stepCount;
         continue;
       }
 
@@ -729,6 +804,7 @@ export async function workflowRuntimeV2RunWorkflow(
       if (forEachContinueState) {
         state = forEachContinueState;
         stepCount += 1;
+        queryStepCount = stepCount;
         continue;
       }
 

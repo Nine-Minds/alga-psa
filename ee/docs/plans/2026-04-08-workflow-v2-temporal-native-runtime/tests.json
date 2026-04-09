@@ -318,5 +318,13 @@
       "F046",
       "F047"
     ]
+  },
+  {
+    "id": "T033",
+    "description": "Temporal interpreter workflow registers operator query handlers that return current step, current wait, and interpreter-summary snapshots for support tooling.",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ]
   }
 ]

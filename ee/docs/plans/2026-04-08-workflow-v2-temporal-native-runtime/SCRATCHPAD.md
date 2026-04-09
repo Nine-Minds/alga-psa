@@ -642,3 +642,20 @@ Plan bookkeeping updates:
 Validation commands (this checkpoint):
 - `npm --prefix ee/packages/workflows run typecheck`
 - `npm --prefix ee/temporal-workflows run type-check`
+
+### F062 + T033 completed (operator query surface)
+
+- Added Temporal query handlers in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - `workflowRuntimeV2CurrentStep`
+  - `workflowRuntimeV2CurrentWait`
+  - `workflowRuntimeV2InterpreterSummary`
+- Query state now tracks current step path, active wait descriptor, frame depth, and interpreted step count as workflow execution progresses.
+- Extended runtime workflow tests in [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts) to assert query registration and non-null summary outputs.
+
+Plan bookkeeping updates:
+- Marked `F062` implemented.
+- Added `T033` (implemented:true) for operator query coverage.
+
+Validation commands (this checkpoint):
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
+- `npm --prefix ee/temporal-workflows run type-check`

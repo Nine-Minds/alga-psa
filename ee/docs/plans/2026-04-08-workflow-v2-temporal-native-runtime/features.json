@@ -368,7 +368,7 @@
   {
     "id": "F062",
     "description": "Expose operator-oriented Temporal workflow queries for current step, current wait, and interpreter summary.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-12", "Observability"]
   },
   {
