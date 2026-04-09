@@ -520,3 +520,33 @@ Validation commands (this checkpoint):
 
 Gotchas:
 - Shared `TimeWaitConfig` type allows optional fields by schema shape; interpreter uses a stricter local parsed-discriminated type to avoid unsafe `undefined` behavior under strict TypeScript.
+
+### F036-F040 + T029 completed (`event.wait` signal runtime + wait projection)
+
+- Added Temporal signal-backed `event.wait` execution in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - Introduced workflow signal `workflowRuntimeV2Event` and in-workflow pending-signal buffer.
+  - `event.wait` now evaluates wait descriptor fields (`eventName`, deterministic `correlationKey`, filters, optional timeout) at wait start.
+  - Wait resume now requires event-name + correlation-key + payload-filter match before continuation.
+  - Unmatched signals are ignored (remain non-authoritative) and only matching signals are consumed.
+  - When timeout elapses with no match, runtime throws structured `TimeoutError` (catchable by existing try/catch semantics).
+- Added event wait projection activities in [ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts):
+  - `projectWorkflowRuntimeV2EventWaitStart(...)` writes `workflow_run_waits` row (`wait_type=event`, event name/key/timeout/payload descriptor)
+  - `projectWorkflowRuntimeV2EventWaitResolved(...)` marks wait resolved and records matched event metadata in payload
+- Extended runtime workflow tests in [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts):
+  - matching signal resumes wait and advances workflow with `vars.event` + `vars.eventName`
+  - timeout path throws `TimeoutError` and resolves wait projection
+
+Rationale:
+- This moves `event.wait` authority into Temporal signal handling while keeping DB wait rows as projection/index only.
+- Existing broader ingress fan-out/candidate-selection work is still required for full end-to-end routing, but interpreter-side correctness is now in place.
+
+Plan bookkeeping updates:
+- Marked `F036`, `F037`, `F038`, `F039`, `F040` implemented.
+- Added `T029` (implemented:true) for focused interpreter-level event-wait coverage.
+
+Validation commands (this checkpoint):
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
+- `npm --prefix ee/temporal-workflows run type-check`
+
+Gotchas:
+- Runtime filter operators in schema are symbolic (`=`, `!=`) rather than textual (`eq`, `neq`); event-filter matching logic and tests now mirror schema operators exactly.

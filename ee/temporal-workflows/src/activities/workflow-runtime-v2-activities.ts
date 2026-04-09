@@ -199,6 +199,57 @@ export async function projectWorkflowRuntimeV2TimeWaitResolved(input: {
   });
 }
 
+export async function projectWorkflowRuntimeV2EventWaitStart(input: {
+  runId: string;
+  stepPath: string;
+  eventName: string;
+  correlationKey: string | null;
+  timeoutAt: string | null;
+  payload: {
+    eventName: string;
+    correlationKey: string | null;
+    filters: unknown[];
+    timeoutAt: string | null;
+  };
+}): Promise<{ waitId: string }> {
+  const knex = await getAdminConnection();
+  const wait = await WorkflowRunWaitModelV2.create(knex, {
+    run_id: input.runId,
+    step_path: input.stepPath,
+    wait_type: 'event',
+    event_name: input.eventName,
+    key: input.correlationKey,
+    timeout_at: input.timeoutAt,
+    status: 'WAITING',
+    payload: input.payload,
+  });
+
+  return {
+    waitId: wait.wait_id,
+  };
+}
+
+export async function projectWorkflowRuntimeV2EventWaitResolved(input: {
+  waitId: string;
+  runId: string;
+  status: 'RESOLVED' | 'CANCELED';
+  matchedEventId?: string | null;
+}): Promise<void> {
+  const knex = await getAdminConnection();
+  const now = new Date().toISOString();
+  const existing = await knex('workflow_run_waits').where({ wait_id: input.waitId }).first(['payload']);
+  const payload = isRecord(existing?.payload) ? existing.payload : {};
+  await WorkflowRunWaitModelV2.update(knex, input.waitId, {
+    status: input.status,
+    resolved_at: now,
+    payload: {
+      ...payload,
+      matchedEventId: input.matchedEventId ?? null,
+      resolvedAt: now,
+    },
+  });
+}
+
 export async function executeWorkflowRuntimeV2ActionStep(input: {
   runId: string;
   stepPath: string;

@@ -212,31 +212,31 @@
   {
     "id": "F036",
     "description": "Implement `event.wait` as a Temporal signal-backed wait instead of resolving DB wait rows directly.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8", "FR-9"]
   },
   {
     "id": "F037",
     "description": "Evaluate and store `event.wait` event name, correlation key, filters, and timeout as part of the active wait descriptor when the wait begins.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8"]
   },
   {
     "id": "F038",
     "description": "Resume `event.wait` only when a signaled event matches the run’s active wait contract, including filters and correlation key semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8", "FR-9"]
   },
   {
     "id": "F039",
     "description": "Preserve `event.wait` timeout behavior by raising a catchable timeout error when no matching signal arrives before the configured deadline.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8"]
   },
   {
     "id": "F040",
     "description": "Project `event.wait` lifecycle and routing fields into `workflow_run_waits` for UI/debugging and candidate selection.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8", "FR-11"]
   },
   {

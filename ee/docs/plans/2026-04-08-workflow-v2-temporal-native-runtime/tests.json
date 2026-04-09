@@ -285,5 +285,17 @@
       "F034",
       "F035"
     ]
+  },
+  {
+    "id": "T029",
+    "description": "Temporal interpreter: `event.wait` uses workflow signals, resumes only on matching event-name/correlation/filter contracts, and throws a catchable timeout error when no match arrives before deadline.",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F037",
+      "F038",
+      "F039",
+      "F040"
+    ]
   }
 ]

@@ -10,15 +10,31 @@ type RuntimeV2Activities = {
   startWorkflowRuntimeV2ChildRun: ReturnType<typeof vi.fn>;
   projectWorkflowRuntimeV2TimeWaitStart: ReturnType<typeof vi.fn>;
   projectWorkflowRuntimeV2TimeWaitResolved: ReturnType<typeof vi.fn>;
+  projectWorkflowRuntimeV2EventWaitStart: ReturnType<typeof vi.fn>;
+  projectWorkflowRuntimeV2EventWaitResolved: ReturnType<typeof vi.fn>;
   completeWorkflowRuntimeV2Run: ReturnType<typeof vi.fn>;
 };
 
 let mockActivities: RuntimeV2Activities;
+const workflowSignalHandlers = new Map<string, (payload: unknown) => void>();
 
 vi.mock('@temporalio/workflow', () => ({
   continueAsNew: vi.fn(async () => undefined),
+  condition: vi.fn(async (predicate: () => boolean, timeoutMs?: number) => {
+    if (predicate()) {
+      return true;
+    }
+    if (timeoutMs === undefined) {
+      return false;
+    }
+    return false;
+  }),
+  defineSignal: vi.fn((name: string) => name),
   executeChild: vi.fn(async () => undefined),
   proxyActivities: vi.fn(() => mockActivities),
+  setHandler: vi.fn((signalName: string, handler: (payload: unknown) => void) => {
+    workflowSignalHandlers.set(signalName, handler);
+  }),
   sleep: vi.fn(async () => undefined),
 }));
 
@@ -30,6 +46,7 @@ const loadWorkflow = async () => {
 describe('workflowRuntimeV2RunWorkflow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    workflowSignalHandlers.clear();
     let stepCounter = 0;
     mockActivities = {
       loadWorkflowRuntimeV2PinnedDefinition: vi.fn(),
@@ -40,6 +57,8 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       startWorkflowRuntimeV2ChildRun: vi.fn(),
       projectWorkflowRuntimeV2TimeWaitStart: vi.fn(),
       projectWorkflowRuntimeV2TimeWaitResolved: vi.fn(),
+      projectWorkflowRuntimeV2EventWaitStart: vi.fn(),
+      projectWorkflowRuntimeV2EventWaitResolved: vi.fn(),
       completeWorkflowRuntimeV2Run: vi.fn(),
     };
 
@@ -59,6 +78,10 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       waitId: 'wait-default',
     });
     mockActivities.projectWorkflowRuntimeV2TimeWaitResolved.mockResolvedValue(undefined);
+    mockActivities.projectWorkflowRuntimeV2EventWaitStart.mockResolvedValue({
+      waitId: 'wait-event-default',
+    });
+    mockActivities.projectWorkflowRuntimeV2EventWaitResolved.mockResolvedValue(undefined);
   });
 
   it('executes action.call through activity boundary then completes on control.return', async () => {
@@ -1456,5 +1479,185 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       runId: 'run_16',
       status: 'SUCCEEDED',
     });
+  });
+
+  it('resumes event.wait from a matching workflow signal and projects wait resolution', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_17',
+      name: 'event wait signal',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_event_wait',
+          type: 'event.wait',
+          config: {
+            eventName: 'ticket.updated',
+            correlationKey: { $expr: 'payload.ticketId' },
+            filters: [
+              { path: 'status', op: '=', value: 'done' },
+            ],
+            timeoutMs: 60000,
+          },
+        },
+        {
+          id: 'step_after_event',
+          type: 'action.call',
+          config: {
+            actionId: 'ticket.update',
+            version: 1,
+          },
+        },
+        {
+          id: 'step_return',
+          type: 'control.return',
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: { ticketId: 't_17' },
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_17',
+          workflowId: 'wf_17',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_17',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+    mockActivities.projectWorkflowRuntimeV2EventWaitStart.mockResolvedValue({
+      waitId: 'wait-event-17',
+    });
+    mockActivities.executeWorkflowRuntimeV2ActionStep.mockResolvedValue({
+      output: { ok: true },
+      saveAsPath: null,
+    });
+
+    const temporalWorkflow = await import('@temporalio/workflow');
+    const conditionMock = vi.mocked(temporalWorkflow.condition);
+    conditionMock.mockImplementationOnce(async (predicate: () => boolean) => {
+      const handler = workflowSignalHandlers.get('workflowRuntimeV2Event');
+      handler?.({
+        eventId: 'event-17',
+        eventName: 'ticket.updated',
+        correlationKey: 't_17',
+        payload: {
+          status: 'done',
+          source: 'test',
+        },
+        receivedAt: '2026-04-08T12:00:00.000Z',
+      });
+      return predicate();
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+    await workflowRuntimeV2RunWorkflow({
+      runId: 'run_17',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_17',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_17',
+    });
+
+    expect(mockActivities.projectWorkflowRuntimeV2EventWaitStart).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'run_17',
+        stepPath: 'root.steps[0]',
+        eventName: 'ticket.updated',
+        correlationKey: 't_17',
+      })
+    );
+    expect(mockActivities.projectWorkflowRuntimeV2EventWaitResolved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        waitId: 'wait-event-17',
+        runId: 'run_17',
+        status: 'RESOLVED',
+        matchedEventId: 'event-17',
+      })
+    );
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stepPath: 'root.steps[1]',
+        scopes: expect.objectContaining({
+          workflow: expect.objectContaining({
+            eventName: 'ticket.updated',
+            event: expect.objectContaining({
+              status: 'done',
+            }),
+          }),
+        }),
+      })
+    );
+  });
+
+  it('raises a catchable TimeoutError when event.wait does not receive a matching signal in time', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_18',
+      name: 'event wait timeout',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_event_wait',
+          type: 'event.wait',
+          config: {
+            eventName: 'ticket.updated',
+            correlationKey: { $expr: 'payload.ticketId' },
+            timeoutMs: 1,
+          },
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: { ticketId: 't_18' },
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_18',
+          workflowId: 'wf_18',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_18',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+    mockActivities.projectWorkflowRuntimeV2EventWaitStart.mockResolvedValue({
+      waitId: 'wait-event-18',
+    });
+
+    const temporalWorkflow = await import('@temporalio/workflow');
+    const conditionMock = vi.mocked(temporalWorkflow.condition);
+    conditionMock.mockResolvedValueOnce(false);
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_18',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_18',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_18',
+    })).rejects.toMatchObject({
+      category: 'TimeoutError',
+    });
+
+    expect(mockActivities.projectWorkflowRuntimeV2EventWaitResolved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        waitId: 'wait-event-18',
+        runId: 'run_18',
+        status: 'RESOLVED',
+      })
+    );
   });
 });

@@ -1,9 +1,9 @@
-import { continueAsNew, executeChild, proxyActivities, sleep } from '@temporalio/workflow';
+import { condition, continueAsNew, defineSignal, executeChild, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
 import {
   WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
   type WorkflowRuntimeV2TemporalRunInput,
 } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
-import type { Expr, ForEachBlock, IfBlock } from '@alga-psa/workflows/runtime';
+import type { EventWaitFilter, Expr, ForEachBlock, IfBlock } from '@alga-psa/workflows/runtime';
 import type { RetryPolicy, OnErrorPolicy } from '@alga-psa/workflows/runtime';
 import type { TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime';
 import jsonata from 'jsonata';
@@ -79,6 +79,25 @@ const activities = proxyActivities<{
     runId: string;
     status: 'RESOLVED' | 'CANCELED';
   }): Promise<void>;
+  projectWorkflowRuntimeV2EventWaitStart(input: {
+    runId: string;
+    stepPath: string;
+    eventName: string;
+    correlationKey: string | null;
+    timeoutAt: string | null;
+    payload: {
+      eventName: string;
+      correlationKey: string | null;
+      filters: EventWaitFilter[];
+      timeoutAt: string | null;
+    };
+  }): Promise<{ waitId: string }>;
+  projectWorkflowRuntimeV2EventWaitResolved(input: {
+    waitId: string;
+    runId: string;
+    status: 'RESOLVED' | 'CANCELED';
+    matchedEventId?: string | null;
+  }): Promise<void>;
   completeWorkflowRuntimeV2Run(input: { runId: string; status: 'SUCCEEDED' | 'FAILED' | 'CANCELED' }): Promise<void>;
 }>({
   startToCloseTimeout: '10m',
@@ -105,6 +124,24 @@ type ParsedTimeWaitConfig =
       assign?: Record<string, Expr>;
     };
 
+type ParsedEventWaitConfig = {
+  eventName: string;
+  correlationKey: Expr;
+  filters: EventWaitFilter[];
+  timeoutMs: number | null;
+  assign?: Record<string, Expr>;
+};
+
+type WorkflowRuntimeV2EventSignalPayload = {
+  eventId: string | null;
+  eventName: string;
+  correlationKey: string | null;
+  payload: Record<string, unknown>;
+  receivedAt: string;
+};
+
+const workflowRuntimeV2EventSignal = defineSignal<[WorkflowRuntimeV2EventSignalPayload]>('workflowRuntimeV2Event');
+
 export type WorkflowRuntimeV2RunWorkflowResult = {
   scopes: WorkflowRuntimeV2ScopeState;
 };
@@ -112,6 +149,11 @@ export type WorkflowRuntimeV2RunWorkflowResult = {
 export async function workflowRuntimeV2RunWorkflow(
   input: WorkflowRuntimeV2RunWorkflowInput
 ): Promise<WorkflowRuntimeV2RunWorkflowResult> {
+  const pendingEventSignals: WorkflowRuntimeV2EventSignalPayload[] = [];
+  setHandler(workflowRuntimeV2EventSignal, (signal) => {
+    pendingEventSignals.push(normalizeEventSignalPayload(signal));
+  });
+
   const pinned = await activities.loadWorkflowRuntimeV2PinnedDefinition({
     runId: input.runId,
     workflowId: input.workflowId,
@@ -360,6 +402,71 @@ export async function workflowRuntimeV2RunWorkflow(
           dueAt,
           resumedAt: new Date().toISOString(),
         });
+        if (config.assign) {
+          state = await applyExpressionAssignments(state, config.assign);
+        }
+        state = advanceWorkflowRuntimeV2InterpreterState(state);
+        state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
+        await activities.projectWorkflowRuntimeV2StepCompletion({
+          runId: input.runId,
+          stepId: stepProjection.stepId,
+          stepPath: current.path,
+          status: 'SUCCEEDED',
+        });
+        stepCount += 1;
+        continue;
+      }
+
+      if (current.step.type === 'event.wait') {
+        const eventWaitStep = current.step as {
+          config?: unknown;
+        };
+        const config = parseEventWaitConfig(eventWaitStep.config, current.path);
+        const correlationKey = await resolveEventWaitCorrelationKey(config, state.scopes);
+        const timeoutAt = resolveEventWaitTimeoutAt(config);
+        const waitProjection = await activities.projectWorkflowRuntimeV2EventWaitStart({
+          runId: input.runId,
+          stepPath: current.path,
+          eventName: config.eventName,
+          correlationKey,
+          timeoutAt,
+          payload: {
+            eventName: config.eventName,
+            correlationKey,
+            filters: config.filters,
+            timeoutAt,
+          },
+        });
+
+        const matchedSignal = await awaitMatchingEventSignal({
+          descriptor: {
+            eventName: config.eventName,
+            correlationKey,
+            filters: config.filters,
+          },
+          timeoutAt,
+          pendingSignals: pendingEventSignals,
+        });
+
+        if (!matchedSignal) {
+          await activities.projectWorkflowRuntimeV2EventWaitResolved({
+            waitId: waitProjection.waitId,
+            runId: input.runId,
+            status: 'RESOLVED',
+            matchedEventId: null,
+          });
+          throw createTimeoutRuntimeError(current.path, config.eventName, correlationKey, timeoutAt);
+        }
+
+        await activities.projectWorkflowRuntimeV2EventWaitResolved({
+          waitId: waitProjection.waitId,
+          runId: input.runId,
+          status: 'RESOLVED',
+          matchedEventId: matchedSignal.eventId,
+        });
+
+        state = assignToScopePath(state, 'vars.event', matchedSignal.payload);
+        state = assignToScopePath(state, 'vars.eventName', matchedSignal.eventName);
         if (config.assign) {
           state = await applyExpressionAssignments(state, config.assign);
         }
@@ -790,6 +897,178 @@ async function resolveTimeWaitDueAt(
   return dueAt.toISOString();
 }
 
+function parseEventWaitConfig(config: unknown, stepPath: string): ParsedEventWaitConfig {
+  if (!isRecord(config)) {
+    throw createValidationRuntimeError(stepPath, 'event.wait config is required');
+  }
+  if (typeof config.eventName !== 'string' || config.eventName.trim().length === 0) {
+    throw createValidationRuntimeError(stepPath, 'event.wait requires eventName');
+  }
+  if (!isExpr(config.correlationKey)) {
+    throw createValidationRuntimeError(stepPath, 'event.wait requires correlationKey expression');
+  }
+  if (config.filters !== undefined && !isEventWaitFilterArray(config.filters)) {
+    throw createValidationRuntimeError(stepPath, 'event.wait filters must be a valid filter array');
+  }
+  if (config.timeoutMs !== undefined && (!isFinitePositiveNumber(config.timeoutMs) || config.timeoutMs <= 0)) {
+    throw createValidationRuntimeError(stepPath, 'event.wait timeoutMs must be a positive number');
+  }
+  if (config.assign !== undefined && !isExprRecord(config.assign)) {
+    throw createValidationRuntimeError(stepPath, 'event.wait assign must be an expression map');
+  }
+
+  return {
+    eventName: config.eventName,
+    correlationKey: config.correlationKey,
+    filters: Array.isArray(config.filters) ? config.filters : [],
+    timeoutMs: typeof config.timeoutMs === 'number' ? config.timeoutMs : null,
+    ...(isExprRecord(config.assign) ? { assign: config.assign } : {}),
+  };
+}
+
+async function resolveEventWaitCorrelationKey(
+  config: ParsedEventWaitConfig,
+  scopes: WorkflowRuntimeV2ScopeState
+): Promise<string | null> {
+  const value = await evaluateExpression(
+    config.correlationKey.$expr,
+    buildWorkflowRuntimeV2ExpressionContext(scopes)
+  );
+  if (value === null || value === undefined) {
+    return null;
+  }
+  return String(value);
+}
+
+function resolveEventWaitTimeoutAt(config: ParsedEventWaitConfig): string | null {
+  if (!config.timeoutMs) {
+    return null;
+  }
+  return new Date(Date.now() + config.timeoutMs).toISOString();
+}
+
+async function awaitMatchingEventSignal(input: {
+  descriptor: {
+    eventName: string;
+    correlationKey: string | null;
+    filters: EventWaitFilter[];
+  };
+  timeoutAt: string | null;
+  pendingSignals: WorkflowRuntimeV2EventSignalPayload[];
+}): Promise<WorkflowRuntimeV2EventSignalPayload | null> {
+  const tryConsume = () => consumeMatchingEventSignal(input.pendingSignals, input.descriptor);
+  const immediate = tryConsume();
+  if (immediate) {
+    return immediate;
+  }
+
+  const timeoutMs = resolveRemainingTimeoutMs(input.timeoutAt);
+  if (timeoutMs !== null && timeoutMs <= 0) {
+    return null;
+  }
+
+  const signaled = timeoutMs === null
+    ? await condition(() => findMatchingEventSignalIndex(input.pendingSignals, input.descriptor) >= 0)
+    : await condition(
+        () => findMatchingEventSignalIndex(input.pendingSignals, input.descriptor) >= 0,
+        timeoutMs
+      );
+  if (!signaled) {
+    return null;
+  }
+  return tryConsume();
+}
+
+function consumeMatchingEventSignal(
+  pendingSignals: WorkflowRuntimeV2EventSignalPayload[],
+  descriptor: { eventName: string; correlationKey: string | null; filters: EventWaitFilter[] }
+): WorkflowRuntimeV2EventSignalPayload | null {
+  const index = findMatchingEventSignalIndex(pendingSignals, descriptor);
+  if (index < 0) {
+    return null;
+  }
+  const [signal] = pendingSignals.splice(index, 1);
+  return signal ?? null;
+}
+
+function findMatchingEventSignalIndex(
+  pendingSignals: WorkflowRuntimeV2EventSignalPayload[],
+  descriptor: { eventName: string; correlationKey: string | null; filters: EventWaitFilter[] }
+): number {
+  return pendingSignals.findIndex((signal) => isMatchingEventSignal(signal, descriptor));
+}
+
+function isMatchingEventSignal(
+  signal: WorkflowRuntimeV2EventSignalPayload,
+  descriptor: { eventName: string; correlationKey: string | null; filters: EventWaitFilter[] }
+): boolean {
+  if (signal.eventName !== descriptor.eventName) {
+    return false;
+  }
+  if (descriptor.correlationKey !== null && signal.correlationKey !== descriptor.correlationKey) {
+    return false;
+  }
+  return descriptor.filters.every((filter) => evaluateEventWaitFilter(signal.payload, filter));
+}
+
+function evaluateEventWaitFilter(payload: Record<string, unknown>, filter: EventWaitFilter): boolean {
+  const current = getEventPayloadValue(payload, filter.path);
+  switch (filter.op) {
+    case '=':
+      return current === filter.value;
+    case '!=':
+      return current !== filter.value;
+    case 'in':
+      return Array.isArray(filter.value) && filter.value.includes(current as never);
+    case 'not_in':
+      return Array.isArray(filter.value) && !filter.value.includes(current as never);
+    case 'exists':
+      return current !== undefined;
+    case 'not_exists':
+      return current === undefined;
+    case '>':
+      return typeof current === 'number' && typeof filter.value === 'number' && current > filter.value;
+    case '>=':
+      return typeof current === 'number' && typeof filter.value === 'number' && current >= filter.value;
+    case '<':
+      return typeof current === 'number' && typeof filter.value === 'number' && current < filter.value;
+    case '<=':
+      return typeof current === 'number' && typeof filter.value === 'number' && current <= filter.value;
+    case 'contains':
+      return typeof current === 'string' && typeof filter.value === 'string' && current.includes(filter.value);
+    case 'starts_with':
+      return typeof current === 'string' && typeof filter.value === 'string' && current.startsWith(filter.value);
+    case 'ends_with':
+      return typeof current === 'string' && typeof filter.value === 'string' && current.endsWith(filter.value);
+    default:
+      return false;
+  }
+}
+
+function getEventPayloadValue(payload: Record<string, unknown>, path: string): unknown {
+  const normalized = path.replace(/^\$?\./, '');
+  const parts = normalized.split('.').filter(Boolean);
+  let cursor: unknown = payload;
+  for (const part of parts) {
+    if (!isRecord(cursor)) {
+      return undefined;
+    }
+    cursor = cursor[part];
+  }
+  return cursor;
+}
+
+function resolveRemainingTimeoutMs(timeoutAt: string | null): number | null {
+  if (!timeoutAt) {
+    return null;
+  }
+  const timeoutAtMs = new Date(timeoutAt).getTime();
+  if (!Number.isFinite(timeoutAtMs)) {
+    return 0;
+  }
+  return Math.max(0, timeoutAtMs - Date.now());
+}
+
 type ForEachLoopContext = {
   items: unknown[];
   index: number;
@@ -1145,6 +1424,25 @@ function createValidationRuntimeError(stepPath: string, message: string): Runtim
   };
 }
 
+function createTimeoutRuntimeError(
+  stepPath: string,
+  eventName: string,
+  correlationKey: string | null,
+  timeoutAt: string | null
+): RuntimeErrorLike {
+  return {
+    category: 'TimeoutError',
+    message: `event.wait timed out waiting for ${eventName}`,
+    nodePath: stepPath,
+    at: new Date().toISOString(),
+    details: {
+      eventName,
+      correlationKey,
+      timeoutAt,
+    },
+  };
+}
+
 function isExpr(value: unknown): value is Expr {
   return isRecord(value) && typeof value.$expr === 'string';
 }
@@ -1154,6 +1452,35 @@ function isExprRecord(value: unknown): value is Record<string, Expr> {
     return false;
   }
   return Object.values(value).every((entry) => isExpr(entry));
+}
+
+function isFinitePositiveNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isEventWaitFilterArray(value: unknown): value is EventWaitFilter[] {
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  return value.every((entry) => {
+    if (!isRecord(entry)) {
+      return false;
+    }
+    if (typeof entry.path !== 'string' || typeof entry.op !== 'string') {
+      return false;
+    }
+    return true;
+  });
+}
+
+function normalizeEventSignalPayload(signal: WorkflowRuntimeV2EventSignalPayload): WorkflowRuntimeV2EventSignalPayload {
+  return {
+    eventId: typeof signal.eventId === 'string' ? signal.eventId : null,
+    eventName: signal.eventName,
+    correlationKey: typeof signal.correlationKey === 'string' ? signal.correlationKey : null,
+    payload: isRecord(signal.payload) ? signal.payload : {},
+    receivedAt: typeof signal.receivedAt === 'string' ? signal.receivedAt : new Date().toISOString(),
+  };
 }
 
 function resolveStepRetryPolicy(step: {
