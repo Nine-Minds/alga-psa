@@ -1047,7 +1047,7 @@ export class TicketService extends BaseService<ITicket> {
   async getTicketComments(
     ticketId: string,
     context: ServiceContext,
-    options?: { limit?: number; offset?: number; order?: 'asc' | 'desc' }
+    options?: { limit?: number; offset?: number; order?: 'asc' | 'desc'; contentFormat?: 'full' | 'markdown' }
   ): Promise<any[]> {
     const { knex } = await this.getKnex();
 
@@ -1119,21 +1119,43 @@ export class TicketService extends BaseService<ITicket> {
       }
     }
 
+    const useMarkdown = options?.contentFormat === 'markdown';
+
     // Map database fields to API response format
-    return comments.map(comment => ({
-      ...comment,
-      comment_text: comment.note,
-      markdown_content: comment.markdown_content || null,
-      comment_html: renderTicketRichTextHtml(comment.note),
-      created_by: comment.user_id ?? null,
-      created_by_name: comment.created_by_name || comment.author_contact_name || null,
-      created_by_avatar_url: comment.user_id ? (avatarMap[comment.user_id] ?? null) : null,
-      author_contact_id: comment.author_contact_id || comment.contact_id || null,
-      author_contact_name: comment.author_contact_name || null,
-      author_contact_email: comment.author_contact_email || null,
-      reactions: reactionsMap[comment.comment_id] ?? [],
-      reaction_user_names: reactionUserNames,
-    }));
+    return comments.map(comment => {
+      if (useMarkdown) {
+        // Compact format: only markdown text and metadata, no heavy BlockNote JSON or HTML
+        return {
+          comment_id: comment.comment_id,
+          ticket_id: comment.ticket_id,
+          markdown_content: comment.markdown_content || null,
+          author_type: comment.author_type,
+          is_internal: comment.is_internal,
+          is_resolution: comment.is_resolution,
+          created_at: comment.created_at,
+          updated_at: comment.updated_at,
+          created_by: comment.user_id ?? null,
+          created_by_name: comment.created_by_name || comment.author_contact_name || null,
+          author_contact_id: comment.author_contact_id || comment.contact_id || null,
+          author_contact_name: comment.author_contact_name || null,
+        };
+      }
+
+      return {
+        ...comment,
+        comment_text: comment.note,
+        markdown_content: comment.markdown_content || null,
+        comment_html: renderTicketRichTextHtml(comment.note),
+        created_by: comment.user_id ?? null,
+        created_by_name: comment.created_by_name || comment.author_contact_name || null,
+        created_by_avatar_url: comment.user_id ? (avatarMap[comment.user_id] ?? null) : null,
+        author_contact_id: comment.author_contact_id || comment.contact_id || null,
+        author_contact_name: comment.author_contact_name || null,
+        author_contact_email: comment.author_contact_email || null,
+        reactions: reactionsMap[comment.comment_id] ?? [],
+        reaction_user_names: reactionUserNames,
+      };
+    });
   }
 
   /**
