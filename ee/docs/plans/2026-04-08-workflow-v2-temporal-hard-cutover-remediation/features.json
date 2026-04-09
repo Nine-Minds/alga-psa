@@ -318,7 +318,7 @@
   {
     "id": "F037",
     "description": "Document the hard-cutover support posture so engineers know which legacy actions are intentionally unsupported for Temporal runs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration Notes",
       "Acceptance Criteria / Definition of Done"

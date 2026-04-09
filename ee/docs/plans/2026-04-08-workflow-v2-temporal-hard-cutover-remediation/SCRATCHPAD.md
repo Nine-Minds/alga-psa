@@ -229,3 +229,16 @@ Parent plan:
 - API ingress still needs full correlation-derivation parity and Temporal-signal-only resume path alignment (`F024`, `F025`, `F026`, `F028`, `T010`).
 - Determinism replay test (`F009` / `T003`) and cutover regression/projection tests (`T011`, `T012`) remain open.
 
+
+## Progress — 2026-04-09 (Support posture documentation)
+
+### Completed scope in this pass
+
+- Added hard-cutover support posture document:
+  - `ee/docs/plans/2026-04-08-workflow-v2-temporal-hard-cutover-remediation/HARD_CUTOVER_SUPPORT_POSTURE.md`
+- Document includes:
+  - Temporal authority model
+  - operator/API run-control support matrix (`cancel` supported, `resume/retry/requeue_event_wait` unsupported)
+  - event-ingress correlation posture
+  - support/debugging guidance for projection fields
+
