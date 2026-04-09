@@ -44,7 +44,7 @@ interface WorkerConfig {
  */
 function getWorkerConfig(): WorkerConfig {
   // Include alga-jobs queue for generic job execution
-  const defaultQueues = ["tenant-workflows", "portal-domain-workflows", "email-domain-workflows", "alga-jobs", "sla-workflows"];
+  const defaultQueues = ["tenant-workflows", "portal-domain-workflows", "email-domain-workflows", "alga-jobs", "sla-workflows", "workflow-runtime-v2"];
   const queuesEnv =
     process.env.TEMPORAL_TASK_QUEUES || process.env.TEMPORAL_TASK_QUEUE;
 
@@ -66,6 +66,9 @@ function getWorkerConfig(): WorkerConfig {
 
   if (!taskQueues.includes("sla-workflows")) {
     taskQueues = [...taskQueues, "sla-workflows"];
+  }
+  if (!taskQueues.includes("workflow-runtime-v2")) {
+    taskQueues = [...taskQueues, "workflow-runtime-v2"];
   }
 
   return {

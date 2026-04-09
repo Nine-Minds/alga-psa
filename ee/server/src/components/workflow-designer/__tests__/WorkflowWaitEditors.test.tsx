@@ -142,10 +142,15 @@ vi.mock('../expression-editor', () => ({
   ))
 }));
 
+const workflowActionInputFixedPickerMock = vi.fn(({ idPrefix, rootInputMapping }: { idPrefix: string; rootInputMapping?: unknown }) => (
+  <div
+    data-testid={`${idPrefix}-typed-picker`}
+    data-root-input-mapping={JSON.stringify(rootInputMapping ?? {})}
+  />
+));
+
 vi.mock('../WorkflowActionInputFixedPicker', () => ({
-  WorkflowActionInputFixedPicker: ({ idPrefix }: { idPrefix: string }) => (
-    <div data-testid={`${idPrefix}-typed-picker`} />
-  )
+  WorkflowActionInputFixedPicker: (props: any) => workflowActionInputFixedPickerMock(props)
 }));
 
 vi.mock('@alga-psa/workflows/actions', async (importOriginal) => {
@@ -225,6 +230,7 @@ const baseProps = {
 
 describe('Workflow wait editors', () => {
   beforeEach(() => {
+    workflowActionInputFixedPickerMock.mockClear();
     getWorkflowSchemaActionMock.mockReset();
     getEventCatalogEntryByEventTypeMock.mockReset();
     getWorkflowSchemaActionMock.mockResolvedValue({ schema: { type: 'object', properties: {} } });
@@ -325,6 +331,58 @@ describe('Workflow wait editors', () => {
     });
   });
 
+  it('passes sibling equality filters into typed picker dependency mapping', async () => {
+    getWorkflowSchemaActionMock.mockResolvedValue({
+      schema: {
+        type: 'object',
+        properties: {
+          board_id: {
+            type: 'string'
+          },
+          status_id: {
+            type: 'string',
+            'x-workflow-picker-kind': 'ticket-status',
+            'x-workflow-picker-dependencies': ['board_id']
+          }
+        }
+      }
+    });
+
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'event-dependency-step',
+          type: 'event.wait',
+          config: {
+            eventName: 'ticket.status.changed',
+            correlationKey: { $expr: 'payload.ticketId' },
+            filters: [
+              { path: 'board_id', op: '=', value: 'board-1' },
+              { path: 'status_id', op: '=', value: '' }
+            ]
+          }
+        } as any}
+        eventCatalogOptions={[
+          {
+            event_id: 'evt-4',
+            event_type: 'ticket.status.changed',
+            name: 'Ticket Status Changed',
+            category: 'Ticket',
+            payload_schema_ref: 'payload.TicketStatus.v1',
+            payload_schema_ref_status: 'known',
+            source: 'tenant',
+            status: 'active'
+          }
+        ]}
+        onChange={vi.fn()}
+      />
+    );
+
+    const picker = await screen.findByTestId('event-wait-filter-value-event-dependency-step-1-typed-picker');
+    expect(picker.getAttribute('data-root-input-mapping')).toContain('"board_id":"board-1"');
+  });
+
   it('T010: wait-filter editor falls back to enum/primitive controls without picker metadata', async () => {
     getWorkflowSchemaActionMock.mockResolvedValue({
       schema: {
@@ -370,5 +428,53 @@ describe('Workflow wait editors', () => {
       expect(screen.getByTestId('event-wait-filter-value-event-fallback-step-0')).toBeInTheDocument();
     });
     expect(screen.queryByTestId('event-wait-filter-value-event-fallback-step-0-typed-picker')).not.toBeInTheDocument();
+  });
+
+  it('preserves numeric array values for in/not_in filters instead of coercing them to strings', async () => {
+    const onChange = vi.fn();
+    getWorkflowSchemaActionMock.mockResolvedValue({
+      schema: {
+        type: 'object',
+        properties: {
+          priority: {
+            type: 'number'
+          }
+        }
+      }
+    });
+
+    render(
+      <StepConfigPanel
+        {...baseProps}
+        step={{
+          id: 'event-array-step',
+          type: 'event.wait',
+          config: {
+            eventName: 'project.priority.changed',
+            correlationKey: { $expr: 'payload.projectId' },
+            filters: [{ path: 'priority', op: 'in', value: [1] }]
+          }
+        } as any}
+        eventCatalogOptions={[
+          {
+            event_id: 'evt-5',
+            event_type: 'project.priority.changed',
+            name: 'Project Priority Changed',
+            category: 'Project',
+            payload_schema_ref: 'payload.ProjectPriority.v1',
+            payload_schema_ref_status: 'known',
+            source: 'tenant',
+            status: 'active'
+          }
+        ]}
+        onChange={onChange}
+      />
+    );
+
+    const input = await screen.findByTestId('event-wait-filter-value-event-array-step-0');
+    fireEvent.change(input, { target: { value: '1, 2, 3' } });
+
+    const lastCall = onChange.mock.calls.at(-1)?.[0];
+    expect(lastCall?.config?.filters?.[0]?.value).toEqual([1, 2, 3]);
   });
 });

@@ -204,8 +204,7 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         triggerType: 'event',
         eventType: 'PING',
         sourcePayloadSchemaRef: 'payload.WorkflowEvent.v1',
-        triggerMappingApplied: false,
-        execute: false
+        triggerMappingApplied: false
       })
     );
     expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(

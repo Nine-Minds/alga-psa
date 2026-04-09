@@ -5137,6 +5137,53 @@ const WAIT_FILTER_OPERATOR_OPTIONS: Array<{ value: WaitFilterOperator; label: st
   { value: 'ends_with', label: 'ends with' }
 ];
 
+const coerceWaitFilterValue = (
+  raw: string,
+  fieldMeta: EventSchemaScalarField | undefined
+): string | number | boolean => {
+  if (fieldMeta?.enumValues?.length) {
+    const matching = fieldMeta.enumValues.find((item) => String(item) === raw);
+    if (matching !== undefined) {
+      return matching;
+    }
+  }
+
+  if (fieldMeta?.type === 'boolean') {
+    return raw === 'true';
+  }
+
+  if (fieldMeta?.type === 'number') {
+    return Number(raw);
+  }
+
+  return raw;
+};
+
+const buildEventFilterDependencyMapping = (
+  filters: EventWaitFilterClause[],
+  activeIndex: number
+): InputMapping => {
+  const mapping: InputMapping = {};
+  for (const [index, filter] of filters.entries()) {
+    if (index === activeIndex) continue;
+    if (!filter.path.trim()) continue;
+    if (filter.op !== '=' && filter.op !== 'in' && filter.op !== 'not_in') continue;
+
+    const value = filter.value;
+    if (Array.isArray(value)) {
+      if (value.length === 1) {
+        mapping[filter.path] = value[0] as any;
+      }
+      continue;
+    }
+
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      mapping[filter.path] = value as any;
+    }
+  }
+  return mapping;
+};
+
 const isEventScalarSchema = (schema: JsonSchema): boolean => {
   const type = normalizeSchemaType(schema);
   return type === 'string' || type === 'number' || type === 'integer' || type === 'boolean' || Boolean(schema.enum?.length);
@@ -5789,6 +5836,7 @@ export const StepConfigPanel: React.FC<{
               const fieldMeta = eventFilterFields.find((field) => field.path === filter.path);
               const showValue = filter.op !== 'exists' && filter.op !== 'not_exists';
               const expectsArray = filter.op === 'in' || filter.op === 'not_in';
+              const dependencyInputMapping = buildEventFilterDependencyMapping(eventFilters, index);
               const enumOptions = (fieldMeta?.enumValues ?? []).map((item) => ({ value: String(item), label: String(item) }));
               const valueAsString = Array.isArray(filter.value)
                 ? filter.value.map((item) => String(item)).join(', ')
@@ -5859,7 +5907,7 @@ export const StepConfigPanel: React.FC<{
                           }}
                           value={valueAsString || null}
                           onChange={(nextValue) => updateEventFilterClause(index, { value: nextValue ?? '' })}
-                          rootInputMapping={{}}
+                          rootInputMapping={dependencyInputMapping}
                           disabled={!editable}
                         />
                       ) : enumOptions.length > 0 && !expectsArray ? (
@@ -5908,9 +5956,11 @@ export const StepConfigPanel: React.FC<{
                                 .split(',')
                                 .map((item) => item.trim())
                                 .filter((item) => item.length > 0);
-                              updateEventFilterClause(index, { value: values });
+                              updateEventFilterClause(index, {
+                                value: values.map((item) => coerceWaitFilterValue(item, fieldMeta))
+                              });
                             } else {
-                              updateEventFilterClause(index, { value: raw });
+                              updateEventFilterClause(index, { value: coerceWaitFilterValue(raw, fieldMeta) });
                             }
                           }}
                         />

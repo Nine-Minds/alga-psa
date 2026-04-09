@@ -7,6 +7,7 @@ import {
   type WorkflowDefinitionVersionRecord,
 } from '@alga-psa/workflows/persistence';
 import { WorkflowRuntimeV2, getSchemaRegistry } from '@alga-psa/workflows/runtime';
+import { startWorkflowRuntimeV2TemporalRun } from './workflowRuntimeV2Temporal';
 
 const WORKFLOW_RUN_TRIGGER_FIRE_KEY_UNIQUE = 'workflow_runs_trigger_fire_key_unique';
 
@@ -207,11 +208,32 @@ export async function launchPublishedWorkflowRun(
   }
 
   if (request.execute !== false) {
-    await runtime.executeRun(
-      knex,
-      runId,
-      request.executionKey ?? `launch-${request.workflowId}-${Date.now()}`
-    );
+    const executionKey = request.executionKey ?? `launch-${request.workflowId}-${Date.now()}`;
+    const engine = String(process.env.WORKFLOW_RUNTIME_V2_ENGINE ?? 'temporal').trim().toLowerCase();
+    const shouldUseTemporal = engine !== 'legacy';
+
+    if (!shouldUseTemporal) {
+      await runtime.executeRun(knex, runId, executionKey);
+    } else {
+      const allowLegacyFallback = process.env.NODE_ENV === 'test'
+        || String(process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_FALLBACK ?? '').trim().toLowerCase() === 'true';
+
+      try {
+        await startWorkflowRuntimeV2TemporalRun({
+          runId,
+          tenantId: request.tenantId ?? null,
+          workflowId: request.workflowId,
+          workflowVersion: versionRecord.version,
+          triggerType: request.triggerType ?? null,
+          executionKey,
+        });
+      } catch (error) {
+        if (!allowLegacyFallback) {
+          throw error;
+        }
+        await runtime.executeRun(knex, runId, executionKey);
+      }
+    }
   }
 
   return {

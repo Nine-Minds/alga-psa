@@ -1,0 +1,159 @@
+# Scratchpad — Workflow V2 Temporal-Native Runtime
+
+- Plan slug: `workflow-v2-temporal-native-runtime`
+- Created: `2026-04-08`
+
+## What This Is
+
+Working notes for replacing the current DB-backed Workflow Runtime V2 execution engine with a full Temporal-native interpreter for Enterprise Edition workflows.
+
+## Core Decisions
+
+- (2026-04-08) Temporal will be the sole execution authority for all new Workflow V2 runs in both hosted EE and appliance EE.
+- (2026-04-08) The workflow designer and authored DSL remain declarative and user-friendly; Temporal concepts stay behind the runtime boundary.
+- (2026-04-08) The migration posture is a hard cutover. No active-run migration is required, and old DB-runtime records may be abandoned if needed.
+- (2026-04-08) The database remains a projection and audit surface, not the scheduler or resume authority.
+- (2026-04-08) `control.callWorkflow` should become a Temporal child workflow rather than inline child execution.
+- (2026-04-08) `time.wait` should use native Temporal timers; DB due-wait polling should be retired for new runs.
+- (2026-04-08) `event.wait` should become signal-backed. Event ingress should signal candidate runs, and Temporal workflows should decide whether the active wait matches.
+- (2026-04-08) `control.forEach` should be sequential in the first Temporal-native release. Parallel loop concurrency is not worth carrying into the first real interpreter.
+- (2026-04-08) Action side effects should be treated as at-least-once safe through durable idempotency design, not by chasing “exactly once” semantics.
+- (2026-04-08) Runtime semantics should be explicitly versioned so future interpreter changes can be reasoned about safely.
+
+## Discoveries / Constraints
+
+- (2026-04-08) The current runtime is strongly DB-driven: [shared/workflow/runtime/runtime/workflowRuntimeV2.ts](/Users/roberisaacs/alga-psa/shared/workflow/runtime/runtime/workflowRuntimeV2.ts) stores run state through `node_path`, snapshots, wait rows, and explicit resume bookkeeping.
+- (2026-04-08) The current worker is a polling scheduler: [shared/workflow/workers/WorkflowRuntimeV2Worker.ts](/Users/roberisaacs/alga-psa/shared/workflow/workers/WorkflowRuntimeV2Worker.ts) scans due retries, due timeouts, due time waits, and runnable runs on a fixed interval.
+- (2026-04-08) The existing service worker already boots both the DB runtime worker and the event stream worker in [services/workflow-worker/src/index.ts](/Users/roberisaacs/alga-psa/services/workflow-worker/src/index.ts).
+- (2026-04-08) Event-triggered workflow starts already have a dedicated ingress path in [services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts](/Users/roberisaacs/alga-psa/services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts), but it currently starts DB-native runs rather than Temporal interpreter runs.
+- (2026-04-08) The current wait persistence model already contains many of the right projection fields (`event_name`, `key`, `timeout_at`, `payload`) in [shared/workflow/persistence/workflowRunWaitModelV2.ts](/Users/roberisaacs/alga-psa/shared/workflow/persistence/workflowRunWaitModelV2.ts).
+- (2026-04-08) Workflow Runtime V2 already supports the important product-facing step types that the interpreter must preserve:
+  - `event.wait`
+  - `time.wait`
+  - `human.task`
+  - `control.if`
+  - `control.forEach`
+  - `control.tryCatch`
+  - `control.callWorkflow`
+  - `control.return`
+- (2026-04-08) Existing Temporal infrastructure is real and reusable. `ee/temporal-workflows` already contains workers, clients, signals, queries, sleeps, and child-orchestration patterns, but not a generic authored-workflow interpreter.
+- (2026-04-08) The strongest prior design artifact is [ee/docs/plans/2026-02-03-sla-temporal-workflow-architecture/PRD.md](/Users/roberisaacs/alga-psa/ee/docs/plans/2026-02-03-sla-temporal-workflow-architecture/PRD.md), which already frames Temporal as orchestration with DB as source/projection depending on subsystem boundaries.
+- (2026-04-08) `workflow_run_snapshots` are useful as historical/debug material in the current system, but they should not remain the execution resume authority in the Temporal-native design.
+
+## Architecture Notes
+
+### Recommended runtime split
+
+- **Authoring truth:** database
+- **Execution truth:** Temporal
+- **Product read model:** database projection
+
+### Recommended event-wait model
+
+1. Persist inbound event for audit/debugging.
+2. Use wait projection indexes to find candidate runs by tenant/event name/correlation key.
+3. Signal all candidate runs.
+4. Let each Temporal workflow decide whether its current active wait matches.
+
+### Recommended schedule model
+
+- Manual/API runs: start Temporal directly.
+- Event-triggered runs: start Temporal directly from ingress.
+- One-time schedules: Temporal-native scheduling authority.
+- Recurring schedules: Temporal Schedules.
+
+### Recommended migration posture
+
+- Hard cutover.
+- No active-run migration.
+- Old worker/scheduler paths can be retired instead of preserved behind complicated fallback logic.
+
+## Open Design Questions
+
+- Should `workflow_run_snapshots` remain as a redacted debug checkpoint surface, or should Temporal queries/history plus targeted projection rows replace that completely?
+- For one-time schedules, should the implementation use the same Temporal Schedules reconciliation path as recurring schedules, or a thinner single-fire abstraction?
+- Should `forEach.concurrency > 1` be rejected at publish time or hidden in the designer while schema cleanup follows later?
+
+## Commands / Runbooks
+
+### Inspect current DB runtime execution authority
+- `rg -n "executeRun|resumeRunFromEvent|resumeRunFromTimeout|scheduleRetry|findCatchPath" shared/workflow/runtime/runtime/workflowRuntimeV2.ts`
+- `rg -n "listDueRetries|listDueTimeouts|listDueTimeWaits|acquireRunnableRun" shared/workflow/workers/WorkflowRuntimeV2Worker.ts`
+
+### Inspect current wait and event-ingress behavior
+- `rg -n "submitWorkflowEventAction|event.wait|time.wait|human.task" ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts shared/workflow/runtime/nodes/registerDefaultNodes.ts`
+- `rg -n "WorkflowRuntimeV2EventStreamWorker|launchPublishedWorkflowRun" services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts`
+
+### Inspect existing runtime schema and persistence
+- `rg -n "eventWait|timeWait|control\.forEach|control\.callWorkflow" shared/workflow/runtime/types.ts`
+- `read shared/workflow/persistence/workflowRunWaitModelV2.ts`
+- `read server/migrations/20251221090000_create_workflow_runtime_v2_tables.cjs`
+
+### Inspect existing Temporal reusable patterns
+- `find ee/temporal-workflows/src/workflows -maxdepth 2 -type f | sort`
+- `rg -n "defineSignal|defineQuery|setHandler|sleep\(|proxyActivities|condition\(" ee/temporal-workflows/src/workflows -g'*.ts'`
+
+## Links / References
+
+- [shared/workflow/runtime/runtime/workflowRuntimeV2.ts](/Users/roberisaacs/alga-psa/shared/workflow/runtime/runtime/workflowRuntimeV2.ts)
+- [shared/workflow/workers/WorkflowRuntimeV2Worker.ts](/Users/roberisaacs/alga-psa/shared/workflow/workers/WorkflowRuntimeV2Worker.ts)
+- [shared/workflow/runtime/nodes/registerDefaultNodes.ts](/Users/roberisaacs/alga-psa/shared/workflow/runtime/nodes/registerDefaultNodes.ts)
+- [shared/workflow/runtime/types.ts](/Users/roberisaacs/alga-psa/shared/workflow/runtime/types.ts)
+- [shared/workflow/persistence/workflowRunWaitModelV2.ts](/Users/roberisaacs/alga-psa/shared/workflow/persistence/workflowRunWaitModelV2.ts)
+- [ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts](/Users/roberisaacs/alga-psa/ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts)
+- [services/workflow-worker/src/index.ts](/Users/roberisaacs/alga-psa/services/workflow-worker/src/index.ts)
+- [services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts](/Users/roberisaacs/alga-psa/services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts)
+- [server/migrations/20251221090000_create_workflow_runtime_v2_tables.cjs](/Users/roberisaacs/alga-psa/server/migrations/20251221090000_create_workflow_runtime_v2_tables.cjs)
+- [ee/temporal-workflows/README.md](/Users/roberisaacs/alga-psa/ee/temporal-workflows/README.md)
+- [ee/temporal-workflows/src/worker.ts](/Users/roberisaacs/alga-psa/ee/temporal-workflows/src/worker.ts)
+- [ee/temporal-workflows/src/client.ts](/Users/roberisaacs/alga-psa/ee/temporal-workflows/src/client.ts)
+- [ee/docs/plans/2026-02-03-sla-temporal-workflow-architecture/PRD.md](/Users/roberisaacs/alga-psa/ee/docs/plans/2026-02-03-sla-temporal-workflow-architecture/PRD.md)
+
+## Progress Log — 2026-04-08
+
+### Planning session outcomes
+
+- Confirmed scope is **runtime + migration**, not a narrower timer-only proposal.
+- Confirmed the end-state is **all EE workflows on Temporal**, not just long-running or wait-heavy workflows.
+- Confirmed the desired authority model is **Temporal authoritative, DB projection-only**.
+- Confirmed the target is **one runtime for both hosted and appliance EE**.
+- Confirmed cutover can be **hard/greenfield**, since the runtime is still early and customer migration is not required.
+- Confirmed the workflow DSL should remain user-friendly and mostly stable, with targeted cleanup allowed where it materially improves runtime correctness.
+- Confirmed action side effects should target **at-least-once safety via idempotency**, not an unrealistic exact-once guarantee.
+
+### Current recommendation status
+
+- Full Temporal-native interpreter is the only rational end-state architecture for this feature.
+- Hybrid or wrapper approaches would preserve too much of the current DB-runtime complexity and split authority.
+- The resulting ALGA plan should be treated as the implementation source of truth for the runtime rewrite.
+
+## Progress Log — 2026-04-08 (Implementation)
+
+### F001 completed
+
+- Implemented a Temporal run-launch path in [ee/packages/workflows/src/lib/workflowRunLauncher.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/packages/workflows/src/lib/workflowRunLauncher.ts):
+  - New launches now default to starting a Temporal workflow execution (`WORKFLOW_RUNTIME_V2_ENGINE=temporal` default).
+  - Legacy inline `runtime.executeRun(...)` remains only as an explicit `WORKFLOW_RUNTIME_V2_ENGINE=legacy` mode or test/fallback guard.
+- Added Temporal launch helper [ee/packages/workflows/src/lib/workflowRuntimeV2Temporal.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/packages/workflows/src/lib/workflowRuntimeV2Temporal.ts):
+  - Defines stable task queue and workflow type names for Workflow V2 runtime.
+  - Starts Temporal workflow ID `workflow-runtime-v2:run:<run_id>` so each Alga run maps to a deterministic Temporal workflow.
+- Added minimal Temporal runtime workflow + activity bridge:
+  - [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts)
+  - [ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts)
+  - Registered in workflow/activity indexes and added `workflow-runtime-v2` to Temporal worker default queues in [ee/temporal-workflows/src/worker.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/worker.ts).
+- Updated event ingress launch call in [services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts) to avoid forcing `execute:false`, so event-triggered launches also enter the Temporal path by default.
+- Added/updated tests:
+  - [server/src/test/unit/workflowRunLauncher.unit.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/test/unit/workflowRunLauncher.unit.test.ts) now asserts Temporal launch is invoked for new runs.
+  - [services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts) updated expectation for launch params.
+
+### Validation runbook used
+
+- `npm --prefix server run test -- src/test/unit/workflowRunLauncher.unit.test.ts`
+- `cd services/workflow-worker && npx vitest src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts --run`
+- `npm --prefix ee/packages/workflows run typecheck`
+- `npm --prefix ee/temporal-workflows run type-check`
+
+### Gotchas
+
+- `services/workflow-worker` package test script references a missing `vitest.config.ts`; direct `npx vitest ... --run` works and was used for validation.
+- Existing Temporal integration tests in `ee/temporal-workflows` can time out in local runs due to dockerized Temporal startup hooks; this pass focused on deterministic unit checks + package typecheck.

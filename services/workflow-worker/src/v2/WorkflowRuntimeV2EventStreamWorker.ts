@@ -210,7 +210,6 @@ export class WorkflowRuntimeV2EventStreamWorker {
         eventType: event.event_type,
         sourcePayloadSchemaRef: payloadSchemaRef ?? workflowPayloadSchemaRef,
         triggerMappingApplied: false,
-        execute: false,
       });
       startedRuns.push(launched.runId);
       if (this.verbose) {

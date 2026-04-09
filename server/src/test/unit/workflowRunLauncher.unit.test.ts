@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   startRunMock,
   executeRunMock,
+  startWorkflowRuntimeV2TemporalRunMock,
   getByTriggerFireKeyMock,
   createRunMock,
   getWorkflowByIdMock,
@@ -11,6 +12,7 @@ const {
 } = vi.hoisted(() => ({
   startRunMock: vi.fn(),
   executeRunMock: vi.fn(),
+  startWorkflowRuntimeV2TemporalRunMock: vi.fn(),
   getByTriggerFireKeyMock: vi.fn(),
   createRunMock: vi.fn(),
   getWorkflowByIdMock: vi.fn(),
@@ -56,6 +58,10 @@ vi.mock('@alga-psa/workflows/runtime', async (importOriginal) => {
   };
 });
 
+vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
+  startWorkflowRuntimeV2TemporalRun: (...args: unknown[]) => startWorkflowRuntimeV2TemporalRunMock(...args),
+}));
+
 import {
   launchPublishedWorkflowRun,
   recordFailedWorkflowRunLaunch
@@ -77,6 +83,7 @@ describe('Workflow run launcher', () => {
   beforeEach(() => {
     startRunMock.mockReset();
     executeRunMock.mockReset();
+    startWorkflowRuntimeV2TemporalRunMock.mockReset();
     getByTriggerFireKeyMock.mockReset();
     createRunMock.mockReset();
     getWorkflowByIdMock.mockReset();
@@ -114,6 +121,10 @@ describe('Workflow run launcher', () => {
       workflow_version: data.workflow_version,
       ...data
     }));
+    startWorkflowRuntimeV2TemporalRunMock.mockResolvedValue({
+      workflowId: 'workflow-runtime-v2:run:run-created',
+      firstExecutionRunId: 'temporal-run-1'
+    });
   });
 
   it('T044: duplicate recurring fire keys return the existing run without executing twice', async () => {
@@ -155,8 +166,40 @@ describe('Workflow run launcher', () => {
       workflowVersion: 5
     });
     expect(startRunMock).toHaveBeenCalledTimes(1);
+    expect(startWorkflowRuntimeV2TemporalRunMock).not.toHaveBeenCalled();
     expect(executeRunMock).not.toHaveBeenCalled();
     expect(getByTriggerFireKeyMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('starts a Temporal runtime workflow for new runs', async () => {
+    startRunMock.mockResolvedValue('run-created');
+
+    const result = await launchPublishedWorkflowRun(knexMock, {
+      workflowId: 'workflow-1',
+      workflowVersion: 5,
+      tenantId: 'tenant-1',
+      payload: { foo: 'bar' },
+      triggerType: 'event',
+      eventType: 'PING',
+      sourcePayloadSchemaRef: 'payload.WorkflowEvent.v1',
+      triggerMappingApplied: false,
+      execute: true,
+      executionKey: 'exec-1'
+    });
+
+    expect(result).toEqual({
+      runId: 'run-created',
+      workflowVersion: 5
+    });
+    expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith({
+      runId: 'run-created',
+      tenantId: 'tenant-1',
+      workflowId: 'workflow-1',
+      workflowVersion: 5,
+      triggerType: 'event',
+      executionKey: 'exec-1'
+    });
+    expect(executeRunMock).not.toHaveBeenCalled();
   });
 
   it('records a failed run row for launch-time payload validation failures', async () => {
