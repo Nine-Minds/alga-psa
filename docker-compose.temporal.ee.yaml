@@ -89,3 +89,23 @@ services:
         condition: service_started
     networks:
       - app-network
+
+  workflow-worker:
+    # Temporal-native authored runtime polling should be independently verifiable
+    # without requiring the full API server process in this compose profile.
+    depends_on:
+      temporal-dev:
+        condition: service_started
+      postgres:
+        condition: service_started
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+      setup:
+        condition: service_started
+    environment:
+      - APPLICATION_URL=${APPLICATION_URL:-http://localhost:3000}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-local-nextauth-secret}
+      - ALGA_AUTH_KEY=${ALGA_AUTH_KEY:-local-alga-auth-key}

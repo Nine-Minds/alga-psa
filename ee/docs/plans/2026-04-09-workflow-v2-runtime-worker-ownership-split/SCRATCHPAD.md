@@ -260,6 +260,35 @@ That exposed two separate but related issues:
 - Features not yet implemented/verified: `F029`
 - Tests not yet implemented/verified: `T009`, `T011`
 
+## Implementation log (2026-04-09, runtime packaging follow-up)
+
+### What was changed
+- Added a dedicated compose smoke harness script:
+  - `scripts/workflow-runtime-v2-compose-smoke.mjs`
+  - Added root script entry:
+    - `package.json` → `test:workflow-runtime-v2-compose-smoke`
+- Extended `workflow-worker` image build inputs and runtime dependencies:
+  - `services/workflow-worker/Dockerfile`
+  - Builds now include additional workspaces required by authored Temporal runtime paths (`@alga-psa/core`, `@alga-psa/types`, `@alga-psa/db`, `@alga-psa/formatting`, `@alga-psa/validation`, `@alga-psa/storage`, plus existing workflow/temporal/shared chain).
+- Added temporal compose profile defaults for worker startup env:
+  - `docker-compose.temporal.ee.yaml`
+  - Includes local defaults for app/auth keys used during worker startup.
+- Hardened `@alga-psa/core` runtime exports for worker containers:
+  - `packages/core/package.json` now points runtime `import` exports to built JS under `dist/` instead of TS sources.
+  - `packages/core/tsup.config.ts` now enables `addJsExtensions: true` so dist ESM imports are Node-resolvable.
+
+### New findings
+- The previous blocker (`ERR_UNKNOWN_FILE_EXTENSION` for `/app/packages/core/src/lib/logger.ts`) was due to `@alga-psa/core` exports resolving to TS source in standalone worker runtime.
+- After redirecting core exports to dist, worker startup moved to the next failure:
+  - `Cannot find module '/app/packages/core/dist/lib/secrets/EnvSecretProvider' imported from /app/packages/core/dist/lib/secrets/index.js`
+  - Root cause: extensionless relative imports in core dist ESM output.
+  - Fixed by enabling `addJsExtensions` in core tsup config.
+- With those fixes in place, authored queue smoke is still blocked by compose-environment instability and repeated project collisions/port contention during iterative retries (not a single deterministic app-code failure yet for final `F029/T009/T011` sign-off).
+
+### Current blocker state
+- `F029`, `T009`, `T011` remain unflipped.
+- Latest known high-signal blocker for clean verification is environment orchestration stability during long compose build/start loops (port collisions and overlapping compose projects), not a closed acceptance pass yet.
+
 ### Additional unblock attempt (same day)
 - Updated `services/workflow-worker/Dockerfile` base image from Alpine to Debian slim to remove Temporal native bridge libc mismatch seen earlier (`__register_atfork`).
 - Updated `docker-compose.temporal.ee.yaml` to provide local defaults for:
