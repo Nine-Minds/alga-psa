@@ -1,5 +1,7 @@
 import { condition, continueAsNew, defineSignal, executeChild, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
 import {
+  WORKFLOW_RUNTIME_V2_EVENT_SIGNAL,
+  WORKFLOW_RUNTIME_V2_HUMAN_TASK_SIGNAL,
   WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
   type WorkflowRuntimeV2TemporalRunInput,
 } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
@@ -165,7 +167,7 @@ type WorkflowRuntimeV2EventSignalPayload = {
   receivedAt: string;
 };
 
-const workflowRuntimeV2EventSignal = defineSignal<[WorkflowRuntimeV2EventSignalPayload]>('workflowRuntimeV2Event');
+const workflowRuntimeV2EventSignal = defineSignal<[WorkflowRuntimeV2EventSignalPayload]>(WORKFLOW_RUNTIME_V2_EVENT_SIGNAL);
 
 type ParsedHumanTaskConfig = {
   taskType: string;
@@ -181,7 +183,7 @@ type WorkflowRuntimeV2HumanTaskSignalPayload = {
   payload?: Record<string, unknown> | null;
 };
 
-const workflowRuntimeV2HumanTaskSignal = defineSignal<[WorkflowRuntimeV2HumanTaskSignalPayload]>('workflowRuntimeV2HumanTask');
+const workflowRuntimeV2HumanTaskSignal = defineSignal<[WorkflowRuntimeV2HumanTaskSignalPayload]>(WORKFLOW_RUNTIME_V2_HUMAN_TASK_SIGNAL);
 
 export type WorkflowRuntimeV2RunWorkflowResult = {
   scopes: WorkflowRuntimeV2ScopeState;

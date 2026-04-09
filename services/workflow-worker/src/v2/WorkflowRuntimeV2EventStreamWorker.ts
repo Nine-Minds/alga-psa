@@ -8,8 +8,10 @@ import {
   WorkflowDefinitionModelV2,
   WorkflowDefinitionVersionModelV2,
   WorkflowRuntimeEventModelV2,
+  WorkflowRunWaitModelV2,
 } from '@alga-psa/workflows/persistence';
 import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
+import { signalWorkflowRuntimeV2Event } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
 import { getAdminConnection } from '@shared/db/admin.js';
 import type { Knex } from 'knex';
 
@@ -146,6 +148,38 @@ export class WorkflowRuntimeV2EventStreamWorker {
       processed_at: processedAt,
     });
 
+    const candidateWaits = await WorkflowRunWaitModelV2.listEventWaitCandidates(
+      knex,
+      event.event_type,
+      event.event_id,
+      event.tenant,
+      ['event']
+    );
+    const signaledRuns = new Set<string>();
+    for (const wait of candidateWaits) {
+      try {
+        await signalWorkflowRuntimeV2Event({
+          runId: wait.run_id,
+          eventId: event.event_id,
+          eventName: event.event_type,
+          correlationKey: event.event_id,
+          payload,
+          receivedAt: processedAt,
+        });
+        signaledRuns.add(wait.run_id);
+      } catch (error) {
+        logger.warn('[WorkflowRuntimeV2EventStreamWorker] Failed to signal candidate run', {
+          workerId: this.workerId,
+          runId: wait.run_id,
+          waitId: wait.wait_id,
+          eventId: event.event_id,
+          eventType: event.event_type,
+          tenant: event.tenant,
+          error,
+        });
+      }
+    }
+
     const schemaRegistry = getSchemaRegistry();
 
     const workflows = await WorkflowDefinitionModelV2.list(knex);
@@ -233,6 +267,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
       totalWorkflows: workflows.length,
       matchingWorkflows: matching.length,
       startedRuns: startedRuns.length,
+      signaledRuns: signaledRuns.size,
       skipStats,
     });
 

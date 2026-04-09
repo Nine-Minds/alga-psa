@@ -306,5 +306,17 @@
       "F041",
       "F042"
     ]
+  },
+  {
+    "id": "T031",
+    "description": "Event ingress worker: inbound events are persisted once, candidate waits are selected from projection indexes, and all candidates are signaled while duplicate `event_id` deliveries are skipped.",
+    "implemented": true,
+    "featureIds": [
+      "F043",
+      "F044",
+      "F045",
+      "F046",
+      "F047"
+    ]
   }
 ]

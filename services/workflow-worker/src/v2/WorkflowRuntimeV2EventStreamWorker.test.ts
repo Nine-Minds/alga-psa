@@ -9,9 +9,11 @@ const {
   workflowRuntimeEventGetByIdMock,
   workflowRuntimeEventCreateMock,
   workflowRuntimeEventUpdateMock,
+  workflowRunWaitListEventWaitCandidatesMock,
   workflowDefinitionListMock,
   workflowDefinitionVersionListByWorkflowMock,
   launchPublishedWorkflowRunMock,
+  signalWorkflowRuntimeV2EventMock,
   getAdminConnectionMock,
   schemaRegistryHasMock,
   schemaRegistryGetMock,
@@ -28,9 +30,11 @@ const {
   workflowRuntimeEventGetByIdMock: vi.fn(),
   workflowRuntimeEventCreateMock: vi.fn(),
   workflowRuntimeEventUpdateMock: vi.fn(async () => undefined),
+  workflowRunWaitListEventWaitCandidatesMock: vi.fn(),
   workflowDefinitionListMock: vi.fn(),
   workflowDefinitionVersionListByWorkflowMock: vi.fn(),
   launchPublishedWorkflowRunMock: vi.fn(),
+  signalWorkflowRuntimeV2EventMock: vi.fn(async () => undefined),
   getAdminConnectionMock: vi.fn(),
   schemaRegistryHasMock: vi.fn(),
   schemaRegistryGetMock: vi.fn(),
@@ -94,11 +98,18 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
     getById: (...args: unknown[]) => workflowRuntimeEventGetByIdMock(...args),
     create: (...args: unknown[]) => workflowRuntimeEventCreateMock(...args),
     update: (...args: unknown[]) => workflowRuntimeEventUpdateMock(...args)
+  },
+  WorkflowRunWaitModelV2: {
+    listEventWaitCandidates: (...args: unknown[]) => workflowRunWaitListEventWaitCandidatesMock(...args)
   }
 }));
 
 vi.mock('@alga-psa/workflows/lib/workflowRunLauncher', () => ({
   launchPublishedWorkflowRun: (...args: unknown[]) => launchPublishedWorkflowRunMock(...args)
+}));
+
+vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
+  signalWorkflowRuntimeV2Event: (...args: unknown[]) => signalWorkflowRuntimeV2EventMock(...args)
 }));
 
 import { WorkflowRuntimeV2EventStreamWorker } from './WorkflowRuntimeV2EventStreamWorker';
@@ -126,9 +137,11 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     workflowRuntimeEventGetByIdMock.mockReset();
     workflowRuntimeEventCreateMock.mockReset();
     workflowRuntimeEventUpdateMock.mockReset();
+    workflowRunWaitListEventWaitCandidatesMock.mockReset();
     workflowDefinitionListMock.mockReset();
     workflowDefinitionVersionListByWorkflowMock.mockReset();
     launchPublishedWorkflowRunMock.mockReset();
+    signalWorkflowRuntimeV2EventMock.mockReset();
     getAdminConnectionMock.mockReset();
     schemaRegistryHasMock.mockReset();
     schemaRegistryGetMock.mockReset();
@@ -159,6 +172,16 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       }
     ]);
     launchPublishedWorkflowRunMock.mockResolvedValue({ runId: 'run-1', workflowVersion: 7 });
+    workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([
+      {
+        wait_id: 'wait-1',
+        run_id: 'run-wait-1',
+      },
+      {
+        wait_id: 'wait-2',
+        run_id: 'run-wait-2',
+      }
+    ]);
     getAdminConnectionMock.mockResolvedValue(knexMock);
     schemaRegistryHasMock.mockReturnValue(true);
     schemaRegistryGetMock.mockReturnValue({
@@ -214,6 +237,30 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         matched_run_id: 'run-1'
       })
     );
+    expect(workflowRunWaitListEventWaitCandidatesMock).toHaveBeenCalledWith(
+      knexMock,
+      'PING',
+      'event-1',
+      'tenant-1',
+      ['event']
+    );
+    expect(signalWorkflowRuntimeV2EventMock).toHaveBeenCalledTimes(2);
+    expect(signalWorkflowRuntimeV2EventMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        runId: 'run-wait-1',
+        eventId: 'event-1',
+        eventName: 'PING',
+      })
+    );
+    expect(signalWorkflowRuntimeV2EventMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        runId: 'run-wait-2',
+        eventId: 'event-1',
+        eventName: 'PING',
+      })
+    );
 
     await worker.stop();
     expect(redisCloseMock).toHaveBeenCalledTimes(1);
@@ -234,5 +281,6 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
 
     expect(workflowRuntimeEventCreateMock).not.toHaveBeenCalled();
     expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+    expect(signalWorkflowRuntimeV2EventMock).not.toHaveBeenCalled();
   });
 });

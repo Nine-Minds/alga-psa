@@ -576,3 +576,31 @@ Plan bookkeeping updates:
 Validation commands (this checkpoint):
 - `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
 - `npm --prefix ee/temporal-workflows run type-check`
+
+### F043-F047 + T031 completed (event-ingress persistence + candidate signal fan-out)
+
+- Extended event-ingress worker in [services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts):
+  - Keeps idempotent inbound-event persistence (`workflow_runtime_events`) by `event_id`.
+  - Uses `workflow_run_waits` projection lookup (`listEventWaitCandidates`) scoped by tenant/event/correlation key to find candidate waiting runs.
+  - Signals every candidate Temporal run via `signalWorkflowRuntimeV2Event(...)` instead of selecting a single wait row as execution authority.
+  - Keeps failure isolation per candidate signal (warn + continue) so one failed signal does not block delivery to other candidates.
+- Added Temporal event-signal client helper in [ee/packages/workflows/src/lib/workflowRuntimeV2Temporal.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/packages/workflows/src/lib/workflowRuntimeV2Temporal.ts):
+  - exported runtime signal constants
+  - added `signalWorkflowRuntimeV2Event(...)` helper for `workflow-runtime-v2:run:<runId>` handles
+- Updated runtime workflow signal naming in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts) to consume shared signal constants.
+- Extended worker tests in [services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts):
+  - asserts candidate lookup + per-candidate signal fan-out
+  - asserts duplicate `event_id` short-circuit does not relaunch or re-signal
+
+Rationale:
+- Event ingress is now aligned with Temporal-native wait authority: DB indexes select candidates, Temporal workflows decide active-wait matches.
+
+Plan bookkeeping updates:
+- Marked `F043`, `F044`, `F045`, `F046`, `F047` implemented.
+- Added `T031` (implemented:true) for ingress persistence/signal fan-out/dedup coverage.
+
+Validation commands (this checkpoint):
+- `cd services/workflow-worker && npx vitest src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts --run`
+- `npm --prefix ee/packages/workflows run typecheck`
+- `npm --prefix ee/temporal-workflows run type-check`
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`

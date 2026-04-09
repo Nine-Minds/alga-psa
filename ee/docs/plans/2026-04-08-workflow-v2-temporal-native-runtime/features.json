@@ -254,31 +254,31 @@
   {
     "id": "F043",
     "description": "Persist inbound workflow events to the database for audit and debugging before or during routing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9", "FR-11"]
   },
   {
     "id": "F044",
     "description": "Use tenant, event name, and correlation key fields from the wait projection to identify candidate waiting runs for an inbound event.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9"]
   },
   {
     "id": "F045",
     "description": "Signal all candidate waiting runs for an inbound event instead of resuming a single first-matching DB wait row as the authority.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9"]
   },
   {
     "id": "F046",
     "description": "Deduplicate repeated external event deliveries by `event_id` so the same event is not processed twice.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9"]
   },
   {
     "id": "F047",
     "description": "Ignore late, duplicate, or unmatched event signals safely inside Temporal workflows without corrupting run state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9", "FR-12"]
   },
   {
