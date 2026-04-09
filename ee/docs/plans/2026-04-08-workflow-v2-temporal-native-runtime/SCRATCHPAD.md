@@ -604,3 +604,22 @@ Validation commands (this checkpoint):
 - `npm --prefix ee/packages/workflows run typecheck`
 - `npm --prefix ee/temporal-workflows run type-check`
 - `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
+
+### F048-F050 completed (direct Temporal launch paths for manual/event/replay)
+
+- Confirmed manual/API runs continue to launch through [ee/packages/workflows/src/lib/workflowRunLauncher.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/packages/workflows/src/lib/workflowRunLauncher.ts) Temporal-first path (`WORKFLOW_RUNTIME_V2_ENGINE=temporal` default), preserving existing launch concepts (`run_id` allocation + projection) while delegating execution authority to Temporal.
+- Confirmed event-triggered runs are started from published trigger metadata and validated payloads in [services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts), then launched via `launchPublishedWorkflowRun(...)` into Temporal-native execution.
+- Updated replay behavior in [ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts):
+  - removed inline DB-runtime replay execution (`runtime.executeRun(...)`)
+  - replay now creates a fresh run through `launchPublishedWorkflowRun(...)` so Temporal starts a new native execution
+  - defaults replay payload to original run input when no explicit override payload is provided
+
+Rationale:
+- Replay/re-run semantics now align with product expectation: new execution from pinned definition/input rather than DB snapshot resume behavior.
+
+Plan bookkeeping updates:
+- Marked `F048`, `F049`, `F050` implemented.
+
+Validation commands (this checkpoint):
+- `npm --prefix ee/packages/workflows run typecheck`
+- `cd services/workflow-worker && npx vitest src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts --run`

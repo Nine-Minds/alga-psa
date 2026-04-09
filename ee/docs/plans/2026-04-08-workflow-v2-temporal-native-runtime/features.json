@@ -284,19 +284,19 @@
   {
     "id": "F048",
     "description": "Start manual and API-triggered workflow runs directly in Temporal while preserving existing run-launch concepts for the product.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-10"]
   },
   {
     "id": "F049",
     "description": "Start event-triggered workflow runs directly in Temporal from published trigger definitions and validated trigger payloads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-10"]
   },
   {
     "id": "F050",
     "description": "Implement replay or re-run as a fresh Temporal-native execution from the pinned definition and original normalized input.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-10", "FR-12"]
   },
   {

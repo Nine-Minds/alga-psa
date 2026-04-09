@@ -185,6 +185,9 @@ const isEnterpriseEdition = (): boolean => {
   return edition === 'ee' || edition === 'enterprise' || publicEdition === 'enterprise';
 };
 
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
 const formatSchedulePayloadValidationMessage = (issues: Array<{ path?: Array<string | number>; message?: string }>): string => {
   if (!issues.length) {
     return 'Schedule payload failed validation against the latest published workflow schema.';
@@ -2794,21 +2797,30 @@ export const retryWorkflowRunAction = withAuth(async (user, { tenant }, input: u
 });
 
 export const replayWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
-  initializeWorkflowRuntimeV2();
   const parsed = ReplayWorkflowRunInput.parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
 
   const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
-
-  const runtime = new WorkflowRuntimeV2();
-  const newRunId = await runtime.startRun(knex, {
+  const hasExplicitReplayPayload = parsed.payload && Object.keys(parsed.payload).length > 0;
+  const replayPayload = hasExplicitReplayPayload
+    ? parsed.payload
+    : (isObjectRecord(run.input_json) ? run.input_json : {});
+  const launched = await launchPublishedWorkflowRun(knex, {
     workflowId: run.workflow_id,
-    version: run.workflow_version,
-    payload: parsed.payload,
+    workflowVersion: run.workflow_version,
+    payload: replayPayload,
     tenantId: run.tenant_id ?? tenant,
-    eventType: run.event_type ?? null
+    triggerType: null,
+    triggerMetadata: {
+      replayOfRunId: run.run_id,
+      reason: parsed.reason,
+    },
+    eventType: run.event_type ?? null,
+    sourcePayloadSchemaRef: run.source_payload_schema_ref ?? null,
+    triggerMappingApplied: run.trigger_mapping_applied ?? false,
   });
+  const newRunId = launched.runId;
 
   await WorkflowRunLogModelV2.create(knex, {
     run_id: newRunId,
@@ -2836,8 +2848,6 @@ export const replayWorkflowRunAction = withAuth(async (user, { tenant }, input: 
     details: { reason: parsed.reason, newRunId },
     source: parsed.source ?? 'api'
   });
-
-  await runtime.executeRun(knex, newRunId, `admin-replay-${user.user_id}`);
 
   return { ok: true, runId: newRunId };
 });
