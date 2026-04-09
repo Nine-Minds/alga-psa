@@ -126,6 +126,17 @@ export default function TaskListView({
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
 
+  // Memoize plain-text descriptions so JSON.parse runs at most once per task
+  // per tasks-array change, instead of repeatedly during search, filter, and
+  // per-row render passes.
+  const taskDescriptionTextMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const task of tasks) {
+      map.set(task.task_id, extractTaskDescriptionText(task.description));
+    }
+    return map;
+  }, [tasks]);
+
   // Auto-expand titles and descriptions when search matches
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -144,7 +155,7 @@ export default function TaskListView({
 
     tasks.forEach(task => {
       const matchesName = regex.test(task.task_name);
-      const descText = extractTaskDescriptionText(task.description);
+      const descText = taskDescriptionTextMap.get(task.task_id) ?? '';
       const matchesDescription = descText ? regex.test(descText) : false;
 
       // Auto-expand title if it matches and is long enough to be truncated
@@ -160,7 +171,7 @@ export default function TaskListView({
 
     setExpandedTitles(newExpandedTitles);
     setExpandedDescriptions(newExpandedDescriptions);
-  }, [searchQuery, searchCaseSensitive, searchWholeWord, tasks]);
+  }, [searchQuery, searchCaseSensitive, searchWholeWord, tasks, taskDescriptionTextMap]);
 
   // Fetch avatar URLs for assignees and additional agents
   useEffect(() => {
@@ -230,7 +241,7 @@ export default function TaskListView({
       const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
       filtered = filtered.filter(task => {
         const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
-        const descText = extractTaskDescriptionText(task.description);
+        const descText = taskDescriptionTextMap.get(task.task_id) ?? '';
         const taskDescription = searchCaseSensitive
           ? descText
           : descText.toLowerCase();
@@ -296,7 +307,7 @@ export default function TaskListView({
     }
 
     return filtered;
-  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, taskResources]);
+  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
 
   // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {
@@ -925,7 +936,7 @@ export default function TaskListView({
                             const additionalCount = resources.length;
                             const checklist = checklistItems[task.task_id];
                             const docCount = documentCounts[task.task_id] || 0;
-                            const descText = extractTaskDescriptionText(task.description);
+                            const descText = taskDescriptionTextMap.get(task.task_id) ?? '';
                             const isDragging = draggedTask?.task_id === task.task_id;
                             const showDropIndicator = isDropTarget && dropIndicatorIndex === taskIndex;
 

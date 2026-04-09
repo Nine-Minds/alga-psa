@@ -19,6 +19,28 @@ const DEFAULT_BLOCK: PartialBlock[] = [
 ];
 
 /**
+ * Signature for a BlockNote-serialized description: a JSON array whose first
+ * element is an object. Plain text starting with `[` (e.g. `[URGENT] Fix bug`)
+ * won't match because the character after `[` isn't `{`, so we avoid a wasted
+ * JSON.parse attempt on those descriptions.
+ */
+const BLOCK_NOTE_JSON_SIGNATURE = /^\s*\[\s*\{/;
+
+/**
+ * BlockNote block types whose emptiness is determined by their inline content.
+ * Any block type NOT in this set (image, table, video, audio, file, codeBlock,
+ * embed, etc.) is inherently non-empty — even when it has no `content` array.
+ */
+const TEXT_CONTAINER_BLOCK_TYPES = new Set([
+  'paragraph',
+  'heading',
+  'bulletListItem',
+  'numberedListItem',
+  'checkListItem',
+  'quote',
+]);
+
+/**
  * Parse a task description string into BlockNote blocks.
  * Handles:
  * - null/undefined/empty -> default empty block
@@ -37,7 +59,7 @@ export function parseTaskRichTextContent(
     return structuredClone(DEFAULT_BLOCK);
   }
 
-  if (trimmed.startsWith('[')) {
+  if (BLOCK_NOTE_JSON_SIGNATURE.test(trimmed)) {
     try {
       const parsed = JSON.parse(trimmed);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -115,7 +137,7 @@ export function extractTaskDescriptionText(description: string | null | undefine
   const trimmed = description.trim();
   if (!trimmed) return '';
 
-  if (trimmed.startsWith('[')) {
+  if (BLOCK_NOTE_JSON_SIGNATURE.test(trimmed)) {
     try {
       const blocks = JSON.parse(trimmed);
       if (!Array.isArray(blocks)) return description;
@@ -137,15 +159,25 @@ export function extractTaskDescriptionText(description: string | null | undefine
 }
 
 /**
- * Check if a BlockNote content array represents empty content (no real text or inline elements).
+ * Check if a BlockNote content array represents empty content (no real text,
+ * inline elements, or non-text blocks like images/tables/embeds).
  */
 export function isTaskRichTextEmpty(content: PartialBlock[]): boolean {
   if (!content || content.length === 0) return true;
 
   for (const block of content) {
-    if (!Array.isArray(block.content)) continue;
-    for (const item of block.content as any[]) {
-      if (hasInlineContent(item)) return false;
+    const blockType = (block as any).type;
+
+    // Non-text block types (image, table, video, audio, file, codeBlock, etc.)
+    // are inherently non-empty even without an inline content array.
+    if (blockType && !TEXT_CONTAINER_BLOCK_TYPES.has(blockType)) {
+      return false;
+    }
+
+    if (Array.isArray(block.content)) {
+      for (const item of block.content as any[]) {
+        if (hasInlineContent(item)) return false;
+      }
     }
   }
   return true;

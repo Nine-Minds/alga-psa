@@ -36,6 +36,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { TextEditor } from '@alga-psa/ui/editor';
+import type { BlockNoteEditor } from '@blocknote/core';
 import { PartialBlock } from '@blocknote/core';
 import { ListChecks, Plus, Trash2, Clock, Ticket } from 'lucide-react';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -119,6 +120,13 @@ export default function TaskForm({
   const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
+  // Ref to the BlockNote editor instance; used to read the normalized document
+  // for dirty-check comparisons so they're immune to BlockNote adding default
+  // props / block IDs on initial load.
+  const blockNoteEditorRef = useRef<BlockNoteEditor<any, any, any> | null>(null);
+  // Serialized baseline captured after the editor normalizes initial content.
+  // Compared against the live editor.document in hasChanges().
+  const initialDescriptionSerializedRef = useRef<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [taskName, setTaskName] = useState(task?.task_name || prefillData?.task_name || '');
   const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
@@ -229,6 +237,33 @@ export default function TaskForm({
   );
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Capture the BlockNote-normalized description as the dirty-check baseline
+  // after the editor has finished normalizing initial content. Without this,
+  // opening a task and changing nothing can flag "unsaved changes" because
+  // parseTaskRichTextContent's output differs from the editor's normalized
+  // form (BlockNote assigns block IDs, adds default props, etc.).
+  useEffect(() => {
+    initialDescriptionSerializedRef.current = null;
+    let frameId: number | null = null;
+    const capture = () => {
+      const editor = blockNoteEditorRef.current;
+      if (editor) {
+        const blocks = editor.document as PartialBlock[];
+        initialDescriptionSerializedRef.current = isTaskRichTextEmpty(blocks)
+          ? ''
+          : serializeTaskRichTextContent(blocks);
+        frameId = null;
+        return;
+      }
+      // Editor not yet attached — try again on the next frame.
+      frameId = requestAnimationFrame(capture);
+    };
+    frameId = requestAnimationFrame(capture);
+    return () => {
+      if (frameId !== null) cancelAnimationFrame(frameId);
+    };
+  }, [task?.task_id, descriptionEditorKey]);
 
   const handlePrefillFromTicket = (payload: {
     prefillData: TaskFormPrefillData;
@@ -856,8 +891,18 @@ export default function TaskForm({
     const normalizeNullable = <T,>(val: T | null | undefined): T | null => val ?? null;
 
     if (taskName !== (task.task_name || '')) return true;
-    const currentDescriptionSerialized = isTaskRichTextEmpty(descriptionContent) ? '' : serializeTaskRichTextContent(descriptionContent);
-    const originalDescriptionSerialized = !task.description ? '' : serializeTaskRichTextContent(parseTaskRichTextContent(task.description));
+    // Read the current description from the live BlockNote editor when
+    // available so both sides of the comparison use BlockNote's normalized
+    // form. Fall back to React state + raw parse when the editor hasn't
+    // initialized yet (e.g. very early dirty-checks before first paint).
+    const liveBlocks = (blockNoteEditorRef.current?.document as PartialBlock[] | undefined) ?? descriptionContent;
+    const currentDescriptionSerialized = isTaskRichTextEmpty(liveBlocks)
+      ? ''
+      : serializeTaskRichTextContent(liveBlocks);
+    const originalDescriptionSerialized = initialDescriptionSerializedRef.current
+      ?? (!task.description
+        ? ''
+        : serializeTaskRichTextContent(parseTaskRichTextContent(task.description)));
     if (currentDescriptionSerialized !== originalDescriptionSerialized) return true;
     if (selectedPhaseId !== task.phase_id) return true;
     if (selectedStatusId !== task.project_status_mapping_id) return true;
@@ -1362,6 +1407,7 @@ export default function TaskForm({
               id={`task-description-${task?.task_id || 'new'}`}
               initialContent={descriptionContent}
               onContentChange={setDescriptionContent}
+              editorRef={blockNoteEditorRef}
               searchMentions={searchUsersForMentions}
               placeholder="Add task description..."
             />

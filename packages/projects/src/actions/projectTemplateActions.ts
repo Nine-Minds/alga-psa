@@ -3,7 +3,6 @@
 import { Knex } from 'knex';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type {
   DependencyType,
@@ -233,7 +232,10 @@ export const createTemplateFromProject = withAuth(async (
           tenant,
           template_phase_id: templatePhaseId,
           task_name: task.task_name,
-          description: extractTaskDescriptionText(task.description) || null,
+          // Preserve the raw description verbatim (including BlockNote rich-text
+          // JSON). Stripping to plain text here caused data loss on save-as-template
+          // and, transitively, on create-project-from-template.
+          description: task.description || null,
           estimated_hours: task.estimated_hours,
           task_type_key: task.task_type_key,
           priority_id: task.priority_id,
