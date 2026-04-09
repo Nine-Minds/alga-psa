@@ -188,6 +188,7 @@ That exposed two separate but related issues:
 - `T005` implemented
 - `T006` implemented
 - `T008` implemented
+- `T010` implemented
 
 ### Gotchas discovered
 - `ee/temporal-workflows/src/worker.ts` could not be directly imported in a lightweight config unit test due broader worker module dependency graph resolution; fixed by extracting queue config to `workerConfig.ts` for isolated testing.
@@ -195,10 +196,12 @@ That exposed two separate but related issues:
 
 ### Remaining items after this checkpoint
 - Features not yet implemented/verified: `F005`, `F027`, `F029`
-- Tests not yet implemented/verified: `T002`, `T007`, `T009`, `T010`, `T011`
+- Tests not yet implemented/verified: `T002`, `T007`, `T009`, `T011`
 - Added ownership/support documentation: `OWNERSHIP.md` (`F030`).
 - Updated `ee/packages/workflows/src/lib/workflowRunLauncher.ts` to import runtime initialization from `@alga-psa/workflows/runtime/core` so worker startup paths do not transitively pull `runtime/bootstrap`.
 - Strengthened `services/workflow-worker/scripts/validate-runtime-imports.mjs` with explicit checks for unresolved `@shared/*` aliases and bootstrap-only runtime dependency leakage (`registerAiActions`, `workflowInferenceService`, `runtime/bootstrap`).
+- Added contract regression test for Temporal launch/signal queue authority:
+  - `ee/packages/workflows/src/lib/__tests__/workflowRuntimeV2Temporal.contract.test.ts` (`T010`)
 - Attempted local compose smoke for `F029`/`T009` with:
   - `docker compose -f docker-compose.ee.yaml -f docker-compose.temporal.ee.yaml up -d --build workflow-worker temporal-worker`
   - Blocked by missing compose env/secret context in this shell (`service "setup" refers to undefined secret postgres_password`).

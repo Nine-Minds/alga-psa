@@ -101,7 +101,7 @@
   {
     "id": "T010",
     "description": "Run-authority regression test: authored Workflow Runtime V2 still uses the existing Temporal launch/signal contract while changing only worker ownership, not caller-side API/UI behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023"
