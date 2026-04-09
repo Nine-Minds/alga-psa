@@ -38,13 +38,13 @@
   {
     "id": "F007",
     "description": "Implement the Temporal-native runtime as an explicit frame-based interpreter rather than DB `node_path` resume authority.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
     "id": "F008",
     "description": "Support root sequence-frame execution for top-level workflow steps inside the interpreter.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {

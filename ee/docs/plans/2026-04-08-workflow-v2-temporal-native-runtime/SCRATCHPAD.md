@@ -180,3 +180,44 @@ Working notes for replacing the current DB-backed Workflow Runtime V2 execution 
 - `mkdir -p server/coverage/.tmp && npm --prefix server run test -- src/test/unit/workflowRunLauncher.unit.test.ts`
 - `cd services/workflow-worker && npx vitest src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts --run`
 - `npm --prefix ee/packages/workflows run typecheck`
+
+### F007-F008 completed (Temporal frame interpreter skeleton)
+
+- Added explicit Temporal interpreter state module at [ee/temporal-workflows/src/workflows/workflow-runtime-v2-interpreter.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-interpreter.ts):
+  - Serializable `WorkflowRuntimeV2InterpreterState` now tracks sequence frames and `currentStepPath`.
+  - Root sequence-frame stepping is explicit via `initializeWorkflowRuntimeV2InterpreterState`, `getWorkflowRuntimeV2CurrentStep`, and `advanceWorkflowRuntimeV2InterpreterState`.
+  - Step paths remain canonical (`root.steps[n]`) while execution authority moves into Temporal workflow state.
+- Updated [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - Runtime now loads pinned definition first and drives a loop from frame state.
+  - `control.return` is interpreted as terminal success in the Temporal workflow loop.
+  - Unsupported steps still use temporary legacy bridge activity while additional handlers are migrated.
+- Extended [ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts):
+  - Added `loadWorkflowRuntimeV2PinnedDefinition(...)` with definition-hash verification against the pinned run.
+  - Added `completeWorkflowRuntimeV2Run(...)` to project terminal status from the Temporal workflow.
+
+Rationale:
+- This introduces explicit frame-based interpreter authority in Temporal first, while preserving operational safety through a scoped bridge for not-yet-migrated step handlers.
+- The interpreter state is plain serializable data, so it survives Temporal replay and worker restarts without relying on DB `node_path` resume mechanics.
+
+### T001 completed
+
+- Confirmed `T001` coverage through launcher unit checks in [server/src/test/unit/workflowRunLauncher.unit.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/test/unit/workflowRunLauncher.unit.test.ts):
+  - Asserts Temporal execution start for new runs.
+  - Asserts pinned definition hash + runtime semantics are passed at run creation.
+  - Asserts `workflow_runs` projection is updated with `engine=temporal`, `temporal_workflow_id`, and `temporal_run_id`.
+
+### Added tests for interpreter state behavior
+
+- Added [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts):
+  - Verifies root sequence-frame initialization.
+  - Verifies deterministic top-level step advancement and terminal exhaustion behavior.
+
+### Validation commands run (this checkpoint)
+
+- `npm --prefix ee/temporal-workflows run type-check`
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts --run`
+- `npm --prefix server run test -- src/test/unit/workflowRunLauncher.unit.test.ts`
+
+### Gotchas
+
+- `WorkflowDefinition` schema currently uses top-level `steps`; interpreter frame paths keep `root.steps[n]` path conventions for continuity with existing runtime pathing.
