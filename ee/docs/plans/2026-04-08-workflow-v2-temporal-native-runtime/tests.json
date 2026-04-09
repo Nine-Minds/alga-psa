@@ -186,7 +186,7 @@
   {
     "id": "T019",
     "description": "Integration: one-time and recurring schedule triggers reconcile correctly to Temporal-native schedule state across publish, update, and unpublish operations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051",
       "F052",

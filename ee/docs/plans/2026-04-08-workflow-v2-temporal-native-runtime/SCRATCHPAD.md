@@ -747,5 +747,20 @@ Commands run:
 - `npm --prefix server run test -- src/test/integration/workflowRuntimeV2.control.integration.test.ts -t "Idempotency key uniqueness prevents duplicate side-effectful action calls. Mocks: non-target dependencies."`
 - `npm --prefix server run test -- src/test/integration/workflowRuntimeV2.control.integration.test.ts src/test/integration/workflowRuntimeV2.publish.integration.test.ts -t "Idempotency key uniqueness prevents duplicate side-effectful action calls|Retry attempts increment workflow_run_steps\\.attempts count|onError=continue records error and continues to next step"`
 
-Status notes / next blocker:
-- `T019` remains open. [server/src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts) still needs additional mock adaptation for `workflow_definition_versions` persistence calls (`knex(...).insert is not a function`) after action-module import-path refactors.
+### T019 completed (schedule reconciliation unit coverage restored)
+
+- Updated [server/src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts) test harness `knexMock` to emulate current persistence table access used by publish lifecycle code:
+  - `workflow_definitions`
+  - `workflow_definition_versions`
+  - `tenant_workflow_schedule`
+- This restored schedule lifecycle tests that verify publish/update behavior rebinds or disables schedules according to payload/schema compatibility and preserves schedule state semantics.
+- Confirmed recurring and one-time scheduled-run handler coverage remains passing in [server/src/test/unit/workflowScheduledRunHandlers.unit.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/test/unit/workflowScheduledRunHandlers.unit.test.ts).
+
+Validation commands:
+- `npm --prefix server run test -- src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts`
+- `npm --prefix server run test -- src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts src/test/unit/workflowScheduledRunHandlers.unit.test.ts`
+
+Follow-on blocker observed while moving to `T020`:
+- `npm --prefix server run test -- src/test/integration/workflowRuntimeV2.publish.integration.test.ts src/test/integration/workflowRuntimeV2.control.integration.test.ts -t "Get run server action returns status, nodePath, and timestamps|List run steps server action returns ordered step history with attempts|Workflow runtime event list server action returns recent events|Cancel run server action sets status CANCELED and releases waits"`
+  - `workflowRuntimeV2.control.integration.test.ts` target passed.
+  - `workflowRuntimeV2.publish.integration.test.ts` failed during DB setup with `ROLLBACK - Connection terminated unexpectedly` and then `db.destroy` on undefined in `afterAll`.
