@@ -84,7 +84,7 @@
   {
     "id": "T009",
     "description": "Integration: a failing child workflow surfaces a structured child-workflow error that can be retried or caught by the parent interpreter.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019",
@@ -274,6 +274,16 @@
     "implemented": true,
     "featureIds": [
       "F031"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Temporal interpreter: `time.wait` projects wait start/resolution, sleeps only when dueAt is in the future, and fast-paths immediate continuation when already due.",
+    "implemented": true,
+    "featureIds": [
+      "F033",
+      "F034",
+      "F035"
     ]
   }
 ]

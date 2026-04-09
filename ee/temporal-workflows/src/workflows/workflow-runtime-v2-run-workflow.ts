@@ -64,6 +64,21 @@ const activities = proxyActivities<{
     rootRunId: string;
     temporalWorkflowId: string;
   }>;
+  projectWorkflowRuntimeV2TimeWaitStart(input: {
+    runId: string;
+    stepPath: string;
+    dueAt: string;
+    payload: {
+      mode: 'duration' | 'until';
+      durationMs: number | null;
+      dueAt: string;
+    };
+  }): Promise<{ waitId: string }>;
+  projectWorkflowRuntimeV2TimeWaitResolved(input: {
+    waitId: string;
+    runId: string;
+    status: 'RESOLVED' | 'CANCELED';
+  }): Promise<void>;
   completeWorkflowRuntimeV2Run(input: { runId: string; status: 'SUCCEEDED' | 'FAILED' | 'CANCELED' }): Promise<void>;
 }>({
   startToCloseTimeout: '10m',
@@ -77,6 +92,18 @@ const CONTINUE_AS_NEW_EVERY_STEPS = 250;
 type WorkflowRuntimeV2RunWorkflowInput = WorkflowRuntimeV2TemporalRunInput & {
   checkpoint?: WorkflowRuntimeV2InterpreterCheckpoint;
 };
+
+type ParsedTimeWaitConfig =
+  | {
+      mode: 'duration';
+      durationMs: number;
+      assign?: Record<string, Expr>;
+    }
+  | {
+      mode: 'until';
+      until: Expr;
+      assign?: Record<string, Expr>;
+    };
 
 export type WorkflowRuntimeV2RunWorkflowResult = {
   scopes: WorkflowRuntimeV2ScopeState;
@@ -234,6 +261,7 @@ export async function workflowRuntimeV2RunWorkflow(
           workflowVersion: number;
           inputMapping?: Record<string, Expr>;
           outputMapping?: Record<string, Expr>;
+          retry?: RetryPolicy;
         };
         const childPayload = await evaluateExpressionMapping(
           callWorkflowStep.inputMapping ?? {},
@@ -248,32 +276,93 @@ export async function workflowRuntimeV2RunWorkflow(
           payload: childPayload,
         });
 
-        try {
-          const childResult = await executeChild(workflowRuntimeV2RunWorkflow, {
-            workflowId: childStart.temporalWorkflowId,
-            taskQueue: WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
-            args: [{
-              runId: childStart.childRunId,
-              tenantId: state.scopes.system.tenantId,
+        const retryPolicy = resolveStepRetryPolicy(callWorkflowStep);
+        let attempt = 1;
+        while (true) {
+          try {
+            const childResult = await executeChild(workflowRuntimeV2RunWorkflow, {
+              workflowId: childStart.temporalWorkflowId,
+              taskQueue: WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
+              args: [{
+                runId: childStart.childRunId,
+                tenantId: state.scopes.system.tenantId,
+                workflowId: callWorkflowStep.workflowId,
+                workflowVersion: callWorkflowStep.workflowVersion,
+                triggerType: null,
+                executionKey: `${input.executionKey}:child:${childStart.childRunId}`,
+              }],
+            });
+            if (callWorkflowStep.outputMapping) {
+              state = await applyCallWorkflowOutputMapping(state, callWorkflowStep.outputMapping, childResult.scopes);
+            }
+            break;
+          } catch (error) {
+            const childError = createChildWorkflowRuntimeError(current.path, {
               workflowId: callWorkflowStep.workflowId,
               workflowVersion: callWorkflowStep.workflowVersion,
-              triggerType: null,
-              executionKey: `${input.executionKey}:child:${childStart.childRunId}`,
-            }],
-          });
-          if (callWorkflowStep.outputMapping) {
-            state = await applyCallWorkflowOutputMapping(state, callWorkflowStep.outputMapping, childResult.scopes);
+              childRunId: childStart.childRunId,
+              rootRunId: childStart.rootRunId,
+              cause: error instanceof Error ? error.message : String(error),
+            });
+            if (shouldRetry(childError, retryPolicy, attempt)) {
+              const backoffMs = getRetryBackoffMs(retryPolicy!, attempt);
+              attempt += 1;
+              await sleep(backoffMs);
+              continue;
+            }
+            throw childError;
           }
-        } catch (error) {
-          throw createChildWorkflowRuntimeError(current.path, {
-            workflowId: callWorkflowStep.workflowId,
-            workflowVersion: callWorkflowStep.workflowVersion,
-            childRunId: childStart.childRunId,
-            rootRunId: childStart.rootRunId,
-            cause: error instanceof Error ? error.message : String(error),
-          });
         }
 
+        state = advanceWorkflowRuntimeV2InterpreterState(state);
+        state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
+        await activities.projectWorkflowRuntimeV2StepCompletion({
+          runId: input.runId,
+          stepId: stepProjection.stepId,
+          stepPath: current.path,
+          status: 'SUCCEEDED',
+        });
+        stepCount += 1;
+        continue;
+      }
+
+      if (current.step.type === 'time.wait') {
+        const timeWaitStep = current.step as {
+          config?: unknown;
+        };
+        const config = parseTimeWaitConfig(timeWaitStep.config, current.path);
+        const dueAt = await resolveTimeWaitDueAt(config, state.scopes, current.path);
+        const waitProjection = await activities.projectWorkflowRuntimeV2TimeWaitStart({
+          runId: input.runId,
+          stepPath: current.path,
+          dueAt,
+          payload: {
+            mode: config.mode,
+            durationMs: config.mode === 'duration' ? config.durationMs : null,
+            dueAt,
+          },
+        });
+
+        const dueAtMs = new Date(dueAt).getTime();
+        const nowMs = Date.now();
+        if (Number.isFinite(dueAtMs) && dueAtMs > nowMs) {
+          await sleep(dueAtMs - nowMs);
+        }
+
+        await activities.projectWorkflowRuntimeV2TimeWaitResolved({
+          waitId: waitProjection.waitId,
+          runId: input.runId,
+          status: 'RESOLVED',
+        });
+
+        state = assignToScopePath(state, 'vars.timeWait', {
+          mode: config.mode,
+          dueAt,
+          resumedAt: new Date().toISOString(),
+        });
+        if (config.assign) {
+          state = await applyExpressionAssignments(state, config.assign);
+        }
         state = advanceWorkflowRuntimeV2InterpreterState(state);
         state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
         await activities.projectWorkflowRuntimeV2StepCompletion({
@@ -473,6 +562,18 @@ async function evaluateExpressionMapping(
   return Object.fromEntries(entries);
 }
 
+async function applyExpressionAssignments(
+  state: WorkflowRuntimeV2InterpreterState,
+  assignments: Record<string, Expr>
+): Promise<WorkflowRuntimeV2InterpreterState> {
+  let nextState = state;
+  for (const [path, expr] of Object.entries(assignments)) {
+    const value = await evaluateExpression(expr.$expr, buildWorkflowRuntimeV2ExpressionContext(nextState.scopes));
+    nextState = assignToScopePath(nextState, path, value);
+  }
+  return nextState;
+}
+
 async function applyCallWorkflowOutputMapping(
   parentState: WorkflowRuntimeV2InterpreterState,
   outputMapping: Record<string, Expr>,
@@ -633,6 +734,60 @@ function normalizeExpressionSource(source: string): string {
     /(^|[^.$A-Za-z0-9_])(coalesce|len|toString|append)(?=\s*\()/g,
     (_match, prefix: string, fn: string) => `${prefix}$${fn}`
   );
+}
+
+function parseTimeWaitConfig(config: unknown, stepPath: string): ParsedTimeWaitConfig {
+  if (!isRecord(config)) {
+    throw createValidationRuntimeError(stepPath, 'time.wait config is required');
+  }
+
+  const mode = config.mode;
+  if (mode !== 'duration' && mode !== 'until') {
+    throw createValidationRuntimeError(stepPath, 'time.wait mode must be "duration" or "until"');
+  }
+
+  if (mode === 'duration') {
+    if (typeof config.durationMs !== 'number' || !Number.isFinite(config.durationMs) || config.durationMs <= 0) {
+      throw createValidationRuntimeError(stepPath, 'time.wait duration mode requires durationMs > 0');
+    }
+  } else if (!isExpr(config.until)) {
+    throw createValidationRuntimeError(stepPath, 'time.wait until mode requires an until expression');
+  }
+
+  if (config.assign !== undefined && !isExprRecord(config.assign)) {
+    throw createValidationRuntimeError(stepPath, 'time.wait assign must be an expression map');
+  }
+
+  if (mode === 'duration') {
+    return {
+      mode: 'duration',
+      durationMs: config.durationMs as number,
+      ...(isExprRecord(config.assign) ? { assign: config.assign } : {}),
+    };
+  }
+
+  return {
+    mode: 'until',
+    until: config.until as Expr,
+    ...(isExprRecord(config.assign) ? { assign: config.assign } : {}),
+  };
+}
+
+async function resolveTimeWaitDueAt(
+  config: ParsedTimeWaitConfig,
+  scopes: WorkflowRuntimeV2ScopeState,
+  stepPath: string
+): Promise<string> {
+  if (config.mode === 'duration') {
+    return new Date(Date.now() + config.durationMs).toISOString();
+  }
+
+  const value = await evaluateExpression(config.until.$expr, buildWorkflowRuntimeV2ExpressionContext(scopes));
+  const dueAt = new Date(String(value ?? ''));
+  if (!Number.isFinite(dueAt.getTime())) {
+    throw createValidationRuntimeError(stepPath, 'time.wait until expression did not resolve to a valid date/time');
+  }
+  return dueAt.toISOString();
 }
 
 type ForEachLoopContext = {
@@ -979,6 +1134,26 @@ function createInterpreterCorruptionError(message: string, details?: unknown): R
     at: new Date().toISOString(),
     ...(details === undefined ? {} : { details }),
   };
+}
+
+function createValidationRuntimeError(stepPath: string, message: string): RuntimeErrorLike {
+  return {
+    category: 'ValidationError',
+    message,
+    nodePath: stepPath,
+    at: new Date().toISOString(),
+  };
+}
+
+function isExpr(value: unknown): value is Expr {
+  return isRecord(value) && typeof value.$expr === 'string';
+}
+
+function isExprRecord(value: unknown): value is Record<string, Expr> {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return Object.values(value).every((entry) => isExpr(entry));
 }
 
 function resolveStepRetryPolicy(step: {

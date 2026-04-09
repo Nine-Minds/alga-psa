@@ -491,3 +491,32 @@ Plan bookkeeping updates:
 Validation commands (this checkpoint):
 - `npm --prefix ee/temporal-workflows run type-check`
 - `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
+
+### F033-F035 + T028 completed (Temporal-native `time.wait` + wait projection)
+
+- Implemented native `time.wait` execution in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - Added explicit interpreter branch for `time.wait` that computes deterministic `dueAt` from either `durationMs` or `until` expression.
+  - Uses Temporal `sleep(...)` directly when `dueAt` is in the future (`F033`).
+  - Fast-paths without `sleep(...)` when `dueAt <= now` (`F034`).
+  - Preserves `time.wait` post-resume assignment behavior by writing `vars.timeWait` and evaluating optional `assign` expression mappings.
+- Added wait projection activities in [ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts):
+  - `projectWorkflowRuntimeV2TimeWaitStart(...)` creates `workflow_run_waits` rows with `wait_type=time`, `status=WAITING`, `timeout_at=dueAt`.
+  - `projectWorkflowRuntimeV2TimeWaitResolved(...)` marks wait rows `RESOLVED` with `resolved_at` after timer completion (`F035`).
+- Extended Temporal workflow tests in [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts):
+  - verifies duration-mode wait performs projection start + Temporal sleep + projection resolve
+  - verifies until-mode fast-path skips sleep when already due
+
+Rationale:
+- Execution authority remains Temporal-native (timer and progression live inside workflow code), while DB `workflow_run_waits` remains a read-model projection and routing index.
+- Added `T028` because existing `T010` also depends on broader cutover cleanup (`F064`) that is not yet complete; this isolates and records meaningful runtime-level verification for the completed time-wait slice.
+
+Plan bookkeeping updates:
+- Marked `F033`, `F034`, `F035` implemented.
+- Added `T028` (implemented:true) for this runtime-focused time wait coverage.
+
+Validation commands (this checkpoint):
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
+- `npm --prefix ee/temporal-workflows run type-check`
+
+Gotchas:
+- Shared `TimeWaitConfig` type allows optional fields by schema shape; interpreter uses a stricter local parsed-discriminated type to avoid unsafe `undefined` behavior under strict TypeScript.

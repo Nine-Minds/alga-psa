@@ -18,6 +18,7 @@ import {
   WorkflowDefinitionVersionModelV2,
   WorkflowRunStepModelV2,
   WorkflowRunModelV2,
+  WorkflowRunWaitModelV2,
 } from '@alga-psa/workflows/persistence';
 
 export async function executeWorkflowRuntimeV2Run(input: {
@@ -157,6 +158,44 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
     error_json: input.status === 'FAILED' && input.errorMessage
       ? { message: input.errorMessage, nodePath: input.stepPath }
       : null,
+  });
+}
+
+export async function projectWorkflowRuntimeV2TimeWaitStart(input: {
+  runId: string;
+  stepPath: string;
+  dueAt: string;
+  payload: {
+    mode: 'duration' | 'until';
+    durationMs: number | null;
+    dueAt: string;
+  };
+}): Promise<{ waitId: string }> {
+  const knex = await getAdminConnection();
+  const wait = await WorkflowRunWaitModelV2.create(knex, {
+    run_id: input.runId,
+    step_path: input.stepPath,
+    wait_type: 'time',
+    timeout_at: input.dueAt,
+    status: 'WAITING',
+    payload: input.payload,
+  });
+
+  return {
+    waitId: wait.wait_id,
+  };
+}
+
+export async function projectWorkflowRuntimeV2TimeWaitResolved(input: {
+  waitId: string;
+  runId: string;
+  status: 'RESOLVED' | 'CANCELED';
+}): Promise<void> {
+  const knex = await getAdminConnection();
+  const now = new Date().toISOString();
+  await WorkflowRunWaitModelV2.update(knex, input.waitId, {
+    status: input.status,
+    resolved_at: now,
   });
 }
 

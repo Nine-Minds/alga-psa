@@ -188,25 +188,25 @@
   {
     "id": "F032",
     "description": "Normalize child workflow failure into a structured parent-visible runtime error that can be retried or caught.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7"]
   },
   {
     "id": "F033",
     "description": "Implement `time.wait` using native Temporal timers rather than DB due-wait polling.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8"]
   },
   {
     "id": "F034",
     "description": "Fast-path `time.wait` when the computed due time is already in the past or present.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8"]
   },
   {
     "id": "F035",
     "description": "Project `time.wait` lifecycle into `workflow_run_waits` for run-detail visibility without making that table the execution authority.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8", "FR-11"]
   },
   {
