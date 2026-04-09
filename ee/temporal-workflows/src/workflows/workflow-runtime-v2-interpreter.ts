@@ -11,6 +11,7 @@ export type WorkflowRuntimeV2InterpreterState = {
   runId: string;
   frames: WorkflowRuntimeV2SequenceFrame[];
   currentStepPath: string | null;
+  scopes: WorkflowRuntimeV2ScopeState;
 };
 
 export type WorkflowRuntimeV2CurrentStep = {
@@ -21,6 +22,7 @@ export type WorkflowRuntimeV2CurrentStep = {
 export function initializeWorkflowRuntimeV2InterpreterState(input: {
   runId: string;
   definition: WorkflowDefinition;
+  initialScopes: WorkflowRuntimeV2ScopeState;
 }): WorkflowRuntimeV2InterpreterState {
   const totalSteps = input.definition.steps.length;
   const frame: WorkflowRuntimeV2SequenceFrame = {
@@ -34,6 +36,7 @@ export function initializeWorkflowRuntimeV2InterpreterState(input: {
     runId: input.runId,
     frames: [frame],
     currentStepPath: totalSteps > 0 ? buildRootStepPath(0) : null,
+    scopes: input.initialScopes,
   };
 }
 
@@ -76,9 +79,59 @@ export function advanceWorkflowRuntimeV2InterpreterState(
     ...state,
     frames: nextFrames,
     currentStepPath,
+    scopes: state.scopes,
+  };
+}
+
+export function buildWorkflowRuntimeV2ExpressionContext(scopes: WorkflowRuntimeV2ScopeState): Record<string, unknown> {
+  const lexicalTop = scopes.lexical[scopes.lexical.length - 1] ?? {};
+  return {
+    ...scopes.workflow,
+    ...lexicalTop,
+    payload: scopes.payload,
+    vars: scopes.workflow,
+    local: lexicalTop,
+    system: scopes.system,
+    meta: {
+      runId: scopes.system.runId,
+      workflowId: scopes.system.workflowId,
+      workflowVersion: scopes.system.workflowVersion,
+      tenantId: scopes.system.tenantId,
+      definitionHash: scopes.system.definitionHash,
+      runtimeSemanticsVersion: scopes.system.runtimeSemanticsVersion,
+    },
+  };
+}
+
+export function createWorkflowRuntimeV2InterpreterCheckpoint(input: {
+  state: WorkflowRuntimeV2InterpreterState;
+  stepCount: number;
+}): WorkflowRuntimeV2InterpreterCheckpoint {
+  return {
+    stepCount: input.stepCount,
+    state: JSON.parse(JSON.stringify(input.state)) as WorkflowRuntimeV2InterpreterState,
   };
 }
 
 function buildRootStepPath(index: number): string {
   return `root.steps[${index}]`;
 }
+
+export type WorkflowRuntimeV2ScopeState = {
+  payload: Record<string, unknown>;
+  workflow: Record<string, unknown>;
+  lexical: Array<Record<string, unknown>>;
+  system: {
+    runId: string;
+    workflowId: string;
+    workflowVersion: number;
+    tenantId: string | null;
+    definitionHash: string | null;
+    runtimeSemanticsVersion: string | null;
+  };
+};
+
+export type WorkflowRuntimeV2InterpreterCheckpoint = {
+  stepCount: number;
+  state: WorkflowRuntimeV2InterpreterState;
+};

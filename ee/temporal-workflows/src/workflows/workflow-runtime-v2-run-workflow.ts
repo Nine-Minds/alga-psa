@@ -1,9 +1,13 @@
-import { proxyActivities } from '@temporalio/workflow';
+import { continueAsNew, proxyActivities } from '@temporalio/workflow';
 import type { WorkflowRuntimeV2TemporalRunInput } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
 import {
   advanceWorkflowRuntimeV2InterpreterState,
+  createWorkflowRuntimeV2InterpreterCheckpoint,
   getWorkflowRuntimeV2CurrentStep,
   initializeWorkflowRuntimeV2InterpreterState,
+  type WorkflowRuntimeV2InterpreterCheckpoint,
+  type WorkflowRuntimeV2InterpreterState,
+  type WorkflowRuntimeV2ScopeState,
 } from './workflow-runtime-v2-interpreter.js';
 import type { WorkflowDefinition } from '@alga-psa/workflows/runtime';
 
@@ -12,7 +16,10 @@ const activities = proxyActivities<{
     runId: string;
     workflowId: string;
     workflowVersion: number;
-  }): Promise<{ definition: WorkflowDefinition }>;
+  }): Promise<{
+    definition: WorkflowDefinition;
+    initialScopes: WorkflowRuntimeV2ScopeState;
+  }>;
   executeWorkflowRuntimeV2Run(input: { runId: string; executionKey: string }): Promise<void>;
   completeWorkflowRuntimeV2Run(input: { runId: string; status: 'SUCCEEDED' | 'FAILED' }): Promise<void>;
 }>({
@@ -22,17 +29,25 @@ const activities = proxyActivities<{
   },
 });
 
-export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2TemporalRunInput): Promise<void> {
+const CONTINUE_AS_NEW_EVERY_STEPS = 250;
+
+type WorkflowRuntimeV2RunWorkflowInput = WorkflowRuntimeV2TemporalRunInput & {
+  checkpoint?: WorkflowRuntimeV2InterpreterCheckpoint;
+};
+
+export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWorkflowInput): Promise<void> {
   const pinned = await activities.loadWorkflowRuntimeV2PinnedDefinition({
     runId: input.runId,
     workflowId: input.workflowId,
     workflowVersion: input.workflowVersion,
   });
 
-  let state = initializeWorkflowRuntimeV2InterpreterState({
+  let state: WorkflowRuntimeV2InterpreterState = input.checkpoint?.state ?? initializeWorkflowRuntimeV2InterpreterState({
     runId: input.runId,
     definition: pinned.definition,
+    initialScopes: pinned.initialScopes,
   });
+  let stepCount = input.checkpoint?.stepCount ?? 0;
 
   while (true) {
     const current = getWorkflowRuntimeV2CurrentStep({
@@ -61,5 +76,17 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2Tempo
       executionKey: input.executionKey,
     });
     state = advanceWorkflowRuntimeV2InterpreterState(state);
+    stepCount += 1;
+
+    if (stepCount > 0 && stepCount % CONTINUE_AS_NEW_EVERY_STEPS === 0) {
+      const checkpoint = createWorkflowRuntimeV2InterpreterCheckpoint({
+        state,
+        stepCount,
+      });
+      await continueAsNew<typeof workflowRuntimeV2RunWorkflow>({
+        ...input,
+        checkpoint,
+      });
+    }
   }
 }

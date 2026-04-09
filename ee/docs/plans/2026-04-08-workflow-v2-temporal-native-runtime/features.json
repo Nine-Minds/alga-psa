@@ -50,31 +50,31 @@
   {
     "id": "F009",
     "description": "Represent workflow payload scope, persistent workflow scope, local lexical scopes, and system scope separately in interpreter state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3", "FR-4"]
   },
   {
     "id": "F010",
     "description": "Preserve current expression ergonomics for authors while resolving expressions against the normalized Temporal-native scope model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3", "FR-4"]
   },
   {
     "id": "F011",
     "description": "Persist enough serializable interpreter state to resume correctly after worker restart and Temporal replay.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
     "id": "F012",
     "description": "Support safe continue-as-new checkpoints for long-lived runs without losing interpreter state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3", "Non-functional Requirements"]
   },
   {
     "id": "F013",
     "description": "Version the interpreter contract with an explicit runtime semantics version stored on each run.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {

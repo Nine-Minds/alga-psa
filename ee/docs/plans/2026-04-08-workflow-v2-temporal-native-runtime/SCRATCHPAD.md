@@ -221,3 +221,34 @@ Rationale:
 ### Gotchas
 
 - `WorkflowDefinition` schema currently uses top-level `steps`; interpreter frame paths keep `root.steps[n]` path conventions for continuity with existing runtime pathing.
+
+### F009-F013 completed (scope model + replay/checkpoint foundations)
+
+- Extended interpreter state in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-interpreter.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-interpreter.ts) with normalized runtime scopes:
+  - `scopes.payload`
+  - `scopes.workflow`
+  - `scopes.lexical`
+  - `scopes.system` (run/workflow identity + pinned `definitionHash` + `runtimeSemanticsVersion`)
+- Updated pinned-definition load activity in [ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts) to return `initialScopes` derived from pinned run projection metadata.
+- Added expression-context adapter `buildWorkflowRuntimeV2ExpressionContext(...)` to preserve author ergonomics over normalized scopes (`payload`, `vars`, direct variable access, lexical locals, and `meta/system` context).
+- Added explicit continue-as-new checkpoint support:
+  - [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts) now supports optional checkpoint input and issues `continueAsNew` every 250 interpreted steps.
+  - Interpreter checkpoints are produced by `createWorkflowRuntimeV2InterpreterCheckpoint(...)` and carry serializable state + step count.
+
+Rationale:
+- Scope partitioning decouples deterministic workflow-code decisions from mutable external state and sets up clear semantics boundaries.
+- Checkpointed continue-as-new preserves interpreter progression while controlling long-running Temporal history growth.
+- Including `runtimeSemanticsVersion` in system scope keeps interpreter contract versioning attached to each run.
+
+### Interpreter test coverage expanded
+
+- Extended [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts):
+  - validates normalized scope initialization/preservation
+  - validates expression-context ergonomics mapping
+  - validates JSON-serializable replay safety
+  - validates checkpoint round-trip continuity
+
+### Validation commands run (scope/checkpoint slice)
+
+- `npm --prefix ee/temporal-workflows run type-check`
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts --run`
