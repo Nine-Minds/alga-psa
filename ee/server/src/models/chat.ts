@@ -64,7 +64,7 @@ const Chat = {
       const { knex: db } = await createTenantKnex();
       // Search at the chat scope so multi-term queries can match across the title
       // and multiple persisted messages, not just within a single indexed field.
-      const rows = await db.raw<IChatHistoryItem[]>(
+      const rawResult = await db.raw(
         `
           with search_query as (
             select websearch_to_tsquery('english', ?) as query
@@ -117,7 +117,9 @@ const Chat = {
         [query, userId, limit]
       );
 
-      return rows.rows;
+      return Array.isArray(rawResult)
+        ? (rawResult as IChatHistoryItem[])
+        : ((rawResult as { rows?: IChatHistoryItem[] })?.rows ?? []);
     } catch (error) {
       console.error(`Error searching chats for user ${userId}:`, error);
       throw error;
