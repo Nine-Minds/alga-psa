@@ -1,11 +1,12 @@
-FROM node:20.19-alpine
+FROM node:20.19-bullseye-slim
 
 # Install required system dependencies
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     postgresql-client \
-    redis \
+    redis-tools \
     curl \
-    bash
+    bash \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

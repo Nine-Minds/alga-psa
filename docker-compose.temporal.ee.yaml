@@ -34,8 +34,10 @@ services:
     environment:
       - LOG_LEVEL=INFO
       - SECRET_READ_CHAIN=filesystem,env
-      - APPLICATION_URL=${APPLICATION_URL}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - APPLICATION_URL=${APPLICATION_URL:-http://localhost:3000}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-local-nextauth-secret}
+      - ALGA_AUTH_KEY=${ALGA_AUTH_KEY:-local-alga-auth-key}
       - DB_HOST=${DB_HOST:-pgbouncer}
       - DB_PORT=${DB_PORT:-6432}
       - DB_NAME_SERVER=${DB_NAME_SERVER:-server}

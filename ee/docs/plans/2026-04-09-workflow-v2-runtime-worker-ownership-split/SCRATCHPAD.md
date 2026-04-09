@@ -259,3 +259,21 @@ That exposed two separate but related issues:
 ### Remaining items after this checkpoint
 - Features not yet implemented/verified: `F029`
 - Tests not yet implemented/verified: `T009`, `T011`
+
+### Additional unblock attempt (same day)
+- Updated `services/workflow-worker/Dockerfile` base image from Alpine to Debian slim to remove Temporal native bridge libc mismatch seen earlier (`__register_atfork`).
+- Updated `docker-compose.temporal.ee.yaml` to provide local defaults for:
+  - `APPLICATION_URL`
+  - `NEXTAUTH_URL`
+  - `NEXTAUTH_SECRET`
+  - `ALGA_AUTH_KEY`
+- Rebuilt `workflow-worker` image and re-ran compose smoke with explicit local env overrides:
+  - `EXPOSE_TEMPORAL_PORT=17233 EXPOSE_TEMPORAL_UI_PORT=18088 TEMPORAL_ADDRESS=temporal-dev:7233 ALGA_AUTH_KEY=local-alga-auth-key NEXTAUTH_SECRET=local-nextauth-secret APPLICATION_URL=http://localhost:3000 docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml -f docker-compose.temporal.ee.yaml up -d workflow-worker temporal-worker temporal-ui temporal-dev`
+
+### New observed blockers after unblock attempt
+- `workflow-worker` still fails startup before stable queue polling due missing runtime modules in container image:
+  - missing `@ee/lib` import from `registerEnterpriseStorageProviders`
+  - missing `@alga-psa/types/dist/index.js` import from `@alga-psa/workflows/dist/runtime/index.mjs`
+- `temporal-worker` startup validation reaches DB checks but fails with:
+  - `password authentication failed for user "app_user"`
+- Because of these unresolved startup/runtime issues, `F029` / `T009` / `T011` remain unverified.
