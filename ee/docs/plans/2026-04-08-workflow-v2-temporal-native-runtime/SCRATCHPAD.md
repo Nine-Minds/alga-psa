@@ -348,3 +348,33 @@ Rationale:
 
 - `npm --prefix ee/temporal-workflows run type-check`
 - `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts --run`
+
+### F023 + T005 completed (uncatchable cancellation/corruption handling)
+
+- Updated Temporal interpreter workflow in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - Added uncatchable-failure gating so cancellation-like failures bypass interpreter retry/`onError` and bypass `control.tryCatch` catch routing.
+  - Cancellation-like failures now project the active step as `CANCELED` and terminally project the run as `CANCELED`.
+  - Added explicit interpreter-corruption fail-fast path when frames exist but no current step can be resolved (prevents silent success on invalid frame state).
+  - Interpreter-corruption failures are marked unrecoverable and are not routed through `control.tryCatch`.
+- Updated activity typings/projection handling in [ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts):
+  - `projectWorkflowRuntimeV2StepCompletion` now supports `CANCELED` step projection status.
+  - `completeWorkflowRuntimeV2Run` now supports `CANCELED` terminal run projection status.
+- Added tests in [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts):
+  - cancellation thrown inside `control.tryCatch` try branch is not swallowed by catch and terminal status is `CANCELED`
+  - corrupted checkpoint/frame state fails fast with `InterpreterCorruption` instead of being treated as successful completion
+
+Rationale:
+- Cancellation semantics are control-plane signals and must not be treated as catchable business-step failures.
+- Corrupted interpreter state is unrecoverable runtime authority drift; allowing catch-branch recovery would hide interpreter defects and produce inconsistent run outcomes.
+
+Plan bookkeeping updates:
+- Marked `F023` implemented.
+- Marked `T005` implemented and narrowed its scope to cancellation-not-swallowed semantics.
+- Added `T025` (implemented:false) for child-cancellation propagation once child workflow execution semantics (`F029`, `F061`) are in place.
+
+Validation commands (this checkpoint):
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
+- `npm --prefix ee/temporal-workflows run type-check`
+
+Gotchas:
+- Cancellation detection is currently pattern-based (`CancelledFailure` name/message and explicit `category=Cancellation`) so later Temporal signal-based cancellation wiring should align on an explicit runtime-error category to avoid accidental broad matching.

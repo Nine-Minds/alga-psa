@@ -35,7 +35,7 @@ const activities = proxyActivities<{
     runId: string;
     stepId: string;
     stepPath: string;
-    status: 'SUCCEEDED' | 'FAILED';
+    status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
     errorMessage?: string;
   }): Promise<void>;
   executeWorkflowRuntimeV2ActionStep(input: {
@@ -49,7 +49,7 @@ const activities = proxyActivities<{
     };
     scopes: WorkflowRuntimeV2ScopeState;
   }): Promise<{ output: unknown; saveAsPath: string | null }>;
-  completeWorkflowRuntimeV2Run(input: { runId: string; status: 'SUCCEEDED' | 'FAILED' }): Promise<void>;
+  completeWorkflowRuntimeV2Run(input: { runId: string; status: 'SUCCEEDED' | 'FAILED' | 'CANCELED' }): Promise<void>;
 }>({
   startToCloseTimeout: '10m',
   retry: {
@@ -84,6 +84,14 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
     });
 
     if (!current) {
+      if (state.frames.length > 0) {
+        const corruptionError = createInterpreterCorruptionError(
+          `Interpreter frames remained but no current step could be resolved for run ${input.runId}`,
+          { frames: state.frames }
+        );
+        await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'FAILED' });
+        throw corruptionError;
+      }
       await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'SUCCEEDED' });
       return;
     }
@@ -170,6 +178,9 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
             }
             break;
           } catch (error) {
+            if (isUncatchableWorkflowError(error)) {
+              throw error;
+            }
             const runtimeError = normalizeRuntimeError(error, current.path);
             if (shouldRetry(runtimeError, retryPolicy, attempt)) {
               const backoffMs = getRetryBackoffMs(retryPolicy!, attempt);
@@ -225,6 +236,30 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
       stepCount += 1;
     } catch (error) {
       const runtimeError = normalizeRuntimeError(error, current.path);
+      if (isCancellationRuntimeError(runtimeError)) {
+        await activities.projectWorkflowRuntimeV2StepCompletion({
+          runId: input.runId,
+          stepId: stepProjection.stepId,
+          stepPath: current.path,
+          status: 'CANCELED',
+          errorMessage: runtimeError.message,
+        });
+        await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'CANCELED' });
+        throw error;
+      }
+
+      if (isInterpreterCorruptionRuntimeError(runtimeError)) {
+        await activities.projectWorkflowRuntimeV2StepCompletion({
+          runId: input.runId,
+          stepId: stepProjection.stepId,
+          stepPath: current.path,
+          status: 'FAILED',
+          errorMessage: runtimeError.message,
+        });
+        await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'FAILED' });
+        throw error;
+      }
+
       await activities.projectWorkflowRuntimeV2StepCompletion({
         runId: input.runId,
         stepId: stepProjection.stepId,
@@ -424,7 +459,7 @@ function normalizeRuntimeError(error: unknown, stepPath: string): RuntimeErrorLi
   }
 
   return {
-    category: 'ActionError',
+    category: isCancellationLikeError(error) ? 'Cancellation' : 'ActionError',
     message: error instanceof Error ? error.message : String(error),
     nodePath: stepPath,
     at: new Date().toISOString(),
@@ -436,6 +471,45 @@ function isRuntimeErrorLike(value: unknown): value is RuntimeErrorLike {
     && typeof value === 'object'
     && typeof (value as Record<string, unknown>).category === 'string'
     && typeof (value as Record<string, unknown>).message === 'string';
+}
+
+function isUncatchableWorkflowError(error: unknown): boolean {
+  return isCancellationLikeError(error) || isInterpreterCorruptionLikeError(error);
+}
+
+function isCancellationRuntimeError(error: RuntimeErrorLike): boolean {
+  return error.category === 'Cancellation';
+}
+
+function isInterpreterCorruptionRuntimeError(error: RuntimeErrorLike): boolean {
+  return error.category === 'InterpreterCorruption';
+}
+
+function isCancellationLikeError(error: unknown): boolean {
+  if (isRuntimeErrorLike(error) && error.category === 'Cancellation') {
+    return true;
+  }
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+  const record = error as Record<string, unknown>;
+  const name = typeof record.name === 'string' ? record.name : '';
+  const message = typeof record.message === 'string' ? record.message : '';
+  return /cancel(l)?ed/i.test(name) || /cancel(l)?ed/i.test(message);
+}
+
+function isInterpreterCorruptionLikeError(error: unknown): boolean {
+  return isRuntimeErrorLike(error) && error.category === 'InterpreterCorruption';
+}
+
+function createInterpreterCorruptionError(message: string, details?: unknown): RuntimeErrorLike {
+  return {
+    category: 'InterpreterCorruption',
+    message,
+    nodePath: 'interpreter',
+    at: new Date().toISOString(),
+    ...(details === undefined ? {} : { details }),
+  };
 }
 
 function resolveStepRetryPolicy(step: {

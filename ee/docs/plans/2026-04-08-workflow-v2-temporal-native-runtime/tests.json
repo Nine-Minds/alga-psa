@@ -46,11 +46,10 @@
   },
   {
     "id": "T005",
-    "description": "Temporal interpreter: workflow cancellation is not swallowed by `control.tryCatch`, marks the run canceled, and propagates cancellation correctly to active child execution when present.",
-    "implemented": false,
+    "description": "Temporal interpreter: workflow cancellation is not swallowed by `control.tryCatch` and marks the run canceled.",
+    "implemented": true,
     "featureIds": [
-      "F023",
-      "F061"
+      "F023"
     ]
   },
   {
@@ -249,6 +248,15 @@
       "F064",
       "F065",
       "F066"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Temporal interpreter: workflow cancellation propagates to active child execution when present and terminal run state remains canceled.",
+    "implemented": false,
+    "featureIds": [
+      "F061",
+      "F029"
     ]
   }
 ]

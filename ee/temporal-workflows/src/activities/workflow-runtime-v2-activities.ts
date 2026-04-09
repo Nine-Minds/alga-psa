@@ -86,7 +86,7 @@ export async function loadWorkflowRuntimeV2PinnedDefinition(input: {
 
 export async function completeWorkflowRuntimeV2Run(input: {
   runId: string;
-  status: 'SUCCEEDED' | 'FAILED';
+  status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
 }): Promise<void> {
   const knex = await getAdminConnection();
   await knex('workflow_runs')
@@ -127,7 +127,7 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
   runId: string;
   stepId: string;
   stepPath: string;
-  status: 'SUCCEEDED' | 'FAILED';
+  status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
   errorMessage?: string;
 }): Promise<void> {
   const knex = await getAdminConnection();
@@ -148,7 +148,11 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
   });
 
   await WorkflowRunModelV2.update(knex, input.runId, {
-    status: input.status === 'FAILED' ? 'FAILED' : 'RUNNING',
+    status: input.status === 'FAILED'
+      ? 'FAILED'
+      : input.status === 'CANCELED'
+        ? 'CANCELED'
+        : 'RUNNING',
     error_json: input.status === 'FAILED' && input.errorMessage
       ? { message: input.errorMessage, nodePath: input.stepPath }
       : null,

@@ -440,4 +440,161 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       status: 'SUCCEEDED',
     });
   });
+
+  it('does not swallow cancellation inside control.tryCatch and marks the run CANCELED', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_6',
+      name: 'TryCatch cancellation',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_try_catch',
+          type: 'control.tryCatch',
+          captureErrorAs: 'caughtError',
+          try: [
+            {
+              id: 'step_try_action',
+              type: 'action.call',
+              config: {
+                actionId: 'ticket.update',
+                version: 1,
+              },
+            },
+          ],
+          catch: [
+            {
+              id: 'step_catch_action',
+              type: 'action.call',
+              config: {
+                actionId: 'ticket.update',
+                version: 1,
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_6',
+          workflowId: 'wf_6',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_6',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    mockActivities.executeWorkflowRuntimeV2ActionStep.mockRejectedValueOnce({
+      name: 'CancelledFailure',
+      message: 'workflow cancelled by operator',
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_6',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_6',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_6',
+    })).rejects.toMatchObject({
+      name: 'CancelledFailure',
+    });
+
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenCalledTimes(1);
+    expect(mockActivities.projectWorkflowRuntimeV2StepCompletion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'run_6',
+        stepPath: 'root.steps[0].try.steps[0]',
+        status: 'CANCELED',
+      })
+    );
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_6',
+      status: 'CANCELED',
+    });
+  });
+
+  it('fails fast when interpreter state is corrupted and no current step can be resolved', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_7',
+      name: 'Corrupt interpreter state',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_7',
+          workflowId: 'wf_7',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_7',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_7',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_7',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_7',
+      checkpoint: {
+        stepCount: 42,
+        state: {
+          runId: 'run_7',
+          currentStepPath: null,
+          scopes: {
+            payload: {},
+            workflow: {},
+            lexical: [],
+            system: {
+              runId: 'run_7',
+              workflowId: 'wf_7',
+              workflowVersion: 1,
+              tenantId: 'tenant_1',
+              definitionHash: 'hash_7',
+              runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+            },
+          },
+          frames: [
+            {
+              kind: 'sequence',
+              path: 'root.steps[99].try.steps',
+              nextIndex: 0,
+              totalSteps: 1,
+            },
+          ],
+        },
+      },
+    })).rejects.toMatchObject({
+      category: 'InterpreterCorruption',
+    });
+
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_7',
+      status: 'FAILED',
+    });
+  });
 });
