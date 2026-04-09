@@ -11,7 +11,7 @@ import {
   WorkflowRuntimeV2,
   getSchemaRegistry,
   initializeWorkflowRuntimeV2,
-} from '@alga-psa/workflows/runtime';
+} from '@alga-psa/workflows/runtime/core';
 import { startWorkflowRuntimeV2TemporalRun } from './workflowRuntimeV2Temporal';
 import { WORKFLOW_RUNTIME_V2_SEMANTICS_VERSION } from './workflowRuntimeV2Semantics';
 

@@ -85,7 +85,7 @@ vi.mock('@alga-psa/workflow-streams', () => ({
   }
 }));
 
-vi.mock('@alga-psa/workflows/runtime', () => ({
+vi.mock('@alga-psa/workflows/runtime/core', () => ({
   initializeWorkflowRuntimeV2: (...args: unknown[]) => initializeWorkflowRuntimeV2Mock(...args),
   getSchemaRegistry: () => ({
     has: (...args: unknown[]) => schemaRegistryHasMock(...args),

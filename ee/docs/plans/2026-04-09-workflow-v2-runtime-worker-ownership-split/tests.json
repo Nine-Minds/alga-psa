@@ -1,0 +1,121 @@
+[
+  {
+    "id": "T001",
+    "description": "Worker ownership startup test: `workflow-worker` starts Temporal polling for `workflow-runtime-v2` and `temporal-worker` does not claim that queue.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F004",
+      "F006",
+      "F008",
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Manual/API authored run smoke test: starting an authored Workflow Runtime V2 run results in a Temporal execution that is actually picked up and progressed by `workflow-worker`.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F005",
+      "F022",
+      "F029"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Ingress continuity test: authored event ingress and Temporal signaling still work when authored queue polling ownership moves to `workflow-worker`.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F023"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Non-authored regression test: `temporal-worker` continues to start and poll its remaining domain/job queues after `workflow-runtime-v2` is removed.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F006",
+      "F007",
+      "F025",
+      "F027"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Runtime-boundary unit test: the worker-safe runtime/core entrypoint does not perform AI/bootstrap side effects during import or initialization.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013",
+      "F014",
+      "F016",
+      "F028"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Server/bootstrap unit test: app-facing workflow runtime initialization still registers the richer bootstrap concerns without forcing those dependencies into `workflow-worker` imports.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F017"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Import-graph regression test: authored runtime startup paths used by `workflow-worker` resolve without `@shared/*` alias failures or repo-layout-relative source hops.",
+    "implemented": false,
+    "featureIds": [
+      "F018",
+      "F019"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Worker-safety regression test: authored runtime startup for `workflow-worker` does not pull UI-only or app-only modules into the worker bundle unexpectedly.",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Compose/dev-environment test: local Docker configuration brings up authored runtime successfully with `workflow-worker` owning Temporal polling and Temporal UI showing active workers on `workflow-runtime-v2`.",
+    "implemented": false,
+    "featureIds": [
+      "F024",
+      "F025",
+      "F026",
+      "F029"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Run-authority regression test: authored Workflow Runtime V2 still uses the existing Temporal launch/signal contract while changing only worker ownership, not caller-side API/UI behavior.",
+    "implemented": false,
+    "featureIds": [
+      "F022",
+      "F023"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB-backed integration sanity test: an authored run and one resumed wait still project correctly in `workflow_runs`, `workflow_run_waits`, and related tables after ownership moves to `workflow-worker`.",
+    "implemented": false,
+    "featureIds": [
+      "F005",
+      "F023",
+      "F028",
+      "F029"
+    ]
+  }
+]

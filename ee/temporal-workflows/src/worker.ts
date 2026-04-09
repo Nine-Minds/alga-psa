@@ -9,6 +9,11 @@ import {
   logConfiguration,
 } from "./config/startupValidation.js";
 import { setupSchedules } from "./schedules/setupSchedules.js";
+import {
+  AUTHORED_RUNTIME_TASK_QUEUE,
+  getWorkerConfig,
+  type WorkerConfig,
+} from "./workerConfig.js";
 
 // Load environment variables
 dotenv.config();
@@ -27,64 +32,6 @@ const logger = createLogger({
     }),
   ],
 });
-
-/**
- * Configuration for the Temporal worker
- */
-interface WorkerConfig {
-  temporalAddress: string;
-  temporalNamespace: string;
-  taskQueues: string[];
-  maxConcurrentActivityTaskExecutions: number;
-  maxConcurrentWorkflowTaskExecutions: number;
-}
-
-/**
- * Get worker configuration from environment variables
- */
-function getWorkerConfig(): WorkerConfig {
-  // Include alga-jobs queue for generic job execution
-  const defaultQueues = ["tenant-workflows", "portal-domain-workflows", "email-domain-workflows", "alga-jobs", "sla-workflows", "workflow-runtime-v2"];
-  const queuesEnv =
-    process.env.TEMPORAL_TASK_QUEUES || process.env.TEMPORAL_TASK_QUEUE;
-
-  const parsedQueues = queuesEnv
-    ? Array.from(
-        new Set(
-          queuesEnv
-            .split(",")
-            .map((queue) => queue.trim())
-            .filter((queue) => queue.length > 0),
-        ),
-      )
-    : defaultQueues;
-
-  // Always ensure the shared job queue is present, even when env overrides are used.
-  let taskQueues = parsedQueues.includes("alga-jobs")
-    ? parsedQueues
-    : [...parsedQueues, "alga-jobs"];
-
-  if (!taskQueues.includes("sla-workflows")) {
-    taskQueues = [...taskQueues, "sla-workflows"];
-  }
-  if (!taskQueues.includes("workflow-runtime-v2")) {
-    taskQueues = [...taskQueues, "workflow-runtime-v2"];
-  }
-
-  return {
-    temporalAddress:
-      process.env.TEMPORAL_ADDRESS ||
-      "temporal-frontend.temporal.svc.cluster.local:7233",
-    temporalNamespace: process.env.TEMPORAL_NAMESPACE || "default",
-    taskQueues: taskQueues.length > 0 ? taskQueues : defaultQueues,
-    maxConcurrentActivityTaskExecutions: parseInt(
-      process.env.MAX_CONCURRENT_ACTIVITIES || "10",
-    ),
-    maxConcurrentWorkflowTaskExecutions: parseInt(
-      process.env.MAX_CONCURRENT_WORKFLOWS || "10",
-    ),
-  };
-}
 
 /**
  * Create and configure the Temporal worker
@@ -201,7 +148,7 @@ function startHealthCheck(): void {
  */
 async function main(): Promise<void> {
   try {
-    logger.info("Starting Temporal worker for tenant workflows");
+    logger.info("Starting Temporal worker for non-authored/domain workflows");
 
     // Run startup validations
     try {
@@ -224,6 +171,11 @@ async function main(): Promise<void> {
     // Get configuration
     const config = getWorkerConfig();
     logger.info("Worker configuration", config);
+    logger.info("Authored runtime queue ownership", {
+      authoredQueue: AUTHORED_RUNTIME_TASK_QUEUE,
+      owner: "workflow-worker",
+      temporalWorkerOwnsAuthoredQueue: false,
+    });
 
     // Initialize schedules
     await setupSchedules();

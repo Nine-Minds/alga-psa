@@ -128,6 +128,28 @@ function validate() {
         );
       }
 
+      if (specifier.startsWith('@shared/')) {
+        addViolation(
+          violations,
+          current,
+          specifier,
+          'unresolved @shared alias is not allowed in worker runtime graph'
+        );
+      }
+
+      if (
+        specifier.includes('workflowInferenceService') ||
+        specifier.includes('registerAiActions') ||
+        specifier.includes('/runtime/bootstrap')
+      ) {
+        addViolation(
+          violations,
+          current,
+          specifier,
+          'bootstrap/app-only runtime dependency leaked into worker runtime graph'
+        );
+      }
+
       if (
         specifier.includes('/components/') ||
         specifier.endsWith('/components')

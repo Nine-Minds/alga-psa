@@ -9,7 +9,7 @@ import {
   initializeWorkflowRuntimeV2,
   isWorkflowEventTrigger,
   resolveInputMapping,
-} from '@alga-psa/workflows/runtime';
+} from '@alga-psa/workflows/runtime/core';
 import {
   WorkflowDefinitionModelV2,
   WorkflowDefinitionVersionModelV2,

@@ -1,6 +1,6 @@
 import { getAdminConnection } from '@shared/db/admin';
 import logger from '@shared/core/logger';
-import { WorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
+import { WorkflowRuntimeV2 } from '@alga-psa/workflows/runtime/core';
 import {
   WorkflowRunLogModelV2,
   WorkflowRunModelV2,

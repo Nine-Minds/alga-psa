@@ -19,6 +19,7 @@ COPY package.json package-lock.json ./
 
 # Copy all workspace package.json files to set up the dependency tree
 COPY ee/packages/workflows/package.json ./ee/packages/workflows/
+COPY ee/temporal-workflows/package.json ./ee/temporal-workflows/
 COPY packages/ee/package.json ./packages/ee/
 COPY shared/package.json ./shared/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
@@ -37,6 +38,7 @@ COPY packages/ui/package.json ./packages/ui/
 # Skip puppeteer Chrome download to save disk space
 RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm install --include-workspace-root \
   --workspace=@alga-psa/workflows \
+  --workspace=temporal-workflows \
   --workspace=@alga-psa/ee-stubs \
   --workspace=@alga-psa/shared \
   --workspace=workflow-worker \
@@ -54,6 +56,8 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
 
 # Copy source code for shared + server workspaces
 COPY ee/packages/workflows/ ./ee/packages/workflows/
+COPY ee/temporal-workflows/ ./ee/temporal-workflows/
+COPY ee/server/ ./ee/server/
 COPY shared/ ./shared/
 COPY server/ ./server/
 COPY packages/ ./packages/
@@ -68,6 +72,10 @@ RUN npm run build
 
 # Build shared workspace first (server is only referenced for type imports)
 WORKDIR /app/shared
+RUN npm run build
+
+# Build temporal workflows so workflow-worker can host authored queue polling.
+WORKDIR /app/ee/temporal-workflows
 RUN npm run build
 
 # Copy workflow worker source code and build

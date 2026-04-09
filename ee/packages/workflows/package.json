@@ -30,6 +30,14 @@
       "import": "./dist/runtime/index.mjs",
       "types": "./src/runtime/index.ts"
     },
+    "./runtime/core": {
+      "import": "./dist/runtime/core.mjs",
+      "types": "./src/runtime/core.ts"
+    },
+    "./runtime/bootstrap": {
+      "import": "./dist/runtime/bootstrap.mjs",
+      "types": "./src/runtime/bootstrap.ts"
+    },
     "./authoring": {
       "import": "./src/authoring/index.ts",
       "types": "./src/authoring/index.ts"

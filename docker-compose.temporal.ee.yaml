@@ -44,6 +44,7 @@ services:
       - TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-temporal-dev:7233}
       - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-default}
       - TEMPORAL_TASK_QUEUE=${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
+      # Authored runtime queue ownership belongs to workflow-worker.
       - TEMPORAL_TASK_QUEUES=tenant-workflows,portal-domain-workflows,email-domain-workflows,alga-jobs
       - PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE=${PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE:-msp/alga-psa-vs}
       - REDIS_HOST=${REDIS_HOST:-redis}

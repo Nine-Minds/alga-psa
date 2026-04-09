@@ -49,6 +49,7 @@ services:
       TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal-dev:7233}
       TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
       TEMPORAL_JOB_TASK_QUEUE: ${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
+      WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE: ${WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE:-workflow-runtime-v2}
       # Secret provider configuration (EE edition - for local dev, vault is disabled by default)
       # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}

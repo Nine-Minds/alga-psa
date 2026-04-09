@@ -7,7 +7,7 @@ import { applyAssignments } from '../utils/assignmentUtils';
 import type { Envelope } from '../types';
 import { safeSerialize } from '../utils/redactionUtils';
 import { parseEmailBodyWithFallback, renderCommentBlocksWithFallback } from './utils/emailNodes';
-import { getFormValidationService } from '@shared/task-inbox';
+import { getFormValidationService } from '../../../task-inbox';
 import {
   composeTextOutputsSchema,
   isWorkflowComposeTextAction,
