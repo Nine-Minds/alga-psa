@@ -6,7 +6,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ItilStandardsService } from '../../services/itilStandardsService';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { v4 as uuidv4 } from 'uuid';
 import { BoardTicketStatusInput, saveBoardTicketStatusesForBoard } from './boardTicketStatusActions';
@@ -252,8 +252,11 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
  * other tables that hold FK references back to `statuses`.
  *
  * This bypasses the normal "at least one default status per board"
- * enforcement because the entire board is going away.  The caller MUST
- * have already verified that zero tickets reference these statuses.
+ * enforcement because the entire board is going away.
+ *
+ * MUST be called inside the same transaction that verified zero tickets
+ * reference these statuses — otherwise there is a race where a ticket
+ * could be created between the check and the delete.
  */
 async function cleanupBoardStatuses(
   trx: Knex | Knex.Transaction,
@@ -306,12 +309,16 @@ interface DeleteBoardResult {
 }
 
 export const deleteBoard = withAuth(async (
-  _user,
+  user,
   { tenant },
   boardId: string,
   force = false,
   cleanupItil = false
 ): Promise<DeleteBoardResult> => {
+  if (!await hasPermission(user, 'ticket', 'delete')) {
+    throw new Error('Permission denied: Cannot delete boards');
+  }
+
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction): Promise<DeleteBoardResult> => {
