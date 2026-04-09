@@ -267,12 +267,13 @@ export async function executeWorkflowRuntimeV2ActionStep(input: {
       saveAsPath: typeof config.saveAs === 'string' ? config.saveAs : null,
     };
   } catch (error) {
+    const runtimeError = normalizeActionRuntimeError(error, input.stepPath);
     await WorkflowActionInvocationModelV2.update(knex, invocation.invocation_id, {
       status: 'FAILED',
-      error_message: error instanceof Error ? error.message : String(error),
+      error_message: runtimeError.message,
       completed_at: new Date().toISOString(),
     });
-    throw error;
+    throw runtimeError;
   }
 }
 
@@ -309,3 +310,43 @@ const noSecretResolver: SecretResolver = {
     throw new Error(`Secret resolution is not available in Temporal workflow runtime activity: ${name}`);
   },
 };
+
+type RuntimeErrorPayload = {
+  category: string;
+  code?: string;
+  message: string;
+  details?: unknown;
+  nodePath: string;
+  at: string;
+};
+
+function normalizeActionRuntimeError(error: unknown, stepPath: string): RuntimeErrorPayload {
+  if (isRuntimeErrorPayload(error)) {
+    return {
+      ...error,
+      nodePath: typeof error.nodePath === 'string' ? error.nodePath : stepPath,
+      at: typeof error.at === 'string' ? error.at : new Date().toISOString(),
+    };
+  }
+
+  return {
+    category: 'ActionError',
+    code: 'INTERNAL_ERROR',
+    message: error instanceof Error ? error.message : String(error),
+    details: error instanceof Error
+      ? {
+          name: error.name,
+          stack: error.stack,
+        }
+      : { raw: error },
+    nodePath: stepPath,
+    at: new Date().toISOString(),
+  };
+}
+
+function isRuntimeErrorPayload(value: unknown): value is RuntimeErrorPayload {
+  return value !== null
+    && typeof value === 'object'
+    && typeof (value as Record<string, unknown>).category === 'string'
+    && typeof (value as Record<string, unknown>).message === 'string';
+}

@@ -104,25 +104,25 @@
   {
     "id": "F018",
     "description": "Normalize action failures into structured runtime error categories that the interpreter can use for retry, catch, and projection behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5", "FR-6"]
   },
   {
     "id": "F019",
     "description": "Keep user-authored retry policy as the semantic retry owner for action steps rather than hiding behavior inside unrestricted Temporal activity retries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5"]
   },
   {
     "id": "F020",
     "description": "Preserve `action.call` on-error continue/fail semantics in the Temporal-native runtime.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5", "FR-6"]
   },
   {
     "id": "F021",
     "description": "Evaluate `control.if` conditions deterministically and route execution to `then` or `else` branches inside the interpreter.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6"]
   },
   {
@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Implement `control.return` as a successful workflow-terminal interpreter outcome.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6"]
   },
   {

@@ -301,3 +301,28 @@ Rationale:
 
 Rationale:
 - This keeps side-effect idempotency in a durable DB ledger while Temporal retry/replay re-enters through deterministic idempotency keys.
+
+### F018-F021 + F028 completed (action error/retry semantics + deterministic branching)
+
+- Updated [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - Added structured runtime error normalization for action-step failures (`category`, `message`, `nodePath`, `at`, optional `code/details`).
+  - Added interpreter-owned retry loop for `action.call` using authored `retry` policy fields (`maxAttempts`, `backoffMs`, `backoffMultiplier`, `maxDelayMs`, `retryOn`) with Temporal `sleep(...)` backoff.
+  - Preserved `action.call` `onError.policy` semantics: `continue` captures error into scope and advances execution; `fail` propagates failure.
+  - Maintained `control.return` as immediate successful terminal outcome.
+- Updated [ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts):
+  - Normalizes thrown action activity failures into structured runtime error payloads before rethrow.
+
+### T003 coverage completed (plus extended action semantics checks)
+
+- Extended [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts):
+  - deterministic `control.if` branch assertion remains in place
+  - added action retry + `onError=continue` exhaustion path assertion
+- Temporal interpreter tests now cover:
+  - straight-line action + return
+  - deterministic branch routing and non-deterministic guard rejection
+  - interpreter-owned action retry/continue behavior
+
+### Validation commands run (retry/error slice)
+
+- `npm --prefix ee/temporal-workflows run type-check`
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts --run`

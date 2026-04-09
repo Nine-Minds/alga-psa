@@ -1,6 +1,7 @@
-import { continueAsNew, proxyActivities } from '@temporalio/workflow';
+import { continueAsNew, proxyActivities, sleep } from '@temporalio/workflow';
 import type { WorkflowRuntimeV2TemporalRunInput } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
 import type { Expr, IfBlock } from '@alga-psa/workflows/runtime';
+import type { RetryPolicy, OnErrorPolicy } from '@alga-psa/workflows/runtime';
 import jsonata from 'jsonata';
 import {
   advanceWorkflowRuntimeV2InterpreterState,
@@ -130,19 +131,56 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
       }
 
       if (current.step.type === 'action.call') {
-        const actionResult = await activities.executeWorkflowRuntimeV2ActionStep({
-          runId: input.runId,
-          stepPath: current.path,
-          stepId: stepProjection.stepId,
-          tenantId: state.scopes.system.tenantId,
-          step: {
-            type: 'action.call',
-            config: current.step.config,
-          },
-          scopes: state.scopes,
-        });
-        if (actionResult.saveAsPath) {
-          state = assignToScopePath(state, actionResult.saveAsPath, actionResult.output);
+        const retryPolicy = resolveStepRetryPolicy(current.step);
+        const onErrorPolicy = resolveStepOnErrorPolicy(current.step);
+        let handledByOnError = false;
+        let attempt = 1;
+        while (true) {
+          try {
+            const actionResult = await activities.executeWorkflowRuntimeV2ActionStep({
+              runId: input.runId,
+              stepPath: current.path,
+              stepId: stepProjection.stepId,
+              tenantId: state.scopes.system.tenantId,
+              step: {
+                type: 'action.call',
+                config: current.step.config,
+              },
+              scopes: state.scopes,
+            });
+            if (actionResult.saveAsPath) {
+              state = assignToScopePath(state, actionResult.saveAsPath, actionResult.output);
+            }
+            break;
+          } catch (error) {
+            const runtimeError = normalizeRuntimeError(error, current.path);
+            if (shouldRetry(runtimeError, retryPolicy, attempt)) {
+              const backoffMs = getRetryBackoffMs(retryPolicy!, attempt);
+              attempt += 1;
+              await sleep(backoffMs);
+              continue;
+            }
+
+            if (onErrorPolicy === 'continue') {
+              state = assignToScopePath(state, 'vars.error', runtimeError);
+              await activities.projectWorkflowRuntimeV2StepCompletion({
+                runId: input.runId,
+                stepId: stepProjection.stepId,
+                stepPath: current.path,
+                status: 'SUCCEEDED',
+                errorMessage: runtimeError.message,
+              });
+              state = advanceWorkflowRuntimeV2InterpreterState(state);
+              stepCount += 1;
+              handledByOnError = true;
+              break;
+            }
+
+            throw runtimeError;
+          }
+        }
+        if (handledByOnError) {
+          continue;
         }
         state = advanceWorkflowRuntimeV2InterpreterState(state);
         await activities.projectWorkflowRuntimeV2StepCompletion({
@@ -331,4 +369,82 @@ function normalizeExpressionSource(source: string): string {
     /(^|[^.$A-Za-z0-9_])(coalesce|len|toString|append)(?=\s*\()/g,
     (_match, prefix: string, fn: string) => `${prefix}$${fn}`
   );
+}
+
+type RuntimeErrorLike = {
+  category: string;
+  message: string;
+  nodePath: string;
+  at: string;
+  code?: string;
+  details?: unknown;
+};
+
+function normalizeRuntimeError(error: unknown, stepPath: string): RuntimeErrorLike {
+  if (isRuntimeErrorLike(error)) {
+    return {
+      category: error.category,
+      message: error.message,
+      nodePath: typeof error.nodePath === 'string' ? error.nodePath : stepPath,
+      at: typeof error.at === 'string' ? error.at : new Date().toISOString(),
+      ...(typeof error.code === 'string' ? { code: error.code } : {}),
+      ...(error.details !== undefined ? { details: error.details } : {}),
+    };
+  }
+
+  return {
+    category: 'ActionError',
+    message: error instanceof Error ? error.message : String(error),
+    nodePath: stepPath,
+    at: new Date().toISOString(),
+  };
+}
+
+function isRuntimeErrorLike(value: unknown): value is RuntimeErrorLike {
+  return value !== null
+    && typeof value === 'object'
+    && typeof (value as Record<string, unknown>).category === 'string'
+    && typeof (value as Record<string, unknown>).message === 'string';
+}
+
+function resolveStepRetryPolicy(step: {
+  retry?: RetryPolicy;
+}): RetryPolicy | null {
+  return step.retry ?? null;
+}
+
+function resolveStepOnErrorPolicy(step: {
+  onError?: OnErrorPolicy;
+  config?: unknown;
+}): 'continue' | 'fail' {
+  if (step.onError?.policy === 'continue' || step.onError?.policy === 'fail') {
+    return step.onError.policy;
+  }
+  if (isRecord(step.config) && isRecord(step.config.onError)) {
+    const policy = step.config.onError.policy;
+    if (policy === 'continue' || policy === 'fail') {
+      return policy;
+    }
+  }
+  return 'fail';
+}
+
+function shouldRetry(error: RuntimeErrorLike, policy: RetryPolicy | null, attempt: number): boolean {
+  if (!policy) {
+    return false;
+  }
+  if (attempt >= policy.maxAttempts) {
+    return false;
+  }
+  if (Array.isArray(policy.retryOn) && policy.retryOn.length > 0 && !policy.retryOn.includes(error.category)) {
+    return false;
+  }
+  return true;
+}
+
+function getRetryBackoffMs(policy: RetryPolicy, attempt: number): number {
+  const multiplier = policy.backoffMultiplier ?? 2;
+  const rawBackoff = policy.backoffMs * Math.pow(multiplier, Math.max(0, attempt - 1));
+  const bounded = policy.maxDelayMs ? Math.min(rawBackoff, policy.maxDelayMs) : rawBackoff;
+  return Math.max(0, Math.floor(bounded));
 }

@@ -27,7 +27,7 @@
   {
     "id": "T003",
     "description": "Temporal interpreter: `control.if` evaluates its condition against runtime scopes and takes the correct branch while preserving deterministic replay semantics.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F010",

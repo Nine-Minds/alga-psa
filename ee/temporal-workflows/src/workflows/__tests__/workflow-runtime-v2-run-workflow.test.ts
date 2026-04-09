@@ -15,6 +15,7 @@ let mockActivities: RuntimeV2Activities;
 vi.mock('@temporalio/workflow', () => ({
   continueAsNew: vi.fn(async () => undefined),
   proxyActivities: vi.fn(() => mockActivities),
+  sleep: vi.fn(async () => undefined),
 }));
 
 const loadWorkflow = async () => {
@@ -24,6 +25,7 @@ const loadWorkflow = async () => {
 
 describe('workflowRuntimeV2RunWorkflow', () => {
   beforeEach(() => {
+    let stepCounter = 0;
     mockActivities = {
       loadWorkflowRuntimeV2PinnedDefinition: vi.fn(),
       executeWorkflowRuntimeV2Run: vi.fn(),
@@ -33,8 +35,10 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       completeWorkflowRuntimeV2Run: vi.fn(),
     };
 
-    mockActivities.projectWorkflowRuntimeV2StepStart.mockResolvedValueOnce({ stepId: 'step-1' });
-    mockActivities.projectWorkflowRuntimeV2StepStart.mockResolvedValueOnce({ stepId: 'step-2' });
+    mockActivities.projectWorkflowRuntimeV2StepStart.mockImplementation(async () => {
+      stepCounter += 1;
+      return { stepId: `step-${stepCounter}` };
+    });
     mockActivities.completeWorkflowRuntimeV2Run.mockResolvedValue(undefined);
     mockActivities.projectWorkflowRuntimeV2StepCompletion.mockResolvedValue(undefined);
     mockActivities.executeWorkflowRuntimeV2Run.mockResolvedValue(undefined);
@@ -257,6 +261,87 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_3',
       status: 'FAILED',
+    });
+  });
+
+  it('retries action.call via interpreter policy and continues when onError=continue after retry exhaustion', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_4',
+      name: 'Action retry',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_action',
+          type: 'action.call',
+          retry: {
+            maxAttempts: 2,
+            backoffMs: 1,
+            backoffMultiplier: 1,
+            jitter: false,
+          },
+          config: {
+            actionId: 'ticket.update',
+            version: 1,
+            onError: {
+              policy: 'continue',
+            },
+          },
+        },
+        {
+          id: 'step_return',
+          type: 'control.return',
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_4',
+          workflowId: 'wf_4',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_4',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    mockActivities.executeWorkflowRuntimeV2ActionStep.mockRejectedValue({
+      category: 'ActionError',
+      message: 'simulated action failure',
+      nodePath: 'root.steps[0]',
+      at: '2026-04-08T00:00:00.000Z',
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await workflowRuntimeV2RunWorkflow({
+      runId: 'run_4',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_4',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_4',
+    });
+
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenCalledTimes(2);
+    expect(mockActivities.projectWorkflowRuntimeV2StepCompletion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'run_4',
+        stepPath: 'root.steps[0]',
+        status: 'SUCCEEDED',
+        errorMessage: 'simulated action failure',
+      })
+    );
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_4',
+      status: 'SUCCEEDED',
     });
   });
 });
