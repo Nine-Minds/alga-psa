@@ -1,9 +1,35 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 
-import type { WorkflowJsonSchema } from '../../../../shared/workflow/runtime/ai/aiSchema';
-
 import { resolveChatProvider, type ChatProviderId, type ResolvedChatProvider } from './chatProviderResolver';
+
+type WorkflowJsonSchema = {
+  type?: string | string[];
+  title?: string;
+  description?: string;
+  enum?: unknown[];
+  const?: unknown;
+  properties?: Record<string, WorkflowJsonSchema>;
+  required?: string[];
+  additionalProperties?: boolean | WorkflowJsonSchema;
+  items?: WorkflowJsonSchema | WorkflowJsonSchema[];
+  anyOf?: WorkflowJsonSchema[];
+  oneOf?: WorkflowJsonSchema[];
+  allOf?: WorkflowJsonSchema[];
+  format?: string;
+  default?: unknown;
+  definitions?: Record<string, WorkflowJsonSchema>;
+  $ref?: string;
+  nullable?: boolean;
+  minimum?: number;
+  maximum?: number;
+  minLength?: number;
+  maxLength?: number;
+  minItems?: number;
+  maxItems?: number;
+  pattern?: string;
+  [key: string]: unknown;
+};
 
 const WORKFLOW_AI_SYSTEM_PROMPT =
   'You generate structured JSON for workflow automation. Follow the provided JSON Schema exactly and do not include markdown or extra commentary.';

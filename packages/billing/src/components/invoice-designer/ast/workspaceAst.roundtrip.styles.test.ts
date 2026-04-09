@@ -36,6 +36,7 @@ describe('workspaceAst roundtrip style matrix', () => {
     { key: 'flexBasis', value: 'auto' },
     { key: 'aspectRatio', value: '16 / 9' },
     { key: 'objectFit', value: 'contain' },
+    { key: 'objectPosition', value: 'right bottom' },
     { key: 'gridTemplateColumns', value: '1fr 2fr' },
     { key: 'gridTemplateRows', value: 'auto auto' },
     { key: 'gridAutoFlow', value: 'row dense' },

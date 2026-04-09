@@ -358,6 +358,28 @@ export function updateTicketAttributes(
   });
 }
 
+export function updateTicketContact(
+  client: ApiClient,
+  params: {
+    apiKey: string;
+    ticketId: string;
+    contact_name_id: string | null;
+    auditHeaders?: Record<string, string | undefined>;
+  },
+): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
+  return client.request<SuccessResponse<TicketDetail>>({
+    method: "PUT",
+    path: `/api/v1/tickets/${params.ticketId}`,
+    headers: {
+      "x-api-key": params.apiKey,
+      ...params.auditHeaders,
+    },
+    body: {
+      contact_name_id: params.contact_name_id,
+    },
+  });
+}
+
 // --- Create Ticket ---
 
 export type CreateTicketParams = {

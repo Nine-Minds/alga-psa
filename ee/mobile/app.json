@@ -15,7 +15,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.nineminds.algapsa",
-      "buildNumber": "15",
+      "buildNumber": "17",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "com.alga.psa.mobile",
-      "versionCode": 11,
+      "versionCode": 17,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -40,7 +40,15 @@
       "expo-localization",
       "expo-notifications",
       "expo-image-picker",
-      "expo-document-picker"
+      "expo-document-picker",
+      "expo-web-browser",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "nine-minds",
+          "project": "alga-psa-mobile"
+        }
+      ]
     ],
     "extra": {
       "eas": {

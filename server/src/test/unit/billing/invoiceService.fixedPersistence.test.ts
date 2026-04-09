@@ -177,6 +177,7 @@ describe("invoiceService fixed recurring persistence", () => {
         {
           type: "product",
           serviceId: "service-1",
+          config_id: "config-product-1",
           serviceName: "Managed Router",
           quantity: 2,
           rate: 4500,
@@ -228,6 +229,7 @@ describe("invoiceService fixed recurring persistence", () => {
         {
           type: "license",
           serviceId: "service-2",
+          config_id: "config-license-1",
           serviceName: "Microsoft 365 Business Premium",
           quantity: 3,
           rate: 3200,
@@ -612,6 +614,215 @@ describe("invoiceService fixed recurring persistence", () => {
     expect(tables.recurring_service_periods[0].invoice_linked_at).toEqual(
       tables.recurring_service_periods[0].updated_at,
     );
+  });
+
+  it("links grouped recurring non-fixed charge rows so every selected member is marked billed", async () => {
+    const { tx, inserts, tables } = createMockTx({
+      invoices: [
+        {
+          invoice_id: "invoice-1",
+          tenant: "tenant-1",
+          billing_period_start: "2025-03-01",
+          billing_period_end: "2025-04-01",
+          billing_cycle_id: null,
+        },
+      ],
+      recurring_service_periods: [
+        {
+          record_id: "rsp-hourly-1",
+          tenant: "tenant-1",
+          charge_family: "hourly",
+          due_position: "arrears",
+          obligation_type: "contract_line",
+          obligation_id: "contract-line-1",
+          lifecycle_state: "generated",
+          invoice_charge_detail_id: null,
+          service_period_start: "2025-02-01",
+          service_period_end: "2025-03-01",
+          invoice_window_start: "2025-03-01",
+          invoice_window_end: "2025-04-01",
+        },
+        {
+          record_id: "rsp-usage-1",
+          tenant: "tenant-1",
+          charge_family: "usage",
+          due_position: "arrears",
+          obligation_type: "contract_line",
+          obligation_id: "contract-line-2",
+          lifecycle_state: "generated",
+          invoice_charge_detail_id: null,
+          service_period_start: "2025-02-01",
+          service_period_end: "2025-03-01",
+          invoice_window_start: "2025-03-01",
+          invoice_window_end: "2025-04-01",
+        },
+      ],
+    }, {
+      missingTables: ["contract_line_service_configuration", "client_contract_lines"],
+    });
+
+    await persistInvoiceCharges(
+      tx,
+      "invoice-1",
+      [
+        {
+          type: "time",
+          serviceId: "service-hourly",
+          config_id: "config-hourly-1",
+          serviceName: "Hourly Support",
+          userId: "user-1",
+          duration: 2,
+          quantity: 2,
+          rate: 2500,
+          total: 5000,
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region: "US-NY",
+          is_taxable: false,
+          client_contract_line_id: "contract-line-1",
+          servicePeriodStart: "2025-02-01",
+          servicePeriodEnd: "2025-03-01",
+          billingTiming: "arrears",
+          tenant: "tenant-1",
+        },
+        {
+          type: "usage",
+          serviceId: "service-usage",
+          config_id: "config-usage-1",
+          serviceName: "Device Usage",
+          quantity: 4,
+          rate: 300,
+          total: 1200,
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region: "US-NY",
+          is_taxable: false,
+          client_contract_line_id: "contract-line-2",
+          servicePeriodStart: "2025-02-01",
+          servicePeriodEnd: "2025-03-01",
+          billingTiming: "arrears",
+          tenant: "tenant-1",
+        },
+      ],
+      {
+        client_id: "client-1",
+        tax_region: "US-NY",
+      },
+      {
+        user: {
+          id: "user-1",
+        },
+      } as any,
+      "tenant-1",
+    );
+
+    expect(inserts.invoice_charge_details).toHaveLength(2);
+    expect(tables.recurring_service_periods).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          record_id: "rsp-hourly-1",
+          lifecycle_state: "billed",
+          invoice_id: "invoice-1",
+          invoice_charge_detail_id: inserts.invoice_charge_details[0].item_detail_id,
+        }),
+        expect.objectContaining({
+          record_id: "rsp-usage-1",
+          lifecycle_state: "billed",
+          invoice_id: "invoice-1",
+          invoice_charge_detail_id: inserts.invoice_charge_details[1].item_detail_id,
+        }),
+      ]),
+    );
+  });
+
+  it("links recurring fixed charges without service configs so base-rate-only lines stop resurfacing as due", async () => {
+    const { tx, inserts, tables } = createMockTx({
+      invoices: [
+        {
+          invoice_id: "invoice-1",
+          tenant: "tenant-1",
+          billing_period_start: "2025-04-01",
+          billing_period_end: "2025-05-01",
+          billing_cycle_id: null,
+        },
+      ],
+      recurring_service_periods: [
+        {
+          record_id: "rsp-fixed-1",
+          tenant: "tenant-1",
+          charge_family: "fixed",
+          due_position: "advance",
+          obligation_type: "contract_line",
+          obligation_id: "contract-line-1",
+          lifecycle_state: "generated",
+          invoice_charge_detail_id: null,
+          service_period_start: "2025-04-01",
+          service_period_end: "2025-04-30",
+          invoice_window_start: "2025-04-01",
+          invoice_window_end: "2025-05-01",
+        },
+      ],
+    }, {
+      missingTables: ["contract_line_service_configuration", "client_contract_lines"],
+    });
+
+    const subtotal = await persistInvoiceCharges(
+      tx,
+      "invoice-1",
+      [
+        {
+          type: "fixed",
+          serviceId: "service-fallback",
+          config_id: "config-fallback",
+          serviceName: "Base Rate Only Fixed Fee",
+          quantity: 1,
+          rate: 12000,
+          total: 12000,
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region: "US-NY",
+          is_taxable: false,
+          client_contract_line_id: "contract-line-1",
+          client_contract_id: "assignment-1",
+          base_rate: 12000,
+          enable_proration: false,
+          fmv: 12000,
+          proportion: 1,
+          allocated_amount: 12000,
+          servicePeriodStart: "2025-04-01",
+          servicePeriodEnd: "2025-04-30",
+          billingTiming: "advance",
+          tenant: "tenant-1",
+        },
+      ],
+      {
+        client_id: "client-1",
+        tax_region: "US-NY",
+      },
+      {
+        user: {
+          id: "user-1",
+        },
+      } as any,
+      "tenant-1",
+    );
+
+    expect(subtotal).toBe(12000);
+    expect(inserts.invoice_charges).toHaveLength(1);
+    expect(inserts.invoice_charge_details).toHaveLength(1);
+    expect(inserts.invoice_charge_details[0]).toMatchObject({
+      service_id: "service-fallback",
+      config_id: "config-fallback",
+      service_period_start: "2025-04-01",
+      service_period_end: "2025-04-30",
+      billing_timing: "advance",
+    });
+    expect(tables.recurring_service_periods[0]).toMatchObject({
+      record_id: "rsp-fixed-1",
+      lifecycle_state: "billed",
+      invoice_id: "invoice-1",
+      invoice_charge_detail_id: inserts.invoice_charge_details[0].item_detail_id,
+    });
   });
 
   it("T038: fixed recurring consolidation keeps sibling assignment charges separated when they share a base contract line", async () => {

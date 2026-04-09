@@ -1,47 +1,12 @@
 import { defineConfig } from 'tsup';
+import { makeConfig } from '../build-tools/tsup-preset';
 
-export default defineConfig({
-  entry: {
-    'index': 'src/index.ts',
-    'actions/index': 'src/actions/index.ts',
-    'lib/session': 'src/lib/session.ts',
-    'lib/rbac': 'src/lib/rbac.ts',
-    'lib/apiAuth': 'src/lib/apiAuth.ts',
-    'lib/deviceFingerprint': 'src/lib/deviceFingerprint.ts',
-    'lib/ipAddress': 'src/lib/ipAddress.ts',
-    'lib/geolocation': 'src/lib/geolocation.ts',
-    'lib/twoFactorHelpers': 'src/lib/twoFactorHelpers.ts',
-    'lib/nextAuthOptions': 'src/lib/nextAuthOptions.ts',
-    'lib/getCurrentUser': 'src/lib/getCurrentUser.ts',
-    'client': 'src/client.ts',
-    'components/index': 'src/components/index.ts',
-    'types/next-auth': 'src/types/next-auth.ts',
-    'nextauth/auth': 'src/nextauth/auth.ts',
-    'nextauth/edge-auth': 'src/nextauth/edge-auth.ts',
-  },
-  format: ['esm'],
-  dts: false,
-  bundle: true,
-  splitting: true,
-  sourcemap: false,
-  clean: true,
-  outDir: 'dist',
+export default defineConfig(makeConfig({
+  jsxEnabled: true,
   external: [
-    'react',
-    'react-dom',
-    'next',
-    'next/link',
-    'next/navigation',
-    'next/headers',
-    'next/server',
-    'next-auth',
-    'next-auth/react',
-    'next-auth/providers/credentials',
-    'next-auth/providers/google',
+    'react', 'react-dom',
+    'next', 'next/link', 'next/navigation', 'next/headers', 'next/server',
+    'next-auth', 'next-auth/react', 'next-auth/providers/credentials', 'next-auth/providers/google',
     '@auth/core',
-    /^@alga-psa\//,
   ],
-  esbuildOptions(options) {
-    options.jsx = 'automatic';
-  },
-});
+}));

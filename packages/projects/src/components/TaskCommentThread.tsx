@@ -98,6 +98,9 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const handleToggleReaction = useCallback(async (taskCommentId: string, emoji: string) => {
     try {
       const { added } = await toggleTaskCommentReaction(taskCommentId, emoji);
+      if (added && currentUser?.user_id && currentUser.name) {
+        setReactionUserNames(prev => prev[currentUser.user_id] ? prev : { ...prev, [currentUser.user_id]: currentUser.name });
+      }
       const userId = currentUser?.user_id || '';
       setReactionsMap((prev) => {
         const existing = prev[taskCommentId] || [];
@@ -127,7 +130,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     } catch (err) {
       console.error('Failed to toggle reaction:', err);
     }
-  }, [currentUser?.user_id]);
+  }, [currentUser?.user_id, currentUser?.name]);
 
   // Sort comments based on reverseOrder
   const sortedComments = [...comments].sort((a, b) => {

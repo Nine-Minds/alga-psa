@@ -42,7 +42,7 @@ spec:
         - name: temporal
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
-          command: ["/bin/sh", "-c", "exec /etc/temporal/entrypoint.sh"]
+          command: ["/bin/sh", "-c", "exec /etc/temporal/entrypoint.sh autosetup"]
           env:
             - name: DB
               value: "{{ .Values.temporal.db }}"

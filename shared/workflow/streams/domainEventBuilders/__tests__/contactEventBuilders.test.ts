@@ -55,13 +55,23 @@ describe('contactEventBuilders', () => {
     actor: { actorType: 'USER' as const, actorUserId },
   };
 
-  it('builds CONTACT_CREATED payloads compatible with schema', () => {
+  it('T017: builds CONTACT_CREATED payloads with email metadata compatible with schema', () => {
     const payload = buildWorkflowPayload(
       buildContactCreatedPayload({
         contactId,
         clientId,
         fullName: 'Jane Doe',
         email: 'jane@example.com',
+        primaryEmailCanonicalType: 'billing',
+        primaryEmailType: 'billing',
+        additionalEmailAddresses: [{
+          contact_additional_email_address_id: '1f88c32b-e780-4036-a9bc-0a7b16535e4a',
+          email_address: 'jane.billing@example.com',
+          normalized_email_address: 'jane.billing@example.com',
+          canonical_type: 'billing',
+          custom_type: null,
+          display_order: 0,
+        }],
         phoneNumbers: [{
           contact_phone_number_id: '6e2d2752-4be9-4313-971f-e1576fdd0119',
           phone_number: '555-0100',
@@ -80,14 +90,27 @@ describe('contactEventBuilders', () => {
     );
 
     expect(contactCreatedEventPayloadSchema.safeParse(payload).success).toBe(true);
+    expect(payload).toMatchObject({
+      primaryEmailCanonicalType: 'billing',
+      primaryEmailType: 'billing',
+      additionalEmailAddresses: [
+        expect.objectContaining({
+          email_address: 'jane.billing@example.com',
+        }),
+      ],
+    });
   });
 
-  it('builds CONTACT_UPDATED payloads with field/path diffs compatible with schema', () => {
+  it('T017: builds CONTACT_UPDATED payloads with email metadata diffs compatible with schema', () => {
     const before = {
       contact_name_id: contactId,
       client_id: clientId,
       full_name: 'Jane Doe',
       email: 'jane@example.com',
+      primary_email_canonical_type: 'work',
+      primary_email_custom_type_id: null,
+      primary_email_type: 'work',
+      additional_email_addresses: [],
       phone_numbers: [{
         contact_phone_number_id: '6e2d2752-4be9-4313-971f-e1576fdd0119',
         phone_number: '555-0100',
@@ -105,6 +128,17 @@ describe('contactEventBuilders', () => {
       client_id: clientId,
       full_name: 'Jane Q. Doe',
       email: 'jane@example.com',
+      primary_email_canonical_type: null,
+      primary_email_custom_type_id: 'c17bc1e3-cbdc-424f-aab9-0da9303cd8b6',
+      primary_email_type: 'Escalations',
+      additional_email_addresses: [{
+        contact_additional_email_address_id: '1f88c32b-e780-4036-a9bc-0a7b16535e4a',
+        email_address: 'jane.old@example.com',
+        normalized_email_address: 'jane.old@example.com',
+        canonical_type: 'work',
+        custom_type: null,
+        display_order: 0,
+      }],
       phone_numbers: [{
         contact_phone_number_id: '6e2d2752-4be9-4313-971f-e1576fdd0119',
         phone_number: '555-0101',
@@ -124,7 +158,7 @@ describe('contactEventBuilders', () => {
         clientId,
         before,
         after,
-        updatedFieldKeys: ['full_name', 'phone_numbers'],
+        updatedFieldKeys: ['full_name', 'phone_numbers', 'primary_email_custom_type', 'additional_email_addresses'],
         updatedByUserId: actorUserId,
         updatedAt: occurredAt,
       }),
@@ -132,9 +166,15 @@ describe('contactEventBuilders', () => {
     );
 
     expect(contactUpdatedEventPayloadSchema.safeParse(payload).success).toBe(true);
-    expect(payload.updatedFields).toEqual(expect.arrayContaining(['fullName', 'phoneNumbers']));
+    expect(payload.updatedFields).toEqual(expect.arrayContaining(['fullName', 'phoneNumbers', 'primaryEmailType', 'primaryEmailCustomTypeId', 'additionalEmailAddresses']));
     expect(payload.changes).toMatchObject({
       fullName: { previous: 'Jane Doe', new: 'Jane Q. Doe' },
+      primaryEmailType: { previous: 'work', new: 'Escalations' },
+      primaryEmailCustomTypeId: { previous: null, new: 'c17bc1e3-cbdc-424f-aab9-0da9303cd8b6' },
+      additionalEmailAddresses: {
+        previous: [],
+        new: after.additional_email_addresses,
+      },
       phoneNumbers: {
         previous: before.phone_numbers,
         new: after.phone_numbers,

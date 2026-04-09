@@ -157,7 +157,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
       try {
         const invoice = await generateInvoiceForSelectionInput(selectorInput, {
           allowPoOverage: params.allowPoOverage,
-        });
+        }, target.billingCycleId ? { billingCycleId: target.billingCycleId } : undefined);
         if (invoice) {
           invoicesCreated += 1;
         }
@@ -167,7 +167,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
         }
 
         failures.push({
-          billingCycleId: null,
+          billingCycleId: target.billingCycleId ?? null,
           executionIdentityKey: executionWindow.identityKey,
           executionWindowKind: executionWindow.kind,
           errorMessage: err instanceof Error ? err.message : 'Unknown error occurred',
@@ -296,7 +296,7 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
       try {
         const invoice = await generateInvoiceForSelectionInputs(group.selectorInputs, {
           allowPoOverage: params.allowPoOverage,
-        });
+        }, group.billingCycleId ? { billingCycleId: group.billingCycleId } : undefined);
         if (invoice) {
           invoicesCreated += 1;
         }
@@ -306,7 +306,7 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
         }
 
         failures.push({
-          billingCycleId: null,
+          billingCycleId: group.billingCycleId ?? null,
           executionIdentityKey: executionWindow.identityKey,
           executionWindowKind: executionWindow.kind,
           errorMessage: err instanceof Error ? err.message : 'Unknown error occurred',

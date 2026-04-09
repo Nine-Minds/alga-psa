@@ -320,4 +320,94 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       'tenant-1'
     );
   });
+
+  it('T036: new-ticket inbound processing preserves the exact sender email separately when the contact matched through an additional email row', async () => {
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: 'contact-additional-1',
+      client_id: 'client-1',
+      user_id: 'client-user-1',
+      email: 'primary@example.com',
+      matched_email: 'billing@example.com',
+      name: 'Billing Sender',
+      client_name: 'Client',
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'billing@example.com', name: 'Billing Sender' },
+      }),
+    });
+
+    expect(result.outcome).toBe('created');
+    expect(createTicketFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        client_id: 'client-1',
+        contact_id: 'contact-additional-1',
+      }),
+      'tenant-1'
+    );
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        author_type: 'contact',
+        author_id: 'client-user-1',
+        contact_id: 'contact-additional-1',
+        metadata: expect.objectContaining({
+          unmatchedSender: false,
+          email: expect.objectContaining({
+            fromAddress: 'billing@example.com',
+          }),
+        }),
+      }),
+      'tenant-1'
+    );
+  });
+
+  it('T036: preserves the exact matched sender email separately from the contact primary email when an additional email matches', async () => {
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: 'contact-additional-1',
+      client_id: 'client-1',
+      user_id: 'client-user-1',
+      email: 'primary@example.com',
+      matched_email: 'billing@example.com',
+      name: 'Billing Contact',
+      client_name: 'Client 1',
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'billing@example.com', name: 'Billing Contact' },
+      }),
+    });
+
+    expect(result).toMatchObject({
+      outcome: 'created',
+      ticketId: 'ticket-1',
+      commentId: 'comment-1',
+    });
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-1',
+        author_type: 'contact',
+        author_id: 'client-user-1',
+        contact_id: 'contact-additional-1',
+        metadata: expect.objectContaining({
+          unmatchedSender: false,
+          email: expect.objectContaining({
+            fromAddress: 'billing@example.com',
+            matchedAddress: 'billing@example.com',
+            contactEmail: 'primary@example.com',
+          }),
+        }),
+      }),
+      'tenant-1'
+    );
+  });
 });

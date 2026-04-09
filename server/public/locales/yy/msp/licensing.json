@@ -1,164 +1,164 @@
 {
   "reduceModal": {
-    "title": "11111",
-    "enterpriseOnly": "11111"
+    "title": "55555",
+    "enterpriseOnly": "55555"
   },
   "purchaseForm": {
-    "title": "11111",
-    "enterpriseOnlyHosted": "11111",
-    "communityEditionUnlimited": "11111"
+    "title": "55555",
+    "enterpriseOnlyHosted": "55555",
+    "communityEditionUnlimited": "55555"
   },
   "purchasePage": {
-    "title": "11111",
-    "description": "11111"
+    "title": "55555",
+    "description": "55555"
   },
   "purchaseSuccess": {
-    "metaTitle": "11111",
-    "scheduledTitle": "11111",
-    "updatedTitle": "11111",
-    "scheduledDescription": "11111",
-    "updatedDescription": "11111",
-    "loadingSubscriptionDetails": "11111",
-    "updatingLicenseCount": "11111",
-    "licenseInformation": "11111",
-    "youNowHave": "11111",
-    "totalLicenses": "11111",
-    "changeEffective": "11111",
-    "whatsNext": "11111",
+    "metaTitle": "55555",
+    "scheduledTitle": "55555",
+    "updatedTitle": "55555",
+    "scheduledDescription": "55555",
+    "updatedDescription": "55555",
+    "loadingSubscriptionDetails": "55555",
+    "updatingLicenseCount": "55555",
+    "licenseInformation": "55555",
+    "youNowHave": "55555",
+    "totalLicenses": "55555",
+    "changeEffective": "55555",
+    "whatsNext": "55555",
     "scheduledSteps": {
-      "currentLicenses": "11111",
-      "autoUpdate": "11111",
-      "emailConfirmation": "11111"
+      "currentLicenses": "55555",
+      "autoUpdate": "55555",
+      "emailConfirmation": "55555"
     },
     "updatedSteps": {
-      "activeReady": "11111",
-      "createUsers": "11111",
-      "invoiceProrated": "11111"
+      "activeReady": "55555",
+      "createUsers": "55555",
+      "invoiceProrated": "55555"
     },
-    "sessionDetails": "11111",
-    "sessionId": "11111",
-    "goToAccountManagement": "11111"
+    "sessionDetails": "55555",
+    "sessionId": "55555",
+    "goToAccountManagement": "55555"
   },
   "subscriptionForm": {
-    "title": "11111",
+    "title": "55555",
     "errors": {
-      "loadPricing": "11111",
-      "loadLicenseInformation": "11111",
-      "prepareUpdate": "11111",
-      "processUpdate": "11111",
-      "missingCheckoutSessionData": "11111"
+      "loadPricing": "55555",
+      "loadLicenseInformation": "55555",
+      "prepareUpdate": "55555",
+      "processUpdate": "55555",
+      "missingCheckoutSessionData": "55555"
     },
     "checkout": {
-      "title": "11111",
-      "summary": "11111",
-      "total": "11111",
-      "cancel": "11111"
+      "title": "55555",
+      "summary": "55555 {{quantity}} 55555 {{licenseLabel}} 55555 {{price}} 55555 {{interval}} 55555",
+      "total": "55555 {{total}} 55555 {{interval}} 55555",
+      "cancel": "55555"
     },
     "confirmation": {
-      "title": "11111",
-      "increaseDescription": "11111",
-      "decreaseDescription": "11111",
-      "currentMonthlyCost": "11111",
-      "currentLicenseCount": "11111",
-      "newMonthlyCost": "11111",
-      "newLicenseCount": "11111",
-      "monthlyIncrease": "11111",
-      "monthlySavings": "11111",
-      "paymentMethod": "11111",
-      "changePaymentMethod": "11111",
-      "immediateChargeTitle": "11111",
-      "immediateChargeDescription": "11111",
-      "prorationDescription": "11111",
-      "scheduledTitle": "11111",
-      "scheduledDescription": "11111",
-      "scheduledKeepAccess": "11111",
-      "cancel": "11111",
-      "confirmPayNow": "11111",
-      "confirmSchedule": "11111"
+      "title": "55555",
+      "increaseDescription": "55555",
+      "decreaseDescription": "55555",
+      "currentMonthlyCost": "55555",
+      "currentLicenseCount": "55555",
+      "newMonthlyCost": "55555",
+      "newLicenseCount": "55555",
+      "monthlyIncrease": "55555",
+      "monthlySavings": "55555",
+      "paymentMethod": "55555",
+      "changePaymentMethod": "55555",
+      "immediateChargeTitle": "55555",
+      "immediateChargeDescription": "55555 {{amountDue}} 55555",
+      "prorationDescription": "55555 {{amount}} 55555",
+      "scheduledTitle": "55555",
+      "scheduledDescription": "55555 {{date}} 55555",
+      "scheduledKeepAccess": "55555 {{count}} 55555",
+      "cancel": "55555",
+      "confirmPayNow": "55555",
+      "confirmSchedule": "55555"
     },
     "usage": {
-      "title": "11111",
-      "licensesUsed": "11111"
+      "title": "55555",
+      "licensesUsed": "55555"
     },
     "fields": {
-      "totalLicenseCount": "11111"
+      "totalLicenseCount": "55555"
     },
     "help": {
-      "totalLicenseCount": "11111",
-      "reduceViaAccount": "11111",
-      "quantityWarning": "11111"
+      "totalLicenseCount": "55555 {{minimum}} 55555 {{current}} 55555",
+      "reduceViaAccount": "55555",
+      "quantityWarning": "55555 {{used}} 55555 {{quantity}} 55555"
     },
     "pricing": {
-      "pricePerLicense": "11111",
-      "quantity": "11111",
-      "total": "11111"
+      "pricePerLicense": "55555",
+      "quantity": "55555",
+      "total": "55555"
     },
     "actions": {
-      "creatingCheckout": "11111",
-      "noChange": "11111",
-      "updateToTotal": "11111"
+      "creatingCheckout": "55555",
+      "noChange": "55555",
+      "updateToTotal": "55555 {{quantity}} 55555 {{difference}} 55555 {{licenseLabel}} 55555"
     },
     "info": {
-      "totalQuantity": "11111",
-      "increasingImmediate": "11111",
-      "billedMonthly": "11111"
+      "totalQuantity": "55555",
+      "increasingImmediate": "55555",
+      "billedMonthly": "55555"
     }
   },
   "removalModal": {
-    "title": "11111",
-    "description": "11111",
+    "title": "55555",
+    "description": "55555",
     "stats": {
-      "currentLicenses": "11111",
-      "activeUsers": "11111"
+      "currentLicenses": "55555",
+      "activeUsers": "55555"
     },
     "fields": {
-      "newLicenseCount": "11111",
-      "minimum": "11111"
+      "newLicenseCount": "55555",
+      "minimum": "55555 {{count}} 55555"
     },
     "validation": {
-      "positiveInteger": "11111",
-      "useAddFlow": "11111",
-      "deactivateUsers": "11111"
+      "positiveInteger": "55555",
+      "useAddFlow": "55555",
+      "deactivateUsers": "55555 {{activeUsers}} 55555 {{usersToDeactivate}} 55555 {{userLabel}} 55555"
     },
     "actions": {
-      "goToUserManagement": "11111",
-      "reviewRemoval": "11111",
-      "confirmRemoval": "11111"
+      "goToUserManagement": "55555",
+      "reviewRemoval": "55555",
+      "confirmRemoval": "55555"
     },
     "scheduled": {
-      "title": "11111",
-      "description": "11111",
-      "creditDescription": "11111"
+      "title": "55555",
+      "description": "55555 {{current}} 55555 {{next}} 55555",
+      "creditDescription": "55555"
     },
     "confirmation": {
-      "description": "11111",
-      "currentMonthlyCost": "11111",
-      "currentLicenseCount": "11111",
-      "newMonthlyCost": "11111",
-      "newLicenseCount": "11111",
-      "monthlySavings": "11111",
-      "creditNotice": "11111"
+      "description": "55555",
+      "currentMonthlyCost": "55555",
+      "currentLicenseCount": "55555",
+      "newMonthlyCost": "55555",
+      "newLicenseCount": "55555",
+      "monthlySavings": "55555",
+      "creditNotice": "55555"
     },
     "errors": {
-      "deactivateUsersFirst": "11111",
-      "reduceFailed": "11111",
-      "removeFailed": "11111"
+      "deactivateUsersFirst": "55555",
+      "reduceFailed": "55555",
+      "removeFailed": "55555"
     },
     "success": {
-      "scheduled": "11111"
+      "scheduled": "55555 {{current}} 55555 {{next}} 55555 {{effectiveDate}} 55555"
     }
   },
   "shared": {
-    "licenseSingular": "11111",
-    "licensePlural": "11111",
-    "userSingular": "11111",
-    "userPlural": "11111",
-    "licenseCount": "11111",
-    "perInterval": "11111",
-    "none": "11111",
+    "licenseSingular": "55555",
+    "licensePlural": "55555",
+    "userSingular": "55555",
+    "userPlural": "55555",
+    "licenseCount": "55555 {{count}} 55555 {{licenseLabel}} 55555",
+    "perInterval": "55555 {{amount}} 55555 {{interval}} 55555",
+    "none": "55555",
     "intervals": {
-      "month": "11111",
-      "year": "11111"
+      "month": "55555",
+      "year": "55555"
     }
   }
 }

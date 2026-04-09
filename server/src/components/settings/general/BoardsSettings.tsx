@@ -32,7 +32,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
@@ -140,6 +140,10 @@ const BoardsSettings: React.FC = () => {
     default_priority_id: '',
     manager_user_id: '',
     sla_policy_id: '',
+    inbound_reply_reopen_enabled: false,
+    inbound_reply_reopen_cutoff_hours: 168,
+    inbound_reply_reopen_status_id: '',
+    inbound_reply_ai_ack_suppression_enabled: false,
     enable_live_ticket_timer: true,
     status_seed_mode: 'copy_existing' as TicketStatusSeedMode,
     copy_ticket_statuses_from_board_id: '',
@@ -335,6 +339,10 @@ const BoardsSettings: React.FC = () => {
       default_priority_id: board.default_priority_id || '',
       manager_user_id: board.manager_user_id || '',
       sla_policy_id: board.sla_policy_id || '',
+      inbound_reply_reopen_enabled: board.inbound_reply_reopen_enabled ?? false,
+      inbound_reply_reopen_cutoff_hours: board.inbound_reply_reopen_cutoff_hours ?? 168,
+      inbound_reply_reopen_status_id: board.inbound_reply_reopen_status_id || '',
+      inbound_reply_ai_ack_suppression_enabled: board.inbound_reply_ai_ack_suppression_enabled ?? false,
       enable_live_ticket_timer: board.enable_live_ticket_timer ?? true,
       ticket_statuses: [],
     });
@@ -527,6 +535,10 @@ const BoardsSettings: React.FC = () => {
           default_priority_id: formData.default_priority_id || null,
           manager_user_id: formData.manager_user_id || null,
           sla_policy_id: formData.sla_policy_id || null,
+          inbound_reply_reopen_enabled: formData.inbound_reply_reopen_enabled,
+          inbound_reply_reopen_cutoff_hours: Math.max(1, Number(formData.inbound_reply_reopen_cutoff_hours) || 168),
+          inbound_reply_reopen_status_id: formData.inbound_reply_reopen_status_id || null,
+          inbound_reply_ai_ack_suppression_enabled: formData.inbound_reply_ai_ack_suppression_enabled,
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
           ticket_statuses: normalizedTicketStatuses,
         });
@@ -544,6 +556,10 @@ const BoardsSettings: React.FC = () => {
           default_priority_id: formData.default_priority_id || null,
           manager_user_id: formData.manager_user_id || null,
           sla_policy_id: formData.sla_policy_id || null,
+          inbound_reply_reopen_enabled: formData.inbound_reply_reopen_enabled,
+          inbound_reply_reopen_cutoff_hours: Math.max(1, Number(formData.inbound_reply_reopen_cutoff_hours) || 168),
+          inbound_reply_reopen_status_id: formData.inbound_reply_reopen_status_id || null,
+          inbound_reply_ai_ack_suppression_enabled: formData.inbound_reply_ai_ack_suppression_enabled,
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
           copy_ticket_statuses_from_board_id: formData.status_seed_mode === 'copy_existing'
             ? (formData.copy_ticket_statuses_from_board_id || null)
@@ -1054,6 +1070,87 @@ const BoardsSettings: React.FC = () => {
               </p>
             </div>
 
+            <div className="space-y-3 rounded-md border border-gray-200 p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="inbound_reply_reopen_enabled">Reopen closed tickets on inbound replies</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Applies to threaded replies matched to already closed tickets on this board.
+                  </p>
+                </div>
+                <Switch
+                  id="inbound_reply_reopen_enabled"
+                  checked={formData.inbound_reply_reopen_enabled}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, inbound_reply_reopen_enabled: checked })
+                  }
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="inbound_reply_reopen_cutoff_hours">Reopen cutoff (hours)</Label>
+                <Input
+                  id="inbound_reply_reopen_cutoff_hours"
+                  type="number"
+                  min={1}
+                  value={formData.inbound_reply_reopen_cutoff_hours}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      inbound_reply_reopen_cutoff_hours: Math.max(1, parseInt(e.target.value || '168', 10) || 168),
+                    })
+                  }
+                  disabled={!formData.inbound_reply_reopen_enabled}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Replies received after this window create new tickets instead of reopening old ones.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="inbound_reply_reopen_status_id">Reopen status (optional)</Label>
+                <CustomSelect
+                  id="inbound_reply_reopen_status_id"
+                  value={formData.inbound_reply_reopen_status_id}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      inbound_reply_reopen_status_id: value,
+                    })
+                  }
+                  options={[
+                    { value: '', label: 'Use board default open status' },
+                    ...normalizeManagedTicketStatuses(formData.ticket_statuses)
+                      .filter((status) => !status.is_closed)
+                      .map((status): SelectOption => ({
+                        value: status.status_id || '',
+                        label: status.name,
+                      }))
+                      .filter((option) => option.value),
+                  ]}
+                  placeholder="Select reopen status"
+                  disabled={!formData.inbound_reply_reopen_enabled}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="inbound_reply_ai_ack_suppression_enabled">Suppress reopen for short ACK replies (AI)</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enterprise AI Assistant add-on only. If unavailable, replies reopen normally.
+                  </p>
+                </div>
+                <Switch
+                  id="inbound_reply_ai_ack_suppression_enabled"
+                  checked={formData.inbound_reply_ai_ack_suppression_enabled}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, inbound_reply_ai_ack_suppression_enabled: checked })
+                  }
+                  disabled={!formData.inbound_reply_reopen_enabled}
+                />
+              </div>
+            </div>
+
             <div>
               <Label htmlFor="default-priority-select">{t('ticketing.boards.fields.defaultPriority.label')}</Label>
               <CustomSelect
@@ -1091,10 +1188,9 @@ const BoardsSettings: React.FC = () => {
             {!editingBoard && (
               <div>
                 <Label>Ticket status setup</Label>
-                <ToggleGroup
-                  type="single"
-                  value={formData.status_seed_mode}
-                  onValueChange={(value) => {
+                <ViewSwitcher
+                  currentView={formData.status_seed_mode}
+                  onChange={(value) => {
                     if (value !== 'copy_existing' && value !== 'create_inline') {
                       return;
                     }
@@ -1107,24 +1203,13 @@ const BoardsSettings: React.FC = () => {
                         : prev.ticket_statuses,
                     }));
                   }}
+                  options={[
+                    { value: 'copy_existing', label: 'Copy from existing board', id: 'ticket-status-seed-mode-copy-existing' },
+                    { value: 'create_inline', label: 'Create statuses inline', id: 'ticket-status-seed-mode-create-inline' },
+                  ]}
                   aria-label="Ticket status setup"
-                  className="mt-2 w-full"
-                >
-                  <ToggleGroupItem
-                    id="ticket-status-seed-mode-copy-existing"
-                    value="copy_existing"
-                    className="flex-1 min-w-0"
-                  >
-                    Copy from existing board
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    id="ticket-status-seed-mode-create-inline"
-                    value="create_inline"
-                    className="flex-1 min-w-0"
-                  >
-                    Create statuses inline
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                  className="mt-2 w-fit"
+                />
                 <p className="text-xs text-muted-foreground mt-1">
                   Choose whether this board starts from an existing lifecycle or a new inline status list.
                 </p>

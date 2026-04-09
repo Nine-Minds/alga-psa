@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
+  initializeWorkflowRuntimeV2Mock,
   startRunMock,
   executeRunMock,
   startWorkflowRuntimeV2TemporalRunMock,
@@ -11,6 +12,7 @@ const {
   listWorkflowVersionsMock,
   getWorkflowVersionMock
 } = vi.hoisted(() => ({
+  initializeWorkflowRuntimeV2Mock: vi.fn(),
   startRunMock: vi.fn(),
   executeRunMock: vi.fn(),
   startWorkflowRuntimeV2TemporalRunMock: vi.fn(),
@@ -51,6 +53,7 @@ vi.mock('@alga-psa/workflows/runtime', async (importOriginal) => {
 
   return {
     ...actual,
+    initializeWorkflowRuntimeV2: () => initializeWorkflowRuntimeV2Mock(),
     WorkflowRuntimeV2: WorkflowRuntimeV2Mock,
     getSchemaRegistry: () => ({
       has: () => false,
@@ -84,6 +87,7 @@ describe('Workflow run launcher', () => {
   });
 
   beforeEach(() => {
+    initializeWorkflowRuntimeV2Mock.mockReset();
     startRunMock.mockReset();
     executeRunMock.mockReset();
     startWorkflowRuntimeV2TemporalRunMock.mockReset();
@@ -126,10 +130,46 @@ describe('Workflow run launcher', () => {
       ...data
     }));
     updateRunMock.mockResolvedValue({});
-    startWorkflowRuntimeV2TemporalRunMock.mockResolvedValue({
-      workflowId: 'workflow-runtime-v2:run:run-created',
+    startRunMock.mockResolvedValue('run-started');
+    startWorkflowRuntimeV2TemporalRunMock.mockImplementation(async ({ runId }: { runId: string }) => ({
+      workflowId: `workflow-runtime-v2:run:${runId}`,
       firstExecutionRunId: 'temporal-run-1'
+    }));
+  });
+
+  it('initializes the workflow runtime before launching a run', async () => {
+    const result = await launchPublishedWorkflowRun(knexMock, {
+      workflowId: 'workflow-1',
+      workflowVersion: 5,
+      tenantId: 'tenant-1',
+      payload: {},
+      execute: true
     });
+
+    expect(result).toEqual({
+      runId: 'run-started',
+      workflowVersion: 5
+    });
+    expect(initializeWorkflowRuntimeV2Mock).toHaveBeenCalledTimes(1);
+    expect(startRunMock).toHaveBeenCalledTimes(1);
+    expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith({
+      runId: 'run-started',
+      tenantId: 'tenant-1',
+      workflowId: 'workflow-1',
+      workflowVersion: 5,
+      triggerType: null,
+      executionKey: expect.stringMatching(/^launch-workflow-1-/)
+    });
+    expect(updateRunMock).toHaveBeenCalledWith(
+      knexMock,
+      'run-started',
+      expect.objectContaining({
+        engine: 'temporal',
+        temporal_workflow_id: 'workflow-runtime-v2:run:run-started',
+        temporal_run_id: 'temporal-run-1'
+      })
+    );
+    expect(executeRunMock).not.toHaveBeenCalled();
   });
 
   it('T044: duplicate recurring fire keys return the existing run without executing twice', async () => {

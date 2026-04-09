@@ -20,6 +20,12 @@ import {
   readAssistantContentFromSse,
   type SseFunctionProposal,
 } from './readAssistantContentFromSse';
+import { ChatMentionChip, type ChatMention } from './ChatMentionChip';
+import {
+  ChatMentionPopup,
+  type ChatMentionPopupHandle,
+} from './ChatMentionPopup';
+import type { MentionableEntity } from '../../lib/chat-actions/searchEntitiesForMention';
 
 import './chat.css';
 
@@ -309,6 +315,9 @@ export const Chat: React.FC<ChatProps> = ({
   const [pendingFunctionAction, setPendingFunctionAction] = useState<'none' | 'approve' | 'decline'>('none');
   const [functionError, setFunctionError] = useState<string | null>(null);
   const [autoApprovedMethods, setAutoApprovedMethods] = useState<string[]>([]);
+  const [mentions, setMentions] = useState<ChatMention[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const mentionPopupRef = useRef<ChatMentionPopupHandle | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
@@ -491,6 +500,13 @@ export const Chat: React.FC<ChatProps> = ({
       setIsMultilineMode(true);
     }
     requestAnimationFrame(autoResizeTextarea);
+
+    // Detect @mention query
+    const cursorPos = e.target.selectionStart ?? value.length;
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const mentionMatch = textBeforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_#\-]{0,30})$/);
+    setMentionQuery(mentionMatch ? mentionMatch[1] : null);
+
     if (onUserInput) {
       onUserInput();
     }
@@ -549,6 +565,55 @@ export const Chat: React.FC<ChatProps> = ({
     [],
   );
 
+  const handleMentionSelect = useCallback(
+    (entity: MentionableEntity) => {
+      // Avoid duplicate mentions
+      if (mentions.some((m) => m.type === entity.type && m.id === entity.id)) {
+        setMentionQuery(null);
+        return;
+      }
+
+      const typeLabel = entity.type.charAt(0).toUpperCase() + entity.type.slice(1);
+      const displayText = `@${typeLabel}: ${entity.displayName}`;
+
+      setMentions((prev) => [
+        ...prev,
+        { type: entity.type, id: entity.id, displayText },
+      ]);
+
+      // Replace @query text in the textarea with the display text
+      const textarea = inputRef.current;
+      if (textarea) {
+        const cursorPos = textarea.selectionStart ?? messageText.length;
+        const textBeforeCursor = messageText.slice(0, cursorPos);
+        const atIndex = textBeforeCursor.lastIndexOf('@');
+        if (atIndex !== -1) {
+          const before = messageText.slice(0, atIndex);
+          const after = messageText.slice(cursorPos);
+          const newText = `${before}${displayText} ${after}`;
+          setMessageText(newText);
+
+          // Set cursor position after the inserted text
+          requestAnimationFrame(() => {
+            if (inputRef.current) {
+              const newPos = before.length + displayText.length + 1;
+              inputRef.current.selectionStart = newPos;
+              inputRef.current.selectionEnd = newPos;
+              inputRef.current.focus();
+            }
+          });
+        }
+      }
+
+      setMentionQuery(null);
+    },
+    [mentions, messageText],
+  );
+
+  const handleMentionRemove = useCallback((mention: ChatMention) => {
+    setMentions((prev) => prev.filter((m) => !(m.type === mention.type && m.id === mention.id)));
+  }, []);
+
   const sendMessage = () => {
     const trimmedMessage = messageText.trim();
     if (!trimmedMessage.length) {
@@ -569,6 +634,12 @@ export const Chat: React.FC<ChatProps> = ({
   };
 
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // When mention popup is active, delegate navigation keys to it
+    if (mentionQuery !== null && mentionPopupRef.current) {
+      const handled = mentionPopupRef.current.handleKeyDown(e);
+      if (handled) return;
+    }
+
     if (e.key !== 'Enter') {
       return;
     }
@@ -696,7 +767,12 @@ export const Chat: React.FC<ChatProps> = ({
       ]);
     }
 
+    // Filter mentions to only those still referenced in the message text
+    const activeMentions = mentions.filter((m) => trimmedMessage.includes(m.displayText));
+
     setMessageText('');
+    setMentions([]);
+    setMentionQuery(null);
     setIsMultilineMode(false);
     if (inputRef.current) {
       inputRef.current.style.height = '';
@@ -719,6 +795,9 @@ export const Chat: React.FC<ChatProps> = ({
         body: JSON.stringify({
           messages: conversationWithUser,
           uiContext: aiContext,
+          ...(activeMentions.length > 0
+            ? { mentions: activeMentions.map((m) => ({ type: m.type, id: m.id })) }
+            : {}),
         }),
         signal: abortController.signal,
       });
@@ -885,6 +964,7 @@ export const Chat: React.FC<ChatProps> = ({
     autoResizeTextarea,
     addAssistantMessageToPersistence,
     aiContext,
+    mentions,
   ]);
 
   useEffect(() => {
@@ -1642,6 +1722,17 @@ export const Chat: React.FC<ChatProps> = ({
       <footer className="chat-footer">
         <div className="chat-footer__inner">
           <div className="chat-footer__input">
+            {mentions.length > 0 && (
+              <div className="chat-mention-chips">
+                {mentions.map((m) => (
+                  <ChatMentionChip
+                    key={`${m.type}-${m.id}`}
+                    mention={m}
+                    onRemove={handleMentionRemove}
+                  />
+                ))}
+              </div>
+            )}
             <textarea
               ref={inputRef}
               id={textareaId}
@@ -1656,6 +1747,15 @@ export const Chat: React.FC<ChatProps> = ({
               aria-busy={generatingResponse || isFunction}
               data-automation-id="chat-input"
             />
+            {mentionQuery !== null && (
+              <ChatMentionPopup
+                ref={mentionPopupRef}
+                query={mentionQuery}
+                onSelect={handleMentionSelect}
+                onDismiss={() => setMentionQuery(null)}
+                anchorRef={inputRef}
+              />
+            )}
             <p className="chat-input__hint">
               {isMultilineMode
                 ? 'Multiline mode: Enter adds a new line. Ctrl+Enter or ⌘+Enter sends.'

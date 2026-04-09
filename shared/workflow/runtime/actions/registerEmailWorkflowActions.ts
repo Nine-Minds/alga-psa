@@ -28,6 +28,7 @@ const contactOutputSchema = z.object({
   contact_id: z.string().describe('Unique identifier for the contact'),
   name: z.string().describe('Full name of the contact'),
   email: z.string().email().describe('Email address of the contact'),
+  matched_email: z.string().email().optional().describe('Exact sender email that matched this contact when different from the primary contact email'),
   client_id: z.string().describe('ID of the associated client'),
   user_id: z.string().optional().describe('Associated client user ID for the contact'),
   client_name: z.string().optional().describe('Name of the associated client'),
@@ -823,7 +824,7 @@ export function registerEmailWorkflowActionsV2(): void {
     handler: async (input) => {
       const { convertHtmlToBlockNote } = await import('@alga-psa/shared/lib/utils/contentConversion');
       try {
-        const blocks = convertHtmlToBlockNote(input.html);
+        const blocks = await convertHtmlToBlockNote(input.html);
         return { success: true, blocks };
       } catch (error) {
         return { success: false, blocks: [{ type: 'paragraph', content: [] }] };

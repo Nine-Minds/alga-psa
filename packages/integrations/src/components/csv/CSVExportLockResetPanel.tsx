@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
-import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { AlertCircle, RotateCcw } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
@@ -82,31 +82,19 @@ export function CSVExportLockResetPanel() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ToggleGroup
-          type="single"
-          value={mode}
-          onValueChange={(value) => {
+        <ViewSwitcher
+          currentView={mode}
+          onChange={(value) => {
             if (value === 'invoice' || value === 'batch') {
               setMode(value);
             }
           }}
+          options={[
+            { value: 'invoice' as const, label: 'Invoice', id: 'qbcsv-reset-export-lock-mode-invoice', disabled: isLoading },
+            { value: 'batch' as const, label: 'Batch', id: 'qbcsv-reset-export-lock-mode-batch', disabled: isLoading },
+          ]}
           aria-label="Reset export lock mode"
-        >
-          <ToggleGroupItem
-            id="qbcsv-reset-export-lock-mode-invoice"
-            value="invoice"
-            disabled={isLoading}
-          >
-            Invoice
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            id="qbcsv-reset-export-lock-mode-batch"
-            value="batch"
-            disabled={isLoading}
-          >
-            Batch
-          </ToggleGroupItem>
-        </ToggleGroup>
+        />
 
         {mode === 'invoice' ? (
           <Input

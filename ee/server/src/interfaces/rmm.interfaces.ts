@@ -6,7 +6,7 @@
  */
 
 // Provider types
-export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'datto' | 'connectwise_automate';
+export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'datto' | 'connectwise_automate';
 export type RmmSyncStatus = 'pending' | 'syncing' | 'completed' | 'error';
 export type RmmAlertSeverity = 'critical' | 'major' | 'moderate' | 'minor' | 'none';
 export type RmmAlertStatus = 'active' | 'acknowledged' | 'resolved' | 'auto_resolved';
@@ -30,16 +30,42 @@ export interface RmmIntegration {
   updated_at: string;
 }
 
-export interface RmmIntegrationSettings {
+export interface RmmCommonIntegrationSettings {
   sync_interval_minutes?: number;
   webhook_enabled?: boolean;
   webhook_secret?: string;
   auto_create_assets?: boolean;
   auto_sync_organizations?: boolean;
   default_asset_status?: string;
-  // NinjaOne specific
+}
+
+export interface NinjaOneRmmProviderSettings {
+  instance_region?: string;
+}
+
+export interface TacticalRmmProviderSettings {
+  auth_mode?: 'api_key' | 'token';
+}
+
+export interface TaniumRmmProviderSettings {
+  gateway_url?: string;
+  persona_name?: string;
+  use_asset_api_fallback?: boolean;
+}
+
+export interface RmmProviderConfigurationPayload {
+  ninjaone?: NinjaOneRmmProviderSettings;
+  tacticalrmm?: TacticalRmmProviderSettings;
+  tanium?: TaniumRmmProviderSettings;
+  datto?: Record<string, unknown>;
+  connectwise_automate?: Record<string, unknown>;
+}
+
+export interface RmmIntegrationSettings extends RmmCommonIntegrationSettings {
+  provider_settings?: RmmProviderConfigurationPayload;
+  // Backward-compatibility bridge for existing NinjaOne rows while migration proceeds.
   ninja_instance_region?: string;
-  // Future provider-specific settings can be added here
+  [key: string]: unknown;
 }
 
 // Organization Mapping

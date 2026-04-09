@@ -43,6 +43,19 @@ export function getTicketDocuments(
   });
 }
 
+export function deleteTicketDocument(
+  client: ApiClient,
+  params: { apiKey: string; ticketId: string; documentId: string },
+): Promise<ApiResult<SuccessResponse<null>>> {
+  return client.request<SuccessResponse<null>>({
+    method: "DELETE",
+    path: `/api/v1/tickets/${params.ticketId}/documents/${params.documentId}`,
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
 export function uploadTicketDocument(
   client: ApiClient,
   params: { apiKey: string; ticketId: string; file: TicketDocumentUpload | FormData },

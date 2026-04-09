@@ -36,6 +36,7 @@ import MoveTaskDialog from './MoveTaskDialog';
 import ProjectPhases from './ProjectPhases';
 import PhaseTaskImportDialog from './PhaseTaskImportDialog';
 import KanbanBoard from './KanbanBoard';
+import { useKanbanPan } from './useKanbanPan';
 import KanbanZoomControl, { calculateColumnWidth } from './KanbanZoomControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
@@ -574,6 +575,7 @@ export default function ProjectDetail({
 
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
+  useKanbanPan(kanbanBoardRef, viewMode === 'kanban');
   const kanbanHeaderRef = useRef<HTMLDivElement>(null);
   const scrollbarTrackRef = useRef<HTMLDivElement>(null);
   const scrollbarThumbRef = useRef<HTMLDivElement>(null);

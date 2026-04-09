@@ -102,15 +102,22 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
     }
   });
 
-  it('T022/T032: ROUTE_NAMESPACES loads admin and time-entry namespaces on the expected MSP routes', () => {
+  it('T022/T032: ROUTE_NAMESPACES loads admin, time-entry, and reused ticket namespaces on the expected MSP routes', () => {
     expect(ROUTE_NAMESPACES['/msp/settings']).toEqual([
       'common',
       'msp/core',
       'msp/settings',
       'msp/admin',
+      'msp/email-providers',
       'features/projects',
+      'features/tickets',
     ]);
 
+    expect(ROUTE_NAMESPACES['/msp/service-requests']).toEqual([
+      'common',
+      'msp/core',
+      'features/tickets',
+    ]);
     expect(ROUTE_NAMESPACES['/msp/time-entry']).toEqual(['common', 'msp/core', 'msp/time-entry']);
     expect(ROUTE_NAMESPACES['/msp/time-sheet-approvals']).toEqual([
       'common',

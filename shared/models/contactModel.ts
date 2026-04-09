@@ -11,6 +11,10 @@ import {
   CONTACT_PHONE_CANONICAL_TYPES,
   type ContactPhoneCanonicalType,
   type ContactPhoneNumberInput,
+  CONTACT_EMAIL_CANONICAL_TYPES,
+  type ContactEmailCanonicalType,
+  type IContactEmailAddress,
+  type ContactEmailAddressInput,
   type IContact,
   type IContactPhoneNumber,
   type CreateContactInput,
@@ -19,12 +23,22 @@ import {
 import { ValidationResult } from '../interfaces/validation.interfaces';
 
 const canonicalPhoneTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
+const canonicalEmailTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
+
 const phoneRowInputSchema = z.object({
   contact_phone_number_id: z.string().uuid().optional(),
   phone_number: z.string().trim().min(1, 'Phone number is required'),
   canonical_type: canonicalPhoneTypeSchema.nullish(),
   custom_type: z.string().trim().min(1).nullish(),
   is_default: z.boolean().optional(),
+  display_order: z.number().int().min(0).optional(),
+});
+
+const emailRowInputSchema = z.object({
+  contact_additional_email_address_id: z.string().uuid().optional(),
+  email_address: z.string().trim().min(1, 'Email address is required'),
+  canonical_type: canonicalEmailTypeSchema.nullish(),
+  custom_type: z.string().trim().min(1).nullish(),
   display_order: z.number().int().min(0).optional(),
 });
 
@@ -35,6 +49,10 @@ const phoneRowInputSchema = z.object({
 export const contactFormSchema = z.object({
   full_name: z.string().trim().min(1, 'Full name is required'),
   email: z.union([z.string().trim().email('Invalid email address'), z.literal(''), z.null()]).optional(),
+  primary_email_canonical_type: canonicalEmailTypeSchema.nullish(),
+  primary_email_custom_type: z.string().trim().min(1).nullish(),
+  primary_email_custom_type_id: z.string().uuid().nullable().optional(),
+  additional_email_addresses: z.array(emailRowInputSchema).optional(),
   phone_numbers: z.array(phoneRowInputSchema).optional(),
   client_id: z.string().uuid('Client ID must be a valid UUID').optional().nullable(),
   role: z.string().optional().nullable(),
@@ -47,6 +65,22 @@ export const contactSchema = z.object({
   tenant: z.string().uuid(),
   full_name: z.string(),
   client_id: z.string().uuid().nullable(),
+  primary_email_canonical_type: canonicalEmailTypeSchema.nullable(),
+  primary_email_custom_type_id: z.string().uuid().nullable().optional(),
+  primary_email_type: z.string().nullable().optional(),
+  additional_email_addresses: z.array(
+    z.object({
+      contact_additional_email_address_id: z.string().uuid(),
+      email_address: z.string(),
+      normalized_email_address: z.string(),
+      canonical_type: canonicalEmailTypeSchema.nullable(),
+      custom_email_type_id: z.string().uuid().nullable().optional(),
+      custom_type: z.string().nullable(),
+      display_order: z.number().int().min(0),
+      created_at: z.string().optional(),
+      updated_at: z.string().optional(),
+    })
+  ),
   phone_numbers: z.array(
     z.object({
       contact_phone_number_id: z.string().uuid(),
@@ -76,6 +110,8 @@ export const contactUpdateSchema = contactFormSchema.partial();
 export type {
   IContact,
   IContactPhoneNumber,
+  IContactEmailAddress,
+  ContactEmailAddressInput,
   ContactPhoneNumberInput,
   CreateContactInput,
   UpdateContactInput,
@@ -87,6 +123,9 @@ type ContactRecord = {
   tenant: string;
   full_name: string;
   client_id: string | null;
+  primary_email_canonical_type: ContactEmailCanonicalType | null;
+  primary_email_custom_type_id: string | null;
+  primary_email_type?: string | null;
   email: string | null;
   role: string | null;
   notes: string | null;
@@ -110,6 +149,19 @@ type ContactPhoneRow = {
   updated_at?: string;
 };
 
+type ContactEmailRow = {
+  contact_additional_email_address_id: string;
+  contact_name_id?: string;
+  email_address: string;
+  normalized_email_address: string;
+  canonical_type: ContactEmailCanonicalType | null;
+  custom_email_type_id?: string | null;
+  custom_type: string | null;
+  display_order: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
 type PreparedPhoneNumberInput = {
   contact_phone_number_id?: string;
   phone_number: string;
@@ -120,9 +172,28 @@ type PreparedPhoneNumberInput = {
   display_order: number;
 };
 
+type PreparedEmailAddressInput = {
+  contact_additional_email_address_id?: string;
+  email_address: string;
+  normalized_email_address: string;
+  canonical_type: ContactEmailCanonicalType | null;
+  custom_type: string | null;
+  normalized_custom_type: string | null;
+  custom_email_type_id?: string | null;
+  display_order: number;
+};
+
+type PreparedPrimaryEmailTypeInput = {
+  canonicalType: ContactEmailCanonicalType | null;
+  customTypeId: string | null;
+  customType: string | null;
+  normalizedCustomType: string | null;
+};
+
 type ContactWithPhones = ContactRecord & Pick<IContact, 'phone_numbers' | 'default_phone_number' | 'default_phone_type'>;
 
 const phonePattern = /^[0-9A-Za-z+().\-#\s/]+$/;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // =============================================================================
 // VALIDATION HELPER FUNCTIONS
@@ -180,9 +251,37 @@ function normalizePhoneForSearch(phoneNumber: string): string {
   return phoneNumber.replace(/\D/g, '');
 }
 
+function normalizeEmailAddress(emailAddress: string): string {
+  return emailAddress.trim().toLowerCase();
+}
+
+function toPreparedEmailAddressInput(row: ContactEmailRow): PreparedEmailAddressInput {
+  return {
+    contact_additional_email_address_id: row.contact_additional_email_address_id,
+    email_address: row.email_address,
+    normalized_email_address: row.normalized_email_address,
+    canonical_type: row.canonical_type,
+    custom_type: row.custom_type,
+    normalized_custom_type: row.custom_type ? normalizeCustomTypeLabel(row.custom_type) : null,
+    custom_email_type_id: row.custom_email_type_id ?? null,
+    display_order: row.display_order,
+  };
+}
+
 function deriveDefaultPhoneType(phoneNumber: Pick<IContactPhoneNumber, 'canonical_type' | 'custom_type'> | undefined): string | null {
   if (!phoneNumber) return null;
   return phoneNumber.custom_type ?? phoneNumber.canonical_type ?? null;
+}
+
+function derivePrimaryEmailType(
+  primaryCanonicalType: ContactEmailCanonicalType | null,
+  primaryCustomTypeId: string | null,
+  customTypeMap: Map<string, string>,
+): string | null {
+  if (primaryCustomTypeId) {
+    return customTypeMap.get(primaryCustomTypeId) ?? null;
+  }
+  return primaryCanonicalType;
 }
 
 // =============================================================================
@@ -191,6 +290,7 @@ function deriveDefaultPhoneType(phoneNumber: Pick<IContactPhoneNumber, 'canonica
 
 export class ContactModel {
   static readonly canonicalPhoneTypes = CONTACT_PHONE_CANONICAL_TYPES;
+  static readonly canonicalEmailTypes = CONTACT_EMAIL_CANONICAL_TYPES;
 
   static validateCreateContactInput(input: CreateContactInput): ValidationResult {
     try {
@@ -204,12 +304,30 @@ export class ContactModel {
       if (!phoneValidation.valid) {
         return phoneValidation;
       }
+      const emailValidation = this.validateEmailAddressPayload(validatedData.additional_email_addresses as ContactEmailAddressInput[] | undefined, {
+        primaryEmail: validatedData.email,
+      });
+      if (!emailValidation.valid) {
+        return emailValidation;
+      }
+      const primaryTypeValidation = this.validatePrimaryEmailTypeInput(
+        validatedData.primary_email_canonical_type,
+        validatedData.primary_email_custom_type_id,
+        validatedData.primary_email_custom_type
+      );
+      if (!primaryTypeValidation.valid) {
+        return primaryTypeValidation;
+      }
 
       return {
         valid: true,
         data: {
           ...validatedData,
           phone_numbers: phoneValidation.data ?? [],
+          additional_email_addresses: emailValidation.data ?? [],
+          primary_email_canonical_type: primaryTypeValidation.data?.canonicalType ?? null,
+          primary_email_custom_type: primaryTypeValidation.data?.customType ?? null,
+          primary_email_custom_type_id: primaryTypeValidation.data?.customTypeId ?? null,
         },
       };
     } catch (error) {
@@ -228,12 +346,34 @@ export class ContactModel {
       if (!phoneValidation.valid) {
         return phoneValidation;
       }
+      const emailValidation = this.validateEmailAddressPayload(validatedData.additional_email_addresses as ContactEmailAddressInput[] | undefined, {
+        allowUndefined: true,
+      });
+      if (!emailValidation.valid) {
+        return emailValidation;
+      }
+      const primaryTypeValidation = this.validatePrimaryEmailTypeInput(
+        validatedData.primary_email_canonical_type,
+        validatedData.primary_email_custom_type_id,
+        validatedData.primary_email_custom_type
+      );
+      if (!primaryTypeValidation.valid) {
+        return primaryTypeValidation;
+      }
 
       return {
         valid: true,
         data: {
           ...validatedData,
           ...(phoneValidation.data !== undefined ? { phone_numbers: phoneValidation.data } : {}),
+          ...(emailValidation.data !== undefined ? { additional_email_addresses: emailValidation.data } : {}),
+          ...(validatedData.primary_email_canonical_type !== undefined || validatedData.primary_email_custom_type_id !== undefined
+            ? {
+              primary_email_canonical_type: primaryTypeValidation.data?.canonicalType ?? null,
+              primary_email_custom_type: primaryTypeValidation.data?.customType ?? null,
+              primary_email_custom_type_id: primaryTypeValidation.data?.customTypeId ?? null,
+            }
+            : {}),
         },
       };
     } catch (error) {
@@ -328,6 +468,131 @@ export class ContactModel {
     return { valid: true, data: normalizedRows };
   }
 
+  static validateEmailAddressPayload(
+    additionalEmailAddresses: ContactEmailAddressInput[] | undefined,
+    options: { allowUndefined?: boolean; primaryEmail?: string | null } = {}
+  ): ValidationResult {
+    if (additionalEmailAddresses === undefined) {
+      return options.allowUndefined ? { valid: true, data: undefined } : { valid: true, data: [] };
+    }
+
+    if (!Array.isArray(additionalEmailAddresses)) {
+      return { valid: false, errors: ['additional_email_addresses must be an array'] };
+    }
+
+    const normalizedRows: PreparedEmailAddressInput[] = [];
+    const errors: string[] = [];
+    const seenEmails = new Set<string>();
+    const seenCustomLabels = new Set<string>();
+    const normalizedPrimary = options.primaryEmail ? normalizeEmailAddress(options.primaryEmail) : null;
+
+    for (let index = 0; index < additionalEmailAddresses.length; index += 1) {
+      const row = additionalEmailAddresses[index];
+      const parsedRow = emailRowInputSchema.safeParse(row);
+      if (!parsedRow.success) {
+        errors.push(...parsedRow.error.errors.map(error => `additional_email_addresses.${index}.${error.path.join('.')}: ${error.message}`));
+        continue;
+      }
+
+      const trimmedEmail = parsedRow.data.email_address.trim();
+      const normalizedEmail = normalizeEmailAddress(trimmedEmail);
+      const rowErrors: string[] = [];
+
+      if (!emailPattern.test(trimmedEmail)) {
+        rowErrors.push(`additional_email_addresses.${index}.email_address: Invalid email address`);
+      }
+      if (normalizedPrimary && normalizedEmail === normalizedPrimary) {
+        rowErrors.push(`additional_email_addresses.${index}.email_address: Additional email address cannot match primary email`);
+      }
+      if (seenEmails.has(normalizedEmail)) {
+        rowErrors.push(`additional_email_addresses.${index}.email_address: Duplicate additional email address is not allowed`);
+      }
+
+      const canonicalType = parsedRow.data.canonical_type ?? null;
+      const customType = parsedRow.data.custom_type?.trim() || null;
+      if (!canonicalType && !customType) {
+        rowErrors.push(`additional_email_addresses.${index}: Choose a canonical type or provide a custom type`);
+      }
+      if (canonicalType && customType) {
+        rowErrors.push(`additional_email_addresses.${index}: An additional email row cannot have both canonical and custom types`);
+      }
+
+      const normalizedCustomType = customType ? normalizeCustomTypeLabel(customType) : null;
+      if (normalizedCustomType && ContactModel.canonicalEmailTypes.includes(normalizedCustomType as ContactEmailCanonicalType)) {
+        rowErrors.push(`additional_email_addresses.${index}.custom_type: Use the canonical type picker for "${normalizedCustomType}"`);
+      }
+      if (normalizedCustomType && seenCustomLabels.has(normalizedCustomType)) {
+        rowErrors.push(`additional_email_addresses.${index}.custom_type: Duplicate custom email type labels are not allowed`);
+      }
+
+      if (rowErrors.length > 0) {
+        errors.push(...rowErrors);
+        continue;
+      }
+
+      seenEmails.add(normalizedEmail);
+      if (normalizedCustomType) {
+        seenCustomLabels.add(normalizedCustomType);
+      }
+
+      normalizedRows.push({
+        contact_additional_email_address_id: parsedRow.data.contact_additional_email_address_id,
+        email_address: trimmedEmail,
+        normalized_email_address: normalizedEmail,
+        canonical_type: canonicalType,
+        custom_type: customType,
+        normalized_custom_type: normalizedCustomType,
+        display_order: index,
+      });
+    }
+
+    if (errors.length > 0) {
+      return { valid: false, errors };
+    }
+
+    return { valid: true, data: normalizedRows };
+  }
+
+  static validatePrimaryEmailTypeInput(
+    canonicalType: ContactEmailCanonicalType | null | undefined,
+    customTypeId: string | null | undefined,
+    customTypeValue: string | null | undefined
+  ): ValidationResult & { data?: PreparedPrimaryEmailTypeInput } {
+    const trimmedCustomType = customTypeValue?.trim() || null;
+
+    if (canonicalType && (customTypeId || trimmedCustomType)) {
+      return {
+        valid: false,
+        errors: ['Choose either a canonical primary email type or a custom primary email type, but not both'],
+      };
+    }
+
+    if (customTypeId && trimmedCustomType) {
+      return {
+        valid: false,
+        errors: ['Provide either primary_email_custom_type_id or primary_email_custom_type, but not both'],
+      };
+    }
+
+    const normalizedCustomType = trimmedCustomType ? normalizeCustomTypeLabel(trimmedCustomType) : null;
+    if (normalizedCustomType && ContactModel.canonicalEmailTypes.includes(normalizedCustomType as ContactEmailCanonicalType)) {
+      return {
+        valid: false,
+        errors: [`primary_email_custom_type: Use the canonical type picker for "${normalizedCustomType}"`],
+      };
+    }
+
+    return {
+      valid: true,
+      data: {
+        canonicalType: canonicalType ?? null,
+        customTypeId: customTypeId ?? null,
+        customType: trimmedCustomType,
+        normalizedCustomType,
+      },
+    };
+  }
+
   static async checkEmailExists(
     email: string,
     tenant: string,
@@ -365,7 +630,11 @@ export class ContactModel {
       throw new Error(`VALIDATION_ERROR: ${validation.errors?.join('; ')}`);
     }
 
-    const validatedInput = validation.data as CreateContactInput & { phone_numbers: PreparedPhoneNumberInput[] };
+    const validatedInput = validation.data as CreateContactInput & {
+      phone_numbers: PreparedPhoneNumberInput[];
+      additional_email_addresses: PreparedEmailAddressInput[];
+      primary_email_custom_type?: string | null;
+    };
     const normalizedEmail = input.email.trim().toLowerCase();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(normalizedEmail)) {
@@ -392,12 +661,17 @@ export class ContactModel {
 
     const contactId = uuidv4();
     const now = new Date().toISOString();
+    const primaryEmailCustomTypeId = await this.resolvePrimaryCustomEmailTypeId(validatedInput, tenant, trx, now);
 
     const insertData = {
       contact_name_id: contactId,
       tenant,
       full_name: input.full_name.trim(),
       email: normalizedEmail,
+      primary_email_canonical_type: primaryEmailCustomTypeId
+        ? null
+        : (validatedInput.primary_email_canonical_type ?? 'work'),
+      primary_email_custom_type_id: primaryEmailCustomTypeId,
       client_id: input.client_id || null,
       role: input.role?.trim() || null,
       notes: input.notes?.trim() || null,
@@ -409,6 +683,7 @@ export class ContactModel {
     try {
       await trx('contacts').insert(insertData);
       await this.replacePhoneNumbers(contactId, tenant, validatedInput.phone_numbers, trx, now);
+      await this.replaceAdditionalEmailAddresses(contactId, tenant, validatedInput.additional_email_addresses, trx, now);
 
       const hydratedContact = await this.getContactById(contactId, tenant, trx);
       if (!hydratedContact) {
@@ -432,6 +707,12 @@ export class ContactModel {
 
         if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
           throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
+        }
+        if (message.includes('A contact email already exists as an additional email address in this tenant')) {
+          throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
+        }
+        if (message.includes('An additional email address already exists as a contact primary email in this tenant')) {
+          throw new Error('EMAIL_EXISTS: A contact email address already exists in this tenant');
         }
 
         if (message.includes('violates not-null constraint')) {
@@ -459,7 +740,14 @@ export class ContactModel {
       throw new Error(`VALIDATION_ERROR: ${validation.errors?.join('; ')}`);
     }
 
-    const updateData = validation.data as UpdateContactInput & { phone_numbers?: PreparedPhoneNumberInput[] };
+    const updateData = validation.data as Omit<
+      UpdateContactInput,
+      'phone_numbers' | 'additional_email_addresses' | 'primary_email_custom_type'
+    > & {
+      phone_numbers?: PreparedPhoneNumberInput[];
+      additional_email_addresses?: PreparedEmailAddressInput[];
+      primary_email_custom_type?: string | null;
+    };
     const existingContact = await trx('contacts')
       .where({ contact_name_id: contactId, tenant })
       .first<ContactRecord>();
@@ -468,13 +756,92 @@ export class ContactModel {
       throw new Error('NOT_FOUND: Contact not found');
     }
 
+    let promotedEmailRow: PreparedEmailAddressInput | null = null;
+
     if (updateData.email?.trim()) {
       const normalizedEmail = updateData.email.trim().toLowerCase();
+      if (normalizedEmail !== existingContact.email?.toLowerCase()) {
+        const incomingAdditionalRows = updateData.additional_email_addresses ?? [];
+        const normalizedExistingPrimaryEmail = normalizeEmailAddress(existingContact.email || '');
+        const hasDemotedPrimaryRow = incomingAdditionalRows.some((row) => {
+          const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
+          return normalizedRowEmail === normalizedExistingPrimaryEmail;
+        });
+        const hasIncomingPrimaryType =
+          updateData.primary_email_canonical_type !== undefined ||
+          updateData.primary_email_custom_type !== undefined ||
+          updateData.primary_email_custom_type_id !== undefined;
+
+        const matchingAdditional = incomingAdditionalRows.find((row) => {
+          const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
+          return normalizedRowEmail === normalizedEmail;
+        });
+        if (matchingAdditional) {
+          promotedEmailRow = matchingAdditional;
+        } else {
+          const existingAdditionalRows = await this.getAdditionalEmailAddressesForContact(contactId, tenant, trx);
+          const existingPromotedRow = existingAdditionalRows.find((row) => row.normalized_email_address === normalizedEmail);
+
+          if (existingPromotedRow && hasDemotedPrimaryRow) {
+            promotedEmailRow = toPreparedEmailAddressInput(existingPromotedRow);
+          } else if (hasDemotedPrimaryRow && hasIncomingPrimaryType) {
+            const customType = updateData.primary_email_custom_type?.trim() || null;
+            promotedEmailRow = {
+              email_address: updateData.email.trim(),
+              normalized_email_address: normalizedEmail,
+              canonical_type: updateData.primary_email_canonical_type ?? null,
+              custom_type: customType,
+              normalized_custom_type: customType ? normalizeCustomTypeLabel(customType) : null,
+              custom_email_type_id: updateData.primary_email_custom_type_id ?? null,
+              display_order: 0,
+            };
+          }
+        }
+
+        if (!promotedEmailRow) {
+          throw new Error('VALIDATION_ERROR: Changing primary email requires promote an additional email first');
+        }
+      }
       const emailExists = await this.checkEmailExists(normalizedEmail, tenant, trx, contactId);
       if (emailExists) {
         throw new Error(`EMAIL_EXISTS: A contact with email ${normalizedEmail} already exists`);
       }
       updateData.email = normalizedEmail;
+      if (promotedEmailRow) {
+        updateData.primary_email_canonical_type = promotedEmailRow.canonical_type ?? null;
+        updateData.primary_email_custom_type = promotedEmailRow.custom_type ?? null;
+        updateData.primary_email_custom_type_id = promotedEmailRow.custom_email_type_id ?? null;
+
+        const remainingRows = (updateData.additional_email_addresses ?? []).filter((row) => {
+          const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
+          return normalizedRowEmail !== normalizedEmail;
+        });
+
+        const hasDemotedPrimaryRow = remainingRows.some((row) => {
+          const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
+          return normalizedRowEmail === normalizeEmailAddress(existingContact.email || '');
+        });
+
+        if (!hasDemotedPrimaryRow) {
+          const demotedPrimaryRow: PreparedEmailAddressInput = {
+            email_address: existingContact.email ?? '',
+            normalized_email_address: normalizeEmailAddress(existingContact.email || ''),
+            canonical_type: existingContact.primary_email_canonical_type ?? null,
+            custom_type: null,
+            normalized_custom_type: null,
+            custom_email_type_id: existingContact.primary_email_custom_type_id ?? null,
+            display_order: remainingRows.length,
+          };
+          updateData.additional_email_addresses = [...remainingRows, demotedPrimaryRow];
+        } else {
+          updateData.additional_email_addresses = remainingRows.map((row, index) => ({
+            ...row,
+            display_order: index,
+          }));
+        }
+      }
+    } else if (updateData.email === null) {
+      throw new Error('VALIDATION_ERROR: Primary email cannot be removed');
     }
 
     if (updateData.client_id) {
@@ -488,17 +855,46 @@ export class ContactModel {
     }
 
     const now = new Date().toISOString();
+    const primaryEmailCustomTypeId = await this.resolvePrimaryCustomEmailTypeId(updateData, tenant, trx, now);
+    if (
+      updateData.primary_email_canonical_type !== undefined ||
+      updateData.primary_email_custom_type !== undefined ||
+      updateData.primary_email_custom_type_id !== undefined
+    ) {
+      updateData.primary_email_canonical_type = primaryEmailCustomTypeId
+        ? null
+        : (updateData.primary_email_canonical_type ?? null);
+      updateData.primary_email_custom_type_id = primaryEmailCustomTypeId;
+    }
+    const shouldClearAdditionalEmailAddressesBeforePrimarySwap =
+      promotedEmailRow !== null &&
+      updateData.additional_email_addresses !== undefined;
+
     const dbData: Record<string, unknown> = {
       updated_at: now,
     };
 
     for (const [key, value] of Object.entries(updateData)) {
-      if (key === 'phone_numbers' || value === undefined) continue;
+      if (
+        key === 'phone_numbers' ||
+        key === 'additional_email_addresses' ||
+        key === 'primary_email_custom_type' ||
+        value === undefined
+      ) continue;
       if (typeof value === 'string') {
         dbData[key] = value.trim() === '' ? null : value.trim();
       } else {
         dbData[key] = value;
       }
+    }
+
+    if (shouldClearAdditionalEmailAddressesBeforePrimarySwap) {
+      // During a primary-email promotion, clear the existing additional rows before
+      // updating contacts.email so immediate uniqueness triggers never see both
+      // the old and new primary addresses in conflicting locations at once.
+      await trx('contact_additional_email_addresses')
+        .where({ tenant, contact_name_id: contactId })
+        .delete();
     }
 
     await trx('contacts')
@@ -507,6 +903,9 @@ export class ContactModel {
 
     if (updateData.phone_numbers !== undefined) {
       await this.replacePhoneNumbers(contactId, tenant, updateData.phone_numbers, trx, now);
+    }
+    if (updateData.additional_email_addresses !== undefined) {
+      await this.replaceAdditionalEmailAddresses(contactId, tenant, updateData.additional_email_addresses, trx, now);
     }
 
     const hydratedContact = await this.getContactById(contactId, tenant, trx);
@@ -557,6 +956,117 @@ export class ContactModel {
     );
 
     return this.getPhoneNumbersForContact(contactId, tenant, trx);
+  }
+
+  static async replaceAdditionalEmailAddresses(
+    contactId: string,
+    tenant: string,
+    additionalEmailAddresses: PreparedEmailAddressInput[] | ContactEmailAddressInput[] | undefined,
+    trx: Knex.Transaction,
+    now: string = new Date().toISOString()
+  ): Promise<IContactEmailAddress[]> {
+    const preparedRows = this.isPreparedEmailAddressInputArray(additionalEmailAddresses)
+      ? additionalEmailAddresses
+      : (() => {
+        const validation = this.validateEmailAddressPayload(
+          Array.isArray(additionalEmailAddresses)
+            ? additionalEmailAddresses as ContactEmailAddressInput[]
+            : additionalEmailAddresses,
+          { allowUndefined: true }
+        );
+        if (!validation.valid) {
+          throw new Error(`VALIDATION_ERROR: ${validation.errors?.join('; ')}`);
+        }
+
+        return (validation.data ?? []) as PreparedEmailAddressInput[];
+      })();
+
+    await trx('contact_additional_email_addresses')
+      .where({ tenant, contact_name_id: contactId })
+      .delete();
+
+    if (preparedRows.length === 0) {
+      return [];
+    }
+
+    const customTypeMap = await this.ensureCustomEmailTypeDefinitions(preparedRows, tenant, trx, now);
+
+    await trx('contact_additional_email_addresses').insert(
+      preparedRows.map((row) => ({
+        tenant,
+        contact_additional_email_address_id: row.contact_additional_email_address_id || uuidv4(),
+        contact_name_id: contactId,
+        email_address: row.email_address,
+        canonical_type: row.canonical_type,
+        custom_email_type_id: row.normalized_custom_type ? customTypeMap.get(row.normalized_custom_type)?.contact_email_type_id ?? null : row.custom_email_type_id ?? null,
+        display_order: row.display_order,
+        created_at: now,
+        updated_at: now,
+      }))
+    );
+
+    return this.getAdditionalEmailAddressesForContact(contactId, tenant, trx);
+  }
+
+  static async getAdditionalEmailAddressesForContact(
+    contactId: string,
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<IContactEmailAddress[]> {
+    const emailMap = await this.getAdditionalEmailAddressesForContacts([contactId], tenant, trx);
+    return emailMap.get(contactId) ?? [];
+  }
+
+  static async getAdditionalEmailAddressesForContacts(
+    contactIds: string[],
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<Map<string, IContactEmailAddress[]>> {
+    const emailMap = new Map<string, IContactEmailAddress[]>();
+    if (contactIds.length === 0) {
+      return emailMap;
+    }
+
+    const rows = await trx('contact_additional_email_addresses as cea')
+      .leftJoin('contact_email_type_definitions as cecd', function joinCustomType() {
+        this.on('cea.custom_email_type_id', '=', 'cecd.contact_email_type_id')
+          .andOn('cea.tenant', '=', 'cecd.tenant');
+      })
+      .select(
+        'cea.contact_additional_email_address_id',
+        'cea.contact_name_id',
+        'cea.email_address',
+        'cea.normalized_email_address',
+        'cea.canonical_type',
+        'cea.custom_email_type_id',
+        'cea.display_order',
+        'cea.created_at',
+        'cea.updated_at',
+        'cecd.label as custom_type'
+      )
+      .where('cea.tenant', tenant)
+      .whereIn('cea.contact_name_id', contactIds)
+      .orderBy([{ column: 'cea.contact_name_id', order: 'asc' }, { column: 'cea.display_order', order: 'asc' }]);
+
+    for (const row of rows) {
+      const address: IContactEmailAddress = {
+        contact_additional_email_address_id: row.contact_additional_email_address_id,
+        email_address: row.email_address,
+        normalized_email_address: row.normalized_email_address,
+        canonical_type: row.canonical_type,
+        custom_email_type_id: row.custom_email_type_id,
+        custom_type: row.custom_type,
+        display_order: row.display_order,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      };
+
+      const existingRows = emailMap.get(row.contact_name_id) ?? [];
+      existingRows.push(address);
+      emailMap.set(row.contact_name_id, existingRows);
+    }
+
+    return emailMap;
   }
 
   static async getPhoneNumbersForContact(
@@ -626,24 +1136,62 @@ export class ContactModel {
     contacts: T[],
     tenant: string,
     trx: Knex.Transaction
-  ): Promise<Array<T & Pick<IContact, 'phone_numbers' | 'default_phone_number' | 'default_phone_type'>>> {
+  ): Promise<Array<T & Pick<IContact, 'phone_numbers' | 'default_phone_number' | 'default_phone_type' | 'additional_email_addresses' | 'primary_email_type'>>> {
     const phoneMap = await this.getPhoneNumbersForContacts(
       contacts.map((contact) => contact.contact_name_id),
       tenant,
       trx
     );
+    const emailMap = await this.getAdditionalEmailAddressesForContacts(
+      contacts.map((contact) => contact.contact_name_id),
+      tenant,
+      trx
+    );
+
+    const primaryTypeMap = await this.getPrimaryEmailTypeForContacts(contacts, tenant, trx);
 
     return contacts.map((contact) => {
       const phoneNumbers = phoneMap.get(contact.contact_name_id) ?? [];
       const defaultPhone = phoneNumbers.find((phoneNumber) => phoneNumber.is_default) ?? null;
+      const additionalEmails = emailMap.get(contact.contact_name_id) ?? [];
+      const primaryEmailType = derivePrimaryEmailType(
+        contact.primary_email_canonical_type ?? null,
+        contact.primary_email_custom_type_id ?? null,
+        primaryTypeMap
+      );
 
       return {
         ...contact,
         phone_numbers: phoneNumbers,
         default_phone_number: defaultPhone?.phone_number ?? null,
         default_phone_type: deriveDefaultPhoneType(defaultPhone ?? undefined),
+        additional_email_addresses: additionalEmails,
+        primary_email_type: primaryEmailType,
       };
     });
+  }
+
+  static async getPrimaryEmailTypeForContacts(
+    contacts: ContactRecord[],
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<Map<string, string>> {
+    const customTypeIds = Array.from(new Set(
+      contacts
+        .map((contact) => contact.primary_email_custom_type_id)
+        .filter((id): id is string => !!id)
+    ));
+
+    if (customTypeIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await trx('contact_email_type_definitions')
+      .where({ tenant })
+      .whereIn('contact_email_type_id', customTypeIds)
+      .select('contact_email_type_id', 'label');
+
+    return new Map(rows.map((row) => [row.contact_email_type_id, row.label]));
   }
 
   static async getContactById(
@@ -687,16 +1235,30 @@ export class ContactModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<IContact | null> {
+    const normalizedEmail = normalizeEmailAddress(email);
+
     const contact = await trx('contacts')
-      .where({ email: email.toLowerCase(), tenant })
+      .where({ email: normalizedEmail, tenant })
       .first<ContactRecord>();
 
-    if (!contact) {
+    if (contact) {
+      const [hydrated] = await this.hydrateContactsWithPhoneNumbers([contact], tenant, trx);
+      return hydrated as IContact;
+    }
+
+    const additionalEmailMatch = await trx('contact_additional_email_addresses')
+      .select('contact_name_id')
+      .where({
+        tenant,
+        normalized_email_address: normalizedEmail,
+      })
+      .first<{ contact_name_id: string }>();
+
+    if (!additionalEmailMatch?.contact_name_id) {
       return null;
     }
 
-    const [hydrated] = await this.hydrateContactsWithPhoneNumbers([contact], tenant, trx);
-    return hydrated as IContact;
+    return this.getContactById(additionalEmailMatch.contact_name_id, tenant, trx);
   }
 
   static async contactExists(
@@ -766,6 +1328,159 @@ export class ContactModel {
 
     const contacts = await query.orderBy('c.full_name', 'asc').select('c.*');
     return this.hydrateContactsWithPhoneNumbers(contacts as ContactRecord[], tenant, trx) as Promise<IContact[]>;
+  }
+
+  /**
+   * Get usage count for a custom email label across all contacts in the tenant.
+   */
+  static async getCustomEmailTypeUsageCount(
+    customTypeLabel: string,
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<{ label: string; usageCount: number }> {
+    const normalized = customTypeLabel.trim().replace(/\s+/g, ' ').toLowerCase();
+
+    const definition = await trx('contact_email_type_definitions')
+      .where({ tenant, normalized_label: normalized })
+      .first<{ contact_email_type_id: string }>();
+
+    if (!definition) {
+      return { label: customTypeLabel, usageCount: 0 };
+    }
+
+    const additionalRows = await trx('contact_additional_email_addresses')
+      .where({
+        tenant,
+        custom_email_type_id: definition.contact_email_type_id,
+      })
+      .count<{ count: string }>('* as count')
+      .first();
+
+    const primaryRows = await trx('contacts')
+      .where({ tenant, primary_email_custom_type_id: definition.contact_email_type_id })
+      .count<{ count: string }>('* as count')
+      .first();
+
+    const additionalCount = Number(additionalRows?.count ?? 0);
+    const primaryCount = Number(primaryRows?.count ?? 0);
+
+    return { label: customTypeLabel, usageCount: additionalCount + primaryCount };
+  }
+
+  /**
+   * Find custom email type IDs used by this contact that are not used by any other contact.
+   */
+  static async findLastUsageEmailTypes(
+    contactId: string,
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<Array<{ contact_email_type_id: string; label: string }>> {
+    const contact = await trx('contacts')
+      .where({ contact_name_id: contactId, tenant })
+      .first<ContactRecord>();
+
+    if (!contact) {
+      return [];
+    }
+
+    const contactTypeIds = new Set<string>();
+    if (contact.primary_email_custom_type_id) {
+      contactTypeIds.add(contact.primary_email_custom_type_id);
+    }
+
+    const additionalTypeIds = await trx('contact_additional_email_addresses')
+      .where({ tenant, contact_name_id: contactId })
+      .whereNotNull('custom_email_type_id')
+      .distinct('custom_email_type_id')
+      .pluck('custom_email_type_id');
+    for (const typeId of additionalTypeIds) {
+      contactTypeIds.add(typeId);
+    }
+
+    if (contactTypeIds.size === 0) return [];
+
+    const typeIds = Array.from(contactTypeIds);
+
+    const additionalCounts = await trx('contact_additional_email_addresses')
+      .where({ tenant })
+      .whereIn('custom_email_type_id', typeIds)
+      .groupBy('custom_email_type_id')
+      .select('custom_email_type_id')
+      .count<Array<{ custom_email_type_id: string; count: string }>>('* as count');
+
+    const countByType = new Map<string, number>(
+      additionalCounts.map((row) => [row.custom_email_type_id, Number(row.count)]),
+    );
+
+    const primaryCounts = await trx('contacts')
+      .where({ tenant })
+      .whereNotNull('primary_email_custom_type_id')
+      .whereIn('primary_email_custom_type_id', typeIds)
+      .groupBy('primary_email_custom_type_id')
+      .select('primary_email_custom_type_id')
+      .count<Array<{ primary_email_custom_type_id: string; count: string }>>('* as count');
+    for (const row of primaryCounts) {
+      const prevCount = countByType.get(row.primary_email_custom_type_id) ?? 0;
+      countByType.set(row.primary_email_custom_type_id, prevCount + Number(row.count));
+    }
+
+    const singleUseTypeIds = Array.from(countByType.entries())
+      .filter((entry) => entry[1] === 1)
+      .map((entry) => entry[0]);
+
+    if (singleUseTypeIds.length === 0) return [];
+
+    return trx('contact_email_type_definitions')
+      .where({ tenant })
+      .whereIn('contact_email_type_id', singleUseTypeIds)
+      .select('contact_email_type_id', 'label');
+  }
+
+  /**
+   * Find orphaned custom email type definitions not referenced by any contact.
+   */
+  static async findOrphanedEmailTypeDefinitions(
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<Array<{ contact_email_type_id: string; label: string }>> {
+    const usedInContacts = await trx('contacts')
+      .where({ tenant })
+      .whereNotNull('primary_email_custom_type_id')
+      .distinct('primary_email_custom_type_id')
+      .pluck('primary_email_custom_type_id');
+
+    const usedInAdditional = await trx('contact_additional_email_addresses')
+      .where({ tenant })
+      .whereNotNull('custom_email_type_id')
+      .distinct('custom_email_type_id')
+      .pluck('custom_email_type_id');
+
+    const usedTypeIds = Array.from(new Set([...usedInContacts, ...usedInAdditional]));
+
+    const query = trx('contact_email_type_definitions')
+      .where({ tenant })
+      .select('contact_email_type_id', 'label');
+
+    if (usedTypeIds.length > 0) {
+      query.whereNotIn('contact_email_type_id', usedTypeIds);
+    }
+
+    return query;
+  }
+
+  /**
+   * Delete specific custom email type definitions by ID.
+   */
+  static async deleteEmailTypeDefinitions(
+    typeIds: string[],
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<number> {
+    if (typeIds.length === 0) return 0;
+    return trx('contact_email_type_definitions')
+      .where({ tenant })
+      .whereIn('contact_email_type_id', typeIds)
+      .delete();
   }
 
   /**
@@ -862,6 +1577,45 @@ export class ContactModel {
       .delete();
   }
 
+  private static isPreparedEmailAddressInputArray(
+    rows: PreparedEmailAddressInput[] | ContactEmailAddressInput[] | undefined
+  ): rows is PreparedEmailAddressInput[] {
+    return Array.isArray(rows) && rows.every((row) => 'normalized_email_address' in row);
+  }
+
+  private static async resolvePrimaryCustomEmailTypeId(
+    input: Pick<CreateContactInput, 'primary_email_custom_type' | 'primary_email_custom_type_id'>,
+    tenant: string,
+    trx: Knex.Transaction,
+    now: string
+  ): Promise<string | null> {
+    if (input.primary_email_custom_type_id) {
+      return input.primary_email_custom_type_id;
+    }
+
+    const customType = input.primary_email_custom_type?.trim();
+    if (!customType) {
+      return null;
+    }
+
+    const normalizedCustomType = normalizeCustomTypeLabel(customType);
+    const customTypeMap = await this.ensureCustomEmailTypeDefinitions(
+      [{
+        email_address: '__primary__@example.invalid',
+        normalized_email_address: '__primary__@example.invalid',
+        canonical_type: null,
+        custom_type: customType,
+        normalized_custom_type: normalizedCustomType,
+        display_order: 0,
+      }],
+      tenant,
+      trx,
+      now
+    );
+
+    return customTypeMap.get(normalizedCustomType)?.contact_email_type_id ?? null;
+  }
+
   private static async ensureCustomPhoneTypeDefinitions(
     preparedRows: PreparedPhoneNumberInput[],
     tenant: string,
@@ -922,6 +1676,72 @@ export class ContactModel {
         row.normalized_label,
         {
           contact_phone_type_id: row.contact_phone_type_id,
+          label: row.label,
+        },
+      ])
+    );
+  }
+
+  private static async ensureCustomEmailTypeDefinitions(
+    preparedRows: PreparedEmailAddressInput[],
+    tenant: string,
+    trx: Knex.Transaction,
+    now: string
+  ): Promise<Map<string, { contact_email_type_id: string; label: string }>> {
+    const labelsToEnsure = preparedRows
+      .filter((row) => row.normalized_custom_type && row.custom_type)
+      .map((row) => ({
+        label: row.custom_type as string,
+        normalized_label: row.normalized_custom_type as string,
+      }));
+
+    if (labelsToEnsure.length === 0) {
+      return new Map();
+    }
+
+    const uniqueByNormalized = new Map<string, string>();
+    for (const row of labelsToEnsure) {
+      if (!uniqueByNormalized.has(row.normalized_label)) {
+        uniqueByNormalized.set(row.normalized_label, row.label);
+      }
+    }
+
+    const normalizedLabels = Array.from(uniqueByNormalized.keys());
+    const existingRows = await trx('contact_email_type_definitions')
+      .select('contact_email_type_id', 'label', 'normalized_label')
+      .where({ tenant })
+      .whereIn('normalized_label', normalizedLabels);
+
+    const existingByNormalized = new Map(existingRows.map((row) => [row.normalized_label, row]));
+
+    const missingRows = normalizedLabels
+      .filter((normalizedLabel) => !existingByNormalized.has(normalizedLabel))
+      .map((normalizedLabel) => ({
+        tenant,
+        contact_email_type_id: uuidv4(),
+        label: uniqueByNormalized.get(normalizedLabel) as string,
+        normalized_label: normalizedLabel,
+        created_at: now,
+        updated_at: now,
+      }));
+
+    if (missingRows.length > 0) {
+      await trx('contact_email_type_definitions')
+        .insert(missingRows)
+        .onConflict(['tenant', 'normalized_label'])
+        .ignore();
+    }
+
+    const resolvedRows = await trx('contact_email_type_definitions')
+      .select('contact_email_type_id', 'label', 'normalized_label')
+      .where({ tenant })
+      .whereIn('normalized_label', normalizedLabels);
+
+    return new Map(
+      resolvedRows.map((row) => [
+        row.normalized_label,
+        {
+          contact_email_type_id: row.contact_email_type_id,
           label: row.label,
         },
       ])

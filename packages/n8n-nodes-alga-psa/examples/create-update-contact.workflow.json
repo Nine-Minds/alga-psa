@@ -8,6 +8,8 @@
         "full_name": "Ada Lovelace",
         "contactCreateAdditionalFields": {
           "email": "ada@example.com",
+          "primary_email_canonical_type": "billing",
+          "additional_email_addresses": "[{\"email_address\":\"ada.personal@example.com\",\"canonical_type\":\"personal\",\"display_order\":0}]",
           "client_id": {
             "mode": "id",
             "value": "00000000-0000-0000-0000-000000000001"

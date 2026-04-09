@@ -404,11 +404,9 @@ const nextConfig = {
     '@blocknote/react',
     '@blocknote/mantine',
     '@emoji-mart/data',
-    '@alga-psa/auth',
     '@alga-psa/ui',
     '@alga-psa/scheduling',
     '@alga-psa/users',
-    '@alga-psa/notifications',
     '@alga-psa/email',
     '@alga-psa/teams',
     '@alga-psa/tenancy',
@@ -481,9 +479,10 @@ const nextConfig = {
       '@img/sharp-libvips-dev/include': path.join(__dirname, 'src/empty/shims/empty.ts'),
       '@img/sharp-libvips-dev/cplusplus': path.join(__dirname, 'src/empty/shims/empty.ts'),
       '@img/sharp-wasm32/versions': path.join(__dirname, 'src/empty/shims/empty.ts'),
-      '@alga-psa/auth': path.join(__dirname, '../packages/auth/src'),
       '@alga-psa/ui': path.join(__dirname, '../packages/ui/src'),
       // Pre-built packages: src/ for local dev, dist/ for production (USE_PREBUILT=true)
+      '@alga-psa/auth': prebuiltDirAbs('auth'),
+      '@alga-psa/notifications': prebuiltDirAbs('notifications'),
       '@alga-psa/clients': prebuiltDirAbs('clients'),
       '@alga-psa/types': prebuiltDirAbs('types'),
       '@alga-psa/core': prebuiltDirAbs('core'),
@@ -532,7 +531,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
-        : path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
+        : path.join(__dirname, usePrebuilt ? '../packages/auth/dist/components/SsoProviderButtons.js' : '../packages/auth/src/components/SsoProviderButtons.tsx'),
       '@alga-psa/ee-stubs': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'),

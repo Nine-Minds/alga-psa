@@ -4,6 +4,7 @@ set -euo pipefail
 KUBECONFIG_PATH="${KUBECONFIG:-}"
 REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)"
 STORAGE_MANIFEST="$REPO_ROOT/ee/appliance/manifests/local-path-storage.yaml"
+STORAGE_PATH="/var/mnt/alga-data/local-path-provisioner"
 SMOKE_NAMESPACE="storage-smoke"
 DRY_RUN=false
 
@@ -50,6 +51,59 @@ wait_for_rollout() {
   fi
 
   kubectl --kubeconfig "$KUBECONFIG_PATH" -n local-path-storage rollout status deployment/local-path-provisioner --timeout=5m
+}
+
+prepare_storage_path() {
+  local manifest
+
+  if $DRY_RUN; then
+    cat <<EOF
++ kubectl --kubeconfig $KUBECONFIG_PATH apply -f -
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: local-path-storage-prepare
+  namespace: local-path-storage
+EOF
+    return 0
+  fi
+
+  manifest="$(cat <<EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: local-path-storage-prepare
+  namespace: local-path-storage
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: prepare
+          image: busybox:1.36
+          securityContext:
+            privileged: true
+          command:
+            - sh
+            - -ec
+            - |
+              mkdir -p /host${STORAGE_PATH}
+              chmod 0777 /host${STORAGE_PATH}
+          volumeMounts:
+            - name: host-root
+              mountPath: /host
+      volumes:
+        - name: host-root
+          hostPath:
+            path: /
+            type: Directory
+EOF
+)"
+
+  printf '%s\n' "$manifest" | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
+  kubectl --kubeconfig "$KUBECONFIG_PATH" -n local-path-storage wait --for=condition=complete --timeout=5m job/local-path-storage-prepare
 }
 
 run_smoke_test() {
@@ -175,6 +229,7 @@ kubectl_cmd label namespace msp \
   pod-security.kubernetes.io/warn=privileged \
   --overwrite
 
+prepare_storage_path
 wait_for_rollout
 run_smoke_test
 

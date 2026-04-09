@@ -291,6 +291,113 @@ function extractTextFromProseMirror(node: any): string {
 }
 
 /**
+ * Convert ProseMirror inline content (text nodes with marks) to markdown.
+ */
+function pmInlineToMarkdown(nodes: any[] | undefined): string {
+  if (!nodes) return '';
+  return nodes.map((node) => {
+    if (node.type === 'text' && typeof node.text === 'string') {
+      let text = node.text;
+      if (node.marks) {
+        for (const mark of node.marks) {
+          switch (mark.type) {
+            case 'bold': text = `**${text}**`; break;
+            case 'italic': text = `*${text}*`; break;
+            case 'code': text = `\`${text}\``; break;
+            case 'strike': text = `~~${text}~~`; break;
+            case 'link': {
+              const href = mark.attrs?.href || '';
+              text = `[${text}](${href})`;
+              break;
+            }
+          }
+        }
+      }
+      return text;
+    }
+    if (node.type === 'hardBreak' || node.type === 'hard_break') return '\n';
+    if (node.type === 'mention') {
+      const label = node.attrs?.displayName || node.attrs?.username || 'mention';
+      return `@${label}`;
+    }
+    return '';
+  }).join('');
+}
+
+/**
+ * Convert a ProseMirror JSON document to markdown text.
+ * Preserves headings, lists, code blocks, blockquotes, inline formatting, etc.
+ */
+function prosemirrorToMarkdown(doc: any): string {
+  if (!doc || !Array.isArray(doc.content)) return '';
+
+  const renderNode = (node: any): string => {
+    switch (node.type) {
+      case 'paragraph':
+        return pmInlineToMarkdown(node.content);
+
+      case 'heading': {
+        const level = node.attrs?.level || 1;
+        return '#'.repeat(level) + ' ' + pmInlineToMarkdown(node.content);
+      }
+
+      case 'bulletList':
+      case 'bullet_list':
+        return (node.content || []).map((li: any) => {
+          const inner = (li.content || [])
+            .map((child: any) => {
+              if (child.type === 'paragraph') return pmInlineToMarkdown(child.content);
+              return renderNode(child);
+            })
+            .join('\n');
+          return `- ${inner}`;
+        }).join('\n');
+
+      case 'orderedList':
+      case 'ordered_list': {
+        let num = Number(node.attrs?.order ?? node.attrs?.start ?? 1);
+        return (node.content || []).map((li: any) => {
+          const inner = (li.content || [])
+            .map((child: any) => {
+              if (child.type === 'paragraph') return pmInlineToMarkdown(child.content);
+              return renderNode(child);
+            })
+            .join('\n');
+          return `${num++}. ${inner}`;
+        }).join('\n');
+      }
+
+      case 'codeBlock':
+      case 'code_block': {
+        const lang = node.attrs?.language || '';
+        const code = (node.content || []).map((n: any) => n.text || '').join('\n');
+        return '```' + lang + '\n' + code + '\n```';
+      }
+
+      case 'blockquote':
+        return (node.content || []).map((child: any) => {
+          const text = child.type === 'paragraph'
+            ? pmInlineToMarkdown(child.content)
+            : renderNode(child);
+          return text.split('\n').map((line: string) => `> ${line}`).join('\n');
+        }).join('\n');
+
+      case 'horizontalRule':
+      case 'horizontal_rule':
+        return '---';
+
+      default:
+        if (node.content) {
+          return node.content.map(renderNode).join('\n');
+        }
+        return '';
+    }
+  };
+
+  return doc.content.map(renderNode).join('\n\n');
+}
+
+/**
  * Error boundary that catches BlockNote render errors and shows the content
  * as plain text instead.
  */
@@ -352,6 +459,11 @@ function RichTextViewerInternal({
       }
       // Handle ProseMirror/Tiptap JSON format: { type: "doc", content: [...] }
       if (parsed && typeof parsed === 'object' && parsed.type === 'doc' && Array.isArray(parsed.content)) {
+        const markdown = prosemirrorToMarkdown(parsed);
+        if (markdown && markdown.trim()) {
+          return { syncBlocks: DEFAULT_EMPTY_BLOCK, rawMarkdown: markdown };
+        }
+        // Fall back to plain text extraction if markdown conversion yields nothing
         const text = extractTextFromProseMirror(parsed);
         if (text) {
           const plainBlock: PartialBlock[] = [{

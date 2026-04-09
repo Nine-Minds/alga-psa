@@ -181,7 +181,7 @@ export const createTemplateFromProject = withAuth(async (
           tenant,
           template_id: template.template_id,
           template_phase_id: templatePhaseId,
-          status_id: mapping.status_id,
+          status_id: mapping.status_id || mapping.standard_status_id,
           custom_status_name: mapping.custom_name,
           display_order: mapping.display_order
         })

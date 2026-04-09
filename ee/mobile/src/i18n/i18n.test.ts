@@ -29,7 +29,7 @@ describe("i18n", () => {
   });
 
   it("resolves nested keys", () => {
-    expect(t("auth:signIn.cta")).toBe("Continue in browser");
+    expect(t("auth:signIn.cta")).toBe("Sign in");
   });
 
   it("resolves settings namespace", () => {

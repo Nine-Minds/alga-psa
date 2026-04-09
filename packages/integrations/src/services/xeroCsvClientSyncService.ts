@@ -168,6 +168,13 @@ export function getXeroCsvClientSyncService(): XeroCsvClientSyncService {
  * Xero CSV Client Sync Service implementation.
  */
 export class XeroCsvClientSyncService {
+  private getClientSummaryEmail(
+    client: Pick<DbClient, 'billing_email'>,
+    location?: Pick<DbClientLocation, 'email'> | null,
+  ): string {
+    return client.billing_email ?? location?.email ?? '';
+  }
+
   /**
    * Export Alga clients to Xero Contacts CSV format.
    *
@@ -234,7 +241,7 @@ export class XeroCsvClientSyncService {
 
         return {
           '*ContactName': client.client_name,
-          'EmailAddress': client.billing_email ?? location?.email ?? '',
+          'EmailAddress': this.getClientSummaryEmail(client, location),
           'FirstName': '',
           'LastName': '',
           'POAddressLine1': location?.address_line1 ?? '',

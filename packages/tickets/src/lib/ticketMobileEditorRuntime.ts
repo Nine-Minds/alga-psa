@@ -483,19 +483,30 @@ export class TicketMobileEditorRuntime {
   }
 
   private emitContentHeight(): void {
-    // Temporarily remove min-height from the element, body, and html so
-    // scrollHeight reflects actual content rather than the WebView viewport.
+    // Temporarily remove min-height AND height from the element, body, and
+    // html so scrollHeight reflects actual content rather than the WebView
+    // viewport.  The CSS sets `height: 100%` on all three, which makes
+    // scrollHeight return the viewport size instead of the content size.
     const doc = this.element.ownerDocument;
-    const prevEl = this.element.style.minHeight;
-    const prevBody = doc.body.style.minHeight;
-    const prevHtml = doc.documentElement.style.minHeight;
+    const prevElMin = this.element.style.minHeight;
+    const prevElH = this.element.style.height;
+    const prevBodyMin = doc.body.style.minHeight;
+    const prevBodyH = doc.body.style.height;
+    const prevHtmlMin = doc.documentElement.style.minHeight;
+    const prevHtmlH = doc.documentElement.style.height;
     this.element.style.minHeight = '0';
+    this.element.style.height = 'auto';
     doc.body.style.minHeight = '0';
+    doc.body.style.height = 'auto';
     doc.documentElement.style.minHeight = '0';
+    doc.documentElement.style.height = 'auto';
     const height = this.element.scrollHeight;
-    this.element.style.minHeight = prevEl;
-    doc.body.style.minHeight = prevBody;
-    doc.documentElement.style.minHeight = prevHtml;
+    this.element.style.minHeight = prevElMin;
+    this.element.style.height = prevElH;
+    doc.body.style.minHeight = prevBodyMin;
+    doc.body.style.height = prevBodyH;
+    doc.documentElement.style.minHeight = prevHtmlMin;
+    doc.documentElement.style.height = prevHtmlH;
     this.emitMessage({
       type: 'content-height',
       payload: { height },

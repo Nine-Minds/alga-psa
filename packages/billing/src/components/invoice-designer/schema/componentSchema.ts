@@ -249,34 +249,6 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
         },
       ],
     },
-    {
-      id: 'flex-item',
-      title: 'Flex Item',
-      visibleWhen: { kind: 'parentPathEquals', path: 'layout.display', value: 'flex' },
-      fields: [
-        {
-          kind: 'number',
-          id: 'flexGrow',
-          label: 'flex-grow',
-          path: 'style.flexGrow',
-          placeholder: '0',
-        },
-        {
-          kind: 'number',
-          id: 'flexShrink',
-          label: 'flex-shrink',
-          path: 'style.flexShrink',
-          placeholder: '1',
-        },
-        {
-          kind: 'css-length',
-          id: 'flexBasis',
-          label: 'flex-basis',
-          path: 'style.flexBasis',
-          placeholder: 'auto | 240px | 50%',
-        },
-      ],
-    },
   ],
 };
 
@@ -320,12 +292,12 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
           placeholder: 'Invoice #',
         },
         {
-          kind: 'string',
+          kind: 'widget',
           id: 'bindingKey',
+          widget: 'field-binding-picker',
           domId: 'designer-field-binding',
           label: 'Binding key',
           path: 'metadata.bindingKey',
-          enableExpressionInsert: true,
         },
         {
           kind: 'enum',
@@ -634,7 +606,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       metadata: {},
     },
     hierarchy: {
-      allowedChildren: ['section'],
+      allowedChildren: ['section', 'totals', 'table', 'dynamic-table', 'image', 'logo', 'qr', 'signature', 'attachment-list', 'action-button'],
       allowedParents: ['document'],
     },
     inspector: COMMON_INSPECTOR,
@@ -743,11 +715,15 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Content',
     defaults: {
       size: { width: 360, height: 140 },
+      style: {
+        width: '100%',
+        height: 'auto',
+      },
       metadata: {},
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: COMMON_INSPECTOR,
   },
@@ -758,6 +734,10 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Dynamic',
     defaults: {
       size: { width: 520, height: 220 },
+      style: {
+        width: '100%',
+        height: 'auto',
+      },
       metadata: {
         columns: [
           { id: 'col-desc', header: 'Description', key: 'item.description', type: 'text', width: 220 },
@@ -774,7 +754,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TABLE_INSPECTOR),
   },
@@ -785,6 +765,10 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Dynamic',
     defaults: {
       size: { width: 520, height: 240 },
+      style: {
+        width: '100%',
+        height: 'auto',
+      },
       metadata: {
         tableBorderPreset: 'boxed',
         tableOuterBorder: true,
@@ -795,7 +779,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TABLE_INSPECTOR),
   },
@@ -806,11 +790,15 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Content',
     defaults: {
       size: { width: 200, height: 48 },
+      style: {
+        width: 'auto',
+        height: 'auto',
+      },
       metadata: {
         bindingKey: 'invoice.number',
         format: 'text',
         placeholder: 'Invoice Number',
-        fieldBorderStyle: 'underline',
+        fieldBorderStyle: 'none',
       },
     },
     hierarchy: {

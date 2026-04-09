@@ -53,12 +53,10 @@ export function registerContactActions(): void {
       } else if (input.email) {
         const email = input.email.toLowerCase().trim();
         matchedBy = 'email';
-        contacts = await tx.trx('contacts')
-          .where({ tenant: tx.tenantId })
-          .andWhereRaw('lower(email) = ?', [email])
-          .orderBy('is_inactive', 'asc')
-          .orderBy(input.match_strategy === 'most_recent' ? 'created_at' : 'created_at', input.match_strategy === 'most_recent' ? 'desc' : 'asc')
-          .limit(5);
+        const contact = await ContactModel.getContactByEmail(email, tx.tenantId, tx.trx);
+        if (contact) {
+          contacts = [contact];
+        }
       } else if (input.phone) {
         const digits = String(input.phone).replace(/\D/g, '');
         if (digits.length < 7) {
@@ -154,6 +152,13 @@ export function registerContactActions(): void {
         .where(function q() {
           this.whereRaw(`full_name ILIKE ? ESCAPE '\\\\'`, [pattern])
             .orWhereRaw(`email ILIKE ? ESCAPE '\\\\'`, [pattern])
+            .orWhereExists(function additionalEmailSearch() {
+              this.select(tx.trx.raw('1'))
+                .from('contact_additional_email_addresses as caea')
+                .whereRaw('caea.contact_name_id = contacts.contact_name_id')
+                .andWhere('caea.tenant', tx.tenantId)
+                .andWhereRaw(`caea.email_address ILIKE ? ESCAPE '\\\\'`, [pattern]);
+            })
             .orWhereRaw(`phone ILIKE ? ESCAPE '\\\\'`, [pattern]);
         });
       if (input.client_id) base = base.andWhere('client_id', input.client_id);
@@ -209,4 +214,3 @@ export function registerContactActions(): void {
     })
   });
 }
-

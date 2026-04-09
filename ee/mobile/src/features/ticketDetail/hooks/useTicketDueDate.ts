@@ -35,7 +35,7 @@ export function useTicketDueDate(
         next.due_date = nextIso;
       }
 
-      const attributesToSend = Object.keys(next).length === 0 ? null : next;
+      const attributesToSend = next;
       const res = await updateTicketAttributes(client, {
         apiKey: session.accessToken,
         ticketId,

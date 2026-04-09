@@ -1,0 +1,410 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration adds primary-email label metadata to `contacts` while preserving the existing required `contacts.email` column.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F007"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Migration creates reusable email-label definition storage and the additional-email table.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "The database rejects two contacts in the same tenant using the same primary email.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "The database rejects an additional email row that duplicates another contact's primary email in the same tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "The database rejects an additional email row that duplicates another contact's additional email in the same tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "The same normalized email address may still exist in different tenants.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Shared contact interfaces and `@alga-psa/types` expose scalar primary `email`, primary label metadata, and `additional_email_addresses` together.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Validation accepts a contact with a labeled primary email and no additional emails.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Validation rejects an additional email row that repeats the primary email.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Validation rejects duplicate additional email rows within the same payload.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Validation rejects malformed additional email rows or label combinations that violate the canonical/custom label rules.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F011"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Creating a contact persists primary-email label metadata and additional-email rows and hydrates them correctly on readback.",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Updating a contact to promote an additional email swaps the old primary email into the child table and moves the promoted email into `contacts.email` with its label metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Deleting the primary/default email directly is rejected until another additional email is promoted.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Tenant-scoped custom email labels are created or reused case-insensitively for both primary and additional emails.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Orphaned custom email labels can be cleaned up once no primary or additional email rows reference them.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Contact created and updated domain-event payloads include primary-email label metadata and additional-email rows while keeping summary email fields on `email`.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "ContactEmailAddressesEditor renders a pinned primary row plus additional rows and normalizes their order on save.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "ContactEmailAddressesEditor supports canonical label selection and custom label suggestions for both primary and additional rows.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Contact detail edit flow saves the hybrid email payload instead of a single unlabeled scalar email input.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Contact detail view renders the primary/default email distinctly and lists additional emails with labels.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F017"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "QuickAddContact creates a contact with labeled primary email data and optional additional-email rows.",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "QuickAddClient inline contact creation saves the hybrid email payload for the new contact.",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Contacts and client-contact lists continue rendering `contacts.email` as the visible summary email.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F031"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "ContactPicker and related summary pickers continue showing the primary email while remaining compatible with the richer contact contract.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F031"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "ContactService and query actions match contacts when the search term hits an additional email row.",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "ContactService export still emits the primary `email` summary while additional-email aware queries remain available for filtering/search.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F026"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "CSV template and preview copy describe the primary email plus additional-email fields correctly.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "CSV import creates or updates a contact with a primary email and additional-email rows.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "CSV export includes primary-email label metadata and the chosen additional-email representation.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "`findContactByEmailAddress` returns a contact when only an additional email matches the lookup address.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "`createOrFindContactByEmail` creates a new contact with the email stored in `contacts.email` and no child rows when no match exists.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Shared `EmailService.findContactByEmail` preserves both the matched sender email and the contact's primary/default `contacts.email` when the match came from an additional row.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Shared `EmailService.createOrFindContact` remains compatible by creating contacts with only a primary email in `contacts.email`.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Shared workflow `findContactByEmail` resolves a contact when the sender matches an additional email row.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Inbound email processing preserves contact authorship with the exact matched sender email when the contact matched through an additional email row.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Inbound email processing still uses `contacts.email` as the default outbound contact email even when the inbound match used an additional email.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Runtime email-action schemas and workflow mappings expose matched sender email separately from the primary/default contact email.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Workflow business-operation `contacts.find` and `contacts.search` match contacts through additional email rows while keeping summary email fields on `contact.email`.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "REST contact create/update accepts scalar primary email plus label metadata and additional-email rows.",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "REST contact responses return scalar primary email, primary label metadata, and additional-email rows together.",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "n8n contact parsers, docs, and example payloads accept the hybrid email fields.",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Integration and client-lookup helpers resolve contacts when only an additional email matches.",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "External sync adapters preserve `contacts.email` as the default billing/summary address while understanding additional emails where lookup logic requires them.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Factories, seeds, and test helpers can create contacts with primary-email labels and additional-email rows.",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Portal invitation, registration, and client-user linking flows remain compatible because they continue to use `contacts.email` after additional emails are added or the default is swapped.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Ticket, project, survey, billing, and scheduling contact-email sends continue to use the current `contacts.email` after a default swap.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Watcher and other email-snapshot recipient behavior remains compatible under the hybrid model unless the surface explicitly re-resolves the contact from email input.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "A DB-backed end-to-end regression covers create -> add additional email -> promote additional email to default -> lookup by both addresses -> verify uniqueness guards.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F010",
+      "F018",
+      "F020",
+      "F021",
+      "F031"
+    ]
+  }
+]

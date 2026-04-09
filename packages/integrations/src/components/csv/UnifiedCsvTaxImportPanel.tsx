@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@alga
 import { Button } from '@alga-psa/ui/components/Button';
 import { StringDateRangePicker } from '@alga-psa/ui/components/DateRangePicker';
 import { Label } from '@alga-psa/ui/components/Label';
-import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { Upload, FileText, AlertCircle, CheckCircle2, HelpCircle, ChevronDown, ChevronUp, XCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -266,31 +266,19 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Source Toggle */}
-        <ToggleGroup
-          type="single"
-          value={source}
-          onValueChange={(value) => {
+        <ViewSwitcher
+          currentView={source}
+          onChange={(value) => {
             if (value === 'xero' || value === 'quickbooks') {
               handleSourceChange(value);
             }
           }}
+          options={[
+            { value: 'xero' as ImportSource, label: 'Xero', id: 'csv-tax-import-source-xero', disabled: isValidating || isImporting },
+            { value: 'quickbooks' as ImportSource, label: 'QuickBooks', id: 'csv-tax-import-source-quickbooks', disabled: isValidating || isImporting },
+          ]}
           aria-label="CSV import source"
-        >
-          <ToggleGroupItem
-            id="csv-tax-import-source-xero"
-            value="xero"
-            disabled={isValidating || isImporting}
-          >
-            Xero
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            id="csv-tax-import-source-quickbooks"
-            value="quickbooks"
-            disabled={isValidating || isImporting}
-          >
-            QuickBooks
-          </ToggleGroupItem>
-        </ToggleGroup>
+        />
 
         {/* Help Section */}
         <div className="border rounded-lg">

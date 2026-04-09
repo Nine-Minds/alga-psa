@@ -2,13 +2,19 @@
 
 import React from 'react';
 import { DndContext } from '@dnd-kit/core';
-import { render, cleanup } from '@testing-library/react';
+import { act, render, cleanup, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { DesignCanvas } from './DesignCanvas';
 import type { DesignerNode } from '../state/designerStore';
+import { useInvoiceDesignerStore } from '../state/designerStore';
+import { importTemplateAstToWorkspace } from '../ast/workspaceAst';
+import { getStandardTemplateAstByCode } from '../../../lib/invoice-template-ast/standardTemplates';
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  useInvoiceDesignerStore.getState().resetWorkspace();
+});
 
 const noop = () => {};
 
@@ -51,7 +57,7 @@ describe('DesignCanvas (media aspect-ratio integration)', () => {
         props: {
           name: 'Image',
           metadata: { src: 'https://example.com/test.png', alt: 'Test' },
-          style: { aspectRatio: '16 / 9', objectFit: 'cover' },
+          style: { aspectRatio: '16 / 9', objectFit: 'cover', objectPosition: 'right bottom' },
         },
         position: { x: 0, y: 0 },
         size: { width: 320, height: 180 },
@@ -88,10 +94,53 @@ describe('DesignCanvas (media aspect-ratio integration)', () => {
     if (!imageEl) return;
 
     expect(imageEl.style.aspectRatio).toBe('16 / 9');
+    expect(imageEl.style.overflow).toBe('hidden');
+    expect(screen.getByText('Image · image')).toBeTruthy();
 
     const img = imageEl.querySelector('img') as HTMLImageElement | null;
     expect(img).toBeTruthy();
     if (!img) return;
     expect(img.style.objectFit).toBe('cover');
+    expect(img.style.objectPosition).toBe('right bottom');
+  });
+
+  it('keeps imported standard logos close to preview sizing constraints in the designer canvas', () => {
+    const ast = getStandardTemplateAstByCode('standard-detailed');
+    expect(ast).toBeTruthy();
+    if (!ast) return;
+
+    const workspace = importTemplateAstToWorkspace(ast);
+    act(() => {
+      useInvoiceDesignerStore.getState().loadWorkspace(workspace);
+    });
+
+    render(
+      <DndContext>
+        <DesignCanvas
+          nodes={useInvoiceDesignerStore.getState().nodes}
+          selectedNodeId={null}
+          showGuides={false}
+          showRulers={false}
+          gridSize={8}
+          canvasScale={1}
+          snapToGrid={false}
+          guides={[]}
+          isDragActive={false}
+          forcedDropTarget={null}
+          droppableId="canvas"
+          onPointerLocationChange={noop}
+          onNodeSelect={noop}
+          onResize={noop}
+          readOnly={false}
+        />
+      </DndContext>
+    );
+
+    const logoEl = document.querySelector('[data-automation-id="designer-canvas-node-issuer-logo"]') as HTMLElement | null;
+    expect(logoEl).toBeTruthy();
+    if (!logoEl) return;
+
+    expect(logoEl.style.width).toBe('180px');
+    expect(logoEl.style.height).toBe('72px');
   });
 });

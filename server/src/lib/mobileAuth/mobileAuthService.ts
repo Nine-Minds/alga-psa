@@ -395,26 +395,43 @@ export async function refreshMobileSession(input: z.infer<typeof refreshSessionS
   });
 
   // Best-effort cleanup and audit logging outside the transaction to minimize lock duration.
-  if (result.existing.api_key_id) {
-    await ApiKeyService.deactivateApiKey(result.existing.api_key_id, result.existing.tenant).catch(() => {});
+  // Run deactivation + audit in parallel since they're independent.
+  const [deactivateResult, auditResult] = await Promise.allSettled([
+    result.existing.api_key_id
+      ? ApiKeyService.deactivateApiKey(result.existing.api_key_id, result.existing.tenant)
+      : Promise.resolve(),
+    safeAuditLog({
+      tenantId: result.existing.tenant,
+      userId: result.existing.user_id,
+      operation: 'MOBILE_AUTH_REFRESH',
+      recordId: result.apiKeyRecord.api_key_id,
+      details: {
+        oldRefreshId: result.existing.mobile_refresh_token_id,
+        newRefreshId: result.newRefreshId,
+        accessExpiresAt: result.accessExpiresAt.toISOString(),
+        refreshExpiresAt: result.refreshExpiresAt.toISOString(),
+        deviceId: input.device?.deviceId ?? null,
+      },
+    }),
+  ]);
+
+  if (deactivateResult.status === 'rejected') {
+    console.warn('[mobileAuth] failed to deactivate old API key', {
+      apiKeyId: result.existing.api_key_id,
+      error: deactivateResult.reason,
+    });
+  }
+  if (auditResult.status === 'rejected') {
+    console.warn('[mobileAuth] post-refresh audit log failed', { error: auditResult.reason });
   }
 
-  // Clean up stale API keys for this user (best-effort, non-blocking)
-  await ApiKeyService.cleanupStaleKeys(result.existing.user_id, result.existing.tenant).catch(() => {});
-
-  await safeAuditLog({
-    tenantId: result.existing.tenant,
-    userId: result.existing.user_id,
-    operation: 'MOBILE_AUTH_REFRESH',
-    recordId: result.apiKeyRecord.api_key_id,
-    details: {
-      oldRefreshId: result.existing.mobile_refresh_token_id,
-      newRefreshId: result.newRefreshId,
-      accessExpiresAt: result.accessExpiresAt.toISOString(),
-      refreshExpiresAt: result.refreshExpiresAt.toISOString(),
-      deviceId: input.device?.deviceId ?? null,
-    },
-  });
+  // Probabilistic stale-key cleanup: run on ~5% of refreshes to avoid
+  // unnecessary DB work on every token rotation.
+  if (Math.random() < 0.05) {
+    ApiKeyService.cleanupStaleKeys(result.existing.user_id, result.existing.tenant).catch((err) => {
+      console.warn('[mobileAuth] stale key cleanup failed', { error: err });
+    });
+  }
 
   return {
     accessToken: result.apiKeyRecord.api_key,

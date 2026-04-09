@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -78,6 +78,7 @@ interface TicketConversationProps {
   closedStatusOptions?: { value: string; label: string }[];
   onClipboardImageUploaded?: () => Promise<void> | void;
   defaultNewestFirst?: boolean;
+  canViewCommentMetadataDebug?: boolean;
 }
 
 const ALL_COMMENTS_TAB_ID = 'all-comments';
@@ -112,6 +113,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   closedStatusOptions = [],
   onClipboardImageUploaded,
   defaultNewestFirst = false,
+  canViewCommentMetadataDebug = false,
 }) => {
   const { t } = useTranslation('features/tickets');
   const { t: tCore } = useTranslation('common');
@@ -153,13 +155,37 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     deleteDocumentFn: deleteDocument,
   });
 
-  const handleAddCommentClick = () => {
+  const addCommentBtnRef = useRef<HTMLButtonElement>(null);
+  const editorAreaRef = useRef<HTMLDivElement>(null);
+  const [addCommentBtnVisible, setAddCommentBtnVisible] = useState(true);
+
+  useEffect(() => {
+    const el = addCommentBtnRef.current;
+    if (!el) {
+      setAddCommentBtnVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setAddCommentBtnVisible(entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [showEditor]);
+
+  const handleAddCommentClick = (scrollToEditor = false) => {
     // Auto-check toggles based on which tab is active
     if (!hideInternalTab) {
       setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
     }
     setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
     setShowEditor(true);
+    if (scrollToEditor) {
+      // Wait for editor to render, then scroll to it
+      requestAnimationFrame(() => {
+        editorAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
   };
   const handleSubmitComment = async () => {
     let success = false;
@@ -309,6 +335,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const handleToggleReaction = useCallback(async (commentId: string, emoji: string) => {
     try {
       const { added } = await toggleCommentReaction(commentId, emoji);
+      if (added && currentUser?.id && currentUser.name) {
+        setReactionUserNames(prev => prev[currentUser.id] ? prev : { ...prev, [currentUser.id]: currentUser.name! });
+      }
       setReactionsMap((prev) => {
         const existing = prev[commentId] || [];
         const idx = existing.findIndex((r) => r.emoji === emoji);
@@ -338,7 +367,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     } catch (err) {
       console.error('[TicketConversation] Failed to toggle reaction:', err);
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentUser?.name]);
 
   const renderComments = (comments: IComment[]): React.JSX.Element[] => {
     // Use the sorted comments based on the reverseOrder state
@@ -377,6 +406,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
         onToggleReaction={handleToggleReaction}
         userNames={reactionUserNames}
+        canViewCommentMetadataDebug={canViewCommentMetadataDebug}
       />
     );
     });
@@ -418,6 +448,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 onEdit={() => {}}
                 onDelete={() => {}}
                 hideInternalTab={hideInternalTab}
+                canViewCommentMetadataDebug={canViewCommentMetadataDebug}
               />
             </div>
           );
@@ -501,14 +532,15 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           <h2 className="text-xl font-bold">{t('conversation.comments', 'Comments')}</h2>
           {!showEditor && (
             <Button
+              ref={addCommentBtnRef}
               id={`${compId}-show-comment-editor-btn`}
-              onClick={handleAddCommentClick}
+              onClick={() => handleAddCommentClick()}
             >
               {t('conversation.addComment', 'Add Comment')}
             </Button>
           )}
         </div>
-        <div className='mb-3'>
+        <div className='mb-3' ref={editorAreaRef}>
           {showEditor && (
             <div className='flex items-start min-w-0 max-w-full'>
               <div className="mr-2">
@@ -618,6 +650,18 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           }
         />
       </div>
+      {/* Floating Add Comment button when the top button scrolls out of view */}
+      {!showEditor && !addCommentBtnVisible && (
+        <div className="sticky bottom-4 flex justify-end px-6 pb-4 pointer-events-none">
+          <Button
+            id={`${compId}-floating-add-comment-btn`}
+            onClick={() => handleAddCommentClick(true)}
+            className="pointer-events-auto shadow-lg"
+          >
+            {t('conversation.addComment', 'Add Comment')}
+          </Button>
+        </div>
+      )}
       <ConfirmationDialog
         id={`${compId}-clipboard-draft-cancel-dialog`}
         isOpen={composeUploadSession.showDraftCancelDialog}

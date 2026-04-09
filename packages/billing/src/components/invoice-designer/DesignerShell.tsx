@@ -23,12 +23,13 @@ import {
   clampInvoiceMarginMm,
   listInvoicePaperPresets,
   resolveTemplatePrintSettings,
+  type TemplateFieldDisplayFormat,
   type TemplatePrintSettings,
 } from '@alga-psa/types';
 import { ComponentPalette } from './palette/ComponentPalette';
 import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
-import type { DesignerComponentType, DesignerNode, Point, Size } from './state/designerStore';
+import type { DesignerComponentType, DesignerNode, DesignerNodeStyle, Point, Size } from './state/designerStore';
 import { clampNodeSizeToPracticalMinimum, getAbsolutePosition, useInvoiceDesignerStore } from './state/designerStore';
 import { AlignmentGuide, resolveFlexPadding } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
@@ -55,7 +56,13 @@ import {
   AlignRight,
   ArrowDown,
   ArrowRight,
+  ArrowUp,
   ArrowUpDown,
+  BoxSelect,
+  Maximize2,
+  Scaling,
+  Shrink,
+  StretchHorizontal,
   Grid3X3,
 } from 'lucide-react';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
@@ -65,7 +72,21 @@ import { resolveInsertPositionFromRects } from './utils/dropIndicator';
 import { DesignerSchemaInspector } from './inspector/DesignerSchemaInspector';
 import DocumentImagePickerWidget from './inspector/widgets/DocumentImagePickerWidget';
 import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from './utils/nodeProps';
+import {
+  inferHeightMode,
+  inferWidthMode,
+  resolveHeightValueForMode,
+  resolveWidthValueForMode,
+  supportsSharedSizingModes,
+  type DesignerHeightMode,
+  type DesignerWidthMode,
+} from './utils/sizeModes';
 import { resolveDesignerDocumentKind } from './utils/documentKind';
+import {
+  getTemplateFieldDefinition,
+  getTemplateFieldDisplayFormats,
+  resolveTemplateFieldLabel,
+} from './fields/fieldCatalog';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -302,6 +323,8 @@ type GridColumnPreset = {
   tracks: number[];
 };
 
+type FlexItemPreset = 'natural' | 'fill' | 'share' | 'fixed' | 'custom';
+
 const CONTAINER_LAYOUT_MODE_OPTIONS: IconToggleOption[] = [
   { value: 'flex', label: 'Stack', tooltip: 'Stack (Flex)', icon: AlignJustify },
   { value: 'grid', label: 'Grid', tooltip: 'Grid layout', icon: Grid3X3 },
@@ -343,6 +366,64 @@ const CONTAINER_JUSTIFY_CONTENT_OPTIONS: IconToggleOption[] = [
   },
 ];
 
+const MEDIA_HORIZONTAL_ALIGN_OPTIONS: IconToggleOption[] = [
+  { value: 'left', label: 'Left', tooltip: 'Align image to the left', icon: AlignLeft },
+  { value: 'center', label: 'Center', tooltip: 'Center image horizontally', icon: AlignCenter },
+  { value: 'right', label: 'Right', tooltip: 'Align image to the right', icon: AlignRight },
+];
+
+const MEDIA_VERTICAL_ALIGN_OPTIONS: IconToggleOption[] = [
+  { value: 'top', label: 'Top', tooltip: 'Align image to the top', icon: ArrowUp },
+  { value: 'center', label: 'Center', tooltip: 'Center image vertically', icon: ArrowUpDown },
+  { value: 'bottom', label: 'Bottom', tooltip: 'Align image to the bottom', icon: ArrowDown },
+];
+
+const MEDIA_OBJECT_FIT_OPTIONS: IconToggleOption[] = [
+  { value: 'contain', label: 'Contain', tooltip: 'Scale to fit inside the frame', icon: Scaling },
+  { value: 'cover', label: 'Cover', tooltip: 'Fill the frame and crop overflow', icon: Maximize2 },
+  { value: 'fill', label: 'Fill', tooltip: 'Stretch to fill the frame', icon: StretchHorizontal },
+  { value: 'none', label: 'None', tooltip: 'Keep the intrinsic image size', icon: BoxSelect },
+  { value: 'scale-down', label: 'Scale Down', tooltip: 'Use intrinsic size unless it needs shrinking', icon: Shrink },
+];
+
+const BLOCK_WIDTH_MODE_OPTIONS: IconToggleOption[] = [
+  { value: 'fixed', label: 'Fixed', tooltip: 'Use an explicit width', icon: BoxSelect },
+  { value: 'fill', label: 'Fill', tooltip: 'Stretch to the available width', icon: Maximize2 },
+  { value: 'hug', label: 'Hug', tooltip: 'Size to the content width', icon: Shrink },
+];
+
+const BLOCK_HEIGHT_MODE_OPTIONS: IconToggleOption[] = [
+  { value: 'fixed', label: 'Fixed', tooltip: 'Use an explicit height', icon: BoxSelect },
+  { value: 'hug', label: 'Hug', tooltip: 'Grow only as tall as the content needs', icon: Shrink },
+];
+
+const FLEX_ITEM_PRESET_OPTIONS: Array<{
+  value: Exclude<FlexItemPreset, 'custom'>;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: 'natural',
+    label: 'Natural',
+    description: 'Use the item content size, but allow it to shrink if space is tight.',
+  },
+  {
+    value: 'fill',
+    label: 'Fill',
+    description: 'Expand into leftover space while keeping the item’s preferred size.',
+  },
+  {
+    value: 'share',
+    label: 'Share',
+    description: 'Split available space evenly with other shared items.',
+  },
+  {
+    value: 'fixed',
+    label: 'Fixed',
+    description: 'Keep the item size and do not let flexbox shrink it.',
+  },
+];
+
 const GRID_COLUMN_PRESETS: GridColumnPreset[] = [
   { id: 'single', label: '1 column', template: '1fr', tracks: [1] },
   { id: 'two-equal', label: '2 equal columns', template: '1fr 1fr', tracks: [1, 1] },
@@ -354,21 +435,39 @@ const GRID_COLUMN_PRESETS: GridColumnPreset[] = [
 const normalizeGridTemplateColumns = (value: string | undefined): string =>
   typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
 
-const FIELD_TYPE_LABELS: Record<string, string> = {
-  'invoice.number': 'Invoice Number',
-  'invoice.invoiceNumber': 'Invoice Number',
-  'invoice.issueDate': 'Issue Date',
-  'invoice.dueDate': 'Due Date',
-  'invoice.poNumber': 'PO Number',
-  'invoice.subtotal': 'Subtotal',
-  'invoice.tax': 'Tax',
-  'invoice.discount': 'Discount',
-  'invoice.total': 'Total',
-  'invoice.currencyCode': 'Currency Code',
-  'customer.name': 'Customer Name',
-  'customer.address': 'Customer Address',
-  'tenant.name': 'Tenant Name',
-  'tenant.address': 'Tenant Address',
+const coerceFlexNumber = (value: unknown, fallback: number): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const numeric = Number(value.trim());
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+  }
+  return fallback;
+};
+
+const normalizeCssToken = (value: unknown): string => (typeof value === 'string' ? value.trim().toLowerCase() : '');
+
+const inferFlexItemPreset = (style: Partial<DesignerNodeStyle> | undefined): FlexItemPreset => {
+  const grow = coerceFlexNumber(style?.flexGrow, 0);
+  const shrink = coerceFlexNumber(style?.flexShrink, 1);
+  const basis = normalizeCssToken(style?.flexBasis);
+
+  if (grow === 0 && shrink === 1 && (basis === '' || basis === 'auto')) {
+    return 'natural';
+  }
+  if (grow === 1 && shrink === 1 && (basis === '' || basis === 'auto')) {
+    return 'fill';
+  }
+  if (grow === 1 && shrink === 1 && (basis === '0' || basis === '0%' || basis === '0px')) {
+    return 'share';
+  }
+  if (grow === 0 && shrink === 0 && (basis === '' || basis === 'auto')) {
+    return 'fixed';
+  }
+  return 'custom';
 };
 
 const humanizeBindingToken = (input: string): string =>
@@ -392,11 +491,7 @@ const resolveFieldTypeLabel = (bindingKey: string): string => {
   if (!normalized) {
     return 'Unbound';
   }
-  const known = FIELD_TYPE_LABELS[normalized];
-  if (known) {
-    return known;
-  }
-  return humanizeBindingToken(normalized);
+  return resolveTemplateFieldLabel(normalized);
 };
 
 const resolveSelectedFieldType = (selectedNode: DesignerNode | null): { label: string; bindingKey: string } | null => {
@@ -540,7 +635,12 @@ export const DesignerShell: React.FC = () => {
   }, [currentPrintSettings.marginMm]);
 
   const resizeNode = useCallback(
-    (id: string, size: Size, commit: boolean = false) => {
+    (
+      id: string,
+      size: Size,
+      commit: boolean = false,
+      options: { widthMode?: DesignerWidthMode; heightMode?: DesignerHeightMode } = {}
+    ) => {
       const node = useInvoiceDesignerStore.getState().nodesById[id];
       if (!node) return;
 
@@ -549,14 +649,16 @@ export const DesignerShell: React.FC = () => {
         width: Math.round(clamped.width),
         height: Math.round(clamped.height),
       };
+      const widthMode = options.widthMode ?? 'fixed';
+      const heightMode = options.heightMode ?? 'fixed';
 
       // Batch updates without generating multiple history entries.
       setNodeProp(id, 'size.width', rounded.width, false);
       setNodeProp(id, 'size.height', rounded.height, false);
       setNodeProp(id, 'baseSize.width', rounded.width, false);
       setNodeProp(id, 'baseSize.height', rounded.height, false);
-      setNodeProp(id, 'style.width', `${rounded.width}px`, false);
-      setNodeProp(id, 'style.height', `${rounded.height}px`, commit);
+      setNodeProp(id, 'style.width', resolveWidthValueForMode(widthMode, { ...node, size: rounded }), false);
+      setNodeProp(id, 'style.height', resolveHeightValueForMode(heightMode, { ...node, size: rounded }), commit);
     },
     [setNodeProp]
   );
@@ -574,12 +676,47 @@ export const DesignerShell: React.FC = () => {
   const selectedPreset = selectedNode?.layoutPresetId ? getPresetById(selectedNode.layoutPresetId) : null;
   const selectedNodeTypeLabel = useMemo(() => resolveSelectedNodeTypeLabel(selectedNode), [selectedNode]);
   const selectedFieldType = useMemo(() => resolveSelectedFieldType(selectedNode), [selectedNode]);
+  const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node] as const)), [nodes]);
   const selectedContainerLayout = useMemo(() => {
     if (!selectedNode || (selectedNode.type !== 'container' && selectedNode.type !== 'section')) {
       return undefined;
     }
     return getNodeLayout(selectedNode);
   }, [selectedNode]);
+  const selectedParentNode = useMemo(
+    () => (selectedNode?.parentId ? nodesById.get(selectedNode.parentId) ?? null : null),
+    [nodesById, selectedNode]
+  );
+  const selectedParentFlexLayout = useMemo(() => {
+    if (!selectedParentNode) {
+      return null;
+    }
+    const layout = getNodeLayout(selectedParentNode);
+    return layout?.display === 'flex' ? layout : null;
+  }, [selectedParentNode]);
+  const selectedSizingStyle = useMemo(() => getNodeStyle(selectedNode ?? undefined), [selectedNode]);
+  const selectedWidthMode = useMemo(
+    () => inferWidthMode(selectedSizingStyle),
+    [selectedSizingStyle]
+  );
+  const selectedHeightMode = useMemo(
+    () => inferHeightMode(selectedSizingStyle),
+    [selectedSizingStyle]
+  );
+  const selectedSupportsSharedSizingModes = useMemo(
+    () => Boolean(selectedNode && supportsSharedSizingModes(selectedNode.type)),
+    [selectedNode]
+  );
+  const selectedFlexItemPreset = useMemo(
+    () => inferFlexItemPreset(selectedSizingStyle),
+    [selectedSizingStyle]
+  );
+  const selectedFieldDisplayFormats = useMemo(() => {
+    if (!selectedFieldType) {
+      return [];
+    }
+    return getTemplateFieldDisplayFormats(selectedFieldType.bindingKey);
+  }, [selectedFieldType]);
   const selectedMediaParentSection = useMemo(() => {
     if (!selectedNode || !['image', 'logo', 'qr'].includes(selectedNode.type)) {
       return null;
@@ -593,7 +730,6 @@ export const DesignerShell: React.FC = () => {
     }
     return getSectionFitSizeFromChildren(selectedNode, new Map(nodes.map((node) => [node.id, node])));
   }, [nodes, selectedNode]);
-  const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node] as const)), [nodes]);
 
 	  useDesignerShortcuts();
 	
@@ -954,18 +1090,8 @@ export const DesignerShell: React.FC = () => {
     updatePointerLocation(null);
   }, [updatePointerLocation]);
 
-  const renderContainerLayoutControls = () => {
-    if (!selectedNode || (selectedNode.type !== 'container' && selectedNode.type !== 'section') || !selectedContainerLayout) {
-      return null;
-    }
-
-    const layoutMode = selectedContainerLayout.display ?? 'flex';
-    const direction = selectedContainerLayout.flexDirection ?? 'column';
-    const alignItems = selectedContainerLayout.alignItems ?? 'stretch';
-    const justifyContent = selectedContainerLayout.justifyContent ?? 'flex-start';
-    const activeGridTemplateColumns = normalizeGridTemplateColumns(selectedContainerLayout.gridTemplateColumns);
-
-    const renderButtonGroup = (
+  const renderIconButtonGroup = useCallback(
+    (
       keyPrefix: string,
       label: string,
       options: IconToggleOption[],
@@ -992,7 +1118,7 @@ export const DesignerShell: React.FC = () => {
                   )}
                   aria-pressed={isSelected}
                   aria-label={`${label}: ${option.label}`}
-                  data-automation-id={`designer-container-layout-${keyPrefix}-${option.value}`}
+                  data-automation-id={`designer-icon-group-${keyPrefix}-${option.value}`}
                 >
                   <Icon className="h-4 w-4" />
                 </button>
@@ -1001,7 +1127,20 @@ export const DesignerShell: React.FC = () => {
           })}
         </div>
       </div>
-    );
+    ),
+    []
+  );
+
+  const renderContainerLayoutControls = () => {
+    if (!selectedNode || (selectedNode.type !== 'container' && selectedNode.type !== 'section') || !selectedContainerLayout) {
+      return null;
+    }
+
+    const layoutMode = selectedContainerLayout.display ?? 'flex';
+    const direction = selectedContainerLayout.flexDirection ?? 'column';
+    const alignItems = selectedContainerLayout.alignItems ?? 'stretch';
+    const justifyContent = selectedContainerLayout.justifyContent ?? 'flex-start';
+    const activeGridTemplateColumns = normalizeGridTemplateColumns(selectedContainerLayout.gridTemplateColumns);
 
     return (
       <div
@@ -1009,7 +1148,7 @@ export const DesignerShell: React.FC = () => {
         data-automation-id="designer-container-layout-controls"
       >
         <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Layout Controls</p>
-        {renderButtonGroup('mode', 'Layout', CONTAINER_LAYOUT_MODE_OPTIONS, layoutMode, (value) => {
+        {renderIconButtonGroup('layout-mode', 'Layout', CONTAINER_LAYOUT_MODE_OPTIONS, layoutMode, (value) => {
           setNodeProp(selectedNode.id, 'layout.display', value, true);
         }, 2)}
         {layoutMode === 'grid' && (
@@ -1063,14 +1202,14 @@ export const DesignerShell: React.FC = () => {
         )}
         {layoutMode === 'flex' && (
           <>
-            {renderButtonGroup('direction', 'Direction', CONTAINER_FLEX_DIRECTION_OPTIONS, direction, (value) => {
+            {renderIconButtonGroup('layout-direction', 'Direction', CONTAINER_FLEX_DIRECTION_OPTIONS, direction, (value) => {
               setNodeProp(selectedNode.id, 'layout.flexDirection', value, true);
             }, 2)}
-            {renderButtonGroup('align-items', 'Align Items', CONTAINER_ALIGN_ITEMS_OPTIONS, alignItems, (value) => {
+            {renderIconButtonGroup('layout-align-items', 'Align Items', CONTAINER_ALIGN_ITEMS_OPTIONS, alignItems, (value) => {
               setNodeProp(selectedNode.id, 'layout.alignItems', value, true);
             }, 4)}
-            {renderButtonGroup(
-              'justify-content',
+            {renderIconButtonGroup(
+              'layout-justify-content',
               'Justify Content',
               CONTAINER_JUSTIFY_CONTENT_OPTIONS,
               justifyContent,
@@ -1081,6 +1220,261 @@ export const DesignerShell: React.FC = () => {
             )}
           </>
         )}
+      </div>
+    );
+  };
+
+  const renderSharedSizingControls = () => {
+    if (!selectedNode || !selectedSupportsSharedSizingModes) {
+      return null;
+    }
+
+    const applyWidthMode = (mode: DesignerWidthMode) => {
+      setNodeProp(selectedNode.id, 'style.width', resolveWidthValueForMode(mode, selectedNode), true);
+    };
+
+    const applyHeightMode = (mode: DesignerHeightMode) => {
+      setNodeProp(selectedNode.id, 'style.height', resolveHeightValueForMode(mode, selectedNode), true);
+    };
+
+    const parentUsesFlowLayout = Boolean(
+      selectedParentNode && (() => {
+        const parentLayout = getNodeLayout(selectedParentNode);
+        return parentLayout?.display === 'flex' || parentLayout?.display === 'grid';
+      })()
+    );
+
+    return (
+      <div
+        className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2"
+        data-automation-id="designer-shared-sizing-controls"
+      >
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Sizing Mode</p>
+        {renderIconButtonGroup(
+          'block-width-mode',
+          'Width',
+          BLOCK_WIDTH_MODE_OPTIONS,
+          selectedWidthMode,
+          (value) => applyWidthMode(value as DesignerWidthMode),
+          3
+        )}
+        {renderIconButtonGroup(
+          'block-height-mode',
+          'Height',
+          BLOCK_HEIGHT_MODE_OPTIONS,
+          selectedHeightMode,
+          (value) => applyHeightMode(value as DesignerHeightMode),
+          2
+        )}
+        <p className="text-[11px] text-slate-500">
+          Width uses fill, fixed, or hug sizing. Height uses fixed or hug sizing so blocks can grow with their content.
+        </p>
+        {!parentUsesFlowLayout && (
+          <p className="text-[11px] text-amber-600 dark:text-amber-400">
+            Fill sizing works best inside stack or grid parents.
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  const renderFlexItemControls = () => {
+    if (!selectedNode || !selectedParentFlexLayout) {
+      return null;
+    }
+
+    const mainAxisLabel = selectedParentFlexLayout.flexDirection === 'row' ? 'Width' : 'Height';
+    const mainAxisNoun = selectedParentFlexLayout.flexDirection === 'row' ? 'width' : 'height';
+    const currentFlexGrow = coerceFlexNumber(selectedSizingStyle?.flexGrow, 0);
+    const currentFlexShrink = coerceFlexNumber(selectedSizingStyle?.flexShrink, 1);
+    const currentFlexBasis = typeof selectedSizingStyle?.flexBasis === 'string' ? selectedSizingStyle.flexBasis : '';
+
+    const applyFlexPreset = (preset: Exclude<FlexItemPreset, 'custom'>) => {
+      const patch =
+        preset === 'fill'
+          ? { grow: 1, shrink: 1, basis: 'auto' }
+          : preset === 'share'
+            ? { grow: 1, shrink: 1, basis: '0%' }
+            : preset === 'fixed'
+              ? { grow: 0, shrink: 0, basis: 'auto' }
+              : { grow: 0, shrink: 1, basis: 'auto' };
+      setNodeProp(selectedNode.id, 'style.flexGrow', patch.grow, false);
+      setNodeProp(selectedNode.id, 'style.flexShrink', patch.shrink, false);
+      setNodeProp(selectedNode.id, 'style.flexBasis', patch.basis, true);
+    };
+
+    const applyFlexBasis = (raw: string, commit: boolean) => {
+      const trimmed = raw.trim();
+      if (trimmed.length === 0) {
+        unsetNodeProp(selectedNode.id, 'style.flexBasis', commit);
+        return;
+      }
+      setNodeProp(selectedNode.id, 'style.flexBasis', trimmed, commit);
+    };
+
+    const applyFlexNumber = (path: 'style.flexGrow' | 'style.flexShrink', raw: string, commit: boolean) => {
+      const trimmed = raw.trim();
+      if (trimmed.length === 0) {
+        unsetNodeProp(selectedNode.id, path, commit);
+        return;
+      }
+      const numeric = Number(trimmed);
+      if (!Number.isFinite(numeric)) {
+        return;
+      }
+      setNodeProp(selectedNode.id, path, numeric, commit);
+    };
+
+    return (
+      <div
+        className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2"
+        data-automation-id="designer-flex-item-controls"
+      >
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Flex Item</p>
+          <p className="text-[11px] text-slate-500">
+            In this {selectedParentFlexLayout.flexDirection === 'row' ? 'horizontal' : 'vertical'} stack, these settings control how the item shares {mainAxisNoun} with its siblings.
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-xs text-slate-500">{mainAxisLabel} Behavior</p>
+          <div className="grid grid-cols-2 gap-2">
+            {FLEX_ITEM_PRESET_OPTIONS.map((option) => {
+              const isSelected = option.value === selectedFlexItemPreset;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => applyFlexPreset(option.value)}
+                  className={clsx(
+                    'rounded border px-2 py-2 text-left transition-colors',
+                    isSelected
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                      : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  )}
+                  aria-pressed={isSelected}
+                  aria-label={`${mainAxisLabel} behavior: ${option.label}`}
+                  data-automation-id={`designer-flex-item-preset-${option.value}`}
+                >
+                  <div className="text-xs font-medium">{option.label}</div>
+                  <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{option.description}</div>
+                </button>
+              );
+            })}
+          </div>
+          {selectedFlexItemPreset === 'custom' && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400">
+              This item has custom flex values. Choose a preset to simplify it, or adjust the advanced values below.
+            </p>
+          )}
+        </div>
+        <details data-automation-id="designer-flex-item-advanced">
+          <summary className="cursor-pointer text-xs font-medium text-slate-600 dark:text-slate-300">
+            Advanced Flex Values
+          </summary>
+          <div className="mt-2 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-slate-500 block mb-1">Take extra space</label>
+                <Input
+                  value={String(currentFlexGrow)}
+                  placeholder="0"
+                  onChange={(event) => applyFlexNumber('style.flexGrow', event.target.value, false)}
+                  onBlur={(event) => applyFlexNumber('style.flexGrow', event.target.value, true)}
+                  data-automation-id="designer-flex-grow-input"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-500 block mb-1">Allow shrinking</label>
+                <Input
+                  value={String(currentFlexShrink)}
+                  placeholder="1"
+                  onChange={(event) => applyFlexNumber('style.flexShrink', event.target.value, false)}
+                  onBlur={(event) => applyFlexNumber('style.flexShrink', event.target.value, true)}
+                  data-automation-id="designer-flex-shrink-input"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 block mb-1">Preferred {mainAxisNoun} size</label>
+              <Input
+                value={currentFlexBasis}
+                placeholder="auto | 240px | 50%"
+                onChange={(event) => applyFlexBasis(event.target.value, false)}
+                onBlur={(event) => applyFlexBasis(event.target.value, true)}
+                data-automation-id="designer-flex-basis-input"
+              />
+            </div>
+          </div>
+        </details>
+      </div>
+    );
+  };
+
+  const renderFieldDisplayControls = () => {
+    if (!selectedNode || selectedNode.type !== 'field' || !selectedFieldType) {
+      return null;
+    }
+
+    const fieldDefinition = getTemplateFieldDefinition(selectedFieldType.bindingKey);
+    if (!fieldDefinition || selectedFieldDisplayFormats.length === 0) {
+      return null;
+    }
+
+    const metadata = getNodeMetadata(selectedNode) as Record<string, unknown>;
+    const selectedDisplayFormat = (
+      metadata.displayFormat === 'single-line' ||
+      metadata.displayFormat === 'multiline' ||
+      metadata.displayFormat === 'raw'
+        ? metadata.displayFormat
+        : 'single-line'
+    ) as TemplateFieldDisplayFormat;
+    const optionLabels: Record<TemplateFieldDisplayFormat, string> = {
+      'single-line': 'Single line',
+      multiline: 'Multiline',
+      raw: 'Raw',
+    };
+    const optionDescriptions: Record<TemplateFieldDisplayFormat, string> = {
+      'single-line': 'Collapse the address onto one line.',
+      multiline: 'Split the address into multiple lines.',
+      raw: 'Use the stored value as-is.',
+    };
+
+    return (
+      <div
+        className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2"
+        data-automation-id="designer-field-display-controls"
+      >
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Display Format</p>
+          <p className="text-[11px] text-slate-500">
+            {fieldDefinition.description} This only applies to Data Field nodes.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-2">
+          {selectedFieldDisplayFormats.map((option) => {
+            const isSelected = option === selectedDisplayFormat;
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setNodeProp(selectedNode.id, 'metadata.displayFormat', option, true)}
+                className={clsx(
+                  'rounded border px-2 py-2 text-left transition-colors',
+                  isSelected
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                    : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                )}
+                aria-pressed={isSelected}
+                aria-label={`Display format: ${optionLabels[option]}`}
+                data-automation-id={`designer-field-display-format-${option}`}
+              >
+                <div className="text-xs font-medium">{optionLabels[option]}</div>
+                <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{optionDescriptions[option]}</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -1173,6 +1567,29 @@ export const DesignerShell: React.FC = () => {
 		    if (selectedNode.type === 'image' || selectedNode.type === 'logo' || selectedNode.type === 'qr') {
 		      const fitMode = metadata.fitMode ?? metadata.fit ?? 'contain';
         const objectFit = getNodeStyle(selectedNode)?.objectFit ?? fitMode;
+        const rawObjectPosition = getNodeStyle(selectedNode)?.objectPosition ?? 'center center';
+        const parseObjectPosition = (
+          value: string
+        ): { horizontal: 'left' | 'center' | 'right'; vertical: 'top' | 'center' | 'bottom' } => {
+          const tokens = value
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+          const horizontalToken = tokens.find((token) => token === 'left' || token === 'center' || token === 'right');
+          const verticalToken = tokens.find((token) => token === 'top' || token === 'center' || token === 'bottom');
+          return {
+            horizontal: (horizontalToken as 'left' | 'center' | 'right' | undefined) ?? 'center',
+            vertical: (verticalToken as 'top' | 'center' | 'bottom' | undefined) ?? 'center',
+          };
+        };
+        const objectPosition = parseObjectPosition(rawObjectPosition);
+        const applyObjectPosition = (
+          patch: Partial<{ horizontal: 'left' | 'center' | 'right'; vertical: 'top' | 'center' | 'bottom' }>
+        ) => {
+          const nextHorizontal = patch.horizontal ?? objectPosition.horizontal;
+          const nextVertical = patch.vertical ?? objectPosition.vertical;
+          setNodeProp(selectedNode.id, 'style.objectPosition', `${nextHorizontal} ${nextVertical}`, true);
+        };
         const applyAspectRatio = (raw: string, commit: boolean) => {
           const normalized = normalizeCssValue(raw);
           if (normalized === undefined) {
@@ -1208,27 +1625,37 @@ export const DesignerShell: React.FC = () => {
               onBlur={(event) => applyMetadata({ alt: event.target.value }, true)}
             />
 	          </div>
-	          <div>
-	            <label className="text-xs text-slate-500 block mb-1">Object fit</label>
-	            <CustomSelect
-	              id="designer-media-object-fit"
-	              options={[
-	                { value: 'contain', label: 'Contain' },
-	                { value: 'cover', label: 'Cover' },
-	                { value: 'fill', label: 'Fill' },
-	                { value: 'none', label: 'None' },
-	                { value: 'scale-down', label: 'Scale Down' },
-	              ]}
-	              value={objectFit}
-	              onValueChange={(value: string) => {
-	                setNodeProp(selectedNode.id, 'style.objectFit', value, true);
-	                if (value === 'contain' || value === 'cover' || value === 'fill') {
-	                  applyMetadata({ fitMode: value, fit: value }, true);
-	                }
-	              }}
-	              size="sm"
-	            />
-	          </div>
+            {renderIconButtonGroup(
+              'media-object-fit',
+              'Object Fit',
+              MEDIA_OBJECT_FIT_OPTIONS,
+              objectFit,
+              (value) => {
+                setNodeProp(selectedNode.id, 'style.objectFit', value, true);
+                if (value === 'contain' || value === 'cover' || value === 'fill') {
+                  applyMetadata({ fitMode: value, fit: value }, true);
+                }
+              },
+              5
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              {renderIconButtonGroup(
+                'media-horizontal-align',
+                'Horizontal Align',
+                MEDIA_HORIZONTAL_ALIGN_OPTIONS,
+                objectPosition.horizontal,
+                (value) => applyObjectPosition({ horizontal: value as 'left' | 'center' | 'right' }),
+                3
+              )}
+              {renderIconButtonGroup(
+                'media-vertical-align',
+                'Vertical Align',
+                MEDIA_VERTICAL_ALIGN_OPTIONS,
+                objectPosition.vertical,
+                (value) => applyObjectPosition({ vertical: value as 'top' | 'center' | 'bottom' }),
+                3
+              )}
+            </div>
             <div>
               <label className="text-xs text-slate-500 block mb-1">Aspect ratio</label>
 	              <Input
@@ -1680,13 +2107,20 @@ export const DesignerShell: React.FC = () => {
     if (!selectedNodeId) return;
     const liveNodes = useInvoiceDesignerStore.getState().nodes;
     const liveSelectedNode = liveNodes.find((node) => node.id === selectedNodeId) ?? null;
-    const liveParentNode =
-      liveSelectedNode?.parentId ? liveNodes.find((node) => node.id === liveSelectedNode.parentId) ?? null : null;
+    const widthMode = inferWidthMode(getNodeStyle(liveSelectedNode ?? undefined));
+    const heightMode = inferHeightMode(getNodeStyle(liveSelectedNode ?? undefined));
 
     // Avoid creating a separate history entry just for position; the resize commit will snapshot both.
     setNodeProp(selectedNodeId, 'position.x', propertyDraft.x, false);
     setNodeProp(selectedNodeId, 'position.y', propertyDraft.y, false);
-    resizeNode(selectedNodeId, { width: propertyDraft.width, height: propertyDraft.height }, true);
+    if (widthMode === 'fixed' || heightMode === 'fixed') {
+      resizeNode(
+        selectedNodeId,
+        { width: propertyDraft.width, height: propertyDraft.height },
+        true,
+        { widthMode, heightMode }
+      );
+    }
 
     const resolvedNode = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === selectedNodeId);
     if (!resolvedNode) {
@@ -1694,10 +2128,11 @@ export const DesignerShell: React.FC = () => {
     }
 
     const draftSize = {
-      width: Number.isFinite(propertyDraft.width) ? propertyDraft.width : resolvedNode.size.width,
-      height: Number.isFinite(propertyDraft.height) ? propertyDraft.height : resolvedNode.size.height,
+      width: widthMode === 'fixed' && Number.isFinite(propertyDraft.width) ? propertyDraft.width : resolvedNode.size.width,
+      height:
+        heightMode === 'fixed' && Number.isFinite(propertyDraft.height) ? propertyDraft.height : resolvedNode.size.height,
     };
-    if (wasSizeConstrainedFromDraft(draftSize, resolvedNode.size)) {
+    if ((widthMode === 'fixed' || heightMode === 'fixed') && wasSizeConstrainedFromDraft(draftSize, resolvedNode.size)) {
       showDropFeedback('info', 'Size constrained to valid bounds.');
     }
   };
@@ -1895,19 +2330,53 @@ export const DesignerShell: React.FC = () => {
               <div className="grid grid-cols-2 gap-3 text-xs text-slate-500">
                 <div>
                   <label htmlFor="prop-x" className="block mb-1">X</label>
-                  <Input id="prop-x" name="x" type="number" value={propertyDraft.x} onChange={handlePropertyInput} onBlur={commitPropertyChanges} />
+                  <Input
+                    id="prop-x"
+                    name="x"
+                    type="number"
+                    value={propertyDraft.x}
+                    onChange={handlePropertyInput}
+                    onBlur={commitPropertyChanges}
+                    data-automation-id="designer-prop-x"
+                  />
                 </div>
                 <div>
                   <label htmlFor="prop-y" className="block mb-1">Y</label>
-                  <Input id="prop-y" name="y" type="number" value={propertyDraft.y} onChange={handlePropertyInput} onBlur={commitPropertyChanges} />
+                  <Input
+                    id="prop-y"
+                    name="y"
+                    type="number"
+                    value={propertyDraft.y}
+                    onChange={handlePropertyInput}
+                    onBlur={commitPropertyChanges}
+                    data-automation-id="designer-prop-y"
+                  />
                 </div>
                 <div>
                   <label htmlFor="prop-width" className="block mb-1">Width</label>
-                  <Input id="prop-width" name="width" type="number" value={propertyDraft.width} onChange={handlePropertyInput} onBlur={commitPropertyChanges} />
+                  <Input
+                    id="prop-width"
+                    name="width"
+                    type="number"
+                    value={propertyDraft.width}
+                    onChange={handlePropertyInput}
+                    onBlur={commitPropertyChanges}
+                    disabled={selectedSupportsSharedSizingModes && selectedWidthMode !== 'fixed'}
+                    data-automation-id="designer-prop-width"
+                  />
                 </div>
                 <div>
                   <label htmlFor="prop-height" className="block mb-1">Height</label>
-                  <Input id="prop-height" name="height" type="number" value={propertyDraft.height} onChange={handlePropertyInput} onBlur={commitPropertyChanges} />
+                  <Input
+                    id="prop-height"
+                    name="height"
+                    type="number"
+                    value={propertyDraft.height}
+                    onChange={handlePropertyInput}
+                    onBlur={commitPropertyChanges}
+                    disabled={selectedSupportsSharedSizingModes && selectedHeightMode !== 'fixed'}
+                    data-automation-id="designer-prop-height"
+                  />
                 </div>
               </div>
               {selectedPreset && (
@@ -1927,6 +2396,9 @@ export const DesignerShell: React.FC = () => {
 	                </div>
 		              )}
                   {renderContainerLayoutControls()}
+                  {renderSharedSizingControls()}
+                  {renderFlexItemControls()}
+                  {renderFieldDisplayControls()}
                   <DesignerSchemaInspector node={selectedNode} nodesById={nodesById} />
 			              {selectedNode.type === 'section' && (
 			                <div className="space-y-1">

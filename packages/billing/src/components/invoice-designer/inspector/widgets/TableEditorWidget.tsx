@@ -147,6 +147,13 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
 
   const metadata = useMemo(() => getNodeMetadata(node), [node]);
   const sourceBindingId = useMemo(() => resolveTableSourceBindingId(metadata), [metadata]);
+  const isGroupedTransformsOutput = useMemo(() => {
+    if (sourceBindingId !== transforms.outputBindingId || !hasDesignerTransforms(transforms)) {
+      return false;
+    }
+
+    return transforms.operations.some((operation) => operation.type === 'group');
+  }, [sourceBindingId, transforms]);
 
   const columns: ColumnModel[] = useMemo(() => {
     const raw = (metadata as { columns?: unknown }).columns;
@@ -221,15 +228,13 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
   const bindingKeySuggestions = useMemo(() => {
     const rawSuggestions = getUniqueStrings([
       ...COLUMN_PRESETS.map((preset) => preset.key),
+      'item.servicePeriodStart',
+      'item.servicePeriodEnd',
+      'item.billingTiming',
       ...columns.map((column) => asTrimmedString(column.key)),
     ]);
 
-    if (sourceBindingId !== transforms.outputBindingId || !hasDesignerTransforms(transforms)) {
-      return rawSuggestions;
-    }
-
-    const isGroupedOutput = transforms.operations.some((operation) => operation.type === 'group');
-    if (!isGroupedOutput) {
+    if (!isGroupedTransformsOutput) {
       return rawSuggestions;
     }
 
@@ -241,9 +246,8 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       'item.key',
       'item.items',
       ...aggregateSuggestions,
-      ...columns.map((column) => asTrimmedString(column.key)),
     ]);
-  }, [columns, sourceBindingId, transforms]);
+  }, [columns, isGroupedTransformsOutput, transforms]);
 
   const resolvedBorderPreset: BorderPreset = useMemo(() => {
     const preset = (metadata as { tableBorderPreset?: unknown }).tableBorderPreset;
@@ -422,20 +426,22 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
             + Column
           </Button>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">Quick add:</span>
-          {COLUMN_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              id={`designer-add-column-preset-${preset.id}`}
-              type="button"
-              className="inline-flex h-6 items-center rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
-              onClick={() => handleAddPresetColumn(preset.id)}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
+        {!isGroupedTransformsOutput && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">Quick add:</span>
+            {COLUMN_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                id={`designer-add-column-preset-${preset.id}`}
+                type="button"
+                className="inline-flex h-6 items-center rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+                onClick={() => handleAddPresetColumn(preset.id)}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Table style */}
@@ -666,12 +672,13 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
               </span>
             </div>
           ))}
-          {COLUMN_PRESETS.map((preset) => (
-            <div key={`legend-${preset.id}`} className="flex items-center justify-between rounded px-2 py-0.5 bg-slate-50 dark:bg-[rgb(var(--color-background))]">
-              <code className="text-[11px] text-slate-600 dark:text-slate-400">{preset.key}</code>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500">{preset.description}</span>
-            </div>
-          ))}
+          {!isGroupedTransformsOutput &&
+            COLUMN_PRESETS.map((preset) => (
+              <div key={`legend-${preset.id}`} className="flex items-center justify-between rounded px-2 py-0.5 bg-slate-50 dark:bg-[rgb(var(--color-background))]">
+                <code className="text-[11px] text-slate-600 dark:text-slate-400">{preset.key}</code>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">{preset.description}</span>
+              </div>
+            ))}
         </div>
       </details>
     </div>

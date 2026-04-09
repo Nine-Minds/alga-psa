@@ -1,0 +1,107 @@
+[
+  {
+    "id": "F001",
+    "description": "Capture official Tanium method-selection guidance and verified schema/API findings in the plan artifacts before implementation starts.",
+    "implemented": false
+  },
+  {
+    "id": "F002",
+    "description": "Introduce a provider-neutral RMM provider adapter contract covering connection status, scope discovery, inventory sync, and optional event/action capabilities.",
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "Introduce an RMM provider registry that drives provider lookup and capability-driven UI rendering instead of hard-coded provider switches.",
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "Add provider capability metadata so shared UI and server logic can distinguish inventory-only providers from providers that also support events, alerts, or remote access.",
+    "implemented": false
+  },
+  {
+    "id": "F005",
+    "description": "Extract a shared RMM scope sync path that normalizes external scope records and persists them into rmm_organization_mappings.",
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "Extract a shared RMM asset ingestion path that correlates external devices through tenant_external_entity_mappings and creates or updates Alga assets.",
+    "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "Use tenant_external_entity_mappings as the canonical external identity backbone for all RMM asset syncs.",
+    "implemented": false
+  },
+  {
+    "id": "F008",
+    "description": "Keep direct and Temporal execution as pluggable sync transports while reusing the same shared provider business logic.",
+    "implemented": false
+  },
+  {
+    "id": "F009",
+    "description": "Wrap NinjaOne behind the new adapter/ingestion seams without changing its current user-visible behavior.",
+    "implemented": false
+  },
+  {
+    "id": "F010",
+    "description": "Wrap Tactical RMM behind the new adapter/ingestion seams without changing its current user-visible behavior.",
+    "implemented": false
+  },
+  {
+    "id": "F011",
+    "description": "Add Tanium as a supported RMM provider identifier in shared RMM types and persistence code.",
+    "implemented": false
+  },
+  {
+    "id": "F012",
+    "description": "Implement Tanium configuration persistence and connection status handling through the shared provider contract.",
+    "implemented": false
+  },
+  {
+    "id": "F013",
+    "description": "Implement a Tanium client/query layer that prefers Gateway and uses documented module APIs only for verified capability gaps.",
+    "implemented": false
+  },
+  {
+    "id": "F014",
+    "description": "Implement Tanium external scope discovery and mapping to Alga clients through rmm_organization_mappings.",
+    "implemented": false
+  },
+  {
+    "id": "F015",
+    "description": "Implement Tanium full device inventory sync for mapped scopes through the shared ingestion pipeline.",
+    "implemented": false
+  },
+  {
+    "id": "F016",
+    "description": "Implement a documented Tanium fallback path for aged-out inventory only if Gateway coverage is insufficient and the Asset API is required.",
+    "implemented": false
+  },
+  {
+    "id": "F017",
+    "description": "Render Tanium in the RMM settings surface from the provider registry with capability-driven controls and Tanium-specific help text.",
+    "implemented": false
+  },
+  {
+    "id": "F018",
+    "description": "Represent Tanium event delivery as an optional provider capability rather than requiring a public inbound webhook route for v1.",
+    "implemented": false
+  },
+  {
+    "id": "F019",
+    "description": "Hide unsupported Tanium capabilities such as remote access or remediation actions behind provider capability flags until explicitly implemented.",
+    "implemented": false
+  },
+  {
+    "id": "F020",
+    "description": "Emit provider-neutral RMM sync lifecycle events for Tanium using the existing integration/workflow event model.",
+    "implemented": false
+  },
+  {
+    "id": "F021",
+    "description": "Document unresolved Tanium schema questions explicitly in the plan and resolve them through tenant-backed schema review before implementation code relies on them.",
+    "implemented": false
+  }
+]

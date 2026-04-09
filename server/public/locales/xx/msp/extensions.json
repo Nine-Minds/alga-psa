@@ -4,7 +4,7 @@
   },
   "enterpriseFeature": {
     "title": "11111",
-    "description": "11111"
+    "description": "11111 {{feature}} 11111"
   },
   "settings": {
     "title": "11111",
@@ -48,7 +48,7 @@
   },
   "detail": {
     "metadataTitle": "11111",
-    "extensionId": "11111"
+    "extensionId": "11111 {{id}} 11111"
   },
   "runtime": {
     "metadataTitle": "11111",

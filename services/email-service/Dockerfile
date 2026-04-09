@@ -19,6 +19,7 @@ COPY services/email-service/package.json ./services/email-service/
 COPY server/package.json ./server/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
+COPY packages/ee/package.json ./packages/ee/
 COPY packages/event-bus/package.json ./packages/event-bus/
 COPY packages/event-schemas/package.json ./packages/event-schemas/
 COPY packages/storage/package.json ./packages/storage/
@@ -30,6 +31,7 @@ RUN npm config set legacy-peer-deps true && npm install --include-workspace-root
   --workspace=server \
   --workspace=@alga-psa/core \
   --workspace=@alga-psa/db \
+  --workspace=@alga-psa/ee-stubs \
   --workspace=@alga-psa/event-bus \
   --workspace=@alga-psa/event-schemas \
   --workspace=@alga-psa/storage \

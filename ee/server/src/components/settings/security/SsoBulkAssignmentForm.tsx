@@ -13,7 +13,7 @@ import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import Spinner from "@alga-psa/ui/components/Spinner";
 import { Loader2, Search } from "lucide-react";
 import { useToast } from "server/src/hooks/use-toast";
-import { ToggleGroup, ToggleGroupItem } from "@alga-psa/ui/components/ToggleGroup";
+import ViewSwitcher from "@alga-psa/ui/components/ViewSwitcher";
 import {
   executeBulkSsoAssignmentAction,
   previewBulkSsoAssignmentAction,
@@ -502,24 +502,19 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
 
           <div className="space-y-3">
             <Label className="block text-sm font-medium text-muted-foreground">Action</Label>
-            <ToggleGroup
-              type="single"
-              value={assignmentMode}
-              onValueChange={(value) => {
+            <ViewSwitcher
+              currentView={assignmentMode}
+              onChange={(value) => {
                 if (value === "link" || value === "unlink") {
                   setAssignmentMode(value);
                 }
               }}
-              className="justify-start"
+              options={[
+                { value: "link" as AssignmentMode, label: "Link selected users", disabled: isPending },
+                { value: "unlink" as AssignmentMode, label: "Unlink selected users", disabled: isPending },
+              ]}
               aria-label="Select SSO bulk action"
-            >
-              <ToggleGroupItem value="link" disabled={isPending}>
-                Link selected users
-              </ToggleGroupItem>
-              <ToggleGroupItem value="unlink" disabled={isPending}>
-                Unlink selected users
-              </ToggleGroupItem>
-            </ToggleGroup>
+            />
             <p className="text-sm text-muted-foreground">
               Linking adds the provider to each selected user. Unlinking removes the provider so the user returns to password/TOTP sign-in until they link again.
             </p>

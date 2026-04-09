@@ -208,6 +208,23 @@ export function CreateTicketScreen({ navigation }: Props) {
     }
   }, [fetchBoards, fetchClients, fetchContacts, fetchLocations, fetchStatuses, fetchPriorities, fetchUsers, boardId]);
 
+  // --- Auto-select default board on mount ---
+  useEffect(() => {
+    if (!client || boardId) return;
+    let canceled = false;
+    void (async () => {
+      const res = await listBoards(client, { apiKey });
+      if (canceled || !res.ok) return;
+      boardsRef.current = res.data.data;
+      const defaultBoard = res.data.data.find((b) => b.is_default);
+      if (defaultBoard) {
+        setBoardId(defaultBoard.board_id);
+        setBoardName(defaultBoard.board_name);
+      }
+    })();
+    return () => { canceled = true; };
+  }, [client, apiKey, boardId]);
+
   // --- Auto-select defaults when board changes ---
   useEffect(() => {
     if (!boardId || !client) return;
@@ -357,6 +374,7 @@ export function CreateTicketScreen({ navigation }: Props) {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: spacing.lg }}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         {/* Title */}
         <Text style={{ ...typography.caption, color: colors.textSecondary }}>{t("create.titleLabel")} *</Text>

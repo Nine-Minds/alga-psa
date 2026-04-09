@@ -153,7 +153,7 @@ If you already have a running cluster and kubeconfig, the same script can be use
 
 Bootstrap mode semantics:
 
-- `fresh`: deletes the appliance namespaces and wipes `/opt/local-path-provisioner` on the node before reinstalling
+- `fresh`: deletes the appliance namespaces and wipes `/var/mnt/alga-data/local-path-provisioner` on the node before reinstalling
 - `recover`: preserves existing PVC-backed appliance state and refuses to generate new database credentials against an existing Postgres PVC
 
 Use the destructive reset helper directly when you need to clear persisted appliance data between test runs:

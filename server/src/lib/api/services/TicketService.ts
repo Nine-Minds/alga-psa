@@ -12,7 +12,7 @@ import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { getEventBus } from 'server/src/lib/eventBus';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
@@ -497,6 +497,50 @@ export class TicketService extends BaseService<ITicket> {
     };
   }
 
+  async deleteTicketDocument(
+    ticketId: string,
+    documentId: string,
+    context: ServiceContext
+  ): Promise<void> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const doc = await knex('documents as d')
+      .join('document_associations as da', function () {
+        this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
+      })
+      .where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.document_id': documentId,
+        'd.tenant': context.tenant,
+      })
+      .select('d.document_id', 'd.file_id', 'da.association_id')
+      .first();
+
+    if (!doc) {
+      throw new NotFoundError('Document not found');
+    }
+
+    await withTransaction(knex, async (trx) => {
+      await trx('document_associations')
+        .where({ association_id: doc.association_id, tenant: context.tenant })
+        .del();
+
+      // Only delete the document itself if no other associations remain
+      const remaining = await trx('document_associations')
+        .where({ document_id: documentId, tenant: context.tenant })
+        .count('* as count')
+        .first();
+
+      if (!remaining || Number(remaining.count) === 0) {
+        await trx('documents')
+          .where({ document_id: documentId, tenant: context.tenant })
+          .del();
+      }
+    });
+  }
+
   async getTicketMaterials(ticketId: string, context: ServiceContext): Promise<ITicketMaterial[]> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
@@ -730,6 +774,19 @@ export class TicketService extends BaseService<ITicket> {
       const { knex } = await this.getKnex();
   
       return withTransaction(knex, async (trx) => {
+        // Validate status belongs to the specified board before proceeding
+        const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
+          data.status_id,
+          data.board_id,
+          context.tenant,
+          trx
+        );
+        if (!statusBelongsToBoard.valid) {
+          throw new ValidationError('Validation failed', [
+            { path: ['status_id'], message: `status_id ${data.status_id} does not belong to board_id ${data.board_id}` }
+          ]);
+        }
+
         // Convert API data format to TicketModel input format
         const createTicketInput: CreateTicketInput = {
           title: data.title,
@@ -888,28 +945,17 @@ export class TicketService extends BaseService<ITicket> {
         }
 
         if (newStatus?.is_closed) {
-          await this.safePublishEvent('TicketClosed', {
-            id: require("crypto").randomUUID(),
-            eventType: "TICKET_CLOSED" as const,
-            timestamp: new Date().toISOString(),
-            payload: {
-              tenantId: context.tenant,
-              ticketId: ticket.ticket_id,
-              userId: context.userId
-            }
+          await this.safePublishEvent('TICKET_CLOSED', context, {
+            ticketId: ticket.ticket_id,
+            closedByUserId: context.userId,
+            closedAt: new Date().toISOString(),
           });
         }
       }
 
-      await this.safePublishEvent('TicketUpdated', {
-        id: require("crypto").randomUUID(),
-        eventType: "TICKET_UPDATED" as const,
-        timestamp: new Date().toISOString(),
-        payload: {
-          tenantId: context.tenant,
-          ticketId: ticket.ticket_id,
-          userId: context.userId
-        }
+      await this.safePublishEvent('TICKET_UPDATED', context, {
+        ticketId: ticket.ticket_id,
+        updatedByUserId: context.userId,
       });
 
       return this.withDescriptionHtml(ticket as ITicket);
@@ -937,6 +983,19 @@ export class TicketService extends BaseService<ITicket> {
 
       if (!asset) {
         throw new NotFoundError('Asset not found');
+      }
+
+      // Validate status belongs to the specified board
+      const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
+        data.status_id,
+        data.board_id,
+        context.tenant,
+        trx
+      );
+      if (!statusBelongsToBoard.valid) {
+        throw new ValidationError('Validation failed', [
+          { path: ['status_id'], message: `status_id ${data.status_id} does not belong to board_id ${data.board_id}` }
+        ]);
       }
 
       // Create adapters for API service context
@@ -1132,8 +1191,7 @@ export class TicketService extends BaseService<ITicket> {
       const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
 
       // Publish TICKET_COMMENT_ADDED event for mention notifications
-      await this.safePublishEvent('TICKET_COMMENT_ADDED', {
-        tenantId: context.tenant,
+      await this.safePublishEvent('TICKET_COMMENT_ADDED', context, {
         ticketId: ticketId,
         userId: context.userId,
         comment: {
@@ -1592,15 +1650,21 @@ export class TicketService extends BaseService<ITicket> {
   /**
    * Safely publish events
    */
-  private async safePublishEvent(eventType: string, event: any): Promise<void> {
+  private async safePublishEvent(eventType: string, context: ServiceContext, payload: Record<string, unknown>): Promise<void> {
     if (process.env.E2E_SKIP_APP_INIT === 'true') {
       return;
     }
 
     try {
-      await publishEvent({
-        eventType,
-        payload: event
+      await publishWorkflowEvent({
+        eventType: eventType as any,
+        payload,
+        ctx: {
+          tenantId: context.tenant,
+          actor: context.userId
+            ? { actorType: 'USER', actorUserId: context.userId }
+            : { actorType: 'SYSTEM' },
+        },
       });
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);

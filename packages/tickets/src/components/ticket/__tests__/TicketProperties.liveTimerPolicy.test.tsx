@@ -108,6 +108,21 @@ vi.mock('@alga-psa/ui/context', () => ({
   useQuickAddClient: () => ({ renderQuickAddContact: vi.fn() }),
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (_key: string, fallback?: string, options?: Record<string, string | number>) => {
+      if (!fallback) {
+        return _key;
+      }
+
+      return Object.entries(options ?? {}).reduce(
+        (message, [name, value]) => message.replaceAll(`{{${name}}}`, String(value)),
+        fallback,
+      );
+    },
+  }),
+}));
+
 vi.mock('@alga-psa/ui', () => ({
   useDrawer: () => ({ openDrawer: vi.fn() }),
 }));

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, View } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, useNavigationContainerRef } from "@react-navigation/native";
 import type { InitialState } from "@react-navigation/native";
 import { getAppConfig } from "../config/appConfig";
 import { linking } from "../navigation/linking";
+import type { RootStackParamList } from "../navigation/types";
 import { RootNavigator } from "../navigation/RootNavigator";
 import { ErrorState, LoadingState } from "../ui/states";
 import { useNetworkStatus } from "../network/useNetworkStatus";
@@ -21,6 +22,7 @@ import { getBiometricGateEnabled, BIOMETRIC_GRACE_MS } from "../auth/biometricGa
 import { BiometricLockView } from "./BiometricLockView";
 import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
+import { setUser as setSentryUser, reactNavigationIntegration } from "../errors/sentry";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { ToastProvider } from "../ui/toast/ToastProvider";
 import { ThemeProvider } from "../ui/ThemeContext";
@@ -46,6 +48,7 @@ export function AppRoot() {
   const lastRevocationCheckAtMs = useRef(0);
   const lastBiometricUnlockAtMs = useRef(0);
 
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const baseUrl = config.ok ? config.baseUrl : null;
 
   const setSession = useCallback(
@@ -54,6 +57,11 @@ export function AppRoot() {
       setSessionState(next);
       if (!next) setIsBiometricLocked(false);
       void (next ? storeSession(next) : clearStoredSession());
+      setSentryUser(
+        next?.user
+          ? { id: next.user.id, email: next.user.email, tenantId: next.tenantId }
+          : null,
+      );
     },
     [clearStoredSession, setSessionState, setIsBiometricLocked, storeSession],
   );
@@ -242,17 +250,14 @@ export function AppRoot() {
 
   useAppResume(() => {
     if (!session) return;
-    if (shouldRefreshOnResume(session.expiresAtMs, Date.now())) {
+    const now = Date.now();
+    // Refresh if token is near expiry, or periodically to detect revocation
+    if (shouldRefreshOnResume(session.expiresAtMs, now)) {
+      void refreshSession();
+    } else if (shouldRunRevocationCheck(lastRevocationCheckAtMs.current, now)) {
+      lastRevocationCheckAtMs.current = now;
       void refreshSession();
     }
-  });
-
-  useAppResume(() => {
-    if (!session) return;
-    const now = Date.now();
-    if (!shouldRunRevocationCheck(lastRevocationCheckAtMs.current, now)) return;
-    lastRevocationCheckAtMs.current = now;
-    void refreshSession();
   });
 
   useAppResume(() => {
@@ -330,6 +335,10 @@ export function AppRoot() {
             {isOfflineStatus(network) ? <OfflineBanner onRetry={() => {}} /> : null}
             <View style={{ flex: 1 }}>
               <NavigationContainer
+                ref={navigationRef}
+                onReady={() => {
+                  reactNavigationIntegration.registerNavigationContainer(navigationRef);
+                }}
                 key={session ? "signed-in" : "signed-out"}
                 linking={linking}
                 initialState={session ? navInitialState : undefined}

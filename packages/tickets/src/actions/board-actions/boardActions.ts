@@ -202,6 +202,10 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
           default_priority_id: defaultPriorityId,
           manager_user_id: boardData.manager_user_id || null,
           sla_policy_id: boardData.sla_policy_id || null,
+          inbound_reply_reopen_enabled: boardData.inbound_reply_reopen_enabled ?? false,
+          inbound_reply_reopen_cutoff_hours: boardData.inbound_reply_reopen_cutoff_hours ?? 168,
+          inbound_reply_reopen_status_id: boardData.inbound_reply_reopen_status_id || null,
+          inbound_reply_ai_ack_suppression_enabled: boardData.inbound_reply_ai_ack_suppression_enabled ?? false,
           enable_live_ticket_timer: boardData.enable_live_ticket_timer ?? true,
           tenant
         })
@@ -514,6 +518,24 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
       }
       if ('sla_policy_id' in sanitizedData) {
         sanitizedData.sla_policy_id = sanitizedData.sla_policy_id || null;
+      }
+      if ('inbound_reply_reopen_status_id' in sanitizedData) {
+        const v = sanitizedData.inbound_reply_reopen_status_id as unknown;
+        sanitizedData.inbound_reply_reopen_status_id = (typeof v === 'string' && v.length > 0) ? v : null;
+      }
+      if ('inbound_reply_reopen_cutoff_hours' in sanitizedData) {
+        const cutoff = Number(sanitizedData.inbound_reply_reopen_cutoff_hours);
+        sanitizedData.inbound_reply_reopen_cutoff_hours = Number.isFinite(cutoff) && cutoff > 0
+          ? Math.max(1, Math.floor(cutoff))
+          : 168;
+      }
+      if ('inbound_reply_reopen_enabled' in sanitizedData) {
+        sanitizedData.inbound_reply_reopen_enabled = Boolean(sanitizedData.inbound_reply_reopen_enabled);
+      }
+      if ('inbound_reply_ai_ack_suppression_enabled' in sanitizedData) {
+        sanitizedData.inbound_reply_ai_ack_suppression_enabled = Boolean(
+          sanitizedData.inbound_reply_ai_ack_suppression_enabled
+        );
       }
       if ('enable_live_ticket_timer' in sanitizedData) {
         sanitizedData.enable_live_ticket_timer = sanitizedData.enable_live_ticket_timer ?? true;
