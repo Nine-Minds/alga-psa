@@ -1440,19 +1440,25 @@ export class ChatCompletionsService {
                 const resolution = c.is_resolution ? ' [resolution]' : '';
                 const author = c.author_type || 'unknown';
                 const date = c.created_at || '';
-                // Extract plain text from note (may be HTML/BlockNote JSON)
-                let noteText = c.note || c.markdown_content || '';
-                if (noteText.startsWith('[{') || noteText.startsWith('[')) {
-                  try {
-                    const blocks = JSON.parse(noteText);
-                    noteText = blocks.map((b: any) => {
-                      if (typeof b === 'string') return b;
-                      const content = b.content;
-                      if (!content) return '';
-                      return content.map((c: any) => c.text || '').join('');
-                    }).join('\n');
-                  } catch {
-                    // keep raw text
+                // Prefer markdown_content (clean text) over note (verbose BlockNote JSON)
+                let noteText = c.markdown_content || '';
+                if (!noteText || noteText === '[No content]' || noteText === '[No markdown content]') {
+                  // Fall back to extracting text from BlockNote JSON in note
+                  const raw = c.note || '';
+                  if (raw.startsWith('[{') || raw.startsWith('[')) {
+                    try {
+                      const blocks = JSON.parse(raw);
+                      noteText = blocks.map((b: any) => {
+                        if (typeof b === 'string') return b;
+                        const content = b.content;
+                        if (!content) return '';
+                        return content.map((ic: any) => ic.text || '').join('');
+                      }).filter(Boolean).join('\n');
+                    } catch {
+                      noteText = raw.slice(0, 300);
+                    }
+                  } else {
+                    noteText = raw;
                   }
                 }
                 // Truncate very long comments
@@ -1631,12 +1637,14 @@ export class ChatCompletionsService {
       const entityLines = await this.resolveMentionedEntities(mentions);
       if (entityLines.length > 0) {
         lines.push('');
-        lines.push('Referenced entities (mentioned by the user):');
+        lines.push('IMPORTANT — The following entities were explicitly mentioned by the user via @mentions. Their full details have already been fetched and are provided below. DO NOT call any API endpoints to look up or re-fetch these entities. Use the data below directly in your response.');
+        lines.push('');
         lines.push(...entityLines);
-        lines.push('Instructions for mentioned entities:');
-        lines.push('- Use the details above when answering questions about these entities. The data is already fetched — do not re-fetch unless the user explicitly asks for the latest/refreshed data.');
-        lines.push('- The IDs provided (ticket_id, client_id, contact_name_id, project_id, asset_id, user_id) are real UUIDs. Use them directly when making API calls related to these entities.');
-        lines.push('- If the user asks to perform an action on a mentioned entity (update, close, assign, etc.), use the provided ID to call the appropriate API endpoint without needing to search for the entity first.');
+        lines.push('');
+        lines.push('Rules for mentioned entities:');
+        lines.push('- You ALREADY HAVE all the data for these entities above. DO NOT call List Contacts, List Clients, or any search/list endpoint to find them again.');
+        lines.push('- The IDs provided (ticket_id, client_id, contact_name_id, project_id, asset_id, user_id) are real UUIDs. Use them directly if you need to perform actions (update, close, assign, etc.) via API calls.');
+        lines.push('- Only re-fetch an entity if the user explicitly asks for "latest", "refreshed", or "updated" data.');
         lines.push('- For tickets with comments, consider the conversation history when answering questions about the ticket status, issues, or resolution.');
       }
     }
@@ -1654,7 +1662,7 @@ export class ChatCompletionsService {
       content:
         'You are Alga, an assistant that helps users manage PSA workflows. ' +
         'Always consult the enterprise API registry before executing actions so you understand every required parameter. ' +
-        'When the registry or endpoint descriptions mention prerequisite data (such as IDs for boards, clients, categories, priorities, or other related resources), proactively call the appropriate lookup endpoints to gather that information instead of asking the user. ' +
+        'When the registry or endpoint descriptions mention prerequisite data (such as IDs for boards, clients, categories, priorities, or other related resources): for write operations (create, update, delete), proactively call the appropriate lookup endpoints to gather that information instead of asking the user; for read operations (list, get), call the endpoint directly and only look up prerequisite data if the user explicitly asks to filter by it. ' +
         'For ticket-creation calls, first use search_api_registry to locate the list endpoints you need, gather current data (e.g. call GET /api/v1/tickets to sample board_id/status_id/priority_id combinations and GET /api/v1/clients to confirm client_id), and do not proceed until you have concrete UUIDs for board_id, client_id, status_id, and priority_id collected from prior API responses. When sampling GET /api/v1/tickets, pick the first record with non-null board_id, status_id, and priority_id and reuse those UUIDs unless the user specifies different values. ' +
         'Never invent field names for a fields query parameter. Only send fields values that are explicitly documented in the registry description, parameters, or examples for that exact endpoint. If the registry does not enumerate exact field names, omit fields entirely. For GET /api/v1/tickets specifically, the only valid fields values are ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, and mobile_list. Do not use aliases like id, subject, status, priority, client, created_at, or description. ' +
         'When you only need discovery data, prefer list endpoints with small limits and explicit fields instead of full payloads. Once you have a resource ID, prefer the detail endpoint over repeatedly expanding list responses. ' +
@@ -1662,6 +1670,7 @@ export class ChatCompletionsService {
         'Clearly explain the plan before each tool call, execute the necessary lookup calls to satisfy all requirements, then call the target endpoint once the inputs are ready. ' +
         'Use the documented request schemas exactly as written—populate *_id fields with the UUIDs you retrieved (never human-friendly names), and skip optional fields when you do not have authoritative values. ' +
         'Never include properties that are not defined for the selected endpoint; if the user mentions data that cannot be expressed with the documented schema (for example a project name when the ticket create payload does not accept project_id), acknowledge it in the natural-language response but leave it out of the API request. ' +
+        'When reading ticket comments, always pass content_format=markdown as a query parameter. This returns compact responses with only markdown_content (readable text) and metadata, instead of the large BlockNote JSON in comment_text. Never use field_ranges on comment_text — use content_format=markdown instead. ' +
         'When handling documents, do not assume null file_id means empty content; in-app documents may store content in document_block_content or document_content. Call GET /api/documents/{documentId}/content to retrieve readable content before concluding the document has no data. ' +
         'Do not create or modify unrelated master data (such as categories, boards, or projects) unless the user explicitly asks for that; prefer reusing existing records you just looked up. ' +
         'When users ask questions that could be answered by internal documentation (e.g. how-to questions, troubleshooting, process questions), proactively search the knowledge base using GET /api/v1/kb-articles with a relevant search query. If matching articles are found, read their content with GET /api/v1/kb-articles/{id}/content and use that information in your response. When creating KB articles from resolved tickets, use POST /api/v1/kb-articles/from-ticket/{ticketId} and then review the generated content. ' +

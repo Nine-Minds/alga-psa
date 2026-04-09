@@ -7,10 +7,12 @@ import { NumberingSettings } from '@alga-psa/reference-data/components';
 import { TenantProjectTaskStatusSettings } from './projects/TenantProjectTaskStatusSettings';
 import { ProjectStatusSettings } from './projects/ProjectStatusSettings';
 import TaskPrioritySettings from './projects/TaskPrioritySettings';
+import { useTranslation } from 'react-i18next';
 
 const DEFAULT_TAB = 'project-numbering';
 
 const ProjectSettings = (): React.JSX.Element => {
+  const { t } = useTranslation('features/projects');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
 
@@ -30,22 +32,22 @@ const ProjectSettings = (): React.JSX.Element => {
   const tabs = [
     {
       id: 'project-numbering',
-      label: "Project Numbering",
+      label: t('settings.page.tabs.projectNumbering', 'Project Numbering'),
       content: <NumberingSettings entityType="PROJECT" />
     },
     {
       id: 'project-statuses',
-      label: "Project Statuses",
+      label: t('settings.page.tabs.projectStatuses', 'Project Statuses'),
       content: <ProjectStatusSettings />
     },
     {
       id: 'task-statuses',
-      label: "Task Statuses",
+      label: t('settings.page.tabs.taskStatuses', 'Task Statuses'),
       content: <TenantProjectTaskStatusSettings />
     },
     {
       id: 'task-priorities',
-      label: "Task Priorities",
+      label: t('settings.page.tabs.taskPriorities', 'Task Priorities'),
       content: <TaskPrioritySettings />
     }
   ];
@@ -70,7 +72,9 @@ const ProjectSettings = (): React.JSX.Element => {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-xl font-bold mb-4 text-gray-800">Project Settings</h2>
+      <h2 className="text-xl font-bold mb-4 text-gray-800">
+        {t('settings.page.title', 'Project Settings')}
+      </h2>
       <CustomTabs
         tabs={tabs}
         defaultTab={activeTab}

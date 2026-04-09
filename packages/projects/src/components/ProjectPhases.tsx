@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Upload } from 'lucide-react';
 import PhaseListItem from './PhaseListItem';
 import styles from './ProjectDetail.module.css';
+import { useTranslation } from 'react-i18next';
 
 interface ProjectPhasesProps {
   phases: IProjectPhase[];
@@ -77,6 +78,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onStatusesChanged,
   onImport,
 }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
   const handleContainerDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     
@@ -152,7 +154,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
     <div className={styles.phasesPanel}>
       {/* Fixed header section */}
       <div className={styles.phasesPanelHeader}>
-        <h2 className="text-xl font-bold mb-2">Project Phases</h2>
+        <h2 className="text-xl font-bold mb-2">{t('projectPhases.title', 'Project Phases')}</h2>
         <div className="flex gap-2 flex-wrap">
           <Button
             id="add-task-button"
@@ -160,14 +162,14 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
             size="sm"
             disabled={!selectedPhase || isAddingTask}
           >
-            {isAddingTask ? 'Adding...' : '+ Add Task'}
+            {isAddingTask ? t('projectPhases.adding', 'Adding...') : t('projectPhases.addTask', '+ Add Task')}
           </Button>
           <Button
             id="add-phase-button"
             onClick={onAddPhase}
             size="sm"
           >
-            + Add Phase
+            {t('projectPhases.addPhase', '+ Add Phase')}
           </Button>
           {onImport && (
             <Button
@@ -177,7 +179,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               size="sm"
             >
               <Upload className="h-4 w-4 mr-1" />
-              Import
+              {t('projectPhases.import', 'Import')}
             </Button>
           )}
         </div>

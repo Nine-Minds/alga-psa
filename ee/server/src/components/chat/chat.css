@@ -379,10 +379,36 @@
   overflow-x: auto;
 }
 
+.function-approval-details {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: rgb(var(--color-text-700));
+}
+
+.function-approval-details summary {
+  cursor: pointer;
+  color: rgb(var(--color-primary-500));
+  font-weight: 600;
+  font-size: 0.8125rem;
+  list-style: none;
+}
+
+.function-approval-details summary::marker {
+  display: none;
+}
+
+.function-approval-details[open] summary {
+  margin-bottom: 0.5rem;
+}
+
+.function-approval-details .function-approval-description {
+  margin-top: 0;
+}
+
 .function-approval-preferences {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .function-approval-preference-toggle {
@@ -391,11 +417,12 @@
   gap: 0.5rem;
 }
 
-.function-approval-preferences-help {
+.function-approval-preference-toggle > div {
+  align-items: center;
+}
+
+.function-approval-preference-toggle label {
   font-size: 0.8125rem;
-  color: rgb(var(--color-text-600));
-  margin: 0;
-  line-height: 1.4;
 }
 
 /* ---------- Mention chips ---------- */

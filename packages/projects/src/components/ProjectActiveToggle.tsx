@@ -5,6 +5,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { updateProject } from '../actions/projectActions';
 import { useState } from 'react';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from 'react-i18next';
 
 interface ProjectActiveToggleProps {
   projectId: string;
@@ -12,6 +13,7 @@ interface ProjectActiveToggleProps {
 }
 
 export default function ProjectActiveToggle({ projectId, initialIsInactive }: ProjectActiveToggleProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [isInactive, setIsInactive] = useState(initialIsInactive);
 
   const toggleProjectActive = async () => {
@@ -23,14 +25,14 @@ export default function ProjectActiveToggle({ projectId, initialIsInactive }: Pr
       }
       setIsInactive(updatedProject.is_inactive);
     } catch (error) {
-      handleError(error, 'Failed to update project status');
+      handleError(error, t('projectEdit.updateError', 'Failed to update project status'));
     }
   };
 
   return (
     <div className="flex items-center space-x-2">
       <Badge variant={isInactive ? 'default-muted' : 'success'}>
-        {isInactive ? 'Inactive' : 'Active'}
+        {isInactive ? t('status.inactive', 'Inactive') : t('status.active', 'Active')}
       </Badge>
       <Switch
         checked={!isInactive}

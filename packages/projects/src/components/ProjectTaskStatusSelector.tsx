@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { ChevronUp, ChevronDown, Plus, X, ChevronRight, Circle } from 'lucide-react';
 import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import { createTenantProjectStatus } from '../actions/projectTaskStatusActions';
+import { useTranslation } from 'react-i18next';
 
 interface ProjectTaskStatusSelectorProps {
   availableStatuses: IStatus[];
@@ -24,6 +25,7 @@ export function ProjectTaskStatusSelector({
   onStatusCreated,
   error
 }: ProjectTaskStatusSelectorProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [showAvailableList, setShowAvailableList] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
@@ -150,7 +152,7 @@ export function ProjectTaskStatusSelector({
     <div className="space-y-2">
       <div className="flex justify-between items-center">
         <label className="block text-sm font-medium text-gray-700">
-          Task Statuses *
+          {t('settings.statuses.task_statuses_label', 'Task Statuses')} *
         </label>
         {!isExpanded && (
           <Button
@@ -161,7 +163,7 @@ export function ProjectTaskStatusSelector({
             id="customize-statuses-button"
           >
             <ChevronRight className="w-4 h-4 mr-1" />
-            Customize
+            {t('settings.statuses.customize', 'Customize')}
           </Button>
         )}
       </div>
@@ -198,7 +200,9 @@ export function ProjectTaskStatusSelector({
         <>
           <div className="flex justify-between items-center mb-2">
             <span className="text-xs text-gray-600">
-              {phaseId ? 'Customize task statuses for this phase' : 'Customize task statuses for this project'}
+              {phaseId
+                ? t('settings.statuses.customize_phase', 'Customize task statuses for this phase')
+                : t('settings.statuses.customize_project', 'Customize task statuses for this project')}
             </span>
             <div className="flex gap-2">
               {unselectedStatuses.length > 0 && (
@@ -210,7 +214,7 @@ export function ProjectTaskStatusSelector({
                   id="toggle-available-statuses"
                 >
                   <Plus className="w-4 h-4 mr-1" />
-                  Add Existing
+                  {t('settings.statuses.add_existing', 'Add Existing')}
                 </Button>
               )}
               <Button
@@ -221,7 +225,7 @@ export function ProjectTaskStatusSelector({
                 id="create-new-status-button"
               >
                 <Plus className="w-4 h-4 mr-1" />
-                Create New
+                {t('settings.statuses.create_new', 'Create New')}
               </Button>
             </div>
           </div>
@@ -230,7 +234,7 @@ export function ProjectTaskStatusSelector({
           {showAvailableList && unselectedStatuses.length > 0 && (
             <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
               <div className="text-xs font-medium text-gray-600 mb-2">
-                Available Statuses (click to add):
+                {t('settings.statuses.available_statuses_click_add', 'Available Statuses (click to add):')}
               </div>
               {unselectedStatuses.map((status) => (
                 <button
@@ -255,7 +259,7 @@ export function ProjectTaskStatusSelector({
                   {status.name}
                   {status.is_closed && (
                     <span className="ml-2 text-xs px-2 py-0.5 bg-gray-200 rounded">
-                      Closed
+                      {t('settings.statuses.closed', 'Closed')}
                     </span>
                   )}
                 </button>
@@ -282,7 +286,7 @@ export function ProjectTaskStatusSelector({
                         onClick={() => moveUp(index)}
                         disabled={index === 0}
                         className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                        title="Move up"
+                        title={t('settings.statuses.move_up', 'Move up')}
                         id={`move-up-${status.status_id}`}
                       >
                         <ChevronUp className="w-3 h-3" />
@@ -292,7 +296,7 @@ export function ProjectTaskStatusSelector({
                         onClick={() => moveDown(index)}
                         disabled={index === selectedStatuses.length - 1}
                         className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                        title="Move down"
+                        title={t('settings.statuses.move_down', 'Move down')}
                         id={`move-down-${status.status_id}`}
                       >
                         <ChevronDown className="w-3 h-3" />
@@ -313,7 +317,7 @@ export function ProjectTaskStatusSelector({
                       <span className="font-medium">{status.name}</span>
                       {status.is_closed && (
                         <span className="ml-2 text-xs px-2 py-0.5 bg-gray-200 rounded">
-                          Closed
+                          {t('settings.statuses.closed', 'Closed')}
                         </span>
                       )}
                     </div>
@@ -328,7 +332,7 @@ export function ProjectTaskStatusSelector({
                       type="button"
                       onClick={() => removeStatus(selected.status_id)}
                       className="p-1 hover:bg-destructive/15 rounded text-destructive"
-                      title="Remove status"
+                      title={t('settings.statuses.remove', 'Remove status')}
                       id={`remove-status-${status.status_id}`}
                     >
                       <X className="w-4 h-4" />
@@ -339,13 +343,17 @@ export function ProjectTaskStatusSelector({
             </div>
           ) : (
             <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg border-2 border-dashed">
-              <p className="font-medium mb-1">No statuses selected</p>
-              <p className="text-xs">Click "Add Existing" to select from available statuses, or "Create New" to add a new status.</p>
+              <p className="font-medium mb-1">
+                {t('settings.statuses.none_selected', 'No statuses selected')}
+              </p>
+              <p className="text-xs">
+                {t('settings.statuses.selector_none_selected_hint', 'Click "Add Existing" to select from available statuses, or "Create New" to add a new status.')}
+              </p>
             </div>
           )}
 
           <p className="text-xs text-gray-500 mt-2">
-            Arrange statuses in the order tasks will flow through them.
+            {t('settings.statuses.arrange_hint', 'Arrange statuses in the order tasks will flow through them.')}
           </p>
         </>
       )}

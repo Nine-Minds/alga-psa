@@ -29,6 +29,7 @@ import { createTagsForEntity } from '@alga-psa/tags/actions';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
+import { useTranslation } from 'react-i18next';
 
 interface ProjectQuickAddProps {
   onClose: () => void;
@@ -37,6 +38,7 @@ interface ProjectQuickAddProps {
 }
 
 const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdded, clients }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
   const { getContactsByClient, getAllContacts, renderQuickAddContact, renderQuickAddClient } = useClientIntegration();
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
@@ -124,16 +126,16 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
 
     const errors: string[] = [];
     if (projectName.trim() === '') {
-      errors.push('Project name is required');
+      errors.push(t('quickAdd.projectNameRequired', 'Project name is required'));
     }
     if (!selectedClientId) {
-      errors.push('Client is required');
+      errors.push(t('quickAdd.clientRequired', 'Client is required'));
     }
     if (!selectedStatusId) {
-      errors.push('Project status is required');
+      errors.push(t('quickAdd.projectStatusRequired', 'Project status is required'));
     }
     if (selectedTaskStatuses.length === 0) {
-      errors.push('At least one task status must be selected');
+      errors.push(t('quickAdd.taskStatusRequired', 'At least one task status must be selected'));
     }
 
     if (errors.length > 0) {
@@ -182,7 +184,9 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         try {
           createdTags = await createTagsForEntity(newProject.project_id, 'project', pendingTags);
           if (createdTags.length < pendingTags.length) {
-            toast.error(`${pendingTags.length - createdTags.length} tag(s) could not be created`);
+            toast.error(t('quickAdd.tagCreatePartialError', '{{count}} tag(s) could not be created', {
+              count: pendingTags.length - createdTags.length,
+            }));
           }
         } catch (tagError) {
           console.error("Error creating project tags:", tagError);
@@ -195,9 +199,9 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       onClose();
 
       // Show success toast *after* potential state updates in parent
-      toast.success('Project created successfully');
+      toast.success(t('quickAdd.createdSuccess', 'Project created successfully'));
     } catch (error) {
-      handleError(error, 'Failed to create project. Please try again.');
+      handleError(error, t('quickAdd.createError', 'Failed to create project. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -212,7 +216,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         setValidationErrors([]);
         onClose();
       }}
-      title="Add New Project"
+      title={t('quickAdd.title', 'Add New Project')}
       className="max-w-[600px]"
       disableFocusTrap
     >
@@ -220,7 +224,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
           {hasAttemptedSubmit && validationErrors.length > 0 && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
-                Please fix the following errors:
+                {t('quickAdd.validationTitle', 'Please fix the following errors:')}
                 <ul className="list-disc pl-5 mt-1 text-sm">
                   {validationErrors.map((err, index) => (
                     <li key={index}>{err}</li>
@@ -234,7 +238,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
               <TextArea
                 value={projectName}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setProjectName(e.target.value)}
-                placeholder="Project Name *"
+                placeholder={t('quickAdd.projectNamePlaceholder', 'Project Name *')}
                 className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${hasAttemptedSubmit && projectName.trim() === '' ? 'border-destructive' : 'border-gray-300'}`}
                 rows={1}
                 autoFocus
@@ -242,12 +246,12 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
               <TextArea
                 value={description}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
-                placeholder="Description"
+                placeholder={t('quickAdd.descriptionPlaceholder', 'Description')}
                 className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
                 rows={3}
               />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.statusLabel', 'Status *')}</label>
                 <CustomSelect
                   value={selectedStatusId || ''}
                   onValueChange={setSelectedStatusId}
@@ -255,14 +259,14 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                     value: status.status_id,
                     label: status.name
                   }))}
-                  placeholder="Select Status"
+                  placeholder={t('quickAdd.statusPlaceholder', 'Select Status')}
                   className={hasAttemptedSubmit && !selectedStatusId ? 'ring-1 ring-red-500' : ''}
                   onAddNew={() => setShowQuickAddProjectStatus(true)}
-                  addNewLabel="Add new status"
+                  addNewLabel={t('settings.statuses.addStatus', 'Add new status')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Client *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.clientLabel', 'Client *')}</label>
                 <ClientPicker
                   id='client-picker'
                   clients={mergedClients}
@@ -277,20 +281,20 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.contactLabel', 'Contact')}</label>
                 <ContactPicker
                   id='contact-picker'
                   contacts={contacts}
                   value={selectedContactId || ''}
                   onValueChange={setSelectedContactId}
                   clientId={selectedClientId || undefined}
-                  placeholder="Select Contact"
+                  placeholder={t('quickAdd.contactPlaceholder', 'Select Contact')}
                   buttonWidth="full"
                   onAddNew={selectedClientId ? () => setIsQuickAddContactOpen(true) : undefined}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Project Manager</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.projectManagerLabel', 'Project Manager')}</label>
                 <UserPicker
                   value={selectedUserId || ''}
                   onValueChange={setSelectedUserId}
@@ -299,12 +303,12 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   labelStyle="none"
                   buttonWidth="full"
                   size="sm"
-                  placeholder="Select Assignee"
+                  placeholder={t('quickAdd.projectManagerPlaceholder', 'Select Assignee')}
                 />
               </div>
               <div>
                 <label htmlFor="budgeted_hours" className="block text-sm font-medium text-gray-700 mb-1">
-                  Budgeted Hours
+                  {t('quickAdd.budgetedHoursLabel', 'Budgeted Hours')}
                 </label>
                 <Input
                   id="budgeted_hours"
@@ -326,24 +330,24 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   }}
                   min="0"
                   step="1"
-                  placeholder="Enter budgeted hours"
+                  placeholder={t('quickAdd.budgetedHoursPlaceholder', 'Enter budgeted hours')}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.startDateLabel', 'Start Date')}</label>
                   <DatePicker
                     value={startDate}
                     onChange={setStartDate}
-                    placeholder="Select start date"
+                    placeholder={t('quickAdd.startDatePlaceholder', 'Select start date')}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.endDateLabel', 'End Date')}</label>
                   <DatePicker
                     value={endDate}
                     onChange={setEndDate}
-                    placeholder="Select end date"
+                    placeholder={t('quickAdd.endDatePlaceholder', 'Select end date')}
                   />
                 </div>
               </div>
@@ -355,7 +359,9 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   // Add new status to the available list
                   setTaskStatuses(prev => [...prev, newStatus]);
                 }}
-                error={hasAttemptedSubmit && selectedTaskStatuses.length === 0 ? 'At least one task status must be selected' : undefined}
+                error={hasAttemptedSubmit && selectedTaskStatuses.length === 0
+                  ? t('quickAdd.taskStatusRequired', 'At least one task status must be selected')
+                  : undefined}
               />
               <QuickAddTagPicker
                 id="quick-add-project-tags"
@@ -377,7 +383,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                     <ChevronRight className="h-4 w-4" />
                   )}
                   <Settings className="h-4 w-4" />
-                  <span>Client Portal Visibility</span>
+                  <span>{t('quickAdd.clientPortalVisibility', 'Client Portal Visibility')}</span>
                 </button>
                 {showClientPortalConfig && (
                   <div className="mt-3">
@@ -395,10 +401,12 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   setValidationErrors([]);
                   onClose();
                 }} disabled={isSubmitting}>
-                  Cancel
+                  {t('common:actions.cancel', 'Cancel')}
                 </Button>
                 <Button id='create-button' type="submit" disabled={isSubmitting} className={!projectName.trim() || !selectedClientId || !selectedStatusId ? 'opacity-50' : ''}>
-                  {isSubmitting ? 'Creating...' : 'Create Project'}
+                  {isSubmitting
+                    ? t('quickAdd.creating', 'Creating...')
+                    : t('quickAdd.create', 'Create Project')}
                 </Button>
               </div>
             </div>

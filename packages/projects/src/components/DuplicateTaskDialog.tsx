@@ -7,6 +7,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
  
 // Define the structure for the duplication options
 export interface DuplicateOptions {
@@ -43,6 +44,7 @@ export default function DuplicateTaskDialog({
   initialTargetPhaseId,
   initialTargetStatusId,
 }: DuplicateTaskDialogProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [duplicateChecklist, setDuplicateChecklist] = useState(true);
   const [duplicatePrimaryAssignee, setDuplicatePrimaryAssignee] = useState(true);
   const [duplicateAdditionalAssignees, setDuplicateAdditionalAssignees] = useState(true);
@@ -98,7 +100,7 @@ export default function DuplicateTaskDialog({
  
   const handleConfirm = () => {
     if (!selectedTargetPath || !selectedTargetPath['phase']) {
-        toast.error("Please select a target phase.");
+        toast.error(t('duplicateTask.selectTargetError', 'Please select a target phase.'));
         return;
     }
     setIsSubmitting(true);
@@ -119,12 +121,12 @@ export default function DuplicateTaskDialog({
     <Dialog 
       isOpen={isOpen} 
       onClose={onClose}
-      title="Duplicate Task"
+      title={t('duplicateTask.title', 'Duplicate Task')}
       className="max-w-lg max-h-[90vh] overflow-y-auto"
     >
       <DialogContent>
         <div className="mb-2 text-sm text-gray-600">
-          Duplicate task <span className="font-medium">"{taskDetails.originalTaskName}"</span> to:
+          {t('duplicateTask.message', 'Duplicate task "{{taskName}}" to:', { taskName: taskDetails.originalTaskName })}
         </div>
  
           <div className="mb-4">
@@ -132,7 +134,7 @@ export default function DuplicateTaskDialog({
                 value={selectedTargetPath?.['status'] || selectedTargetPath?.['phase'] || ''}
                 onValueChange={handleTreeSelect}
                 options={projectTreeData}
-                placeholder="Select target project/phase/status..."
+                placeholder={t('duplicateTask.placeholder', 'Select target project/phase/status...')}
                 className="w-full"
                 multiSelect={false}
                 showExclude={false}
@@ -151,7 +153,7 @@ export default function DuplicateTaskDialog({
                   disabled={isSubmitting}
                 />
                 <Label htmlFor="duplicateChecklist" className="text-sm font-normal">
-                  {duplicateChecklist ? 'Duplicate task with checklist items' : 'Duplicate task without checklist items'}
+                  {duplicateChecklist ? t('duplicateTask.withChecklist', 'Duplicate task with checklist items') : t('duplicateTask.withoutChecklist', 'Duplicate task without checklist items')}
                 </Label>
               </div>
             )}
@@ -165,7 +167,7 @@ export default function DuplicateTaskDialog({
                   disabled={isSubmitting || (taskDetails.additionalAssigneeCount > 0 && duplicateAdditionalAssignees)}
                 />
                 <Label htmlFor="duplicatePrimaryAssignee" className="text-sm font-normal">
-                  {duplicatePrimaryAssignee ? 'Duplicate task with primary assignee' : 'Duplicate task without primary assignee'}
+                  {duplicatePrimaryAssignee ? t('duplicateTask.withPrimaryAssignee', 'Duplicate task with primary assignee') : t('duplicateTask.withoutPrimaryAssignee', 'Duplicate task without primary assignee')}
                 </Label>
               </div>
             )}
@@ -184,7 +186,7 @@ export default function DuplicateTaskDialog({
                   disabled={isSubmitting}
                 />
                 <Label htmlFor="duplicateAdditionalAssignees" className="text-sm font-normal">
-                  {duplicateAdditionalAssignees ? `Duplicate task with additional assignees (${taskDetails.additionalAssigneeCount})` : 'Duplicate task without additional assignees'}
+                  {duplicateAdditionalAssignees ? t('duplicateTask.withAdditionalAssignees', 'Duplicate task with additional assignees ({{count}})', { count: taskDetails.additionalAssigneeCount }) : t('duplicateTask.withoutAdditionalAssignees', 'Duplicate task without additional assignees')}
                 </Label>
               </div>
             )}
@@ -197,7 +199,7 @@ export default function DuplicateTaskDialog({
                   disabled={isSubmitting}
                 />
                 <Label htmlFor="duplicateTicketLinks" className="text-sm font-normal">
-                  {duplicateTicketLinks ? `Duplicate task with ticket links (${taskDetails.ticketLinkCount})` : 'Duplicate task without ticket links'}
+                  {duplicateTicketLinks ? t('duplicateTask.withTicketLinks', 'Duplicate task with ticket links ({{count}})', { count: taskDetails.ticketLinkCount }) : t('duplicateTask.withoutTicketLinks', 'Duplicate task without ticket links')}
                 </Label>
               </div>
             )}
@@ -205,10 +207,10 @@ export default function DuplicateTaskDialog({
 
         <div className="flex justify-end space-x-2">
           <Button id='cancel-duplicate-button' variant="ghost" onClick={onClose} disabled={isSubmitting}>
-            Cancel
+            {t('common:actions.cancel', 'Cancel')}
           </Button>
           <Button id='confirm-duplicate-button' onClick={handleConfirm} disabled={isSubmitting || !selectedTargetPath?.['phase']}>
-            {isSubmitting ? 'Duplicating...' : 'Confirm Duplicate'}
+            {isSubmitting ? t('duplicateTask.duplicating', 'Duplicating...') : t('duplicateTask.confirm', 'Confirm Duplicate')}
           </Button>
         </div>
       </DialogContent>

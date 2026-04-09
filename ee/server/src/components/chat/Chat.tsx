@@ -767,8 +767,8 @@ export const Chat: React.FC<ChatProps> = ({
       ]);
     }
 
-    // Filter mentions to only those still referenced in the message text
-    const activeMentions = mentions.filter((m) => trimmedMessage.includes(m.displayText));
+    // Send all mentions that have chips visible — user controls removal via chip X button
+    const activeMentions = mentions;
 
     setMessageText('');
     setMentions([]);
@@ -1619,48 +1619,53 @@ export const Chat: React.FC<ChatProps> = ({
                     <h3 className="function-approval-title">
                       {pendingFunction.metadata.displayName}
                     </h3>
-                    {pendingFunction.metadata.description && (
-                      <p className="function-approval-description">
-                        {pendingFunction.metadata.description}
-                      </p>
-                    )}
                     {previewText && (
                       <p className="function-approval-preview">{previewText}</p>
                     )}
-                    {assistantPlanText ? (
-                      <details className="function-approval-reasoning">
-                        <summary>View assistant plan</summary>
-                        {assistantPlanItems.length ? (
-                          <ol className="function-approval-plan">
-                            {assistantPlanItems.map((item) => (
-                              <li key={item}>{item}</li>
-                            ))}
-                          </ol>
-                        ) : (
-                          <p>{assistantPlanText}</p>
+                    {(pendingFunction.metadata.description || assistantPlanText || pendingFunction.metadata.playbooks?.length || pendingArgumentEntries.length > 0) && (
+                      <details className="function-approval-details">
+                        <summary>View details</summary>
+                        {pendingFunction.metadata.description && (
+                          <p className="function-approval-description">
+                            {pendingFunction.metadata.description}
+                          </p>
+                        )}
+                        {assistantPlanText ? (
+                          <div className="function-approval-reasoning">
+                            <span className="function-arg-key">Plan</span>
+                            {assistantPlanItems.length ? (
+                              <ol className="function-approval-plan">
+                                {assistantPlanItems.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ol>
+                            ) : (
+                              <p>{assistantPlanText}</p>
+                            )}
+                          </div>
+                        ) : null}
+                        {pendingFunction.metadata.playbooks?.length ? (
+                          <div className="function-approval-playbooks">
+                            <span className="function-arg-key">Playbooks</span>
+                            <span className="function-arg-value">
+                              {pendingFunction.metadata.playbooks.join(', ')}
+                            </span>
+                          </div>
+                        ) : null}
+                        {pendingArgumentEntries.length > 0 && (
+                          <div className="function-approval-arguments">
+                            <h4>Parameters</h4>
+                            <ul className="function-arg-list">
+                              {pendingArgumentEntries.map(([key, value]) => (
+                                <li key={key} className="function-arg-item">
+                                  <span className="function-arg-key">{formatArgumentKey(key)}</span>
+                                  <span className="function-arg-value">{renderArgumentValue(value)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         )}
                       </details>
-                    ) : null}
-                    {pendingFunction.metadata.playbooks?.length ? (
-                      <div className="function-approval-playbooks">
-                        <span className="function-arg-key">Playbooks</span>
-                        <span className="function-arg-value">
-                          {pendingFunction.metadata.playbooks.join(', ')}
-                        </span>
-                      </div>
-                    ) : null}
-                    {pendingArgumentEntries.length > 0 && (
-                      <div className="function-approval-arguments">
-                        <h4>Parameters</h4>
-                        <ul className="function-arg-list">
-                          {pendingArgumentEntries.map(([key, value]) => (
-                            <li key={key} className="function-arg-item">
-                              <span className="function-arg-key">{formatArgumentKey(key)}</span>
-                              <span className="function-arg-value">{renderArgumentValue(value)}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
                     )}
                     {functionError && (
                       <div className="function-approval-error">{functionError}</div>
@@ -1677,11 +1682,6 @@ export const Chat: React.FC<ChatProps> = ({
                             label={`Auto-approve future ${normalizedMethod} requests`}
                           />
                         </div>
-                        <p className="function-approval-preferences-help">
-                          {autoApprovalEnabledForMethod
-                            ? 'Future requests with this method will run automatically.'
-                            : 'Enable to approve this HTTP method without prompts.'}
-                        </p>
                       </div>
                     ) : null}
                     <div className="function-approval-status">{statusText}</div>

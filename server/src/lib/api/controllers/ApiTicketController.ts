@@ -299,11 +299,22 @@ export class ApiTicketController extends ApiBaseController {
             order = orderRaw;
           }
 
+          const contentFormatRaw = searchParams.get('content_format');
+          let contentFormat: 'full' | 'markdown' | undefined;
+          if (contentFormatRaw !== null) {
+            if (contentFormatRaw !== 'full' && contentFormatRaw !== 'markdown') {
+              throw new ValidationError('Validation failed', [
+                { path: ['content_format'], message: "content_format must be 'full' or 'markdown'" }
+              ]);
+            }
+            contentFormat = contentFormatRaw;
+          }
+
           const ticketId = await this.extractIdFromPath(apiRequest);
           const comments = await this.ticketService.getTicketComments(
-            ticketId, 
+            ticketId,
             apiRequest.context!,
-            { limit, offset, order }
+            { limit, offset, order, contentFormat }
           );
 
           return createSuccessResponse(comments, 200, undefined, apiRequest);
