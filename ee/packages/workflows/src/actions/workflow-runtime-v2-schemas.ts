@@ -189,7 +189,8 @@ export const SchemaRefInput = z.object({
 
 export const SubmitWorkflowEventInput = z.object({
   eventName: z.string().min(1),
-  correlationKey: z.string().min(1),
+  workflowCorrelationKey: z.string().min(1).optional(),
+  correlationKey: z.string().min(1).optional(),
   payloadSchemaRef: z.string().min(1).optional(),
   payload: z.record(z.any()).default({})
 });

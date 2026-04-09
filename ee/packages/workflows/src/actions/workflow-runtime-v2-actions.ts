@@ -61,7 +61,12 @@ import {
   launchPublishedWorkflowRun,
   recordFailedWorkflowRunLaunch
 } from '../lib/workflowRunLauncher';
-import { cancelWorkflowRuntimeV2TemporalRun } from '../lib/workflowRuntimeV2Temporal';
+import {
+  cancelWorkflowRuntimeV2TemporalRun,
+  signalWorkflowRuntimeV2Event,
+  signalWorkflowRuntimeV2HumanTask
+} from '../lib/workflowRuntimeV2Temporal';
+import { resolveWorkflowEventCorrelation } from '../lib/workflowEventCorrelation';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
   CreateWorkflowDefinitionInput,
@@ -3094,6 +3099,12 @@ export const listWorkflowSchemasMetaAction = withAuth(async (user, { tenant }) =
 export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = SubmitWorkflowEventInput.parse(input);
+  const payload = parsed.payload ?? {};
+  const correlation = resolveWorkflowEventCorrelation({
+    eventName: parsed.eventName,
+    payload,
+    explicitCorrelationKey: parsed.workflowCorrelationKey ?? parsed.correlationKey ?? null,
+  });
 
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
@@ -3101,6 +3112,9 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
   let eventRecord: Awaited<ReturnType<typeof WorkflowRuntimeEventModelV2.create>> | null = null;
   let ingestionError: string | null = null;
   let ingestionErrorStatus = 500;
+  const temporalEventSignals: Array<{ runId: string }> = [];
+  const temporalHumanSignals: Array<{ runId: string; taskId: string }> = [];
+  const signaledTemporalRuns = new Set<string>();
   const processedAt = new Date().toISOString();
 
   const catalogEntry = tenant ? await EventCatalogModel.getByEventType(knex, parsed.eventName, tenant) : null;
@@ -3130,39 +3144,78 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
     eventRecord = await WorkflowRuntimeEventModelV2.create(trx, {
       tenant_id: tenant,
       event_name: parsed.eventName,
-      correlation_key: parsed.correlationKey,
-      payload: parsed.payload,
+      correlation_key: correlation.key,
+      payload,
       payload_schema_ref: sourcePayloadSchemaRef,
       schema_ref_conflict: schemaRefConflict,
       processed_at: processedAt
     });
 
     try {
-      const waits = await WorkflowRunWaitModelV2.listEventWaitCandidates(
-        trx,
-        parsed.eventName,
-        parsed.correlationKey,
-        tenant,
-        ['event', 'human']
-      );
-      const wait = waits.find((candidate) => {
-        if (candidate.wait_type !== 'event') {
-          return true;
-        }
-        const payload = candidate.payload as { filters?: EventWaitFilter[] } | null | undefined;
-        return evaluateEventWaitFilters(parsed.payload, payload?.filters);
-      }) ?? null;
-      if (!wait) {
+      if (!correlation.key) {
+        const correlationError = `Missing workflow correlation key (${correlation.detail})`;
+        await WorkflowRuntimeEventModelV2.update(trx, eventRecord.event_id, {
+          error_message: correlationError,
+          processed_at: processedAt
+        });
         return;
       }
 
-      const matchedRun = await WorkflowRunModelV2.getById(trx, wait.run_id);
-      if (matchedRun?.engine === 'temporal') {
-        ingestionError = `Legacy API event resume is unsupported for Temporal run ${wait.run_id}`;
-        ingestionErrorStatus = 409;
-        if (eventRecord) {
+      const waits = await WorkflowRunWaitModelV2.listEventWaitCandidates(
+        trx,
+        parsed.eventName,
+        correlation.key,
+        tenant,
+        ['event', 'human']
+      );
+      const waitsByRun = new Map<string, Awaited<ReturnType<typeof WorkflowRunModelV2.getById>>>();
+      const getRun = async (candidateRunId: string) => {
+        if (!waitsByRun.has(candidateRunId)) {
+          waitsByRun.set(candidateRunId, await WorkflowRunModelV2.getById(trx, candidateRunId));
+        }
+        return waitsByRun.get(candidateRunId) ?? null;
+      };
+
+      for (const wait of waits) {
+        const matchedRun = await getRun(wait.run_id);
+        if (matchedRun?.engine !== 'temporal') {
+          continue;
+        }
+        if (wait.wait_type === 'human') {
+          const taskId = typeof (wait.payload as Record<string, unknown> | null | undefined)?.taskId === 'string'
+            ? String((wait.payload as Record<string, unknown>).taskId)
+            : '';
+          if (taskId) {
+            temporalHumanSignals.push({ runId: wait.run_id, taskId });
+            signaledTemporalRuns.add(wait.run_id);
+          }
+          continue;
+        }
+        temporalEventSignals.push({ runId: wait.run_id });
+        signaledTemporalRuns.add(wait.run_id);
+      }
+
+      let wait: (typeof waits)[number] | null = null;
+      for (const candidate of waits) {
+        const matchedRun = await getRun(candidate.run_id);
+        if (matchedRun?.engine === 'temporal') {
+          continue;
+        }
+        if (candidate.wait_type !== 'event') {
+          wait = candidate;
+          break;
+        }
+        const waitPayload = candidate.payload as { filters?: EventWaitFilter[] } | null | undefined;
+        if (evaluateEventWaitFilters(payload, waitPayload?.filters)) {
+          wait = candidate;
+          break;
+        }
+      }
+      if (!wait) {
+        if (signaledTemporalRuns.size === 1) {
+          const [matchedRunId] = Array.from(signaledTemporalRuns);
           await WorkflowRuntimeEventModelV2.update(trx, eventRecord.event_id, {
-            error_message: ingestionError,
+            matched_run_id: matchedRunId,
             processed_at: processedAt
           });
         }
@@ -3188,7 +3241,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
         step_path: wait.step_path,
         level: 'INFO',
         message: 'Event wait resolved',
-        correlation_key: parsed.correlationKey,
+        correlation_key: correlation.key,
         event_name: parsed.eventName,
         context_json: {
           waitId: wait.wait_id
@@ -3217,6 +3270,30 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
 
   if (ingestionError) {
     return throwHttpError(ingestionErrorStatus, 'Failed to process workflow event', { error: ingestionError });
+  }
+
+  for (const signal of temporalEventSignals) {
+    const eventId = String((eventRecord as any)?.event_id ?? '');
+    if (!eventId) {
+      continue;
+    }
+    await signalWorkflowRuntimeV2Event({
+      runId: signal.runId,
+      eventId,
+      eventName: parsed.eventName,
+      correlationKey: correlation.key,
+      payload,
+      receivedAt: processedAt,
+    });
+  }
+
+  for (const signal of temporalHumanSignals) {
+    await signalWorkflowRuntimeV2HumanTask({
+      runId: signal.runId,
+      taskId: signal.taskId,
+      eventName: parsed.eventName,
+      payload,
+    });
   }
 
   const runtime = new WorkflowRuntimeV2();
@@ -3270,8 +3347,8 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
           expressionContext: {
             event: {
               name: parsed.eventName,
-              correlationKey: parsed.correlationKey,
-              payload: parsed.payload ?? {},
+              correlationKey: correlation.key,
+              payload,
               payloadSchemaRef: effectiveSourceSchemaRef
             }
           },
@@ -3329,7 +3406,9 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
 
   }
 
-  return { status: runId ? 'resumed' : 'no_wait', runId, startedRuns, eventId: (eventRecord as any)?.event_id ?? null };
+  const status = runId || signaledTemporalRuns.size > 0 ? 'resumed' : 'no_wait';
+  const resolvedRunId = runId ?? (signaledTemporalRuns.size === 1 ? Array.from(signaledTemporalRuns)[0] : null);
+  return { status, runId: resolvedRunId, startedRuns, eventId: (eventRecord as any)?.event_id ?? null };
 });
 
 export const listWorkflowEventsAction = withAuth(async (user, { tenant }, input: unknown) => {

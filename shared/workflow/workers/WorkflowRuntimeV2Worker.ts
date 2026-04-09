@@ -59,6 +59,14 @@ export class WorkflowRuntimeV2Worker {
         await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'CANCELED', resolved_at: new Date().toISOString() });
         continue;
       }
+      if (run.engine === 'temporal') {
+        logger.debug('[WorkflowRuntimeV2Worker] Skipping retry wait for Temporal run', {
+          workerId: this.workerId,
+          waitId: wait.wait_id,
+          runId: wait.run_id,
+        });
+        continue;
+      }
       logger.debug('[WorkflowRuntimeV2Worker] Resolving retry wait', {
         workerId: this.workerId,
         waitId: wait.wait_id,
@@ -95,6 +103,15 @@ export class WorkflowRuntimeV2Worker {
       }
       if (run.status === 'CANCELED') {
         await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'CANCELED', resolved_at: new Date().toISOString() });
+        continue;
+      }
+      if (run.engine === 'temporal') {
+        logger.debug('[WorkflowRuntimeV2Worker] Skipping timeout wait for Temporal run', {
+          workerId: this.workerId,
+          waitId: wait.wait_id,
+          runId: wait.run_id,
+          eventName: wait.event_name ?? null,
+        });
         continue;
       }
       logger.debug('[WorkflowRuntimeV2Worker] Resolving timeout wait', {
@@ -138,6 +155,14 @@ export class WorkflowRuntimeV2Worker {
       }
       if (run.status === 'CANCELED') {
         await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'CANCELED', resolved_at: new Date().toISOString() });
+        continue;
+      }
+      if (run.engine === 'temporal') {
+        logger.debug('[WorkflowRuntimeV2Worker] Skipping time wait for Temporal run', {
+          workerId: this.workerId,
+          waitId: wait.wait_id,
+          runId: wait.run_id,
+        });
         continue;
       }
       logger.debug('[WorkflowRuntimeV2Worker] Resolving time wait', {

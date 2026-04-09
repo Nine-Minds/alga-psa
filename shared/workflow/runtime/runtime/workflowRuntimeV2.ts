@@ -160,6 +160,9 @@ export class WorkflowRuntimeV2 {
     const updated = await knex('workflow_runs')
       .where({ status: 'RUNNING' })
       .andWhere((builder) => {
+        builder.whereNull('engine').orWhere('engine', '!=', 'temporal');
+      })
+      .andWhere((builder) => {
         builder.whereNull('lease_expires_at').orWhere('lease_expires_at', '<=', nowIso);
       })
       .orderBy('updated_at', 'asc')
@@ -182,6 +185,13 @@ export class WorkflowRuntimeV2 {
     const run = await WorkflowRunModelV2.getById(knex, runId);
     if (!run) {
       throw new Error(`Run ${runId} not found`);
+    }
+    if (run.engine === 'temporal') {
+      throw createRuntimeError(
+        'ValidationError',
+        `WorkflowRuntimeV2.executeRun is unsupported for Temporal run ${runId}`,
+        run.node_path ?? 'root'
+      );
     }
 
     if (run.lease_owner && run.lease_owner !== workerId) {

@@ -2563,4 +2563,125 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       }),
     }));
   });
+
+  it('replays from a continue-as-new checkpoint with canonical control.if expressions without drift', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_23',
+      name: 'replay checkpoint parity',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_if',
+          type: 'control.if',
+          condition: { $expr: 'nowIso() != ""' },
+          then: [{ id: 'step_then_action', type: 'action.call', config: { actionId: 'ticket.update', version: 1 } }],
+          else: [{ id: 'step_else_return', type: 'control.return' }],
+        },
+        {
+          id: 'step_return',
+          type: 'control.return',
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_23',
+          workflowId: 'wf_23',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_23',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+    mockActivities.executeWorkflowRuntimeV2ActionStep.mockResolvedValue({
+      output: { ok: true },
+      saveAsPath: null,
+    });
+
+    const temporalWorkflow = await import('@temporalio/workflow');
+    const continueAsNewMock = vi.mocked(temporalWorkflow.continueAsNew);
+    continueAsNewMock.mockImplementationOnce(async () => {
+      throw new Error('checkpoint-captured');
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+    let capturedCheckpoint: unknown = null;
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_23',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_23',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_23',
+      checkpoint: {
+        stepCount: 249,
+        state: {
+          runId: 'run_23',
+          currentStepPath: 'root.steps[0]',
+          scopes: {
+            payload: {},
+            workflow: {},
+            lexical: [],
+            system: {
+              runId: 'run_23',
+              workflowId: 'wf_23',
+              workflowVersion: 1,
+              tenantId: 'tenant_1',
+              definitionHash: 'hash_23',
+              runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+            },
+          },
+          frames: [
+            {
+              kind: 'sequence',
+              path: 'root.steps',
+              nextIndex: 0,
+              totalSteps: 2,
+            },
+          ],
+        },
+      },
+    })).rejects.toThrow('checkpoint-captured');
+
+    const firstCall = continueAsNewMock.mock.calls[0]?.[0] as { checkpoint?: unknown } | undefined;
+    capturedCheckpoint = firstCall?.checkpoint ?? null;
+    expect(capturedCheckpoint).toBeTruthy();
+
+    continueAsNewMock.mockReset();
+    const replayResult = await workflowRuntimeV2RunWorkflow({
+      runId: 'run_23',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_23',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_23',
+      checkpoint: capturedCheckpoint as {
+        state: {
+          runId: string;
+          currentStepPath: string | null;
+          scopes: unknown;
+          frames: unknown[];
+        };
+        stepCount: number;
+      },
+    });
+
+    expect(replayResult).toMatchObject({
+      scopes: expect.objectContaining({
+        payload: {},
+      }),
+    });
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_23',
+      status: 'SUCCEEDED',
+    });
+  });
 });

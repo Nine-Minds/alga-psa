@@ -242,3 +242,94 @@ Parent plan:
   - event-ingress correlation posture
   - support/debugging guidance for projection fields
 
+
+## Progress — 2026-04-09 (API/stream correlation + Temporal signal-only ingress)
+
+### Completed scope in this pass
+
+- Aligned API event ingress with stream correlation contract using a shared resolver:
+  - Added `ee/packages/workflows/src/lib/workflowEventCorrelation.ts`
+  - Updated stream worker (`services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts`) to use shared resolver
+  - Updated API action schema to accept explicit workflow correlation while supporting derivation fallback:
+    - `ee/packages/workflows/src/actions/workflow-runtime-v2-schemas.ts`
+- Reworked `submitWorkflowEventAction` to keep Temporal authority in Temporal:
+  - file: `ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts`
+  - Temporal candidate waits are no longer DB-resolved/advanced.
+  - Temporal event waits are routed via `signalWorkflowRuntimeV2Event(...)`.
+  - Temporal human waits are routed via new `signalWorkflowRuntimeV2HumanTask(...)`.
+  - DB candidate lookup remains index/routing aid; payload-filter matching is no longer used as final authority for Temporal waits.
+  - Missing correlation writes clear runtime-event audit metadata and skips wait routing.
+- Added Temporal human-task signal helper:
+  - `ee/packages/workflows/src/lib/workflowRuntimeV2Temporal.ts`
+
+### Determinism / replay test scope
+
+- Added replay/checkpoint determinism coverage for canonical expressions in Temporal workflow unit suite:
+  - `ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts`
+  - New test validates continue-as-new checkpoint replay path with canonical `control.if` expression semantics.
+
+### Tests added/updated
+
+- `server/src/test/integration/workflowRuntimeV2.control.integration.test.ts`
+  - Temporal API event ingress signals event waits without DB-authoritative mutation.
+  - Derived correlation (`WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON`) routes Temporal waits and avoids `executeRun`.
+  - Temporal payload-filter matching stays inside Temporal wait contract (API still signals candidate wait).
+  - Temporal human waits route through Temporal human-task signal.
+  - Resume/retry unsupported Temporal actions assert no `WorkflowRuntimeV2.executeRun(...)` call.
+- `services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts`
+  - remains passing with shared correlation helper integration.
+
+### Commands / runbook used
+
+- `cd services/workflow-worker && npx vitest run src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts`
+- `cd ee/temporal-workflows && npx vitest run src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts`
+- `cd server && mkdir -p coverage/.tmp && npm run -s test -- --coverage.enabled=false src/test/integration/workflowRuntimeV2.control.integration.test.ts -t "Submit workflow event|Temporal runs reject legacy admin resume|Temporal runs reject legacy retry"`
+
+### Plan checklist updates
+
+- Marked implemented: `F009`, `F024`, `F025`, `F026`, `F028`, `F036`
+- Marked implemented: `T003`, `T010`, `T011`, `T012`
+
+### Remaining open items after this pass
+
+- Features: `F029`, `F030`, `F031`, `F032`
+- Tests: no remaining unchecked tests in this plan file.
+
+## Progress — 2026-04-09 (Legacy worker/runtime gating for Temporal runs)
+
+### Completed scope in this pass
+
+- Gated legacy scheduler/runtime execution paths from affecting Temporal runs:
+  - `shared/workflow/workers/WorkflowRuntimeV2Worker.ts`
+    - due retry/time/event-time waits are now explicitly skipped when `run.engine === 'temporal'`
+  - `shared/workflow/runtime/runtime/workflowRuntimeV2.ts`
+    - `acquireRunnableRun(...)` excludes Temporal runs from runnable acquisition
+    - `executeRun(...)` now hard-fails for Temporal runs with explicit unsupported-runtime error
+  - `services/workflow-worker/src/v2/WorkflowRuntimeV2Worker.ts`
+    - mirrored Temporal wait skip guardrails for service worker code path
+
+### Projection/supportability impact
+
+- Temporal projections are no longer mutated by legacy worker timeout/retry polling paths.
+- Runtime event projections continue to persist resolved correlation and matched run metadata for Temporal signal routing.
+- Unsupported Temporal run-control actions continue returning actionable operator metadata (`code/action/engine/runId`).
+
+### Tests added/updated
+
+- Updated `server/src/test/integration/workflowRuntimeV2.control.integration.test.ts`:
+  - Added `worker timeout polling does not execute Temporal runs through legacy runtime authority`
+  - Validates temporal wait remains `WAITING`, run remains `WAITING`, and `WorkflowRuntimeV2.executeRun(...)` is not invoked.
+
+### Commands / runbook used
+
+- `cd server && mkdir -p coverage/.tmp && npm run -s test -- --coverage.enabled=false src/test/integration/workflowRuntimeV2.control.integration.test.ts -t "Submit workflow event|Temporal runs reject legacy admin resume|Temporal runs reject legacy retry|timeout polling"`
+- `cd services/workflow-worker && npx vitest run src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts src/index.startup.test.ts`
+
+### Plan checklist updates
+
+- Marked implemented: `F029`, `F030`, `F031`, `F032`
+
+### Remaining open items after this pass
+
+- Features: none
+- Tests: none

@@ -69,7 +69,7 @@
   {
     "id": "F009",
     "description": "Ensure Temporal-native expression evaluation remains deterministic under replay while still honoring the canonical workflow-expression contract.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1",
       "Non-functional Requirements"
@@ -202,7 +202,7 @@
   {
     "id": "F024",
     "description": "Align stream-ingested workflow events and API-submitted workflow events on the same correlation-resolution contract.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-6"
     ]
@@ -210,7 +210,7 @@
   {
     "id": "F025",
     "description": "Stop API-submitted workflow events from directly resolving Temporal wait rows or mutating Temporal run state as execution authority.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-6",
       "FR-7"
@@ -219,7 +219,7 @@
   {
     "id": "F026",
     "description": "Keep DB-backed candidate selection for Temporal event routing only as an index/projection aid rather than an execution shortcut.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-6",
       "FR-8"
@@ -237,7 +237,7 @@
   {
     "id": "F028",
     "description": "Keep payload-filter matching inside the Temporal wait contract rather than treating DB candidate lookup as the final authority.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow 3",
       "FR-6"
@@ -246,7 +246,7 @@
   {
     "id": "F029",
     "description": "Remove remaining supported Workflow Runtime V2 dependencies on DB wait-resolution or runnable-run polling for Temporal runs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-7"
     ]
@@ -254,7 +254,7 @@
   {
     "id": "F030",
     "description": "Retire or gate legacy-only Workflow Runtime V2 control paths so they cannot affect Temporal-backed runs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-7",
       "Rollout / Migration Notes"
@@ -263,7 +263,7 @@
   {
     "id": "F031",
     "description": "Keep run, step, wait, and event projection rows accurate for Temporal-backed execution after the authority cleanup.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-8"
     ]
@@ -271,7 +271,7 @@
   {
     "id": "F032",
     "description": "Include enough projection metadata to explain unsupported Temporal actions and resolved event-correlation routing outcomes in support workflows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-8",
       "UX / UI Notes"
@@ -308,7 +308,7 @@
   {
     "id": "F036",
     "description": "Add event-ingress tests that prove explicit and derived workflow correlation both route candidate Temporal waits correctly.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5",
       "FR-6",

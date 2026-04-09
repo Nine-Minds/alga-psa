@@ -24,7 +24,7 @@
   {
     "id": "T003",
     "description": "Determinism test: a Temporal workflow using canonical workflow expressions replays successfully without expression-contract drift.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F033"
@@ -103,7 +103,7 @@
   {
     "id": "T010",
     "description": "API/ingress alignment test: API-submitted workflow events follow the same resolved-correlation contract as stream-ingested events and resume Temporal waits only through signals.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F025",
@@ -115,7 +115,7 @@
   {
     "id": "T011",
     "description": "Cutover regression test: no supported Temporal run-control or event-ingress path invokes `WorkflowRuntimeV2.executeRun(...)` for a Temporal-backed Workflow Runtime V2 run.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F029",
@@ -126,7 +126,7 @@
   {
     "id": "T012",
     "description": "Projection test: run, wait, and event projections remain accurate enough to explain unsupported operator actions and resolved event-correlation routing after the authority cleanup.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031",
       "F032",
