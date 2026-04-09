@@ -1,0 +1,327 @@
+[
+  {
+    "id": "F001",
+    "description": "Declare Workflow Runtime V2 Temporal runs as the only supported execution authority for new EE workflow runs during hard cutover.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "FR-2",
+      "FR-7"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Branch all relevant run-control APIs on `run.engine` so Temporal runs cannot accidentally flow through legacy DB-runtime execution paths.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2",
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Remove the hand-rolled Temporal workflow JSONata evaluator as a separate workflow-expression contract.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-1"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Adopt a single canonical workflow-expression contract for Temporal-native execution so publish validation and runtime evaluation share the same semantics.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-1"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Preserve exact allowed-function parity in Temporal expression evaluation, including `nowIso()`.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-1"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Preserve exact expression-source normalization behavior in Temporal evaluation so authored expressions parse the same way across validation and execution.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-1"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Preserve canonical disallowed-function rejection behavior for Temporal-native expression evaluation.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-1"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Preserve canonical JSON-serializability and max-output-size guardrails for Temporal-native expression results.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-1"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Ensure Temporal-native expression evaluation remains deterministic under replay while still honoring the canonical workflow-expression contract.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-1",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Block `resumeWorkflowRunAction` from invoking legacy DB-runtime resume behavior for Temporal runs.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2",
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Return an explicit unsupported-action error when resume is requested for a Temporal run without a Temporal-native resume contract.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Block `retryWorkflowRunAction` from invoking legacy DB-runtime retry behavior for Temporal runs.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2",
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Return an explicit unsupported-action error when retry is requested for a Temporal run without a Temporal-native retry contract.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Block any Temporal run path that still calls `WorkflowRuntimeV2.executeRun(...)` from operator or event-ingress control surfaces.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-2",
+      "FR-6",
+      "FR-7"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Make Temporal-run cancellation go through Temporal first instead of optimistically projecting `CANCELED` in the database.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Prevent cancel failures against Temporal from silently leaving the DB projection canceled while execution may still be active.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Add actionable operator-facing error messaging for unsupported Temporal run-control actions.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Extend workflow event ingress to accept an explicit workflow correlation field distinct from `event_id`.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Define configured correlation-derivation rules for workflow event ingress when explicit correlation is absent.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-5",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Fail clearly when event ingress cannot resolve a workflow correlation key from either explicit input or configured derivation where one is required.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-5",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Persist the resolved workflow correlation key on ingested workflow-event audit records for debugging and supportability.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-5",
+      "FR-8"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Use the resolved workflow correlation key rather than `event_id` when selecting candidate waiting runs for Temporal event routing.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-5",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Carry the resolved workflow correlation key into Temporal signal payloads for event.wait evaluation.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-5",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Align stream-ingested workflow events and API-submitted workflow events on the same correlation-resolution contract.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Stop API-submitted workflow events from directly resolving Temporal wait rows or mutating Temporal run state as execution authority.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-6",
+      "FR-7"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Keep DB-backed candidate selection for Temporal event routing only as an index/projection aid rather than an execution shortcut.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-6",
+      "FR-8"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Preserve tenant + event name + resolved correlation as the minimum routing key for candidate Temporal waits.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-5",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Keep payload-filter matching inside the Temporal wait contract rather than treating DB candidate lookup as the final authority.",
+    "implemented": false,
+    "prdRefs": [
+      "Flow 3",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Remove remaining supported Workflow Runtime V2 dependencies on DB wait-resolution or runnable-run polling for Temporal runs.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-7"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Retire or gate legacy-only Workflow Runtime V2 control paths so they cannot affect Temporal-backed runs.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-7",
+      "Rollout / Migration Notes"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Keep run, step, wait, and event projection rows accurate for Temporal-backed execution after the authority cleanup.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-8"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Include enough projection metadata to explain unsupported Temporal actions and resolved event-correlation routing outcomes in support workflows.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-8",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Add parity-focused Temporal tests that prove canonical expression behavior matches the workflow-expression contract.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-1",
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Add run-control tests that prove unsupported Temporal actions fail explicitly without mutating execution-authority state.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2",
+      "FR-3",
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Add cancel-authority tests that prove Temporal cancel failures do not silently desynchronize DB projection and live execution.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4",
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Add event-ingress tests that prove explicit and derived workflow correlation both route candidate Temporal waits correctly.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-5",
+      "FR-6",
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Document the hard-cutover support posture so engineers know which legacy actions are intentionally unsupported for Temporal runs.",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration Notes",
+      "Acceptance Criteria / Definition of Done"
+    ]
+  }
+]

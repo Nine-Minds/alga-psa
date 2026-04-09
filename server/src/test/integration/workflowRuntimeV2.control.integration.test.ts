@@ -15,6 +15,7 @@ import {
   submitWorkflowEventAction,
   listWorkflowEventsAction,
   resumeWorkflowRunAction,
+  retryWorkflowRunAction,
   cancelWorkflowRunAction
 } from '@alga-psa/workflows/actions';
 import { WorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
@@ -41,6 +42,8 @@ import {
   getSideEffectCount,
   TEST_SCHEMA_REF
 } from '../helpers/workflowRuntimeV2TestHelpers';
+
+const cancelWorkflowRuntimeV2TemporalRunMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
@@ -94,6 +97,10 @@ vi.mock('@alga-psa/auth', () => {
     preCheckDeletion: vi.fn()
   };
 });
+
+vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
+  cancelWorkflowRuntimeV2TemporalRun: (...args: unknown[]) => cancelWorkflowRuntimeV2TemporalRunMock(...args)
+}));
 
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
 const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
@@ -149,6 +156,8 @@ beforeEach(async () => {
   mockedGetCurrentTenantId.mockImplementation(() => tenantId);
   mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
   resetTestActionState();
+  cancelWorkflowRuntimeV2TemporalRunMock.mockReset();
+  cancelWorkflowRuntimeV2TemporalRunMock.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -761,6 +770,60 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
     expect(record?.resume_event_payload).toMatchObject({ __admin_override: true, reason: 'test resume' });
   });
 
+  it('Temporal runs reject legacy admin resume with an explicit unsupported-action error. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' } })]
+    });
+    await publishWorkflow(workflowId, 1);
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    await WorkflowRunModelV2.update(db, run.runId, { engine: 'temporal' });
+
+    await expect(resumeWorkflowRunAction({ runId: run.runId, reason: 'test resume' }))
+      .rejects.toMatchObject({
+        status: 409,
+        details: expect.objectContaining({
+          code: 'WORKFLOW_TEMPORAL_ACTION_UNSUPPORTED',
+          action: 'resume',
+          engine: 'temporal',
+          runId: run.runId
+        })
+      });
+
+    const waitAfter = await db('workflow_run_waits').where({ run_id: run.runId }).first();
+    const runAfter = await WorkflowRunModelV2.getById(db, run.runId);
+    expect(waitAfter?.status).toBe('WAITING');
+    expect(runAfter?.status).toBe('WAITING');
+    expect(runAfter?.resume_event_payload).toBeNull();
+  });
+
+  it('Temporal runs reject legacy retry without mutating failed projection state. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [actionCallStep({ id: 'fail', actionId: 'test.fail', inputMapping: {} })]
+    });
+    await publishWorkflow(workflowId, 1);
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    await WorkflowRunModelV2.update(db, run.runId, { engine: 'temporal' });
+
+    const before = await WorkflowRunModelV2.getById(db, run.runId);
+    expect(before?.status).toBe('FAILED');
+
+    await expect(retryWorkflowRunAction({ runId: run.runId, reason: 'test retry' }))
+      .rejects.toMatchObject({
+        status: 409,
+        details: expect.objectContaining({
+          code: 'WORKFLOW_TEMPORAL_ACTION_UNSUPPORTED',
+          action: 'retry',
+          engine: 'temporal',
+          runId: run.runId
+        })
+      });
+
+    const after = await WorkflowRunModelV2.getById(db, run.runId);
+    expect(after?.status).toBe('FAILED');
+    expect(after?.node_path).toBe(before?.node_path ?? null);
+    expect(after?.completed_at).toEqual(before?.completed_at ?? null);
+  });
+
   it('canceling a WAITING run deletes waits and prevents resume. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' } })] });
     await publishWorkflow(workflowId, 1);
@@ -781,6 +844,29 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
     await cancelWorkflowRunAction({ runId: run.runId, reason: 'test cancel' });
     const waits = await db('workflow_run_waits').where({ run_id: run.runId });
     expect(waits.every((wait: any) => wait.status === 'CANCELED')).toBe(true);
+  });
+
+  it('Temporal cancel failure does not project CANCELED status in the database. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' } })] });
+    await publishWorkflow(workflowId, 1);
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    await WorkflowRunModelV2.update(db, run.runId, { engine: 'temporal' });
+    cancelWorkflowRuntimeV2TemporalRunMock.mockRejectedValueOnce(new Error('temporal unavailable'));
+
+    await expect(cancelWorkflowRunAction({ runId: run.runId, reason: 'test cancel' }))
+      .rejects.toMatchObject({
+        status: 409,
+        details: expect.objectContaining({
+          code: 'WORKFLOW_TEMPORAL_CANCEL_FAILED',
+          runId: run.runId,
+          engine: 'temporal'
+        })
+      });
+
+    const waits = await db('workflow_run_waits').where({ run_id: run.runId });
+    const runAfter = await WorkflowRunModelV2.getById(db, run.runId);
+    expect(waits.every((wait: any) => wait.status === 'WAITING')).toBe(true);
+    expect(runAfter?.status).toBe('WAITING');
   });
 
   it('waits are scoped by tenant when tenant_id is provided. Mocks: non-target dependencies.', async () => {

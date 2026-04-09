@@ -1058,6 +1058,34 @@ const requireRunTenantAccess = async (
   return run;
 };
 
+const TEMPORAL_UNSUPPORTED_ACTION_CODE = 'WORKFLOW_TEMPORAL_ACTION_UNSUPPORTED';
+
+const throwUnsupportedTemporalRunControlAction = (
+  runId: string,
+  action: string
+): never => {
+  return throwHttpError(
+    409,
+    `Unsupported action "${action}" for Temporal-backed workflow run`,
+    {
+      code: TEMPORAL_UNSUPPORTED_ACTION_CODE,
+      action,
+      engine: 'temporal',
+      runId,
+      hint: 'Workflow Runtime V2 Temporal runs are controlled by Temporal; legacy DB runtime control actions are disabled during hard cutover.'
+    }
+  );
+};
+
+const assertLegacyRunControlSupported = (
+  run: { run_id: string; engine: string | null },
+  action: string
+) => {
+  if (run.engine === 'temporal') {
+    throwUnsupportedTemporalRunControlAction(run.run_id, action);
+  }
+};
+
 const requireWorkflowPermission = async (
   user: AuthUser,
   action: 'read' | 'manage' | 'publish' | 'admin',
@@ -2628,9 +2656,25 @@ export const cancelWorkflowRunAction = withAuth(async (user, { tenant }, input: 
 
   const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
   if (runRecord.engine === 'temporal') {
-    await cancelWorkflowRuntimeV2TemporalRun({
-      runId: parsed.runId,
-    }).catch(() => undefined);
+    try {
+      await cancelWorkflowRuntimeV2TemporalRun({
+        runId: parsed.runId,
+      });
+    } catch (error) {
+      return throwHttpError(
+        409,
+        'Failed to cancel Temporal-backed workflow run',
+        {
+          code: 'WORKFLOW_TEMPORAL_CANCEL_FAILED',
+          action: 'cancel',
+          engine: 'temporal',
+          runId: parsed.runId,
+          reason: parsed.reason ?? null,
+          hint: 'Cancel is Temporal-authoritative; projection state was not updated because Temporal cancel did not succeed.',
+          error: error instanceof Error ? error.message : String(error)
+        }
+      );
+    }
   }
 
   await WorkflowRunModelV2.update(knex, parsed.runId, {
@@ -2674,6 +2718,7 @@ export const resumeWorkflowRunAction = withAuth(async (user, { tenant }, input: 
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
   const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
+  assertLegacyRunControlSupported(runRecord, 'resume');
 
   const waits = await WorkflowRunWaitModelV2.listByRun(knex, parsed.runId);
   const waiting = waits.filter((wait) => wait.status === 'WAITING');
@@ -2754,6 +2799,7 @@ export const retryWorkflowRunAction = withAuth(async (user, { tenant }, input: u
   await requireWorkflowPermission(user, 'admin', knex);
 
   const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
+  assertLegacyRunControlSupported(run, 'retry');
   if (run.status !== 'FAILED') {
     return throwHttpError(409, 'Run is not failed');
   }
@@ -2864,10 +2910,8 @@ export const requeueWorkflowRunEventWaitAction = withAuth(async (user, { tenant 
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
 
-  const run = await WorkflowRunModelV2.getById(knex, parsed.runId);
-  if (!run) {
-    return throwHttpError(404, 'Run not found');
-  }
+  const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
+  assertLegacyRunControlSupported(run, 'requeue_event_wait');
 
   const wait = await knex('workflow_run_waits')
     .where({ run_id: parsed.runId, wait_type: 'event' })
