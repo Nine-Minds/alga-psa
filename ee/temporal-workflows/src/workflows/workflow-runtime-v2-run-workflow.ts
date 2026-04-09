@@ -98,6 +98,31 @@ const activities = proxyActivities<{
     status: 'RESOLVED' | 'CANCELED';
     matchedEventId?: string | null;
   }): Promise<void>;
+  startWorkflowRuntimeV2HumanTaskWait(input: {
+    runId: string;
+    stepPath: string;
+    tenantId: string | null;
+    taskType: string;
+    title: string;
+    description: string | null;
+    contextData: Record<string, unknown>;
+  }): Promise<{
+    waitId: string;
+    taskId: string;
+    eventName: string;
+  }>;
+  resolveWorkflowRuntimeV2HumanTaskWait(input: {
+    waitId: string;
+    runId: string;
+    status: 'RESOLVED' | 'CANCELED';
+    payload: Record<string, unknown>;
+  }): Promise<void>;
+  validateWorkflowRuntimeV2HumanTaskResponse(input: {
+    tenantId: string | null;
+    taskType: string;
+    eventName: string;
+    payload: Record<string, unknown>;
+  }): Promise<void>;
   completeWorkflowRuntimeV2Run(input: { runId: string; status: 'SUCCEEDED' | 'FAILED' | 'CANCELED' }): Promise<void>;
 }>({
   startToCloseTimeout: '10m',
@@ -142,6 +167,22 @@ type WorkflowRuntimeV2EventSignalPayload = {
 
 const workflowRuntimeV2EventSignal = defineSignal<[WorkflowRuntimeV2EventSignalPayload]>('workflowRuntimeV2Event');
 
+type ParsedHumanTaskConfig = {
+  taskType: string;
+  title: Expr;
+  description?: Expr;
+  contextData?: Record<string, Expr>;
+  assign?: Record<string, Expr>;
+};
+
+type WorkflowRuntimeV2HumanTaskSignalPayload = {
+  taskId: string;
+  eventName?: string | null;
+  payload?: Record<string, unknown> | null;
+};
+
+const workflowRuntimeV2HumanTaskSignal = defineSignal<[WorkflowRuntimeV2HumanTaskSignalPayload]>('workflowRuntimeV2HumanTask');
+
 export type WorkflowRuntimeV2RunWorkflowResult = {
   scopes: WorkflowRuntimeV2ScopeState;
 };
@@ -152,6 +193,10 @@ export async function workflowRuntimeV2RunWorkflow(
   const pendingEventSignals: WorkflowRuntimeV2EventSignalPayload[] = [];
   setHandler(workflowRuntimeV2EventSignal, (signal) => {
     pendingEventSignals.push(normalizeEventSignalPayload(signal));
+  });
+  const pendingHumanTaskSignals: WorkflowRuntimeV2HumanTaskSignalPayload[] = [];
+  setHandler(workflowRuntimeV2HumanTaskSignal, (signal) => {
+    pendingHumanTaskSignals.push(normalizeHumanTaskSignalPayload(signal));
   });
 
   const pinned = await activities.loadWorkflowRuntimeV2PinnedDefinition({
@@ -467,6 +512,70 @@ export async function workflowRuntimeV2RunWorkflow(
 
         state = assignToScopePath(state, 'vars.event', matchedSignal.payload);
         state = assignToScopePath(state, 'vars.eventName', matchedSignal.eventName);
+        if (config.assign) {
+          state = await applyExpressionAssignments(state, config.assign);
+        }
+        state = advanceWorkflowRuntimeV2InterpreterState(state);
+        state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
+        await activities.projectWorkflowRuntimeV2StepCompletion({
+          runId: input.runId,
+          stepId: stepProjection.stepId,
+          stepPath: current.path,
+          status: 'SUCCEEDED',
+        });
+        stepCount += 1;
+        continue;
+      }
+
+      if (current.step.type === 'human.task') {
+        const humanTaskStep = current.step as {
+          config?: unknown;
+        };
+        const config = parseHumanTaskConfig(humanTaskStep.config, current.path);
+        const titleValue = await evaluateExpression(config.title.$expr, buildWorkflowRuntimeV2ExpressionContext(state.scopes));
+        const descriptionValue = config.description
+          ? await evaluateExpression(config.description.$expr, buildWorkflowRuntimeV2ExpressionContext(state.scopes))
+          : null;
+        const contextData = config.contextData
+          ? await evaluateExpressionMapping(config.contextData, state.scopes)
+          : {};
+
+        const createdTask = await activities.startWorkflowRuntimeV2HumanTaskWait({
+          runId: input.runId,
+          stepPath: current.path,
+          tenantId: state.scopes.system.tenantId,
+          taskType: config.taskType,
+          title: String(titleValue ?? ''),
+          description: descriptionValue === null || descriptionValue === undefined ? null : String(descriptionValue),
+          contextData,
+        });
+
+        const matchedSignal = await awaitHumanTaskSignal({
+          taskId: createdTask.taskId,
+          pendingSignals: pendingHumanTaskSignals,
+        });
+
+        const responsePayload = isRecord(matchedSignal.payload) ? matchedSignal.payload : {};
+        const responseEventName = matchedSignal.eventName ?? createdTask.eventName;
+        await activities.validateWorkflowRuntimeV2HumanTaskResponse({
+          tenantId: state.scopes.system.tenantId,
+          taskType: config.taskType,
+          eventName: responseEventName,
+          payload: responsePayload,
+        });
+        await activities.resolveWorkflowRuntimeV2HumanTaskWait({
+          waitId: createdTask.waitId,
+          runId: input.runId,
+          status: 'RESOLVED',
+          payload: {
+            taskId: createdTask.taskId,
+            eventName: responseEventName,
+            response: responsePayload,
+          },
+        });
+
+        state = assignToScopePath(state, 'vars.event', responsePayload);
+        state = assignToScopePath(state, 'vars.eventName', responseEventName);
         if (config.assign) {
           state = await applyExpressionAssignments(state, config.assign);
         }
@@ -1069,6 +1178,72 @@ function resolveRemainingTimeoutMs(timeoutAt: string | null): number | null {
   return Math.max(0, timeoutAtMs - Date.now());
 }
 
+function parseHumanTaskConfig(config: unknown, stepPath: string): ParsedHumanTaskConfig {
+  if (!isRecord(config)) {
+    throw createValidationRuntimeError(stepPath, 'human.task config is required');
+  }
+  if (typeof config.taskType !== 'string' || config.taskType.trim().length === 0) {
+    throw createValidationRuntimeError(stepPath, 'human.task requires taskType');
+  }
+  if (!isExpr(config.title)) {
+    throw createValidationRuntimeError(stepPath, 'human.task requires title expression');
+  }
+  if (config.description !== undefined && !isExpr(config.description)) {
+    throw createValidationRuntimeError(stepPath, 'human.task description must be an expression');
+  }
+  if (config.contextData !== undefined && !isExprRecord(config.contextData)) {
+    throw createValidationRuntimeError(stepPath, 'human.task contextData must be an expression map');
+  }
+  if (config.assign !== undefined && !isExprRecord(config.assign)) {
+    throw createValidationRuntimeError(stepPath, 'human.task assign must be an expression map');
+  }
+
+  return {
+    taskType: config.taskType,
+    title: config.title,
+    ...(isExpr(config.description) ? { description: config.description } : {}),
+    ...(isExprRecord(config.contextData) ? { contextData: config.contextData } : {}),
+    ...(isExprRecord(config.assign) ? { assign: config.assign } : {}),
+  };
+}
+
+async function awaitHumanTaskSignal(input: {
+  taskId: string;
+  pendingSignals: WorkflowRuntimeV2HumanTaskSignalPayload[];
+}): Promise<WorkflowRuntimeV2HumanTaskSignalPayload> {
+  const tryConsume = () => consumeHumanTaskSignal(input.pendingSignals, input.taskId);
+  const immediate = tryConsume();
+  if (immediate) {
+    return immediate;
+  }
+
+  await condition(() => findHumanTaskSignalIndex(input.pendingSignals, input.taskId) >= 0);
+  return tryConsume() ?? {
+    taskId: input.taskId,
+    eventName: 'HUMAN_TASK_COMPLETED',
+    payload: {},
+  };
+}
+
+function consumeHumanTaskSignal(
+  pendingSignals: WorkflowRuntimeV2HumanTaskSignalPayload[],
+  taskId: string
+): WorkflowRuntimeV2HumanTaskSignalPayload | null {
+  const index = findHumanTaskSignalIndex(pendingSignals, taskId);
+  if (index < 0) {
+    return null;
+  }
+  const [signal] = pendingSignals.splice(index, 1);
+  return signal ?? null;
+}
+
+function findHumanTaskSignalIndex(
+  pendingSignals: WorkflowRuntimeV2HumanTaskSignalPayload[],
+  taskId: string
+): number {
+  return pendingSignals.findIndex((signal) => signal.taskId === taskId);
+}
+
 type ForEachLoopContext = {
   items: unknown[];
   index: number;
@@ -1480,6 +1655,14 @@ function normalizeEventSignalPayload(signal: WorkflowRuntimeV2EventSignalPayload
     correlationKey: typeof signal.correlationKey === 'string' ? signal.correlationKey : null,
     payload: isRecord(signal.payload) ? signal.payload : {},
     receivedAt: typeof signal.receivedAt === 'string' ? signal.receivedAt : new Date().toISOString(),
+  };
+}
+
+function normalizeHumanTaskSignalPayload(signal: WorkflowRuntimeV2HumanTaskSignalPayload): WorkflowRuntimeV2HumanTaskSignalPayload {
+  return {
+    taskId: typeof signal.taskId === 'string' ? signal.taskId : '',
+    eventName: typeof signal.eventName === 'string' ? signal.eventName : 'HUMAN_TASK_COMPLETED',
+    payload: isRecord(signal.payload) ? signal.payload : {},
   };
 }
 

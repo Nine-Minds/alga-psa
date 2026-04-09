@@ -1,4 +1,5 @@
 import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getFormValidationService } from '@shared/task-inbox';
 import {
   WorkflowRuntimeV2,
   workflowDefinitionSchema,
@@ -19,6 +20,8 @@ import {
   WorkflowRunStepModelV2,
   WorkflowRunModelV2,
   WorkflowRunWaitModelV2,
+  WorkflowTaskModel,
+  WorkflowTaskStatus,
 } from '@alga-psa/workflows/persistence';
 
 export async function executeWorkflowRuntimeV2Run(input: {
@@ -250,6 +253,111 @@ export async function projectWorkflowRuntimeV2EventWaitResolved(input: {
   });
 }
 
+export async function startWorkflowRuntimeV2HumanTaskWait(input: {
+  runId: string;
+  stepPath: string;
+  tenantId: string | null;
+  taskType: string;
+  title: string;
+  description: string | null;
+  contextData: Record<string, unknown>;
+}): Promise<{
+  waitId: string;
+  taskId: string;
+  eventName: string;
+}> {
+  const knex = await getAdminConnection();
+  const taskId = await WorkflowTaskModel.createTask(knex, input.tenantId ?? '', {
+    execution_id: input.runId,
+    task_definition_type: 'system',
+    system_task_definition_task_type: input.taskType,
+    title: input.title,
+    description: input.description ?? '',
+    status: WorkflowTaskStatus.PENDING,
+    priority: 'medium',
+    context_data: input.contextData,
+  } as never);
+
+  const formSchema = await resolveTaskFormSchema(knex, input.tenantId, input.taskType);
+  const wait = await WorkflowRunWaitModelV2.create(knex, {
+    run_id: input.runId,
+    step_path: input.stepPath,
+    wait_type: 'human',
+    key: taskId,
+    event_name: 'HUMAN_TASK_COMPLETED',
+    status: 'WAITING',
+    payload: {
+      taskId,
+      contextData: input.contextData,
+      formSchema,
+      taskType: input.taskType,
+    },
+  });
+
+  return {
+    waitId: wait.wait_id,
+    taskId,
+    eventName: 'HUMAN_TASK_COMPLETED',
+  };
+}
+
+export async function resolveWorkflowRuntimeV2HumanTaskWait(input: {
+  waitId: string;
+  runId: string;
+  status: 'RESOLVED' | 'CANCELED';
+  payload: Record<string, unknown>;
+}): Promise<void> {
+  const knex = await getAdminConnection();
+  const now = new Date().toISOString();
+  const existing = await knex('workflow_run_waits').where({ wait_id: input.waitId }).first(['payload']);
+  const currentPayload = isRecord(existing?.payload) ? existing.payload : {};
+  await WorkflowRunWaitModelV2.update(knex, input.waitId, {
+    status: input.status,
+    resolved_at: now,
+    payload: {
+      ...currentPayload,
+      ...input.payload,
+      resolvedAt: now,
+    },
+  });
+}
+
+export async function validateWorkflowRuntimeV2HumanTaskResponse(input: {
+  tenantId: string | null;
+  taskType: string;
+  eventName: string;
+  payload: Record<string, unknown>;
+}): Promise<void> {
+  const isAdminOverride = input.eventName === 'ADMIN_RESUME' || input.payload.__admin_override === true;
+  if (isAdminOverride) {
+    return;
+  }
+
+  const knex = await getAdminConnection();
+  const formSchema = await resolveTaskFormSchema(knex, input.tenantId, input.taskType);
+  if (!formSchema?.schema || !isRecord(formSchema.schema)) {
+    throw {
+      category: 'ValidationError',
+      message: `Missing form schema for task type ${input.taskType}`,
+      nodePath: 'human.task',
+      at: new Date().toISOString(),
+    };
+  }
+
+  const validation = getFormValidationService().validate(
+    formSchema.schema as Record<string, unknown>,
+    input.payload
+  );
+  if (!validation.valid) {
+    throw {
+      category: 'ValidationError',
+      message: `Human task response validation failed: ${JSON.stringify(validation.errors ?? [])}`,
+      nodePath: 'human.task',
+      at: new Date().toISOString(),
+    };
+  }
+}
+
 export async function executeWorkflowRuntimeV2ActionStep(input: {
   runId: string;
   stepPath: string;
@@ -435,6 +543,54 @@ export async function startWorkflowRuntimeV2ChildRun(input: {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+async function resolveTaskFormSchema(
+  knex: Awaited<ReturnType<typeof getAdminConnection>>,
+  tenantId: string | null,
+  taskType: string
+): Promise<{ formId: string; formType: string; schema: Record<string, unknown> | null } | null> {
+  if (!taskType) return null;
+
+  const systemTask = await knex('system_workflow_task_definitions')
+    .where({ task_type: taskType })
+    .first();
+  if (systemTask) {
+    const formId = systemTask.form_id as string;
+    const formType = systemTask.form_type ?? 'system';
+    if (formType === 'system') {
+      const form = await knex('system_workflow_form_definitions')
+        .where({ name: formId })
+        .first();
+      return {
+        formId,
+        formType,
+        schema: isRecord(form?.json_schema) ? form.json_schema : null,
+      };
+    }
+  }
+
+  if (tenantId) {
+    const tenantTask = await knex('workflow_task_definitions')
+      .where({ tenant: tenantId, name: taskType })
+      .first();
+    if (tenantTask) {
+      const formId = tenantTask.form_id as string;
+      const formType = tenantTask.form_type ?? 'tenant';
+      if (formType === 'tenant') {
+        const formSchema = await knex('workflow_form_schemas')
+          .where({ tenant: tenantId, form_id: formId })
+          .first();
+        return {
+          formId,
+          formType,
+          schema: isRecord(formSchema?.json_schema) ? formSchema.json_schema : null,
+        };
+      }
+    }
+  }
+
+  return null;
 }
 
 type ActionCallConfig = {

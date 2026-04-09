@@ -297,5 +297,14 @@
       "F039",
       "F040"
     ]
+  },
+  {
+    "id": "T030",
+    "description": "Temporal interpreter: `human.task` waits for a matching task signal, validates response payloads through runtime form validation, and fails with catchable validation errors for invalid responses.",
+    "implemented": true,
+    "featureIds": [
+      "F041",
+      "F042"
+    ]
   }
 ]

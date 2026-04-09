@@ -242,13 +242,13 @@
   {
     "id": "F041",
     "description": "Keep `human.task` as a signal-backed wait and associate it with its task identity in the Temporal-native runtime.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8"]
   },
   {
     "id": "F042",
     "description": "Validate human-task responses before resume when runtime metadata requires form-schema or response-shape checking.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8"]
   },
   {

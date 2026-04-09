@@ -550,3 +550,29 @@ Validation commands (this checkpoint):
 
 Gotchas:
 - Runtime filter operators in schema are symbolic (`=`, `!=`) rather than textual (`eq`, `neq`); event-filter matching logic and tests now mirror schema operators exactly.
+
+### F041-F042 + T030 completed (`human.task` signal wait + response validation)
+
+- Added `human.task` Temporal-native wait handling in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - Introduced signal `workflowRuntimeV2HumanTask` and task-id-based signal matching.
+  - Interpreter now resolves human-task title/description/context expressions deterministically, creates task+wait through activity boundary, waits for matching task signal, validates response, and resumes with `vars.event`/`vars.eventName`.
+- Added dedicated human-task activities in [ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts):
+  - `startWorkflowRuntimeV2HumanTaskWait(...)` creates `workflow_tasks` row and `workflow_run_waits` projection (`wait_type=human`) with task identity.
+  - `resolveWorkflowRuntimeV2HumanTaskWait(...)` resolves wait projection with response metadata.
+  - `validateWorkflowRuntimeV2HumanTaskResponse(...)` enforces form-schema validation (with admin-resume bypass semantics) before interpreter resume.
+- Added helper for task form-schema lookup in activities mirroring existing runtime lookup behavior across system/tenant task definitions.
+- Extended workflow tests in [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts):
+  - valid human-task response resumes workflow and resolves wait
+  - invalid human-task response fails with catchable `ValidationError`
+
+Rationale:
+- Human task progression is now Temporal signal-authoritative while retaining product/task surfaces in DB.
+- Response validation remains activity-bound where DB-backed form metadata access is safe.
+
+Plan bookkeeping updates:
+- Marked `F041`, `F042` implemented.
+- Added `T030` (implemented:true) for interpreter-level human-task validation coverage.
+
+Validation commands (this checkpoint):
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
+- `npm --prefix ee/temporal-workflows run type-check`

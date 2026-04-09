@@ -12,6 +12,9 @@ type RuntimeV2Activities = {
   projectWorkflowRuntimeV2TimeWaitResolved: ReturnType<typeof vi.fn>;
   projectWorkflowRuntimeV2EventWaitStart: ReturnType<typeof vi.fn>;
   projectWorkflowRuntimeV2EventWaitResolved: ReturnType<typeof vi.fn>;
+  startWorkflowRuntimeV2HumanTaskWait: ReturnType<typeof vi.fn>;
+  resolveWorkflowRuntimeV2HumanTaskWait: ReturnType<typeof vi.fn>;
+  validateWorkflowRuntimeV2HumanTaskResponse: ReturnType<typeof vi.fn>;
   completeWorkflowRuntimeV2Run: ReturnType<typeof vi.fn>;
 };
 
@@ -59,6 +62,9 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       projectWorkflowRuntimeV2TimeWaitResolved: vi.fn(),
       projectWorkflowRuntimeV2EventWaitStart: vi.fn(),
       projectWorkflowRuntimeV2EventWaitResolved: vi.fn(),
+      startWorkflowRuntimeV2HumanTaskWait: vi.fn(),
+      resolveWorkflowRuntimeV2HumanTaskWait: vi.fn(),
+      validateWorkflowRuntimeV2HumanTaskResponse: vi.fn(),
       completeWorkflowRuntimeV2Run: vi.fn(),
     };
 
@@ -82,6 +88,13 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       waitId: 'wait-event-default',
     });
     mockActivities.projectWorkflowRuntimeV2EventWaitResolved.mockResolvedValue(undefined);
+    mockActivities.startWorkflowRuntimeV2HumanTaskWait.mockResolvedValue({
+      waitId: 'wait-human-default',
+      taskId: 'task-default',
+      eventName: 'HUMAN_TASK_COMPLETED',
+    });
+    mockActivities.resolveWorkflowRuntimeV2HumanTaskWait.mockResolvedValue(undefined);
+    mockActivities.validateWorkflowRuntimeV2HumanTaskResponse.mockResolvedValue(undefined);
   });
 
   it('executes action.call through activity boundary then completes on control.return', async () => {
@@ -1659,5 +1672,175 @@ describe('workflowRuntimeV2RunWorkflow', () => {
         status: 'RESOLVED',
       })
     );
+  });
+
+  it('resumes human.task from matching task signal and validates response before continuing', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_19',
+      name: 'human task',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_human_task',
+          type: 'human.task',
+          config: {
+            taskType: 'approval',
+            title: { $expr: '\"Approve request\"' },
+            assign: {
+              'vars.approval': { $expr: 'vars.event.approved' },
+            },
+          },
+        },
+        {
+          id: 'step_return',
+          type: 'control.return',
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_19',
+          workflowId: 'wf_19',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_19',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+    mockActivities.startWorkflowRuntimeV2HumanTaskWait.mockResolvedValue({
+      waitId: 'wait-human-19',
+      taskId: 'task-19',
+      eventName: 'HUMAN_TASK_COMPLETED',
+    });
+
+    const temporalWorkflow = await import('@temporalio/workflow');
+    const conditionMock = vi.mocked(temporalWorkflow.condition);
+    conditionMock.mockImplementationOnce(async (predicate: () => boolean) => {
+      const handler = workflowSignalHandlers.get('workflowRuntimeV2HumanTask');
+      handler?.({
+        taskId: 'task-19',
+        eventName: 'HUMAN_TASK_COMPLETED',
+        payload: {
+          approved: true,
+        },
+      });
+      return predicate();
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+    await workflowRuntimeV2RunWorkflow({
+      runId: 'run_19',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_19',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_19',
+    });
+
+    expect(mockActivities.startWorkflowRuntimeV2HumanTaskWait).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'run_19',
+        stepPath: 'root.steps[0]',
+        taskType: 'approval',
+      })
+    );
+    expect(mockActivities.validateWorkflowRuntimeV2HumanTaskResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant_1',
+        taskType: 'approval',
+        eventName: 'HUMAN_TASK_COMPLETED',
+        payload: expect.objectContaining({
+          approved: true,
+        }),
+      })
+    );
+    expect(mockActivities.resolveWorkflowRuntimeV2HumanTaskWait).toHaveBeenCalledWith(
+      expect.objectContaining({
+        waitId: 'wait-human-19',
+        runId: 'run_19',
+        status: 'RESOLVED',
+      })
+    );
+  });
+
+  it('fails human.task when response validation activity rejects payload', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_20',
+      name: 'human task invalid response',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_human_task',
+          type: 'human.task',
+          config: {
+            taskType: 'approval',
+            title: { $expr: '\"Approve request\"' },
+          },
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_20',
+          workflowId: 'wf_20',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_20',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+    mockActivities.startWorkflowRuntimeV2HumanTaskWait.mockResolvedValue({
+      waitId: 'wait-human-20',
+      taskId: 'task-20',
+      eventName: 'HUMAN_TASK_COMPLETED',
+    });
+    mockActivities.validateWorkflowRuntimeV2HumanTaskResponse.mockRejectedValueOnce({
+      category: 'ValidationError',
+      message: 'Human task response validation failed: [{\"path\":\"approved\"}]',
+      nodePath: 'human.task',
+      at: '2026-04-08T00:00:00.000Z',
+    });
+
+    const temporalWorkflow = await import('@temporalio/workflow');
+    const conditionMock = vi.mocked(temporalWorkflow.condition);
+    conditionMock.mockImplementationOnce(async (predicate: () => boolean) => {
+      const handler = workflowSignalHandlers.get('workflowRuntimeV2HumanTask');
+      handler?.({
+        taskId: 'task-20',
+        eventName: 'HUMAN_TASK_COMPLETED',
+        payload: {
+          approved: 'yes',
+        },
+      });
+      return predicate();
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_20',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_20',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_20',
+    })).rejects.toMatchObject({
+      category: 'ValidationError',
+    });
   });
 });
