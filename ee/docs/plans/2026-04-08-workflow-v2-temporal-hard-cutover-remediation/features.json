@@ -21,7 +21,7 @@
   {
     "id": "F003",
     "description": "Remove the hand-rolled Temporal workflow JSONata evaluator as a separate workflow-expression contract.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1"
     ]
@@ -29,7 +29,7 @@
   {
     "id": "F004",
     "description": "Adopt a single canonical workflow-expression contract for Temporal-native execution so publish validation and runtime evaluation share the same semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1"
     ]
@@ -37,7 +37,7 @@
   {
     "id": "F005",
     "description": "Preserve exact allowed-function parity in Temporal expression evaluation, including `nowIso()`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1"
     ]
@@ -45,7 +45,7 @@
   {
     "id": "F006",
     "description": "Preserve exact expression-source normalization behavior in Temporal evaluation so authored expressions parse the same way across validation and execution.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1"
     ]
@@ -53,7 +53,7 @@
   {
     "id": "F007",
     "description": "Preserve canonical disallowed-function rejection behavior for Temporal-native expression evaluation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1"
     ]
@@ -61,7 +61,7 @@
   {
     "id": "F008",
     "description": "Preserve canonical JSON-serializability and max-output-size guardrails for Temporal-native expression results.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1"
     ]
@@ -114,7 +114,7 @@
   {
     "id": "F014",
     "description": "Block any Temporal run path that still calls `WorkflowRuntimeV2.executeRun(...)` from operator or event-ingress control surfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2",
       "FR-6",
@@ -280,7 +280,7 @@
   {
     "id": "F033",
     "description": "Add parity-focused Temporal tests that prove canonical expression behavior matches the workflow-expression contract.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1",
       "Acceptance Criteria / Definition of Done"

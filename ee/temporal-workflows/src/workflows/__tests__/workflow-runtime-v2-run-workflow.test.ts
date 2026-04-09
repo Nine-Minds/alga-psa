@@ -3,7 +3,7 @@ import type { WorkflowDefinition } from '@alga-psa/workflows/runtime';
 
 type RuntimeV2Activities = {
   loadWorkflowRuntimeV2PinnedDefinition: ReturnType<typeof vi.fn>;
-  executeWorkflowRuntimeV2Run: ReturnType<typeof vi.fn>;
+  executeWorkflowRuntimeV2NodeStep: ReturnType<typeof vi.fn>;
   projectWorkflowRuntimeV2StepStart: ReturnType<typeof vi.fn>;
   projectWorkflowRuntimeV2StepCompletion: ReturnType<typeof vi.fn>;
   executeWorkflowRuntimeV2ActionStep: ReturnType<typeof vi.fn>;
@@ -54,7 +54,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     let stepCounter = 0;
     mockActivities = {
       loadWorkflowRuntimeV2PinnedDefinition: vi.fn(),
-      executeWorkflowRuntimeV2Run: vi.fn(),
+      executeWorkflowRuntimeV2NodeStep: vi.fn(),
       projectWorkflowRuntimeV2StepStart: vi.fn(),
       projectWorkflowRuntimeV2StepCompletion: vi.fn(),
       executeWorkflowRuntimeV2ActionStep: vi.fn(),
@@ -75,7 +75,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     });
     mockActivities.completeWorkflowRuntimeV2Run.mockResolvedValue(undefined);
     mockActivities.projectWorkflowRuntimeV2StepCompletion.mockResolvedValue(undefined);
-    mockActivities.executeWorkflowRuntimeV2Run.mockResolvedValue(undefined);
+    mockActivities.executeWorkflowRuntimeV2NodeStep.mockImplementation(async ({ scopes }: { scopes: unknown }) => ({ scopes }));
     mockActivities.startWorkflowRuntimeV2ChildRun.mockResolvedValue({
       childRunId: 'child-run-default',
       rootRunId: 'root-run-default',
@@ -261,18 +261,185 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     });
   });
 
-  it('fails control.if when expression uses nowIso()', async () => {
+  it('resolves nested control.if branches without losing interpreter position', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_2_nested_if',
+      name: 'Nested If Branches',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_outer_if',
+          type: 'control.if',
+          condition: { $expr: 'payload.outer = true' },
+          then: [
+            {
+              id: 'step_inner_if',
+              type: 'control.if',
+              condition: { $expr: 'payload.inner = true' },
+              then: [
+                {
+                  id: 'step_nested_return',
+                  type: 'control.return',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: { outer: true, inner: true },
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_2_nested_if',
+          workflowId: 'wf_2_nested_if',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_2_nested_if',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await workflowRuntimeV2RunWorkflow({
+      runId: 'run_2_nested_if',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_2_nested_if',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_2_nested_if',
+    });
+
+    expect(mockActivities.projectWorkflowRuntimeV2StepStart).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ stepPath: 'root.steps[0].then.steps[0]' })
+    );
+    expect(mockActivities.projectWorkflowRuntimeV2StepStart).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ stepPath: 'root.steps[0].then.steps[0].then.steps[0]' })
+    );
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_2_nested_if',
+      status: 'SUCCEEDED',
+    });
+  });
+
+  it('keeps Temporal interpreter state synchronized for non-action node steps', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_2_node_sync',
+      name: 'Node Step Sync',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_state_set',
+          type: 'state.set',
+          config: {
+            state: 'ready',
+          },
+        },
+        {
+          id: 'step_action_after_node',
+          type: 'action.call',
+          config: {
+            actionId: 'ticket.update',
+            version: 1,
+          },
+        },
+        {
+          id: 'step_return_after_node',
+          type: 'control.return',
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        meta: {},
+        error: null,
+        system: {
+          runId: 'run_2_node_sync',
+          workflowId: 'wf_2_node_sync',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_2_node_sync',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+    mockActivities.executeWorkflowRuntimeV2NodeStep.mockResolvedValue({
+      scopes: {
+        payload: {},
+        workflow: { derivedFlag: true },
+        lexical: [],
+        meta: { state: 'ready' },
+        error: null,
+        system: {
+          runId: 'run_2_node_sync',
+          workflowId: 'wf_2_node_sync',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_2_node_sync',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+    mockActivities.executeWorkflowRuntimeV2ActionStep.mockResolvedValue({
+      output: { ok: true },
+      saveAsPath: null,
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await workflowRuntimeV2RunWorkflow({
+      runId: 'run_2_node_sync',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_2_node_sync',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_2_node_sync',
+    });
+
+    expect(mockActivities.executeWorkflowRuntimeV2NodeStep).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stepPath: 'root.steps[0]',
+        step: expect.objectContaining({ type: 'state.set' }),
+      })
+    );
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stepPath: 'root.steps[1]',
+        scopes: expect.objectContaining({
+          workflow: expect.objectContaining({ derivedFlag: true }),
+          meta: expect.objectContaining({ state: 'ready' }),
+        }),
+      })
+    );
+  });
+
+  it('accepts nowIso() in control.if via canonical expression engine semantics', async () => {
     const definition: WorkflowDefinition = {
       id: 'wf_3',
-      name: 'Non deterministic if',
+      name: 'nowIso parity',
       version: 1,
       payloadSchemaRef: 'payload.test.v1',
       steps: [
         {
           id: 'step_if',
           type: 'control.if',
-          condition: { $expr: 'nowIso() = \"2026-01-01T00:00:00.000Z\"' },
-          then: [],
+          condition: { $expr: 'len(toString(nowIso())) > 0' },
+          then: [{ id: 'step_return', type: 'control.return' }],
           else: [],
         },
       ],
@@ -304,18 +471,174 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       workflowVersion: 1,
       triggerType: null,
       executionKey: 'exec_3',
-    })).rejects.toThrow('nowIso');
+    })).resolves.toEqual({
+      scopes: expect.objectContaining({
+        system: expect.objectContaining({
+          runId: 'run_3',
+        }),
+      }),
+    });
 
     expect(mockActivities.projectWorkflowRuntimeV2StepCompletion).toHaveBeenCalledWith(
       expect.objectContaining({
         runId: 'run_3',
-        status: 'FAILED',
+        status: 'SUCCEEDED',
       })
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_3',
-      status: 'FAILED',
+      status: 'SUCCEEDED',
     });
+  });
+
+  it('applies canonical expression source normalization (== to =) in Temporal execution', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_3_normalize',
+      name: 'Normalization parity',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_if',
+          type: 'control.if',
+          condition: { $expr: '1 == 1' },
+          then: [{ id: 'step_return', type: 'control.return' }],
+          else: [],
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        meta: {},
+        error: null,
+        system: {
+          runId: 'run_3_normalize',
+          workflowId: 'wf_3_normalize',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_3_normalize',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_3_normalize',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_3_normalize',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_3_normalize',
+    })).resolves.toEqual({
+      scopes: expect.objectContaining({
+        system: expect.objectContaining({
+          runId: 'run_3_normalize',
+        }),
+      }),
+    });
+  });
+
+  it('rejects disallowed expression functions with canonical validation errors', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_3_disallowed',
+      name: 'Disallowed function',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_if',
+          type: 'control.if',
+          condition: { $expr: 'sum([1, 2]) = 3' },
+          then: [],
+          else: [],
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        meta: {},
+        error: null,
+        system: {
+          runId: 'run_3_disallowed',
+          workflowId: 'wf_3_disallowed',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_3_disallowed',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_3_disallowed',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_3_disallowed',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_3_disallowed',
+    })).rejects.toThrow('disallowed function');
+  });
+
+  it('enforces canonical expression output-size guardrails', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_3_output_limit',
+      name: 'Output guardrail',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_for_each',
+          type: 'control.forEach',
+          items: { $expr: 'payload.big' },
+          itemVar: 'item',
+          body: [],
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: { big: 'x'.repeat(256 * 1024 + 1) },
+        workflow: {},
+        lexical: [],
+        meta: {},
+        error: null,
+        system: {
+          runId: 'run_3_output_limit',
+          workflowId: 'wf_3_output_limit',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_3_output_limit',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_3_output_limit',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_3_output_limit',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_3_output_limit',
+    })).rejects.toThrow('max output size');
   });
 
   it('retries action.call via interpreter policy and continues when onError=continue after retry exhaustion', async () => {
@@ -787,6 +1110,85 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_8',
+      status: 'SUCCEEDED',
+    });
+  });
+
+  it('advances nested control.forEach bodies correctly when the final body step is nested control flow', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_8_nested_for_each',
+      name: 'Nested forEach body',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_for_each_nested',
+          type: 'control.forEach',
+          items: { $expr: 'payload.items' },
+          itemVar: 'item',
+          body: [
+            {
+              id: 'step_body_if',
+              type: 'control.if',
+              condition: { $expr: 'item = "run"' },
+              then: [
+                {
+                  id: 'step_body_nested_action',
+                  type: 'action.call',
+                  config: {
+                    actionId: 'ticket.update',
+                    version: 1,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: 'step_return_nested_for_each',
+          type: 'control.return',
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: { items: ['run', 'run'] },
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_8_nested_for_each',
+          workflowId: 'wf_8_nested_for_each',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_8_nested_for_each',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+    mockActivities.executeWorkflowRuntimeV2ActionStep.mockResolvedValue({
+      output: { ok: true },
+      saveAsPath: null,
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await workflowRuntimeV2RunWorkflow({
+      runId: 'run_8_nested_for_each',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_8_nested_for_each',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_8_nested_for_each',
+    });
+
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenCalledTimes(2);
+    expect(mockActivities.projectWorkflowRuntimeV2StepStart).toHaveBeenCalledWith(
+      expect.objectContaining({ stepPath: 'root.steps[0].body.steps[0].then.steps[0]' })
+    );
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_8_nested_for_each',
       status: 'SUCCEEDED',
     });
   });
@@ -1575,6 +1977,75 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_16',
       status: 'SUCCEEDED',
+    });
+  });
+
+  it('marks active waits as CANCELED when Temporal cancellation interrupts a wait', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_16_cancel_wait',
+      name: 'time wait cancellation cleanup',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_wait',
+          type: 'time.wait',
+          config: {
+            mode: 'duration',
+            durationMs: 60000,
+          },
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_16_cancel_wait',
+          workflowId: 'wf_16_cancel_wait',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_16_cancel_wait',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+    mockActivities.projectWorkflowRuntimeV2TimeWaitStart.mockResolvedValue({
+      waitId: 'wait-16-cancel',
+    });
+
+    const temporalWorkflow = await import('@temporalio/workflow');
+    const sleepMock = vi.mocked(temporalWorkflow.sleep);
+    sleepMock.mockRejectedValueOnce({
+      name: 'CancelledFailure',
+      message: 'workflow cancelled while sleeping',
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_16_cancel_wait',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_16_cancel_wait',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_16_cancel_wait',
+    })).rejects.toMatchObject({
+      name: 'CancelledFailure',
+    });
+
+    expect(mockActivities.projectWorkflowRuntimeV2TimeWaitResolved).toHaveBeenCalledWith({
+      waitId: 'wait-16-cancel',
+      runId: 'run_16_cancel_wait',
+      status: 'CANCELED',
+    });
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_16_cancel_wait',
+      status: 'CANCELED',
     });
   });
 

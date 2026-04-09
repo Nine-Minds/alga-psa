@@ -3100,6 +3100,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
   let runId: string | null = null;
   let eventRecord: Awaited<ReturnType<typeof WorkflowRuntimeEventModelV2.create>> | null = null;
   let ingestionError: string | null = null;
+  let ingestionErrorStatus = 500;
   const processedAt = new Date().toISOString();
 
   const catalogEntry = tenant ? await EventCatalogModel.getByEventType(knex, parsed.eventName, tenant) : null;
@@ -3155,6 +3156,19 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
         return;
       }
 
+      const matchedRun = await WorkflowRunModelV2.getById(trx, wait.run_id);
+      if (matchedRun?.engine === 'temporal') {
+        ingestionError = `Legacy API event resume is unsupported for Temporal run ${wait.run_id}`;
+        ingestionErrorStatus = 409;
+        if (eventRecord) {
+          await WorkflowRuntimeEventModelV2.update(trx, eventRecord.event_id, {
+            error_message: ingestionError,
+            processed_at: processedAt
+          });
+        }
+        return;
+      }
+
       await WorkflowRunWaitModelV2.update(trx, wait.wait_id, {
         status: 'RESOLVED',
         resolved_at: new Date().toISOString()
@@ -3202,7 +3216,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
   });
 
   if (ingestionError) {
-    return throwHttpError(500, 'Failed to process workflow event', { error: ingestionError });
+    return throwHttpError(ingestionErrorStatus, 'Failed to process workflow event', { error: ingestionError });
   }
 
   const runtime = new WorkflowRuntimeV2();

@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Parity test: Temporal-native expression evaluation accepts the same allowed functions and source normalization as the canonical workflow-expression contract, including `nowIso()`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F004",
@@ -14,7 +14,7 @@
   {
     "id": "T002",
     "description": "Parity test: Temporal-native expression evaluation rejects the same disallowed functions and enforces the same serialization/output guardrails as the canonical workflow-expression contract.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F008",

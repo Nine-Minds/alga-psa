@@ -643,6 +643,33 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
     expect(result.runId).toBe(run.runId);
   });
 
+  it('Submit workflow event rejects legacy DB-authoritative resume for Temporal runs. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' } })]
+    });
+    await publishWorkflow(workflowId, 1);
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    await WorkflowRunModelV2.update(db, run.runId, { engine: 'temporal' });
+
+    await expect(submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'key', payload: {} }))
+      .rejects.toMatchObject({
+        status: 409,
+        details: expect.objectContaining({
+          error: expect.stringContaining('unsupported for Temporal run')
+        })
+      });
+
+    const wait = await db('workflow_run_waits').where({ run_id: run.runId }).first();
+    const runAfter = await WorkflowRunModelV2.getById(db, run.runId);
+    const eventRow = await db('workflow_runtime_events')
+      .where({ event_name: 'PING' })
+      .orderBy('created_at', 'desc')
+      .first();
+    expect(wait?.status).toBe('WAITING');
+    expect(runAfter?.status).toBe('WAITING');
+    expect(eventRow?.error_message).toContain(`Temporal run ${run.runId}`);
+  });
+
   it('WAITING run resumes from correct nodePath after event resume. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' } }), stateSetStep('state-1', 'DONE')] });
     await publishWorkflow(workflowId, 1);

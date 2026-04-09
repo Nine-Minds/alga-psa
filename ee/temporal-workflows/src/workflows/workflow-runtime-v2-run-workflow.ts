@@ -5,10 +5,10 @@ import {
   WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
   type WorkflowRuntimeV2TemporalRunInput,
 } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
-import type { EventWaitFilter, Expr, ForEachBlock, IfBlock } from '@alga-psa/workflows/runtime';
+import { compileExpression, type CompiledExpression } from '@alga-psa/workflows/runtime/expressionEngine';
+import type { EventWaitFilter, Expr, ForEachBlock, IfBlock, Step } from '@alga-psa/workflows/runtime';
 import type { RetryPolicy, OnErrorPolicy } from '@alga-psa/workflows/runtime';
 import type { TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime';
-import jsonata from 'jsonata';
 import {
   advanceWorkflowRuntimeV2InterpreterState,
   createWorkflowRuntimeV2InterpreterCheckpoint,
@@ -30,7 +30,17 @@ const activities = proxyActivities<{
     definition: WorkflowDefinition;
     initialScopes: WorkflowRuntimeV2ScopeState;
   }>;
-  executeWorkflowRuntimeV2Run(input: { runId: string; executionKey: string }): Promise<void>;
+  executeWorkflowRuntimeV2NodeStep(input: {
+    runId: string;
+    stepPath: string;
+    stepId: string;
+    tenantId: string | null;
+    step: {
+      type: string;
+      config?: unknown;
+    };
+    scopes: WorkflowRuntimeV2ScopeState;
+  }): Promise<{ scopes: WorkflowRuntimeV2ScopeState }>;
   projectWorkflowRuntimeV2StepStart(input: {
     runId: string;
     stepPath: string;
@@ -191,6 +201,13 @@ type WorkflowRuntimeV2CurrentWait = {
   descriptor: Record<string, unknown>;
 };
 
+type WorkflowRuntimeV2ActiveWaitProjection = {
+  type: 'time.wait' | 'event.wait' | 'human.task';
+  waitId: string;
+};
+
+const expressionCache = new Map<string, CompiledExpression>();
+
 const workflowRuntimeV2CurrentStepQuery = defineQuery<{
   runId: string;
   currentStepPath: string | null;
@@ -222,6 +239,7 @@ export async function workflowRuntimeV2RunWorkflow(
   let queryStepCount = 0;
   let queryFrameDepth = 0;
   let queryCurrentWait: WorkflowRuntimeV2CurrentWait | null = null;
+  let activeWaitProjection: WorkflowRuntimeV2ActiveWaitProjection | null = null;
   setHandler(workflowRuntimeV2CurrentStepQuery, () => ({
     runId: input.runId,
     currentStepPath: queryCurrentStepPath,
@@ -245,6 +263,16 @@ export async function workflowRuntimeV2RunWorkflow(
     definition: pinned.definition,
     initialScopes: pinned.initialScopes,
   });
+  state = {
+    ...state,
+    scopes: {
+      ...state.scopes,
+      meta: isRecord(state.scopes.meta) ? state.scopes.meta : {},
+      error: state.scopes.error && typeof state.scopes.error === 'object'
+        ? state.scopes.error as Record<string, unknown>
+        : null,
+    },
+  };
   let stepCount = input.checkpoint?.stepCount ?? 0;
   queryStepCount = stepCount;
   queryFrameDepth = state.frames.length;
@@ -493,6 +521,10 @@ export async function workflowRuntimeV2RunWorkflow(
             dueAt,
           },
         });
+        activeWaitProjection = {
+          type: 'time.wait',
+          waitId: waitProjection.waitId,
+        };
         queryCurrentWait = {
           type: 'time.wait',
           stepPath: current.path,
@@ -513,6 +545,7 @@ export async function workflowRuntimeV2RunWorkflow(
           runId: input.runId,
           status: 'RESOLVED',
         });
+        activeWaitProjection = null;
         queryCurrentWait = null;
 
         state = assignToScopePath(state, 'vars.timeWait', {
@@ -557,6 +590,10 @@ export async function workflowRuntimeV2RunWorkflow(
             timeoutAt,
           },
         });
+        activeWaitProjection = {
+          type: 'event.wait',
+          waitId: waitProjection.waitId,
+        };
         queryCurrentWait = {
           type: 'event.wait',
           stepPath: current.path,
@@ -584,6 +621,7 @@ export async function workflowRuntimeV2RunWorkflow(
             status: 'RESOLVED',
             matchedEventId: null,
           });
+          activeWaitProjection = null;
           queryCurrentWait = null;
           throw createTimeoutRuntimeError(current.path, config.eventName, correlationKey, timeoutAt);
         }
@@ -594,6 +632,7 @@ export async function workflowRuntimeV2RunWorkflow(
           status: 'RESOLVED',
           matchedEventId: matchedSignal.eventId,
         });
+        activeWaitProjection = null;
         queryCurrentWait = null;
 
         state = assignToScopePath(state, 'vars.event', matchedSignal.payload);
@@ -637,6 +676,10 @@ export async function workflowRuntimeV2RunWorkflow(
           description: descriptionValue === null || descriptionValue === undefined ? null : String(descriptionValue),
           contextData,
         });
+        activeWaitProjection = {
+          type: 'human.task',
+          waitId: createdTask.waitId,
+        };
         queryCurrentWait = {
           type: 'human.task',
           stepPath: current.path,
@@ -669,6 +712,7 @@ export async function workflowRuntimeV2RunWorkflow(
             response: responsePayload,
           },
         });
+        activeWaitProjection = null;
         queryCurrentWait = null;
 
         state = assignToScopePath(state, 'vars.event', responsePayload);
@@ -725,7 +769,13 @@ export async function workflowRuntimeV2RunWorkflow(
             }
 
             if (onErrorPolicy === 'continue') {
-              state = assignToScopePath(state, 'vars.error', runtimeError);
+              state = {
+                ...state,
+                scopes: {
+                  ...state.scopes,
+                  error: runtimeError as Record<string, unknown>,
+                },
+              };
               await activities.projectWorkflowRuntimeV2StepCompletion({
                 runId: input.runId,
                 stepId: stepProjection.stepId,
@@ -762,11 +812,21 @@ export async function workflowRuntimeV2RunWorkflow(
         continue;
       }
 
-      // Temporary bridge while additional step handlers are moved into the Temporal-native interpreter.
-      await activities.executeWorkflowRuntimeV2Run({
+      const nodeResult = await activities.executeWorkflowRuntimeV2NodeStep({
         runId: input.runId,
-        executionKey: input.executionKey,
+        stepPath: current.path,
+        stepId: stepProjection.stepId,
+        tenantId: state.scopes.system.tenantId,
+        step: {
+          type: current.step.type,
+          config: 'config' in current.step ? current.step.config : undefined,
+        },
+        scopes: state.scopes,
       });
+      state = {
+        ...state,
+        scopes: nodeResult.scopes,
+      };
       state = advanceWorkflowRuntimeV2InterpreterState(state);
       state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
       await activities.projectWorkflowRuntimeV2StepCompletion({
@@ -781,6 +841,30 @@ export async function workflowRuntimeV2RunWorkflow(
     } catch (error) {
       queryCurrentWait = null;
       const runtimeError = normalizeRuntimeError(error, current.path);
+      if (activeWaitProjection) {
+        if (activeWaitProjection.type === 'time.wait') {
+          await activities.projectWorkflowRuntimeV2TimeWaitResolved({
+            waitId: activeWaitProjection.waitId,
+            runId: input.runId,
+            status: 'CANCELED',
+          });
+        } else if (activeWaitProjection.type === 'event.wait') {
+          await activities.projectWorkflowRuntimeV2EventWaitResolved({
+            waitId: activeWaitProjection.waitId,
+            runId: input.runId,
+            status: 'CANCELED',
+            matchedEventId: null,
+          });
+        } else {
+          await activities.resolveWorkflowRuntimeV2HumanTaskWait({
+            waitId: activeWaitProjection.waitId,
+            runId: input.runId,
+            status: 'CANCELED',
+            payload: {},
+          });
+        }
+        activeWaitProjection = null;
+      }
       if (isCancellationRuntimeError(runtimeError)) {
         await activities.projectWorkflowRuntimeV2StepCompletion({
           runId: input.runId,
@@ -831,6 +915,7 @@ export async function workflowRuntimeV2RunWorkflow(
         state,
         definition: pinned.definition,
         failedStepPath: current.path,
+        runtimeError,
       });
       if (forEachContinueState) {
         state = forEachContinueState;
@@ -849,7 +934,6 @@ export async function workflowRuntimeV2RunWorkflow(
 }
 
 async function evaluateDeterministicBooleanExpression(expr: Expr, scopes: WorkflowRuntimeV2ScopeState): Promise<boolean> {
-  assertDeterministicExpression(expr.$expr);
   const expressionContext = buildWorkflowRuntimeV2ExpressionContext(scopes);
   const value = await evaluateExpression(expr.$expr, expressionContext);
   if (typeof value !== 'boolean') {
@@ -859,7 +943,6 @@ async function evaluateDeterministicBooleanExpression(expr: Expr, scopes: Workfl
 }
 
 async function evaluateDeterministicArrayExpression(expr: Expr, scopes: WorkflowRuntimeV2ScopeState): Promise<unknown[]> {
-  assertDeterministicExpression(expr.$expr);
   const expressionContext = buildWorkflowRuntimeV2ExpressionContext(scopes);
   const value = await evaluateExpression(expr.$expr, expressionContext);
   if (!Array.isArray(value)) {
@@ -921,13 +1004,6 @@ async function applyCallWorkflowOutputMapping(
   }
 
   return state;
-}
-
-function assertDeterministicExpression(source: string): void {
-  // nowIso depends on wall-clock time and is intentionally disallowed in control-flow decisions.
-  if (/\$?nowIso\s*\(/.test(source)) {
-    throw new Error('Expression function nowIso() is not allowed in Temporal interpreter control flow');
-  }
 }
 
 function assignToScopePath(
@@ -1020,37 +1096,19 @@ function cloneRecord(value: Record<string, unknown>): Record<string, unknown> {
 }
 
 async function evaluateExpression(source: string, context: Record<string, unknown>): Promise<unknown> {
-  const expression = jsonata(normalizeExpressionSource(source));
-  expression.registerFunction('coalesce', (...args: unknown[]) => {
-    for (const arg of args) {
-      if (arg !== null && arg !== undefined) return arg;
-    }
-    return null;
-  });
-  expression.registerFunction('len', (value: unknown) => {
-    if (typeof value === 'string' || Array.isArray(value)) {
-      return value.length;
-    }
-    return 0;
-  });
-  expression.registerFunction('toString', (value: unknown) => {
-    if (value === null || value === undefined) return '';
-    return String(value);
-  });
-  expression.registerFunction('append', (list: unknown, value: unknown) => {
-    const base = Array.isArray(list) ? list : list === null || list === undefined ? [] : [list];
-    const toAdd = Array.isArray(value) ? value : [value];
-    return base.concat(toAdd);
-  });
-
-  return await Promise.resolve(expression.evaluate(context));
+  const compiled = getCompiledExpression(source);
+  return await compiled.evaluate(context);
 }
 
-function normalizeExpressionSource(source: string): string {
-  return source.replace(/==/g, '=').replace(
-    /(^|[^.$A-Za-z0-9_])(coalesce|len|toString|append)(?=\s*\()/g,
-    (_match, prefix: string, fn: string) => `${prefix}$${fn}`
-  );
+function getCompiledExpression(source: string): CompiledExpression {
+  const cached = expressionCache.get(source);
+  if (cached) {
+    return cached;
+  }
+
+  const compiled = compileExpression({ $expr: source });
+  expressionCache.set(source, compiled);
+  return compiled;
 }
 
 function parseTimeWaitConfig(config: unknown, stepPath: string): ParsedTimeWaitConfig {
@@ -1522,28 +1580,31 @@ function resolveCompletedForEachBodyStep(
   bodyPath: string;
   bodyLength: number;
 } | null {
-  const match = /^root\.steps\[(\d+)\]\.body\.steps\[(\d+)\](?:\..+)?$/.exec(completedStepPath);
-  if (!match) {
+  const ancestry = resolveStepAncestry(definition, completedStepPath);
+  if (!ancestry) {
     return null;
   }
-  const parentIndex = Number(match[1]);
-  const bodyIndex = Number(match[2]);
-  if (!Number.isInteger(parentIndex) || !Number.isInteger(bodyIndex)) {
-    return null;
+
+  for (let index = ancestry.length - 2; index >= 0; index -= 1) {
+    const ancestor = ancestry[index];
+    if (ancestor.descendedVia !== 'body' || ancestor.step.type !== 'control.forEach') {
+      continue;
+    }
+
+    const directBodyChild = ancestry[index + 1];
+    const forEachStep = ancestor.step as ForEachBlock;
+    if (directBodyChild.indexInParentSequence !== forEachStep.body.length - 1) {
+      return null;
+    }
+
+    return {
+      loopId: forEachStep.id,
+      bodyPath: `${ancestor.stepPath}.body.steps`,
+      bodyLength: forEachStep.body.length,
+    };
   }
-  const parentStep = definition.steps[parentIndex];
-  if (!parentStep || parentStep.type !== 'control.forEach') {
-    return null;
-  }
-  const forEachStep = parentStep as ForEachBlock;
-  if (bodyIndex !== forEachStep.body.length - 1) {
-    return null;
-  }
-  return {
-    loopId: forEachStep.id,
-    bodyPath: `root.steps[${parentIndex}].body.steps`,
-    bodyLength: forEachStep.body.length,
-  };
+
+  return null;
 }
 
 function isForEachLoopContext(value: unknown): value is ForEachLoopContext {
@@ -1574,47 +1635,43 @@ function routeForEachOnItemError(input: {
   state: WorkflowRuntimeV2InterpreterState;
   definition: WorkflowDefinition;
   failedStepPath: string;
+  runtimeError: RuntimeErrorLike;
 }): WorkflowRuntimeV2InterpreterState | null {
-  const forEachPath = resolveForEachPathFromBodyStep(input.failedStepPath);
-  if (!forEachPath) {
+  const ancestry = resolveStepAncestry(input.definition, input.failedStepPath);
+  if (!ancestry) {
     return null;
   }
-  const forEachStep = resolveTopLevelForEachStep(input.definition, forEachPath);
-  if (!forEachStep) {
+
+  const forEachAncestor = [...ancestry].reverse().slice(1).find((ancestor) => {
+    return ancestor.descendedVia === 'body' && ancestor.step.type === 'control.forEach';
+  });
+  if (!forEachAncestor) {
     return null;
   }
+
+  const forEachStep = forEachAncestor.step as ForEachBlock;
   if ((forEachStep.onItemError ?? 'fail') !== 'continue') {
     return null;
   }
 
-  let nextState = advanceWorkflowRuntimeV2InterpreterState(input.state);
+  let nextState: WorkflowRuntimeV2InterpreterState = {
+    ...input.state,
+    scopes: {
+      ...input.state.scopes,
+      error: input.runtimeError as Record<string, unknown>,
+    },
+  };
+  nextState = advanceWorkflowRuntimeV2InterpreterState(nextState);
   nextState = advanceWorkflowRuntimeV2ForEachLoopState(nextState, input.definition, input.failedStepPath);
   return nextState;
 }
 
-function resolveForEachPathFromBodyStep(stepPath: string): string | null {
-  const match = /^(root\.steps\[\d+\])\.body\.steps\[\d+\](?:\..+)?$/.exec(stepPath);
-  if (!match) {
-    return null;
-  }
-  return match[1];
-}
-
-function resolveTopLevelForEachStep(definition: WorkflowDefinition, forEachPath: string): ForEachBlock | null {
-  const match = /^root\.steps\[(\d+)\]$/.exec(forEachPath);
-  if (!match) {
-    return null;
-  }
-  const stepIndex = Number(match[1]);
-  if (!Number.isInteger(stepIndex) || stepIndex < 0) {
-    return null;
-  }
-  const step = definition.steps[stepIndex];
-  if (!step || step.type !== 'control.forEach') {
-    return null;
-  }
-  return step as ForEachBlock;
-}
+type WorkflowRuntimeV2StepAncestor = {
+  stepPath: string;
+  step: Step;
+  indexInParentSequence: number;
+  descendedVia: 'then' | 'else' | 'try' | 'catch' | 'body' | null;
+};
 
 type RuntimeErrorLike = {
   category: string;
@@ -1809,40 +1866,138 @@ function getRetryBackoffMs(policy: RetryPolicy, attempt: number): number {
   return Math.max(0, Math.floor(bounded));
 }
 
+function resolveStepAncestry(
+  definition: WorkflowDefinition,
+  stepPath: string
+): WorkflowRuntimeV2StepAncestor[] | null {
+  if (!stepPath.startsWith('root.steps')) {
+    return null;
+  }
+
+  let sequence = definition.steps;
+  let sequencePath = 'root.steps';
+  let remaining = stepPath.slice('root.steps'.length);
+  const ancestors: WorkflowRuntimeV2StepAncestor[] = [];
+
+  while (remaining.length > 0) {
+    const indexMatch = /^\[(\d+)\]/.exec(remaining);
+    if (!indexMatch) {
+      return null;
+    }
+
+    const stepIndex = Number(indexMatch[1]);
+    if (!Number.isInteger(stepIndex) || stepIndex < 0) {
+      return null;
+    }
+
+    const step = sequence[stepIndex];
+    if (!step) {
+      return null;
+    }
+
+    const currentStepPath = `${sequencePath}[${stepIndex}]`;
+    remaining = remaining.slice(indexMatch[0].length);
+    let descendedVia: WorkflowRuntimeV2StepAncestor['descendedVia'] = null;
+    if (remaining.length > 0) {
+      const branchMatch = /^\.(then|else|try|catch|body)\.steps/.exec(remaining);
+      if (!branchMatch) {
+        return null;
+      }
+      descendedVia = branchMatch[1] as WorkflowRuntimeV2StepAncestor['descendedVia'];
+      const branchSequence = resolveStepBranchSequence(step, descendedVia);
+      if (!branchSequence) {
+        return null;
+      }
+      sequence = branchSequence;
+      sequencePath = `${currentStepPath}.${descendedVia}.steps`;
+      remaining = remaining.slice(branchMatch[0].length);
+    }
+
+    ancestors.push({
+      stepPath: currentStepPath,
+      step,
+      indexInParentSequence: stepIndex,
+      descendedVia,
+    });
+  }
+
+  return ancestors.length > 0 ? ancestors : null;
+}
+
+function resolveStepBranchSequence(
+  step: WorkflowDefinition['steps'][number],
+  branchName: WorkflowRuntimeV2StepAncestor['descendedVia']
+): Step[] | null {
+  if (branchName === 'then' || branchName === 'else') {
+    if (step.type !== 'control.if') {
+      return null;
+    }
+    const ifStep = step as IfBlock;
+    return branchName === 'then' ? ifStep.then : (ifStep.else ?? []);
+  }
+
+  if (branchName === 'body') {
+    if (step.type !== 'control.forEach') {
+      return null;
+    }
+    const forEachStep = step as ForEachBlock;
+    return forEachStep.body;
+  }
+
+  if (branchName === 'try' || branchName === 'catch') {
+    if (step.type !== 'control.tryCatch') {
+      return null;
+    }
+    const tryCatchStep = step as TryCatchBlock;
+    return branchName === 'try' ? tryCatchStep.try : tryCatchStep.catch;
+  }
+
+  return null;
+}
+
 function routeTryCatchFailure(input: {
   state: WorkflowRuntimeV2InterpreterState;
   definition: WorkflowDefinition;
   failedStepPath: string;
   runtimeError: RuntimeErrorLike;
 }): WorkflowRuntimeV2InterpreterState | null {
-  const match = /^root\.steps\[(\d+)\]\.try\.steps\[\d+\](?:\..+)?$/.exec(input.failedStepPath);
-  if (!match) {
+  const ancestry = resolveStepAncestry(input.definition, input.failedStepPath);
+  if (!ancestry) {
     return null;
-  }
-  const parentIndex = Number(match[1]);
-  const parentStep = input.definition.steps[parentIndex];
-  if (!parentStep || parentStep.type !== 'control.tryCatch') {
-    return null;
-  }
-  const tryCatchStep = parentStep as TryCatchBlock;
-  const tryPathPrefix = `root.steps[${parentIndex}].try.steps`;
-  const nextFrames = [...input.state.frames];
-  while (nextFrames.length > 0 && nextFrames[nextFrames.length - 1].path.startsWith(tryPathPrefix)) {
-    nextFrames.pop();
   }
 
-  let nextState: WorkflowRuntimeV2InterpreterState = {
-    ...input.state,
-    frames: nextFrames,
-  };
-  if (tryCatchStep.captureErrorAs) {
-    nextState = assignToScopePath(nextState, `vars.${tryCatchStep.captureErrorAs}`, input.runtimeError);
+  for (let index = ancestry.length - 2; index >= 0; index -= 1) {
+    const ancestor = ancestry[index];
+    if (ancestor.descendedVia !== 'try' || ancestor.step.type !== 'control.tryCatch') {
+      continue;
+    }
+
+    const tryCatchStep = ancestor.step as TryCatchBlock;
+    const tryPathPrefix = `${ancestor.stepPath}.try.steps`;
+    const nextFrames = [...input.state.frames];
+    while (nextFrames.length > 0 && nextFrames[nextFrames.length - 1].path.startsWith(tryPathPrefix)) {
+      nextFrames.pop();
+    }
+
+    let nextState: WorkflowRuntimeV2InterpreterState = {
+      ...input.state,
+      frames: nextFrames,
+      scopes: {
+        ...input.state.scopes,
+        error: input.runtimeError as Record<string, unknown>,
+      },
+    };
+    if (tryCatchStep.captureErrorAs) {
+      nextState = assignToScopePath(nextState, `vars.${tryCatchStep.captureErrorAs}`, input.runtimeError);
+    }
+    if (tryCatchStep.catch.length > 0) {
+      nextState = pushWorkflowRuntimeV2SequenceFrame(nextState, {
+        path: `${ancestor.stepPath}.catch.steps`,
+        totalSteps: tryCatchStep.catch.length,
+      });
+    }
+    return nextState;
   }
-  if (tryCatchStep.catch.length > 0) {
-    nextState = pushWorkflowRuntimeV2SequenceFrame(nextState, {
-      path: `root.steps[${parentIndex}].catch.steps`,
-      totalSteps: tryCatchStep.catch.length,
-    });
-  }
-  return nextState;
+
+  return null;
 }

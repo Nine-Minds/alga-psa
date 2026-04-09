@@ -112,7 +112,74 @@ Parent plan:
 
 ### Current gaps / next work
 
-- Expression parity hard-cutover items (`F003`+) are still open:
-  - Temporal workflow file still has a local JSONata evaluator and local normalization/guard logic.
 - Event-ingress correlation/authority items (`F018`+) remain open.
+- Expression parity items referenced here were addressed in the next section (`Expression parity cutover`).
+
+
+## Progress — 2026-04-09 (Expression parity cutover)
+
+### Completed scope in this pass
+
+- Replaced Temporal workflow-local expression evaluation with canonical workflow expression contract in:
+  - `ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts`
+- Removed local Temporal-only JSONata helpers from workflow execution path:
+  - removed local evaluator/normalizer and now uses canonical `compileExpression` from `@alga-psa/workflows/runtime/expressionEngine`
+- Removed Temporal-only `nowIso()` control-flow ban.
+  - Temporal workflow now accepts `nowIso()` with canonical function set/validation behavior.
+
+### Key decisions and rationale
+
+- Decision: import expression contract from `@alga-psa/workflows/runtime/expressionEngine` directly instead of `@alga-psa/workflows/runtime` barrel.
+  - Rationale: avoids pulling unrelated transitive runtime package entry dependencies into temporal workflow unit test bundle (`@alga-psa/storage` resolution issue).
+- Decision: cache compiled expressions per source string in-workflow (`Map<string, CompiledExpression>`).
+  - Rationale: preserves behavior and avoids repeated compile cost while remaining deterministic for replayed source strings.
+
+### Tests added/updated
+
+- Updated `ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts`:
+  - nowIso parity: `control.if` accepts `nowIso()` via canonical engine.
+  - normalization parity: `==` source normalization path works in Temporal execution.
+  - disallowed-function parity: rejects unsupported functions with canonical validation.
+  - output guardrail parity: expression result over max size fails with canonical guardrail error.
+
+### Commands / runbook used
+
+- Temporal workflow unit suite (targeted):
+  - `cd ee/temporal-workflows && npx vitest run src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts`
+  - Result: passed (30 tests).
+
+### Current gaps / next work
+
+- Determinism replay proof item (`F009` / `T003`) is still open:
+  - need a dedicated replay-focused test that demonstrates no expression-contract drift across replay.
+- Event ingress correlation and API/stream alignment (`F018+`) remain open.
+
+## Progress — 2026-04-09 (Event-ingress authority guard for Temporal)
+
+### Completed scope in this pass
+
+- Added Temporal guard in API event ingestion path (`submitWorkflowEventAction`) to prevent legacy DB-authoritative resume for Temporal runs:
+  - file: `ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts`
+  - behavior: if a matched candidate wait belongs to `engine='temporal'`, ingestion fails explicitly (`409`) and records an audit error message; no wait/run projection mutation is performed for that Temporal run.
+
+### Key decisions and rationale
+
+- Decision: hard-fail API resume attempts for Temporal candidate runs in the legacy DB event-resume code path.
+  - Rationale: prevents `WorkflowRuntimeV2.executeRun(...)` from being an authority path for Temporal runs in operator/API control surfaces.
+
+### Tests added/updated
+
+- Updated `server/src/test/integration/workflowRuntimeV2.control.integration.test.ts`:
+  - New: `Submit workflow event rejects legacy DB-authoritative resume for Temporal runs`
+  - Asserts:
+    - explicit `409` failure
+    - wait remains `WAITING`
+    - run remains `WAITING`
+    - runtime event audit row includes Temporal-unsupported error metadata
+
+### Commands / runbook used
+
+- Focused server integration run for Temporal guard tests:
+  - `cd server && npm run -s test -- src/test/integration/workflowRuntimeV2.control.integration.test.ts -t "Temporal runs reject legacy|Temporal cancel failure|Submit workflow event rejects legacy DB-authoritative resume for Temporal runs"`
+  - Result: passed.
 
