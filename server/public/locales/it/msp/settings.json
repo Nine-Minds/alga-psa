@@ -1246,6 +1246,94 @@
       }
     }
   },
+  "integrations": {
+    "betaNotice": "Alcune integrazioni sono ancora in fase di sviluppo. Si prega di lavorare in un ambiente sandbox durante la valutazione e di condividere il proprio feedback per aiutarci a migliorare.",
+    "emptyCategory": "Nessuna integrazione disponibile in questa categoria.",
+    "rmmEnterpriseNote": "Le integrazioni RMM sono disponibili nell'edizione Enterprise.",
+    "categoryHeading": "Integrazioni {{label}}",
+    "loading": {
+      "payments": "Caricamento impostazioni di pagamento..."
+    },
+    "categories": {
+      "accounting": {
+        "label": "Contabilità",
+        "description": "Seleziona un pacchetto contabile per configurare la sincronizzazione di fatture, pagamenti e dati fiscali."
+      },
+      "rmm": {
+        "label": "RMM",
+        "description": "Collega strumenti di monitoraggio e gestione remota"
+      },
+      "communication": {
+        "label": "Comunicazione",
+        "description": "Collega superfici di posta in arrivo e collaborazione per l'elaborazione dei ticket, i flussi di lavoro degli operatori e l'accesso a Microsoft Teams."
+      },
+      "calendar": {
+        "label": "Calendario",
+        "description": "Sincronizzazione calendario esclusiva Enterprise per Google e Outlook mantiene allineati smistamento e appuntamenti con i clienti."
+      },
+      "providers": {
+        "label": "Fornitori",
+        "description": {
+          "ee": "Configura le credenziali condivise dei fornitori utilizzate da e-mail, calendario, MSP SSO e altre integrazioni.",
+          "oss": "Configura le credenziali condivise dei fornitori utilizzate da e-mail, MSP SSO e altre integrazioni."
+        }
+      },
+      "identity": {
+        "label": "Identità",
+        "description": "Collega fornitori di identità per la scoperta dei tenant e la sincronizzazione dei contatti."
+      },
+      "payments": {
+        "label": "Pagamenti",
+        "description": "Accetta pagamenti online per le fatture"
+      }
+    },
+    "items": {
+      "accountingSetup": {
+        "name": "Integrazioni contabili",
+        "description": "Configura la sincronizzazione e le esportazioni contabili"
+      },
+      "rmmSetup": {
+        "name": "Integrazioni RMM",
+        "description": "Seleziona e configura il tuo fornitore RMM"
+      },
+      "email": {
+        "name": "E-mail in entrata",
+        "description": "Elabora le e-mail in entrata come ticket",
+        "cardTitle": "Integrazione e-mail in entrata",
+        "cardDescription": "Configura i fornitori di e-mail per elaborare automaticamente le e-mail in entrata come ticket"
+      },
+      "teams": {
+        "name": "Microsoft Teams",
+        "description": "Configura le superfici di collaborazione Teams per i tecnici MSP",
+        "upgradeDescription": "Configura le superfici di collaborazione Microsoft Teams per i tecnici MSP. Passa a Premium per sbloccare questa funzionalità."
+      },
+      "calendarSync": {
+        "name": "Sincronizzazione calendario",
+        "description": "Sincronizza le voci di pianificazione con i calendari Google o Microsoft"
+      },
+      "google": {
+        "name": "Google",
+        "description": {
+          "ee": "Credenziali Google Cloud di proprietà del tenant per Gmail e Calendario",
+          "oss": "Credenziali Google Cloud di proprietà del tenant per Gmail e flussi di supporto MSP SSO"
+        },
+        "cardTitle": "Credenziali del fornitore",
+        "cardDescription": {
+          "ee": "Configura prima Google e Microsoft, poi collega gli account dei fornitori dalle schermate di integrazione e-mail in entrata e calendario. La scoperta dei domini MSP SSO utilizza queste credenziali del fornitore con le mappature dei domini di accesso del tenant.",
+          "oss": "Configura prima Google e Microsoft, poi collega gli account dei fornitori dalla schermata di integrazione e-mail in entrata. La scoperta dei domini MSP SSO utilizza queste credenziali del fornitore con le mappature dei domini di accesso del tenant."
+        }
+      },
+      "entra": {
+        "name": "Microsoft Entra",
+        "description": "Scopri i tenant Microsoft gestiti e sincronizza gli utenti ai contatti",
+        "upgradeDescription": "Scopri i tenant Microsoft Entra gestiti e sincronizza gli utenti ai contatti. Passa a Premium per sbloccare questa funzionalità."
+      },
+      "stripe": {
+        "name": "Stripe",
+        "description": "Accetta pagamenti con carta di credito per le fatture tramite Stripe"
+      }
+    }
+  },
   "orgChart": {
     "emptyState": "Nessun utente disponibile.",
     "roles": {
