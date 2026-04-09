@@ -1,4 +1,4 @@
-import type { IfBlock, Step, TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime';
+import type { ForEachBlock, IfBlock, Step, TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime';
 
 export type WorkflowRuntimeV2SequenceFrame = {
   kind: 'sequence';
@@ -168,7 +168,7 @@ function resolveSequenceByPath(definition: WorkflowDefinition, path: string): St
     return definition.steps;
   }
 
-  const branchMatch = /^root\.steps\[(\d+)\]\.(then|else|try|catch)\.steps$/.exec(path);
+  const branchMatch = /^root\.steps\[(\d+)\]\.(then|else|try|catch|body)\.steps$/.exec(path);
   if (!branchMatch) {
     return null;
   }
@@ -191,6 +191,14 @@ function resolveSequenceByPath(definition: WorkflowDefinition, path: string): St
     const ifStep = parentStep as IfBlock;
     const branch = branchName === 'then' ? ifStep.then : (ifStep.else ?? []);
     return Array.isArray(branch) ? branch : null;
+  }
+
+  if (branchName === 'body') {
+    if (parentStep.type !== 'control.forEach') {
+      return null;
+    }
+    const forEachStep = parentStep as ForEachBlock;
+    return Array.isArray(forEachStep.body) ? forEachStep.body : null;
   }
 
   if (parentStep.type !== 'control.tryCatch') {

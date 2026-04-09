@@ -378,3 +378,40 @@ Validation commands (this checkpoint):
 
 Gotchas:
 - Cancellation detection is currently pattern-based (`CancelledFailure` name/message and explicit `category=Cancellation`) so later Temporal signal-based cancellation wiring should align on an explicit runtime-error category to avoid accidental broad matching.
+
+### F024-F026 + T006 completed (Temporal sequential forEach)
+
+- Implemented `control.forEach` in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - Deterministic item-array evaluation via workflow-side expression evaluation.
+  - Sequential body execution by pushing `...body.steps` interpreter sequence frames.
+  - Deterministic loop progression tracked in interpreter scope (`vars.__forEach[loopId]`) with stable `items` + `index`.
+- Added loop lifecycle support around interpreter advancement:
+  - advance to next item when the last body step of the current item completes
+  - restore pre-loop value of the configured `itemVar` on loop completion
+  - clear loop runtime bookkeeping on completion
+- Added lexical loop locals:
+  - per-iteration lexical scope now includes dynamic `itemVar` value and stable helpers (`item`, `index`, `length`, `isFirst`, `isLast`)
+  - lexical scope updates each iteration and is removed when loop completes
+- Preserved `onItemError` semantics:
+  - `continue` advances execution from the failed step using normal interpreter path progression (including continuing loop progression when body-end is reached)
+  - `fail` preserves terminal failure behavior
+- Extended interpreter sequence resolution in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-interpreter.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-interpreter.ts) to support `root.steps[n].body.steps` (forEach body container paths).
+
+Tests:
+- Extended [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts):
+  - sequential forEach item order + index progression assertions
+  - lexical loop locals exposure assertions
+  - `onItemError=continue` progression assertions
+  - `onItemError=fail` terminal failure assertion
+
+Plan bookkeeping updates:
+- Marked `F024`, `F025`, `F026` implemented.
+- Marked `T006` implemented.
+
+Validation commands (this checkpoint):
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts --run`
+- `npm --prefix ee/temporal-workflows run type-check`
+
+Gotchas:
+- Current forEach-body path parsing is intentionally scoped to top-level `root.steps[n].body.steps[...]` in this slice; nested branch-container forEach path traversal should be generalized when nested branch/loop combinations are implemented more broadly.

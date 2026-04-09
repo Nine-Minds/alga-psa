@@ -55,7 +55,7 @@
   {
     "id": "T006",
     "description": "Temporal interpreter: sequential `control.forEach` iterates items in order, exposes lexical loop locals, and honors `onItemError` continue versus fail behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F025",

@@ -597,4 +597,321 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       status: 'FAILED',
     });
   });
+
+  it('executes control.forEach sequentially with deterministic item and index progression', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_8',
+      name: 'Sequential forEach',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_for_each',
+          type: 'control.forEach',
+          items: { $expr: 'payload.items' },
+          itemVar: 'item',
+          body: [
+            {
+              id: 'step_body_action',
+              type: 'action.call',
+              config: {
+                actionId: 'ticket.update',
+                version: 1,
+              },
+            },
+          ],
+        },
+        {
+          id: 'step_return',
+          type: 'control.return',
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: { items: ['a', 'b', 'c'] },
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_8',
+          workflowId: 'wf_8',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_8',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    mockActivities.executeWorkflowRuntimeV2ActionStep.mockResolvedValue({
+      output: { ok: true },
+      saveAsPath: null,
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await workflowRuntimeV2RunWorkflow({
+      runId: 'run_8',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_8',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_8',
+    });
+
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenCalledTimes(3);
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        stepPath: 'root.steps[0].body.steps[0]',
+        scopes: expect.objectContaining({
+          lexical: [
+            expect.objectContaining({
+              item: 'a',
+              index: 0,
+              isFirst: true,
+            }),
+          ],
+          workflow: expect.objectContaining({
+            item: 'a',
+            __forEach: {
+              step_for_each: expect.objectContaining({
+                index: 0,
+              }),
+            },
+          }),
+        }),
+      })
+    );
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        stepPath: 'root.steps[0].body.steps[0]',
+        scopes: expect.objectContaining({
+          lexical: [
+            expect.objectContaining({
+              item: 'b',
+              index: 1,
+              isFirst: false,
+            }),
+          ],
+          workflow: expect.objectContaining({
+            item: 'b',
+            __forEach: {
+              step_for_each: expect.objectContaining({
+                index: 1,
+              }),
+            },
+          }),
+        }),
+      })
+    );
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        stepPath: 'root.steps[0].body.steps[0]',
+        scopes: expect.objectContaining({
+          lexical: [
+            expect.objectContaining({
+              item: 'c',
+              index: 2,
+              isLast: true,
+            }),
+          ],
+          workflow: expect.objectContaining({
+            item: 'c',
+            __forEach: {
+              step_for_each: expect.objectContaining({
+                index: 2,
+              }),
+            },
+          }),
+        }),
+      })
+    );
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_8',
+      status: 'SUCCEEDED',
+    });
+  });
+
+  it('continues within control.forEach item when onItemError is continue', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_9',
+      name: 'forEach onItemError continue',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_for_each',
+          type: 'control.forEach',
+          items: { $expr: 'payload.items' },
+          itemVar: 'step_for_each',
+          onItemError: 'continue',
+          body: [
+            {
+              id: 'step_body_fail',
+              type: 'action.call',
+              config: {
+                actionId: 'ticket.update',
+                version: 1,
+              },
+            },
+            {
+              id: 'step_body_succeed',
+              type: 'action.call',
+              config: {
+                actionId: 'ticket.update',
+                version: 1,
+              },
+            },
+          ],
+        },
+        {
+          id: 'step_return',
+          type: 'control.return',
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: { items: ['x', 'y'] },
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_9',
+          workflowId: 'wf_9',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_9',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    mockActivities.executeWorkflowRuntimeV2ActionStep
+      .mockRejectedValueOnce({
+        category: 'ActionError',
+        message: 'first item failed',
+        nodePath: 'root.steps[0].body.steps[0]',
+        at: '2026-04-08T00:00:00.000Z',
+      })
+      .mockResolvedValueOnce({ output: { ok: true }, saveAsPath: null })
+      .mockRejectedValueOnce({
+        category: 'ActionError',
+        message: 'second item failed',
+        nodePath: 'root.steps[0].body.steps[0]',
+        at: '2026-04-08T00:00:01.000Z',
+      })
+      .mockResolvedValueOnce({ output: { ok: true }, saveAsPath: null });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await workflowRuntimeV2RunWorkflow({
+      runId: 'run_9',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_9',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_9',
+    });
+
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenCalledTimes(4);
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        stepPath: 'root.steps[0].body.steps[1]',
+        scopes: expect.objectContaining({
+          lexical: [expect.objectContaining({ step_for_each: 'x', index: 0 })],
+        }),
+      })
+    );
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenNthCalledWith(
+      4,
+      expect.objectContaining({
+        stepPath: 'root.steps[0].body.steps[1]',
+        scopes: expect.objectContaining({
+          lexical: [expect.objectContaining({ step_for_each: 'y', index: 1 })],
+        }),
+      })
+    );
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_9',
+      status: 'SUCCEEDED',
+    });
+  });
+
+  it('fails control.forEach when onItemError is fail', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_10',
+      name: 'forEach onItemError fail',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_for_each',
+          type: 'control.forEach',
+          items: { $expr: 'payload.items' },
+          itemVar: 'step_for_each',
+          onItemError: 'fail',
+          body: [
+            {
+              id: 'step_body_fail',
+              type: 'action.call',
+              config: {
+                actionId: 'ticket.update',
+                version: 1,
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: { items: ['x'] },
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_10',
+          workflowId: 'wf_10',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_10',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+
+    mockActivities.executeWorkflowRuntimeV2ActionStep.mockRejectedValueOnce({
+      category: 'ActionError',
+      message: 'item failed',
+      nodePath: 'root.steps[0].body.steps[0]',
+      at: '2026-04-08T00:00:00.000Z',
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_10',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_10',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_10',
+    })).rejects.toMatchObject({
+      category: 'ActionError',
+    });
+
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_10',
+      status: 'FAILED',
+    });
+  });
 });

@@ -140,19 +140,19 @@
   {
     "id": "F024",
     "description": "Execute `control.forEach` sequentially in the first Temporal-native release with deterministic item and index progression.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6"]
   },
   {
     "id": "F025",
     "description": "Provide lexical loop locals for `control.forEach`, including the current item and related iteration context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6"]
   },
   {
     "id": "F026",
     "description": "Preserve `control.forEach` `onItemError` continue/fail semantics when executing sequentially.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6"]
   },
   {

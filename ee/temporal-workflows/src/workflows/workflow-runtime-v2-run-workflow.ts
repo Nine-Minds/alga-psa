@@ -1,6 +1,6 @@
 import { continueAsNew, proxyActivities, sleep } from '@temporalio/workflow';
 import type { WorkflowRuntimeV2TemporalRunInput } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
-import type { Expr, IfBlock } from '@alga-psa/workflows/runtime';
+import type { Expr, ForEachBlock, IfBlock } from '@alga-psa/workflows/runtime';
 import type { RetryPolicy, OnErrorPolicy } from '@alga-psa/workflows/runtime';
 import type { TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime';
 import jsonata from 'jsonata';
@@ -155,6 +155,54 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
         continue;
       }
 
+      if (current.step.type === 'control.forEach') {
+        const forEachStep = current.step as ForEachBlock;
+        const resolvedItems = await evaluateDeterministicArrayExpression(forEachStep.items, state.scopes);
+        const hadPrevious = Object.prototype.hasOwnProperty.call(state.scopes.workflow, forEachStep.itemVar);
+        const previous = state.scopes.workflow[forEachStep.itemVar];
+
+        state = setForEachLoopContext(state, {
+          loopId: forEachStep.id,
+          loopContext: {
+            items: resolvedItems,
+            index: 0,
+            itemVar: forEachStep.itemVar,
+            previous,
+            hadPrevious,
+          },
+        });
+        state = advanceWorkflowRuntimeV2InterpreterState(state);
+        if (resolvedItems.length > 0 && forEachStep.body.length > 0) {
+          state = assignToScopePath(state, `vars.${forEachStep.itemVar}`, resolvedItems[0]);
+          state = upsertForEachLexicalScope(state, {
+            loopId: forEachStep.id,
+            itemVar: forEachStep.itemVar,
+            item: resolvedItems[0],
+            index: 0,
+            length: resolvedItems.length,
+          });
+          state = pushWorkflowRuntimeV2SequenceFrame(state, {
+            path: `${current.path}.body.steps`,
+            totalSteps: forEachStep.body.length,
+          });
+        } else {
+          state = clearForEachLoopContext(state, forEachStep.id);
+          state = restoreForEachItemVar(state, forEachStep.itemVar, {
+            previous,
+            hadPrevious,
+          });
+          state = clearForEachLexicalScope(state, forEachStep.id);
+        }
+        await activities.projectWorkflowRuntimeV2StepCompletion({
+          runId: input.runId,
+          stepId: stepProjection.stepId,
+          stepPath: current.path,
+          status: 'SUCCEEDED',
+        });
+        stepCount += 1;
+        continue;
+      }
+
       if (current.step.type === 'action.call') {
         const retryPolicy = resolveStepRetryPolicy(current.step);
         const onErrorPolicy = resolveStepOnErrorPolicy(current.step);
@@ -199,6 +247,7 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
                 errorMessage: runtimeError.message,
               });
               state = advanceWorkflowRuntimeV2InterpreterState(state);
+              state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
               stepCount += 1;
               handledByOnError = true;
               break;
@@ -211,6 +260,7 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
           continue;
         }
         state = advanceWorkflowRuntimeV2InterpreterState(state);
+        state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
         await activities.projectWorkflowRuntimeV2StepCompletion({
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -227,6 +277,7 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
         executionKey: input.executionKey,
       });
       state = advanceWorkflowRuntimeV2InterpreterState(state);
+      state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
       await activities.projectWorkflowRuntimeV2StepCompletion({
         runId: input.runId,
         stepId: stepProjection.stepId,
@@ -280,6 +331,17 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
         continue;
       }
 
+      const forEachContinueState = routeForEachOnItemError({
+        state,
+        definition: pinned.definition,
+        failedStepPath: current.path,
+      });
+      if (forEachContinueState) {
+        state = forEachContinueState;
+        stepCount += 1;
+        continue;
+      }
+
       await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'FAILED' });
       throw runtimeError;
     }
@@ -303,6 +365,16 @@ async function evaluateDeterministicBooleanExpression(expr: Expr, scopes: Workfl
   const value = await evaluateExpression(expr.$expr, expressionContext);
   if (typeof value !== 'boolean') {
     throw new Error('control.if condition must evaluate to a boolean');
+  }
+  return value;
+}
+
+async function evaluateDeterministicArrayExpression(expr: Expr, scopes: WorkflowRuntimeV2ScopeState): Promise<unknown[]> {
+  assertDeterministicExpression(expr.$expr);
+  const expressionContext = buildWorkflowRuntimeV2ExpressionContext(scopes);
+  const value = await evaluateExpression(expr.$expr, expressionContext);
+  if (!Array.isArray(value)) {
+    throw new Error('control.forEach items did not evaluate to an array');
   }
   return value;
 }
@@ -435,6 +507,267 @@ function normalizeExpressionSource(source: string): string {
     /(^|[^.$A-Za-z0-9_])(coalesce|len|toString|append)(?=\s*\()/g,
     (_match, prefix: string, fn: string) => `${prefix}$${fn}`
   );
+}
+
+type ForEachLoopContext = {
+  items: unknown[];
+  index: number;
+  itemVar: string;
+  previous: unknown;
+  hadPrevious: boolean;
+};
+
+type ForEachLexicalScope = Record<string, unknown> & {
+  __loopId: string;
+  item: unknown;
+  index: number;
+  length: number;
+  isFirst: boolean;
+  isLast: boolean;
+};
+
+function getForEachLoopRecord(state: WorkflowRuntimeV2InterpreterState): Record<string, ForEachLoopContext> {
+  const raw = state.scopes.workflow.__forEach;
+  if (!isRecord(raw)) {
+    return {};
+  }
+  const entries = Object.entries(raw);
+  const normalized = entries.filter((entry) => isForEachLoopContext(entry[1]));
+  return Object.fromEntries(normalized) as Record<string, ForEachLoopContext>;
+}
+
+function setForEachLoopContext(
+  state: WorkflowRuntimeV2InterpreterState,
+  input: {
+    loopId: string;
+    loopContext: ForEachLoopContext;
+  }
+): WorkflowRuntimeV2InterpreterState {
+  const loops = getForEachLoopRecord(state);
+  loops[input.loopId] = input.loopContext;
+  return assignToScopePath(state, 'vars.__forEach', loops);
+}
+
+function clearForEachLoopContext(state: WorkflowRuntimeV2InterpreterState, loopId: string): WorkflowRuntimeV2InterpreterState {
+  const loops = getForEachLoopRecord(state);
+  delete loops[loopId];
+  return assignToScopePath(state, 'vars.__forEach', loops);
+}
+
+function restoreForEachItemVar(
+  state: WorkflowRuntimeV2InterpreterState,
+  itemVar: string,
+  previous: { previous: unknown; hadPrevious: boolean }
+): WorkflowRuntimeV2InterpreterState {
+  const workflowScope = cloneRecord(state.scopes.workflow);
+  if (previous.hadPrevious) {
+    workflowScope[itemVar] = previous.previous;
+  } else {
+    delete workflowScope[itemVar];
+  }
+  return {
+    ...state,
+    scopes: {
+      ...state.scopes,
+      workflow: workflowScope,
+    },
+  };
+}
+
+function upsertForEachLexicalScope(
+  state: WorkflowRuntimeV2InterpreterState,
+  input: {
+    loopId: string;
+    itemVar: string;
+    item: unknown;
+    index: number;
+    length: number;
+  }
+): WorkflowRuntimeV2InterpreterState {
+  const lexicalScope: ForEachLexicalScope = {
+    __loopId: input.loopId,
+    [input.itemVar]: input.item,
+    item: input.item,
+    index: input.index,
+    length: input.length,
+    isFirst: input.index === 0,
+    isLast: input.index === input.length - 1,
+  };
+  const lexical = [...state.scopes.lexical];
+  const top = lexical[lexical.length - 1];
+  if (isForEachLexicalScope(top) && top.__loopId === input.loopId) {
+    lexical[lexical.length - 1] = lexicalScope;
+  } else {
+    lexical.push(lexicalScope);
+  }
+
+  return {
+    ...state,
+    scopes: {
+      ...state.scopes,
+      lexical,
+    },
+  };
+}
+
+function clearForEachLexicalScope(state: WorkflowRuntimeV2InterpreterState, loopId: string): WorkflowRuntimeV2InterpreterState {
+  const lexical = [...state.scopes.lexical];
+  const top = lexical[lexical.length - 1];
+  if (isForEachLexicalScope(top) && top.__loopId === loopId) {
+    lexical.pop();
+    return {
+      ...state,
+      scopes: {
+        ...state.scopes,
+        lexical,
+      },
+    };
+  }
+  return state;
+}
+
+function advanceWorkflowRuntimeV2ForEachLoopState(
+  state: WorkflowRuntimeV2InterpreterState,
+  definition: WorkflowDefinition,
+  completedStepPath: string
+): WorkflowRuntimeV2InterpreterState {
+  const loopProgress = resolveCompletedForEachBodyStep(definition, completedStepPath);
+  if (!loopProgress) {
+    return state;
+  }
+
+  const loops = getForEachLoopRecord(state);
+  const loopContext = loops[loopProgress.loopId];
+  if (!loopContext) {
+    throw createInterpreterCorruptionError(
+      `Missing control.forEach context for loop ${loopProgress.loopId} while processing ${completedStepPath}`
+    );
+  }
+  if (loopContext.index >= loopContext.items.length - 1) {
+    let nextState = clearForEachLoopContext(state, loopProgress.loopId);
+    nextState = restoreForEachItemVar(nextState, loopContext.itemVar, {
+      previous: loopContext.previous,
+      hadPrevious: loopContext.hadPrevious,
+    });
+    nextState = clearForEachLexicalScope(nextState, loopProgress.loopId);
+    return nextState;
+  }
+
+  const nextIndex = loopContext.index + 1;
+  const updatedLoopContext: ForEachLoopContext = {
+    ...loopContext,
+    index: nextIndex,
+  };
+
+  let nextState = setForEachLoopContext(state, {
+    loopId: loopProgress.loopId,
+    loopContext: updatedLoopContext,
+  });
+  nextState = assignToScopePath(nextState, `vars.${loopContext.itemVar}`, loopContext.items[nextIndex]);
+  nextState = upsertForEachLexicalScope(nextState, {
+    loopId: loopProgress.loopId,
+    itemVar: loopContext.itemVar,
+    item: loopContext.items[nextIndex],
+    index: nextIndex,
+    length: loopContext.items.length,
+  });
+  nextState = pushWorkflowRuntimeV2SequenceFrame(nextState, {
+    path: loopProgress.bodyPath,
+    totalSteps: loopProgress.bodyLength,
+  });
+  return nextState;
+}
+
+function resolveCompletedForEachBodyStep(
+  definition: WorkflowDefinition,
+  completedStepPath: string
+): {
+  loopId: string;
+  bodyPath: string;
+  bodyLength: number;
+} | null {
+  const match = /^root\.steps\[(\d+)\]\.body\.steps\[(\d+)\](?:\..+)?$/.exec(completedStepPath);
+  if (!match) {
+    return null;
+  }
+  const parentIndex = Number(match[1]);
+  const bodyIndex = Number(match[2]);
+  if (!Number.isInteger(parentIndex) || !Number.isInteger(bodyIndex)) {
+    return null;
+  }
+  const parentStep = definition.steps[parentIndex];
+  if (!parentStep || parentStep.type !== 'control.forEach') {
+    return null;
+  }
+  const forEachStep = parentStep as ForEachBlock;
+  if (bodyIndex !== forEachStep.body.length - 1) {
+    return null;
+  }
+  return {
+    loopId: forEachStep.id,
+    bodyPath: `root.steps[${parentIndex}].body.steps`,
+    bodyLength: forEachStep.body.length,
+  };
+}
+
+function isForEachLoopContext(value: unknown): value is ForEachLoopContext {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return Array.isArray(value.items)
+    && typeof value.index === 'number'
+    && typeof value.itemVar === 'string'
+    && typeof value.hadPrevious === 'boolean';
+}
+
+function isForEachLexicalScope(value: unknown): value is ForEachLexicalScope {
+  return isRecord(value) && typeof value.__loopId === 'string';
+}
+
+function routeForEachOnItemError(input: {
+  state: WorkflowRuntimeV2InterpreterState;
+  definition: WorkflowDefinition;
+  failedStepPath: string;
+}): WorkflowRuntimeV2InterpreterState | null {
+  const forEachPath = resolveForEachPathFromBodyStep(input.failedStepPath);
+  if (!forEachPath) {
+    return null;
+  }
+  const forEachStep = resolveTopLevelForEachStep(input.definition, forEachPath);
+  if (!forEachStep) {
+    return null;
+  }
+  if ((forEachStep.onItemError ?? 'fail') !== 'continue') {
+    return null;
+  }
+
+  let nextState = advanceWorkflowRuntimeV2InterpreterState(input.state);
+  nextState = advanceWorkflowRuntimeV2ForEachLoopState(nextState, input.definition, input.failedStepPath);
+  return nextState;
+}
+
+function resolveForEachPathFromBodyStep(stepPath: string): string | null {
+  const match = /^(root\.steps\[\d+\])\.body\.steps\[\d+\](?:\..+)?$/.exec(stepPath);
+  if (!match) {
+    return null;
+  }
+  return match[1];
+}
+
+function resolveTopLevelForEachStep(definition: WorkflowDefinition, forEachPath: string): ForEachBlock | null {
+  const match = /^root\.steps\[(\d+)\]$/.exec(forEachPath);
+  if (!match) {
+    return null;
+  }
+  const stepIndex = Number(match[1]);
+  if (!Number.isInteger(stepIndex) || stepIndex < 0) {
+    return null;
+  }
+  const step = definition.steps[stepIndex];
+  if (!step || step.type !== 'control.forEach') {
+    return null;
+  }
+  return step as ForEachBlock;
 }
 
 type RuntimeErrorLike = {
