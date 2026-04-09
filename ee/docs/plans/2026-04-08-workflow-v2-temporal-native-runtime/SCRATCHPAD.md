@@ -252,3 +252,52 @@ Rationale:
 
 - `npm --prefix ee/temporal-workflows run type-check`
 - `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts --run`
+
+### F014-F015 completed (deterministic control-flow boundary + dedicated action activity)
+
+- Migrated Temporal-native workflow loop in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - `control.if` is now evaluated in workflow code against interpreter scopes only.
+  - `control.if` explicitly rejects `nowIso()` usage in control-flow decisions to keep replay-safe deterministic behavior.
+  - `action.call` now executes via a dedicated Temporal activity (`executeWorkflowRuntimeV2ActionStep`) instead of through inline deterministic workflow code.
+  - Step-start/step-completion projections are now emitted per interpreted step through dedicated activities.
+- Expanded interpreter frame model in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-interpreter.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-interpreter.ts):
+  - Sequence-frame paths are now generic (not just `root.steps`) so nested branch execution can be represented without DB `node_path` authority.
+  - Added frame push helper for branch sequences.
+- Added activity implementations in [ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts):
+  - `projectWorkflowRuntimeV2StepStart`
+  - `projectWorkflowRuntimeV2StepCompletion`
+  - `executeWorkflowRuntimeV2ActionStep` (resolves input mapping, invokes action registry, writes action invocation ledger rows, and returns output + `saveAs` path)
+
+Rationale:
+- This moves control-flow authority for interpreted branches into deterministic Temporal workflow state while keeping side effects behind activity boundaries.
+- The split keeps workflow code free of DB/network/secret reads and creates a clean seam for later retry/catch semantics work.
+
+### T002 completed
+
+- Added focused interpreter workflow tests in [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts):
+  - straight-line `action.call` then `control.return` with step projection assertions
+  - deterministic `control.if` branch routing
+  - rejection path for non-deterministic `nowIso()` in control decisions
+- Updated interpreter state tests in [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts) for frame-pop completion behavior.
+
+### Validation commands run (this slice)
+
+- `npm --prefix ee/temporal-workflows run type-check`
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
+
+### Gotchas
+
+- Importing runtime value-level helpers from `@alga-psa/workflows/runtime` in workflow tests pulled heavier package dependencies (`@alga-psa/storage`) into vitest resolution. The workflow-level expression evaluation in this slice uses local JSONata wiring to keep Temporal workflow tests isolated.
+
+### F016-F017 completed (action idempotency keying + ledger dedupe)
+
+- Implemented deterministic idempotency key derivation in [ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts):
+  - default key uses stable tuple (`runId`, `stepPath`, `actionId`, `version`, parsed input) via `generateIdempotencyKey(...)`
+  - optional user-provided idempotency expression is still supported
+  - tenant-prefixed key normalization keeps cross-tenant dedupe boundaries explicit
+- Implemented durable invocation-ledger reuse in the same activity:
+  - prior successful invocation for the same idempotency key returns cached validated output
+  - new invocations are persisted as `STARTED` and transitioned to `SUCCEEDED`/`FAILED`
+
+Rationale:
+- This keeps side-effect idempotency in a durable DB ledger while Temporal retry/replay re-enters through deterministic idempotency keys.

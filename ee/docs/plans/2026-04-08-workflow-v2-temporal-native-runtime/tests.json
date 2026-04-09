@@ -14,7 +14,7 @@
   {
     "id": "T002",
     "description": "Temporal interpreter: a straight-line workflow with `action.call` and `control.return` executes deterministically and projects run/step/action completion correctly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F015",

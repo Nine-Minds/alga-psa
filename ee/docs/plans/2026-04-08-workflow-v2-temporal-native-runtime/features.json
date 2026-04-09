@@ -80,25 +80,25 @@
   {
     "id": "F014",
     "description": "Restrict workflow-code control decisions to deterministic inputs only and prevent direct mutable DB, network, or secret reads in workflow code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4", "Security / Permissions"]
   },
   {
     "id": "F015",
     "description": "Execute `action.call` through a dedicated Temporal activity boundary rather than in deterministic workflow code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5"]
   },
   {
     "id": "F016",
     "description": "Compute deterministic action idempotency keys from stable run, step, tenant, and input context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5"]
   },
   {
     "id": "F017",
     "description": "Retain a durable action invocation ledger that suppresses duplicate external side effects and can return cached successful outputs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5", "FR-11"]
   },
   {

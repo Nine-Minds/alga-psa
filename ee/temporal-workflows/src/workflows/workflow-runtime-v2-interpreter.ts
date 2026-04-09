@@ -1,8 +1,8 @@
-import type { Step, WorkflowDefinition } from '@alga-psa/workflows/runtime';
+import type { IfBlock, Step, WorkflowDefinition } from '@alga-psa/workflows/runtime';
 
 export type WorkflowRuntimeV2SequenceFrame = {
   kind: 'sequence';
-  path: 'root.steps';
+  path: string;
   nextIndex: number;
   totalSteps: number;
 };
@@ -24,18 +24,12 @@ export function initializeWorkflowRuntimeV2InterpreterState(input: {
   definition: WorkflowDefinition;
   initialScopes: WorkflowRuntimeV2ScopeState;
 }): WorkflowRuntimeV2InterpreterState {
-  const totalSteps = input.definition.steps.length;
-  const frame: WorkflowRuntimeV2SequenceFrame = {
-    kind: 'sequence',
-    path: 'root.steps',
-    nextIndex: 0,
-    totalSteps,
-  };
+  const frame = createSequenceFrame('root.steps', input.definition.steps.length);
 
   return {
     runId: input.runId,
     frames: [frame],
-    currentStepPath: totalSteps > 0 ? buildRootStepPath(0) : null,
+    currentStepPath: frame.totalSteps > 0 ? buildRootStepPath(0) : null,
     scopes: input.initialScopes,
   };
 }
@@ -46,14 +40,17 @@ export function getWorkflowRuntimeV2CurrentStep(input: {
 }): WorkflowRuntimeV2CurrentStep | null {
   const frame = input.state.frames[input.state.frames.length - 1];
   if (!frame) return null;
-  if (frame.kind !== 'sequence' || frame.path !== 'root.steps') return null;
+  if (frame.kind !== 'sequence') return null;
   if (frame.nextIndex >= frame.totalSteps) return null;
 
-  const step = input.definition.steps[frame.nextIndex];
+  const sequence = resolveSequenceByPath(input.definition, frame.path);
+  if (!sequence) return null;
+
+  const step = sequence[frame.nextIndex];
   if (!step) return null;
 
   return {
-    path: buildRootStepPath(frame.nextIndex),
+    path: buildStepPath(frame.path, frame.nextIndex),
     step,
   };
 }
@@ -61,18 +58,32 @@ export function getWorkflowRuntimeV2CurrentStep(input: {
 export function advanceWorkflowRuntimeV2InterpreterState(
   state: WorkflowRuntimeV2InterpreterState
 ): WorkflowRuntimeV2InterpreterState {
-  const nextFrames = state.frames.map((frame, index) => {
-    if (index !== state.frames.length - 1) return frame;
-    if (frame.kind !== 'sequence' || frame.path !== 'root.steps') return frame;
+  if (state.frames.length === 0) {
     return {
-      ...frame,
-      nextIndex: frame.nextIndex + 1,
+      ...state,
+      currentStepPath: null,
     };
-  });
+  }
+
+  const nextFrames = [...state.frames];
+  const current = nextFrames[nextFrames.length - 1];
+  if (current?.kind === 'sequence') {
+    nextFrames[nextFrames.length - 1] = {
+      ...current,
+      nextIndex: current.nextIndex + 1,
+    };
+  }
+  while (nextFrames.length > 0) {
+    const frame = nextFrames[nextFrames.length - 1];
+    if (frame.kind !== 'sequence' || frame.nextIndex < frame.totalSteps) {
+      break;
+    }
+    nextFrames.pop();
+  }
 
   const currentFrame = nextFrames[nextFrames.length - 1];
   const currentStepPath = currentFrame && currentFrame.nextIndex < currentFrame.totalSteps
-    ? buildRootStepPath(currentFrame.nextIndex)
+    ? buildStepPath(currentFrame.path, currentFrame.nextIndex)
     : null;
 
   return {
@@ -80,6 +91,25 @@ export function advanceWorkflowRuntimeV2InterpreterState(
     frames: nextFrames,
     currentStepPath,
     scopes: state.scopes,
+  };
+}
+
+export function pushWorkflowRuntimeV2SequenceFrame(
+  state: WorkflowRuntimeV2InterpreterState,
+  input: {
+    path: string;
+    totalSteps: number;
+  }
+): WorkflowRuntimeV2InterpreterState {
+  if (input.totalSteps <= 0) {
+    return state;
+  }
+
+  const frame = createSequenceFrame(input.path, input.totalSteps);
+  return {
+    ...state,
+    frames: [...state.frames, frame],
+    currentStepPath: buildStepPath(frame.path, frame.nextIndex),
   };
 }
 
@@ -115,6 +145,48 @@ export function createWorkflowRuntimeV2InterpreterCheckpoint(input: {
 
 function buildRootStepPath(index: number): string {
   return `root.steps[${index}]`;
+}
+
+function buildStepPath(sequencePath: string, index: number): string {
+  if (sequencePath === 'root.steps') {
+    return buildRootStepPath(index);
+  }
+  return `${sequencePath}[${index}]`;
+}
+
+function createSequenceFrame(path: string, totalSteps: number): WorkflowRuntimeV2SequenceFrame {
+  return {
+    kind: 'sequence',
+    path,
+    nextIndex: 0,
+    totalSteps,
+  };
+}
+
+function resolveSequenceByPath(definition: WorkflowDefinition, path: string): Step[] | null {
+  if (path === 'root.steps') {
+    return definition.steps;
+  }
+
+  const branchMatch = /^root\.steps\[(\d+)\]\.(then|else)\.steps$/.exec(path);
+  if (!branchMatch) {
+    return null;
+  }
+
+  const [, rawStepIndex, branchName] = branchMatch;
+  const stepIndex = Number(rawStepIndex);
+  if (!Number.isInteger(stepIndex) || stepIndex < 0) {
+    return null;
+  }
+
+  const parentStep = definition.steps[stepIndex];
+  if (!parentStep || parentStep.type !== 'control.if') {
+    return null;
+  }
+
+  const ifStep = parentStep as IfBlock;
+  const branch = branchName === 'then' ? ifStep.then : (ifStep.else ?? []);
+  return Array.isArray(branch) ? branch : null;
 }
 
 export type WorkflowRuntimeV2ScopeState = {

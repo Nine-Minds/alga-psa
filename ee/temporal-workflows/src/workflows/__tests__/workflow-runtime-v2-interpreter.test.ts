@@ -99,7 +99,7 @@ describe('workflowRuntimeV2Interpreter', () => {
       definition,
     });
 
-    expect(state2.frames[0]?.nextIndex).toBe(2);
+    expect(state2.frames).toEqual([]);
     expect(state2.currentStepPath).toBeNull();
     expect(state2.scopes).toEqual(initialScopes);
     expect(step2).toBeNull();
