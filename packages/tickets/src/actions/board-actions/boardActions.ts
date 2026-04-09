@@ -248,6 +248,43 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
 });
 
 /**
+ * Remove all ticket statuses owned by a board, plus their child rows in
+ * other tables that hold FK references back to `statuses`.
+ *
+ * This bypasses the normal "at least one default status per board"
+ * enforcement because the entire board is going away.  The caller MUST
+ * have already verified that zero tickets reference these statuses.
+ */
+async function cleanupBoardStatuses(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  boardId: string
+): Promise<void> {
+  const statusIds = await trx('statuses')
+    .where({ tenant, board_id: boardId, status_type: 'ticket' })
+    .pluck('status_id');
+
+  if (statusIds.length === 0) return;
+
+  // 1. Clear the board's own FK back to statuses (circular ref)
+  await trx('boards')
+    .where({ tenant, board_id: boardId })
+    .whereIn('inbound_reply_reopen_status_id', statusIds)
+    .update({ inbound_reply_reopen_status_id: null });
+
+  // 2. Remove SLA pause config rows that reference these statuses
+  await trx('status_sla_pause_config')
+    .where({ tenant })
+    .whereIn('status_id', statusIds)
+    .delete();
+
+  // 3. Delete the statuses themselves
+  await trx('statuses')
+    .where({ tenant, board_id: boardId, status_type: 'ticket' })
+    .delete();
+}
+
+/**
  * Delete a board with hasDependencies pattern (like deleteClient).
  *
  * - If board is default → BLOCK
@@ -354,15 +391,38 @@ export const deleteBoard = withAuth(async (
       };
     }
 
+    // 6b. Count board ticket statuses (informational — these are always
+    // auto-cleaned because the "at least one default" rule makes manual
+    // deletion impossible)
+    const statusCountResult = await trx('statuses')
+      .where({ tenant, board_id: boardId, status_type: 'ticket' })
+      .count('status_id as count')
+      .first();
+    const statusCount = Number(statusCountResult?.count || 0);
+
     // 7. If custom board has categories and force=false, prompt for confirmation
     // ITIL categories are shared and handled separately via ITIL cleanup
     if (!isItilCategoryBoard && allCategoryIds.length > 0 && !force) {
+      const statusInfo = statusCount > 0
+        ? ` and ${statusCount} ticket status${statusCount === 1 ? '' : 'es'}`
+        : '';
       return {
         success: false,
         code: 'BOARD_HAS_CATEGORIES',
-        message: `Board has ${allCategoryIds.length} categor${allCategoryIds.length === 1 ? 'y' : 'ies'}. Delete them too?`,
-        dependencies: ['categories'],
-        counts: { categories: allCategoryIds.length }
+        message: `Board has ${allCategoryIds.length} categor${allCategoryIds.length === 1 ? 'y' : 'ies'}${statusInfo}. Delete them too?`,
+        dependencies: ['categories', ...(statusCount > 0 ? ['statuses'] : [])],
+        counts: { categories: allCategoryIds.length, ...(statusCount > 0 ? { statuses: statusCount } : {}) }
+      };
+    }
+
+    // 7b. If board has statuses and user hasn't confirmed, inform them
+    if (!force && statusCount > 0 && allCategoryIds.length === 0) {
+      return {
+        success: false,
+        code: 'BOARD_HAS_STATUSES',
+        message: `Board has ${statusCount} ticket status${statusCount === 1 ? '' : 'es'} that will also be removed.`,
+        dependencies: ['statuses'],
+        counts: { statuses: statusCount }
       };
     }
 
@@ -395,6 +455,11 @@ export const deleteBoard = withAuth(async (
 
     if (!force && !isLastItilBoard && allCategoryIds.length === 0) {
       const result = await deleteEntityWithValidation('board', boardId, db, tenant, async (boardTrx, tenantId) => {
+        // Clean up board statuses (can't be deleted manually due to
+        // "at least one default status" enforcement, safe because
+        // we already confirmed zero tickets above)
+        await cleanupBoardStatuses(boardTrx, tenantId, boardId);
+
         const deletedCount = await boardTrx('boards')
           .where({ tenant: tenantId, board_id: boardId })
           .delete();
@@ -426,12 +491,17 @@ export const deleteBoard = withAuth(async (
         .delete();
     }
 
-    // 10. Delete the board
+    // 10. Clean up board statuses (can't be deleted manually due to
+    // "at least one default status" enforcement, safe because
+    // we already confirmed zero tickets above)
+    await cleanupBoardStatuses(trx, tenant, boardId);
+
+    // 11. Delete the board
     await trx('boards')
       .where({ tenant, board_id: boardId })
       .delete();
 
-    // 11. If last ITIL board and cleanup confirmed, remove unused ITIL data
+    // 12. If last ITIL board and cleanup confirmed, remove unused ITIL data
     let itilCleanupMessage = '';
     if (isLastItilBoard && cleanupItil) {
       const cleanupResult = await ItilStandardsService.cleanupUnusedItilStandards(trx, tenant);

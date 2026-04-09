@@ -439,7 +439,8 @@ const BoardsSettings: React.FC = () => {
       // Handle different error codes
       switch (result.code) {
         case 'BOARD_HAS_CATEGORIES':
-          // Show confirmation dialog to force delete categories
+        case 'BOARD_HAS_STATUSES':
+          // Show confirmation dialog to force delete categories/statuses
           setDeleteDialog({
             ...deleteDialog,
             confirmForce: true,
