@@ -67,7 +67,7 @@
   {
     "id": "T007",
     "description": "Event-ingress test: a stream-ingested workflow event with explicit correlation routes candidate waits by tenant + event name + resolved correlation instead of `event_id`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F021",
@@ -80,7 +80,7 @@
   {
     "id": "T008",
     "description": "Event-ingress test: a stream-ingested workflow event without explicit correlation uses configured derivation to route candidate Temporal waits correctly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F021",
@@ -93,7 +93,7 @@
   {
     "id": "T009",
     "description": "Event-ingress guard test: when correlation cannot be resolved where required, the event is audited clearly and does not false-match candidate waits.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021",

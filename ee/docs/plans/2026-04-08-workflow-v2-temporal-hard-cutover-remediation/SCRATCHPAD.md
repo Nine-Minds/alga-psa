@@ -183,3 +183,49 @@ Parent plan:
   - `cd server && npm run -s test -- src/test/integration/workflowRuntimeV2.control.integration.test.ts -t "Temporal runs reject legacy|Temporal cancel failure|Submit workflow event rejects legacy DB-authoritative resume for Temporal runs"`
   - Result: passed.
 
+
+## Progress — 2026-04-09 (Stream correlation contract)
+
+### Completed scope in this pass
+
+- Extended workflow event stream schema/contracts to carry explicit workflow correlation:
+  - `packages/event-schemas/src/schemas/workflowEventSchema.ts`
+  - `packages/event-bus/src/schemas/workflowEventSchema.ts`
+  - `packages/event-schemas/src/schemas/eventBusSchema.ts` (`WorkflowPublishHooks.correlationKey`, `convertToWorkflowEvent` mapping)
+  - `packages/event-bus/src/eventBus.ts` (publishes `workflow_correlation_key` in stream payload)
+- Updated stream ingestion worker correlation logic:
+  - `services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts`
+  - correlation resolution order:
+    1. explicit (`event.workflow_correlation_key`, `payload.workflowCorrelationKey`, `payload.correlationKey`)
+    2. configured derivation paths from `WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON` (event-specific and `*` wildcard)
+  - no fallback to `event_id` for wait routing
+  - resolved key persisted in `workflow_runtime_events.correlation_key`
+  - wait candidate lookup uses resolved key (`tenant + event_name + resolved correlation`)
+  - Temporal signal payload carries resolved correlation key
+  - unresolved correlation writes audit error metadata and skips wait routing/signaling
+
+### Key decisions and rationale
+
+- Decision: use env-configured derivation paths as the immediate configurable source (`WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON`).
+  - Rationale: provides explicit, event-type-specific derivation without introducing schema migrations in this remediation slice.
+- Decision: fail open for event-triggered workflow launches but fail closed for wait routing when correlation is missing.
+  - Rationale: preserves event-triggered starts while preventing false-positive wait matches.
+
+### Tests added/updated
+
+- Updated `services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts`:
+  - explicit correlation routes candidate waits/signals by resolved key (not `event_id`)
+  - configured derivation from payload path routes correctly
+  - unresolved correlation writes audit error and skips wait-routing/signaling
+
+### Commands / runbook used
+
+- Stream worker unit tests:
+  - `cd services/workflow-worker && npx vitest run src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts`
+  - Result: passed (4 tests).
+
+### Current gaps / next work
+
+- API ingress still needs full correlation-derivation parity and Temporal-signal-only resume path alignment (`F024`, `F025`, `F026`, `F028`, `T010`).
+- Determinism replay test (`F009` / `T003`) and cutover regression/projection tests (`T011`, `T012`) remain open.
+

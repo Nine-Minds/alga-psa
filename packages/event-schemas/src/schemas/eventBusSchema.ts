@@ -1082,6 +1082,7 @@ export type Event =
 
 export type WorkflowPublishHooks = {
   executionId?: string;
+  correlationKey?: string;
   eventName?: string;
   fromState?: string;
   toState?: string;
@@ -1095,6 +1096,9 @@ export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHook
   return {
     event_id: event.id,
     execution_id: hooks?.executionId,
+    workflow_correlation_key: hooks?.correlationKey
+      ?? (typeof event.payload?.workflowCorrelationKey === 'string' ? event.payload.workflowCorrelationKey : undefined)
+      ?? (typeof event.payload?.correlationKey === 'string' ? event.payload.correlationKey : undefined),
     event_name: hooks?.eventName ?? event.payload?.eventName ?? event.eventType,
     event_type: event.eventType,
     tenant: event.payload?.tenantId || '',

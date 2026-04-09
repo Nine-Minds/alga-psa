@@ -21,6 +21,12 @@ type WorkerConfig = {
   batchSize: number;
 };
 
+type CorrelationResolution = {
+  key: string | null;
+  source: 'explicit' | 'derived' | 'missing';
+  detail: string;
+};
+
 export class WorkflowRuntimeV2EventStreamWorker {
   private readonly workerId: string;
   private readonly config: WorkerConfig;
@@ -129,6 +135,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
     });
 
     const payload = (event.payload && typeof event.payload === 'object' ? event.payload : {}) as Record<string, unknown>;
+    const correlation = this.resolveCorrelationKey(event, payload);
 
     logger.debug('[WorkflowRuntimeV2EventStreamWorker] Resolved payload schema ref', {
       workerId: this.workerId,
@@ -136,48 +143,69 @@ export class WorkflowRuntimeV2EventStreamWorker {
       eventType: event.event_type,
       tenant: event.tenant,
       payloadSchemaRef,
+      correlationKey: correlation.key,
+      correlationSource: correlation.source,
+      correlationDetail: correlation.detail,
     });
 
     const eventRecord = await WorkflowRuntimeEventModelV2.create(knex, {
       event_id: event.event_id,
       tenant_id: event.tenant,
       event_name: event.event_type,
-      correlation_key: event.event_id,
+      correlation_key: correlation.key,
       payload,
       payload_schema_ref: payloadSchemaRef,
       processed_at: processedAt,
     });
 
-    const candidateWaits = await WorkflowRunWaitModelV2.listEventWaitCandidates(
-      knex,
-      event.event_type,
-      event.event_id,
-      event.tenant,
-      ['event']
-    );
     const signaledRuns = new Set<string>();
-    for (const wait of candidateWaits) {
-      try {
-        await signalWorkflowRuntimeV2Event({
-          runId: wait.run_id,
-          eventId: event.event_id,
-          eventName: event.event_type,
-          correlationKey: event.event_id,
-          payload,
-          receivedAt: processedAt,
-        });
-        signaledRuns.add(wait.run_id);
-      } catch (error) {
-        logger.warn('[WorkflowRuntimeV2EventStreamWorker] Failed to signal candidate run', {
+    if (correlation.key) {
+      const candidateWaits = await WorkflowRunWaitModelV2.listEventWaitCandidates(
+        knex,
+        event.event_type,
+        correlation.key,
+        event.tenant,
+        ['event']
+      );
+      for (const wait of candidateWaits) {
+        try {
+          await signalWorkflowRuntimeV2Event({
+            runId: wait.run_id,
+            eventId: event.event_id,
+            eventName: event.event_type,
+            correlationKey: correlation.key,
+            payload,
+            receivedAt: processedAt,
+          });
+          signaledRuns.add(wait.run_id);
+        } catch (error) {
+          logger.warn('[WorkflowRuntimeV2EventStreamWorker] Failed to signal candidate run', {
+            workerId: this.workerId,
+            runId: wait.run_id,
+            waitId: wait.wait_id,
+            eventId: event.event_id,
+            eventType: event.event_type,
+            tenant: event.tenant,
+            correlationKey: correlation.key,
+            error,
+          });
+        }
+      }
+    } else {
+      const correlationError = `Missing workflow correlation key (${correlation.detail})`;
+      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
+        error_message: correlationError,
+        processed_at: processedAt,
+      });
+      logger.warn('[WorkflowRuntimeV2EventStreamWorker] Correlation key unresolved; skipping wait routing', {
           workerId: this.workerId,
-          runId: wait.run_id,
-          waitId: wait.wait_id,
           eventId: event.event_id,
           eventType: event.event_type,
           tenant: event.tenant,
-          error,
-        });
-      }
+          correlationSource: correlation.source,
+          correlationDetail: correlation.detail,
+        }
+      );
     }
 
     const schemaRegistry = getSchemaRegistry();
@@ -279,6 +307,95 @@ export class WorkflowRuntimeV2EventStreamWorker {
     }
   }
 
+  private resolveCorrelationKey(
+    event: {
+      event_type: string;
+      event_id: string;
+      workflow_correlation_key?: string | null;
+    },
+    payload: Record<string, unknown>
+  ): CorrelationResolution {
+    const explicit = this.resolveExplicitCorrelation(event, payload);
+    if (explicit) {
+      return {
+        key: explicit,
+        source: 'explicit',
+        detail: 'event.workflow_correlation_key|payload.workflowCorrelationKey|payload.correlationKey'
+      };
+    }
+
+    const derived = this.resolveDerivedCorrelation(event.event_type, payload);
+    if (derived) {
+      return {
+        key: derived.value,
+        source: 'derived',
+        detail: `path:${derived.path}`
+      };
+    }
+
+    return {
+      key: null,
+      source: 'missing',
+      detail: 'no explicit key and no configured derivation path produced a value'
+    };
+  }
+
+  private resolveExplicitCorrelation(
+    event: { workflow_correlation_key?: string | null },
+    payload: Record<string, unknown>
+  ): string | null {
+    const fromEvent = typeof event.workflow_correlation_key === 'string'
+      ? event.workflow_correlation_key.trim()
+      : '';
+    if (fromEvent) return fromEvent;
+
+    const workflowCorrelationKey = payload.workflowCorrelationKey;
+    if (typeof workflowCorrelationKey === 'string' && workflowCorrelationKey.trim()) {
+      return workflowCorrelationKey.trim();
+    }
+
+    const correlationKey = payload.correlationKey;
+    if (typeof correlationKey === 'string' && correlationKey.trim()) {
+      return correlationKey.trim();
+    }
+
+    return null;
+  }
+
+  private resolveDerivedCorrelation(
+    eventType: string,
+    payload: Record<string, unknown>
+  ): { value: string; path: string } | null {
+    const configuredPaths = this.getConfiguredCorrelationPaths(eventType);
+    for (const path of configuredPaths) {
+      const value = readDottedValue(payload, path);
+      if (value === null || value === undefined) continue;
+      const asString = String(value).trim();
+      if (!asString) continue;
+      return { value: asString, path };
+    }
+    return null;
+  }
+
+  private getConfiguredCorrelationPaths(eventType: string): string[] {
+    const raw = process.env.WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON;
+    if (!raw) return [];
+
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      const eventPaths = parsed[eventType];
+      const wildcardPaths = parsed['*'];
+      return normalizePathConfig(eventPaths).concat(normalizePathConfig(wildcardPaths));
+    } catch (error) {
+      logger.warn('[WorkflowRuntimeV2EventStreamWorker] Failed to parse correlation derivation config', {
+        workerId: this.workerId,
+        eventType,
+        error,
+      });
+      return [];
+    }
+  }
+
   private async getPayloadSchemaRefForEvent(
     knexOrTrx: Knex | Knex.Transaction,
     opts: { tenantId: string; eventType: string }
@@ -298,4 +415,29 @@ export class WorkflowRuntimeV2EventStreamWorker {
 
     return systemRow && typeof (systemRow as any).payload_schema_ref === 'string' ? String((systemRow as any).payload_schema_ref) : null;
   }
+}
+
+function normalizePathConfig(value: unknown): string[] {
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function readDottedValue(input: Record<string, unknown>, dottedPath: string): unknown {
+  const path = dottedPath.split('.').filter(Boolean);
+  let cursor: unknown = input;
+  for (const segment of path) {
+    if (!cursor || typeof cursor !== 'object' || Array.isArray(cursor)) {
+      return undefined;
+    }
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+  return cursor;
 }

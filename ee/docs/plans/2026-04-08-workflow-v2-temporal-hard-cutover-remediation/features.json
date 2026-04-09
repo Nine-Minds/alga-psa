@@ -149,7 +149,7 @@
   {
     "id": "F018",
     "description": "Extend workflow event ingress to accept an explicit workflow correlation field distinct from `event_id`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]
@@ -157,7 +157,7 @@
   {
     "id": "F019",
     "description": "Define configured correlation-derivation rules for workflow event ingress when explicit correlation is absent.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5",
       "Open Questions"
@@ -166,7 +166,7 @@
   {
     "id": "F020",
     "description": "Fail clearly when event ingress cannot resolve a workflow correlation key from either explicit input or configured derivation where one is required.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5",
       "Risks"
@@ -175,7 +175,7 @@
   {
     "id": "F021",
     "description": "Persist the resolved workflow correlation key on ingested workflow-event audit records for debugging and supportability.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5",
       "FR-8"
@@ -184,7 +184,7 @@
   {
     "id": "F022",
     "description": "Use the resolved workflow correlation key rather than `event_id` when selecting candidate waiting runs for Temporal event routing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5",
       "FR-6"
@@ -193,7 +193,7 @@
   {
     "id": "F023",
     "description": "Carry the resolved workflow correlation key into Temporal signal payloads for event.wait evaluation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5",
       "FR-6"
@@ -228,7 +228,7 @@
   {
     "id": "F027",
     "description": "Preserve tenant + event name + resolved correlation as the minimum routing key for candidate Temporal waits.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5",
       "Non-functional Requirements"

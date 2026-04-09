@@ -127,6 +127,7 @@ const knexMock: any = (table: string) => {
 
 describe('WorkflowRuntimeV2EventStreamWorker', () => {
   beforeEach(() => {
+    delete process.env.WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON;
     registeredConsumer = null;
 
     redisInitializeMock.mockReset();
@@ -202,6 +203,7 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     await registeredConsumer?.({
       event_id: 'event-1',
       event_type: 'PING',
+      workflow_correlation_key: 'corr-1',
       tenant: 'tenant-1',
       payload: { foo: 'bar' }
     });
@@ -212,7 +214,7 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         event_id: 'event-1',
         tenant_id: 'tenant-1',
         event_name: 'PING',
-        correlation_key: 'event-1',
+        correlation_key: 'corr-1',
         payload: { foo: 'bar' },
         payload_schema_ref: 'payload.WorkflowEvent.v1'
       })
@@ -240,7 +242,7 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     expect(workflowRunWaitListEventWaitCandidatesMock).toHaveBeenCalledWith(
       knexMock,
       'PING',
-      'event-1',
+      'corr-1',
       'tenant-1',
       ['event']
     );
@@ -251,6 +253,7 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         runId: 'run-wait-1',
         eventId: 'event-1',
         eventName: 'PING',
+        correlationKey: 'corr-1',
       })
     );
     expect(signalWorkflowRuntimeV2EventMock).toHaveBeenNthCalledWith(
@@ -259,6 +262,7 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         runId: 'run-wait-2',
         eventId: 'event-1',
         eventName: 'PING',
+        correlationKey: 'corr-1',
       })
     );
 
@@ -275,6 +279,7 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     await registeredConsumer?.({
       event_id: 'event-1',
       event_type: 'PING',
+      workflow_correlation_key: 'corr-1',
       tenant: 'tenant-1',
       payload: { foo: 'bar' }
     });
@@ -282,5 +287,70 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     expect(workflowRuntimeEventCreateMock).not.toHaveBeenCalled();
     expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
     expect(signalWorkflowRuntimeV2EventMock).not.toHaveBeenCalled();
+  });
+
+  it('derives correlation key from configured payload paths when explicit key is absent', async () => {
+    process.env.WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON = JSON.stringify({
+      PING: ['ticket.id']
+    });
+
+    const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+    await worker.start();
+
+    await registeredConsumer?.({
+      event_id: 'event-2',
+      event_type: 'PING',
+      tenant: 'tenant-1',
+      payload: { ticket: { id: 'ticket-42' } }
+    });
+
+    expect(workflowRuntimeEventCreateMock).toHaveBeenCalledWith(
+      knexMock,
+      expect.objectContaining({
+        event_id: 'event-2',
+        correlation_key: 'ticket-42'
+      })
+    );
+    expect(workflowRunWaitListEventWaitCandidatesMock).toHaveBeenCalledWith(
+      knexMock,
+      'PING',
+      'ticket-42',
+      'tenant-1',
+      ['event']
+    );
+    expect(signalWorkflowRuntimeV2EventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventId: 'event-2',
+        correlationKey: 'ticket-42'
+      })
+    );
+  });
+
+  it('records a clear audit error and skips wait routing when correlation cannot be resolved', async () => {
+    process.env.WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON = JSON.stringify({
+      PING: ['ticket.id']
+    });
+    workflowDefinitionListMock.mockResolvedValue([]);
+    workflowRuntimeEventCreateMock.mockResolvedValue({ event_id: 'event-3' });
+
+    const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+    await worker.start();
+
+    await registeredConsumer?.({
+      event_id: 'event-3',
+      event_type: 'PING',
+      tenant: 'tenant-1',
+      payload: { foo: 'bar' }
+    });
+
+    expect(workflowRunWaitListEventWaitCandidatesMock).not.toHaveBeenCalled();
+    expect(signalWorkflowRuntimeV2EventMock).not.toHaveBeenCalled();
+    expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
+      knexMock,
+      'event-3',
+      expect.objectContaining({
+        error_message: expect.stringContaining('Missing workflow correlation key')
+      })
+    );
   });
 });
