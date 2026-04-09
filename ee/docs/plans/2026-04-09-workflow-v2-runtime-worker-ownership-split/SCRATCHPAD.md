@@ -306,3 +306,20 @@ That exposed two separate but related issues:
 - `temporal-worker` startup validation reaches DB checks but fails with:
   - `password authentication failed for user "app_user"`
 - Because of these unresolved startup/runtime issues, `F029` / `T009` / `T011` remain unverified.
+
+## Implementation log (2026-04-09, runtime packaging follow-up 2)
+
+### Additional runtime fixes applied
+- `packages/types/tsup.config.ts`
+  - Enabled `addJsExtensions: true` so `dist/index.js` and internal imports emit explicit `.js` specifiers for Node ESM.
+- `packages/validation/tsup.config.ts`
+  - Enabled `addJsExtensions: true` preemptively for the same worker-runtime ESM compatibility reason.
+
+### New high-signal failure observed after core fix
+- Worker startup advanced further but then failed on:
+  - `Cannot find module '/app/packages/types/dist/lib/attributes' imported from /app/packages/types/dist/index.js`
+- This confirmed the same extensionless-import class of failure now affected `@alga-psa/types`; fix above addresses that class.
+
+### Verification state after this follow-up
+- Full `F029/T009/T011` end-to-end acceptance is still not closed in this session.
+- Latest blocker remains compose-heavy verification reliability (long build/start cycles and repeated project/port churn), with worker now moving through successive package-resolution failures as runtime packaging is hardened.
