@@ -1,0 +1,90 @@
+[
+  {
+    "id": "T001",
+    "description": "Bootstrap integration: fresh appliance bootstrap generates exactly one claim token, stores it in the expected Kubernetes Secret, and prints a claim URL using the configured app URL.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration (happy path): appliance claim token verification accepts a valid unexpired token by comparing against stored token hash.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F005",
+      "F009"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration (guard cases): expired, already-claimed, or unknown appliance claim tokens are rejected without mutating appliance state.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F009",
+      "F020"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Server integration: appliance claim completion is blocked when appliance mode is disabled or when an MSP admin already exists.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F012"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed integration (happy path): redeeming a valid claim token on a fresh appliance creates the minimum tenant record(s), tenant settings, first MSP user, and MSP Admin role assignment in one successful flow.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F014",
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed integration (race/guard): two redemption attempts for the same token result in only one created initial admin and one claimed token state.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F020"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "UI route test: `/auth/appliance-claim` shows the claim form for a valid token and a clear terminal error state for invalid or already-used tokens.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Auth integration: a successful claim produces a valid MSP session and redirects the created admin to `/msp/onboarding`.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Manual appliance smoke test: operator can retrieve the claim token from the Kubernetes Secret after bootstrap output is lost and still complete the first-admin claim flow successfully.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F021"
+    ]
+  }
+]

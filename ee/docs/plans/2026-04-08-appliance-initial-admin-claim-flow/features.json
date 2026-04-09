@@ -1,0 +1,191 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a non-tenant-scoped appliance claim state record that stores token hash, expiry, and claim completion metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Generate a cryptographically strong one-time appliance claim token during fresh appliance bootstrap.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Persist the raw appliance claim token in a Kubernetes Secret for operator retrieval.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Print a usable appliance claim URL during bootstrap output using the configured appliance app URL.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Persist only the hashed claim token in application state and never the raw token.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Ensure recover-mode bootstrap does not mint or expose a new claim token for an already-claimed appliance.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Add a dedicated `/auth/appliance-claim` route that is distinct from public registration and client portal setup.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Gate the appliance claim route so it only functions in appliance mode while the appliance is still unclaimed.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Add server-side token verification that checks hash match, expiry, unused state, and overall appliance unclaimed state.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Render an appliance claim form that collects full name, work email, organization name, password, and password confirmation.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Show explicit invalid-state UI for missing, invalid, expired, already-used, or already-claimed token scenarios.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Block claim completion if a first MSP admin already exists, even if a stale token is presented.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Create the minimum tenant row required for MSP auth/onboarding if no tenant exists yet during claim completion.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Create the tenant-scoped settings/bootstrap state required for `/msp` layout and onboarding checks to load after claim.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Create the first internal MSP user with local email/password credentials by reusing existing user creation and password hashing logic.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Assign the created first user to the MSP `Admin` role or equivalent existing highest-privilege default role.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Consume the claim token atomically with tenant/user creation so concurrent redemptions cannot create duplicate initial admins.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Establish a normal authenticated MSP session immediately after successful claim.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Redirect successful claim completion to `/msp/onboarding` instead of leaving the user on a terminal success page.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Disable first-user creation through the claim route after the appliance has been claimed once.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Document the operator retrieval flow for the claim token from the Kubernetes Secret in appliance docs/runbooks.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Rollout / Migration"
+    ]
+  }
+]
