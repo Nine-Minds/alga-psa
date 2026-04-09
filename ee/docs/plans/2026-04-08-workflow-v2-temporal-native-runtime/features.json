@@ -182,7 +182,7 @@
   {
     "id": "F031",
     "description": "Map child workflow outputs back into the parent scope through the existing output-mapping semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7"]
   },
   {

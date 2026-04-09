@@ -469,3 +469,25 @@ Validation commands (this checkpoint):
 - `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
 - `npm --prefix ee/temporal-workflows run type-check`
 - `npm --prefix shared run typecheck`
+
+### F031 + T027 completed (child output mapping semantics)
+
+- Extended Temporal runtime workflow return contract in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - interpreter workflow now returns final scope state (`WorkflowRuntimeV2RunWorkflowResult`) for child-call consumers
+- Implemented `control.callWorkflow` output mapping in parent interpreter:
+  - after `executeChild(...)`, parent evaluates `outputMapping` expressions against a `childRun` context containing child `payload`, `vars`, `local`, and `meta/system` fields
+  - mapping assignments are applied using the same scoped assignment-path behavior (`vars.*`, `payload.*`, pointer/default handling)
+- Updated child workflow unit coverage in [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts):
+  - verifies mapped child values are visible in subsequent parent steps
+
+Rationale:
+- This preserves authored DSL semantics where `control.callWorkflow` output mappings are expression-driven and assigned back into parent workflow scope, while keeping execution authority in Temporal.
+
+Plan bookkeeping updates:
+- Marked `F031` implemented.
+- Added `T027` (implemented:true) for explicit child-output-mapping runtime coverage.
+- Kept `T008` pending for broader integration/projection assertions (`F054`) beyond this interpreter unit slice.
+
+Validation commands (this checkpoint):
+- `npm --prefix ee/temporal-workflows run type-check`
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`

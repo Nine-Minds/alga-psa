@@ -938,6 +938,17 @@ describe('workflowRuntimeV2RunWorkflow', () => {
           inputMapping: {
             ticketId: { $expr: 'payload.ticketId' },
           },
+          outputMapping: {
+            'vars.childTicketId': { $expr: 'childRun.vars.ticketId' },
+          },
+        },
+        {
+          id: 'step_after_child',
+          type: 'action.call',
+          config: {
+            actionId: 'ticket.update',
+            version: 1,
+          },
         },
         {
           id: 'step_return',
@@ -968,10 +979,28 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       rootRunId: 'run_11',
       temporalWorkflowId: 'workflow-runtime-v2:run:child-run-11',
     });
+    mockActivities.executeWorkflowRuntimeV2ActionStep.mockResolvedValue({
+      output: { ok: true },
+      saveAsPath: null,
+    });
 
     const temporalWorkflow = await import('@temporalio/workflow');
     const executeChildMock = vi.mocked(temporalWorkflow.executeChild);
-    executeChildMock.mockResolvedValueOnce(undefined);
+    executeChildMock.mockResolvedValueOnce({
+      scopes: {
+        payload: {},
+        workflow: { ticketId: 't_child_11' },
+        lexical: [],
+        system: {
+          runId: 'child-run-11',
+          workflowId: 'wf_child',
+          workflowVersion: 7,
+          tenantId: 'tenant_1',
+          definitionHash: 'child-hash-11',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
 
     const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
 
@@ -996,6 +1025,16 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       })
     );
     expect(executeChildMock).toHaveBeenCalledTimes(1);
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stepPath: 'root.steps[1]',
+        scopes: expect.objectContaining({
+          workflow: expect.objectContaining({
+            childTicketId: 't_child_11',
+          }),
+        }),
+      })
+    );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_11',
       status: 'SUCCEEDED',

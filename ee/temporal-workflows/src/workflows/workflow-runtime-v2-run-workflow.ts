@@ -78,7 +78,13 @@ type WorkflowRuntimeV2RunWorkflowInput = WorkflowRuntimeV2TemporalRunInput & {
   checkpoint?: WorkflowRuntimeV2InterpreterCheckpoint;
 };
 
-export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWorkflowInput): Promise<void> {
+export type WorkflowRuntimeV2RunWorkflowResult = {
+  scopes: WorkflowRuntimeV2ScopeState;
+};
+
+export async function workflowRuntimeV2RunWorkflow(
+  input: WorkflowRuntimeV2RunWorkflowInput
+): Promise<WorkflowRuntimeV2RunWorkflowResult> {
   const pinned = await activities.loadWorkflowRuntimeV2PinnedDefinition({
     runId: input.runId,
     workflowId: input.workflowId,
@@ -108,7 +114,9 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
         throw corruptionError;
       }
       await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'SUCCEEDED' });
-      return;
+      return {
+        scopes: state.scopes,
+      };
     }
 
     state = {
@@ -131,7 +139,9 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
           status: 'SUCCEEDED',
         });
         await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'SUCCEEDED' });
-        return;
+        return {
+          scopes: state.scopes,
+        };
       }
 
       if (current.step.type === 'control.if') {
@@ -223,6 +233,7 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
           workflowId: string;
           workflowVersion: number;
           inputMapping?: Record<string, Expr>;
+          outputMapping?: Record<string, Expr>;
         };
         const childPayload = await evaluateExpressionMapping(
           callWorkflowStep.inputMapping ?? {},
@@ -238,7 +249,7 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
         });
 
         try {
-          await executeChild(workflowRuntimeV2RunWorkflow, {
+          const childResult = await executeChild(workflowRuntimeV2RunWorkflow, {
             workflowId: childStart.temporalWorkflowId,
             taskQueue: WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
             args: [{
@@ -250,6 +261,9 @@ export async function workflowRuntimeV2RunWorkflow(input: WorkflowRuntimeV2RunWo
               executionKey: `${input.executionKey}:child:${childStart.childRunId}`,
             }],
           });
+          if (callWorkflowStep.outputMapping) {
+            state = await applyCallWorkflowOutputMapping(state, callWorkflowStep.outputMapping, childResult.scopes);
+          }
         } catch (error) {
           throw createChildWorkflowRuntimeError(current.path, {
             workflowId: callWorkflowStep.workflowId,
@@ -457,6 +471,38 @@ async function evaluateExpressionMapping(
     return [key, await evaluateExpression(value.$expr, context)] as const;
   }));
   return Object.fromEntries(entries);
+}
+
+async function applyCallWorkflowOutputMapping(
+  parentState: WorkflowRuntimeV2InterpreterState,
+  outputMapping: Record<string, Expr>,
+  childScopes: WorkflowRuntimeV2ScopeState
+): Promise<WorkflowRuntimeV2InterpreterState> {
+  let state = parentState;
+  const context = {
+    ...buildWorkflowRuntimeV2ExpressionContext(parentState.scopes),
+    childRun: {
+      payload: childScopes.payload,
+      vars: childScopes.workflow,
+      local: childScopes.lexical[childScopes.lexical.length - 1] ?? {},
+      system: childScopes.system,
+      meta: {
+        runId: childScopes.system.runId,
+        workflowId: childScopes.system.workflowId,
+        workflowVersion: childScopes.system.workflowVersion,
+        tenantId: childScopes.system.tenantId,
+        definitionHash: childScopes.system.definitionHash,
+        runtimeSemanticsVersion: childScopes.system.runtimeSemanticsVersion,
+      },
+    },
+  };
+
+  for (const [path, expr] of Object.entries(outputMapping)) {
+    const value = await evaluateExpression(expr.$expr, context);
+    state = assignToScopePath(state, path, value);
+  }
+
+  return state;
 }
 
 function assertDeterministicExpression(source: string): void {

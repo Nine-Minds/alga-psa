@@ -267,5 +267,13 @@
       "F029",
       "F030"
     ]
+  },
+  {
+    "id": "T027",
+    "description": "Temporal interpreter: `control.callWorkflow` output mapping evaluates against child-run scopes and writes mapped values into parent workflow scope.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
   }
 ]
