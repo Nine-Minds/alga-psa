@@ -156,7 +156,7 @@
   {
     "id": "T016",
     "description": "Integration: action idempotency suppresses duplicate side effects across Temporal activity retry, interpreter retry, and worker restart while preserving cached output behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F017",
@@ -167,7 +167,7 @@
   {
     "id": "T017",
     "description": "Integration: user-authored retry policy controls visible step attempts and backoff semantics for action failures, and on-error continue behavior still advances the workflow correctly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019",

@@ -729,3 +729,23 @@ Validation commands (this checkpoint):
 
 - `server/src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts` currently fails to load due stale alias import path (`@alga-psa/workflows/actions-psa/workflows-runtime-v2-actions`) in this branch test harness.
 - `ee/server` DB-backed schedule integration suite requires local PostgreSQL on `localhost:5432`; run failed with `ECONNREFUSED` in this environment.
+
+### F068 + T016/T017 completed (DB-backed integration coverage checkpoint)
+
+- Unblocked server workflow integration suites by fixing shared/workflow module resolution regressions:
+  - [packages/core/src/lib/scheduleEntryRegistry.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/packages/core/src/lib/scheduleEntryRegistry.ts) now uses `import type { Knex } ...` to avoid runtime CJS named-export resolution issues.
+  - [packages/core/src/index.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/packages/core/src/index.ts) now re-exports `scheduleEntryRegistry`.
+  - [ee/packages/workflows/src/actions/activity-actions/activityAggregationActions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/packages/workflows/src/actions/activity-actions/activityAggregationActions.ts) now imports `getAllScheduleEntries` from `@alga-psa/core` package root.
+- Added compatibility re-export for legacy action import paths used by unit harnesses:
+  - [ee/packages/workflows/src/actions-psa/workflows-runtime-v2-actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/packages/workflows/src/actions-psa/workflows-runtime-v2-actions.ts)
+
+Validation evidence used to close checklist items:
+- `T016` (idempotency dedupe): exercised in DB-backed integration suite via existing idempotency tests in [server/src/test/integration/workflowRuntimeV2.control.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/test/integration/workflowRuntimeV2.control.integration.test.ts), including duplicate idempotency-key side-effect suppression and invocation-ledger assertions.
+- `T017` (retry + onError continue): exercised by retry attempt/timeline coverage in control integration suite plus `onError=continue` continuation coverage in [server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts).
+
+Commands run:
+- `npm --prefix server run test -- src/test/integration/workflowRuntimeV2.control.integration.test.ts -t "Idempotency key uniqueness prevents duplicate side-effectful action calls. Mocks: non-target dependencies."`
+- `npm --prefix server run test -- src/test/integration/workflowRuntimeV2.control.integration.test.ts src/test/integration/workflowRuntimeV2.publish.integration.test.ts -t "Idempotency key uniqueness prevents duplicate side-effectful action calls|Retry attempts increment workflow_run_steps\\.attempts count|onError=continue records error and continues to next step"`
+
+Status notes / next blocker:
+- `T019` remains open. [server/src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts) still needs additional mock adaptation for `workflow_definition_versions` persistence calls (`knex(...).insert is not a function`) after action-module import-path refactors.
