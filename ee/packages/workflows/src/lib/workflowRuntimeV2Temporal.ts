@@ -75,3 +75,24 @@ export async function signalWorkflowRuntimeV2Event(input: {
     await connection.close().catch(() => undefined);
   }
 }
+
+export async function cancelWorkflowRuntimeV2TemporalRun(input: {
+  runId: string;
+}): Promise<void> {
+  const temporal = await import('@temporalio/client');
+  const connection = await temporal.Connection.connect({
+    address: process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS,
+  });
+  const client = new temporal.Client({
+    connection,
+    namespace: process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE,
+  });
+
+  const temporalWorkflowId = `workflow-runtime-v2:run:${input.runId}`;
+  try {
+    const handle = client.workflow.getHandle(temporalWorkflowId);
+    await handle.cancel();
+  } finally {
+    await connection.close().catch(() => undefined);
+  }
+}

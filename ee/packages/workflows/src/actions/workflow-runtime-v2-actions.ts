@@ -61,6 +61,7 @@ import {
   launchPublishedWorkflowRun,
   recordFailedWorkflowRunLaunch
 } from '../lib/workflowRunLauncher';
+import { cancelWorkflowRuntimeV2TemporalRun } from '../lib/workflowRuntimeV2Temporal';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
   CreateWorkflowDefinitionInput,
@@ -2626,6 +2627,11 @@ export const cancelWorkflowRunAction = withAuth(async (user, { tenant }, input: 
   await requireWorkflowPermission(user, 'admin', knex);
 
   const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
+  if (runRecord.engine === 'temporal') {
+    await cancelWorkflowRuntimeV2TemporalRun({
+      runId: parsed.runId,
+    }).catch(() => undefined);
+  }
 
   await WorkflowRunModelV2.update(knex, parsed.runId, {
     status: 'CANCELED',

@@ -623,3 +623,22 @@ Plan bookkeeping updates:
 Validation commands (this checkpoint):
 - `npm --prefix ee/packages/workflows run typecheck`
 - `cd services/workflow-worker && npx vitest src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts --run`
+
+### F061 completed (Temporal cancel path from operator controls)
+
+- Added Temporal cancel helper in [ee/packages/workflows/src/lib/workflowRuntimeV2Temporal.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/packages/workflows/src/lib/workflowRuntimeV2Temporal.ts):
+  - `cancelWorkflowRuntimeV2TemporalRun(...)` resolves run workflow ID and issues Temporal `handle.cancel()`.
+- Updated operator cancel action in [ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts):
+  - when a run is Temporal-backed (`engine=temporal`), cancellation is sent to Temporal before projection updates.
+  - existing DB projection updates/logging/audit remain for product/API surfaces.
+
+Rationale:
+- Cancellation authority now targets Temporal execution directly for Temporal runs, allowing native child-workflow cancellation propagation semantics to apply.
+
+Plan bookkeeping updates:
+- Marked `F061` implemented.
+- Kept `T025` pending for explicit child-cancellation propagation test coverage.
+
+Validation commands (this checkpoint):
+- `npm --prefix ee/packages/workflows run typecheck`
+- `npm --prefix ee/temporal-workflows run type-check`

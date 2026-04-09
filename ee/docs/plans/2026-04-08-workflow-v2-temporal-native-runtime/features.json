@@ -362,7 +362,7 @@
   {
     "id": "F061",
     "description": "Support run cancellation in the Temporal-native runtime and propagate cancellation appropriately to active child workflows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-12"]
   },
   {
