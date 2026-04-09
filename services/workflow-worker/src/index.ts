@@ -49,13 +49,21 @@ async function startServices() {
     const runtimeV2EventWorkerId = `runtime-v2-events-${Date.now()}`;
     const runtimeV2Worker = new WorkflowRuntimeV2Worker(runtimeV2WorkerId);
     const runtimeV2EventWorker = new WorkflowRuntimeV2EventStreamWorker(runtimeV2EventWorkerId);
+    const enableDbPollingWorker =
+      process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING === 'true'
+      || process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING === '1';
     logger.info('[WorkflowWorker] Starting runtime v2 workers', {
       runtimeV2WorkerId,
       runtimeV2EventWorkerId,
       consumerGroup: process.env.WORKFLOW_RUNTIME_V2_EVENT_CONSUMER_GROUP ?? 'workflow-runtime-v2',
+      enableDbPollingWorker,
     });
-
-    await Promise.all([runtimeV2Worker.start(), runtimeV2EventWorker.start()]);
+    await runtimeV2EventWorker.start();
+    if (enableDbPollingWorker) {
+      await runtimeV2Worker.start();
+    } else {
+      logger.info('[WorkflowWorker] DB polling runtime worker disabled; Temporal-native runtime is authoritative for new runs');
+    }
     
     logger.info('[WorkflowWorker] All services started successfully');
     
@@ -65,7 +73,10 @@ async function startServices() {
     
     async function shutdown() {
       logger.info('[WorkflowWorker] Shutting down services...');
-      await Promise.all([runtimeV2Worker.stop(), runtimeV2EventWorker.stop()]);
+      await Promise.all([
+        runtimeV2EventWorker.stop(),
+        enableDbPollingWorker ? runtimeV2Worker.stop() : Promise.resolve()
+      ]);
       process.exit(0);
     }
   } catch (error) {

@@ -1907,4 +1907,106 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       })
     );
   });
+
+  it('continues as new with an interpreter checkpoint at the configured step interval', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_22',
+      name: 'continue as new checkpoint',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_action_1',
+          type: 'action.call',
+          config: {
+            actionId: 'ticket.update',
+            version: 1,
+          },
+        },
+        {
+          id: 'step_action_2',
+          type: 'action.call',
+          config: {
+            actionId: 'ticket.update',
+            version: 1,
+          },
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_22',
+          workflowId: 'wf_22',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_22',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+    mockActivities.executeWorkflowRuntimeV2ActionStep.mockResolvedValue({
+      output: { ok: true },
+      saveAsPath: null,
+    });
+
+    const temporalWorkflow = await import('@temporalio/workflow');
+    const continueAsNewMock = vi.mocked(temporalWorkflow.continueAsNew);
+    continueAsNewMock.mockImplementationOnce(async () => {
+      throw new Error('continue-as-new checkpoint');
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+    await expect(workflowRuntimeV2RunWorkflow({
+      runId: 'run_22',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_22',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_22',
+      checkpoint: {
+        stepCount: 249,
+        state: {
+          runId: 'run_22',
+          currentStepPath: 'root.steps[0]',
+          scopes: {
+            payload: {},
+            workflow: {},
+            lexical: [],
+            system: {
+              runId: 'run_22',
+              workflowId: 'wf_22',
+              workflowVersion: 1,
+              tenantId: 'tenant_1',
+              definitionHash: 'hash_22',
+              runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+            },
+          },
+          frames: [
+            {
+              kind: 'sequence',
+              path: 'root.steps',
+              nextIndex: 0,
+              totalSteps: 2,
+            },
+          ],
+        },
+      },
+    })).rejects.toThrow('continue-as-new checkpoint');
+
+    expect(continueAsNewMock).toHaveBeenCalledWith(expect.objectContaining({
+      runId: 'run_22',
+      workflowId: 'wf_22',
+      workflowVersion: 1,
+      executionKey: 'exec_22',
+      checkpoint: expect.objectContaining({
+        stepCount: 250,
+      }),
+    }));
+  });
 });

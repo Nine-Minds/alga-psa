@@ -302,61 +302,61 @@
   {
     "id": "F051",
     "description": "Use a Temporal-native scheduling authority for one-time schedule triggers instead of DB polling.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-10", "Open Questions"]
   },
   {
     "id": "F052",
     "description": "Use Temporal Schedules or an equivalent Temporal-native recurring schedule model for recurring workflow triggers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-10"]
   },
   {
     "id": "F053",
     "description": "Reconcile publish, unpublish, and update operations for scheduled workflows against Temporal schedule state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-10", "Rollout / Migration"]
   },
   {
     "id": "F054",
     "description": "Convert `workflow_runs` into a Temporal-backed run summary projection with engine metadata and Temporal identifiers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-11", "Data / API / Integrations"]
   },
   {
     "id": "F055",
     "description": "Convert `workflow_run_steps` into a step-execution timeline projection that records actual attempts, durations, and failures.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-11"]
   },
   {
     "id": "F056",
     "description": "Convert `workflow_run_waits` into a wait projection plus event-routing index rather than a scheduler truth source.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-11"]
   },
   {
     "id": "F057",
     "description": "Retain `workflow_action_invocations` as both a product-facing action timeline and the durable side-effect idempotency ledger.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-11", "FR-5"]
   },
   {
     "id": "F058",
     "description": "Retain `workflow_runtime_events` as the product-facing inbound-event audit surface for Temporal-native workflow routing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-11"]
   },
   {
     "id": "F059",
     "description": "Reduce `workflow_run_snapshots` from execution-authority storage to optional debug-checkpoint storage if retained at all.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-11", "Open Questions"]
   },
   {
     "id": "F060",
     "description": "Keep run-list and run-detail product APIs usable by reading from the Temporal-backed projection model rather than directly from Temporal.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-11", "UX / UI Notes"]
   },
   {
@@ -374,31 +374,31 @@
   {
     "id": "F063",
     "description": "Hard-cut all new Workflow V2 runs to the Temporal-native runtime with no DB-runtime fallback path for new executions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-13", "Rollout / Migration"]
   },
   {
     "id": "F064",
     "description": "Retire lease-based runnable-run acquisition and due-wait polling as execution-authority mechanisms for new runs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-13"]
   },
   {
     "id": "F065",
     "description": "Retire DB event-wait resolution as the authority for resuming runs, leaving DB rows as projection/index only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-13", "FR-9"]
   },
   {
     "id": "F066",
     "description": "Provide a cleanup path for obsolete execution-authority columns, worker code paths, and schema assumptions left over from the DB-backed runtime.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-13", "Rollout / Migration"]
   },
   {
     "id": "F067",
     "description": "Add Temporal test-environment coverage for interpreter semantics including control flow, waits, signals, child workflows, and continue-as-new.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Acceptance Criteria (Definition of Done)"]
   },
   {

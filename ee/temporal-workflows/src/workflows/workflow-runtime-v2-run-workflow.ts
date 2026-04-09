@@ -249,6 +249,19 @@ export async function workflowRuntimeV2RunWorkflow(
   queryStepCount = stepCount;
   queryFrameDepth = state.frames.length;
   queryCurrentStepPath = state.currentStepPath;
+  const maybeContinueAsNew = async (): Promise<void> => {
+    if (stepCount <= 0 || stepCount % CONTINUE_AS_NEW_EVERY_STEPS !== 0) {
+      return;
+    }
+    const checkpoint = createWorkflowRuntimeV2InterpreterCheckpoint({
+      state,
+      stepCount,
+    });
+    await continueAsNew<typeof workflowRuntimeV2RunWorkflow>({
+      ...input,
+      checkpoint,
+    });
+  };
 
   while (true) {
     const current = getWorkflowRuntimeV2CurrentStep({
@@ -314,6 +327,8 @@ export async function workflowRuntimeV2RunWorkflow(
           status: 'SUCCEEDED',
         });
         stepCount += 1;
+        queryStepCount = stepCount;
+        await maybeContinueAsNew();
         continue;
       }
 
@@ -331,6 +346,8 @@ export async function workflowRuntimeV2RunWorkflow(
           status: 'SUCCEEDED',
         });
         stepCount += 1;
+        queryStepCount = stepCount;
+        await maybeContinueAsNew();
         continue;
       }
 
@@ -379,6 +396,8 @@ export async function workflowRuntimeV2RunWorkflow(
           status: 'SUCCEEDED',
         });
         stepCount += 1;
+        queryStepCount = stepCount;
+        await maybeContinueAsNew();
         continue;
       }
 
@@ -450,6 +469,8 @@ export async function workflowRuntimeV2RunWorkflow(
           status: 'SUCCEEDED',
         });
         stepCount += 1;
+        queryStepCount = stepCount;
+        await maybeContinueAsNew();
         continue;
       }
 
@@ -509,6 +530,7 @@ export async function workflowRuntimeV2RunWorkflow(
         });
         stepCount += 1;
         queryStepCount = stepCount;
+        await maybeContinueAsNew();
         continue;
       }
 
@@ -586,6 +608,7 @@ export async function workflowRuntimeV2RunWorkflow(
         });
         stepCount += 1;
         queryStepCount = stepCount;
+        await maybeContinueAsNew();
         continue;
       }
 
@@ -660,6 +683,7 @@ export async function workflowRuntimeV2RunWorkflow(
         });
         stepCount += 1;
         queryStepCount = stepCount;
+        await maybeContinueAsNew();
         continue;
       }
 
@@ -710,6 +734,7 @@ export async function workflowRuntimeV2RunWorkflow(
               state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
               stepCount += 1;
               queryStepCount = stepCount;
+              await maybeContinueAsNew();
               handledByOnError = true;
               break;
             }
@@ -730,6 +755,7 @@ export async function workflowRuntimeV2RunWorkflow(
         });
         stepCount += 1;
         queryStepCount = stepCount;
+        await maybeContinueAsNew();
         continue;
       }
 
@@ -748,6 +774,7 @@ export async function workflowRuntimeV2RunWorkflow(
       });
       stepCount += 1;
       queryStepCount = stepCount;
+      await maybeContinueAsNew();
     } catch (error) {
       queryCurrentWait = null;
       const runtimeError = normalizeRuntimeError(error, current.path);
@@ -793,6 +820,7 @@ export async function workflowRuntimeV2RunWorkflow(
         state = tryCatchRoutedState;
         stepCount += 1;
         queryStepCount = stepCount;
+        await maybeContinueAsNew();
         continue;
       }
 
@@ -805,6 +833,7 @@ export async function workflowRuntimeV2RunWorkflow(
         state = forEachContinueState;
         stepCount += 1;
         queryStepCount = stepCount;
+        await maybeContinueAsNew();
         continue;
       }
 
@@ -812,16 +841,7 @@ export async function workflowRuntimeV2RunWorkflow(
       throw runtimeError;
     }
 
-    if (stepCount > 0 && stepCount % CONTINUE_AS_NEW_EVERY_STEPS === 0) {
-      const checkpoint = createWorkflowRuntimeV2InterpreterCheckpoint({
-        state,
-        stepCount,
-      });
-      await continueAsNew<typeof workflowRuntimeV2RunWorkflow>({
-        ...input,
-        checkpoint,
-      });
-    }
+    await maybeContinueAsNew();
   }
 }
 

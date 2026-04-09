@@ -73,7 +73,7 @@
   {
     "id": "T008",
     "description": "Integration: `control.callWorkflow` starts a Temporal child workflow with deterministic linkage, maps child outputs back to the parent, and records parent/root relationships in projections.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F030",
@@ -94,7 +94,7 @@
   {
     "id": "T010",
     "description": "Temporal integration: `time.wait` uses a native Temporal timer, projects the active wait, and resumes without any DB polling worker involvement.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033",
       "F035",
@@ -104,7 +104,7 @@
   {
     "id": "T011",
     "description": "Temporal integration: `time.wait` fast-paths immediately when the computed due time is already due and does not suspend the workflow.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -112,7 +112,7 @@
   {
     "id": "T012",
     "description": "Temporal integration: `event.wait` resumes only when the active wait matches event name, correlation key, and payload filters, and times out with a catchable timeout error when no matching signal arrives.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036",
       "F037",
@@ -124,7 +124,7 @@
   {
     "id": "T013",
     "description": "Integration: inbound event routing records the event, selects candidate waiting runs from the wait projection, signals all candidates, and resumes every matching run rather than an arbitrary first DB wait row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043",
       "F044",
@@ -137,7 +137,7 @@
   {
     "id": "T014",
     "description": "Integration: duplicate inbound delivery of the same external `event_id` is deduplicated so the event is only processed once, and late duplicate signals do not corrupt run state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046",
       "F047",
@@ -147,7 +147,7 @@
   {
     "id": "T015",
     "description": "Integration: `human.task` waits until a valid response signal arrives, rejects invalid responses, and resumes with the expected assigned values once validation passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041",
       "F042"
@@ -177,7 +177,7 @@
   {
     "id": "T018",
     "description": "Integration: event-triggered workflows start new Temporal runs directly from published trigger metadata and validated payloads.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043",
       "F049"
@@ -221,7 +221,7 @@
   {
     "id": "T022",
     "description": "Temporal integration: a long-running workflow performs continue-as-new at a safe checkpoint and resumes with equivalent interpreter state, current wait semantics, and projection continuity.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",

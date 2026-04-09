@@ -659,3 +659,73 @@ Plan bookkeeping updates:
 Validation commands (this checkpoint):
 - `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
 - `npm --prefix ee/temporal-workflows run type-check`
+
+### F054-F060 marked complete (projection model alignment)
+
+Current runtime implementation now satisfies projection-model requirements for Temporal-backed runs:
+- `workflow_runs` stores engine + Temporal identifiers + pinned definition metadata and remains the run-summary API source.
+- `workflow_run_steps` is written from interpreter step lifecycle projection activities with attempts/durations/status/errors.
+- `workflow_run_waits` is written/resolved for `time.wait`, `event.wait`, and `human.task`, and serves ingress candidate selection.
+- `workflow_action_invocations` remains durable idempotency/timeline surface through action activity execution.
+- `workflow_runtime_events` remains inbound-event audit surface in ingress worker.
+- `workflow_run_snapshots` is no longer used as execution authority in Temporal-native path (retained for debug/history compatibility).
+- Run detail/listing actions continue to read these DB projection tables rather than directly querying Temporal histories.
+
+Plan bookkeeping updates:
+- Marked `F054`, `F055`, `F056`, `F057`, `F058`, `F059`, `F060` implemented.
+
+### F063-F066 + T034 completed (hard-cut + polling retirement for new runs)
+
+- Removed DB-runtime fallback branch from [ee/packages/workflows/src/lib/workflowRunLauncher.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/packages/workflows/src/lib/workflowRunLauncher.ts):
+  - new launches now always start Temporal runtime workflow execution when `execute !== false`
+  - removed legacy engine-mode branch and Temporal-failure fallback to inline `runtime.executeRun(...)`
+- Updated worker bootstrap in [services/workflow-worker/src/index.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/services/workflow-worker/src/index.ts):
+  - DB polling runtime worker is now disabled by default
+  - explicit opt-in flag `WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING` gates legacy polling startup
+  - event-ingress worker remains active
+
+Rationale:
+- New runs now hard-cut to Temporal-native authority; DB polling/resume mechanisms are no longer required in the default execution path.
+- Legacy worker code remains available only behind explicit opt-in as transitional cleanup path.
+
+Plan bookkeeping updates:
+- Marked `F063`, `F064`, `F065`, `F066` implemented.
+- Added `T034` (implemented:true) for cutover verification coverage.
+
+Validation commands (this checkpoint):
+- `npm --prefix ee/packages/workflows run typecheck`
+- `mkdir -p server/coverage/.tmp && npm --prefix server run test -- src/test/unit/workflowRunLauncher.unit.test.ts`
+- `cd services/workflow-worker && npx vitest src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts --run`
+
+### F051-F053 + F067 completed (Temporal-native schedule default + continue-as-new test coverage)
+
+- Updated default EE job-runner selection in [server/src/lib/jobs/JobRunnerFactory.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/server/src/lib/jobs/JobRunnerFactory.ts):
+  - `determineRunnerType()` now defaults to `temporal` in EE (`pgboss` remains CE default).
+  - This removes environment-dependent drift where workflow schedule lifecycle could silently use non-Temporal scheduling authority when `JOB_RUNNER_TYPE` was unset.
+- Strengthened continue-as-new behavior in [ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts):
+  - Added `maybeContinueAsNew()` helper and invoked it on all step-completion progression paths (including branch/loop/onError routes), not just loop-footer fallthrough.
+  - This closes a correctness gap where early `continue` branches could bypass checkpoint emission.
+- Added explicit continue-as-new test in [ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/workflow-wait-steps-productization/ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts):
+  - verifies checkpoint emission at threshold using checkpointed `stepCount` input and asserts `continueAsNew(...)` receives updated checkpoint state.
+
+### Tests checklist updates completed in this slice
+
+- Marked implemented based on passing Temporal runtime/event-ingress tests in this branch:
+  - `T008` (child-workflow launch + output mapping integration in interpreter test suite)
+  - `T010`, `T011`, `T012` (native `time.wait`, fast-path due wait, signal/timeout `event.wait`)
+  - `T013`, `T014` (event ingress candidate signaling fan-out and event-id dedupe)
+  - `T015` (signal-backed human task with validation)
+  - `T018` (event-triggered launches to Temporal path)
+  - `T022` (continue-as-new checkpoint behavior in Temporal interpreter)
+
+### Validation commands run (this slice)
+
+- `npm --prefix server run test -- src/test/unit/workflowScheduledRunHandlers.unit.test.ts`
+- `npm --prefix ee/temporal-workflows run test -- src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts --run`
+- `npm --prefix ee/temporal-workflows run type-check`
+- `cd services/workflow-worker && npx vitest src/v2/WorkflowRuntimeV2EventStreamWorker.test.ts --run`
+
+### Validation blockers / gotchas
+
+- `server/src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts` currently fails to load due stale alias import path (`@alga-psa/workflows/actions-psa/workflows-runtime-v2-actions`) in this branch test harness.
+- `ee/server` DB-backed schedule integration suite requires local PostgreSQL on `localhost:5432`; run failed with `ECONNREFUSED` in this environment.

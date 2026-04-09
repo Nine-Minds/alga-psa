@@ -9,7 +9,7 @@ export type WorkflowRunWaitRecord = {
   event_name?: string | null;
   timeout_at?: string | null;
   status: string;
-  payload?: unknown | null;
+  payload?: Record<string, unknown> | null;
   created_at: string;
   resolved_at?: string | null;
 };

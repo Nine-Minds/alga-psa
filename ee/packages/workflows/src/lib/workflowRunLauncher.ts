@@ -228,41 +228,19 @@ export async function launchPublishedWorkflowRun(
 
   if (request.execute !== false) {
     const executionKey = request.executionKey ?? `launch-${request.workflowId}-${Date.now()}`;
-    const engine = String(process.env.WORKFLOW_RUNTIME_V2_ENGINE ?? 'temporal').trim().toLowerCase();
-    const shouldUseTemporal = engine !== 'legacy';
-
-    if (!shouldUseTemporal) {
-      await runtime.executeRun(knex, runId, executionKey);
-    } else {
-      const allowLegacyFallback = process.env.NODE_ENV === 'test'
-        || String(process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_FALLBACK ?? '').trim().toLowerCase() === 'true';
-
-      try {
-        const temporalStart = await startWorkflowRuntimeV2TemporalRun({
-          runId,
-          tenantId: request.tenantId ?? null,
-          workflowId: request.workflowId,
-          workflowVersion: versionRecord.version,
-          triggerType: request.triggerType ?? null,
-          executionKey,
-        });
-        await WorkflowRunModelV2.update(knex, runId, {
-          engine: 'temporal',
-          temporal_workflow_id: temporalStart.workflowId,
-          temporal_run_id: temporalStart.firstExecutionRunId,
-        });
-      } catch (error) {
-        if (!allowLegacyFallback) {
-          throw error;
-        }
-        await WorkflowRunModelV2.update(knex, runId, {
-          engine: 'db',
-          temporal_workflow_id: null,
-          temporal_run_id: null,
-        });
-        await runtime.executeRun(knex, runId, executionKey);
-      }
-    }
+    const temporalStart = await startWorkflowRuntimeV2TemporalRun({
+      runId,
+      tenantId: request.tenantId ?? null,
+      workflowId: request.workflowId,
+      workflowVersion: versionRecord.version,
+      triggerType: request.triggerType ?? null,
+      executionKey,
+    });
+    await WorkflowRunModelV2.update(knex, runId, {
+      engine: 'temporal',
+      temporal_workflow_id: temporalStart.workflowId,
+      temporal_run_id: temporalStart.firstExecutionRunId,
+    });
   }
 
   return {
