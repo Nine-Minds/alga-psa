@@ -173,6 +173,12 @@ function scoreIntent(entry: ChatApiRegistryEntry, context: SearchContext) {
   if (context.mentionsList && isListEndpoint) {
     score += 3;
   }
+  if (!context.intents.has('detail') && isGetById) {
+    score -= 3;
+  }
+  if (!context.intents.has('detail') && entry.method === 'get' && hasPathParams) {
+    score -= 1;
+  }
   if (hasMutatingIntent && entry.method === 'get') {
     score -= 6;
   }

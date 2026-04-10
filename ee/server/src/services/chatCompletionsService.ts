@@ -12,7 +12,7 @@ import { getRegistry } from '../chat/registry/apiRegistry.indexer';
 import {
   ChatApiRegistryEntry,
 } from '../chat/registry/apiRegistry.schema';
-import { searchRegistryEntries } from '../chat/registry/search';
+import { searchRegistryEntries, type RegistrySearchResult } from '../chat/registry/search';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
@@ -206,6 +206,58 @@ type StreamedToolCallState = {
 };
 
 export class ChatCompletionsService {
+  private static isDebugLoggingEnabled(): boolean {
+    const value = (process.env.CHAT_AGENT_DEBUG ?? '').trim().toLowerCase();
+    return value === '1' || value === 'true' || value === 'yes' || value === 'on';
+  }
+
+  private static previewText(value: string | null | undefined, maxLength = 240): string | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+
+    return trimmed.length <= maxLength ? trimmed : `${trimmed.slice(0, maxLength)}…`;
+  }
+
+  private static summarizeConversation(messages: ChatCompletionMessage[]) {
+    const lastUserMessage = [...messages]
+      .reverse()
+      .find((message) => message.role === 'user' && typeof message.content === 'string');
+
+    return {
+      messageCount: messages.length,
+      lastUserMessage: this.previewText(lastUserMessage?.content),
+    };
+  }
+
+  private static summarizeRegistryResults(results: RegistrySearchResult[]) {
+    return results.slice(0, 5).map(({ entry, score, matchedFields }) => ({
+      id: entry.id,
+      displayName: entry.displayName,
+      method: entry.method.toUpperCase(),
+      path: entry.path,
+      score: Number(score.toFixed(2)),
+      matchedFields,
+    }));
+  }
+
+  private static logDebug(event: string, payload?: Record<string, unknown>) {
+    if (!this.isDebugLoggingEnabled()) {
+      return;
+    }
+
+    console.info(`[ChatCompletionsService] ${event}`, payload ?? {});
+  }
+
+  private static logWarn(event: string, payload?: Record<string, unknown>) {
+    console.warn(`[ChatCompletionsService] ${event}`, payload ?? {});
+  }
+
   static async createRawCompletionStream(
     conversation: ChatCompletionMessage[],
   ): Promise<AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
@@ -269,6 +321,11 @@ export class ChatCompletionsService {
       const toolCalls = this.materializeStreamedToolCalls(streamedToolCalls);
 
       if (toolCalls.length > 1) {
+        this.logWarn('stream_retry_multiple_tool_calls', {
+          iteration,
+          toolNames: toolCalls.map((toolCall) => toolCall.function?.name ?? 'unknown'),
+          ...this.summarizeConversation(conversation),
+        });
         conversation = this.appendToolContractRetryMessage(
           conversation,
           parsedContent,
@@ -283,6 +340,10 @@ export class ChatCompletionsService {
         const toolCallId = toolCall.id ?? uuid();
 
         if (!functionName) {
+          this.logWarn('stream_missing_tool_name', {
+            iteration,
+            ...this.summarizeConversation(conversation),
+          });
           yield { type: 'done' };
           return;
         }
@@ -302,6 +363,12 @@ export class ChatCompletionsService {
 
         if (parsedArgsResult.ok === false) {
           const parseErrorMessage = parsedArgsResult.message;
+          this.logWarn('stream_retry_invalid_tool_arguments', {
+            iteration,
+            functionName,
+            toolCallId,
+            error: parseErrorMessage,
+          });
           conversation = [
             ...conversation,
             assistantMessage,
@@ -316,6 +383,12 @@ export class ChatCompletionsService {
         }
 
         if (functionName === SEARCH_TOOL_NAME) {
+          this.logDebug('stream_tool_search_registry', {
+            iteration,
+            functionName,
+            query: typeof parsedArgs.query === 'string' ? parsedArgs.query : undefined,
+            limit: parsedArgs.limit,
+          });
           const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
           conversation = [
             ...conversation,
@@ -332,11 +405,27 @@ export class ChatCompletionsService {
 
         if (functionName === EXECUTE_TOOL_NAME) {
           conversation = [...conversation, assistantMessage];
+          this.logDebug('stream_tool_execute_requested', {
+            iteration,
+            requestedEntryId:
+              typeof (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) === 'string'
+                ? (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name)
+                : undefined,
+            method: typeof parsedArgs.method === 'string' ? parsedArgs.method : undefined,
+            path: typeof parsedArgs.path === 'string' ? parsedArgs.path : undefined,
+          });
           const entry = this.resolveRegistryEntry(
             parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
             parsedArgs,
           );
           if (!entry) {
+            this.logWarn('stream_tool_execute_entry_unavailable', {
+              iteration,
+              requestedEntryId:
+                typeof (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) === 'string'
+                  ? (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name)
+                  : undefined,
+            });
             yield {
               type: 'content_delta',
               delta: this.buildUnavailableFunctionMessage(
@@ -351,6 +440,12 @@ export class ChatCompletionsService {
           const preparedArgs = { ...parsedArgs };
           this.populatePathParameters(entry, preparedArgs);
           assistantMessage.function_call!.arguments = preparedArgs;
+          this.logDebug('stream_tool_execute_resolved', {
+            iteration,
+            entryId: entry.id,
+            method: entry.method.toUpperCase(),
+            path: entry.path,
+          });
           const metadata = this.buildFunctionMetadata(entry, preparedArgs);
           const assistantPreview = this.buildFunctionPreview(parsedContent, entry);
           yield {
@@ -374,6 +469,11 @@ export class ChatCompletionsService {
         if (functionName === FINISH_TOOL_NAME) {
           const finishPayload = this.parseFinishResponsePayload(parsedArgs);
           if (!finishPayload.ok) {
+            this.logWarn('stream_retry_invalid_finish_response', {
+              iteration,
+              toolCallId,
+              error: finishPayload.error,
+            });
             conversation = [
               ...conversation,
               assistantMessage,
@@ -403,6 +503,10 @@ export class ChatCompletionsService {
           return;
         }
 
+        this.logWarn('stream_unknown_tool_name', {
+          iteration,
+          functionName,
+        });
         yield {
           type: 'content_delta',
           delta: this.buildUnavailableFunctionMessage(functionName),
@@ -412,12 +516,27 @@ export class ChatCompletionsService {
       }
 
       if (!this.hasMeaningfulContent(parsedContent)) {
+        this.logWarn('stream_retry_no_meaningful_content', {
+          iteration,
+          contentPreview: this.previewText(parsedContent.raw),
+          reasoningPreview: this.previewText(parsedContent.reasoning),
+          ...this.summarizeConversation(conversation),
+        });
         continue;
       }
 
+      this.logWarn('stream_retry_plain_text_instead_of_tool', {
+        iteration,
+        contentPreview: this.previewText(parsedContent.raw),
+        reasoningPreview: this.previewText(parsedContent.reasoning),
+      });
       conversation = this.appendToolContractRetryMessage(conversation, parsedContent);
     }
 
+    this.logWarn('stream_gave_up_after_max_iterations', {
+      maxIterations: MAX_TOOL_ITERATIONS,
+      ...this.summarizeConversation(conversation),
+    });
     yield { type: 'done' };
   }
 
@@ -802,7 +921,7 @@ export class ChatCompletionsService {
     const method = typeof args?.method === 'string' ? args.method.toLowerCase() : undefined;
     const path = typeof args?.path === 'string' ? args.path : undefined;
 
-    return (
+    const resolved = (
       registry.find((item) => item.id === identifier) ??
       registry.find((item) => this.toToolName(item.id) === identifier) ??
       registry.find((item) => item.id === normalizedId) ??
@@ -814,17 +933,45 @@ export class ChatCompletionsService {
         : null) ??
       null
     );
+
+    if (!resolved) {
+      this.logWarn('registry_entry_not_found', {
+        requestedEntryId: identifier || undefined,
+        normalizedId: normalizedId || undefined,
+        method,
+        path,
+      });
+      return null;
+    }
+
+    this.logDebug('registry_entry_resolved', {
+      requestedEntryId: identifier || undefined,
+      resolvedEntryId: resolved.id,
+      method: resolved.method.toUpperCase(),
+      path: resolved.path,
+    });
+
+    return resolved;
   }
 
   private static searchRegistry(query: unknown, limitValue: unknown) {
     const text = typeof query === 'string' ? query.trim() : '';
     if (!text) {
+      this.logWarn('registry_search_empty_query', {
+        rawQueryType: typeof query,
+      });
       return [];
     }
 
     const limit = Math.max(1, Math.min(typeof limitValue === 'number' ? limitValue : parseInt(String(limitValue ?? ''), 10) || 5, 25));
     const registry = getRegistry();
-    const top = searchRegistryEntries(registry, text, limit).map(({ entry }) => ({
+    const ranked = searchRegistryEntries(registry, text, limit);
+    this.logDebug('registry_search', {
+      query: text,
+      limit,
+      topResults: this.summarizeRegistryResults(ranked),
+    });
+    const top = ranked.map(({ entry }) => ({
       id: entry.id,
       displayName: entry.displayName,
       description: entry.description,
@@ -963,6 +1110,11 @@ export class ChatCompletionsService {
       }
 
       if (toolCalls.length > 1) {
+        this.logWarn('retry_multiple_tool_calls', {
+          iteration,
+          toolNames: toolCalls.map((toolCall) => toolCall.function?.name ?? 'unknown'),
+          ...this.summarizeConversation(conversation),
+        });
         conversation = this.appendToolContractRetryMessage(
           conversation,
           parsedContent,
@@ -977,6 +1129,10 @@ export class ChatCompletionsService {
         const toolCallId = toolCall.id ?? uuid();
 
         if (!functionName) {
+          this.logWarn('missing_tool_name', {
+            iteration,
+            ...this.summarizeConversation(conversation),
+          });
           return {
             type: 'error',
             error: 'The assistant attempted to call an unknown function.',
@@ -998,6 +1154,12 @@ export class ChatCompletionsService {
 
         if (parsedArgsResult.ok === false) {
           const parseErrorMessage = parsedArgsResult.message;
+          this.logWarn('retry_invalid_tool_arguments', {
+            iteration,
+            functionName,
+            toolCallId,
+            error: parseErrorMessage,
+          });
           const functionMessage: ChatCompletionMessage = {
             role: 'function',
             name: functionName,
@@ -1009,6 +1171,12 @@ export class ChatCompletionsService {
         }
 
         if (functionName === SEARCH_TOOL_NAME) {
+          this.logDebug('tool_search_registry', {
+            iteration,
+            functionName,
+            query: typeof parsedArgs.query === 'string' ? parsedArgs.query : undefined,
+            limit: parsedArgs.limit,
+          });
           const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
           const functionMessage: ChatCompletionMessage = {
             role: 'function',
@@ -1022,11 +1190,27 @@ export class ChatCompletionsService {
 
         if (functionName === EXECUTE_TOOL_NAME) {
           conversation = [...conversation, assistantMessage];
+          this.logDebug('tool_execute_requested', {
+            iteration,
+            requestedEntryId:
+              typeof (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) === 'string'
+                ? (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name)
+                : undefined,
+            method: typeof parsedArgs.method === 'string' ? parsedArgs.method : undefined,
+            path: typeof parsedArgs.path === 'string' ? parsedArgs.path : undefined,
+          });
           const entry = this.resolveRegistryEntry(
             parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
             parsedArgs,
           );
           if (!entry) {
+            this.logWarn('tool_execute_entry_unavailable', {
+              iteration,
+              requestedEntryId:
+                typeof (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name) === 'string'
+                  ? (parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name)
+                  : undefined,
+            });
             return {
               type: 'error',
               error: `Function ${parsedArgs.entryId ?? functionName} is not available.`,
@@ -1036,6 +1220,12 @@ export class ChatCompletionsService {
           const preparedArgs = { ...parsedArgs };
           this.populatePathParameters(entry, preparedArgs);
           assistantMessage.function_call!.arguments = preparedArgs;
+          this.logDebug('tool_execute_resolved', {
+            iteration,
+            entryId: entry.id,
+            method: entry.method.toUpperCase(),
+            path: entry.path,
+          });
           const metadata = this.buildFunctionMetadata(entry, preparedArgs);
           const assistantPreview = this.buildFunctionPreview(parsedContent, entry);
           return {
@@ -1057,6 +1247,11 @@ export class ChatCompletionsService {
         if (functionName === FINISH_TOOL_NAME) {
           const finishPayload = this.parseFinishResponsePayload(parsedArgs);
           if (!finishPayload.ok) {
+            this.logWarn('retry_invalid_finish_response', {
+              iteration,
+              toolCallId,
+              error: finishPayload.error,
+            });
             conversation = [
               ...conversation,
               assistantMessage,
@@ -1089,6 +1284,10 @@ export class ChatCompletionsService {
           };
         }
 
+        this.logWarn('unknown_tool_name', {
+          iteration,
+          functionName,
+        });
         return {
           type: 'error',
           error: `Function ${functionName} is not available.`,
@@ -1096,12 +1295,27 @@ export class ChatCompletionsService {
       }
 
       if (!this.hasMeaningfulContent(parsedContent)) {
+        this.logWarn('retry_no_meaningful_content', {
+          iteration,
+          contentPreview: this.previewText(parsedContent.raw),
+          reasoningPreview: this.previewText(parsedContent.reasoning),
+          ...this.summarizeConversation(conversation),
+        });
         continue;
       }
 
+      this.logWarn('retry_plain_text_instead_of_tool', {
+        iteration,
+        contentPreview: this.previewText(parsedContent.raw),
+        reasoningPreview: this.previewText(parsedContent.reasoning),
+      });
       conversation = this.appendToolContractRetryMessage(conversation, parsedContent);
     }
 
+    this.logWarn('gave_up_after_max_iterations', {
+      maxIterations: MAX_TOOL_ITERATIONS,
+      ...this.summarizeConversation(conversation),
+    });
     return {
       type: 'error',
       error: 'The assistant produced too many invalid or incomplete tool turns without completing the task.',
@@ -2390,28 +2604,28 @@ export class ChatCompletionsService {
       const requestStarted = Date.now();
       const requestHeadersForLog = this.sanitizeHeadersForLogging(init.headers);
       const requestMethodForLog = init.method ?? entry.method.toUpperCase();
-      // console.info('[ChatCompletionsService] API request', {
-      //   entryId: entry.id,
-      //   method: requestMethodForLog,
-      //   url,
-      //   hasBody: init.body !== undefined && init.body !== null,
-      //   headers: requestHeadersForLog,
-      //   args,
-      // });
+      this.logDebug('api_tool_request', {
+        entryId: entry.id,
+        method: requestMethodForLog,
+        url,
+        hasBody: init.body !== undefined && init.body !== null,
+        headers: requestHeadersForLog,
+        args,
+      });
       const response = await this.fetchWithProtocolFallback(url, init, baseUrl);
       const durationMs = Date.now() - requestStarted;
 
       const text = await response.text();
-      // console.info('[ChatCompletionsService] API response', {
-      //   entryId: entry.id,
-      //   method: requestMethodForLog,
-      //   url,
-      //   status: response.status,
-      //   ok: response.ok,
-      //   durationMs,
-      //   contentType: response.headers.get('content-type') ?? undefined,
-      //   text
-      // });      
+      this.logDebug('api_tool_response', {
+        entryId: entry.id,
+        method: requestMethodForLog,
+        url,
+        status: response.status,
+        ok: response.ok,
+        durationMs,
+        contentType: response.headers.get('content-type') ?? undefined,
+        bodyPreview: this.previewText(text, 1000),
+      });
       let data: unknown = null;
       try {
         data = text ? JSON.parse(text) : null;

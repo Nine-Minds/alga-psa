@@ -205,15 +205,20 @@ export class ServiceCatalogService extends BaseService<IService> {
     }
 
     const rawData = data as any;
+    const {
+      currency_code: _currency_code,
+      prices: _prices,
+      ...serviceInput
+    } = rawData;
+
     const serviceData = {
-      category_id: data.category_id ?? null,
-      currency_code: rawData.currency_code ?? 'USD',
-      ...data,
+      category_id: serviceInput.category_id ?? null,
+      ...serviceInput,
       tenant,
-      default_rate: typeof data.default_rate === 'string'
-        ? parseFloat(data.default_rate) || 0
-        : data.default_rate,
-      tax_rate_id: data.tax_rate_id || null,
+      default_rate: typeof serviceInput.default_rate === 'string'
+        ? parseFloat(serviceInput.default_rate) || 0
+        : serviceInput.default_rate,
+      tax_rate_id: serviceInput.tax_rate_id || null,
     };
 
     const [created] = await knex('service_catalog')
@@ -228,7 +233,12 @@ export class ServiceCatalogService extends BaseService<IService> {
     const tenant = context.tenant;
 
     // Strip fields that shouldn't be updated
-    const { service_type_name: _, prices: _prices, ...updateData } = data as any;
+    const {
+      service_type_name: _,
+      prices: _prices,
+      currency_code: _currency_code,
+      ...updateData
+    } = data as any;
 
     const [updated] = await knex('service_catalog')
       .where({ service_id: id, tenant })
