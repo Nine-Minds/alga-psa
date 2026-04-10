@@ -205,6 +205,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               <Link
                 href={`/msp/tickets/${record.ticket_id}`}
                 onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey) return;
                   e.preventDefault();
                   e.stopPropagation();
                   onTicketClick(record.ticket_id as string);
@@ -259,6 +260,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           <Link
             href={`/msp/tickets/${record.ticket_id}`}
             onClick={(e) => {
+              if (e.metaKey || e.ctrlKey) return;
               e.preventDefault();
               e.stopPropagation();
               onTicketClick(record.ticket_id as string);
