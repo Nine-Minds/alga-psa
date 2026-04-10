@@ -111,6 +111,8 @@ export default function Schedules({
     (searchParams.get(SCHEDULE_TRIGGER_PARAM) as TriggerFilter) || 'all'
   );
   const [workflowFilter, setWorkflowFilter] = useState(searchParams.get(SCHEDULE_WORKFLOW_PARAM) || '');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
   const [activeScheduleId, setActiveScheduleId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -203,6 +205,15 @@ export default function Schedules({
       setError(actionError instanceof Error ? actionError.message : 'Failed to update schedule.');
     }
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, triggerFilter, workflowFilter]);
+
+  const pagedSchedules = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return schedules.slice(start, start + pageSize);
+  }, [currentPage, schedules]);
 
   const workflowFilterOptions = useMemo<SelectOption[]>(
     () => [
@@ -482,12 +493,20 @@ export default function Schedules({
             </div>
           </div>
         ) : (
-          <DataTable
-            id="workflow-schedules-table"
-            data={schedules}
-            columns={columns}
-            pagination={false}
-          />
+          <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-[rgb(var(--color-border-200))] bg-white">
+            <div className="h-full min-h-0 overflow-y-auto">
+              <DataTable
+                id="workflow-schedules-table"
+                data={pagedSchedules}
+                columns={columns}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                totalItems={schedules.length}
+              />
+            </div>
+          </div>
         )}
       </div>
 
