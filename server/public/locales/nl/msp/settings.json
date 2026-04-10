@@ -1246,6 +1246,94 @@
       }
     }
   },
+  "integrations": {
+    "betaNotice": "Sommige integraties zijn nog in ontwikkeling. Werk in een sandbox-omgeving bij het evalueren en deel uw feedback om ons te helpen verbeteren.",
+    "emptyCategory": "Geen integraties beschikbaar in deze categorie.",
+    "rmmEnterpriseNote": "RMM-integraties zijn beschikbaar in de Enterprise-editie.",
+    "categoryHeading": "{{label}}-integraties",
+    "loading": {
+      "payments": "Betalingsinstellingen laden..."
+    },
+    "categories": {
+      "accounting": {
+        "label": "Boekhouding",
+        "description": "Selecteer een boekhoudpakket om synchronisatie van facturen, betalingen en belastinggegevens te configureren."
+      },
+      "rmm": {
+        "label": "RMM",
+        "description": "Verbind tools voor monitoring en beheer op afstand"
+      },
+      "communication": {
+        "label": "Communicatie",
+        "description": "Verbind inbox- en samenwerkingsoppervlakken voor ticketverwerking, operatorworkflows en Microsoft Teams-toegang."
+      },
+      "calendar": {
+        "label": "Agenda",
+        "description": "Enterprise-exclusieve agendasynchronisatie voor Google en Outlook houdt planning en klantafspraken op één lijn."
+      },
+      "providers": {
+        "label": "Providers",
+        "description": {
+          "ee": "Configureer gedeelde providerreferenties die worden gebruikt door e-mail, agenda, MSP SSO en andere integraties.",
+          "oss": "Configureer gedeelde providerreferenties die worden gebruikt door e-mail, MSP SSO en andere integraties."
+        }
+      },
+      "identity": {
+        "label": "Identiteit",
+        "description": "Verbind identiteitsproviders voor tenantontdekking en contactsynchronisatie."
+      },
+      "payments": {
+        "label": "Betalingen",
+        "description": "Accepteer online betalingen voor facturen"
+      }
+    },
+    "items": {
+      "accountingSetup": {
+        "name": "Boekhoudintegraties",
+        "description": "Configureer boekhoudsynchronisatie en -exports"
+      },
+      "rmmSetup": {
+        "name": "RMM-integraties",
+        "description": "Selecteer en configureer uw RMM-provider"
+      },
+      "email": {
+        "name": "Inkomende e-mail",
+        "description": "Verwerk inkomende e-mails naar tickets",
+        "cardTitle": "Inkomende e-mailintegratie",
+        "cardDescription": "Configureer e-mailproviders om inkomende e-mails automatisch naar tickets te verwerken"
+      },
+      "teams": {
+        "name": "Microsoft Teams",
+        "description": "Configureer Teams-samenwerkingsoppervlakken voor MSP-technici",
+        "upgradeDescription": "Configureer Microsoft Teams-samenwerkingsoppervlakken voor MSP-technici. Upgrade naar Premium om deze functie te ontgrendelen."
+      },
+      "calendarSync": {
+        "name": "Agendasynchronisatie",
+        "description": "Synchroniseer planningsitems met Google- of Microsoft-agenda's"
+      },
+      "google": {
+        "name": "Google",
+        "description": {
+          "ee": "Google Cloud-referenties van de tenant voor Gmail en Agenda",
+          "oss": "Google Cloud-referenties van de tenant voor Gmail en MSP SSO-ondersteuningsstromen"
+        },
+        "cardTitle": "Providerreferenties",
+        "cardDescription": {
+          "ee": "Configureer eerst Google en Microsoft, verbind vervolgens provideraccounts vanuit de instellingen voor inkomende e-mail en agendaintegratie. MSP SSO-domeinontdekking gebruikt deze providerreferenties met tenant-inlogdomeinmappings.",
+          "oss": "Configureer eerst Google en Microsoft, verbind vervolgens provideraccounts vanuit de instellingen voor inkomende e-mailintegratie. MSP SSO-domeinontdekking gebruikt deze providerreferenties met tenant-inlogdomeinmappings."
+        }
+      },
+      "entra": {
+        "name": "Microsoft Entra",
+        "description": "Ontdek beheerde Microsoft-tenants en synchroniseer gebruikers naar contacten",
+        "upgradeDescription": "Ontdek beheerde Microsoft Entra-tenants en synchroniseer gebruikers naar contacten. Upgrade naar Premium om deze functie te ontgrendelen."
+      },
+      "stripe": {
+        "name": "Stripe",
+        "description": "Accepteer creditcardbetalingen voor facturen via Stripe"
+      }
+    }
+  },
   "orgChart": {
     "emptyState": "Geen gebruikers beschikbaar.",
     "roles": {

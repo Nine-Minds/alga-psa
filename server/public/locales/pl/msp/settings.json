@@ -1246,6 +1246,94 @@
       }
     }
   },
+  "integrations": {
+    "betaNotice": "Niektóre integracje są jeszcze w fazie rozwoju. Prosimy o pracę w środowisku sandbox podczas oceny i dzielenie się opinią, aby pomóc nam w ulepszaniu.",
+    "emptyCategory": "Brak dostępnych integracji w tej kategorii.",
+    "rmmEnterpriseNote": "Integracje RMM są dostępne w edycji Enterprise.",
+    "categoryHeading": "Integracje {{label}}",
+    "loading": {
+      "payments": "Ładowanie ustawień płatności..."
+    },
+    "categories": {
+      "accounting": {
+        "label": "Księgowość",
+        "description": "Wybierz pakiet księgowy, aby skonfigurować synchronizację faktur, płatności i danych podatkowych."
+      },
+      "rmm": {
+        "label": "RMM",
+        "description": "Połącz narzędzia do zdalnego monitorowania i zarządzania"
+      },
+      "communication": {
+        "label": "Komunikacja",
+        "description": "Połącz powierzchnie skrzynki odbiorczej i współpracy do przetwarzania zgłoszeń, przepływów pracy operatorów i dostępu do Microsoft Teams."
+      },
+      "calendar": {
+        "label": "Kalendarz",
+        "description": "Synchronizacja kalendarza dostępna wyłącznie w Enterprise dla Google i Outlook utrzymuje zgodność dyspozycji i spotkań z klientami."
+      },
+      "providers": {
+        "label": "Dostawcy",
+        "description": {
+          "ee": "Skonfiguruj współdzielone poświadczenia dostawców używane przez e-mail, kalendarz, MSP SSO i inne integracje.",
+          "oss": "Skonfiguruj współdzielone poświadczenia dostawców używane przez e-mail, MSP SSO i inne integracje."
+        }
+      },
+      "identity": {
+        "label": "Tożsamość",
+        "description": "Połącz dostawców tożsamości w celu odkrywania dzierżawców i synchronizacji kontaktów."
+      },
+      "payments": {
+        "label": "Płatności",
+        "description": "Przyjmuj płatności online za faktury"
+      }
+    },
+    "items": {
+      "accountingSetup": {
+        "name": "Integracje księgowe",
+        "description": "Skonfiguruj synchronizację i eksport księgowy"
+      },
+      "rmmSetup": {
+        "name": "Integracje RMM",
+        "description": "Wybierz i skonfiguruj swojego dostawcę RMM"
+      },
+      "email": {
+        "name": "Poczta przychodząca",
+        "description": "Przetwarzaj przychodzące e-maile na zgłoszenia",
+        "cardTitle": "Integracja poczty przychodzącej",
+        "cardDescription": "Skonfiguruj dostawców poczty e-mail, aby automatycznie przetwarzać przychodzące e-maile na zgłoszenia"
+      },
+      "teams": {
+        "name": "Microsoft Teams",
+        "description": "Skonfiguruj powierzchnie współpracy Teams dla techników MSP",
+        "upgradeDescription": "Skonfiguruj powierzchnie współpracy Microsoft Teams dla techników MSP. Przejdź na Premium, aby odblokować tę funkcję."
+      },
+      "calendarSync": {
+        "name": "Synchronizacja kalendarza",
+        "description": "Synchronizuj wpisy harmonogramu z kalendarzami Google lub Microsoft"
+      },
+      "google": {
+        "name": "Google",
+        "description": {
+          "ee": "Poświadczenia Google Cloud należące do dzierżawcy dla Gmail i Kalendarza",
+          "oss": "Poświadczenia Google Cloud należące do dzierżawcy dla Gmail i przepływów wsparcia MSP SSO"
+        },
+        "cardTitle": "Poświadczenia dostawcy",
+        "cardDescription": {
+          "ee": "Najpierw skonfiguruj Google i Microsoft, a następnie połącz konta dostawców z ekranów integracji poczty przychodzącej i kalendarza. Odkrywanie domen MSP SSO używa tych poświadczeń dostawcy z mapowaniami domen logowania dzierżawcy.",
+          "oss": "Najpierw skonfiguruj Google i Microsoft, a następnie połącz konta dostawców z ekranu integracji poczty przychodzącej. Odkrywanie domen MSP SSO używa tych poświadczeń dostawcy z mapowaniami domen logowania dzierżawcy."
+        }
+      },
+      "entra": {
+        "name": "Microsoft Entra",
+        "description": "Odkrywaj zarządzanych dzierżawców Microsoft i synchronizuj użytkowników do kontaktów",
+        "upgradeDescription": "Odkrywaj zarządzanych dzierżawców Microsoft Entra i synchronizuj użytkowników do kontaktów. Przejdź na Premium, aby odblokować tę funkcję."
+      },
+      "stripe": {
+        "name": "Stripe",
+        "description": "Przyjmuj płatności kartą kredytową za faktury przez Stripe"
+      }
+    }
+  },
   "orgChart": {
     "emptyState": "Brak dostępnych użytkowników.",
     "roles": {

@@ -194,7 +194,7 @@ const ImportExportSettings = (): React.JSX.Element => {
   const tabs: TabContent[] = useMemo(() => [
     {
       id: 'asset-import',
-      label: "Asset Import",
+      label: t('importExport.tabs.assetImport'),
       content: (
         <div className="space-y-6">
           {error && (
@@ -383,7 +383,7 @@ const ImportExportSettings = (): React.JSX.Element => {
     },
     {
       id: 'asset-export',
-      label: "Asset Export",
+      label: t('importExport.tabs.assetExport'),
       content: (
         <div className="space-y-4">
           <Alert>
@@ -396,7 +396,7 @@ const ImportExportSettings = (): React.JSX.Element => {
     },
     {
       id: 'templates-automation',
-      label: "Templates & Automation",
+      label: t('importExport.tabs.templatesAutomation'),
       content: (
         <div className="space-y-4">
           <Alert>
@@ -589,7 +589,7 @@ const ImportJobDetailsView = ({ details }: { details: ImportJobDetails }) => {
     () => [
       {
         id: 'summary',
-        label: "Summary",
+        label: t('importExport.jobDetails.sections.summary'),
         content: (
           <div className="space-y-4">
             <InfoSection
@@ -614,19 +614,19 @@ const ImportJobDetailsView = ({ details }: { details: ImportJobDetails }) => {
       },
       {
         id: 'records',
-        label: `Records (${allItems.length})`,
+        label: t('importExport.jobDetails.sections.records', { count: allItems.length }),
         content: (
           <JobRecordsTable items={records} hasMore={hasMoreRecords} />
         )
       },
       {
         id: 'errors',
-        label: `Errors (${errorItems.length})`,
+        label: t('importExport.jobDetails.sections.errors', { count: errorItems.length }),
         content: <JobErrorsTable items={errorItems} />
       },
       {
         id: 'duplicates',
-        label: `Duplicates (${duplicateItems.length})`,
+        label: t('importExport.jobDetails.sections.duplicates', { count: duplicateItems.length }),
         content: <JobDuplicatesTable items={duplicateItems} />
       }
     ],

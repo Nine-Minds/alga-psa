@@ -90,7 +90,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   const baseTabContent: SettingsTabContent[] = [
     {
       id: 'general',
-      label: "General",
+      label: t('tabs.general'),
       icon: Settings,
       content: (
         <Card>
@@ -108,7 +108,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'experimental-features',
-      label: "Experimental Features",
+      label: t('tabs.experimentalFeatures'),
       icon: FlaskConical,
       content: (
         <Suspense
@@ -126,19 +126,19 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'client-portal',
-      label: "Client Portal",
+      label: t('tabs.clientPortal'),
       icon: Globe,
       content: <ClientPortalSettings />,
     },
     {
       id: 'users',
-      label: "Users",
+      label: t('tabs.users'),
       icon: UserCog,
       content: <UserManagement />,
     },
     {
       id: 'teams',
-      label: "Teams",
+      label: t('tabs.teams'),
       icon: Users,
       content: (
         <Card>
@@ -156,13 +156,13 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     ...(isMspI18nEnabled ? [{
       id: 'language',
-      label: "Language",
+      label: t('tabs.language'),
       icon: Globe,
       content: <MspLanguageSettings />,
     }] : []),
     {
       id: 'ticketing',
-      label: "Ticketing",
+      label: t('tabs.ticketing'),
       icon: MessageSquare,
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />}>
@@ -172,14 +172,14 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'projects',
-      label: "Projects",
+      label: t('tabs.projects'),
       icon: Layers,
       content: <ProjectSettings />,
     },
 
     {
       id: 'interactions',
-      label: "Interactions",
+      label: t('tabs.interactions'),
       icon: Handshake,
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Interactions" description="Loading interaction settings..." showTabs={false} />}>
@@ -189,13 +189,13 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'notifications',
-      label: "Notifications",
+      label: t('tabs.notifications'),
       icon: Bell,
       content: <NotificationsTab />,
     },
     {
       id: 'time-entry',
-      label: "Time Entry",
+      label: t('tabs.timeEntry'),
       icon: Clock,
       content: (
         <Card>
@@ -211,7 +211,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'billing',
-      label: "Billing",
+      label: t('tabs.billing'),
       icon: CreditCard,
       content: (
         <Card>
@@ -227,7 +227,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'secrets',
-      label: "Secrets",
+      label: t('tabs.secrets'),
       icon: KeyRound,
       content: (
         <Card>
@@ -245,13 +245,13 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'import-export',
-      label: "Import/Export",
+      label: t('tabs.importExport'),
       icon: Download,
       content: <ImportExportSettings />,
     },
     {
       id: 'email',
-      label: "Email",
+      label: t('tabs.email'),
       icon: Mail,
       content: (
         <Card>
@@ -268,7 +268,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     {
       // Integrations tab with category-based organization
       id: 'integrations',
-      label: "Integrations",
+      label: t('tabs.integrations'),
       icon: Plug,
       requiredFeature: TIER_FEATURES.INTEGRATIONS,
       content: <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} canUseTeams={canUseTeams} />,
@@ -280,7 +280,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // - OSS: enterprise-only stub
   const extensionsTab: SettingsTabContent = {
     id: 'extensions',
-    label: "Extensions",
+    label: t('tabs.extensions'),
     icon: Puzzle,
     requiredFeature: TIER_FEATURES.EXTENSIONS,
     content: <ExtensionManagement />,

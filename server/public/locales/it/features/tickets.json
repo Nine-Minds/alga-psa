@@ -220,7 +220,17 @@
     "noStatusChange": "Non modificare lo stato",
     "clipboardDraftCancelTitle": "Rilevate immagini incollate",
     "deleteUploadedImages": "Elimina immagini",
-    "keepUploadedImages": "Mantieni immagini"
+    "keepUploadedImages": "Mantieni immagini",
+    "bundledUpdate": "Aggiornamento raggruppato",
+    "clientSuffix": " (Cliente)",
+    "internalCommentTooltip": "Commento interno",
+    "resolutionCommentTooltip": "Commento di risoluzione",
+    "unknownUser": "Utente sconosciuto",
+    "editCommentAriaLabel": "Modifica commento",
+    "deleteCommentAriaLabel": "Elimina commento",
+    "inboundChildReplies": "Risposte in entrata su ticket secondari (sola lettura)",
+    "childTicket": "Ticket secondario",
+    "ticketPrefix": "Ticket {{number}}"
   },
   "responseState": {
     "awaitingYourResponse": "In attesa della tua risposta",
@@ -423,7 +433,8 @@
       "masterTicket": "Seleziona ticket master",
       "selectMasterTicket": "Seleziona ticket master...",
       "syncUpdates": "Sincronizza gli aggiornamenti dal master ai figli (risposte pubbliche + modifiche al flusso di lavoro)",
-      "syncUpdatesHelp": "I ticket figli mantengono il loro stato attuale quando vengono raggruppati. I campi del flusso di lavoro sono bloccati sui figli per impostazione predefinita. Le note interne restano sul master."
+      "syncUpdatesHelp": "I ticket figli mantengono il loro stato attuale quando vengono raggruppati. I campi del flusso di lavoro sono bloccati sui figli per impostazione predefinita. Le note interne restano sul master.",
+      "childrenDescription": "I secondari mantengono il loro stato attuale; i campi del workflow sono bloccati sui secondari. Le risposte in entrata dei secondari sono mostrate sotto in sola lettura."
     },
     "auth": {
       "moveRequired": "Devi aver effettuato l'accesso per spostare i ticket",

@@ -220,7 +220,17 @@
     "noStatusChange": "Do not change status",
     "clipboardDraftCancelTitle": "Pasted Images Detected",
     "deleteUploadedImages": "Delete Images",
-    "keepUploadedImages": "Keep Images"
+    "keepUploadedImages": "Keep Images",
+    "bundledUpdate": "Bundled update",
+    "clientSuffix": " (Client)",
+    "internalCommentTooltip": "Internal Comment",
+    "resolutionCommentTooltip": "Resolution Comment",
+    "unknownUser": "Unknown User",
+    "editCommentAriaLabel": "Edit comment",
+    "deleteCommentAriaLabel": "Delete comment",
+    "inboundChildReplies": "Inbound replies on child tickets (view-only)",
+    "childTicket": "Child ticket",
+    "ticketPrefix": "Ticket {{number}}"
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",
@@ -423,7 +433,8 @@
       "masterTicket": "Select Master Ticket",
       "selectMasterTicket": "Select master ticket...",
       "syncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-      "syncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master."
+      "syncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.",
+      "childrenDescription": "Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only."
     },
     "auth": {
       "moveRequired": "You must be logged in to move tickets",

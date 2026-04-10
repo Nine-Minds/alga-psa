@@ -421,7 +421,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     return (
       <div className="mt-4" id={`${compId}-external-comments`}>
         <div className="text-xs text-gray-500 mb-2">
-          Inbound replies on child tickets (view-only)
+          {t('conversation.inboundChildReplies')}
         </div>
         {commentsToRender.map((conversation) => {
           const key = `ext-${conversation.child_ticket_id || 'unknown'}-${conversation.comment_id || conversation.created_at || ''}`;
@@ -429,7 +429,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             <div key={key} className="mb-2">
               <div className="text-xs text-gray-600 mb-1">
                 {conversation.child_client_name ? `${conversation.child_client_name} • ` : ''}
-                {conversation.child_ticket_number ? `Ticket ${conversation.child_ticket_number}` : 'Child ticket'}
+                {conversation.child_ticket_number ? t('conversation.ticketPrefix', { number: conversation.child_ticket_number }) : t('conversation.childTicket')}
                 {conversation.child_ticket_title ? ` • ${conversation.child_ticket_title}` : ''}
               </div>
               <CommentItem

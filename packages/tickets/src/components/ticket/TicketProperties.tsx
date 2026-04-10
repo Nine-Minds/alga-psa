@@ -1197,7 +1197,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   const memberId = member.additional_user_id!;
                   const agent = availableAgents.find(a => a.user_id === memberId);
                   const memberName = agent
-                    ? `${agent.first_name || ''} ${agent.last_name || ''}`.trim() || 'Unnamed User'
+                    ? `${agent.first_name || ''} ${agent.last_name || ''}`.trim() || t('properties.unnamedUser')
                     : memberId;
 
                   return (

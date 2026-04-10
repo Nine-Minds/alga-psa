@@ -318,7 +318,7 @@ const CategoriesSettings = (): React.JSX.Element => {
           </span>
           {record.is_from_itil_standard && (
             <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
-              ITIL
+              {t('categories.itilBadge')}
             </span>
           )}
         </div>

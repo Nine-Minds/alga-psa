@@ -220,7 +220,17 @@
     "noStatusChange": "Nie zmieniaj statusu",
     "clipboardDraftCancelTitle": "Wykryto wklejone obrazy",
     "deleteUploadedImages": "Usuń obrazy",
-    "keepUploadedImages": "Zachowaj obrazy"
+    "keepUploadedImages": "Zachowaj obrazy",
+    "bundledUpdate": "Aktualizacja zbiorcza",
+    "clientSuffix": " (Klient)",
+    "internalCommentTooltip": "Komentarz wewnętrzny",
+    "resolutionCommentTooltip": "Komentarz rozwiązania",
+    "unknownUser": "Nieznany użytkownik",
+    "editCommentAriaLabel": "Edytuj komentarz",
+    "deleteCommentAriaLabel": "Usuń komentarz",
+    "inboundChildReplies": "Odpowiedzi przychodzące na zgłoszenia podrzędne (tylko do odczytu)",
+    "childTicket": "Zgłoszenie podrzędne",
+    "ticketPrefix": "Zgłoszenie {{number}}"
   },
   "responseState": {
     "awaitingYourResponse": "Oczekuje na Twoją odpowiedź",
@@ -423,7 +433,8 @@
       "masterTicket": "Wybierz zgłoszenie nadrzędne",
       "selectMasterTicket": "Wybierz zgłoszenie nadrzędne...",
       "syncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany przepływu pracy)",
-      "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Pola przepływu pracy są domyślnie zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym."
+      "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Pola przepływu pracy są domyślnie zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+      "childrenDescription": "Podrzędne zachowują swój obecny status; pola przepływu pracy są zablokowane na zgłoszeniach podrzędnych. Odpowiedzi przychodzące na podrzędne są wyświetlane poniżej jako tylko do odczytu."
     },
     "auth": {
       "moveRequired": "Musisz być zalogowany, aby przenosić zgłoszenia",

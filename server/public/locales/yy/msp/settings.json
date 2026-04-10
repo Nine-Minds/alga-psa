@@ -1246,6 +1246,94 @@
       }
     }
   },
+  "integrations": {
+    "betaNotice": "55555",
+    "emptyCategory": "55555",
+    "rmmEnterpriseNote": "55555",
+    "categoryHeading": "{{label}} 55555",
+    "loading": {
+      "payments": "55555"
+    },
+    "categories": {
+      "accounting": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "rmm": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "communication": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "calendar": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "providers": {
+        "label": "55555",
+        "description": {
+          "ee": "55555",
+          "oss": "55555"
+        }
+      },
+      "identity": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "payments": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "items": {
+      "accountingSetup": {
+        "name": "55555",
+        "description": "55555"
+      },
+      "rmmSetup": {
+        "name": "55555",
+        "description": "55555"
+      },
+      "email": {
+        "name": "55555",
+        "description": "55555",
+        "cardTitle": "55555",
+        "cardDescription": "55555"
+      },
+      "teams": {
+        "name": "55555",
+        "description": "55555",
+        "upgradeDescription": "55555"
+      },
+      "calendarSync": {
+        "name": "55555",
+        "description": "55555"
+      },
+      "google": {
+        "name": "55555",
+        "description": {
+          "ee": "55555",
+          "oss": "55555"
+        },
+        "cardTitle": "55555",
+        "cardDescription": {
+          "ee": "55555",
+          "oss": "55555"
+        }
+      },
+      "entra": {
+        "name": "55555",
+        "description": "55555",
+        "upgradeDescription": "55555"
+      },
+      "stripe": {
+        "name": "55555",
+        "description": "55555"
+      }
+    }
+  },
   "orgChart": {
     "emptyState": "55555",
     "roles": {
