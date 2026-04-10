@@ -420,6 +420,9 @@ const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSch
       }
     }
     for (const [key, propSchema] of Object.entries(knownProperties)) {
+      if (objectValue[key] === undefined) {
+        continue;
+      }
       errors.push(...validateAgainstSchema(propSchema, objectValue[key], root, path ? `${path}.${key}` : key));
     }
     if (resolved.additionalProperties === false) {
