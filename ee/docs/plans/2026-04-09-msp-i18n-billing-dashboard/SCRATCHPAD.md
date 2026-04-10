@@ -159,6 +159,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F036 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/ConditionalRuleManager.tsx` for the heading, action select options, text-input placeholders, and add-rule button label. The existing `templateDesigner.conditionalRules.*` keys fully covered the component.
 - **(2026-04-10) F037 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/ContractsHub.tsx` for the hub heading and the two sub-tab labels. This closes out the contracts hub chrome with the existing `contractsHub.*` keys.
 - **(2026-04-10) F038 complete** -- Audited `packages/billing/src/components/billing-dashboard/TemplateRendererCore.ts` and confirmed its fallback strings (`No data for list`, `Uncategorized`, `N/A`, `Unknown value`) are emitted into generated invoice HTML rather than the billing dashboard shell. Added code comments documenting that boundary instead of forcing dashboard-namespace translation into the pure renderer.
+- **(2026-04-10) T001 complete** -- Re-ran `node scripts/generate-pseudo-locales.cjs` and `node scripts/validate-translations.cjs` after the later accounting-export status-key expansion and final feature wiring. Validation still passed with 0 errors / 0 warnings across `de`, `es`, `fr`, `it`, `nl`, `pl`, `xx`, and `yy`, so locale parity remains intact after the full feature set.
 
 ## Runbook
 
