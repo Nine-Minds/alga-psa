@@ -8,7 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getContactsByClient } from '@alga-psa/clients/actions';
+import { getQuoteRecipientContacts } from '../../../actions/quoteRecipientActions';
 import type { IContact, IUser } from '@alga-psa/types';
 
 export type QuoteRecipient = {
@@ -25,7 +25,7 @@ interface QuoteSendRecipientsFieldProps {
   value: QuoteRecipient[];
   onChange: (next: QuoteRecipient[]) => void;
   disabled?: boolean;
-  id?: string;
+  id: string;
 }
 
 function emailKey(email: string): string {
@@ -85,7 +85,7 @@ export function QuoteSendRecipientsField({
       setContacts([]);
       return;
     }
-    getContactsByClient(clientId, 'active')
+    getQuoteRecipientContacts(clientId, 'active')
       .then((rows) => {
         if (cancelled) return;
         setContacts(Array.isArray(rows) ? rows : []);
@@ -112,16 +112,10 @@ export function QuoteSendRecipientsField({
 
     let cancelled = false;
     getUserAvatarUrlsBatchAction(idsToFetch, tenant)
-      .then((resp) => {
+      .then((map) => {
         if (cancelled) return;
         const next: Record<string, string | null> = {};
-        if (resp && typeof (resp as Map<string, string | null>).get === 'function') {
-          const map = resp as Map<string, string | null>;
-          for (const uid of idsToFetch) next[uid] = map.get(uid) ?? null;
-        } else {
-          const obj = resp as Record<string, string | null>;
-          for (const uid of idsToFetch) next[uid] = obj[uid] ?? null;
-        }
+        for (const uid of idsToFetch) next[uid] = map.get(uid) ?? null;
         setUserAvatarUrls((prev) => ({ ...prev, ...next }));
       })
       .catch(() => {});
@@ -131,7 +125,6 @@ export function QuoteSendRecipientsField({
   }, [internalUsers]);
 
   const getPortalContainer = useCallback((): Element => {
-    if (typeof document === 'undefined') return document.body;
     const trigger = triggerRef.current;
     const dialog = trigger?.closest?.('[role="dialog"]');
     return (dialog as Element) ?? document.body;
