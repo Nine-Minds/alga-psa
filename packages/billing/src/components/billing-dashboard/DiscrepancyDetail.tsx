@@ -21,6 +21,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { AlertCircle, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientInfo {
   id: string;
@@ -45,6 +46,7 @@ const DiscrepancyDetail: React.FC = () => {
   const params = useParams();
   const router = useRouter();
   const { data: session } = useSession();
+  const { t } = useTranslation('msp/billing');
   const searchParams = new URLSearchParams(window.location.search);
   const action = searchParams.get('action');
   const reportId = params?.reportId as string;
@@ -282,14 +284,14 @@ const DiscrepancyDetail: React.FC = () => {
     return (
       <div className="space-y-6">
         <BackNav href="/msp/billing?tab=reconciliation">
-          Back to Reconciliation Dashboard
+          {t('discrepancy.backToReconciliation', { defaultValue: 'Back to Reconciliation' })}
         </BackNav>
         
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <div className="font-semibold">Error</div>
+          <div className="font-semibold">{t('common.error', { defaultValue: 'Error' })}</div>
           <AlertDescription>
-            Reconciliation report not found. The report may have been deleted or you may not have permission to view it.
+            {t('reconciliation.errors.reportNotFound', { defaultValue: 'Reconciliation report not found. The report may have been deleted or you may not have permission to view it.' })}
           </AlertDescription>
         </Alert>
       </div>
@@ -303,19 +305,19 @@ const DiscrepancyDetail: React.FC = () => {
         return {
           color: 'bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-900))]',
           icon: <AlertCircle className="h-4 w-4 mr-1" />,
-          text: 'Open'
+          text: t('discrepancy.status.open', { defaultValue: 'Open' })
         };
       case 'in_review':
         return {
           color: 'bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-900))]',
           icon: <CheckCircle className="h-4 w-4 mr-1" />,
-          text: 'In Review'
+          text: t('discrepancy.status.inReview', { defaultValue: 'In Review' })
         };
       case 'resolved':
         return {
           color: 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-900))]',
           icon: <CheckCircle className="h-4 w-4 mr-1" />,
-          text: 'Resolved'
+          text: t('discrepancy.status.resolved', { defaultValue: 'Resolved' })
         };
       default:
         return {
@@ -739,7 +741,7 @@ const DiscrepancyDetail: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <BackNav href="/msp/billing?tab=reconciliation">
-          Back to Reconciliation Dashboard
+          {t('discrepancy.backToReconciliation', { defaultValue: 'Back to Reconciliation' })}
         </BackNav>
         
         {report.status !== 'resolved' && (
@@ -815,17 +817,17 @@ const DiscrepancyDetail: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Discrepancy Details</CardTitle>
+            <CardTitle>{t('discrepancy.cards.discrepancyDetails', { defaultValue: 'Discrepancy Details' })}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between">
                 <div>
-                  <p className="text-sm text-[rgb(var(--color-text-500))]">Client</p>
+                  <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.client', { defaultValue: 'Client' })}</p>
                   <p className="font-medium">{client?.name || report.client_id}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-[rgb(var(--color-text-500))]">Status</p>
+                  <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.status', { defaultValue: 'Status' })}</p>
                   <Badge className={`${statusDisplay.color} flex items-center`}>
                     {statusDisplay.icon} {statusDisplay.text}
                   </Badge>
@@ -834,31 +836,31 @@ const DiscrepancyDetail: React.FC = () => {
               
               <div className="flex justify-between">
                 <div>
-                  <p className="text-sm text-[rgb(var(--color-text-500))]">Detected</p>
+                  <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.detected', { defaultValue: 'Detected' })}</p>
                   <p className="font-medium">{formatDateTime(parseISO(report.detection_date), 'PPpp')}</p>
                 </div>
                 {report.status === 'resolved' && (
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Resolved</p>
-                    <p className="font-medium">{report.resolution_date ? formatDateTime(parseISO(report.resolution_date), 'PPpp') : 'N/A'}</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.resolved', { defaultValue: 'Resolved' })}</p>
+                    <p className="font-medium">{report.resolution_date ? formatDateTime(parseISO(report.resolution_date), 'PPpp') : t('common.notAvailable', { defaultValue: 'N/A' })}</p>
                   </div>
                 )}
               </div>
               
               {report.status === 'resolved' && (
                 <div>
-                  <p className="text-sm text-[rgb(var(--color-text-500))]">Resolution Notes</p>
-                  <p className="font-medium">{report.resolution_notes || 'No notes provided'}</p>
+                  <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.resolutionNotes', { defaultValue: 'Resolution Notes' })}</p>
+                  <p className="font-medium">{report.resolution_notes || t('discrepancy.empty.noNotesProvided', { defaultValue: 'No notes provided' })}</p>
                 </div>
               )}
               
               {isCreditTrackingIssue && report.metadata && (
                 <div>
-                  <p className="text-sm text-[rgb(var(--color-text-500))]">Issue Type</p>
+                  <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.issueType', { defaultValue: 'Issue Type' })}</p>
                   <p className="font-medium">
                     {report.metadata.issue_type === 'missing_credit_tracking_entry' 
-                      ? 'Missing Credit Tracking Entry' 
-                      : 'Inconsistent Credit Remaining Amount'}
+                      ? t('discrepancy.issueTypes.missingCreditTrackingEntry', { defaultValue: 'Missing Credit Tracking Entry' })
+                      : t('discrepancy.issueTypes.inconsistentCreditRemainingAmount', { defaultValue: 'Inconsistent Credit Remaining Amount' })}
                   </p>
                 </div>
               )}
@@ -868,26 +870,26 @@ const DiscrepancyDetail: React.FC = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle>Balance Comparison</CardTitle>
+            <CardTitle>{t('discrepancy.cards.balanceComparison', { defaultValue: 'Balance Comparison' })}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-[rgb(var(--color-primary-50))] p-4 rounded-lg">
-                <p className="text-sm text-[rgb(var(--color-text-500))]">Expected Balance</p>
+                <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.expectedBalance', { defaultValue: 'Expected Balance' })}</p>
                 <p className="text-2xl font-bold text-[rgb(var(--color-primary-700))]">
                   {formatCurrency(report.expected_balance)}
                 </p>
               </div>
               
               <div className="bg-[rgb(var(--color-accent-50))] p-4 rounded-lg">
-                <p className="text-sm text-[rgb(var(--color-text-500))]">Actual Balance</p>
+                <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.actualBalance', { defaultValue: 'Actual Balance' })}</p>
                 <p className="text-2xl font-bold text-[rgb(var(--color-accent-700))]">
                   {formatCurrency(report.actual_balance)}
                 </p>
               </div>
               
               <div className="col-span-2 bg-[rgb(var(--color-secondary-50))] p-4 rounded-lg">
-                <p className="text-sm text-[rgb(var(--color-text-500))]">Difference</p>
+                <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.difference', { defaultValue: 'Difference' })}</p>
                 <p className={`text-2xl font-bold ${report.difference >= 0 
                   ? 'text-[rgb(var(--color-primary-700))]' 
                   : 'text-[rgb(var(--color-destructive-600))]'}`}>

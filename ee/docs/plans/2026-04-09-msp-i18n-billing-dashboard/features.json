@@ -67,7 +67,7 @@
   {
     "id": "F014",
     "description": "Wire useTranslation('msp/billing') in DiscrepancyDetail.tsx — back nav, status badges (Open/In Review/Resolved), discrepancy details card labels, balance comparison card",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F015",

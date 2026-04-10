@@ -51,6 +51,7 @@ credits, and service catalog are handled in separate plans.
 - **(2026-04-09)** `DiscrepancyDetail.tsx` (921 LOC) has ~70 strings and shares many labels
   with ReconciliationResolution (balance comparison, issue types, recommended fix text).
   Key reuse within the namespace will reduce total key count. Split into 3 features (F030-F032).
+- **(2026-04-10)** `DiscrepancyDetail.tsx` can share a large chunk of terminology with the reconciliation wizard, but it also has its own `discrepancy.*` card/field/status groups. The first pass is mostly shell labeling; the tab-heavy table content is the riskier part and is better split into separate commits.
 - **(2026-04-09)** `LineItem.tsx` (514 LOC) has complex conditional rendering for regular
   items vs discounts (percentage vs fixed). The collapsed/expanded states have different
   label sets. ~40 strings total, split into 2 features (F050-F051).
@@ -127,6 +128,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F011 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/ReconciliationResolution.tsx` for the stepper labels and the three resolution-type options. The step array now derives labels from `t()` at render time instead of relying on the module-scope English constants.
 - **(2026-04-10) F012 complete** -- Continued the `ReconciliationResolution.tsx` pass by translating the discrepancy detail labels (`Client`, `Status`, `Detected`, `Issue Type`), the balance comparison labels, and the two issue-type titles. This kept the commit aligned with the existing `reconciliation.fields.*`, `reconciliation.sections.*`, `reconciliation.status.*`, and `reconciliation.issueTypes.*` key groups.
 - **(2026-04-10) F013 complete** -- Finished the main reconciliation wizard shell: four-eyes approval copy, approval verification UI, correction summary labels, confirmation-step summary text, completion dialog copy, and user-facing error messages now read from `msp/billing`. Reused existing namespace keys throughout, so no locale-file regeneration was needed after F009.
+- **(2026-04-10) F014 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/DiscrepancyDetail.tsx` for the back navigation text, status badges, discrepancy detail labels, issue-type labels, and balance comparison card labels.
 
 ## Runbook
 
