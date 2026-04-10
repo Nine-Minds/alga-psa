@@ -269,7 +269,7 @@ const buildInitialPayloadFromSchema = (schema: JsonSchema | null): Record<string
   }
   const synthetic = buildSyntheticValueFromSchema(schema, schema);
   if (synthetic && typeof synthetic === 'object' && !Array.isArray(synthetic)) {
-    return synthetic as Record<string, unknown>;
+    return pruneSyntheticPickerBackedFields(schema, synthetic as Record<string, unknown>);
   }
   const fallback = buildDefaultValueFromSchema(schema, schema);
   return fallback && typeof fallback === 'object' && !Array.isArray(fallback)
@@ -418,6 +418,45 @@ const resolveRunDialogPickerField = (
       },
     },
   };
+};
+
+const pruneSyntheticPickerBackedFields = (
+  schema: JsonSchema,
+  payload: Record<string, unknown>,
+  rootSchema: JsonSchema = schema,
+  path: Array<string | number> = []
+): Record<string, unknown> => {
+  const resolved = resolveSchemaRef(schema, rootSchema);
+  const next: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(payload)) {
+    const childPath = [...path, key];
+    const childSchema = resolved.properties?.[key];
+    if (!childSchema) {
+      next[key] = value;
+      continue;
+    }
+
+    // Synthetic defaults should not pretend we know actual entity identifiers.
+    // If a field should render a picker by default, prefer leaving it blank so the user picks a real record.
+    if (resolveRunDialogPickerField(childSchema, rootSchema, childPath)) {
+      continue;
+    }
+
+    if (isObjectRecord(value)) {
+      next[key] = pruneSyntheticPickerBackedFields(childSchema, value, rootSchema, childPath);
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      next[key] = value;
+      continue;
+    }
+
+    next[key] = value;
+  }
+
+  return next;
 };
 
 const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSchema, path = ''): ValidationError[] => {
