@@ -62,7 +62,7 @@
   {
     "id": "F013",
     "description": "Wire ReconciliationResolution.tsx — four-eyes approval section (threshold notice, secondary approver name/email, verification code, approval verified badge), correction summary labels, confirmation dialog, error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F014",
