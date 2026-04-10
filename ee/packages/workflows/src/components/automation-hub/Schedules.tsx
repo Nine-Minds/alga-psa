@@ -338,9 +338,7 @@ export default function Schedules({
                 <DropdownMenu.Item
                   className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-text-700))] outline-none hover:bg-[rgb(var(--color-border-50))]"
                   onSelect={() => {
-                    setDialogMode('edit');
-                    setActiveScheduleId(record.id);
-                    setIsDialogOpen(true);
+                    openEditDialog(record.id);
                   }}
                 >
                   <Pencil className="h-4 w-4" />
@@ -394,6 +392,12 @@ export default function Schedules({
   const openCreateDialog = () => {
     setDialogMode('create');
     setActiveScheduleId(null);
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (scheduleId: string) => {
+    setDialogMode('edit');
+    setActiveScheduleId(scheduleId);
     setIsDialogOpen(true);
   };
 
@@ -504,6 +508,7 @@ export default function Schedules({
                 onPageChange={setCurrentPage}
                 pageSize={pageSize}
                 totalItems={schedules.length}
+                onRowClick={(record) => openEditDialog(record.id)}
               />
             </div>
           </div>
