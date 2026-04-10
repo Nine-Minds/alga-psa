@@ -13,8 +13,8 @@ import {
   type Envelope,
   type InputMapping,
   type SecretResolver,
-} from '@alga-psa/workflows/runtime';
-import type { WorkflowDefinition } from '@alga-psa/workflows/runtime';
+} from '@alga-psa/workflows/runtime/core';
+import type { WorkflowDefinition } from '@alga-psa/workflows/runtime/core';
 import { createHash } from 'crypto';
 import {
   buildWorkflowRuntimeV2ExpressionContext,

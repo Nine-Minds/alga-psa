@@ -248,7 +248,7 @@
   {
     "id": "F029",
     "description": "Make Temporal UI show active workers for authored queue ownership through `workflow-worker` during local smoke testing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria / Definition of Done",
       "UX / UI Notes"

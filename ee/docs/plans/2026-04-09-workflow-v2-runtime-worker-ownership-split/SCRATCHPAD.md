@@ -323,3 +323,45 @@ That exposed two separate but related issues:
 ### Verification state after this follow-up
 - Full `F029/T009/T011` end-to-end acceptance is still not closed in this session.
 - Latest blocker remains compose-heavy verification reliability (long build/start cycles and repeated project/port churn), with worker now moving through successive package-resolution failures as runtime packaging is hardened.
+
+## Implementation log (2026-04-10, compose smoke closure)
+
+### Completed in this checkpoint
+- Feature `F029` implemented/verified.
+- Tests `T009` and `T011` implemented/verified.
+
+### Decisions and rationale
+- Updated the compose smoke harness to allocate host ports dynamically (`DB`, `Redis`, `pgbouncer`, `Temporal`, `Temporal UI`, `server`, `hocuspocus`) so parallel local stacks no longer block the smoke with host-port collisions.
+- Started `workflow-worker` with `--no-deps` and explicitly started only required services (`setup`, `redis`, `temporal-dev`, `temporal-ui`) to avoid unrelated `server`/`hocuspocus` startup coupling during authored-runtime validation.
+- Hardened the smoke's DB fixture inserts to tolerate schema variants by filtering payload keys to actual table columns at runtime.
+  - Rationale: this keeps `T011` meaningful even when migration shape differs slightly across branches.
+- Fixed authored-runtime worker imports in Temporal activities/interpreter paths to use `@alga-psa/workflows/runtime/core` instead of the mixed bootstrap barrel.
+  - Rationale: prevents bootstrap-only runtime dependencies from being pulled into worker startup and avoids ESM runtime failures.
+- Fixed `@alga-psa/types` ESM barrel exports by using explicit `index` subpaths for directory exports (`constants`, `interfaces`).
+  - Rationale: avoids unresolved `dist/constants.js` / `dist/interfaces.js` imports in worker containers.
+- Updated smoke fixture workflow definition shape to omit `trigger` when absent (instead of `trigger: null`) so runtime schema parsing succeeds.
+
+### Files changed in this checkpoint
+- `scripts/workflow-runtime-v2-compose-smoke.mjs`
+- `packages/types/src/index.ts`
+- `ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts`
+- `ee/temporal-workflows/src/workflows/workflow-runtime-v2-interpreter.ts`
+- `ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts`
+- `ee/docs/plans/2026-04-09-workflow-v2-runtime-worker-ownership-split/features.json`
+- `ee/docs/plans/2026-04-09-workflow-v2-runtime-worker-ownership-split/tests.json`
+
+### Commands and checks run
+- `cd ee/temporal-workflows && npm run build`
+- `cd packages/types && npm run build`
+- `npm run -s test:workflow-runtime-v2-compose-smoke`
+- Re-ran compose smoke after cleanup and confirmed pass again:
+  - `npm run -s test:workflow-runtime-v2-compose-smoke`
+
+### High-signal verification outcomes
+- Compose smoke now passes end-to-end with exit code `0`.
+- `workflow-worker` starts Temporal polling on `workflow-runtime-v2` in the compose profile and authored run execution proceeds.
+- Smoke scenario confirms DB projection sanity for authored run + resumed event wait (`workflow_runs`, `workflow_run_waits`, `workflow_run_steps`).
+
+### Gotchas captured
+- Local schema in this branch does not include some previously assumed workflow columns (`published_version`, `definition_hash`), requiring schema-aware fixture inserts for stable integration smoke behavior.
+- Runtime definition parser requires absent trigger to be omitted, not `null`.

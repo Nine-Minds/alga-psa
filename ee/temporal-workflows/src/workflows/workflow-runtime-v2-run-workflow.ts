@@ -6,9 +6,9 @@ import {
   type WorkflowRuntimeV2TemporalRunInput,
 } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
 import { compileExpression, type CompiledExpression } from '@alga-psa/workflows/runtime/expressionEngine';
-import type { EventWaitFilter, Expr, ForEachBlock, IfBlock, Step } from '@alga-psa/workflows/runtime';
-import type { RetryPolicy, OnErrorPolicy } from '@alga-psa/workflows/runtime';
-import type { TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime';
+import type { EventWaitFilter, Expr, ForEachBlock, IfBlock, Step } from '@alga-psa/workflows/runtime/core';
+import type { RetryPolicy, OnErrorPolicy } from '@alga-psa/workflows/runtime/core';
+import type { TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime/core';
 import {
   advanceWorkflowRuntimeV2InterpreterState,
   createWorkflowRuntimeV2InterpreterCheckpoint,

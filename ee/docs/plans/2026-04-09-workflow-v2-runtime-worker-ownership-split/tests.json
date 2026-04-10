@@ -90,7 +90,7 @@
   {
     "id": "T009",
     "description": "Compose/dev-environment test: local Docker configuration brings up authored runtime successfully with `workflow-worker` owning Temporal polling and Temporal UI showing active workers on `workflow-runtime-v2`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F025",
@@ -110,7 +110,7 @@
   {
     "id": "T011",
     "description": "DB-backed integration sanity test: an authored run and one resumed wait still project correctly in `workflow_runs`, `workflow_run_waits`, and related tables after ownership moves to `workflow-worker`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F023",

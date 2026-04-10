@@ -1,4 +1,4 @@
-import type { ForEachBlock, IfBlock, Step, TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime';
+import type { ForEachBlock, IfBlock, Step, TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime/core';
 
 export type WorkflowRuntimeV2SequenceFrame = {
   kind: 'sequence';
