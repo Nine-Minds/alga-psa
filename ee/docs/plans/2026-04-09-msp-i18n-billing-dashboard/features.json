@@ -42,7 +42,7 @@
   {
     "id": "F009",
     "description": "Run `node scripts/validate-translations.cjs` and resolve any key parity issues across all 9 locales (exit code 0 required)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",

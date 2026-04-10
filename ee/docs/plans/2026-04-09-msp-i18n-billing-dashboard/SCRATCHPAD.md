@@ -43,6 +43,7 @@ credits, and service catalog are handled in separate plans.
   this array is the only config change needed.
 - **(2026-04-10)** `server/public/locales/en/msp/billing.json` was created as a broad foundational namespace with shared vocabulary across dashboard, overview, reconciliation, discrepancy, usage, line-item, services, exports, template designer, and quantity-dialog surfaces. It intentionally front-loads reusable labels so later component wiring can reference stable keys instead of inventing ad hoc per-file strings.
 - **(2026-04-10)** Locale generation can be bootstrapped from the English namespace using `translate.googleapis.com` while preserving `{{interpolation}}` tokens. This is good enough for parity work, but repeated billing vocabulary still needs spot-auditing because machine translation is not domain-aware (for example, quote/billing terminology can drift).
+- **(2026-04-10)** A temporary smoke-test invocation of the locale generator created an unintended `server/public/locales/--help` directory. This was removed before validation; no tracked files depended on it.
 - **(2026-04-09)** `ReconciliationResolution.tsx` (1129 LOC) is the largest file and has
   ~80 user-visible strings spanning 3 wizard steps, resolution options, four-eyes approval
   flow, and a confirmation dialog. Split into 3 features (F020-F022).
@@ -120,9 +121,11 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F006 complete** -- Generated `server/public/locales/it/msp/billing.json` and verified it parses. The explicit Italian accent audit still needs the global validation pass, but the locale file is now present and structurally correct.
 - **(2026-04-10) F007 complete** -- Generated `server/public/locales/pl/msp/billing.json` and verified it parses. At this point all real-language locale files for `msp/billing` exist; pseudo-locales and parity validation are next.
 - **(2026-04-10) F008 complete** -- Ran `node scripts/generate-pseudo-locales.cjs`, which regenerated `server/public/locales/xx/msp/billing.json` and `server/public/locales/yy/msp/billing.json` from the English source. Verified both pseudo-locale files now exist.
+- **(2026-04-10) F009 complete** -- Ran `node scripts/validate-translations.cjs` after cleaning up the stray `--help` locale directory. Validation passed with 0 errors / 0 warnings across `de`, `es`, `fr`, `it`, `nl`, `pl`, `xx`, and `yy`.
 
 ## Runbook
 
 - `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/billing.json','utf8')); console.log('ok')"`
 - `node - <<'NODE' ... generate translated locale from en/msp/billing.json via translate.googleapis.com while preserving {{placeholders}} ... NODE`
 - `node scripts/generate-pseudo-locales.cjs`
+- `rm -rf server/public/locales/--help && node scripts/validate-translations.cjs`
