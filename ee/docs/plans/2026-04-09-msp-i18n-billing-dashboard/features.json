@@ -92,7 +92,7 @@
   {
     "id": "F019",
     "description": "Wire useTranslation('msp/billing') in LineItem.tsx — regular line item labels (Service/Quantity/Rate/Description), discount labels (Discount Type/Percentage/Amount/Apply Discount To/Discount Description), collapsed summary text (Item Discount/Invoice Discount/Taxable/Non-Taxable/Subtotal/Select Service)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F020",

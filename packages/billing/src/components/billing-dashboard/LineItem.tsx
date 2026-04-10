@@ -7,6 +7,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { DiscountType } from '@alga-psa/types';
 import { formatCurrency } from '@alga-psa/core';
 import { getCurrencySymbol } from '@alga-psa/core';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Extend SelectOption to include rate
 export interface ServiceOption extends SelectOption {
@@ -58,6 +59,7 @@ export const LineItem: React.FC<LineItemProps> = ({
   onToggleExpand,
   currencyCode = 'USD',
 }) => {
+  const { t } = useTranslation('msp/billing');
   const currencySymbol = getCurrencySymbol(currencyCode);
   // Internal state for editing
   const [editState, setEditState] = useState<EditableItem>(() => ({
@@ -204,7 +206,9 @@ export const LineItem: React.FC<LineItemProps> = ({
           {editState.is_discount ? (
             <>
               <span className="font-medium text-blue-600">
-                {editState.applies_to_item_id ? 'Item Discount' : 'Invoice Discount'}
+                {editState.applies_to_item_id
+                  ? t('lineItem.collapsed.itemDiscount', { defaultValue: 'Item Discount' })
+                  : t('lineItem.collapsed.invoiceDiscount', { defaultValue: 'Invoice Discount' })}
               </span>
               <span className="mx-2 text-muted-foreground">|</span>
               <span className="text-muted-foreground">
@@ -214,17 +218,26 @@ export const LineItem: React.FC<LineItemProps> = ({
                 {editState.applies_to_item_id && (
                   <>
                     <span className="mx-2 text-muted-foreground">|</span>
-                    <span>Applied to: {invoiceItems?.find(i => i.item_id === editState.applies_to_item_id)?.description}</span>
+                    <span>
+                      {t('lineItem.collapsed.appliedTo', {
+                        defaultValue: 'Applied to: {{description}}',
+                        description: invoiceItems?.find(i => i.item_id === editState.applies_to_item_id)?.description ?? '',
+                      })}
+                    </span>
                   </>
                 )}
               </span>
             </>
           ) : (
             <>
-              <span className="font-medium">{selectedService?.label || 'Select Service'}</span>
+              <span className="font-medium">
+                {selectedService?.label || t('lineItem.collapsed.selectService', { defaultValue: 'Select Service' })}
+              </span>
               {/* Derive taxable status directly from tax_rate_id */}
               <span className="text-xs text-muted-foreground ml-1">
-                {!!selectedService?.tax_rate_id ? '(Taxable)' : '(Non-Taxable)'}
+                {!!selectedService?.tax_rate_id
+                  ? t('lineItem.collapsed.taxable', { defaultValue: '(Taxable)' })
+                  : t('lineItem.collapsed.nonTaxable', { defaultValue: '(Non-Taxable)' })}
               </span>
               <span className="mx-2 text-muted-foreground">|</span>
               <span className="text-muted-foreground">{editState.description}</span>
@@ -293,7 +306,7 @@ export const LineItem: React.FC<LineItemProps> = ({
           <>
             <div>
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                Service
+                {t('lineItem.fields.service', { defaultValue: 'Service' })}
               </label>
               <CustomSelect
                 id='service-select'
@@ -307,7 +320,7 @@ export const LineItem: React.FC<LineItemProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                Quantity
+                {t('lineItem.fields.quantity', { defaultValue: 'Quantity' })}
               </label>
               <Input
                 id='quantity-input'
@@ -326,7 +339,7 @@ export const LineItem: React.FC<LineItemProps> = ({
           <>
             <div>
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                Discount Type
+                {t('lineItem.fields.discountType', { defaultValue: 'Discount Type' })}
               </label>
               <CustomSelect
                 id='discount-type-select'
@@ -340,7 +353,12 @@ export const LineItem: React.FC<LineItemProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                {editState.discount_type === 'percentage' ? 'Percentage' : `Amount (${currencySymbol})`}
+                {editState.discount_type === 'percentage'
+                  ? t('lineItem.fields.percentage', { defaultValue: 'Percentage' })
+                  : t('lineItem.fields.amount', {
+                      defaultValue: 'Amount ({{currencySymbol}})',
+                      currencySymbol,
+                    })}
               </label>
               <Input
                 id='discount-value-input'
@@ -400,7 +418,7 @@ export const LineItem: React.FC<LineItemProps> = ({
           <>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                Discount Description
+                {t('lineItem.fields.discountDescription', { defaultValue: 'Discount Description' })}
               </label>
               <Input
                 id='discount-description-input'
@@ -409,14 +427,16 @@ export const LineItem: React.FC<LineItemProps> = ({
                 onChange={(e) => handleLocalChange('description', e.target.value)}
                 className="w-full"
                 disabled={editState.isRemoved}
-                placeholder="e.g., Early Payment Discount"
+                placeholder={t('lineItem.placeholders.discountDescription', {
+                  defaultValue: 'e.g., Early Payment Discount',
+                })}
               />
             </div>
 
             {invoiceItems && invoiceItems.length > 0 && (
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                  Apply Discount To
+                  {t('lineItem.fields.applyDiscountTo', { defaultValue: 'Apply Discount To' })}
                 </label>
                 <CustomSelect
                   id='applies-to-item-select'
@@ -441,7 +461,10 @@ export const LineItem: React.FC<LineItemProps> = ({
         ) : (
           <div className="col-span-1">
             <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-              Rate ({currencySymbol})
+              {t('lineItem.fields.rate', {
+                defaultValue: 'Rate ({{currencySymbol}})',
+                currencySymbol,
+              })}
             </label>
             <Input
               id='rate-input'
@@ -466,7 +489,7 @@ export const LineItem: React.FC<LineItemProps> = ({
       {!editState.is_discount && (
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-            Description
+            {t('lineItem.fields.description', { defaultValue: 'Description' })}
           </label>
           <Input
             id='description-input'
@@ -488,25 +511,48 @@ export const LineItem: React.FC<LineItemProps> = ({
         {editState.is_discount ? (
           <>
             <span className="text-blue-600 font-medium">
-              {editState.discount_type === 'percentage' ? 'Percentage Discount' : 'Fixed Discount'}
+              {editState.discount_type === 'percentage'
+                ? t('lineItem.summary.percentageDiscount', { defaultValue: 'Percentage Discount' })
+                : t('lineItem.summary.fixedDiscount', { defaultValue: 'Fixed Discount' })}
             </span>
             <span className="mx-2">|</span>
             <span>
               {editState.discount_type === 'percentage'
-                ? `${editState.discount_percentage || 0}% of ${editState.applies_to_item_id ? 'item' : 'invoice'} total`
-                : `Amount: -${currencySymbol}${(Math.abs(subtotal) / 100).toFixed(2)}`}
+                ? editState.applies_to_item_id
+                  ? t('lineItem.summary.itemTotal', {
+                      defaultValue: '{{percentage}}% of item total',
+                      percentage: editState.discount_percentage || 0,
+                    })
+                  : t('lineItem.summary.invoiceTotal', {
+                      defaultValue: '{{percentage}}% of invoice total',
+                      percentage: editState.discount_percentage || 0,
+                    })
+                : t('lineItem.summary.amount', {
+                    defaultValue: 'Amount: -{{currencySymbol}}{{amount}}',
+                    currencySymbol,
+                    amount: (Math.abs(subtotal) / 100).toFixed(2),
+                  })}
               {editState.applies_to_item_id && (
                 <>
                   <span className="mx-2">|</span>
                   <span className="text-muted-foreground">
-                    Applied to: {invoiceItems?.find(i => i.item_id === editState.applies_to_item_id)?.description}
+                    {t('lineItem.summary.appliedTo', {
+                      defaultValue: 'Applied to: {{description}}',
+                      description: invoiceItems?.find(i => i.item_id === editState.applies_to_item_id)?.description ?? '',
+                    })}
                   </span>
                 </>
               )}
             </span>
           </>
         ) : (
-          <>Subtotal: {currencySymbol}{(subtotal / 100).toFixed(2)}</>
+          <>
+            {t('lineItem.summary.subtotal', {
+              defaultValue: 'Subtotal: {{currencySymbol}}{{amount}}',
+              currencySymbol,
+              amount: (subtotal / 100).toFixed(2),
+            })}
+          </>
         )}
       </div>
     </div>

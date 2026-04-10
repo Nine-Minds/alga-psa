@@ -65,6 +65,7 @@ credits, and service catalog are handled in separate plans.
   `title` and `subtitle` props as strings. These need to become `t()` calls at the
   call site, not inside MetricCard itself (MetricCard is a generic presentational component).
 - **(2026-04-10)** `UsageTracking.tsx` already had a clean separation between list-shell strings and dialog/toast strings. That makes it safe to split the i18n pass into F017 (table/filter shell) and F018 (dialog, guidance, toasts) without touching locale structure in between.
+- **(2026-04-10)** `LineItem.tsx` can be split cleanly between content labels/summary strings and the remaining chrome-only strings. The existing `lineItem.*` locale group already covers both halves, so F019/F020 do not need additional locale keys unless a hidden string surfaces during test coverage.
 - **(2026-04-09)** `ContractsHub.tsx` is small (77 LOC) but renders tab labels that should
   use `msp/billing` namespace for consistency with the billing dashboard.
 - **(2026-04-09)** `PropertyEditor.tsx` and `ConditionalRuleManager.tsx` are part of the
@@ -134,6 +135,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F016 complete** -- Finished `DiscrepancyDetail.tsx` by translating the issue-details tab, recommended-fix copy, credit-applications table headings, resolve-discrepancy dialog labels, and the remaining empty/error states. This closes out the discrepancy detail screen without expanding the locale schema beyond the keys already seeded in F001.
 - **(2026-04-10) F017 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/UsageTracking.tsx` for the bucket overview title, usage table headers, contract-line summary text, filter labels/placeholders, loading state, and row action menu labels.
 - **(2026-04-10) F018 complete** -- Finished `UsageTracking.tsx` by translating the add/edit dialog labels, contract-line selector guidance/placeholder copy, create-update-delete toasts, and the delete confirmation dialog. This closes out the usage-tracking screen without introducing new locale keys after the foundational namespace work.
+- **(2026-04-10) F019 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/LineItem.tsx` for the regular field labels, discount field labels, collapsed summary strings, subtotal/discount summaries, and the discount-description placeholder. The file reused the seeded `lineItem.collapsed.*`, `lineItem.fields.*`, `lineItem.placeholders.*`, and `lineItem.summary.*` keys, so locale regeneration was not needed.
 
 ## Runbook
 
@@ -141,3 +143,4 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - `node - <<'NODE' ... generate translated locale from en/msp/billing.json via translate.googleapis.com while preserving {{placeholders}} ... NODE`
 - `node scripts/generate-pseudo-locales.cjs`
 - `rm -rf server/public/locales/--help && node scripts/validate-translations.cjs`
+- `npm exec eslint -- packages/billing/src/components/billing-dashboard/LineItem.tsx`
