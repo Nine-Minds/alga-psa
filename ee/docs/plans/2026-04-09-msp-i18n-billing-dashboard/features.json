@@ -52,7 +52,7 @@
   {
     "id": "F011",
     "description": "Wire useTranslation('msp/billing') in ReconciliationResolution.tsx — stepper labels (Review Discrepancy / Approval / Confirmation), resolution type options",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",

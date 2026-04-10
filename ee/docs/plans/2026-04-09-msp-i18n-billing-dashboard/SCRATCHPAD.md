@@ -47,6 +47,7 @@ credits, and service catalog are handled in separate plans.
 - **(2026-04-09)** `ReconciliationResolution.tsx` (1129 LOC) is the largest file and has
   ~80 user-visible strings spanning 3 wizard steps, resolution options, four-eyes approval
   flow, and a confirmation dialog. Split into 3 features (F020-F022).
+- **(2026-04-10)** `ReconciliationResolution.tsx` can reuse the already-seeded `reconciliation.steps.*`, `reconciliation.sections.resolutionOptions`, and `reconciliation.resolutionTypes.*` keys without expanding the locale surface. That keeps the first reconciliation wiring pass focused and avoids immediate locale-file churn after F009 validation.
 - **(2026-04-09)** `DiscrepancyDetail.tsx` (921 LOC) has ~70 strings and shares many labels
   with ReconciliationResolution (balance comparison, issue types, recommended fix text).
   Key reuse within the namespace will reduce total key count. Split into 3 features (F030-F032).
@@ -123,6 +124,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F008 complete** -- Ran `node scripts/generate-pseudo-locales.cjs`, which regenerated `server/public/locales/xx/msp/billing.json` and `server/public/locales/yy/msp/billing.json` from the English source. Verified both pseudo-locale files now exist.
 - **(2026-04-10) F009 complete** -- Ran `node scripts/validate-translations.cjs` after cleaning up the stray `--help` locale directory. Validation passed with 0 errors / 0 warnings across `de`, `es`, `fr`, `it`, `nl`, `pl`, `xx`, and `yy`.
 - **(2026-04-10) F010 complete** -- Updated `packages/core/src/lib/i18n/config.ts` so `ROUTE_NAMESPACES['/msp/billing']` now loads `msp/billing` alongside `common`, `msp/core`, `features/billing`, and `msp/reports`. This is the only route-config change needed for this batch.
+- **(2026-04-10) F011 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/ReconciliationResolution.tsx` for the stepper labels and the three resolution-type options. The step array now derives labels from `t()` at render time instead of relying on the module-scope English constants.
 
 ## Runbook
 

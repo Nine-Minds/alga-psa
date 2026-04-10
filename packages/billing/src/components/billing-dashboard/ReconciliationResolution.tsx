@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle, CheckCircle, XCircle, ArrowLeft, AlertTriangle, Info } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Define the threshold for requiring four-eyes approval
 const FOUR_EYES_THRESHOLD = 1000; // $1000
@@ -130,8 +131,18 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation('msp/billing');
   const stepParam = searchParams?.get('step');
   const reportId = propReportId || (params?.reportId as string);
+  const steps = STEPS.map((step) => ({
+    ...step,
+    label:
+      step.id === 'review'
+        ? t('reconciliation.steps.review', { defaultValue: 'Review Discrepancy' })
+        : step.id === 'approve'
+          ? t('reconciliation.steps.approval', { defaultValue: 'Approval' })
+          : t('reconciliation.steps.confirmation', { defaultValue: 'Confirmation' }),
+  }));
 
   // Determine initial step based on URL parameter
   const getInitialStep = (): number => {
@@ -489,7 +500,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
         <h2 className="text-xl font-bold">Resolve Credit Discrepancy</h2>
       </div>
       
-      <Stepper currentStep={currentStep} steps={STEPS} className="mb-8" />
+      <Stepper currentStep={currentStep} steps={steps} className="mb-8" />
       
       {/* Step 1: Review Discrepancy */}
       {currentStep === 0 && (
@@ -711,7 +722,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
           {/* Resolution options */}
           <Card>
             <CardHeader>
-              <CardTitle>Resolution Options</CardTitle>
+              <CardTitle>
+                {t('reconciliation.sections.resolutionOptions', { defaultValue: 'Resolution Options' })}
+              </CardTitle>
               <CardDescription>
                 Select how you want to resolve this discrepancy
               </CardDescription>
@@ -728,7 +741,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                     className="h-4 w-4 text-[rgb(var(--color-primary-600))] focus:ring-[rgb(var(--color-primary-500))]"
                   />
                   <label htmlFor="recommended-fix" className="text-sm font-medium text-[rgb(var(--color-text-900))]">
-                    Apply Recommended Fix ({formatCurrency(report.difference)})
+                    {t('reconciliation.resolutionTypes.recommended', { defaultValue: 'Recommended Fix' })} ({formatCurrency(report.difference)})
                   </label>
                 </div>
                 
@@ -743,7 +756,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                   />
                   <div className="flex-1">
                     <label htmlFor="custom-fix" className="text-sm font-medium text-[rgb(var(--color-text-900))]">
-                      Custom Correction
+                      {t('reconciliation.resolutionTypes.custom', { defaultValue: 'Custom Correction' })}
                     </label>
                     {resolutionType === 'custom' && (
                       <div className="mt-2">
@@ -773,7 +786,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                     className="h-4 w-4 text-[rgb(var(--color-primary-600))] focus:ring-[rgb(var(--color-primary-500))]"
                   />
                   <label htmlFor="no-action" className="text-sm font-medium text-[rgb(var(--color-text-900))]">
-                    No Action Required (Mark as Resolved Without Correction)
+                    {t('reconciliation.resolutionTypes.noAction', { defaultValue: 'No Action Required' })}
                   </label>
                 </div>
               </div>
