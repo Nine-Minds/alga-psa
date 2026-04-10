@@ -1,7 +1,7 @@
 'use client';
 
 
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Activity,
   ActivityFilters,
@@ -11,21 +11,38 @@ import {
 } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { RefreshCw, Filter, XCircle } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { fetchActivities } from '@alga-psa/workflows/actions';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
-import { ActivitiesTableFilters, ActivitiesTableFiltersRef } from './filters/ActivitiesTableFilters';
+import { ActivitiesTableFilters } from './filters/ActivitiesTableFilters';
 import { useActivityDrawer } from './ActivityDrawerProvider';
+import { useActivityCrossFeature } from '@alga-psa/ui/context';
 import { useActivitiesCache } from '../../hooks/useActivitiesCache';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { ScheduleActivity } from '@alga-psa/types';
+
+// Lightweight shape for the project filter tree — matches getProjectsWithPhases
+export interface ProjectWithPhasesForFilter {
+  project_id: string;
+  project_name: string;
+  is_inactive: boolean;
+  phases: Array<{ phase_id: string; phase_name: string; wbs_code: string }>;
+}
 import { ActivitiesTableSkeleton } from './ActivitiesTableSkeleton';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { DEFAULT_TABLE_TYPES } from './constants';
 
 interface ActivitiesDataTableSectionProps {
   title?: string;
   initialFilters?: ActivityFilters;
   id?: string;
 }
+
+const DEFAULT_FILTERS: ActivityFilters = {
+  types: DEFAULT_TABLE_TYPES,
+  isClosed: false,
+};
 
 export function ActivitiesDataTableSection({
   title = "All Activities",
@@ -34,9 +51,39 @@ export function ActivitiesDataTableSection({
 }: ActivitiesDataTableSectionProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<ActivityFilters>(initialFilters);
-  const filtersRef = useRef<ActivitiesTableFiltersRef>(null); // Create ref for ActivitiesTableFilters
   const { openActivityDrawer } = useActivityDrawer();
+  const ctx = useActivityCrossFeature();
+
+  // Determine if explicit filters were passed (e.g., from "View All" in cards view)
+  const hasExplicitFilters = initialFilters.types && initialFilters.types.length > 0;
+
+  // Persist filters to user preferences
+  const {
+    value: savedFilters,
+    setValue: setSavedFilters,
+    hasLoadedInitial: filtersLoaded,
+  } = useUserPreference<ActivityFilters>(
+    'activitiesTableFilters',
+    {
+      defaultValue: DEFAULT_FILTERS,
+      localStorageKey: 'activitiesTableFilters',
+      debounceMs: 1000,
+    }
+  );
+
+  // Use explicit filters if provided, otherwise saved preferences
+  const [filters, setFilters] = useState<ActivityFilters>(
+    hasExplicitFilters ? initialFilters : DEFAULT_FILTERS
+  );
+  const [filtersInitialized, setFiltersInitialized] = useState(hasExplicitFilters);
+
+  // Once saved preferences load, apply them (unless explicit filters were provided)
+  useEffect(() => {
+    if (filtersLoaded && !hasExplicitFilters && !filtersInitialized) {
+      setFilters(savedFilters);
+      setFiltersInitialized(true);
+    }
+  }, [filtersLoaded, hasExplicitFilters, filtersInitialized, savedFilters]);
   
   // Use the enhanced cache hook with loading state
   const {
@@ -50,10 +97,23 @@ export function ActivitiesDataTableSection({
   // Priorities for the filter dropdown
   const [priorities, setPriorities] = useState<IPriority[]>([]);
 
+  // Projects (with phases) for the filter tree-select
+  const [projects, setProjects] = useState<ProjectWithPhasesForFilter[]>([]);
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+
+  // Sort state (server-side)
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSortChange = useCallback((nextSortBy: string, nextDirection: 'asc' | 'desc') => {
+    setSortBy(nextSortBy);
+    setSortDirection(nextDirection);
+    setCurrentPage(1); // reset to first page on sort change
+  }, []);
 
   // Load priorities when a single prioritized activity type is selected
   useEffect(() => {
@@ -71,40 +131,30 @@ export function ActivitiesDataTableSection({
     setPriorities([]);
   }, [filters.types]);
 
-  // Check if any filters are active - memoized
-  const isFiltersActive = useCallback(() => {
-    // Check if any filter has a non-default value
-    const hasTypes = filters.types && filters.types.length > 0;
-    const hasStatus = filters.status && filters.status.length > 0;
-    const hasPriority = filters.priority && filters.priority.length > 0;
-    const hasPriorityIds = filters.priorityIds && filters.priorityIds.length > 0;
-    const hasAssignedTo = filters.assignedTo && filters.assignedTo.length > 0;
-    const hasDateRange = filters.dueDateStart || filters.dueDateEnd;
-    const isClosed = filters.isClosed === true; // Default is false
-
-    return hasTypes || hasStatus || hasPriority || hasPriorityIds || hasAssignedTo || hasDateRange || isClosed;
-  }, [filters]);
-
-  // Handle reset filters - memoized
-  const handleResetFilters = useCallback(() => {
-    // Reset to default filters
-    setFilters({});
-    setCurrentPage(1); // Reset to first page
-  }, []);
+  // Load projects with phases for the filter tree on mount
+  useEffect(() => {
+    ctx.getProjectsWithPhases()
+      .then((data: any) => {
+        if (!isActionPermissionError(data)) {
+          setProjects(data);
+        }
+      })
+      .catch((err: any) => console.error('Error loading projects with phases:', err));
+  }, [ctx]);
 
   // Use useCallback to memoize loadActivities with cache
   const loadActivities = useCallback(async () => {
     try {
       // Prepare filter
-      const effectiveFilters = {
+      const effectiveFilters: ActivityFilters = {
         ...filters,
         // If types array is empty, explicitly request all activity types
         types: filters.types && filters.types.length > 0
           ? filters.types
-          : Object.values(ActivityType) // Removed filter excluding WORKFLOW_TASK
+          : Object.values(ActivityType),
+        sortBy: sortBy as any,
+        sortDirection,
       };
-
-      console.log(`Loading activities page ${currentPage} with filters:`, effectiveFilters);
 
       // Use the cache to fetch activities
       const result = await getActivities(
@@ -113,15 +163,14 @@ export function ActivitiesDataTableSection({
         pageSize
       );
 
-      console.log(`Loaded ${result.activities.length} activities, total: ${result.totalCount}`);
       setActivities(result.activities);
-      setTotalItems(result.totalCount); // Set total items count from response
+      setTotalItems(result.totalCount);
       setError(null);
     } catch (err) {
       console.error(`Error loading activities (page ${currentPage}):`, err);
       setError('Failed to load activities. Please try again later.');
     }
-  }, [filters, currentPage, pageSize, getActivities]); // Add getActivities to dependencies
+  }, [filters, currentPage, pageSize, getActivities, sortBy, sortDirection]);
 
   // useEffect to trigger loadActivities when filters or pagination changes
   useEffect(() => {
@@ -140,12 +189,10 @@ export function ActivitiesDataTableSection({
   }, [loadActivities, invalidateCache]);
 
   const handleFilterChange = useCallback((newFilters: ActivityFilters) => {
-    setFilters(prev => ({
-      ...prev,
-      ...newFilters
-    }));
+    setFilters(newFilters);
+    setSavedFilters(newFilters);
     setCurrentPage(1);
-  }, []);
+  }, [setSavedFilters]);
 
   const handlePageChange = useCallback((newPage: number) => {
     setCurrentPage(newPage);
@@ -184,31 +231,8 @@ export function ActivitiesDataTableSection({
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle>{title}</CardTitle>
         <div className="flex items-center gap-2">
-          {isFiltersActive() ? (
-            <Button
-              id={`${id}-reset-filters-button`}
-              variant="outline"
-              size="sm"
-              onClick={handleResetFilters}
-              disabled={isLoading}
-            >
-              <XCircle className="h-4 w-4 mr-2" />
-              Reset
-            </Button>
-          ) : (
-            <Button
-              id={`${id}-filter-button`}
-              variant="outline"
-              size="sm"
-              onClick={() => filtersRef.current?.openDialog()}
-              disabled={isLoading}
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Filters
-            </Button>
-          )}
-          <Button 
-            id={`${id}-refresh-button`} 
+          <Button
+            id={`${id}-refresh-button`}
             variant="outline"
             size="sm"
             onClick={handleRefresh}
@@ -220,13 +244,11 @@ export function ActivitiesDataTableSection({
         </div>
       </CardHeader>
       <CardContent>
-        {/* Render ActivitiesTableFilters always, pass the ref */}
-        {/* Visibility is handled internally by its Dialog */}
         <ActivitiesTableFilters
-          ref={filtersRef}
           filters={filters}
           onChange={handleFilterChange}
           priorities={priorities}
+          projects={projects}
         />
         {isInitialLoad || (isLoading && activities.length === 0) ? (
           <ActivitiesTableSkeleton rowCount={pageSize} />
@@ -253,6 +275,9 @@ export function ActivitiesDataTableSection({
             totalItems={totalItems}
             onPageChange={handlePageChange}
             onItemsPerPageChange={handlePageSizeChange}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSortChange={handleSortChange}
           />
         )}
       </CardContent>

@@ -1,267 +1,286 @@
 'use client';
 
 
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   ActivityFilters as ActivityFiltersType,
   ActivityType,
   IPriority
 } from "@alga-psa/types";
+
+export interface ProjectWithPhases {
+  project_id: string;
+  project_name: string;
+  is_inactive: boolean;
+  phases: Array<{ phase_id: string; phase_name: string; wbs_code: string }>;
+}
+
+type ProjectNodeType = 'project' | 'phase';
 import { Button } from "@alga-psa/ui/components/Button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@alga-psa/ui/components/Dialog";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import TreeSelect, { TreeSelectOption } from "@alga-psa/ui/components/TreeSelect";
+import { RotateCcw } from 'lucide-react';
+import { DEFAULT_TABLE_TYPES } from '../constants';
 
 // Activity types that support priority filtering via the priorities table
 const PRIORITY_FILTERABLE_TYPES = new Set([ActivityType.TICKET, ActivityType.PROJECT_TASK]);
+
+// Time entries and notifications are intentionally excluded from the list view —
+// they create noise and aren't meaningful "tasks to do today".
+const ACTIVITY_TYPE_OPTIONS = [
+  { value: ActivityType.SCHEDULE, label: 'Schedule' },
+  { value: ActivityType.PROJECT_TASK, label: 'Project Tasks' },
+  { value: ActivityType.TICKET, label: 'Tickets' },
+  { value: ActivityType.WORKFLOW_TASK, label: 'Workflow Tasks' },
+];
 
 interface ActivitiesTableFiltersProps {
   filters: ActivityFiltersType;
   onChange: (filters: ActivityFiltersType) => void;
   priorities?: IPriority[];
+  projects?: ProjectWithPhases[];
 }
 
-export interface ActivitiesTableFiltersRef {
-  openDialog: () => void;
-}
+export function ActivitiesTableFilters({
+  filters,
+  onChange,
+  priorities = [],
+  projects = []
+}: ActivitiesTableFiltersProps) {
+  const [selectedPriorityId, setSelectedPriorityId] = useState<string>(filters.priorityIds?.[0] || 'all');
 
-export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, ActivitiesTableFiltersProps>(
-  ({ filters, onChange, priorities = [] }, ref) => {
-    const [open, setOpen] = useState(false);
-    const [localFilters, setLocalFilters] = useState<ActivityFiltersType>(filters);
-    const [selectedPriorityId, setSelectedPriorityId] = useState<string>(filters.priorityIds?.[0] || 'all');
+  // Determine if priority filter should be enabled based on selected types
+  const isPriorityFilterAvailable = filters.types?.length === 1
+    && PRIORITY_FILTERABLE_TYPES.has(filters.types[0]);
 
-    // Determine if priority filter should be enabled based on selected types
-    const isPriorityFilterAvailable = localFilters.types?.length === 1
-      && PRIORITY_FILTERABLE_TYPES.has(localFilters.types[0]);
+  const handleReset = useCallback(() => {
+    setSelectedPriorityId('all');
+    onChange({
+      types: DEFAULT_TABLE_TYPES,
+      status: [],
+      assignedTo: [],
+      isClosed: false,
+      projectIds: undefined,
+      phaseIds: undefined,
+    });
+  }, [onChange]);
 
-    // Expose openDialog function via ref
-    useImperativeHandle(ref, () => ({
-      openDialog: () => {
-        setLocalFilters(filters); // Ensure local state is synced with parent on open
-        setSelectedPriorityId(filters.priorityIds?.[0] || 'all');
-        setOpen(true);
-      }
-    }));
+  // Toggle a value in an array filter and apply immediately
+  const toggleType = useCallback((typeValue: ActivityType) => {
+    const currentTypes = filters.types || [];
+    const newTypes = currentTypes.includes(typeValue)
+      ? currentTypes.filter(t => t !== typeValue)
+      : [...currentTypes, typeValue];
 
-    // Reset filters to initial state
-    const handleReset = () => {
-      const resetFilters: ActivityFiltersType = {
-        types: [],
-        status: [],
-        priority: [],
-        assignedTo: [],
-        isClosed: false
-      };
-      setLocalFilters(resetFilters);
+    // Clear priority selection if the result is no longer a single prioritized type
+    const stillFilterable = newTypes.length === 1 && PRIORITY_FILTERABLE_TYPES.has(newTypes[0]);
+    const updatedFilters: ActivityFiltersType = { ...filters, types: newTypes };
+    if (!stillFilterable) {
       setSelectedPriorityId('all');
+      delete updatedFilters.priorityIds;
+    }
+    onChange(updatedFilters);
+  }, [filters, onChange]);
+
+  const handlePriorityChange = useCallback((value: string) => {
+    setSelectedPriorityId(value);
+    const updatedFilters: ActivityFiltersType = {
+      ...filters,
+      priorityIds: value && value !== 'all' ? [value] : undefined,
     };
+    if (!updatedFilters.priorityIds) delete updatedFilters.priorityIds;
+    delete updatedFilters.priority;
+    onChange(updatedFilters);
+  }, [filters, onChange]);
 
-    // Apply filters and close dialog
-    const handleApply = () => {
-      const filtersToApply: ActivityFiltersType = {
-        ...localFilters,
-        priorityIds: isPriorityFilterAvailable && selectedPriorityId && selectedPriorityId !== 'all'
-          ? [selectedPriorityId]
-          : undefined,
-      };
-      // Clean up priority enum filter (no longer used from this dialog)
-      delete filtersToApply.priority;
-      if (!filtersToApply.priorityIds) delete filtersToApply.priorityIds;
-      onChange(filtersToApply);
-      setOpen(false);
-    };
+  const handleDateRangeChange = useCallback((range: { from: string; to: string }) => {
+    const startDate = range.from ? new Date(range.from) : undefined;
+    const endDate = range.to ? new Date(range.to) : undefined;
+    const effectiveStartDate = !startDate && endDate ? new Date() : startDate;
 
-    // Update local filters state
-    const handleFilterChange = <K extends keyof ActivityFiltersType>(
-      key: K,
-      value: ActivityFiltersType[K]
-    ) => {
-      setLocalFilters(prev => ({
-        ...prev,
-        [key]: value
-      }));
-    };
+    if (effectiveStartDate) effectiveStartDate.setHours(0, 0, 0, 0);
+    if (endDate) endDate.setHours(23, 59, 59, 999);
 
-    // Toggle a value in an array filter
-    const toggleArrayFilter = <T extends string>(
-      key: keyof ActivityFiltersType,
-      value: T,
-      currentValues: T[] = []
-    ) => {
-      const newValues = [...currentValues];
-      const index = newValues.indexOf(value);
+    onChange({
+      ...filters,
+      dueDateStart: effectiveStartDate ? effectiveStartDate.toISOString() as any : undefined,
+      dueDateEnd: endDate ? endDate.toISOString() as any : undefined,
+    });
+  }, [filters, onChange]);
 
-      if (index >= 0) {
-        newValues.splice(index, 1);
+  const handleProjectTreeToggle = useCallback((value: string, type: ProjectNodeType) => {
+    if (!value) {
+      // Reset clicked — clear both projects and phases
+      const next: ActivityFiltersType = { ...filters };
+      delete next.projectIds;
+      delete next.phaseIds;
+      onChange(next);
+      return;
+    }
+
+    if (type === 'project') {
+      const current = filters.projectIds || [];
+      const isSelected = current.includes(value);
+      const updated = isSelected
+        ? current.filter(id => id !== value)
+        : [...current, value];
+      const next: ActivityFiltersType = { ...filters };
+      if (updated.length > 0) {
+        next.projectIds = updated;
       } else {
-        newValues.push(value);
+        delete next.projectIds;
       }
+      onChange(next);
+      return;
+    }
 
-      handleFilterChange(key, newValues as any);
-
-      // Clear priority selection when activity types change and the result
-      // is no longer a single prioritized type
-      if (key === 'types') {
-        const newTypes = newValues as string[];
-        const stillFilterable = newTypes.length === 1
-          && PRIORITY_FILTERABLE_TYPES.has(newTypes[0] as ActivityType);
-        if (!stillFilterable) {
-          setSelectedPriorityId('all');
-        }
+    if (type === 'phase') {
+      const current = filters.phaseIds || [];
+      const isSelected = current.includes(value);
+      const updated = isSelected
+        ? current.filter(id => id !== value)
+        : [...current, value];
+      const next: ActivityFiltersType = { ...filters };
+      if (updated.length > 0) {
+        next.phaseIds = updated;
+      } else {
+        delete next.phaseIds;
       }
-    };
+      onChange(next);
+    }
+  }, [filters, onChange]);
 
-    // Check if a value is selected in an array filter
-    const isSelected = <T extends string>(
-      value: T,
-      currentValues: T[] = []
-    ): boolean => {
-      return currentValues.includes(value);
-    };
+  // Build project/phase tree options with selected state
+  const projectTreeOptions = useMemo((): TreeSelectOption<ProjectNodeType>[] => {
+    const selectedProjectIds = new Set(filters.projectIds || []);
+    const selectedPhaseIds = new Set(filters.phaseIds || []);
+    return projects.map(p => ({
+      value: p.project_id,
+      label: p.project_name,
+      type: 'project' as const,
+      selected: selectedProjectIds.has(p.project_id),
+      children: p.phases.map(phase => ({
+        value: phase.phase_id,
+        label: phase.phase_name,
+        type: 'phase' as const,
+        selected: selectedPhaseIds.has(phase.phase_id),
+      })),
+    }));
+  }, [projects, filters.projectIds, filters.phaseIds]);
 
-    return (
-      // Pass isOpen and onClose to Dialog for controlled state
-      <Dialog isOpen={open} onClose={() => setOpen(false)}>
-        {/* Trigger button is now removed from here and placed in the parent */}
-        {/* DialogContent is always rendered, Dialog controls visibility */}
-        <DialogContent className="sm:max-w-[450px]">
-          {/* Removed onInteractOutside and onEscapeKeyDown */}
-          <DialogHeader>
-            <DialogTitle>Filter Activities</DialogTitle>
-            <DialogDescription>
-              Select criteria to filter your activities
-            </DialogDescription>
-          </DialogHeader>
+  const handleClosedToggle = useCallback((e: boolean | React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = typeof e === 'boolean' ? e : (e.target as HTMLInputElement).checked;
+    onChange({ ...filters, isClosed: isChecked });
+  }, [filters, onChange]);
 
-          <div className="py-2">
-            {/* Activity Types Filter */}
-            <div>
-              <Label htmlFor="activity-types" className="text-lg font-semibold">Activity Types</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { value: ActivityType.SCHEDULE, label: 'Schedule' },
-                  { value: ActivityType.PROJECT_TASK, label: 'Project Tasks' },
-                  { value: ActivityType.TICKET, label: 'Tickets' },
-                  { value: ActivityType.TIME_ENTRY, label: 'Time Entries' },
-                  { value: ActivityType.WORKFLOW_TASK, label: 'Workflow Tasks' },
-                  { value: ActivityType.NOTIFICATION, label: 'Notifications' }
-                ].map(option => (
-                    <Checkbox
-                      key={option.value}
-                      id={`activity-type-${option.value}`}
-                      label={option.label}
-                      checked={isSelected(option.value, localFilters.types)}
-                      onChange={() => toggleArrayFilter('types', option.value, localFilters.types)}
-                    />
-                ))}
-              </div>
-            </div>
+  return (
+    <div className="border-b border-border pb-4 mb-4">
+      {/* Row 1: Activity types */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-3">
+        <Label className="text-sm font-semibold whitespace-nowrap">Types:</Label>
+        {ACTIVITY_TYPE_OPTIONS.map(option => (
+          <Checkbox
+            key={option.value}
+            id={`activity-type-${option.value}`}
+            label={option.label}
+            checked={(filters.types || []).includes(option.value)}
+            onChange={() => toggleType(option.value)}
+            containerClassName="mb-0"
+            size="sm"
+          />
+        ))}
+      </div>
 
-            {/* Priority Filter - only available when a single prioritized type is selected */}
-            <div className="mt-4">
-              <Label htmlFor="priority-select" className="text-lg font-semibold">Priority</Label>
-              {isPriorityFilterAvailable && priorities.length > 0 ? (
-                <CustomSelect
-                  id="priority-select"
-                  value={selectedPriorityId}
-                  onValueChange={(value) => setSelectedPriorityId(value)}
-                  options={[
-                    { value: 'all', label: 'All Priorities' },
-                    ...priorities.map(p => ({
-                      value: p.priority_id,
-                      label: (
-                        <span className="flex items-center gap-2">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: p.color || '#94a3b8' }}
-                          />
-                          {p.priority_name}
-                        </span>
-                      ),
-                      textValue: p.priority_name,
-                    }))
-                  ]}
-                  placeholder="Select Priority..."
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Select a single activity type (Tickets or Project Tasks) to filter by priority.
-                </p>
-              )}
-            </div>
-
-            {/* Date Range Filter */}
-            <div className="mt-4">
-              <Label className="text-lg font-semibold">Due Date Range</Label>
-              <StringDateRangePicker
-                id="activities-due-date-range"
-                value={{
-                  from: localFilters.dueDateStart ? new Date(localFilters.dueDateStart).toISOString().split('T')[0] : '',
-                  to: localFilters.dueDateEnd ? new Date(localFilters.dueDateEnd).toISOString().split('T')[0] : ''
-                }}
-                onChange={(range) => {
-                  // If date is empty string, set to undefined
-                  const startDate = range.from ? new Date(range.from) : undefined;
-                  const endDate = range.to ? new Date(range.to) : undefined;
-
-                  // If we have an end date but no start date, set start date to today
-                  const effectiveStartDate = !startDate && endDate ? new Date() : startDate;
-
-                  // Set the time to the beginning of the day for start date and end of the day for end date
-                  if (effectiveStartDate) {
-                    effectiveStartDate.setHours(0, 0, 0, 0);
-                  }
-
-                  if (endDate) {
-                    endDate.setHours(23, 59, 59, 999);
-                  }
-
-                  handleFilterChange('dueDateStart', effectiveStartDate ? effectiveStartDate.toISOString() as any : undefined);
-                  handleFilterChange('dueDateEnd', endDate ? endDate.toISOString() as any : undefined);
-                }}
-              />
-            </div>
-
-            {/* Show Closed Activities */}
-            <Checkbox
-              id="show-closed"
-              label="Show closed activities"
-              checked={localFilters.isClosed}
-              onChange={(e) => {
-                  // Correctly access checked status for Shadcn Checkbox
-                  const isChecked = typeof e === 'boolean' ? e : (e.target as HTMLInputElement).checked;
-                  handleFilterChange('isClosed', isChecked);
-                }
-              }
+      {/* Row 2: Priority, Date Range, Show Closed, Reset */}
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+        {/* Priority filter */}
+        {isPriorityFilterAvailable && priorities.length > 0 && (
+          <div className="min-w-[180px]">
+            <Label htmlFor="priority-select" className="text-sm font-semibold mb-1 block">Priority</Label>
+            <CustomSelect
+              id="priority-select"
+              value={selectedPriorityId}
+              onValueChange={handlePriorityChange}
+              options={[
+                { value: 'all', label: 'All Priorities' },
+                ...priorities.map(p => ({
+                  value: p.priority_id,
+                  label: (
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: p.color || '#94a3b8' }}
+                      />
+                      {p.priority_name}
+                    </span>
+                  ),
+                  textValue: p.priority_name,
+                }))
+              ]}
+              placeholder="Select Priority..."
+              size="sm"
             />
           </div>
+        )}
 
-          <DialogFooter>
-            <div className="flex justify-between w-full">
-              <Button
-                id="reset-filters-button"
-                type="button"
-                variant="outline"
-                onClick={handleReset}
-              >
-                Reset
-              </Button>
-              <Button
-                id="apply-filters-button"
-                type="button"
-                onClick={handleApply}
-              >
-                Apply Filters
-              </Button>
-            </div>
-          </DialogFooter>
-          </DialogContent>
-      </Dialog>
-    );
-  }
-);
+        {/* Project + phase filter */}
+        {projects.length > 0 && (
+          <div className="min-w-[220px] max-w-[320px]">
+            <Label className="text-sm font-semibold mb-1 block">Projects / Phases</Label>
+            <TreeSelect<ProjectNodeType>
+              options={projectTreeOptions}
+              value=""
+              onValueChange={handleProjectTreeToggle}
+              placeholder="All Projects"
+              multiSelect
+              showReset
+              allowEmpty
+            />
+          </div>
+        )}
 
-ActivitiesTableFilters.displayName = 'ActivitiesTableFilters';
+        {/* Date range filter */}
+        <div className="min-w-[240px]">
+          <Label className="text-sm font-semibold mb-1 block">Due Date</Label>
+          <StringDateRangePicker
+            id="activities-due-date-range"
+            value={{
+              from: filters.dueDateStart ? new Date(filters.dueDateStart).toISOString().split('T')[0] : '',
+              to: filters.dueDateEnd ? new Date(filters.dueDateEnd).toISOString().split('T')[0] : ''
+            }}
+            onChange={handleDateRangeChange}
+          />
+        </div>
+
+        {/* Show closed */}
+        <div className="flex items-center pb-0.5">
+          <Checkbox
+            id="show-closed"
+            label="Show closed"
+            checked={filters.isClosed}
+            onChange={handleClosedToggle}
+            containerClassName="mb-0"
+            size="sm"
+          />
+        </div>
+
+        {/* Reset button */}
+        <div className="flex items-center pb-0.5 ml-auto">
+          <Button
+            id="reset-filters-button"
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+          >
+            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+            Reset
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

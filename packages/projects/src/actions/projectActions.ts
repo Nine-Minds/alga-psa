@@ -133,6 +133,69 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
     }
 });
 
+/**
+ * Lightweight action that returns all projects with their phases attached.
+ * Used by filter pickers that need to display projects + phases as a tree,
+ * but don't need the full project details (statuses, users, etc.)
+ */
+export interface ProjectWithPhases {
+  project_id: string;
+  project_name: string;
+  is_inactive: boolean;
+  phases: Array<{
+    phase_id: string;
+    phase_name: string;
+    wbs_code: string;
+  }>;
+}
+
+export const getProjectsWithPhases = withAuth(async (
+  user,
+  { tenant }
+): Promise<ProjectWithPhases[] | ActionPermissionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    const denied = await checkPermission(user, 'project', 'read', knex);
+    if (denied) return denied;
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Fetch all projects and phases in two queries, assemble in JS
+      const [projects, phases] = await Promise.all([
+        trx('projects')
+          .where({ tenant })
+          .select('project_id', 'project_name', 'is_inactive')
+          .orderBy('project_name'),
+        trx('project_phases')
+          .where({ tenant })
+          .select('phase_id', 'project_id', 'phase_name', 'wbs_code')
+          .orderBy('wbs_code'),
+      ]);
+
+      const phasesByProject = new Map<string, ProjectWithPhases['phases']>();
+      for (const phase of phases) {
+        const list = phasesByProject.get(phase.project_id) || [];
+        list.push({
+          phase_id: phase.phase_id,
+          phase_name: phase.phase_name,
+          wbs_code: phase.wbs_code,
+        });
+        phasesByProject.set(phase.project_id, list);
+      }
+
+      return projects.map((p) => ({
+        project_id: p.project_id,
+        project_name: p.project_name,
+        is_inactive: p.is_inactive,
+        phases: phasesByProject.get(p.project_id) || [],
+      }));
+    });
+  } catch (error) {
+    console.error('Error fetching projects with phases:', error);
+    throw error;
+  }
+});
+
 export const getProjectPhase = withAuth(async (user, { tenant }, phaseId: string): Promise<IProjectPhase | null> => {
     try {
         const { knex } = await createTenantKnex();
