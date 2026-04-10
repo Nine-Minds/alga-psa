@@ -88,9 +88,29 @@ const EMPTY_TICKET_FIELD_OPTIONS: TicketFieldOptions = {
   locations: [],
 };
 
-const loadClientActions = async () => import('@alga-psa/' + 'clients/actions') as Promise<typeof import('@alga-psa/clients/actions')>;
-const loadIntegrationActions = async () => import('@alga-psa/' + 'integrations/actions') as Promise<typeof import('@alga-psa/integrations/actions')>;
-const loadTicketActions = async () => import('@alga-psa/' + 'tickets/actions') as Promise<typeof import('@alga-psa/tickets/actions')>;
+type WorkflowClientActionsModule = {
+  getAllContacts: () => Promise<IContact[]>;
+  getContactsByClient: (clientId: string) => Promise<IContact[]>;
+};
+
+type WorkflowIntegrationActionsModule = {
+  getAvailableStatuses: (boardId: string) => Promise<{ statuses: TicketFieldOptions['statuses'] }>;
+  getTicketFieldOptions: () => Promise<{ options: TicketFieldOptions }>;
+};
+
+type WorkflowTicketActionsModule = {
+  getTicketById: (ticketId: string) => Promise<{ ticket_id?: string; ticket_number?: string | null; title?: string | null; board_id?: string | null } | null>;
+  getTicketsForList: (input: { boardFilterState: 'active' | 'inactive' | 'all'; searchQuery: string }) => Promise<{ tickets?: WorkflowTicketSearchResult[] } | null>;
+};
+
+const loadFeatureActions = async <T,>(featureName: string): Promise<T> => {
+  const modulePath = ['@alga-psa', featureName, 'actions'].join('/');
+  return import(modulePath) as Promise<T>;
+};
+
+const loadClientActions = async () => loadFeatureActions<WorkflowClientActionsModule>('clients');
+const loadIntegrationActions = async () => loadFeatureActions<WorkflowIntegrationActionsModule>('integrations');
+const loadTicketActions = async () => loadFeatureActions<WorkflowTicketActionsModule>('tickets');
 
 const getAllContactsForPicker = async () => (await loadClientActions()).getAllContacts();
 const getContactsByClientForPicker = async (clientId: string) => (await loadClientActions()).getContactsByClient(clientId);
