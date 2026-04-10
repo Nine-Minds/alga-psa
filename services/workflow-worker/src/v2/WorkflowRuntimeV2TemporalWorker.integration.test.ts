@@ -2,7 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
-import { WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
+import { WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE } from '@alga-psa/workflows/lib/workflowRuntimeV2TemporalContract';
 import { WorkflowRuntimeV2TemporalWorker } from './WorkflowRuntimeV2TemporalWorker.js';
 
 const __filename = fileURLToPath(import.meta.url);

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { NativeConnection, Worker } from '@temporalio/worker';
 import logger from '@alga-psa/core/logger';
-import { WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
+import { WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE } from '@alga-psa/workflows/lib/workflowRuntimeV2TemporalContract';
 
 const DEFAULT_TEMPORAL_ADDRESS = 'temporal-frontend.temporal.svc.cluster.local:7233';
 const DEFAULT_TEMPORAL_NAMESPACE = 'default';

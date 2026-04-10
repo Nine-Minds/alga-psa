@@ -4,7 +4,7 @@ import {
   WORKFLOW_RUNTIME_V2_HUMAN_TASK_SIGNAL,
   WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
   type WorkflowRuntimeV2TemporalRunInput,
-} from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
+} from '@alga-psa/workflows/lib/workflowRuntimeV2TemporalContract';
 import { compileExpression, type CompiledExpression } from '@alga-psa/workflows/runtime/expressionEngine';
 import type { EventWaitFilter, Expr, ForEachBlock, IfBlock, Step } from '@alga-psa/workflows/runtime/core';
 import type { RetryPolicy, OnErrorPolicy } from '@alga-psa/workflows/runtime/core';
