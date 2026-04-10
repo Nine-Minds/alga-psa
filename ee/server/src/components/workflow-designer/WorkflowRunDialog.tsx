@@ -20,11 +20,18 @@ import {
 } from '@alga-psa/workflows/actions';
 import { getEventCatalogEntries, getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import type { InputMapping } from '@alga-psa/workflows/runtime';
 import {
   filterEventCatalogEntries,
   getSchemaDiffSummary,
   pickEventTemplates
 } from './workflowRunDialogUtils';
+import {
+  WorkflowActionInputFixedPicker,
+  WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES,
+  type WorkflowActionInputPickerField,
+} from './WorkflowActionInputFixedPicker';
+import { resolveWorkflowSchemaFieldEditor } from './workflowSchemaFieldEditor';
 
 type JsonSchema = {
   type?: string | string[];
@@ -43,6 +50,11 @@ type JsonSchema = {
   format?: string;
   $ref?: string;
   definitions?: Record<string, JsonSchema>;
+  'x-workflow-picker-kind'?: string;
+  'x-workflow-picker-dependencies'?: string[];
+  'x-workflow-picker-fixed-value-hint'?: string;
+  'x-workflow-picker-allow-dynamic-reference'?: boolean;
+  'x-workflow-editor'?: import('@alga-psa/shared/workflow/runtime').WorkflowEditorJsonSchemaMetadata;
 };
 
 type WorkflowRunDialogProps = {
@@ -252,6 +264,68 @@ const pathToString = (path: Array<string | number>): string =>
   );
 
 type ValidationError = { path: string; message: string };
+
+const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
+  if (!schema?.type) return undefined;
+  if (Array.isArray(schema.type)) {
+    return schema.type.find((value) => value !== 'null') ?? schema.type[0];
+  }
+  return schema.type;
+};
+
+const WORKFLOW_RUN_DIALOG_PICKER_FALLBACKS: Record<string, { resource: string; fixedValueHint?: string }> = {
+  ticketid: { resource: 'ticket', fixedValueHint: 'Search tickets by number or title' },
+  actorcontactid: { resource: 'contact', fixedValueHint: 'Select Contact' },
+  contactid: { resource: 'contact', fixedValueHint: 'Select Contact' },
+  createdbyuserid: { resource: 'user', fixedValueHint: 'Select User' },
+  actoruserid: { resource: 'user', fixedValueHint: 'Select User' },
+  clientid: { resource: 'client', fixedValueHint: 'Select Client' },
+};
+
+const resolveRunDialogPickerField = (
+  schema: JsonSchema,
+  path: Array<string | number>
+): WorkflowActionInputPickerField | null => {
+  const fieldKey = path[path.length - 1];
+  if (typeof fieldKey !== 'string') {
+    return null;
+  }
+
+  if (normalizeSchemaType(schema) !== 'string') {
+    return null;
+  }
+
+  // Preferred path: annotate the schema itself with x-workflow-editor / x-workflow-picker-kind
+  // so the properties dialog and run dialog light up the same picker without adding UI-only logic here.
+  const schemaEditor = resolveWorkflowSchemaFieldEditor(schema);
+  const schemaPickerResource = schemaEditor?.picker?.resource;
+  if (schemaEditor?.kind === 'picker' && schemaPickerResource && WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES.has(schemaPickerResource)) {
+    return {
+      name: fieldKey,
+      nullable: Array.isArray(schema.type) ? schema.type.includes('null') : false,
+      editor: schemaEditor,
+    };
+  }
+
+  // Keep fallback inference intentionally narrow. If a new schema should always render a picker,
+  // prefer adding schema metadata at the source rather than growing this name-based map indefinitely.
+  const fallback = WORKFLOW_RUN_DIALOG_PICKER_FALLBACKS[fieldKey.toLowerCase()];
+  if (!fallback || !WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES.has(fallback.resource)) {
+    return null;
+  }
+
+  return {
+    name: fieldKey,
+    nullable: Array.isArray(schema.type) ? schema.type.includes('null') : false,
+    editor: {
+      kind: 'picker',
+      fixedValueHint: fallback.fixedValueHint,
+      picker: {
+        resource: fallback.resource,
+      },
+    },
+  };
+};
 
 const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSchema, path = ''): ValidationError[] => {
   const resolved = resolveSchemaRef(schema, root);
@@ -865,6 +939,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     const isRequired = typeof fieldKey === 'string' && requiredSet.has(fieldKey);
     const fieldPath = pathToString(path);
     const fieldErrors = schemaErrors.filter((err) => err.path === fieldPath);
+    const pickerField = resolveRunDialogPickerField(resolved, path);
 
     const commonHeader = (
       <div className="flex items-center justify-between">
@@ -1044,6 +1119,25 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     const description = resolved.description ? (
       <div className="text-xs text-gray-500 mt-1">{resolved.description}</div>
     ) : null;
+
+    if (pickerField) {
+      return (
+        <div className="space-y-1">
+          {commonHeader}
+          <WorkflowActionInputFixedPicker
+            field={pickerField}
+            value={typeof value === 'string' ? value : null}
+            onChange={(nextValue) => updateFormValue((prev) => setValueAtPath(prev, path, nextValue))}
+            idPrefix={`run-form-${fieldPath || 'root'}`}
+            rootInputMapping={(isObjectRecord(formValue) ? formValue : {}) as InputMapping}
+          />
+          {description}
+          {fieldErrors.map((err) => (
+            <div key={`${fieldPath}-err`} className="text-xs text-destructive">{err.message}</div>
+          ))}
+        </div>
+      );
+    }
 
     if (resolved.enum) {
       const options: SelectOption[] = resolved.enum.map((entry) => ({
