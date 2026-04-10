@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter } from '@alga-ps
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface RecommendedFixPanelProps {
   report: ICreditReconciliationReport;
@@ -23,6 +24,7 @@ interface RecommendedFixPanelProps {
  * Component that analyzes a credit reconciliation report and suggests appropriate fixes
  */
 const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApplyFix }) => {
+  const { t } = useTranslation('msp/billing');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedFix, setSelectedFix] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
@@ -90,29 +92,45 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
       return (
         <div className="space-y-4">
           <div className="bg-[rgb(var(--color-primary-50))] p-4 rounded-lg">
-            <h4 className="font-medium mb-2">Recommended Fix</h4>
+            <h4 className="font-medium mb-2">
+              {t('recommendedFix.panels.recommendedFix', { defaultValue: 'Recommended Fix' })}
+            </h4>
             <p className="text-sm text-[rgb(var(--color-text-700))]">
-              Create a credit tracking entry for transaction {report.metadata?.transaction_id} with the following details:
+              {t('recommendedFix.descriptions.missingTrackingRecommended', {
+                defaultValue: 'Create the missing credit tracking entry so the transaction is reflected in the tracking ledger.',
+              })}
             </p>
             <ul className="list-disc list-inside mt-2 text-sm text-[rgb(var(--color-text-700))]">
-              <li>Transaction ID: {report.metadata?.transaction_id}</li>
-              <li>Amount: {formatCurrency(report.metadata?.transaction_amount)}</li>
-              <li>Remaining Amount: {formatCurrency(report.metadata?.transaction_amount)}</li>
-              <li>Created At: {formatDateOnly(parseISO(report.metadata?.transaction_date))}</li>
+              <li>
+                {t('reconciliation.fields.transactionId', { defaultValue: 'Transaction ID' })}: {report.metadata?.transaction_id}
+              </li>
+              <li>
+                {t('discrepancy.fields.amount', { defaultValue: 'Amount' })}: {formatCurrency(report.metadata?.transaction_amount)}
+              </li>
+              <li>
+                {t('discrepancy.fields.remainingAmount', { defaultValue: 'Remaining Amount' })}: {formatCurrency(report.metadata?.transaction_amount)}
+              </li>
+              <li>
+                {t('discrepancy.fields.createdAt', { defaultValue: 'Created At' })}: {formatDateOnly(parseISO(report.metadata?.transaction_date))}
+              </li>
             </ul>
             <Button 
               id="create-tracking-entry-button" 
               onClick={() => handleOpenFixDialog('create_tracking_entry')}
               className="mt-4"
             >
-              Create Tracking Entry
+              {t('recommendedFix.buttons.createTrackingEntry', { defaultValue: 'Create Credit Tracking Entry' })}
             </Button>
           </div>
 
           <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-lg">
-            <h4 className="font-medium mb-2">Alternative Fix</h4>
+            <h4 className="font-medium mb-2">
+              {t('recommendedFix.panels.alternativeFix', { defaultValue: 'Alternative Fix' })}
+            </h4>
             <p className="text-sm text-[rgb(var(--color-text-700))]">
-              Apply a custom credit adjustment to reconcile the balance without creating a tracking entry.
+              {t('recommendedFix.descriptions.missingTrackingAlternative', {
+                defaultValue: 'Create a manual adjustment instead if the original transaction should not produce a tracking entry.',
+              })}
             </p>
             <Button 
               id="custom-adjustment-button" 
@@ -120,14 +138,18 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
               variant="outline"
               className="mt-4"
             >
-              Custom Adjustment
+              {t('recommendedFix.panels.customAdjustment', { defaultValue: 'Custom Adjustment' })}
             </Button>
           </div>
 
           <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-lg">
-            <h4 className="font-medium mb-2">No Action Required</h4>
+            <h4 className="font-medium mb-2">
+              {t('recommendedFix.panels.noActionRequired', { defaultValue: 'No Action Required' })}
+            </h4>
             <p className="text-sm text-[rgb(var(--color-text-700))]">
-              Mark this discrepancy as resolved without making any changes if you've determined no action is needed.
+              {t('recommendedFix.descriptions.missingTrackingNoAction', {
+                defaultValue: 'Leave the discrepancy unresolved only if the transaction was intentionally excluded from credit tracking.',
+              })}
             </p>
             <Button 
               id="no-action-button" 
@@ -135,7 +157,7 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
               variant="outline"
               className="mt-4"
             >
-              Mark as Resolved (No Action)
+              {t('recommendedFix.buttons.markResolvedNoAction', { defaultValue: 'Mark as Resolved (No Action)' })}
             </Button>
           </div>
         </div>
@@ -144,29 +166,45 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
       return (
         <div className="space-y-4">
           <div className="bg-[rgb(var(--color-primary-50))] p-4 rounded-lg">
-            <h4 className="font-medium mb-2">Recommended Fix</h4>
+            <h4 className="font-medium mb-2">
+              {t('recommendedFix.panels.recommendedFix', { defaultValue: 'Recommended Fix' })}
+            </h4>
             <p className="text-sm text-[rgb(var(--color-text-700))]">
-              Update the credit tracking entry's remaining amount to match the expected value:
+              {t('recommendedFix.descriptions.inconsistentRemainingRecommended', {
+                defaultValue: 'Update the tracked remaining amount so it matches the expected balance after applications.',
+              })}
             </p>
             <ul className="list-disc list-inside mt-2 text-sm text-[rgb(var(--color-text-700))]">
-              <li>Credit ID: {report.metadata?.credit_id}</li>
-              <li>Current Remaining Amount: {formatCurrency(report.actual_balance)}</li>
-              <li>Corrected Remaining Amount: {formatCurrency(report.expected_balance)}</li>
-              <li>Difference: {formatCurrency(report.difference)}</li>
+              <li>
+                {t('reconciliation.fields.creditId', { defaultValue: 'Credit ID' })}: {report.metadata?.credit_id}
+              </li>
+              <li>
+                {t('reconciliation.fields.actualRemaining', { defaultValue: 'Actual Remaining' })}: {formatCurrency(report.actual_balance)}
+              </li>
+              <li>
+                {t('reconciliation.fields.expectedRemaining', { defaultValue: 'Expected Remaining' })}: {formatCurrency(report.expected_balance)}
+              </li>
+              <li>
+                {t('reconciliation.fields.difference', { defaultValue: 'Difference' })}: {formatCurrency(report.difference)}
+              </li>
             </ul>
             <Button 
               id="update-remaining-amount-button" 
               onClick={() => handleOpenFixDialog('update_remaining_amount')}
               className="mt-4"
             >
-              Update Remaining Amount
+              {t('recommendedFix.buttons.updateRemainingAmount', { defaultValue: 'Update Remaining Amount' })}
             </Button>
           </div>
 
           <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-lg">
-            <h4 className="font-medium mb-2">Alternative Fix</h4>
+            <h4 className="font-medium mb-2">
+              {t('recommendedFix.panels.alternativeFix', { defaultValue: 'Alternative Fix' })}
+            </h4>
             <p className="text-sm text-[rgb(var(--color-text-700))]">
-              Apply a custom credit adjustment to reconcile the balance without updating the tracking entry.
+              {t('recommendedFix.descriptions.inconsistentRemainingAlternative', {
+                defaultValue: 'Create a balancing adjustment instead of editing the existing tracking entry.',
+              })}
             </p>
             <Button 
               id="custom-adjustment-button" 
@@ -174,14 +212,18 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
               variant="outline"
               className="mt-4"
             >
-              Custom Adjustment
+              {t('recommendedFix.panels.customAdjustment', { defaultValue: 'Custom Adjustment' })}
             </Button>
           </div>
 
           <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-lg">
-            <h4 className="font-medium mb-2">No Action Required</h4>
+            <h4 className="font-medium mb-2">
+              {t('recommendedFix.panels.noActionRequired', { defaultValue: 'No Action Required' })}
+            </h4>
             <p className="text-sm text-[rgb(var(--color-text-700))]">
-              Mark this discrepancy as resolved without making any changes if you've determined no action is needed.
+              {t('recommendedFix.descriptions.inconsistentRemainingNoAction', {
+                defaultValue: 'Leave the discrepancy unresolved only if the tracking entry is intentionally offset elsewhere.',
+              })}
             </p>
             <Button 
               id="no-action-button" 
@@ -189,7 +231,7 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
               variant="outline"
               className="mt-4"
             >
-              Mark as Resolved (No Action)
+              {t('recommendedFix.buttons.markResolvedNoAction', { defaultValue: 'Mark as Resolved (No Action)' })}
             </Button>
           </div>
         </div>
@@ -199,28 +241,42 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
       return (
         <div className="space-y-4">
           <div className="bg-[rgb(var(--color-primary-50))] p-4 rounded-lg">
-            <h4 className="font-medium mb-2">Recommended Fix</h4>
+            <h4 className="font-medium mb-2">
+              {t('recommendedFix.panels.recommendedFix', { defaultValue: 'Recommended Fix' })}
+            </h4>
             <p className="text-sm text-[rgb(var(--color-text-700))]">
-              Apply a credit adjustment to correct the balance discrepancy:
+              {t('recommendedFix.descriptions.genericRecommended', {
+                defaultValue: 'Apply the recommended correction to bring the balances back into alignment.',
+              })}
             </p>
             <ul className="list-disc list-inside mt-2 text-sm text-[rgb(var(--color-text-700))]">
-              <li>Current Balance: {formatCurrency(report.actual_balance)}</li>
-              <li>Expected Balance: {formatCurrency(report.expected_balance)}</li>
-              <li>Adjustment Amount: {formatCurrency(report.difference)}</li>
+              <li>
+                {t('reconciliation.fields.currentBalance', { defaultValue: 'Current Balance' })}: {formatCurrency(report.actual_balance)}
+              </li>
+              <li>
+                {t('reconciliation.fields.expectedBalance', { defaultValue: 'Expected Balance' })}: {formatCurrency(report.expected_balance)}
+              </li>
+              <li>
+                {t('reconciliation.fields.correctionAmount', { defaultValue: 'Correction Amount' })}: {formatCurrency(report.difference)}
+              </li>
             </ul>
             <Button 
               id="apply-adjustment-button" 
               onClick={() => handleOpenFixDialog('apply_adjustment')}
               className="mt-4"
             >
-              Apply Adjustment
+              {t('recommendedFix.buttons.applyAdjustment', { defaultValue: 'Apply Credit Adjustment' })}
             </Button>
           </div>
 
           <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-lg">
-            <h4 className="font-medium mb-2">Custom Adjustment</h4>
+            <h4 className="font-medium mb-2">
+              {t('recommendedFix.panels.customAdjustment', { defaultValue: 'Custom Adjustment' })}
+            </h4>
             <p className="text-sm text-[rgb(var(--color-text-700))]">
-              Apply a custom credit adjustment amount different from the calculated difference.
+              {t('recommendedFix.descriptions.genericCustom', {
+                defaultValue: 'Enter a custom adjustment if a manual correction is required.',
+              })}
             </p>
             <Button 
               id="custom-adjustment-button" 
@@ -228,14 +284,18 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
               variant="outline"
               className="mt-4"
             >
-              Custom Adjustment
+              {t('recommendedFix.panels.customAdjustment', { defaultValue: 'Custom Adjustment' })}
             </Button>
           </div>
 
           <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-lg">
-            <h4 className="font-medium mb-2">No Action Required</h4>
+            <h4 className="font-medium mb-2">
+              {t('recommendedFix.panels.noActionRequired', { defaultValue: 'No Action Required' })}
+            </h4>
             <p className="text-sm text-[rgb(var(--color-text-700))]">
-              Mark this discrepancy as resolved without making any changes if you've determined no action is needed.
+              {t('recommendedFix.descriptions.noAction', {
+                defaultValue: 'This will mark the discrepancy as resolved without making any changes.',
+              })}
             </p>
             <Button 
               id="no-action-button" 
@@ -243,7 +303,7 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
               variant="outline"
               className="mt-4"
             >
-              Mark as Resolved (No Action)
+              {t('recommendedFix.buttons.markResolvedNoAction', { defaultValue: 'Mark as Resolved (No Action)' })}
             </Button>
           </div>
         </div>
@@ -370,9 +430,9 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recommended Fixes</CardTitle>
+        <CardTitle>{t('recommendedFix.title', { defaultValue: 'Recommended Fixes' })}</CardTitle>
         <CardDescription>
-          Select an option to resolve this discrepancy
+          {t('reconciliation.sections.resolutionOptions', { defaultValue: 'Select an option to resolve this discrepancy' })}
         </CardDescription>
       </CardHeader>
       <CardContent>

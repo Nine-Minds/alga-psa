@@ -137,7 +137,7 @@
   {
     "id": "F027",
     "description": "Wire useTranslation('msp/billing') in RecommendedFixPanel.tsx — panel title/description, fix option headings (Recommended Fix/Alternative Fix/No Action Required/Custom Adjustment), fix descriptions per issue type, button labels per fix type",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F028",
