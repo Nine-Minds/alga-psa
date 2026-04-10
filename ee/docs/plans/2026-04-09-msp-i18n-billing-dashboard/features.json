@@ -147,7 +147,7 @@
   {
     "id": "F029",
     "description": "Wire useTranslation('msp/billing') in Overview.tsx — metric card titles (Active Contract Lines/Billing Clients/Monthly Revenue/Active Services/Outstanding Amount/Credit Balance/Pending Approvals), metric subtitles, Monthly Activity section, Service Catalog Management section",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F030",
