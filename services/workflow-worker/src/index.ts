@@ -10,7 +10,7 @@ import dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
 
-import { initializeWorkflowRuntimeV2, registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime/core';
+import { initializeWorkflowRuntimeV2, registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime/worker';
 import { WorkflowRuntimeV2Worker } from '@alga-psa/workflows/workers';
 import { WorkflowRuntimeV2EventStreamWorker } from './v2/WorkflowRuntimeV2EventStreamWorker.js';
 import { WorkflowRuntimeV2TemporalWorker } from './v2/WorkflowRuntimeV2TemporalWorker.js';
@@ -55,6 +55,9 @@ async function startServices() {
     const enableDbPollingWorker =
       process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING === 'true'
       || process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING === '1';
+    const enableTemporalPolling = !['false', '0', 'no'].includes(
+      String(process.env.WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING ?? 'true').toLowerCase(),
+    );
     logger.info('[WorkflowWorker] Starting runtime v2 workers', {
       runtimeV2WorkerId,
       runtimeV2EventWorkerId,
@@ -64,8 +67,13 @@ async function startServices() {
       temporalAddress: process.env.TEMPORAL_ADDRESS ?? 'temporal-frontend.temporal.svc.cluster.local:7233',
       temporalNamespace: process.env.TEMPORAL_NAMESPACE ?? 'default',
       enableDbPollingWorker,
+      enableTemporalPolling,
     });
-    await runtimeV2TemporalWorker.start();
+    if (enableTemporalPolling) {
+      await runtimeV2TemporalWorker.start();
+    } else {
+      logger.info('[WorkflowWorker] Authored Temporal polling disabled for this environment');
+    }
     await runtimeV2EventWorker.start();
     if (enableDbPollingWorker) {
       await runtimeV2Worker.start();
@@ -82,7 +90,7 @@ async function startServices() {
     async function shutdown() {
       logger.info('[WorkflowWorker] Shutting down services...');
       await Promise.all([
-        runtimeV2TemporalWorker.stop(),
+        enableTemporalPolling ? runtimeV2TemporalWorker.stop() : Promise.resolve(),
         runtimeV2EventWorker.stop(),
         enableDbPollingWorker ? runtimeV2Worker.stop() : Promise.resolve()
       ]);

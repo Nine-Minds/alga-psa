@@ -109,3 +109,4 @@ services:
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-local-nextauth-secret}
       - ALGA_AUTH_KEY=${ALGA_AUTH_KEY:-local-alga-auth-key}
+      - WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING=true

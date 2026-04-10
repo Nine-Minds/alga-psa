@@ -90,4 +90,29 @@ describe('validate-runtime-imports', () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('relative import does not resolve in dist output');
   });
+
+  it('allows AI runtime wiring only through the dedicated runtime/worker entrypoint', async () => {
+    const distRoot = await createDistFixture({
+      'dist/src/index.js': "import '../../ee/packages/workflows/src/runtime/worker.js';\n",
+      'dist/ee/packages/workflows/src/runtime/worker.js': [
+        "import '../../../../../shared/workflow/runtime/actions/registerAiActions.js';",
+        "import '../../../../../packages/ee/src/services/workflowInferenceService.js';",
+        'export const ok = true;',
+        '',
+      ].join('\n'),
+    });
+    tempDirs.push(distRoot);
+
+    const result = spawnSync(process.execPath, [scriptPath], {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        WORKFLOW_WORKER_VALIDATE_DIST_ROOT: path.join(distRoot, 'dist'),
+      },
+      encoding: 'utf8',
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('validation passed');
+  });
 });

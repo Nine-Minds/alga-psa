@@ -40,7 +40,7 @@ vi.mock('dotenv', () => ({
   }
 }));
 
-vi.mock('@alga-psa/workflows/runtime/core', () => ({
+vi.mock('@alga-psa/workflows/runtime/worker', () => ({
   initializeWorkflowRuntimeV2: (...args: unknown[]) => initializeWorkflowRuntimeV2Mock(...args),
   registerWorkflowEmailProvider: (...args: unknown[]) => registerWorkflowEmailProviderMock(...args)
 }));
@@ -114,6 +114,7 @@ describe('workflow worker startup', () => {
   beforeEach(() => {
     vi.resetModules();
     delete process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING;
+    delete process.env.WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING;
 
     dotenvConfigMock.mockReset();
     initializeWorkflowRuntimeV2Mock.mockReset();
@@ -172,6 +173,26 @@ describe('workflow worker startup', () => {
         expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
       });
 
+      expect(loggerErrorMock).not.toHaveBeenCalled();
+    } finally {
+      processOnSpy.mockRestore();
+    }
+  });
+
+  it('does not start authored Temporal polling when WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING is disabled', async () => {
+    process.env.WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING = 'false';
+    const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
+
+    try {
+      await import('./index.ts');
+      await vi.waitFor(() => {
+        expect(runtimeWorkerCtorMock).toHaveBeenCalledTimes(1);
+        expect(eventWorkerCtorMock).toHaveBeenCalledTimes(1);
+        expect(temporalWorkerCtorMock).toHaveBeenCalledTimes(1);
+        expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
+      });
+
+      expect(temporalWorkerStartMock).not.toHaveBeenCalled();
       expect(loggerErrorMock).not.toHaveBeenCalled();
     } finally {
       processOnSpy.mockRestore();

@@ -27,4 +27,12 @@ describe('workflow runtime entrypoint boundaries', () => {
     expect(source).toContain('configureWorkflowAiInferenceService');
     expect(source).toContain('initializeWorkflowRuntimeV2Core()');
   });
+
+  it('worker entrypoint restores AI registration needed for authored runtime execution', () => {
+    const source = readRuntimeFile('worker.ts');
+
+    expect(source).toContain('registerAiActionsV2');
+    expect(source).toContain('configureWorkflowAiInferenceService');
+    expect(source).toContain('initializeWorkflowRuntimeV2Core()');
+  });
 });

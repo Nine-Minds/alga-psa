@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { NativeConnection, Worker } from '@temporalio/worker';
@@ -6,8 +7,41 @@ import { WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE } from '@alga-psa/workflows/lib
 
 const DEFAULT_TEMPORAL_ADDRESS = 'temporal-frontend.temporal.svc.cluster.local:7233';
 const DEFAULT_TEMPORAL_NAMESPACE = 'default';
-const DEFAULT_WORKFLOWS_PATH = '../../ee/temporal-workflows/dist/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.js';
-const DEFAULT_ACTIVITIES_PATH = '../../ee/temporal-workflows/dist/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.js';
+const DIST_WORKFLOWS_PATH = '../../ee/temporal-workflows/dist/ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.js';
+const DIST_ACTIVITIES_PATH = '../../ee/temporal-workflows/dist/ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.js';
+const SOURCE_WORKFLOWS_PATH = '../../ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts';
+const SOURCE_ACTIVITIES_PATH = '../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts';
+
+function resolveTemporalRuntimeModulePath(options: {
+  envOverride: string | undefined;
+  useSourcePaths: boolean;
+  sourceRelativePath: string;
+  distRelativePath: string;
+}): string {
+  if (options.envOverride) {
+    return path.resolve(process.cwd(), options.envOverride);
+  }
+
+  const preferredRelativePath = options.useSourcePaths
+    ? options.sourceRelativePath
+    : options.distRelativePath;
+  const preferredAbsolutePath = path.resolve(process.cwd(), preferredRelativePath);
+  if (fs.existsSync(preferredAbsolutePath)) {
+    return preferredAbsolutePath;
+  }
+
+  const fallbackRelativePath = options.useSourcePaths
+    ? options.distRelativePath
+    : options.sourceRelativePath;
+  const fallbackAbsolutePath = path.resolve(process.cwd(), fallbackRelativePath);
+  if (fs.existsSync(fallbackAbsolutePath)) {
+    return fallbackAbsolutePath;
+  }
+
+  throw new Error(
+    `Unable to resolve Temporal runtime module. Checked ${preferredAbsolutePath} and ${fallbackAbsolutePath}.`,
+  );
+}
 
 export class WorkflowRuntimeV2TemporalWorker {
   private readonly workerId: string;
@@ -25,14 +59,21 @@ export class WorkflowRuntimeV2TemporalWorker {
     this.temporalAddress = process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS;
     this.temporalNamespace = process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE;
     this.taskQueue = process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE || WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE;
-    this.workflowsPath = path.resolve(
-      process.cwd(),
-      process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOWS_PATH || DEFAULT_WORKFLOWS_PATH,
+    const useSourcePaths = ['true', '1', 'yes'].includes(
+      String(process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_USE_SOURCE_PATHS ?? '').toLowerCase(),
     );
-    this.activitiesPath = path.resolve(
-      process.cwd(),
-      process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_ACTIVITIES_PATH || DEFAULT_ACTIVITIES_PATH,
-    );
+    this.workflowsPath = resolveTemporalRuntimeModulePath({
+      envOverride: process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOWS_PATH,
+      useSourcePaths,
+      sourceRelativePath: SOURCE_WORKFLOWS_PATH,
+      distRelativePath: DIST_WORKFLOWS_PATH,
+    });
+    this.activitiesPath = resolveTemporalRuntimeModulePath({
+      envOverride: process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_ACTIVITIES_PATH,
+      useSourcePaths,
+      sourceRelativePath: SOURCE_ACTIVITIES_PATH,
+      distRelativePath: DIST_ACTIVITIES_PATH,
+    });
   }
 
   async start(): Promise<void> {

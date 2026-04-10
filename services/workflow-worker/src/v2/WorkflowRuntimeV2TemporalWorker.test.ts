@@ -45,6 +45,7 @@ describe('WorkflowRuntimeV2TemporalWorker', () => {
     delete process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE;
     delete process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOWS_PATH;
     delete process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_ACTIVITIES_PATH;
+    delete process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_USE_SOURCE_PATHS;
   });
 
   it('starts Temporal polling for the authored queue and shuts down cleanly', async () => {
@@ -71,5 +72,27 @@ describe('WorkflowRuntimeV2TemporalWorker', () => {
 
     expect(workerShutdownMock).toHaveBeenCalledTimes(1);
     expect(connectionCloseMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('prefers source Temporal runtime modules in source mode when explicit overrides are absent', async () => {
+    process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_USE_SOURCE_PATHS = 'true';
+    process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_ACTIVITIES_PATH = './src/v2/WorkflowRuntimeV2TemporalWorker.test.activities.mjs';
+
+    const { WorkflowRuntimeV2TemporalWorker } = await import('./WorkflowRuntimeV2TemporalWorker.js');
+    const worker = new WorkflowRuntimeV2TemporalWorker('temporal-source-worker');
+
+    await worker.start();
+
+    expect(workerCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflowsPath: path.resolve(
+          process.cwd(),
+          '../../ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts',
+        ),
+        activities: expect.any(Object),
+      }),
+    );
+
+    await worker.stop();
   });
 });

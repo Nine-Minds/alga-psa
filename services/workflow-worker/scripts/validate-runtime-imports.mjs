@@ -89,6 +89,10 @@ function addViolation(violations, filePath, specifier, reason) {
   });
 }
 
+function isWorkerRuntimeEntrypoint(filePath) {
+  return filePath.endsWith(path.join('ee', 'packages', 'workflows', 'src', 'runtime', 'worker.js'));
+}
+
 function validate() {
   if (!fs.existsSync(DIST_ROOT)) {
     throw new Error(`dist not found at ${DIST_ROOT}`);
@@ -139,16 +143,24 @@ function validate() {
         );
       }
 
-      if (
-        specifier.includes('workflowInferenceService') ||
-        specifier.includes('registerAiActions') ||
-        specifier.includes('/runtime/bootstrap')
-      ) {
+      if (specifier.includes('/runtime/bootstrap')) {
         addViolation(
           violations,
           current,
           specifier,
           'bootstrap/app-only runtime dependency leaked into worker runtime graph'
+        );
+      }
+
+      if (
+        (specifier.includes('workflowInferenceService') || specifier.includes('registerAiActions'))
+        && !isWorkerRuntimeEntrypoint(current)
+      ) {
+        addViolation(
+          violations,
+          current,
+          specifier,
+          'worker runtime graph may only reach AI runtime wiring through the dedicated runtime/worker entrypoint'
         );
       }
 

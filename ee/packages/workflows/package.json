@@ -38,6 +38,10 @@
       "import": "./dist/runtime/bootstrap.mjs",
       "types": "./src/runtime/bootstrap.ts"
     },
+    "./runtime/worker": {
+      "import": "./dist/runtime/worker.mjs",
+      "types": "./src/runtime/worker.ts"
+    },
     "./authoring": {
       "import": "./src/authoring/index.ts",
       "types": "./src/authoring/index.ts"
