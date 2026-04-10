@@ -142,7 +142,7 @@
   {
     "id": "F028",
     "description": "Wire RecommendedFixPanel.tsx — fix dialog titles and descriptions per fix type (create_tracking_entry/update_remaining_amount/apply_adjustment/custom_adjustment/no_action), adjustment amount field, notes field, impact summary labels (Current Balance/New Balance), resolved state message",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F029",

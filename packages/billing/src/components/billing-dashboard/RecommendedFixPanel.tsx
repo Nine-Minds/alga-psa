@@ -53,7 +53,9 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
   // Handle applying the selected fix
   const handleApplyFix = async () => {
     if (!notes.trim()) {
-      setError('Please provide notes explaining the reason for this correction');
+      setError(t('recommendedFix.errors.notesRequired', {
+        defaultValue: 'Please provide notes explaining the reason for this correction',
+      }));
       return;
     }
 
@@ -66,7 +68,9 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
       if (selectedFix === 'custom_adjustment') {
         const amount = parseFloat(customAmount);
         if (isNaN(amount)) {
-          setError('Please enter a valid amount');
+          setError(t('recommendedFix.errors.invalidAmount', {
+            defaultValue: 'Please enter a valid amount',
+          }));
           setIsApplying(false);
           return;
         }
@@ -81,7 +85,9 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
       setIsApplying(false);
     } catch (error) {
       console.error('Error applying fix:', error);
-      setError(error instanceof Error ? error.message : 'An unknown error occurred');
+      setError(error instanceof Error
+        ? error.message
+        : t('recommendedFix.errors.unknown', { defaultValue: 'An unknown error occurred' }));
       setIsApplying(false);
     }
   };
@@ -315,17 +321,17 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
   const getFixDialogTitle = () => {
     switch (selectedFix) {
       case 'create_tracking_entry':
-        return 'Create Credit Tracking Entry';
+        return t('recommendedFix.buttons.createTrackingEntry', { defaultValue: 'Create Credit Tracking Entry' });
       case 'update_remaining_amount':
-        return 'Update Remaining Amount';
+        return t('recommendedFix.buttons.updateRemainingAmount', { defaultValue: 'Update Remaining Amount' });
       case 'apply_adjustment':
-        return 'Apply Credit Adjustment';
+        return t('recommendedFix.buttons.applyAdjustment', { defaultValue: 'Apply Credit Adjustment' });
       case 'custom_adjustment':
-        return 'Apply Custom Adjustment';
+        return t('recommendedFix.buttons.applyCustomAdjustment', { defaultValue: 'Apply Custom Adjustment' });
       case 'no_action':
-        return 'Mark as Resolved (No Action)';
+        return t('recommendedFix.buttons.markResolvedNoAction', { defaultValue: 'Mark as Resolved (No Action)' });
       default:
-        return 'Apply Fix';
+        return t('recommendedFix.buttons.confirm', { defaultValue: 'Apply Fix' });
     }
   };
 
@@ -333,15 +339,25 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
   const getFixDialogDescription = () => {
     switch (selectedFix) {
       case 'create_tracking_entry':
-        return 'This will create a new credit tracking entry for the transaction.';
+        return t('recommendedFix.descriptions.createTrackingEntry', {
+          defaultValue: 'This will create a new credit tracking entry for the transaction.',
+        });
       case 'update_remaining_amount':
-        return 'This will update the remaining amount in the credit tracking entry.';
+        return t('recommendedFix.descriptions.updateRemainingAmount', {
+          defaultValue: 'This will update the remaining amount in the credit tracking entry.',
+        });
       case 'apply_adjustment':
-        return 'This will create a credit adjustment transaction to correct the balance.';
+        return t('recommendedFix.descriptions.applyAdjustment', {
+          defaultValue: 'This will create a credit adjustment transaction to correct the balance.',
+        });
       case 'custom_adjustment':
-        return 'This will create a custom credit adjustment transaction.';
+        return t('recommendedFix.descriptions.customAdjustment', {
+          defaultValue: 'This will create a custom credit adjustment transaction.',
+        });
       case 'no_action':
-        return 'This will mark the discrepancy as resolved without making any changes.';
+        return t('recommendedFix.descriptions.noAction', {
+          defaultValue: 'This will mark the discrepancy as resolved without making any changes.',
+        });
       default:
         return '';
     }
@@ -355,7 +371,8 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
           {selectedFix === 'custom_adjustment' && (
             <div>
               <Label htmlFor="custom-amount" className="text-sm font-medium">
-                Adjustment Amount <span className="text-[rgb(var(--color-destructive-500))]">*</span>
+                {t('recommendedFix.dialog.adjustmentAmount', { defaultValue: 'Adjustment Amount' })}{' '}
+                <span className="text-[rgb(var(--color-destructive-500))]">*</span>
               </Label>
               <Input
                 id="custom-amount"
@@ -370,41 +387,54 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
                 className="mt-1"
               />
               <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-                Enter a positive value to increase the balance, or a negative value to decrease it.
+                {t('recommendedFix.dialog.adjustmentHint', {
+                  defaultValue: 'Enter a positive amount to increase the balance or a negative amount to decrease it.',
+                })}
               </p>
             </div>
           )}
 
           <div>
             <Label htmlFor="fix-notes" className="text-sm font-medium">
-              Notes <span className="text-[rgb(var(--color-destructive-500))]">*</span>
+              {t('recommendedFix.dialog.notes', { defaultValue: 'Notes' })}{' '}
+              <span className="text-[rgb(var(--color-destructive-500))]">*</span>
             </Label>
             <TextArea
               id="fix-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Explain the reason for this correction..."
+              placeholder={t('recommendedFix.dialog.notesPlaceholder', {
+                defaultValue: 'Explain the reason for this correction...',
+              })}
               className="w-full mt-1"
               rows={4}
             />
             <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-              Please provide detailed notes explaining the reason for this correction.
+              {t('recommendedFix.errors.notesRequired', {
+                defaultValue: 'Please provide notes explaining the reason for this correction',
+              })}
             </p>
           </div>
 
           {selectedFix !== 'no_action' && (
             <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-md">
-              <h4 className="font-medium mb-2">Impact Summary</h4>
+              <h4 className="font-medium mb-2">
+                {t('recommendedFix.impactSummary.title', { defaultValue: 'Impact Summary' })}
+              </h4>
               <div className="grid grid-cols-3 gap-4">
                 <div className="p-3 bg-[rgb(var(--color-accent-50))] rounded-md text-center">
-                  <p className="text-xs text-[rgb(var(--color-text-500))]">Current Balance</p>
+                  <p className="text-xs text-[rgb(var(--color-text-500))]">
+                    {t('recommendedFix.impactSummary.currentBalance', { defaultValue: 'Current Balance' })}
+                  </p>
                   <p className="text-lg font-bold">{formatCurrency(report.actual_balance)}</p>
                 </div>
                 <div className="p-3 bg-[rgb(var(--color-secondary-50))] rounded-md text-center flex items-center justify-center">
                   <ArrowRight className="h-5 w-5 text-[rgb(var(--color-secondary-700))]" />
                 </div>
                 <div className="p-3 bg-[rgb(var(--color-primary-50))] rounded-md text-center">
-                  <p className="text-xs text-[rgb(var(--color-text-500))]">New Balance</p>
+                  <p className="text-xs text-[rgb(var(--color-text-500))]">
+                    {t('recommendedFix.impactSummary.newBalance', { defaultValue: 'New Balance' })}
+                  </p>
                   <p className="text-lg font-bold">
                     {selectedFix === 'custom_adjustment' && customAmount
                       ? formatCurrency(report.actual_balance + (parseFloat(customAmount) || 0))
@@ -418,7 +448,7 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <div className="font-semibold">Error</div>
+              <div className="font-semibold">{t('common.error', { defaultValue: 'Error' })}</div>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -440,9 +470,13 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
           <div className="flex items-center space-x-2 bg-[rgb(var(--color-primary-50))] p-4 rounded-lg">
             <CheckCircle className="h-5 w-5 text-[rgb(var(--color-primary-600))]" />
             <div>
-              <h4 className="font-medium">This discrepancy has been resolved</h4>
+              <h4 className="font-medium">
+                {t('recommendedFix.resolved.title', { defaultValue: 'This discrepancy has been resolved' })}
+              </h4>
               <p className="text-sm text-[rgb(var(--color-text-500))]">
-                No further action is required.
+                {t('recommendedFix.resolved.description', {
+                  defaultValue: 'No further action is required unless you need to review the reconciliation history.',
+                })}
               </p>
             </div>
           </div>
@@ -470,14 +504,16 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
               variant="outline" 
               onClick={() => setIsDialogOpen(false)}
             >
-              Cancel
+              {t('recommendedFix.buttons.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button 
               id="confirm-fix-button" 
               onClick={handleApplyFix}
               disabled={isApplying || !notes.trim()}
             >
-              {isApplying ? 'Processing...' : 'Apply Fix'}
+              {isApplying
+                ? t('common.processing', { defaultValue: 'Processing...' })
+                : t('recommendedFix.buttons.confirm', { defaultValue: 'Apply Fix' })}
             </Button>
           </DialogFooter>
         </DialogContent>
