@@ -1,7 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { extractTaskDescriptionText } from '../../../lib/taskRichText';
+import {
+  extractTaskDescriptionText,
+  parseTaskRichTextContent,
+  serializeTaskRichTextContent,
+} from '../../../lib/taskRichText';
+import { TextEditor } from '@alga-psa/ui/editor';
+import type { PartialBlock } from '@blocknote/core';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -219,13 +226,15 @@ export function TemplateTasksStep({
 
                         <div>
                           <Label>Description</Label>
-                          <TextArea
-                            value={extractTaskDescriptionText(task.description) || ''}
-                            onChange={(e) =>
-                              updateTask(task.temp_id, { description: e.target.value })
+                          <TextEditor
+                            key={`wizard-task-desc-${task.temp_id}`}
+                            id={`wizard-task-description-${task.temp_id}`}
+                            initialContent={parseTaskRichTextContent(task.description)}
+                            onContentChange={(blocks: PartialBlock[]) =>
+                              updateTask(task.temp_id, { description: serializeTaskRichTextContent(blocks) })
                             }
+                            searchMentions={searchUsersForMentions}
                             placeholder="Describe what needs to be done..."
-                            rows={2}
                           />
                         </div>
 
