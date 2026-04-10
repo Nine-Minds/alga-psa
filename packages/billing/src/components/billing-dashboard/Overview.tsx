@@ -38,9 +38,10 @@ const MetricCard: React.FC<MetricCardProps> = ({
   error = false,
   subtitle 
 }) => {
+  const { t } = useTranslation('msp/billing');
   const getDisplayValue = () => {
-    if (loading) return '...';
-    if (error) return 'Error';
+    if (loading) return t('overview.states.ellipsis', { defaultValue: '...' });
+    if (error) return t('overview.states.error', { defaultValue: 'Error' });
     
     // Handle formatted metric values
     if (value && typeof value === 'object' && 'formatted' in value) {
@@ -52,7 +53,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
       return value.toLocaleString();
     }
     
-    return value || '0';
+    return value || t('overview.states.zero', { defaultValue: '0' });
   };
 
   return (
@@ -110,14 +111,16 @@ const Overview = () => {
         setReportData(data);
       } catch (err) {
         console.error('Error fetching billing overview:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load billing data');
+        setError(err instanceof Error
+          ? err.message
+          : t('overview.errors.loadData', { defaultValue: 'Failed to load billing data' }));
       } finally {
         setLoading(false);
       }
     }
 
     fetchBillingOverview();
-  }, []);
+  }, [t]);
 
   const metrics = reportData?.metrics || {};
   const hasError = !!error;
@@ -128,7 +131,9 @@ const Overview = () => {
       {error && (
         <Alert variant="destructive">
           <AlertDescription>
-            <p className="font-medium">Unable to load billing data</p>
+            <p className="font-medium">
+              {t('overview.errors.loadTitle', { defaultValue: 'Unable to load billing data' })}
+            </p>
             <p className="text-sm">{error}</p>
           </AlertDescription>
         </Alert>
@@ -212,8 +217,8 @@ const Overview = () => {
             </div>
             <div>
               <p className="text-2xl font-bold">
-                {loading ? '...' : hasError ? 'Error' : (
-                  metrics.monthly_billable_hours?.formatted || '0 hours'
+                {loading ? t('overview.states.ellipsis', { defaultValue: '...' }) : hasError ? t('overview.states.error', { defaultValue: 'Error' }) : (
+                  metrics.monthly_billable_hours?.formatted || t('overview.states.zeroHours', { defaultValue: '0 hours' })
                 )}
               </p>
               <p className="text-sm text-muted-foreground">
@@ -228,33 +233,45 @@ const Overview = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <FeatureCard
           icon={CreditCard}
-          title="Payment Processing"
-          description="Track and manage client payments, process refunds, and handle payment disputes"
+          title={t('overview.features.paymentProcessing.title', { defaultValue: 'Payment Processing' })}
+          description={t('overview.features.paymentProcessing.description', {
+            defaultValue: 'Track and manage client payments, process refunds, and handle payment disputes',
+          })}
         />
         <FeatureCard
           icon={Clock}
-          title="Billing Cycles"
-          description="Manage client billing schedules, cadence defaults, and invoice frequency settings"
+          title={t('overview.features.billingCycles.title', { defaultValue: 'Billing Cycles' })}
+          description={t('overview.features.billingCycles.description', {
+            defaultValue: 'Manage client billing schedules, cadence defaults, and invoice frequency settings',
+          })}
         />
         <FeatureCard
           icon={Calendar}
-          title="Service Periods"
-          description="Review recurring service periods and understand how invoice windows group them"
+          title={t('overview.features.servicePeriods.title', { defaultValue: 'Service Periods' })}
+          description={t('overview.features.servicePeriods.description', {
+            defaultValue: 'Review recurring service periods and understand how invoice windows group them',
+          })}
         />
         <FeatureCard
           icon={FileText}
-          title="Invoice Management"
-          description="Generate invoice windows for recurring service periods and create manual or prepayment documents when financial handling differs from recurring coverage"
+          title={t('overview.features.invoiceManagement.title', { defaultValue: 'Invoice Management' })}
+          description={t('overview.features.invoiceManagement.description', {
+            defaultValue: 'Generate invoice windows for recurring service periods and create manual or prepayment documents when financial handling differs from recurring coverage',
+          })}
         />
         <FeatureCard
           icon={AlertCircle}
-          title="Overdue Payments"
-          description="Monitor and follow up on overdue payments and payment reminders"
+          title={t('overview.features.overduePayments.title', { defaultValue: 'Overdue Payments' })}
+          description={t('overview.features.overduePayments.description', {
+            defaultValue: 'Monitor and follow up on overdue payments and payment reminders',
+          })}
         />
         <FeatureCard
           icon={FileSpreadsheet}
-          title="Service Catalog"
-          description="Manage your service offerings, pricing, and contracts"
+          title={t('overview.features.serviceCatalog.title', { defaultValue: 'Service Catalog' })}
+          description={t('overview.features.serviceCatalog.description', {
+            defaultValue: 'Manage your service offerings, pricing, and contracts',
+          })}
         />
       </div>
 
@@ -275,10 +292,10 @@ const Overview = () => {
               </p>
               <p>
                 <span className="font-semibold">
-                  {loading ? '...' : hasError ? 'Error' : (
+                  {loading ? t('overview.states.ellipsis', { defaultValue: '...' }) : hasError ? t('overview.states.error', { defaultValue: 'Error' }) : (
                     metrics.active_services_count?.formatted || 
                     metrics.active_services_count || 
-                    '0'
+                    t('overview.states.zero', { defaultValue: '0' })
                   )}
                 </span>{' '}
                 {t('overview.sections.serviceCatalog.activeServicesLabel', { defaultValue: 'Active Services' })}
@@ -298,9 +315,15 @@ const Overview = () => {
       {/* Debug info in development */}
       {reportData && process.env.NODE_ENV === 'development' && (
         <div className="text-xs text-muted-foreground p-4 bg-muted rounded">
-          <p>Report executed: {reportData.executedAt}</p>
-          <p>Execution time: {reportData.metadata.executionTime}ms</p>
-          <p>Report version: {reportData.metadata.version}</p>
+          <p>
+            {t('overview.debug.reportExecuted', { defaultValue: 'Report executed:' })} {reportData.executedAt}
+          </p>
+          <p>
+            {t('overview.debug.executionTime', { defaultValue: 'Execution time:' })} {reportData.metadata.executionTime}ms
+          </p>
+          <p>
+            {t('overview.debug.reportVersion', { defaultValue: 'Report version:' })} {reportData.metadata.version}
+          </p>
         </div>
       )}
     </div>

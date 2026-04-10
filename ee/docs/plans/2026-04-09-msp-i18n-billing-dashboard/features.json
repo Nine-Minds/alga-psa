@@ -152,7 +152,7 @@
   {
     "id": "F030",
     "description": "Wire Overview.tsx — feature card titles and descriptions (Payment Processing/Billing Cycles/Service Periods/Invoice Management/Overdue Payments/Service Catalog), error alert, debug info labels",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F031",
