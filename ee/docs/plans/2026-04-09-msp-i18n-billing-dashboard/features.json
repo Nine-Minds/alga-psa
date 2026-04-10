@@ -177,7 +177,7 @@
   {
     "id": "F035",
     "description": "Wire useTranslation('msp/billing') in PropertyEditor.tsx — field labels (Content/Data Field/Width/Height/Font Size/Color), 'Select a field' placeholder, column(s)/row(s) unit labels",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F036",

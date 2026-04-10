@@ -1,6 +1,7 @@
 import { LayoutBlock } from '@alga-psa/types';
 import styles from './InvoiceDesigner.module.css';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface PropertyEditorProps {
     block?: LayoutBlock;
@@ -9,28 +10,35 @@ interface PropertyEditorProps {
 }
 
 export const PropertyEditor: React.FC<PropertyEditorProps> = ({ block, onUpdate, availableFields }) => {
+    const { t } = useTranslation('msp/billing');
     if (!block) return null;
 
     const fieldOptions = [
-        { value: '', label: 'Select a field' },
+        { value: '', label: t('templateDesigner.propertyEditor.selectField', { defaultValue: 'Select a field' }) },
         ...availableFields.map((field): { value: string; label: string } => ({ value: field, label: field }))
     ];
 
     const widthOptions = [...Array(12)].map((_, i): { value: string; label: string } => ({
         value: (i + 1).toString(),
-        label: `${i + 1} column(s)`
+        label: t('templateDesigner.propertyEditor.columns', {
+            defaultValue: '{{count}} column(s)',
+            count: i + 1,
+        })
     }));
 
     const heightOptions = [...Array(10)].map((_, i): { value: string; label: string } => ({
         value: (i + 1).toString(),
-        label: `${i + 1} row(s)`
+        label: t('templateDesigner.propertyEditor.rows', {
+            defaultValue: '{{count}} row(s)',
+            count: i + 1,
+        })
     }));
 
     return (
         <div className={styles.propertyEditorContent}>
             {block.type === 'text' && (
                 <label className={styles.propertyLabel}>
-                    Content:
+                    {t('templateDesigner.propertyEditor.content', { defaultValue: 'Content' })}:
                     <input
                         type="text"
                         value={block.content}
@@ -40,7 +48,7 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({ block, onUpdate,
             )}
             {block.type === 'dynamic' && (
                 <label className={styles.propertyLabel}>
-                    Data Field:
+                    {t('templateDesigner.propertyEditor.dataField', { defaultValue: 'Data Field' })}:
                     <CustomSelect
                         value={block.content || ''}
                         onValueChange={(value) => onUpdate({ content: value })}
@@ -49,7 +57,7 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({ block, onUpdate,
                 </label>
             )}
             <label className={styles.propertyLabel}>
-                Width:
+                {t('templateDesigner.propertyEditor.width', { defaultValue: 'Width' })}:
                 <CustomSelect
                     value={block.grid_column_span.toString()}
                     onValueChange={(value) => onUpdate({ grid_column_span: Number(value) })}
@@ -57,7 +65,7 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({ block, onUpdate,
                 />
             </label>
             <label className={styles.propertyLabel}>
-                Height:
+                {t('templateDesigner.propertyEditor.height', { defaultValue: 'Height' })}:
                 <CustomSelect
                     value={block.grid_row_span.toString()}
                     onValueChange={(value) => onUpdate({ grid_row_span: Number(value) })}
@@ -65,7 +73,7 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({ block, onUpdate,
                 />
             </label>
             <label className={styles.propertyLabel}>
-                Font Size:
+                {t('templateDesigner.propertyEditor.fontSize', { defaultValue: 'Font Size' })}:
                 <input
                     type="number"
                     value={block.styles.fontSize?.replace('px', '') || ''}
@@ -73,7 +81,7 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({ block, onUpdate,
                 />
             </label>
             <label className={styles.propertyLabel}>
-                Color:
+                {t('templateDesigner.propertyEditor.color', { defaultValue: 'Color' })}:
                 <input
                     type="color"
                     value={block.styles.color || '#000000'}
