@@ -22,8 +22,8 @@ describe('Contact details email address wiring', () => {
 
   it('T021: ContactDetailsView renders the primary email distinctly and lists additional email addresses with labels', () => {
     expect(contactDetailsViewSource).toContain('contact.primary_email_canonical_type');
-    expect(contactDetailsViewSource).toContain("{' • Default'}");
-    expect(contactDetailsViewSource).toContain('contact.additional_email_addresses.map((emailAddress) => (');
+    expect(contactDetailsViewSource).toContain("{' • '}{t('contactDetailsView.fields.defaultEmail',");
+    expect(contactDetailsViewSource).toContain('(contact.additional_email_addresses ?? []).map((emailAddress) => (');
     expect(contactDetailsViewSource).toContain('emailAddress.email_address');
     expect(contactDetailsViewSource).toContain('getEmailTypeLabel(emailAddress)');
   });

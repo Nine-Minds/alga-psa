@@ -646,7 +646,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             </div>
           </div>
 
-          <div className="rounded-xl border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-surface-25,250_250_250))] p-4 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <ContactEmailAddressesEditor
               id="contact-details-email"
               primaryEmailInputId="email-field"
