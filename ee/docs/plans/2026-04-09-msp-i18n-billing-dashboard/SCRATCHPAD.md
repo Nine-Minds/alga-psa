@@ -163,6 +163,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) T002 complete** -- Added `packages/billing/tests/billing-dashboard/ReconciliationResolution.i18n.test.ts` and verified, under `packages/billing`’s Vitest config, that the stepper labels are wired through `msp/billing` and backed by pseudo-locale keys. Command used: `npm exec -- vitest --root packages/billing --config vitest.config.ts run tests/billing-dashboard/ReconciliationResolution.i18n.test.ts`.
 - **(2026-04-10) T003 complete** -- Extended the same ReconciliationResolution audit test to cover the three resolution-option labels (`Recommended Fix`, `Custom Correction`, `No Action Required`) and verified the updated file passes under the billing package Vitest config.
 - **(2026-04-10) T004 complete** -- Extended the ReconciliationResolution audit to cover the translated balance-comparison labels and the four-eyes approval copy (`requiredTitle`, `requiredDescription`, approver fields, verification code, verified badge title). The billing-package Vitest run remained green.
+- **(2026-04-10) T005 complete** -- Extended the ReconciliationResolution audit to cover the confirmation-step copy (`importantTitle`, `importantDescription`, confirm/close buttons, thank-you title) and the key reconciliation error messages. The shared audit file still passed under the billing-package Vitest config.
 
 ## Runbook
 

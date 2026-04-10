@@ -66,4 +66,36 @@ describe('ReconciliationResolution i18n wiring contract', () => {
     expect(source).toContain("t('reconciliation.fourEyes.verificationCode', { defaultValue: 'Verification Code' })");
     expect(source).toContain("t('reconciliation.fourEyes.verifiedTitle', { defaultValue: 'Secondary Approval Verified' })");
   });
+
+  it('T005: wires confirmation-dialog copy and error messages through msp/billing translations', () => {
+    const source = read('../../src/components/billing-dashboard/ReconciliationResolution.tsx');
+
+    expect(source).toContain("t('reconciliation.confirmation.importantTitle', { defaultValue: 'Important' })");
+    expect(source).toContain("t('reconciliation.confirmation.importantDescription', {");
+    expect(source).toContain("t('reconciliation.confirmation.confirmButton', { defaultValue: 'Confirm Resolution' })");
+    expect(source).toContain("t('reconciliation.confirmation.thankYouTitle', { defaultValue: 'Thank you!' })");
+    expect(source).toContain("t('reconciliation.confirmation.closeButton', { defaultValue: 'Close' })");
+    expect(source).toContain("t('reconciliation.errors.loadData', { defaultValue: 'Failed to load reconciliation report data' })");
+    expect(source).toContain("t('reconciliation.errors.unknown', { defaultValue: 'An unknown error occurred' })");
+    expect(source).toContain("t('reconciliation.errors.reportNotFound', { defaultValue: 'Reconciliation report not found. The report may have been deleted or you may not have permission to view it.' })");
+  });
+
+  it('T006: keeps the reconciliation shell backed by xx pseudo-locale keys instead of raw English', () => {
+    const pseudo = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/xx/msp/billing.json'
+    );
+
+    const pseudoKeys = [
+      'reconciliation.steps.review',
+      'reconciliation.resolutionTypes.recommended',
+      'reconciliation.fields.expectedBalance',
+      'reconciliation.fourEyes.requiredTitle',
+      'reconciliation.confirmation.confirmButton',
+      'reconciliation.confirmation.closeButton',
+    ];
+
+    for (const key of pseudoKeys) {
+      expect(getLeaf(pseudo, key)).toBe('11111');
+    }
+  });
 });

@@ -42,7 +42,7 @@
   {
     "id": "T005",
     "description": "Unit: ReconciliationResolution renders confirmation dialog text and error messages via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
