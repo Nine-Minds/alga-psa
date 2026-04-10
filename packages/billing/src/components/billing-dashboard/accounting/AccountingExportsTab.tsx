@@ -87,6 +87,29 @@ const DEFAULT_ADAPTERS = [
   { id: 'quickbooks_desktop', label: 'QuickBooks Desktop' }
 ] as const;
 
+function getAccountingExportStatusKey(status: AccountingExportStatus): string {
+  switch (status) {
+    case 'pending':
+      return 'pending';
+    case 'validating':
+      return 'validating';
+    case 'ready':
+      return 'ready';
+    case 'delivered':
+      return 'delivered';
+    case 'posted':
+      return 'posted';
+    case 'failed':
+      return 'failed';
+    case 'cancelled':
+      return 'cancelled';
+    case 'needs_attention':
+      return 'needsAttention';
+    default:
+      return 'pending';
+  }
+}
+
 export default function AccountingExportsTab(): React.JSX.Element {
   const { t } = useTranslation('msp/billing');
   const [loading, setLoading] = useState(true);
@@ -158,6 +181,8 @@ export default function AccountingExportsTab(): React.JSX.Element {
     () => (selectedDetail?.batch?.batch_id ? selectedDetail.batch : batches.find((b) => b.batch_id === selectedBatchId) ?? null),
     [selectedBatchId, selectedDetail, batches]
   );
+  const getStatusLabel = (status: AccountingExportStatus) =>
+    t(`accountingExports.status.${getAccountingExportStatusKey(status)}`, { defaultValue: status });
 
   const onCreate = async () => {
     setCreating(true);
@@ -274,7 +299,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
                   <TableRow key={batch.batch_id}>
                     <TableCell className="font-mono text-xs">{batch.batch_id}</TableCell>
                     <TableCell>{batch.adapter_type}</TableCell>
-                    <TableCell>{batch.status}</TableCell>
+                    <TableCell>{getStatusLabel(batch.status)}</TableCell>
                     <TableCell>{formatIso(batch.created_at)}</TableCell>
                     <TableCell>{formatIso(batch.updated_at)}</TableCell>
                     <TableCell className="text-right">
@@ -462,7 +487,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
                   <div className="text-xs text-muted-foreground">
                     {t('accountingExports.detailDialog.fields.status', { defaultValue: 'Status' })}
                   </div>
-                  <div className="text-sm">{selectedBatch.status}</div>
+                  <div className="text-sm">{getStatusLabel(selectedBatch.status)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">

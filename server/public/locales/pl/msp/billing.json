@@ -674,6 +674,16 @@
       "loadDetailError": "Nie udało się załadować szczegółów partii",
       "createError": "Nie udało się utworzyć partii eksportu",
       "executeError": "Nie udało się wykonać partii"
+    },
+    "status": {
+      "pending": "Oczekujace",
+      "validating": "W trakcie walidacji",
+      "ready": "Gotowe",
+      "delivered": "Dostarczone",
+      "posted": "Zaksiegowane",
+      "failed": "Niepowodzenie",
+      "cancelled": "Anulowane",
+      "needsAttention": "Wymaga uwagi"
     }
   },
   "templateRenderer": {

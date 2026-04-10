@@ -674,6 +674,16 @@
       "loadDetailError": "Impossibile caricare i dettagli del batch",
       "createError": "Impossibile creare il batch di esportazione",
       "executeError": "Impossibile eseguire il batch"
+    },
+    "status": {
+      "pending": "In sospeso",
+      "validating": "Convalida in corso",
+      "ready": "Pronto",
+      "delivered": "Consegnato",
+      "posted": "Registrato",
+      "failed": "Non riuscito",
+      "cancelled": "Annullato",
+      "needsAttention": "Richiede attenzione"
     }
   },
   "templateRenderer": {

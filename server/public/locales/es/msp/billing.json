@@ -674,6 +674,16 @@
       "loadDetailError": "No se pudieron cargar los detalles del lote",
       "createError": "No se pudo crear el lote de exportación",
       "executeError": "No se pudo ejecutar el lote"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "validating": "Validando",
+      "ready": "Listo",
+      "delivered": "Entregado",
+      "posted": "Publicado",
+      "failed": "Fallido",
+      "cancelled": "Cancelado",
+      "needsAttention": "Requiere atencion"
     }
   },
   "templateRenderer": {

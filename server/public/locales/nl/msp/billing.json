@@ -674,6 +674,16 @@
       "loadDetailError": "Kan batchdetails niet laden",
       "createError": "Kan exportbatch niet maken",
       "executeError": "Kan batch niet uitvoeren"
+    },
+    "status": {
+      "pending": "In afwachting",
+      "validating": "Valideren",
+      "ready": "Gereed",
+      "delivered": "Afgeleverd",
+      "posted": "Gepost",
+      "failed": "Mislukt",
+      "cancelled": "Geannuleerd",
+      "needsAttention": "Vereist aandacht"
     }
   },
   "templateRenderer": {

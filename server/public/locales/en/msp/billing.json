@@ -674,6 +674,16 @@
       "loadDetailError": "Failed to load batch details",
       "createError": "Failed to create export batch",
       "executeError": "Failed to execute batch"
+    },
+    "status": {
+      "pending": "Pending",
+      "validating": "Validating",
+      "ready": "Ready",
+      "delivered": "Delivered",
+      "posted": "Posted",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "needsAttention": "Needs Attention"
     }
   },
   "templateRenderer": {

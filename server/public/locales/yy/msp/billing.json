@@ -674,6 +674,16 @@
       "loadDetailError": "55555",
       "createError": "55555",
       "executeError": "55555"
+    },
+    "status": {
+      "pending": "55555",
+      "validating": "55555",
+      "ready": "55555",
+      "delivered": "55555",
+      "posted": "55555",
+      "failed": "55555",
+      "cancelled": "55555",
+      "needsAttention": "55555"
     }
   },
   "templateRenderer": {

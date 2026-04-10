@@ -674,6 +674,16 @@
       "loadDetailError": "Échec du chargement des détails du lot",
       "createError": "Échec de la création du lot d'exportation",
       "executeError": "Échec de l'exécution du lot"
+    },
+    "status": {
+      "pending": "En attente",
+      "validating": "Validation en cours",
+      "ready": "Pret",
+      "delivered": "Livre",
+      "posted": "Publie",
+      "failed": "Echec",
+      "cancelled": "Annule",
+      "needsAttention": "Attention requise"
     }
   },
   "templateRenderer": {

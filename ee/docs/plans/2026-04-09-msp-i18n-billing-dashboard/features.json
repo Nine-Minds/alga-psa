@@ -122,7 +122,7 @@
   {
     "id": "F024A",
     "description": "Wire AccountingExportsTab.tsx status labels through msp/billing and add locale keys for pending/validating/ready/delivered/posted/failed/cancelled/needs_attention so raw backend status codes do not leak in the table or detail dialog",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F025",

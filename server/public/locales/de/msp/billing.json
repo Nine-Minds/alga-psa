@@ -674,6 +674,16 @@
       "loadDetailError": "Batch-Details konnten nicht geladen werden",
       "createError": "Exportstapel konnte nicht erstellt werden",
       "executeError": "Batch konnte nicht ausgeführt werden"
+    },
+    "status": {
+      "pending": "Ausstehend",
+      "validating": "Wird validiert",
+      "ready": "Bereit",
+      "delivered": "Zugestellt",
+      "posted": "Gebucht",
+      "failed": "Fehlgeschlagen",
+      "cancelled": "Storniert",
+      "needsAttention": "Erfordert Aufmerksamkeit"
     }
   },
   "templateRenderer": {
