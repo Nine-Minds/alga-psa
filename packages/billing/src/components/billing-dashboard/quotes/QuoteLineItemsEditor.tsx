@@ -98,6 +98,17 @@ interface QuotePhaseSection {
   items: DraftQuoteItem[];
 }
 
+function computeMarkupPercent(
+  unitPrice: number,
+  cost: number | null | undefined,
+  costCurrency: string | null | undefined,
+  quoteCurrency: string
+): number | null {
+  if (cost == null || cost === 0) return null;
+  if (costCurrency && costCurrency !== quoteCurrency) return null;
+  return ((unitPrice - cost) / cost) * 100;
+}
+
 const UNGROUPED_PHASE_KEY = '__ungrouped__';
 
 const getPhaseKey = (phase?: string | null): string => phase?.trim() || UNGROUPED_PHASE_KEY;
@@ -413,6 +424,20 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               {item.needs_price && (
                 <p className="text-xs text-amber-600 dark:text-amber-400">No price in {currencyCode}</p>
               )}
+              {!isDiscount && item.service_item_kind === 'product' && (() => {
+                const markup = computeMarkupPercent(item.unit_price, item.cost, item.cost_currency, currencyCode);
+                if (markup === null) return null;
+                const colorClass = markup < 0
+                  ? 'text-red-600 dark:text-red-400'
+                  : markup === 0
+                    ? 'text-muted-foreground'
+                    : 'text-emerald-600 dark:text-emerald-400';
+                return (
+                  <p className={`text-xs ${colorClass}`}>
+                    {markup >= 0 ? '+' : ''}{markup.toFixed(1)}% markup
+                  </p>
+                );
+              })()}
             </div>
           )}
         </td>

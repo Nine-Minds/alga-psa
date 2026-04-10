@@ -313,6 +313,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
             is_taxable: item.is_taxable ?? true,
             tax_region: item.tax_region ?? null,
             tax_rate: item.tax_rate ?? null,
+            cost: item.cost ?? null,
+            cost_currency: item.cost_currency ?? null,
           };
 
           if (item.quote_item_id) {
