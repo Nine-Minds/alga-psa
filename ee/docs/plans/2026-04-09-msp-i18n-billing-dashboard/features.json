@@ -192,6 +192,6 @@
   {
     "id": "F038",
     "description": "Audit TemplateRendererCore.ts for user-visible strings — translate 'N/A', 'Unknown value', 'No data for list', 'Uncategorized' if they surface in UI; document as N/A if they only appear in generated invoice HTML",
-    "implemented": false
+    "implemented": true
   }
 ]
