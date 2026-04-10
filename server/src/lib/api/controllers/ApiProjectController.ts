@@ -68,7 +68,7 @@ export class ApiProjectController extends ApiBaseController {
    * description_rich_text is an internal storage detail — the API only
    * exposes the markdown `description`.
    */
-  private stripInternalTaskFields<T extends Record<string, unknown>>(task: T): Omit<T, 'description_rich_text'> {
+  private stripInternalTaskFields<T extends { description_rich_text?: unknown }>(task: T): Omit<T, 'description_rich_text'> {
     const { description_rich_text, ...rest } = task;
     return rest as Omit<T, 'description_rich_text'>;
   }
