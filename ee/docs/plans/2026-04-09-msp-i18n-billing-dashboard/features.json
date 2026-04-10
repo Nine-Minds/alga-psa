@@ -182,7 +182,7 @@
   {
     "id": "F036",
     "description": "Wire useTranslation('msp/billing') in ConditionalRuleManager.tsx — heading 'Conditional Display Rules', action options (Select Action/Show/Hide/Format), placeholders (Condition/Target), 'Add Rule' button",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F037",
