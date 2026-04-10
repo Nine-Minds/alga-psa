@@ -18,7 +18,7 @@
   {
     "id": "T002",
     "description": "Unit: ReconciliationResolution renders stepper labels (Review Discrepancy / Approval / Confirmation) via t() in en",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
