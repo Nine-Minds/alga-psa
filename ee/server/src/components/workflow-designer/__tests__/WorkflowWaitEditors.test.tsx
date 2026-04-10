@@ -154,7 +154,7 @@ vi.mock('../WorkflowActionInputFixedPicker', () => ({
 }));
 
 vi.mock('@alga-psa/workflows/actions', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/workflows/actions')>();
+  const actual = await importOriginal() as typeof import('@alga-psa/workflows/actions');
   return {
     ...actual,
     getWorkflowSchemaAction: (...args: unknown[]) => getWorkflowSchemaActionMock(...args),
@@ -176,7 +176,7 @@ vi.mock('@alga-psa/workflows/actions', async (importOriginal) => {
 });
 
 vi.mock('@alga-psa/workflows/runtime', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/workflows/runtime')>();
+  const actual = await importOriginal() as typeof import('@alga-psa/workflows/runtime');
   return {
     ...actual,
     buildWorkflowDesignerActionCatalog: vi.fn(() => []),
