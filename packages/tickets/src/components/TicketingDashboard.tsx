@@ -30,8 +30,9 @@ import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStat
 import { bundleTicketsAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster, getAllMatchingTicketIds } from '../actions/optimizedTicketActions';
 import TicketExportDialog from './TicketExportDialog';
+import TicketImportDialog from './TicketImportDialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { XCircle, Clock, Download, ChevronDown } from 'lucide-react';
+import { XCircle, Clock, Download, Upload, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -182,6 +183,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [bundleError, setBundleError] = useState<string | null>(null);
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
@@ -1393,6 +1395,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [onFilterChange, clearSelection]);
 
   return (
+    <>
     <ReflectionContainer id={id} label="Ticketing Dashboard">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
@@ -1447,6 +1450,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               {t('bulk.bundleTickets', 'Bundle Tickets')}
             </Button>
           )}
+          <Button
+            id={`${id}-import-csv-button`}
+            variant="outline"
+            onClick={() => setIsImportDialogOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            Import CSV
+          </Button>
           <Tooltip content={hasSelection
             ? t('dashboard.exportSelectedTooltip', {
               count: selectedTicketIds.size,
@@ -2090,6 +2102,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         selectedTicketIds={selectedTicketIdsArray}
       />
     </ReflectionContainer>
+    {isImportDialogOpen && (
+      <TicketImportDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        initialBoards={boards}
+        initialClients={clients}
+        initialUsers={initialUsers}
+        onImportComplete={() => {
+          setIsImportDialogOpen(false);
+          router.refresh();
+        }}
+      />
+    )}
+    </>
   );
 };
 
