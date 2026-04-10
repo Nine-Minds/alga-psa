@@ -41,6 +41,7 @@ credits, and service catalog are handled in separate plans.
 - **(2026-04-09)** Current `ROUTE_NAMESPACES['/msp/billing']` loads
   `['common', 'msp/core', 'features/billing', 'msp/reports']`. Adding `'msp/billing'` to
   this array is the only config change needed.
+- **(2026-04-10)** `server/public/locales/en/msp/billing.json` was created as a broad foundational namespace with shared vocabulary across dashboard, overview, reconciliation, discrepancy, usage, line-item, services, exports, template designer, and quantity-dialog surfaces. It intentionally front-loads reusable labels so later component wiring can reference stable keys instead of inventing ad hoc per-file strings.
 - **(2026-04-09)** `ReconciliationResolution.tsx` (1129 LOC) is the largest file and has
   ~80 user-visible strings spanning 3 wizard steps, resolution options, four-eyes approval
   flow, and a confirmation dialog. Split into 3 features (F020-F022).
@@ -84,6 +85,7 @@ credits, and service catalog are handled in separate plans.
 - **BILLING_METHOD_OPTIONS** in FixedContractLineServicesList and FixedContractLinePresetServicesList
   -- defined at module scope. Same pattern: translate labels in-component or use `t()` in
   the render callback.
+- **(2026-04-10)** The initial English namespace includes some forward-looking keys for later features/tests. As component wiring lands, keep locale parity by updating the real locales and pseudo-locales in lockstep rather than creating one-off English-only keys.
 
 ## Key Count Estimate
 
@@ -106,3 +108,11 @@ credits, and service catalog are handled in separate plans.
 
 After key reuse (shared labels like Cancel, Save, Error, etc. from `common` namespace),
 the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
+
+## Progress Log
+
+- **(2026-04-10) F001 complete** -- Added `server/public/locales/en/msp/billing.json` with 14 top-level groups (`common`, `dashboard`, `overview`, `reconciliation`, `discrepancy`, `recommendedFix`, `usage`, `lineItem`, `contractLineServices`, `presetServices`, `accountingExports`, `templateRenderer`, `templateDesigner`, `contractsHub`, `editQuantityDialog`, `templateRendererCore`). Verified the file parses with `node -e "JSON.parse(...)"`. This gives the batch a stable namespace before locale generation and component wiring.
+
+## Runbook
+
+- `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/billing.json','utf8')); console.log('ok')"`

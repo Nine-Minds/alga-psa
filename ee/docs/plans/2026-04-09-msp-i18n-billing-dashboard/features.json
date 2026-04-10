@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Create server/public/locales/en/msp/billing.json with key groups: dashboard, overview, reconciliation, discrepancy, recommendedFix, usage, lineItem, contractLineServices, presetServices, accountingExports, templateRenderer, templateDesigner, contractsHub, editQuantityDialog",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F002",
