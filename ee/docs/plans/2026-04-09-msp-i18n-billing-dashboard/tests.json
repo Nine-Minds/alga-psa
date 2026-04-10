@@ -34,7 +34,7 @@
   {
     "id": "T004",
     "description": "Unit: ReconciliationResolution renders balance comparison labels (Expected Balance / Actual Balance / Difference) and four-eyes approval text via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]

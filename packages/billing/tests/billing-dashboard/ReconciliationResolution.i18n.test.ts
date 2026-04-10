@@ -52,4 +52,18 @@ describe('ReconciliationResolution i18n wiring contract', () => {
     expect(getLeaf(pseudo, 'reconciliation.resolutionTypes.custom')).toBe('11111');
     expect(getLeaf(pseudo, 'reconciliation.resolutionTypes.noAction')).toBe('11111');
   });
+
+  it('T004: wires balance-comparison and four-eyes approval copy through msp/billing translations', () => {
+    const source = read('../../src/components/billing-dashboard/ReconciliationResolution.tsx');
+
+    expect(source).toContain("t('reconciliation.fields.expectedBalance', { defaultValue: 'Expected Balance' })");
+    expect(source).toContain("t('reconciliation.fields.actualBalance', { defaultValue: 'Actual Balance' })");
+    expect(source).toContain("t('reconciliation.fields.difference', { defaultValue: 'Difference' })");
+    expect(source).toContain("t('reconciliation.fourEyes.requiredTitle', { defaultValue: 'Four-Eyes Approval Required' })");
+    expect(source).toContain("t('reconciliation.fourEyes.requiredDescription', {");
+    expect(source).toContain("t('reconciliation.fourEyes.approverName', { defaultValue: 'Secondary Approver Name' })");
+    expect(source).toContain("t('reconciliation.fourEyes.approverEmail', { defaultValue: 'Secondary Approver Email' })");
+    expect(source).toContain("t('reconciliation.fourEyes.verificationCode', { defaultValue: 'Verification Code' })");
+    expect(source).toContain("t('reconciliation.fourEyes.verifiedTitle', { defaultValue: 'Secondary Approval Verified' })");
+  });
 });
