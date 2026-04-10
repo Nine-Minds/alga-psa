@@ -30,6 +30,7 @@ export const projectTemplateTaskSchema = tenantSchema.extend({
   template_phase_id: z.string().uuid(),
   task_name: z.string().min(1).max(255),
   description: z.string().nullable().optional(),
+  description_rich_text: z.string().nullable().optional(),
   estimated_hours: z.number().positive().nullable().optional(),
   duration_days: z.number().int().positive().nullable().optional(),
   task_type_key: z.string().max(50).nullable().optional(),

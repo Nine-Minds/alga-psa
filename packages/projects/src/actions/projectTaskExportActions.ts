@@ -68,6 +68,7 @@ interface TaskRow {
   task_id: string;
   task_name: string;
   description: string | null;
+  description_rich_text: string | null;
   phase_id: string;
   assigned_to: string | null;
   assigned_team_id: string | null;

@@ -180,6 +180,7 @@ export const projectPhaseResponseSchema = z.object({
 export const createProjectTaskSchema = z.object({
   task_name: z.string().min(1, 'Task name is required').max(255),
   description: z.string().optional(),
+  description_rich_text: z.string().optional(),
   assigned_to: uuidSchema.optional(),
   estimated_hours: z.number().min(0).optional(),
   due_date: dateSchema.optional(),
@@ -197,6 +198,7 @@ export const projectTaskResponseSchema = z.object({
   phase_id: uuidSchema,
   task_name: z.string(),
   description: z.string().nullable(),
+  description_rich_text: z.string().nullable(),
   assigned_to: uuidSchema.nullable(),
   estimated_hours: z.number().nullable(),
   actual_hours: z.number().nullable(),
