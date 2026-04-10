@@ -157,7 +157,7 @@
   {
     "id": "F031",
     "description": "Wire useTranslation('msp/billing') in BillingDashboard.tsx — page title 'Billing', beta warning banner (title + description), error display, back-to-presets nav text, quote templates heading",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F032",
