@@ -245,8 +245,16 @@ type ValidationIssue = { path: string; message: string };
 const IMPLICIT_SIMULATION_FIELD_KEYS = new Set(['tenantId']);
 const UUID_SAMPLE_VALUE = '00000000-0000-4000-8000-000000000001';
 
-const resolveSchemaRef = (schema: JsonSchema, root: JsonSchema): JsonSchema => {
+const resolveSchemaRef = (schema: JsonSchema | null | undefined, root: JsonSchema | null | undefined): JsonSchema => {
+  if (!schema || typeof schema !== 'object') {
+    return {};
+  }
+
   if (!schema.$ref?.startsWith('#/')) {
+    return schema;
+  }
+
+  if (!root || typeof root !== 'object') {
     return schema;
   }
 
@@ -423,8 +431,15 @@ const buildSyntheticValueFromSchema = (schema: JsonSchema, root: JsonSchema, pat
     case 'object': {
       const required = new Set(resolved.required ?? []);
       return Object.entries(resolved.properties ?? {}).reduce<Record<string, unknown>>((acc, [key, childSchema]) => {
-        if (required.has(key) || childSchema.default !== undefined || childSchema.example !== undefined || childSchema.examples?.length || childSchema.enum?.length) {
-          acc[key] = buildSyntheticValueFromSchema(childSchema, root, [...path, key]);
+        const childResolved = resolveSchemaRef(childSchema, root);
+        if (
+          required.has(key)
+          || childResolved.default !== undefined
+          || childResolved.example !== undefined
+          || childResolved.examples?.length
+          || childResolved.enum?.length
+        ) {
+          acc[key] = buildSyntheticValueFromSchema(childResolved, root, [...path, key]);
         }
         return acc;
       }, {});
