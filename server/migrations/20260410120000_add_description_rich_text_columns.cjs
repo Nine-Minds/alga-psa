@@ -10,8 +10,13 @@
  */
 
 /**
- * Minimal BlockNote-JSON → markdown converter for migration backfill.
- * Handles the block types that the editor actually produces.
+ * BlockNote-JSON → markdown converter for migration backfill.
+ *
+ * Mirrors the runtime converter in @alga-psa/formatting/blocknoteUtils.ts.
+ * Since migrations are CJS and the runtime converter is TypeScript/ESM,
+ * we maintain a parallel implementation here. The description_rich_text
+ * column preserves the original BlockNote JSON, so any minor drift is
+ * self-healing on first editor save.
  */
 function blockNoteJsonToMarkdown(json) {
   if (!json || typeof json !== 'string') return json;
@@ -57,6 +62,8 @@ function blockNoteJsonToMarkdown(json) {
           const alt = block.props?.caption || block.props?.name || 'image';
           return url ? `![${alt}](${url})` : '';
         }
+        case 'table':
+          return convertTableToMarkdown(block);
         default:
           return text;
       }
@@ -75,73 +82,135 @@ function extractText(content) {
           if (item.styles.italic) t = `*${t}*`;
           if (item.styles.code) t = '`' + t + '`';
           if (item.styles.strikethrough) t = `~~${t}~~`;
+          if (item.styles.underline) t = `<u>${t}</u>`;
+          if (item.styles.textColor && item.styles.textColor !== 'default') {
+            t = `<span style="color:${item.styles.textColor}">${t}</span>`;
+          }
+          if (item.styles.backgroundColor && item.styles.backgroundColor !== 'default') {
+            t = `<span style="background-color:${item.styles.backgroundColor}">${t}</span>`;
+          }
         }
         return t;
       }
       if (item.type === 'mention') {
-        return '@' + (item.props?.displayName || item.props?.username || '');
+        const name = item.props?.username || item.props?.displayName || '';
+        return name ? `@${name}` : '';
       }
       if (item.type === 'link' && Array.isArray(item.content)) {
         const linkText = extractText(item.content);
-        return item.href ? `[${linkText}](${item.href})` : linkText;
+        const href = item.href || '';
+        return href ? `[${linkText}](${href})` : linkText;
       }
       return '';
     })
     .join('');
 }
 
+function convertTableToMarkdown(block) {
+  const content = block.content;
+  if (!content || typeof content !== 'object' || !content.rows) return '';
+
+  const rows = content.rows || [];
+  if (rows.length === 0) return '';
+
+  const numCols = rows[0].cells ? rows[0].cells.length : 0;
+  if (numCols === 0) return '';
+
+  let md = '';
+  rows.forEach((row, rowIndex) => {
+    const cells = row.cells || [];
+    let rowMd = '|';
+    for (let c = 0; c < numCols; c++) {
+      const cell = cells[c] || [];
+      let cellText = Array.isArray(cell) ? extractText(cell) : ' ';
+      if (!cellText || !cellText.trim()) cellText = ' ';
+      rowMd += ` ${cellText} |`;
+    }
+    md += rowMd + '\n';
+    if (rowIndex === 0) {
+      md += '|' + ' --- |'.repeat(numCols) + '\n';
+    }
+  });
+  return md.trimEnd();
+}
+
+/**
+ * Check whether a column already exists on a table (idempotent guard).
+ */
+async function columnExists(knex, tableName, columnName) {
+  const result = await knex.raw(`
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_name = ? AND column_name = ?
+    LIMIT 1
+  `, [tableName, columnName]);
+  return result.rows.length > 0;
+}
+
+/**
+ * Convert descriptions from BlockNote JSON → markdown for a single table,
+ * processing one tenant at a time to bound memory and isolate failures.
+ */
+async function convertDescriptions(knex, tableName, pkColumn) {
+  const tenants = await knex(tableName)
+    .distinct('tenant')
+    .whereNotNull('description');
+
+  for (const { tenant } of tenants) {
+    await knex.transaction(async (trx) => {
+      const rows = await trx(tableName)
+        .select(pkColumn, 'tenant', 'description')
+        .where({ tenant })
+        .whereNotNull('description');
+
+      for (const row of rows) {
+        const md = blockNoteJsonToMarkdown(row.description);
+        if (md !== row.description) {
+          await trx(tableName)
+            .where({ [pkColumn]: row[pkColumn], tenant: row.tenant })
+            .update({ description: md });
+        }
+      }
+    });
+  }
+}
+
 /**
  * @param {import('knex').Knex} knex
  */
 exports.up = async function (knex) {
-  // 1. Add columns
-  await knex.schema.alterTable('project_tasks', (table) => {
-    table.text('description_rich_text').nullable();
-  });
+  // 1. Add columns (idempotent — skip if already present from a partial run)
+  if (!(await columnExists(knex, 'project_tasks', 'description_rich_text'))) {
+    await knex.schema.alterTable('project_tasks', (table) => {
+      table.text('description_rich_text').nullable();
+    });
+  }
 
-  await knex.schema.alterTable('project_template_tasks', (table) => {
-    table.text('description_rich_text').nullable();
-  });
+  if (!(await columnExists(knex, 'project_template_tasks', 'description_rich_text'))) {
+    await knex.schema.alterTable('project_template_tasks', (table) => {
+      table.text('description_rich_text').nullable();
+    });
+  }
 
   // 2. Backfill: copy existing description (BlockNote JSON) → description_rich_text
+  //    Only fill rows that haven't been backfilled yet (idempotent).
   await knex.raw(`
     UPDATE project_tasks
     SET description_rich_text = description
     WHERE description IS NOT NULL
+      AND description_rich_text IS NULL
   `);
 
   await knex.raw(`
     UPDATE project_template_tasks
     SET description_rich_text = description
     WHERE description IS NOT NULL
+      AND description_rich_text IS NULL
   `);
 
-  // 3. Convert description from BlockNote JSON → markdown (row-by-row)
-  const taskRows = await knex('project_tasks')
-    .select('task_id', 'tenant', 'description')
-    .whereNotNull('description');
-
-  for (const row of taskRows) {
-    const md = blockNoteJsonToMarkdown(row.description);
-    if (md !== row.description) {
-      await knex('project_tasks')
-        .where({ task_id: row.task_id, tenant: row.tenant })
-        .update({ description: md });
-    }
-  }
-
-  const templateTaskRows = await knex('project_template_tasks')
-    .select('template_task_id', 'tenant', 'description')
-    .whereNotNull('description');
-
-  for (const row of templateTaskRows) {
-    const md = blockNoteJsonToMarkdown(row.description);
-    if (md !== row.description) {
-      await knex('project_template_tasks')
-        .where({ template_task_id: row.template_task_id, tenant: row.tenant })
-        .update({ description: md });
-    }
-  }
+  // 3. Convert description from BlockNote JSON → markdown, per tenant
+  await convertDescriptions(knex, 'project_tasks', 'task_id');
+  await convertDescriptions(knex, 'project_template_tasks', 'template_task_id');
 };
 
 /**
@@ -161,11 +230,15 @@ exports.down = async function (knex) {
     WHERE description_rich_text IS NOT NULL
   `);
 
-  await knex.schema.alterTable('project_tasks', (table) => {
-    table.dropColumn('description_rich_text');
-  });
+  if (await columnExists(knex, 'project_tasks', 'description_rich_text')) {
+    await knex.schema.alterTable('project_tasks', (table) => {
+      table.dropColumn('description_rich_text');
+    });
+  }
 
-  await knex.schema.alterTable('project_template_tasks', (table) => {
-    table.dropColumn('description_rich_text');
-  });
+  if (await columnExists(knex, 'project_template_tasks', 'description_rich_text')) {
+    await knex.schema.alterTable('project_template_tasks', (table) => {
+      table.dropColumn('description_rich_text');
+    });
+  }
 };

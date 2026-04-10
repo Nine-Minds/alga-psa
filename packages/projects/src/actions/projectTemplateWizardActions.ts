@@ -5,14 +5,20 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUser } from '@alga-psa/types';
+import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { OrderingService } from '../lib/orderingUtils';
 import type {
-  TemplateChecklistItem,
-  TemplatePhase,
-  TemplateStatusMapping,
   TemplateTask,
   TemplateWizardData,
 } from '@alga-psa/projects/types/templateWizard';
+
+function getTaskMarkdownDescription(task: TemplateTask): string | null {
+  if (task.description_rich_text) {
+    return convertBlockNoteToMarkdown(task.description_rich_text);
+  }
+
+  return task.description || null;
+}
 
 async function checkPermission(
   user: IUser,
@@ -131,7 +137,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
               tenant,
               template_phase_id: templatePhaseId,
               task_name: task.task_name,
-              description: task.description || null,
+              description: getTaskMarkdownDescription(task),
               description_rich_text: task.description_rich_text || null,
               // Convert from hours (wizard UI) to minutes (storage)
               estimated_hours: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
@@ -311,7 +317,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
               tenant,
               template_phase_id: templatePhaseId,
               task_name: task.task_name,
-              description: task.description || null,
+              description: getTaskMarkdownDescription(task),
               description_rich_text: task.description_rich_text || null,
               // Convert from hours (wizard UI) to minutes (storage)
               estimated_hours: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,

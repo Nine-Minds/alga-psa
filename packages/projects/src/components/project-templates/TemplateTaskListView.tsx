@@ -756,9 +756,9 @@ export default function TemplateTaskListView({
                                       {task.description && (
                                         <p
                                           className="text-xs text-gray-500 mt-0.5 line-clamp-1"
-                                          title={extractTaskDescriptionText(task.description)}
+                                          title={extractTaskDescriptionText(task.description_rich_text ?? task.description)}
                                         >
-                                          {extractTaskDescriptionText(task.description)}
+                                          {extractTaskDescriptionText(task.description_rich_text ?? task.description)}
                                         </p>
                                       )}
                                     </div>

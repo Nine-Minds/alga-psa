@@ -130,7 +130,7 @@ function taskToRow(
 
   return {
     task_name: task.task_name || '',
-    description: extractTaskDescriptionText(task.description) || '',
+    description: extractTaskDescriptionText(task.description_rich_text ?? task.description) || '',
     phase: phaseName,
     status: statusName,
     is_closed: isClosed,

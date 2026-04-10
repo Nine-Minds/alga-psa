@@ -908,9 +908,9 @@ export default function TaskForm({
       ? ''
       : serializeTaskRichTextContent(liveBlocks);
     const originalDescriptionSerialized = initialDescriptionSerializedRef.current
-      ?? (!task.description
+      ?? (!(task.description_rich_text ?? task.description)
         ? ''
-        : serializeTaskRichTextContent(parseTaskRichTextContent(task.description)));
+        : serializeTaskRichTextContent(parseTaskRichTextContent(task.description_rich_text ?? task.description)));
     if (currentDescriptionSerialized !== originalDescriptionSerialized) return true;
     if (selectedPhaseId !== task.phase_id) return true;
     if (selectedStatusId !== task.project_status_mapping_id) return true;

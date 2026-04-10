@@ -1020,7 +1020,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     const query = searchQuery.toLowerCase();
     return phaseTasks.filter((task) =>
       task.task_name.toLowerCase().includes(query) ||
-      (task.description && extractTaskDescriptionText(task.description).toLowerCase().includes(query))
+      (task.description && extractTaskDescriptionText(task.description_rich_text ?? task.description).toLowerCase().includes(query))
     );
   }, [phaseTasks, searchQuery]);
 
@@ -2186,7 +2186,7 @@ function TaskCard({
             ref={descriptionRef}
             className={`${zoomScales.descSize} text-gray-600 dark:text-gray-400 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
-            {extractTaskDescriptionText(task.description)}
+            {extractTaskDescriptionText(task.description_rich_text ?? task.description)}
           </p>
           {(isDescriptionTruncated || isDescriptionExpanded) && (
             <Button

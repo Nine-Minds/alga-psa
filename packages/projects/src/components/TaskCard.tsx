@@ -130,7 +130,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   };
   const tagSize = getTagSize();
 
-  const descriptionPlainText = extractTaskDescriptionText(task.description);
+  const descriptionPlainText = extractTaskDescriptionText(task.description_rich_text ?? task.description);
 
   // Auto-expand description when search matches in description
   useEffect(() => {

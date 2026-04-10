@@ -380,7 +380,7 @@ export default function ProjectDetail({
     if (!searchQuery.trim()) return true;
     const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
     const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
-    const descText = extractTaskDescriptionText(task.description);
+    const descText = extractTaskDescriptionText(task.description_rich_text ?? task.description);
     const taskDescription = searchCaseSensitive ? descText : descText.toLowerCase();
 
     if (searchWholeWord) {

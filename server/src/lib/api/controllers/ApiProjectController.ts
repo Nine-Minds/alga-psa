@@ -6,12 +6,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import { ProjectService } from '../services/ProjectService';
-import { 
+import {
   createProjectSchema,
   updateProjectSchema,
   projectListQuerySchema,
   projectSearchSchema,
-  projectExportQuerySchema
+  projectExportQuerySchema,
+  updateProjectTaskSchema
 } from '../schemas/project';
 import { 
   ApiKeyServiceForApi 
@@ -60,6 +61,16 @@ export class ApiProjectController extends ApiBaseController {
     });
     
     this.projectService = projectService;
+  }
+
+  /**
+   * Strip internal-only fields from task objects before sending via API.
+   * description_rich_text is an internal storage detail — the API only
+   * exposes the markdown `description`.
+   */
+  private stripInternalTaskFields<T extends Record<string, unknown>>(task: T): Omit<T, 'description_rich_text'> {
+    const { description_rich_text, ...rest } = task;
+    return rest as Omit<T, 'description_rich_text'>;
   }
 
   /**
@@ -257,8 +268,8 @@ export class ApiProjectController extends ApiBaseController {
             projectId,
             apiRequest.context!
           );
-          
-          return createSuccessResponse(tasks);
+
+          return createSuccessResponse(tasks.map(t => this.stripInternalTaskFields(t)));
         });
       } catch (error) {
         return handleApiError(error);
@@ -1016,7 +1027,7 @@ export class ApiProjectController extends ApiBaseController {
             apiRequest.context!
           );
 
-          return createSuccessResponse(tasks);
+          return createSuccessResponse(tasks.map(t => this.stripInternalTaskFields(t)));
         });
       } catch (error) {
         return handleApiError(error);
@@ -1092,7 +1103,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Task not found');
           }
 
-          return createSuccessResponse(task);
+          return createSuccessResponse(this.stripInternalTaskFields(task));
         });
       } catch (error) {
         return handleApiError(error);
@@ -1159,12 +1170,21 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
 
-          // Parse body
-          const data = await req.json();
+          // Parse and validate body — strips unrecognized fields like
+          // description_rich_text so they can't be written via the API.
+          const raw = await req.json();
+          const data = updateProjectTaskSchema.parse(raw);
+
+          // When the API updates description (markdown), null out
+          // description_rich_text so the UI falls back to the new
+          // markdown instead of showing stale rich text.
+          const updatePayload = data.description !== undefined
+            ? { ...data, description_rich_text: null }
+            : data;
 
           const task = await this.projectService.updateTask(
             taskId,
-            data,
+            updatePayload,
             apiRequest.context!
           );
 
@@ -1172,7 +1192,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Task not found');
           }
 
-          return createSuccessResponse(task);
+          return createSuccessResponse(this.stripInternalTaskFields(task));
         });
       } catch (error) {
         return handleApiError(error);

@@ -134,7 +134,7 @@ export default function TaskListView({
   const taskDescriptionTextMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const task of tasks) {
-      map.set(task.task_id, extractTaskDescriptionText(task.description));
+      map.set(task.task_id, extractTaskDescriptionText(task.description_rich_text ?? task.description));
     }
     return map;
   }, [tasks]);
