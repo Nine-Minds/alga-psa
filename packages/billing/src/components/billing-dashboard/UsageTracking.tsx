@@ -34,12 +34,14 @@ import BucketUsageChart from '@alga-psa/ui/components/charts/BucketUsageChart';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface UsageTrackingProps {
   initialServices: IService[];
 }
 
 const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
+  const { t } = useTranslation('msp/billing');
   const { toast } = useToast();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -304,33 +306,35 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
 
   const columns: ColumnDefinition<IUsageRecord>[] = [
     {
-      title: 'Client',
+      title: t('usage.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
     },
     {
-      title: 'Service',
+      title: t('usage.table.service', { defaultValue: 'Service' }),
       dataIndex: 'service_name',
     },
     {
-      title: 'Quantity',
+      title: t('usage.table.quantity', { defaultValue: 'Quantity' }),
       dataIndex: 'quantity',
     },
     {
-      title: 'Usage Date',
+      title: t('usage.table.usageDate', { defaultValue: 'Usage Date' }),
       dataIndex: 'usage_date',
       render: (value) => new Date(value).toLocaleDateString(),
     },
     {
-      title: 'Contract Line',
+      title: t('usage.table.contractLine', { defaultValue: 'Contract Line' }),
       dataIndex: 'contract_line_id',
       render: (value, record) => {
         // This would ideally be populated from a join in the backend
         // For now, we'll just show the ID or "Default"
-        return value ? `Contract Line: ${value.substring(0, 8)}...` : "Default Contract Line";
+        return value
+          ? t('usage.table.contractLineLabel', { defaultValue: 'Contract Line: {{id}}...', id: value.substring(0, 8) })
+          : t('usage.table.defaultContractLine', { defaultValue: 'Default Contract Line' });
       },
     },
     {
-      title: 'Actions',
+      title: t('usage.table.actions', { defaultValue: 'Actions' }),
       dataIndex: 'usage_id',
       width: '5%',
       render: (_, record) => (
@@ -342,7 +346,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
               id={`usage-actions-menu-${record.usage_id}`}
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('common.openMenu', { defaultValue: 'Open menu' })}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -362,14 +366,14 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
               }}
               disabled={isSaving}
             >
-              Edit
+              {t('usage.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-usage-${record.usage_id}`}
               onClick={() => handleDeleteUsage(record.usage_id)}
               disabled={isSaving}
             >
-              Delete
+              {t('usage.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -385,7 +389,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
           <CardHeader>
             <div className="flex items-center">
               <Package className="h-5 w-5 text-blue-600 mr-2" />
-              <h3 className="text-lg font-semibold">Bucket Hours Overview</h3>
+              <h3 className="text-lg font-semibold">{t('usage.bucketHoursOverview', { defaultValue: 'Bucket Hours Overview' })}</h3>
             </div>
           </CardHeader>
           <CardContent>
@@ -405,7 +409,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No active bucket plans found.</p>
+              <p className="text-sm text-muted-foreground">{t('usage.states.noActiveBucketPlans', { defaultValue: 'No active bucket plans found.' })}</p>
             )}
           </CardContent>
         </Card>
@@ -415,7 +419,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Usage Records</h3>
+            <h3 className="text-lg font-semibold">{t('usage.usageRecords', { defaultValue: 'Usage Records' })}</h3>
             <Button
               id="add-usage-button"
               onClick={() => {
@@ -426,7 +430,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
               disabled={isSaving}
             >
               <Plus className="h-4 w-4" />
-              Add Usage
+              {t('usage.actions.addUsage', { defaultValue: 'Add Usage' })}
             </Button>
           </div>
         </CardHeader>
@@ -434,14 +438,14 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
           <div className="space-y-4">
             <div className="flex items-center space-x-2 mb-4">
               <div className="flex-1">
-                <Label htmlFor="client-filter">Client</Label>
+                <Label htmlFor="client-filter">{t('usage.filters.client', { defaultValue: 'Client' })}</Label>
                 <CustomSelect
                   id="client-filter"
                   value={selectedClient || 'all_clients'}
                   onValueChange={value => setSelectedClient(value === 'all_clients' ? null : value)}
-                  placeholder="Filter by client"
+                  placeholder={t('usage.filters.clientPlaceholder', { defaultValue: 'Filter by client' })}
                   options={[
-                    { value: 'all_clients', label: 'All Clients' },
+                    { value: 'all_clients', label: t('usage.filters.allClients', { defaultValue: 'All Clients' }) },
                     ...clients.map(client => ({
                       value: client.client_id,
                       label: client.client_name
@@ -450,14 +454,14 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 />
               </div>
               <div className="flex-1">
-                <Label htmlFor="service-filter">Service</Label>
+                <Label htmlFor="service-filter">{t('usage.filters.service', { defaultValue: 'Service' })}</Label>
                 <CustomSelect
                   id="service-filter"
                   value={selectedService || 'all_services'}
                   onValueChange={value => setSelectedService(value === 'all_services' ? '' : value)}
-                  placeholder="Filter by service"
+                  placeholder={t('usage.filters.servicePlaceholder', { defaultValue: 'Filter by service' })}
                   options={[
-                    { value: 'all_services', label: 'All Services' },
+                    { value: 'all_services', label: t('usage.filters.allServices', { defaultValue: 'All Services' }) },
                     ...usageServiceOptions,
                   ]}
                 />
@@ -471,7 +475,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                     setSelectedClient('all_clients');
                   }}
                 >
-                  Reset
+                  {t('usage.actions.resetFilters', { defaultValue: 'Reset' })}
                 </Button>
               </div>
             </div>
@@ -481,7 +485,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 layout="stacked"
                 className="py-10 text-muted-foreground"
                 spinnerProps={{ size: 'md' }}
-                text="Loading usage records"
+                text={t('usage.states.loadingRecords', { defaultValue: 'Loading usage records' })}
               />
             ) : (
               <DataTable

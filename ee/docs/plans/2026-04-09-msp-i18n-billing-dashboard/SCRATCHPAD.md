@@ -64,6 +64,7 @@ credits, and service catalog are handled in separate plans.
 - **(2026-04-09)** `Overview.tsx` metric cards use a `MetricCard` component that accepts
   `title` and `subtitle` props as strings. These need to become `t()` calls at the
   call site, not inside MetricCard itself (MetricCard is a generic presentational component).
+- **(2026-04-10)** `UsageTracking.tsx` already had a clean separation between list-shell strings and dialog/toast strings. That makes it safe to split the i18n pass into F017 (table/filter shell) and F018 (dialog, guidance, toasts) without touching locale structure in between.
 - **(2026-04-09)** `ContractsHub.tsx` is small (77 LOC) but renders tab labels that should
   use `msp/billing` namespace for consistency with the billing dashboard.
 - **(2026-04-09)** `PropertyEditor.tsx` and `ConditionalRuleManager.tsx` are part of the
@@ -131,6 +132,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F014 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/DiscrepancyDetail.tsx` for the back navigation text, status badges, discrepancy detail labels, issue-type labels, and balance comparison card labels.
 - **(2026-04-10) F015 complete** -- Continued `DiscrepancyDetail.tsx` by translating the transaction-history tab labels, expanded transaction metadata labels, the credit-tracking tab labels, and the credit-entry detail labels/status text. No new locale keys were needed because `discrepancy.tabs.*`, `discrepancy.cards.*`, `discrepancy.fields.*`, `discrepancy.status.*`, and `discrepancy.empty.*` were already seeded in F001.
 - **(2026-04-10) F016 complete** -- Finished `DiscrepancyDetail.tsx` by translating the issue-details tab, recommended-fix copy, credit-applications table headings, resolve-discrepancy dialog labels, and the remaining empty/error states. This closes out the discrepancy detail screen without expanding the locale schema beyond the keys already seeded in F001.
+- **(2026-04-10) F017 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/UsageTracking.tsx` for the bucket overview title, usage table headers, contract-line summary text, filter labels/placeholders, loading state, and row action menu labels.
 
 ## Runbook
 

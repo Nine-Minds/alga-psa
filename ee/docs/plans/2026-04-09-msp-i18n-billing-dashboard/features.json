@@ -82,7 +82,7 @@
   {
     "id": "F017",
     "description": "Wire useTranslation('msp/billing') in UsageTracking.tsx — bucket hours overview, usage records table headers (Client/Service/Quantity/Usage Date/Contract Line/Actions), filter labels and dropdown menus",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F018",
