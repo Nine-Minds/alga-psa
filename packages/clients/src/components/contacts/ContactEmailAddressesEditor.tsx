@@ -41,7 +41,7 @@ export type ContactEmailAddressesEditorChange = {
 
 type NormalizedContactEmailAddresses = ContactEmailAddressesEditorChange;
 
-const CANONICAL_EMAIL_TYPE_OPTIONS = CONTACT_EMAIL_CANONICAL_TYPES.map((value) => ({
+const CANONICAL_EMAIL_TYPE_OPTIONS = (CONTACT_EMAIL_CANONICAL_TYPES ?? []).map((value) => ({
   value,
   label: value.charAt(0).toUpperCase() + value.slice(1),
 }));
@@ -67,7 +67,7 @@ function createRowLocalId(index: number): string {
 }
 
 function isCanonicalEmailType(value: string | null | undefined): value is ContactEmailCanonicalType {
-  return CONTACT_EMAIL_CANONICAL_TYPES.includes((value ?? '') as ContactEmailCanonicalType);
+  return (CONTACT_EMAIL_CANONICAL_TYPES ?? []).includes((value ?? '') as ContactEmailCanonicalType);
 }
 
 function normalizeAdditionalEmailRowForDraft(
@@ -336,6 +336,7 @@ interface ContactEmailRowProps {
   disabled?: boolean;
   compact?: boolean;
   isExpanded?: boolean;
+  highlighted?: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
   showReorderControls: boolean;
@@ -356,6 +357,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
   disabled = false,
   compact = false,
   isExpanded = true,
+  highlighted = false,
   canMoveUp,
   canMoveDown,
   showReorderControls,
@@ -375,9 +377,12 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
     [customTypeSuggestions]
   );
 
+  const highlightClasses = 'transition-[box-shadow,background-color] duration-700';
+  const highlightActiveClasses = highlighted ? 'ring-2 ring-[rgb(var(--color-primary-400))] bg-[rgb(var(--color-primary-50))]' : '';
+
   if (compact && !isExpanded) {
     return (
-      <Card className="border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50,255_255_255))] p-3" data-testid={`${id}-row-${index}`}>
+      <Card className={`border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50,255_255_255))] p-3 ${highlightClasses} ${highlightActiveClasses}`} data-testid={`${id}-row-${index}`}>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -445,19 +450,19 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
                 >
                   <ArrowDown className="h-4 w-4" />
                 </Button>
-                <Button
-                  id={`${id}-remove-${index}`}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={onRemove}
-                  disabled={disabled}
-                  aria-label={`Remove additional email ${index + 1}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </>
             )}
+            <Button
+              id={`${id}-remove-${index}`}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onRemove}
+              disabled={disabled}
+              aria-label={`Remove additional email ${index + 1}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </Card>
@@ -465,7 +470,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
   }
 
   return (
-    <Card className="p-4" data-testid={`${id}-row-${index}`}>
+    <Card className={`p-4 ${highlightClasses} ${highlightActiveClasses}`} data-testid={`${id}-row-${index}`}>
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div>
           <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Additional email {index + 1}</div>
@@ -525,19 +530,19 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
               >
                 <ArrowDown className="h-4 w-4" />
               </Button>
-              <Button
-                id={`${id}-remove-${index}`}
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onRemove}
-                disabled={disabled}
-                aria-label={`Remove additional email ${index + 1}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </>
           )}
+          <Button
+            id={`${id}-remove-${index}`}
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            disabled={disabled}
+            aria-label={`Remove additional email ${index + 1}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -641,7 +646,18 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
   );
   const [touchedRowKeys, setTouchedRowKeys] = useState<Set<string>>(new Set());
   const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
+  const [highlightPrimary, setHighlightPrimary] = useState(false);
+  const [highlightDemotedKey, setHighlightDemotedKey] = useState<string | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastEmittedSignatureRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const externalSignature = buildContactEmailAddressesSignature(normalizedValue);
@@ -783,12 +799,26 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
 
   const handlePromote = (index: number) => {
     const promoted = promoteContactEmailRow(currentValue, index);
+    const nextRows = buildEditableAdditionalEmailRows(promoted.additional_email_addresses);
     commitValue(
       promoted.email,
       promoted.primary_email_canonical_type,
       promoted.primary_email_custom_type,
-      buildEditableAdditionalEmailRows(promoted.additional_email_addresses)
+      nextRows
     );
+
+    // Animate: highlight the primary card and the demoted row
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+    const demotedRowKey = nextRows.length > 0 ? getRowKey(nextRows[nextRows.length - 1]!, nextRows.length - 1) : null;
+    setHighlightPrimary(true);
+    setHighlightDemotedKey(demotedRowKey);
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlightPrimary(false);
+      setHighlightDemotedKey(null);
+      highlightTimerRef.current = null;
+    }, 600);
   };
 
   const handleMove = (index: number, direction: -1 | 1) => {
@@ -857,7 +887,7 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
         </Button>
       </div>
 
-      <Card className="p-4" data-testid={`${id}-primary-row`}>
+      <Card className={`p-4 transition-[box-shadow,background-color] duration-700 ${highlightPrimary ? 'ring-2 ring-[rgb(var(--color-primary-400))] bg-[rgb(var(--color-primary-50))]' : ''}`} data-testid={`${id}-primary-row`}>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div>
             <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Primary email</div>
@@ -942,6 +972,7 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
             disabled={disabled}
             compact={compactAdditionalRows}
             isExpanded={!compactAdditionalRows || expandedRowKey === getRowKey(row, index)}
+            highlighted={highlightDemotedKey === getRowKey(row, index)}
             canMoveUp={index > 0}
             canMoveDown={index < draftRows.length - 1}
             showReorderControls={draftRows.length > 1}
