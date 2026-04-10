@@ -127,7 +127,7 @@
   {
     "id": "F025",
     "description": "Wire useTranslation('msp/billing') in FixedContractLinePresetServicesList.tsx — table headers (Service Name/Category/Billing Method/Quantity/Default Rate/Actions), billing method options, add services section, unsaved changes warning, save/reset buttons, loading text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F026",
