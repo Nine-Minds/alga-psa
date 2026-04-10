@@ -132,7 +132,7 @@
   {
     "id": "F026",
     "description": "Wire FixedContractLinePresetServicesList.tsx — navigation warning dialog (title/message/confirmLabel/cancelLabel), empty states, error alerts, service type/method/rate info in add list",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F027",

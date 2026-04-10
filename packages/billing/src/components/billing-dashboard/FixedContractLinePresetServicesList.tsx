@@ -368,7 +368,13 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
               columns={presetServiceColumns}
               pagination={false}
             />
-            {presetServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this contract line.</p>}
+            {presetServices.length === 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                {t('presetServices.states.emptyAssociated', {
+                  defaultValue: 'No services currently associated with this contract line.',
+                })}
+              </p>
+            )}
           </div>
 
           <div className="mt-6 border-t pt-4">
@@ -376,7 +382,11 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
               {t('presetServices.addSection.title', { defaultValue: 'Add Services to Contract Line' })}
             </h4>
             {servicesAvailableToAdd.length === 0 ? (
-              <p className="text-sm text-muted-foreground">All available services are already associated with this contract line.</p>
+              <p className="text-sm text-muted-foreground">
+                {t('presetServices.states.emptyAvailable', {
+                  defaultValue: 'All available services are already associated with this contract line.',
+                })}
+              </p>
             ) : (
               <>
                 <div className="mb-3">
@@ -405,7 +415,20 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
                           <div className="flex-grow flex flex-col text-sm">
                             <span>{service.service_name}</span>
                             <span className="text-xs text-muted-foreground">
-                              Service Type: {serviceTypeName} | Method: {getBillingMethodLabel(service.billing_method)} | Rate: ${(Number(service.default_rate) / 100).toFixed(2)}
+                              {t('presetServices.addSection.serviceType', {
+                                defaultValue: 'Service Type: {{value}}',
+                                value: serviceTypeName,
+                              })}
+                              {' | '}
+                              {t('presetServices.addSection.method', {
+                                defaultValue: 'Method: {{value}}',
+                                value: getBillingMethodLabel(service.billing_method),
+                              })}
+                              {' | '}
+                              {t('presetServices.addSection.rate', {
+                                defaultValue: 'Rate: ${{value}}',
+                                value: (Number(service.default_rate) / 100).toFixed(2),
+                              })}
                             </span>
                           </div>
                         </div>
@@ -466,10 +489,12 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
         isOpen={showNavigateAwayConfirm}
         onClose={handleNavigateAwayDismiss}
         onConfirm={handleNavigateAwayConfirm}
-        title="Unsaved Changes"
-        message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
-        confirmLabel="Leave Page"
-        cancelLabel="Stay on Page"
+        title={t('presetServices.navigationDialog.title', { defaultValue: 'Unsaved Changes' })}
+        message={t('presetServices.navigationDialog.message', {
+          defaultValue: 'You have unsaved changes. Are you sure you want to leave this page? All changes will be lost.',
+        })}
+        confirmLabel={t('presetServices.navigationDialog.confirmLabel', { defaultValue: 'Leave Page' })}
+        cancelLabel={t('presetServices.navigationDialog.cancelLabel', { defaultValue: 'Stay on Page' })}
       />
     </div>
   );
