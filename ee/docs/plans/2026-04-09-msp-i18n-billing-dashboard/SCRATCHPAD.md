@@ -117,6 +117,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F003 complete** -- Generated `server/public/locales/es/msp/billing.json` with the same placeholder-safe pipeline and verified it parses. Locale generation is now quick enough to finish the remaining real locales before component wiring.
 - **(2026-04-10) F004 complete** -- Generated `server/public/locales/de/msp/billing.json` and verified it parses. The machine pass works structurally; wording cleanup remains a later QA item, especially for action verbs and billing-domain nouns.
 - **(2026-04-10) F005 complete** -- Generated `server/public/locales/nl/msp/billing.json` and verified it parses. The translation endpoint threw one transient 500 during generation; resuming from the on-disk cache completed the locale without losing prior progress.
+- **(2026-04-10) F006 complete** -- Generated `server/public/locales/it/msp/billing.json` and verified it parses. The explicit Italian accent audit still needs the global validation pass, but the locale file is now present and structurally correct.
 
 ## Runbook
 
