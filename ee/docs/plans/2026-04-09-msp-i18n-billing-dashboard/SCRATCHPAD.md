@@ -115,6 +115,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F001 complete** -- Added `server/public/locales/en/msp/billing.json` with 14 top-level groups (`common`, `dashboard`, `overview`, `reconciliation`, `discrepancy`, `recommendedFix`, `usage`, `lineItem`, `contractLineServices`, `presetServices`, `accountingExports`, `templateRenderer`, `templateDesigner`, `contractsHub`, `editQuantityDialog`, `templateRendererCore`). Verified the file parses with `node -e "JSON.parse(...)"`. This gives the batch a stable namespace before locale generation and component wiring.
 - **(2026-04-10) F002 complete** -- Generated `server/public/locales/fr/msp/billing.json` from the English source with placeholder preservation and verified it parses. The first pass is machine-generated; keep an eye on MSP-specific wording during later UI smoke tests.
 - **(2026-04-10) F003 complete** -- Generated `server/public/locales/es/msp/billing.json` with the same placeholder-safe pipeline and verified it parses. Locale generation is now quick enough to finish the remaining real locales before component wiring.
+- **(2026-04-10) F004 complete** -- Generated `server/public/locales/de/msp/billing.json` and verified it parses. The machine pass works structurally; wording cleanup remains a later QA item, especially for action verbs and billing-domain nouns.
 
 ## Runbook
 

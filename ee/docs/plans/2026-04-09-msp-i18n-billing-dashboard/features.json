@@ -17,7 +17,7 @@
   {
     "id": "F004",
     "description": "Generate de/msp/billing.json translations for all keys in F001",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",
