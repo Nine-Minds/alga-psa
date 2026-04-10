@@ -172,7 +172,7 @@
   {
     "id": "F034",
     "description": "Wire useTranslation('msp/billing') in TemplateRenderer.tsx — loading text ('Loading template preview...'), error prefix, empty state message ('Please select an invoice and a template to preview.')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F035",
