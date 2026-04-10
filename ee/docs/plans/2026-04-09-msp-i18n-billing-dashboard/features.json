@@ -107,7 +107,7 @@
   {
     "id": "F022",
     "description": "Wire FixedContractLineServicesList.tsx — add services section (heading, checkbox labels with service type/method/rate info, add button with count, product rate override input), empty states, loading text, error alert",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F023",
