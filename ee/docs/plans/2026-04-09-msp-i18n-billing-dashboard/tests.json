@@ -26,7 +26,7 @@
   {
     "id": "T003",
     "description": "Unit: ReconciliationResolution renders resolution options (Recommended Fix / Custom Correction / No Action Required) via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]

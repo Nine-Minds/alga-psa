@@ -37,4 +37,19 @@ describe('ReconciliationResolution i18n wiring contract', () => {
     expect(getLeaf(pseudo, 'reconciliation.steps.approval')).toBe('11111');
     expect(getLeaf(pseudo, 'reconciliation.steps.confirmation')).toBe('11111');
   });
+
+  it('T003: wires the resolution options through msp/billing translations', () => {
+    const source = read('../../src/components/billing-dashboard/ReconciliationResolution.tsx');
+    const pseudo = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/xx/msp/billing.json'
+    );
+
+    expect(source).toContain("t('reconciliation.resolutionTypes.recommended', { defaultValue: 'Recommended Fix' })");
+    expect(source).toContain("t('reconciliation.resolutionTypes.custom', { defaultValue: 'Custom Correction' })");
+    expect(source).toContain("t('reconciliation.resolutionTypes.noAction', { defaultValue: 'No Action Required' })");
+
+    expect(getLeaf(pseudo, 'reconciliation.resolutionTypes.recommended')).toBe('11111');
+    expect(getLeaf(pseudo, 'reconciliation.resolutionTypes.custom')).toBe('11111');
+    expect(getLeaf(pseudo, 'reconciliation.resolutionTypes.noAction')).toBe('11111');
+  });
 });
