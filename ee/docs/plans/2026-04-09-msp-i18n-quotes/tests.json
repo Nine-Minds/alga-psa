@@ -166,5 +166,12 @@
     "description": "QuoteSendRecipientsField.tsx compiles with useTranslation('msp/quotes') -- trigger labels, search placeholder, empty states, kind badges, and Remove {{email}} aria-label all use t(); no remaining hardcoded English strings in JSX; quoteRecipients.* key group present in all 9 locale files",
     "implemented": false,
     "featureIds": ["F021"]
+  },
+
+  {
+    "id": "T027",
+    "description": "msp/core.json in all 9 locales (en, fr, es, de, nl, it, pl, xx, yy) contains nav.billing.sections.quotes, nav.billing.quotes, nav.billing.quoteBusinessTemplates, and nav.billing.quoteLayouts under the existing nav.billing.* group. Visual smoke test: the MSP left sidebar's QUOTES section in xx renders '11111' for the section header and all three items instead of falling back to the raw English names in menuConfig.ts; in de the same entries render German translations",
+    "implemented": false,
+    "featureIds": ["F022"]
   }
 ]

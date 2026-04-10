@@ -14,6 +14,18 @@
 
 ## Post-planning additions (2026-04-10)
 
+- **(2026-04-10)** **MSP sidebar Quotes section renders raw English even in xx/de.** While doing the billing-dashboard xx smoke test, the left-hand MSP navigation consistently showed `Quotes / Quote Templates / Quote Layouts` in English under a `QUOTES` section header, while every other entry pseudo-translated cleanly. Root cause: `server/src/config/menuConfig.ts:308-317` added a Quotes section that references four translation keys that were never backfilled into `msp/core.json`:
+  - `nav.billing.sections.quotes` (section header)
+  - `nav.billing.quotes` (Quotes item)
+  - `nav.billing.quoteBusinessTemplates` (Quote Templates item; note: href=`/msp/billing?tab=quote-business-templates`)
+  - `nav.billing.quoteLayouts` (Quote Layouts item; note: href=`/msp/billing?tab=quote-templates`)
+
+  Every other `nav.billing.*` key is present in all 9 locale files under `msp/core.json` (contractTemplates, clientContracts, invoicing, accountingExports, usageTracking, etc.). Only the Quotes block is missing — so the sidebar falls back to the hardcoded English `name` field in `menuConfig.ts`.
+
+  **Decision:** keep these keys in `msp/core` (where the rest of `nav.billing.*` lives) rather than introducing cross-namespace navigation. The fix is a pure locale-file backfill — no code change in `menuConfig.ts`, and no dependency on the `msp/quotes` namespace load order. Tracked as `F022` / `T027` below.
+
+
+
 - **(2026-04-10)** **Product markup on quote line items** landed after the planning commit (commits `6a40d09fa` "Show product markup on quote line items" and `3afa5763f` "Add recipient picker and discount-aware markup"). `QuoteLineItemsEditor.tsx` now renders, for product-kind items only:
   - A live markup badge in the Unit Price cell: `` `${sign}${markup.toFixed(1)}% markup` `` -- needs a translation key with `{{value}}` interpolation (and probably a separate key for the sign, or format the whole string via t with `{{signedValue}}`).
   - A "Markup unavailable" label + tooltip when `cost_currency` differs from the quote currency. Tooltip text: `` `Markup can't be calculated because cost is tracked in ${item.cost_currency} and this quote is in ${currencyCode}.` `` -- needs `{{costCurrency}}` and `{{quoteCurrency}}` interpolation.

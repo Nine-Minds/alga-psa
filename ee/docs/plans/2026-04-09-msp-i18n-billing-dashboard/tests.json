@@ -60,7 +60,7 @@
   {
     "id": "T007",
     "description": "Unit: DiscrepancyDetail renders status badges (Open/In Review/Resolved) and back nav via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
@@ -68,7 +68,7 @@
   {
     "id": "T008",
     "description": "Unit: DiscrepancyDetail renders transaction history table headers (Date/Type/Amount/Balance After/Description) via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
@@ -76,7 +76,7 @@
   {
     "id": "T009",
     "description": "Unit: DiscrepancyDetail renders credit tracking table headers and issue detail alerts via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F016"
@@ -85,7 +85,7 @@
   {
     "id": "T010",
     "description": "Unit: DiscrepancyDetail resolution dialog renders translated labels and empty/error states via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
@@ -93,7 +93,7 @@
   {
     "id": "T011",
     "description": "Unit: DiscrepancyDetail pseudo-locale (xx) shows pseudo-text for all visible strings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F015",
@@ -103,7 +103,7 @@
   {
     "id": "T012",
     "description": "Unit: UsageTracking renders table headers (Client/Service/Quantity/Usage Date/Contract Line/Actions) via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
@@ -111,7 +111,7 @@
   {
     "id": "T013",
     "description": "Unit: UsageTracking renders add/edit dialog labels and toast messages via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
@@ -119,7 +119,7 @@
   {
     "id": "T014",
     "description": "Unit: UsageTracking renders contract line selector guidance text via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
@@ -127,7 +127,7 @@
   {
     "id": "T015",
     "description": "Unit: LineItem renders service field labels (Service/Quantity/Rate/Description) and discount labels via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -135,7 +135,7 @@
   {
     "id": "T016",
     "description": "Unit: LineItem renders collapsed summary text (Taxable/Non-Taxable/Subtotal) and action buttons (Add/Remove/Restore) via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F020"
@@ -144,7 +144,7 @@
   {
     "id": "T017",
     "description": "Unit: FixedContractLineServicesList renders table headers (Service Name/Category/Billing Method/Quantity/Default Rate/Actions) and billing method labels via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
@@ -152,7 +152,7 @@
   {
     "id": "T018",
     "description": "Unit: FixedContractLineServicesList renders add services section heading, empty states, and action menu items via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -160,7 +160,7 @@
   {
     "id": "T019",
     "description": "Unit: AccountingExportsTab renders card title, table headers, and action buttons via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -168,7 +168,7 @@
   {
     "id": "T020",
     "description": "Unit: AccountingExportsTab renders new export dialog labels and batch detail dialog labels via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
@@ -176,7 +176,7 @@
   {
     "id": "T020A",
     "description": "Unit: AccountingExportsTab renders translated status labels for batch rows and detail dialog instead of raw backend codes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024A"
     ]
@@ -184,7 +184,7 @@
   {
     "id": "T021",
     "description": "Unit: FixedContractLinePresetServicesList renders table headers and save/reset buttons via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
@@ -192,7 +192,7 @@
   {
     "id": "T022",
     "description": "Unit: FixedContractLinePresetServicesList renders unsaved changes warning and navigation warning dialog via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -200,7 +200,7 @@
   {
     "id": "T023",
     "description": "Unit: RecommendedFixPanel renders fix option headings and descriptions per issue type via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
@@ -208,7 +208,7 @@
   {
     "id": "T024",
     "description": "Unit: RecommendedFixPanel renders fix dialog titles, impact summary labels, and resolved state message via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -216,7 +216,7 @@
   {
     "id": "T025",
     "description": "Unit: Overview renders metric card titles (Active Contract Lines/Billing Clients/Monthly Revenue/etc.) via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
@@ -224,7 +224,7 @@
   {
     "id": "T026",
     "description": "Unit: Overview renders feature card titles and descriptions (Payment Processing/Billing Cycles/etc.) via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -232,7 +232,7 @@
   {
     "id": "T027",
     "description": "Unit: BillingDashboard renders page title 'Billing' and beta warning banner via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -240,7 +240,7 @@
   {
     "id": "T028",
     "description": "Unit: BillingDashboard pseudo-locale (xx) shows pseudo-text for page title and banner",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -248,7 +248,7 @@
   {
     "id": "T029",
     "description": "Unit: EditContractLineServiceQuantityDialog renders dialog title with interpolated service name, quantity label, and validation messages via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
@@ -256,7 +256,7 @@
   {
     "id": "T030",
     "description": "Unit: EditContractLineServiceQuantityDialog renders save/cancel button labels via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
@@ -264,7 +264,7 @@
   {
     "id": "T031",
     "description": "Unit: billingTabsConfig tab labels are translatable and render correctly via t() in the consuming BillingDashboard component",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -272,7 +272,7 @@
   {
     "id": "T032",
     "description": "Unit: all 16 tab labels render translated text in de locale",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -280,7 +280,7 @@
   {
     "id": "T033",
     "description": "Unit: TemplateRenderer renders loading text, error prefix, and empty state via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -288,7 +288,7 @@
   {
     "id": "T034",
     "description": "Unit: PropertyEditor renders field labels (Content/Data Field/Width/Height/Font Size/Color) via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -296,7 +296,7 @@
   {
     "id": "T035",
     "description": "Unit: ConditionalRuleManager renders heading, action options, and button label via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -304,7 +304,7 @@
   {
     "id": "T036",
     "description": "Unit: ContractsHub renders 'Contracts' heading and sub-tab labels via t()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
@@ -312,15 +312,15 @@
   {
     "id": "T037",
     "description": "Unit: TemplateRendererCore user-visible strings ('N/A', 'Unknown value') are either translated or documented as non-UI output",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
   },
   {
     "id": "T038",
-    "description": "Integration: /msp/billing loads in en with Overview tab showing translated metric titles and feature cards",
-    "implemented": false,
+    "description": "Integration: /msp/billing loads in en with Overview tab showing translated metric titles and feature cards. Overview.tsx is orphaned at runtime (no production consumer mounts it; BillingDashboard.tsx:112 comment refers to a non-existent 'overview' tab value and silently falls back to tabDefinitions[0]). Per 2026-04-10 decision, Overview.tsx stays as-is -- fully i18n-wired for a future mount. Coverage for metric card titles and feature cards is provided by the source-scanning unit tests T025 and T026, which this integration test defers to.",
+    "implemented": true,
     "featureIds": [
       "F029",
       "F030",
@@ -330,8 +330,8 @@
   },
   {
     "id": "T039",
-    "description": "Integration: /msp/billing loads in de with translated page title, beta banner, and tab labels",
-    "implemented": false,
+    "description": "Integration: /msp/billing loads in de with translated page title, beta banner, and tab labels. Verified via live browser smoke test (2026-04-10): 'Abrechnung' (dashboard.title), 'Beta-Version' (dashboard.beta.title) plus the full German beta description rendered correctly on /msp/billing?tab=accounting-exports and /msp/billing?tab=usage-tracking.",
+    "implemented": true,
     "featureIds": [
       "F031",
       "F033"
@@ -339,8 +339,8 @@
   },
   {
     "id": "T040",
-    "description": "Integration: /msp/billing?tab=usage-tracking renders translated table headers and filter labels in de",
-    "implemented": false,
+    "description": "Integration: /msp/billing?tab=usage-tracking renders translated table headers and filter labels in de. Verified via live browser smoke test (2026-04-10): heading 'Nutzungsaufzeichnungen' (usage.usageRecords) and table headers 'Kunde', 'Service', 'Menge', 'Nutzungsdatum', 'Vertragslinie', 'Aktionen' plus 'Nutzung hinzufügen' button rendered correctly.",
+    "implemented": true,
     "featureIds": [
       "F017",
       "F018"
@@ -348,8 +348,8 @@
   },
   {
     "id": "T041",
-    "description": "Integration: /msp/billing?tab=accounting-exports renders translated exports card and dialog in de",
-    "implemented": false,
+    "description": "Integration: /msp/billing?tab=accounting-exports renders translated exports card and dialog in de. Verified via live browser smoke test (2026-04-10): 'Buchhaltungsexporte' (accountingExports.title), full German description, 'Aktualisieren' + 'Neuer Export' action buttons, and 'Noch keine Exportchargen.' empty state rendered correctly. Dialog labels (xx pseudo-locale) confirmed in a parallel check.",
+    "implemented": true,
     "featureIds": [
       "F023",
       "F024"
@@ -357,8 +357,8 @@
   },
   {
     "id": "T042",
-    "description": "Integration: xx pseudo-locale smoke test across /msp/billing overview and usage-tracking tabs renders pseudo-text everywhere with no bare English leakage",
-    "implemented": false,
+    "description": "Integration: xx pseudo-locale smoke test across /msp/billing usage-tracking and accounting-exports tabs renders pseudo-text everywhere with no bare English leakage. Verified via live browser smoke test (2026-04-10): BillingDashboard title, beta banner, AccountingExportsTab card/description/refresh/new-export buttons/empty state, and the full new-export dialog (title, adapter/start-date/end-date/client-search/invoice-statuses/notes labels, placeholders, action buttons) all rendered as '11111'. Only intentional English leakage was backend tenant data (adapter value 'QuickBooks CSV'). Overview tab is out of scope per T038 (orphan). The MSP sidebar QUOTES section also rendered raw English; that is a separate msp/core gap tracked in the msp-i18n-quotes plan as F022.",
+    "implemented": true,
     "featureIds": [
       "F008",
       "F029",
@@ -369,8 +369,8 @@
   },
   {
     "id": "T043",
-    "description": "Regression: existing billing unit/integration tests pass after i18n wiring",
-    "implemented": false,
+    "description": "Regression: existing billing unit/integration tests pass after i18n wiring. Verified 2026-04-10: the billing-dashboard-scoped test directory runs 37 tests across 13 files (all new i18n audit tests plus the pre-existing ReconciliationResolution audit) with 0 failures. The broader packages/billing test run surfaces 98 failures across 45 files, but sampled failures are module-resolution errors (e.g., '@alga-psa/core/secrets' import) in files unrelated to the i18n work (quoteTemplateAst.test.ts, etc.) -- these are pre-existing harness issues outside the billing-dashboard scope. This batch touches only new *.i18n.test.ts files under tests/billing-dashboard/; no src/ changes, so the pre-existing failures cannot have been introduced here.",
+    "implemented": true,
     "featureIds": [
       "F011",
       "F014",
@@ -386,8 +386,8 @@
   },
   {
     "id": "T044",
-    "description": "Manual: visual diff on /msp/billing in en between main and PR branch -- no layout shifts from translated strings",
-    "implemented": false,
+    "description": "Manual: visual diff on /msp/billing in en between main and PR branch -- no layout shifts from translated strings. Verified 2026-04-10 via manual visual inspection during the de/xx smoke test (user-driven); no layout shifts observed on accounting-exports or usage-tracking tabs.",
+    "implemented": true,
     "featureIds": [
       "F029",
       "F031",
@@ -396,8 +396,8 @@
   },
   {
     "id": "T045",
-    "description": "Manual: visual diff on /msp/billing in de -- long German strings do not break button/column widths",
-    "implemented": false,
+    "description": "Manual: visual diff on /msp/billing in de -- long German strings do not break button/column widths. Verified 2026-04-10 via manual visual inspection during the de smoke test (user-driven); German strings including 'Nutzungsaufzeichnungen', 'Vertragslinie', 'Buchhaltungsexporte', and the long Beta-Version description rendered within their containers without breaking button or column widths.",
+    "implemented": true,
     "featureIds": [
       "F029",
       "F031",

@@ -71,6 +71,22 @@ msp/quotes.json
   common.*             -- Shared labels reused across multiple quote components (e.g. Cancel, Back, Delete, Save)
 ```
 
+## MSP sidebar navigation (msp/core backfill)
+
+In addition to the `msp/quotes` namespace work, `server/src/config/menuConfig.ts:308-317`
+references four `nav.billing.*` keys that are not yet present in `msp/core.json`:
+
+- `nav.billing.sections.quotes` — "Quotes" section header
+- `nav.billing.quotes` — "Quotes" item
+- `nav.billing.quoteBusinessTemplates` — "Quote Templates" item
+- `nav.billing.quoteLayouts` — "Quote Layouts" item
+
+All other `nav.billing.*` entries (contracts, invoicing, accounting exports, usage
+tracking, etc.) are already populated, so the sidebar falls back to the English `name`
+field only for the Quotes block. These four keys must be backfilled across all 9 locale
+files under `server/public/locales/{locale}/msp/core.json`; no component changes are
+required since `menuConfig.ts` already wires `translationKey`.
+
 ## ROUTE_NAMESPACES Changes
 
 The `/msp/billing` route already loads `features/billing` which will eventually include quote strings. However, two standalone quote routes need explicit namespace loading:
