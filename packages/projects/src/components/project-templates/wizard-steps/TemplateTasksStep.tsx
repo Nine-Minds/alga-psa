@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import {
   extractTaskDescriptionText,
   parseTaskRichTextContent,
-  serializeTaskRichTextContent,
+  serializeTaskDescriptions,
 } from '../../../lib/taskRichText';
 import { TextEditor } from '@alga-psa/ui/editor';
 import type { PartialBlock } from '@blocknote/core';
@@ -229,9 +229,9 @@ export function TemplateTasksStep({
                           <TextEditor
                             key={`wizard-task-desc-${task.temp_id}`}
                             id={`wizard-task-description-${task.temp_id}`}
-                            initialContent={parseTaskRichTextContent(task.description)}
+                            initialContent={parseTaskRichTextContent(task.description_rich_text ?? task.description)}
                             onContentChange={(blocks: PartialBlock[]) =>
-                              updateTask(task.temp_id, { description: serializeTaskRichTextContent(blocks) })
+                              updateTask(task.temp_id, serializeTaskDescriptions(blocks))
                             }
                             searchMentions={searchUsersForMentions}
                             placeholder="Describe what needs to be done..."

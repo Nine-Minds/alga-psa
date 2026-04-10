@@ -23,6 +23,7 @@ export interface TemplateTask {
   phase_temp_id: string;
   task_name: string;
   description?: string;
+  description_rich_text?: string;
   estimated_hours?: number;
   duration_days?: number;
   task_type_key?: string;

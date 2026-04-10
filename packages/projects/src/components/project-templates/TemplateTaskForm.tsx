@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   parseTaskRichTextContent,
   serializeTaskRichTextContent,
+  serializeTaskDescriptions,
   isTaskRichTextEmpty,
 } from '../../lib/taskRichText';
 import { TextEditor } from '@alga-psa/ui/editor';
@@ -230,7 +231,7 @@ export function TemplateTaskForm({
 
       if (task) {
         const taskNameVal = task.task_name || '';
-        const descriptionBlocks = parseTaskRichTextContent(task.description);
+        const descriptionBlocks = parseTaskRichTextContent(task.description_rich_text ?? task.description);
         const descriptionSerializedVal = isTaskRichTextEmpty(descriptionBlocks)
           ? ''
           : serializeTaskRichTextContent(descriptionBlocks);
@@ -399,14 +400,14 @@ export function TemplateTaskForm({
       // (which has BlockNote's normalized form) so saves preserve what the
       // user actually sees.
       const liveBlocks = (blockNoteEditorRef.current?.document as PartialBlock[] | undefined) ?? descriptionContent;
-      const descriptionSerialized = isTaskRichTextEmpty(liveBlocks)
-        ? undefined
-        : serializeTaskRichTextContent(liveBlocks);
+      const { description: descriptionMd, description_rich_text: descriptionRichText } =
+        serializeTaskDescriptions(liveBlocks);
 
       await onSave(
         {
           task_name: taskName.trim(),
-          description: descriptionSerialized,
+          description: descriptionMd ?? undefined,
+          description_rich_text: descriptionRichText ?? undefined,
           // Convert from hours (display) to minutes (storage)
           estimated_hours: estimatedHours ? Math.round(parseFloat(estimatedHours) * 60) : undefined,
           duration_days: durationDays ? parseInt(durationDays) : undefined,

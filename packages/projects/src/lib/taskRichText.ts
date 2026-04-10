@@ -1,4 +1,5 @@
 import type { PartialBlock } from '@blocknote/core';
+import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 
 const DEFAULT_BLOCK: PartialBlock[] = [
   {
@@ -95,6 +96,25 @@ export function parseTaskRichTextContent(
  */
 export function serializeTaskRichTextContent(content: PartialBlock[]): string {
   return JSON.stringify(content);
+}
+
+/**
+ * Serialize BlockNote blocks into both storage formats:
+ *   - description: markdown string (for search/display/portability)
+ *   - description_rich_text: BlockNote JSON string (for editor round-tripping)
+ *
+ * Returns null values when the content is empty.
+ */
+export function serializeTaskDescriptions(
+  content: PartialBlock[],
+): { description: string | null; description_rich_text: string | null } {
+  if (isTaskRichTextEmpty(content)) {
+    return { description: null, description_rich_text: null };
+  }
+  return {
+    description: convertBlockNoteToMarkdown(content),
+    description_rich_text: serializeTaskRichTextContent(content),
+  };
 }
 
 /**

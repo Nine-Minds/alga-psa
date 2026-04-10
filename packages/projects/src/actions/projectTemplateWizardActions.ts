@@ -132,6 +132,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
               template_phase_id: templatePhaseId,
               task_name: task.task_name,
               description: task.description || null,
+              description_rich_text: task.description_rich_text || null,
               // Convert from hours (wizard UI) to minutes (storage)
               estimated_hours: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
               duration_days: task.duration_days || null,
@@ -311,6 +312,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
               template_phase_id: templatePhaseId,
               task_name: task.task_name,
               description: task.description || null,
+              description_rich_text: task.description_rich_text || null,
               // Convert from hours (wizard UI) to minutes (storage)
               estimated_hours: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
               duration_days: task.duration_days || null,
@@ -466,6 +468,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
           template_phase_id: newPhaseId,
           task_name: task.task_name,
           description: task.description,
+          description_rich_text: task.description_rich_text,
           estimated_hours: task.estimated_hours,
           duration_days: task.duration_days,
           task_type_key: task.task_type_key,

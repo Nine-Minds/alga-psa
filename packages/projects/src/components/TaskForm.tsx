@@ -75,6 +75,7 @@ import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
 import {
   parseTaskRichTextContent,
   serializeTaskRichTextContent,
+  serializeTaskDescriptions,
   isTaskRichTextEmpty,
 } from '../lib/taskRichText';
 
@@ -130,7 +131,7 @@ export default function TaskForm({
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [taskName, setTaskName] = useState(task?.task_name || prefillData?.task_name || '');
   const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
-    parseTaskRichTextContent(task?.description || prefillData?.description || null)
+    parseTaskRichTextContent(task?.description_rich_text ?? task?.description ?? prefillData?.description ?? null)
   );
   const [projectTreeOptions, setProjectTreeOptions] = useState<Array<TreeSelectOption<'project' | 'phase' | 'status'>>>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>(phase.phase_id);
@@ -594,7 +595,7 @@ export default function TaskForm({
         // Update task with all fields preserved
         const taskData: Partial<IProjectTask> = {
           task_name: taskName,
-          description: isTaskRichTextEmpty(descriptionContent) ? null : serializeTaskRichTextContent(descriptionContent),
+          ...serializeTaskDescriptions(descriptionContent),
           assigned_to: assignedUser || null,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
@@ -748,7 +749,7 @@ export default function TaskForm({
         // Always update the task data (whether moved or not)
         const taskData: Partial<IProjectTask> = {
           task_name: taskName,
-          description: isTaskRichTextEmpty(descriptionContent) ? null : serializeTaskRichTextContent(descriptionContent),
+          ...serializeTaskDescriptions(descriptionContent),
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
@@ -776,7 +777,7 @@ export default function TaskForm({
           task_name: taskName,
           project_status_mapping_id: selectedStatusId,
           wbs_code: `${phase.wbs_code}.0`,
-          description: isTaskRichTextEmpty(descriptionContent) ? null : serializeTaskRichTextContent(descriptionContent),
+          ...serializeTaskDescriptions(descriptionContent),
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
