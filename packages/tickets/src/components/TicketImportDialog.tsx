@@ -1427,7 +1427,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                           : [];
                         const canMapToExisting = filteredContacts.length > 0;
                         return (
-                          <div key={info.name} className="pt-3 space-y-2">
+                          <div key={info.resolutionKey} className="pt-3 space-y-2">
                             <div>
                               <span className="font-medium text-sm">&quot;{info.name}&quot;</span>
                               <span className="text-xs text-gray-500"> ({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span>
