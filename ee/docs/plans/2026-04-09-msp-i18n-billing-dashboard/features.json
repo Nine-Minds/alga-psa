@@ -97,7 +97,7 @@
   {
     "id": "F020",
     "description": "Wire LineItem.tsx — expanded state labels (Item N/Discount/Marked for removal), action buttons (Add/Remove/Restore), discount type options (Percentage/Fixed Amount), Entire Invoice option, calculated-on-save hint",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F021",

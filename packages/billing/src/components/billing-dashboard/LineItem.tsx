@@ -43,11 +43,6 @@ interface LineItemProps {
   currencyCode?: string;
 }
 
-const discountTypeOptions: SelectOption[] = [
-  { value: 'percentage', label: 'Percentage' },
-  { value: 'fixed', label: 'Fixed Amount' }
-];
-
 export const LineItem: React.FC<LineItemProps> = ({
   item,
   index,
@@ -105,6 +100,16 @@ export const LineItem: React.FC<LineItemProps> = ({
 
   // Convert rate to dollars for display (only for non-percentage discounts)
   const rateInDollars = editState.rate / 100;
+  const discountTypeOptions: SelectOption[] = [
+    {
+      value: 'percentage',
+      label: t('lineItem.options.percentage', { defaultValue: 'Percentage' }),
+    },
+    {
+      value: 'fixed',
+      label: t('lineItem.options.fixedAmount', { defaultValue: 'Fixed Amount' }),
+    },
+  ];
 
   // Handle local state changes
   const handleLocalChange = (field: keyof EditableItem, value: string | number | boolean | undefined) => {
@@ -255,7 +260,7 @@ export const LineItem: React.FC<LineItemProps> = ({
           </span>
           {editState.discount_type === 'percentage' && (
             <span className="text-sm text-muted-foreground ml-1">
-              (calculated on save)
+              {t('lineItem.collapsed.calculatedOnSave', { defaultValue: '(calculated on save)' })}
             </span>
           )}
         </div>
@@ -270,11 +275,16 @@ export const LineItem: React.FC<LineItemProps> = ({
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium">
-            {editState.is_discount ? 'Discount' : `Item ${index + 1}`}
+            {editState.is_discount
+              ? t('lineItem.expanded.discount', { defaultValue: 'Discount' })
+              : t('lineItem.expanded.item', {
+                  defaultValue: 'Item {{number}}',
+                  number: index + 1,
+                })}
           </h3>
           {editState.isRemoved && (
             <span className="text-xs text-destructive bg-destructive/10 px-2 py-1 rounded">
-              Marked for removal
+              {t('lineItem.expanded.markedForRemoval', { defaultValue: 'Marked for removal' })}
             </span>
           )}
         </div>
@@ -286,7 +296,7 @@ export const LineItem: React.FC<LineItemProps> = ({
             variant="secondary"
             size="sm"
           >
-            Add
+            {t('lineItem.actions.add', { defaultValue: 'Add' })}
           </Button>
           <Button
             id={editState.isRemoved ? 'restore-line-item-button' : 'remove-line-item-button'}
@@ -295,7 +305,9 @@ export const LineItem: React.FC<LineItemProps> = ({
             variant={editState.isRemoved ? "default" : "secondary"}
             size="sm"
           >
-            {editState.isRemoved ? 'Restore' : 'Remove'}
+            {editState.isRemoved
+              ? t('lineItem.actions.restore', { defaultValue: 'Restore' })
+              : t('lineItem.actions.remove', { defaultValue: 'Remove' })}
           </Button>
         </div>
       </div>
@@ -446,7 +458,10 @@ export const LineItem: React.FC<LineItemProps> = ({
                     handleLocalChange('applies_to_item_id', applies_to_item_id || '');
                   }}
                   options={[
-                    { value: 'INVOICE', label: 'Entire Invoice' },
+                    {
+                      value: 'INVOICE',
+                      label: t('lineItem.fields.entireInvoice', { defaultValue: 'Entire Invoice' }),
+                    },
                     ...invoiceItems.map(item => ({
                       value: item.item_id,
                       label: item.description
