@@ -72,7 +72,7 @@
   {
     "id": "F015",
     "description": "Wire DiscrepancyDetail.tsx — transaction history tab (table headers: Date/Type/Amount/Balance After/Description, expanded row labels), credit tracking entries tab (table headers: Credit ID/Transaction ID/Created/Amount/Remaining/Expiration/Status)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F016",

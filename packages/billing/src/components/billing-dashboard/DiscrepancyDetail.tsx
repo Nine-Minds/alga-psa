@@ -339,11 +339,11 @@ const DiscrepancyDetail: React.FC = () => {
   const tabsContent: TabContent[] = [
     {
       id: 'transactions',
-      label: 'Transaction History',
+      label: t('discrepancy.tabs.transactionHistory', { defaultValue: 'Transaction History' }),
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Related Transactions</CardTitle>
+            <CardTitle>{t('discrepancy.cards.relatedTransactions', { defaultValue: 'Related Transactions' })}</CardTitle>
             <CardDescription>
               Transaction history related to this discrepancy
             </CardDescription>
@@ -353,18 +353,18 @@ const DiscrepancyDetail: React.FC = () => {
               <Skeleton className="h-64 w-full" />
             ) : transactionData.transactions.length === 0 ? (
               <div className="text-center py-8 text-[rgb(var(--color-text-500))]">
-                No transactions found
+                {t('discrepancy.empty.transactions', { defaultValue: 'No related transactions found.' })}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-[rgb(var(--color-border-200))]">
-                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Date</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Type</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Amount</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Balance After</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Description</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.created', { defaultValue: 'Date' })}</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.type', { defaultValue: 'Type' })}</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.amount', { defaultValue: 'Amount' })}</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.balanceAfter', { defaultValue: 'Balance After' })}</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.description', { defaultValue: 'Description' })}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -403,32 +403,32 @@ const DiscrepancyDetail: React.FC = () => {
                             <td colSpan={5} className="px-6 py-3">
                               <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Transaction ID</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.transactionId', { defaultValue: 'Transaction ID' })}</p>
                                   <p className="font-mono">{transaction.transaction_id}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Created At</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.createdAt', { defaultValue: 'Created At' })}</p>
                                   <p>{formatDateTime(parseISO(transaction.created_at), 'PPpp')}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Client ID</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.clientId', { defaultValue: 'Client ID' })}</p>
                                   <p className="font-mono">{transaction.client_id}</p>
                                 </div>
                                 {transaction.metadata?.user_id && (
                                   <div>
-                                    <p className="text-xs text-[rgb(var(--color-text-500))]">User ID</p>
+                                    <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.userId', { defaultValue: 'User ID' })}</p>
                                     <p className="font-mono">{transaction.metadata.user_id}</p>
                                   </div>
                                 )}
                                 {transaction.invoice_id && (
                                   <div>
-                                    <p className="text-xs text-[rgb(var(--color-text-500))]">Invoice ID</p>
+                                    <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.invoiceId', { defaultValue: 'Invoice ID' })}</p>
                                     <p className="font-mono">{transaction.invoice_id}</p>
                                   </div>
                                 )}
                                 {transaction.metadata && (
                                   <div className="col-span-2">
-                                    <p className="text-xs text-[rgb(var(--color-text-500))]">Metadata</p>
+                                    <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.metadata', { defaultValue: 'Metadata' })}</p>
                                     <pre className="bg-[rgb(var(--color-background-200))] p-2 rounded text-xs overflow-x-auto">
                                       {JSON.stringify(transaction.metadata, null, 2)}
                                     </pre>
@@ -450,11 +450,11 @@ const DiscrepancyDetail: React.FC = () => {
     },
     {
       id: 'credit-tracking',
-      label: 'Credit Tracking Entries',
+      label: t('discrepancy.tabs.creditTrackingEntries', { defaultValue: 'Credit Tracking Entries' }),
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Credit Tracking Entries</CardTitle>
+            <CardTitle>{t('discrepancy.cards.creditTrackingEntries', { defaultValue: 'Credit Tracking Entries' })}</CardTitle>
             <CardDescription>
               Credit tracking entries related to this client
             </CardDescription>
@@ -464,20 +464,20 @@ const DiscrepancyDetail: React.FC = () => {
               <Skeleton className="h-64 w-full" />
             ) : creditTrackingData.entries.length === 0 ? (
               <div className="text-center py-8 text-[rgb(var(--color-text-500))]">
-                No credit tracking entries found
+                {t('discrepancy.empty.creditTrackingEntries', { defaultValue: 'No credit tracking entries found.' })}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-[rgb(var(--color-border-200))]">
-                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Credit ID</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Transaction ID</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Created</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Amount</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Remaining</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Expiration</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Status</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.creditId', { defaultValue: 'Credit ID' })}</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.transactionId', { defaultValue: 'Transaction ID' })}</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.created', { defaultValue: 'Created' })}</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.amount', { defaultValue: 'Amount' })}</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.remaining', { defaultValue: 'Remaining' })}</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.expiration', { defaultValue: 'Expiration' })}</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.status', { defaultValue: 'Status' })}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -507,16 +507,16 @@ const DiscrepancyDetail: React.FC = () => {
                           <td className="px-4 py-2 text-sm">
                             {entry.expiration_date
                               ? formatDateOnly(parseISO(entry.expiration_date))
-                              : 'No expiration'}
+                              : t('discrepancy.empty.noExpiration', { defaultValue: 'No expiration' })}
                           </td>
                           <td className="px-4 py-2 text-sm">
                             {entry.is_expired ? (
                               <Badge variant="default" className="bg-[rgb(var(--color-destructive-100))] text-[rgb(var(--color-destructive-700))] border-[rgb(var(--color-destructive-200))]">
-                                Expired
+                                {t('discrepancy.status.expired', { defaultValue: 'Expired' })}
                               </Badge>
                             ) : (
                               <Badge variant="default" className="bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] border-[rgb(var(--color-primary-200))]">
-                                Active
+                                {t('discrepancy.status.active', { defaultValue: 'Active' })}
                               </Badge>
                             )}
                           </td>
@@ -526,38 +526,38 @@ const DiscrepancyDetail: React.FC = () => {
                             <td colSpan={7} className="px-6 py-3">
                               <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Credit ID</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.creditId', { defaultValue: 'Credit ID' })}</p>
                                   <p className="font-mono">{entry.credit_id}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Transaction ID</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.transactionId', { defaultValue: 'Transaction ID' })}</p>
                                   <p className="font-mono">{entry.transaction_id}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Client ID</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.clientId', { defaultValue: 'Client ID' })}</p>
                                   <p className="font-mono">{entry.client_id}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Created At</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.createdAt', { defaultValue: 'Created At' })}</p>
                                   <p>{formatDateTime(parseISO(entry.created_at), 'PPpp')}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Original Amount</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.originalAmount', { defaultValue: 'Original Amount' })}</p>
                                   <p className="font-medium">{formatCurrency(entry.amount)}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Remaining Amount</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.remainingAmount', { defaultValue: 'Remaining Amount' })}</p>
                                   <p className="font-medium">{formatCurrency(entry.remaining_amount)}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Expiration Date</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.expirationDate', { defaultValue: 'Expiration Date' })}</p>
                                   <p>{entry.expiration_date
                                     ? formatDateTime(parseISO(entry.expiration_date), 'PPpp')
-                                    : 'No expiration'}</p>
+                                    : t('discrepancy.empty.noExpiration', { defaultValue: 'No expiration' })}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Status</p>
-                                  <p>{entry.is_expired ? 'Expired' : 'Active'}</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.status', { defaultValue: 'Status' })}</p>
+                                  <p>{entry.is_expired ? t('discrepancy.status.expired', { defaultValue: 'Expired' }) : t('discrepancy.status.active', { defaultValue: 'Active' })}</p>
                                 </div>
                                 {/* Credit applications would be fetched separately in a real implementation */}
                               </div>
