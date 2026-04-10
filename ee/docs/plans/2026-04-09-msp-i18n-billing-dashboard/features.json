@@ -1,0 +1,192 @@
+[
+  {
+    "id": "F001",
+    "description": "Create server/public/locales/en/msp/billing.json with key groups: dashboard, overview, reconciliation, discrepancy, recommendedFix, usage, lineItem, contractLineServices, presetServices, accountingExports, templateRenderer, templateDesigner, contractsHub, editQuantityDialog",
+    "implemented": false
+  },
+  {
+    "id": "F002",
+    "description": "Generate fr/msp/billing.json translations for all keys in F001",
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "Generate es/msp/billing.json translations for all keys in F001",
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "Generate de/msp/billing.json translations for all keys in F001",
+    "implemented": false
+  },
+  {
+    "id": "F005",
+    "description": "Generate nl/msp/billing.json translations for all keys in F001",
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "Generate it/msp/billing.json translations for all keys in F001 (with accent audit)",
+    "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "Generate pl/msp/billing.json translations for all keys in F001",
+    "implemented": false
+  },
+  {
+    "id": "F008",
+    "description": "Run `node scripts/generate-pseudo-locales.cjs` to regenerate xx/ and yy/ pseudo-locale files from updated English source",
+    "implemented": false
+  },
+  {
+    "id": "F009",
+    "description": "Run `node scripts/validate-translations.cjs` and resolve any key parity issues across all 9 locales (exit code 0 required)",
+    "implemented": false
+  },
+  {
+    "id": "F010",
+    "description": "Update ROUTE_NAMESPACES in packages/core/src/lib/i18n/config.ts: add 'msp/billing' to '/msp/billing' route entry",
+    "implemented": false
+  },
+  {
+    "id": "F011",
+    "description": "Wire useTranslation('msp/billing') in ReconciliationResolution.tsx — stepper labels (Review Discrepancy / Approval / Confirmation), resolution type options",
+    "implemented": false
+  },
+  {
+    "id": "F012",
+    "description": "Wire ReconciliationResolution.tsx — balance comparison labels (Client/Status/Detected/Expected Balance/Actual Balance/Difference), issue detail labels (Missing Credit Tracking Entry/Inconsistent Credit Remaining Amount)",
+    "implemented": false
+  },
+  {
+    "id": "F013",
+    "description": "Wire ReconciliationResolution.tsx — four-eyes approval section (threshold notice, secondary approver name/email, verification code, approval verified badge), correction summary labels, confirmation dialog, error messages",
+    "implemented": false
+  },
+  {
+    "id": "F014",
+    "description": "Wire useTranslation('msp/billing') in DiscrepancyDetail.tsx — back nav, status badges (Open/In Review/Resolved), discrepancy details card labels, balance comparison card",
+    "implemented": false
+  },
+  {
+    "id": "F015",
+    "description": "Wire DiscrepancyDetail.tsx — transaction history tab (table headers: Date/Type/Amount/Balance After/Description, expanded row labels), credit tracking entries tab (table headers: Credit ID/Transaction ID/Created/Amount/Remaining/Expiration/Status)",
+    "implemented": false
+  },
+  {
+    "id": "F016",
+    "description": "Wire DiscrepancyDetail.tsx — issue details tab (alerts, recommended fix text, credit applications table), resolution dialog (title, description, notes label, expected/actual/difference labels), error/empty states",
+    "implemented": false
+  },
+  {
+    "id": "F017",
+    "description": "Wire useTranslation('msp/billing') in UsageTracking.tsx — bucket hours overview, usage records table headers (Client/Service/Quantity/Usage Date/Contract Line/Actions), filter labels and dropdown menus",
+    "implemented": false
+  },
+  {
+    "id": "F018",
+    "description": "Wire UsageTracking.tsx — add/edit usage dialog (field labels: Client/Service/Quantity/Usage Date/Comments, contract line selector guidance, placeholders), toast messages (success/error for create/update/delete), delete confirmation dialog",
+    "implemented": false
+  },
+  {
+    "id": "F019",
+    "description": "Wire useTranslation('msp/billing') in LineItem.tsx — regular line item labels (Service/Quantity/Rate/Description), discount labels (Discount Type/Percentage/Amount/Apply Discount To/Discount Description), collapsed summary text (Item Discount/Invoice Discount/Taxable/Non-Taxable/Subtotal/Select Service)",
+    "implemented": false
+  },
+  {
+    "id": "F020",
+    "description": "Wire LineItem.tsx — expanded state labels (Item N/Discount/Marked for removal), action buttons (Add/Remove/Restore), discount type options (Percentage/Fixed Amount), Entire Invoice option, calculated-on-save hint",
+    "implemented": false
+  },
+  {
+    "id": "F021",
+    "description": "Wire useTranslation('msp/billing') in FixedContractLineServicesList.tsx — table headers (Service Name/Category/Billing Method/Quantity/Default Rate/Actions), billing method options (Fixed Price/Hourly/Usage Based), Product/Service badges, action menu items (Edit Quantity/Remove), tooltip text",
+    "implemented": false
+  },
+  {
+    "id": "F022",
+    "description": "Wire FixedContractLineServicesList.tsx — add services section (heading, checkbox labels with service type/method/rate info, add button with count, product rate override input), empty states, loading text, error alert",
+    "implemented": false
+  },
+  {
+    "id": "F023",
+    "description": "Wire useTranslation('msp/billing') in AccountingExportsTab.tsx — card title/description, batch table headers (Batch/Adapter/Status/Created/Updated/Actions), action buttons (Refresh/New Export/Open/Execute), loading/empty states",
+    "implemented": false
+  },
+  {
+    "id": "F024",
+    "description": "Wire AccountingExportsTab.tsx — new export dialog (title, adapter label, date range labels, client search label/placeholder, invoice statuses label/placeholder, notes label/placeholder, cancel/create buttons), batch detail dialog (title, field labels: Batch ID/Adapter/Status/Created/Lines/Errors/Delivered, refresh/execute buttons)",
+    "implemented": false
+  },
+  {
+    "id": "F025",
+    "description": "Wire useTranslation('msp/billing') in FixedContractLinePresetServicesList.tsx — table headers (Service Name/Category/Billing Method/Quantity/Default Rate/Actions), billing method options, add services section, unsaved changes warning, save/reset buttons, loading text",
+    "implemented": false
+  },
+  {
+    "id": "F026",
+    "description": "Wire FixedContractLinePresetServicesList.tsx — navigation warning dialog (title/message/confirmLabel/cancelLabel), empty states, error alerts, service type/method/rate info in add list",
+    "implemented": false
+  },
+  {
+    "id": "F027",
+    "description": "Wire useTranslation('msp/billing') in RecommendedFixPanel.tsx — panel title/description, fix option headings (Recommended Fix/Alternative Fix/No Action Required/Custom Adjustment), fix descriptions per issue type, button labels per fix type",
+    "implemented": false
+  },
+  {
+    "id": "F028",
+    "description": "Wire RecommendedFixPanel.tsx — fix dialog titles and descriptions per fix type (create_tracking_entry/update_remaining_amount/apply_adjustment/custom_adjustment/no_action), adjustment amount field, notes field, impact summary labels (Current Balance/New Balance), resolved state message",
+    "implemented": false
+  },
+  {
+    "id": "F029",
+    "description": "Wire useTranslation('msp/billing') in Overview.tsx — metric card titles (Active Contract Lines/Billing Clients/Monthly Revenue/Active Services/Outstanding Amount/Credit Balance/Pending Approvals), metric subtitles, Monthly Activity section, Service Catalog Management section",
+    "implemented": false
+  },
+  {
+    "id": "F030",
+    "description": "Wire Overview.tsx — feature card titles and descriptions (Payment Processing/Billing Cycles/Service Periods/Invoice Management/Overdue Payments/Service Catalog), error alert, debug info labels",
+    "implemented": false
+  },
+  {
+    "id": "F031",
+    "description": "Wire useTranslation('msp/billing') in BillingDashboard.tsx — page title 'Billing', beta warning banner (title + description), error display, back-to-presets nav text, quote templates heading",
+    "implemented": false
+  },
+  {
+    "id": "F032",
+    "description": "Wire useTranslation('msp/billing') in EditContractLineServiceQuantityDialog.tsx — dialog title pattern ('Edit Quantity for {serviceName}'), quantity label, validation messages (empty/not positive), save/cancel buttons, saving indicator text",
+    "implemented": false
+  },
+  {
+    "id": "F033",
+    "description": "Make billingTabsConfig.ts tab labels translatable — either convert label strings to translation keys consumed by the rendering component, or export a hook/function that returns translated labels. Covers all 16 tab labels: Quotes, Quote Layouts, Quote Templates, Client Contracts, Accounting Exports, Contract Templates, Invoicing, Invoice Layouts, Tax Rates, Contract Line Presets, Billing Cycles, Service Periods, Usage Tracking, Reports, Service Catalog, Products",
+    "implemented": false
+  },
+  {
+    "id": "F034",
+    "description": "Wire useTranslation('msp/billing') in TemplateRenderer.tsx — loading text ('Loading template preview...'), error prefix, empty state message ('Please select an invoice and a template to preview.')",
+    "implemented": false
+  },
+  {
+    "id": "F035",
+    "description": "Wire useTranslation('msp/billing') in PropertyEditor.tsx — field labels (Content/Data Field/Width/Height/Font Size/Color), 'Select a field' placeholder, column(s)/row(s) unit labels",
+    "implemented": false
+  },
+  {
+    "id": "F036",
+    "description": "Wire useTranslation('msp/billing') in ConditionalRuleManager.tsx — heading 'Conditional Display Rules', action options (Select Action/Show/Hide/Format), placeholders (Condition/Target), 'Add Rule' button",
+    "implemented": false
+  },
+  {
+    "id": "F037",
+    "description": "Wire useTranslation('msp/billing') in ContractsHub.tsx — 'Contracts' heading, tab labels (Templates/Client Contracts)",
+    "implemented": false
+  },
+  {
+    "id": "F038",
+    "description": "Audit TemplateRendererCore.ts for user-visible strings — translate 'N/A', 'Unknown value', 'No data for list', 'Uncategorized' if they surface in UI; document as N/A if they only appear in generated invoice HTML",
+    "implemented": false
+  }
+]

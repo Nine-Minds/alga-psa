@@ -1,0 +1,399 @@
+[
+  {
+    "id": "T001",
+    "description": "Lang-pack validation: `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` passes for all 9 locales after namespace creation (covers key parity, missing/extra keys, interpolation variables, pseudo-locale patterns, Italian accents). Single check, run on every commit.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: ReconciliationResolution renders stepper labels (Review Discrepancy / Approval / Confirmation) via t() in en",
+    "implemented": false,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: ReconciliationResolution renders resolution options (Recommended Fix / Custom Correction / No Action Required) via t()",
+    "implemented": false,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: ReconciliationResolution renders balance comparison labels (Expected Balance / Actual Balance / Difference) and four-eyes approval text via t()",
+    "implemented": false,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: ReconciliationResolution renders confirmation dialog text and error messages via t()",
+    "implemented": false,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: ReconciliationResolution pseudo-locale (xx) shows pseudo-text for all visible strings",
+    "implemented": false,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: DiscrepancyDetail renders status badges (Open/In Review/Resolved) and back nav via t()",
+    "implemented": false,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: DiscrepancyDetail renders transaction history table headers (Date/Type/Amount/Balance After/Description) via t()",
+    "implemented": false,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: DiscrepancyDetail renders credit tracking table headers and issue detail alerts via t()",
+    "implemented": false,
+    "featureIds": [
+      "F015",
+      "F016"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: DiscrepancyDetail resolution dialog renders translated labels and empty/error states via t()",
+    "implemented": false,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: DiscrepancyDetail pseudo-locale (xx) shows pseudo-text for all visible strings",
+    "implemented": false,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F016"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: UsageTracking renders table headers (Client/Service/Quantity/Usage Date/Contract Line/Actions) via t()",
+    "implemented": false,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: UsageTracking renders add/edit dialog labels and toast messages via t()",
+    "implemented": false,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Unit: UsageTracking renders contract line selector guidance text via t()",
+    "implemented": false,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Unit: LineItem renders service field labels (Service/Quantity/Rate/Description) and discount labels via t()",
+    "implemented": false,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Unit: LineItem renders collapsed summary text (Taxable/Non-Taxable/Subtotal) and action buttons (Add/Remove/Restore) via t()",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F020"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Unit: FixedContractLineServicesList renders table headers (Service Name/Category/Billing Method/Quantity/Default Rate/Actions) and billing method labels via t()",
+    "implemented": false,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Unit: FixedContractLineServicesList renders add services section heading, empty states, and action menu items via t()",
+    "implemented": false,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Unit: AccountingExportsTab renders card title, table headers, and action buttons via t()",
+    "implemented": false,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Unit: AccountingExportsTab renders new export dialog labels and batch detail dialog labels via t()",
+    "implemented": false,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Unit: FixedContractLinePresetServicesList renders table headers and save/reset buttons via t()",
+    "implemented": false,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Unit: FixedContractLinePresetServicesList renders unsaved changes warning and navigation warning dialog via t()",
+    "implemented": false,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Unit: RecommendedFixPanel renders fix option headings and descriptions per issue type via t()",
+    "implemented": false,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Unit: RecommendedFixPanel renders fix dialog titles, impact summary labels, and resolved state message via t()",
+    "implemented": false,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Unit: Overview renders metric card titles (Active Contract Lines/Billing Clients/Monthly Revenue/etc.) via t()",
+    "implemented": false,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Unit: Overview renders feature card titles and descriptions (Payment Processing/Billing Cycles/etc.) via t()",
+    "implemented": false,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Unit: BillingDashboard renders page title 'Billing' and beta warning banner via t()",
+    "implemented": false,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Unit: BillingDashboard pseudo-locale (xx) shows pseudo-text for page title and banner",
+    "implemented": false,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Unit: EditContractLineServiceQuantityDialog renders dialog title with interpolated service name, quantity label, and validation messages via t()",
+    "implemented": false,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Unit: EditContractLineServiceQuantityDialog renders save/cancel button labels via t()",
+    "implemented": false,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Unit: billingTabsConfig tab labels are translatable and render correctly via t() in the consuming BillingDashboard component",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Unit: all 16 tab labels render translated text in de locale",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Unit: TemplateRenderer renders loading text, error prefix, and empty state via t()",
+    "implemented": false,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Unit: PropertyEditor renders field labels (Content/Data Field/Width/Height/Font Size/Color) via t()",
+    "implemented": false,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Unit: ConditionalRuleManager renders heading, action options, and button label via t()",
+    "implemented": false,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Unit: ContractsHub renders 'Contracts' heading and sub-tab labels via t()",
+    "implemented": false,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Unit: TemplateRendererCore user-visible strings ('N/A', 'Unknown value') are either translated or documented as non-UI output",
+    "implemented": false,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Integration: /msp/billing loads in en with Overview tab showing translated metric titles and feature cards",
+    "implemented": false,
+    "featureIds": [
+      "F029",
+      "F030",
+      "F031",
+      "F033"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Integration: /msp/billing loads in de with translated page title, beta banner, and tab labels",
+    "implemented": false,
+    "featureIds": [
+      "F031",
+      "F033"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Integration: /msp/billing?tab=usage-tracking renders translated table headers and filter labels in de",
+    "implemented": false,
+    "featureIds": [
+      "F017",
+      "F018"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Integration: /msp/billing?tab=accounting-exports renders translated exports card and dialog in de",
+    "implemented": false,
+    "featureIds": [
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Integration: xx pseudo-locale smoke test across /msp/billing overview and usage-tracking tabs renders pseudo-text everywhere with no bare English leakage",
+    "implemented": false,
+    "featureIds": [
+      "F008",
+      "F029",
+      "F031",
+      "F033",
+      "F017"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Regression: existing billing unit/integration tests pass after i18n wiring",
+    "implemented": false,
+    "featureIds": [
+      "F011",
+      "F014",
+      "F017",
+      "F019",
+      "F021",
+      "F023",
+      "F025",
+      "F027",
+      "F029",
+      "F031"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Manual: visual diff on /msp/billing in en between main and PR branch -- no layout shifts from translated strings",
+    "implemented": false,
+    "featureIds": [
+      "F029",
+      "F031",
+      "F033"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Manual: visual diff on /msp/billing in de -- long German strings do not break button/column widths",
+    "implemented": false,
+    "featureIds": [
+      "F029",
+      "F031",
+      "F033"
+    ]
+  }
+]

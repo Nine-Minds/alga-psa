@@ -1,0 +1,157 @@
+[
+  {
+    "id": "T001",
+    "description": "en/msp/quotes.json exists and is valid JSON with component-scoped root keys (quotesTab, quoteForm, quoteDetail, quoteLineItems, quoteConversion, quoteApproval, quoteTemplates, quotePreview, templateEditor, templatesPage, common)",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "validate-translations.cjs passes for msp/quotes namespace -- all 9 locales have identical key sets with no missing keys or empty values",
+    "implemented": false,
+    "featureIds": ["F001", "F014", "F016", "F017"]
+  },
+
+  {
+    "id": "T003",
+    "description": "QuoteForm.tsx compiles with useTranslation('msp/quotes') -- no TypeScript errors, all form labels, workflow buttons, dialog text, validation messages, and status banners use t()",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "QuoteForm.tsx has no remaining hardcoded English strings in JSX (grep for bare string literals in rendered output returns 0 matches, excluding technical values like CSS classes, element IDs, and route paths)",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+
+  {
+    "id": "T005",
+    "description": "QuoteDetail.tsx compiles with useTranslation('msp/quotes') -- no TypeScript errors, all section headings, field labels, action buttons, dialogs, banners, and activity log use t()",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T006",
+    "description": "QuoteDetail.tsx has no remaining hardcoded English strings in JSX",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+
+  {
+    "id": "T007",
+    "description": "QuotesTab.tsx compiles with useTranslation -- all sub-tab labels, column headers, action menu items, dialogs, and empty states use t()",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T008",
+    "description": "QuotesTab.tsx has no remaining hardcoded English strings in JSX",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+
+  {
+    "id": "T009",
+    "description": "QuoteDocumentTemplateEditor.tsx compiles with useTranslation -- all headings, tab labels, status labels, buttons, and error messages use t()",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T010",
+    "description": "QuoteDocumentTemplateEditor.tsx has no remaining hardcoded English strings in JSX",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+
+  {
+    "id": "T011",
+    "description": "QuoteLineItemsEditor.tsx compiles with useTranslation -- all table headers, checkbox labels, frequency options, discount panel labels, section labels, and empty states use t()",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T012",
+    "description": "QuoteLineItemsEditor.tsx has no remaining hardcoded English strings in JSX",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+
+  {
+    "id": "T013",
+    "description": "QuoteDocumentTemplatesPage.tsx compiles with useTranslation -- all page chrome, table columns, and action menu items use t()",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T014",
+    "description": "QuoteConversionDialog.tsx compiles with useTranslation -- all dialog text, mode labels/descriptions, item category headings, summary labels use t()",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+
+  {
+    "id": "T015",
+    "description": "QuoteApprovalDashboard.tsx compiles with useTranslation -- all headings, settings, filter labels, column headers, and empty states use t()",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T016",
+    "description": "QuoteTemplatesList.tsx compiles with useTranslation -- all list chrome, action menu items, empty state, and delete confirmation use t()",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+
+  {
+    "id": "T017",
+    "description": "QuotePreviewPanel.tsx compiles with useTranslation -- panel heading, button labels, empty/loading/error states use t()",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T018",
+    "description": "Currency formatting uses locale-aware formatter instead of hardcoded 'en-US' in all 5 affected components",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+
+  {
+    "id": "T019",
+    "description": "Date formatting uses locale-aware formatter instead of hardcoded .toLocaleDateString() in all 4 affected components",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T020",
+    "description": "Italian accent audit passes for it/msp/quotes.json -- all Italian translations use correct grave/acute accents (e.g. 'perche' must be 'perch\u00e9', 'piu' must be 'pi\u00f9')",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+
+  {
+    "id": "T021",
+    "description": "Pseudo-locale xx/msp/quotes.json shows '11111' fill patterns for visual QA -- all values are replaced with numeric fill",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T022",
+    "description": "Interpolation variables are preserved in all 9 locale files -- every t() call with variables (e.g. {{count}}, {{name}}) has matching variables in all translations",
+    "implemented": false,
+    "featureIds": ["F014", "F016", "F017"]
+  },
+
+  {
+    "id": "T023",
+    "description": "ROUTE_NAMESPACES includes '/msp/quote-approvals' and '/msp/quote-document-templates' loading 'msp/quotes', and '/msp/billing' entry includes 'msp/quotes'",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T024",
+    "description": "npm run build succeeds with no TypeScript errors after all quote i18n wiring is complete",
+    "implemented": false,
+    "featureIds": ["F019"]
+  }
+]

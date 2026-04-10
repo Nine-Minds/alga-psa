@@ -1,0 +1,110 @@
+# SCRATCHPAD — MSP i18n: Billing & Tax Settings
+
+## Key Decisions
+
+### New namespace, not reusing existing
+Unlike the tickets migration (which wired into existing `features/tickets.json`), this
+batch creates `msp/billing-settings.json` from scratch. The billing settings surface has
+no client-portal counterpart, so there is no shared namespace to reuse.
+
+### TaxSettingsForm included in this batch
+`TaxSettingsForm.tsx` lives at `packages/billing/src/components/tax/` (outside the
+`settings/` directory) but is functionally part of the billing/tax settings surface.
+Including it here avoids a standalone sub-batch for a single component. If the namespace
+exceeds ~500 keys, consider splitting `clientTaxSettings.*` into a separate namespace.
+
+### Select option translation strategy
+Constants like `POLICY_OPTIONS`, `LICENSE_TERM_OPTIONS`, `BILLING_METHOD_OPTIONS` are
+currently defined outside components. To support locale-reactive labels, wrap them in
+`useMemo` inside the component with `t()` calls, or move the constant inside the
+component body. Do NOT try to call `t()` at module scope -- it will not have access to
+the i18n context.
+
+### Zod schema messages stay English
+Zod validation `.message()` strings in `TaxRegionsManager`, `TaxThresholdEditor`,
+`TaxComponentEditor`, and `TaxHolidayManager` are NOT translated. They are developer-
+facing validation constraints. The rendered `<p>` error messages that display these to
+users already get their text from `form.formState.errors.fieldName?.message` -- if we
+want to translate those, we would need `t()` in the `<p>` tag wrapping the Zod message,
+or switch to custom validation. For now, leave Zod messages as English and translate
+only the surrounding UI chrome. This matches the pattern used elsewhere in the codebase.
+
+### handleError second-argument strings
+`handleError(error, 'Failed to load settings')` displays the second argument as a toast
+fallback. These ARE user-visible and should be translated:
+`handleError(error, t('errors.failedToLoadSettings', { defaultValue: 'Failed to load settings' }))`.
+
+### PaymentSettingsConfig excluded
+The `PaymentSettingsConfig` component is dynamically imported via `@product/billing/entry`
+and resolves to either EE or OSS version at build time. It is outside this batch's scope
+and should be handled in an EE-specific i18n pass.
+
+### NumberingSettings excluded
+`NumberingSettings` from `@alga-psa/reference-data/components` is rendered inside
+`BillingSettings.tsx` but belongs to the `reference-data` package. Its strings should be
+translated in a separate sub-batch covering the `reference-data` package namespace.
+
+## Gotchas
+
+1. **ServiceCatalogManager is 996 lines** -- the edit dialog alone has ~30 field labels.
+   Break the wiring into two features (F040 table chrome + F041 edit dialog) to keep
+   PRs reviewable.
+
+2. **Duplicate BILLING_METHOD_OPTIONS** -- defined separately in `ServiceCatalogManager`,
+   `QuickAddService`, and `QuickAddProduct`. The i18n keys should be consistent across
+   all three. Use the same keys from the namespace (e.g., `common.billingMethod.fixed`,
+   `common.billingMethod.hourly`, `common.billingMethod.usage`).
+
+3. **Dynamic placeholders in RenewalAutomationSettings** -- placeholder text changes
+   based on loading state (`'Loading boards...'` vs `'Select board'` vs
+   `'Select a board first'`). Each variant needs its own key.
+
+4. **Interpolated confirmation messages** -- Several components use template literals
+   in confirmation dialogs: `` `Are you sure you want to delete "${name}"?` ``.
+   Convert to `t('confirmDelete', { name, defaultValue: '...' })`.
+
+5. **ProductsManager archive vs delete** -- Two separate confirmation flows with
+   different messages. The permanent delete dialog has three states (checking, can-delete,
+   cannot-delete) each needing separate translated strings.
+
+6. **TaxThresholdEditor bracket issue messages** -- These are dynamically constructed
+   strings with currency formatting. Use interpolation:
+   `t('tax.thresholds.issueGap', { from: formatted1, to: formatted2 })`.
+
+7. **TaxHolidayManager heading interpolation** -- The heading conditionally includes
+   the tax rate name: `Tax Holidays for ${taxRateName}`. Use:
+   `t('tax.holidays.titleWithName', { name: taxRateName })` and
+   `t('tax.holidays.title')` for the without-name case.
+
+8. **TaxSettingsForm has inline components (ErrorMessage, SuccessMessage)** -- These
+   are defined inside the component function. The `t()` hook is accessible in the parent
+   scope and can be used inside these inline components without issues.
+
+## Estimated String Counts by Group
+
+| Group | Est. Keys |
+|-------|-----------|
+| tabs | 4 |
+| general (currency, invoiceNumbering, zeroDollar, creditExpiration, renewal) | 55 |
+| quoting | 5 |
+| tax (source, regions, thresholds, components, holidays) | 130 |
+| payments | 5 |
+| serviceCategories | 35 |
+| serviceTypes | 45 |
+| serviceCatalog | 50 |
+| products | 35 |
+| quickAddService | 40 |
+| quickAddProduct | 40 |
+| clientTaxSettings | 35 |
+| common (shared Edit/Delete/Cancel/Save/Actions/etc.) | 15 |
+| import (shared import dialog strings) | 15 |
+| validation/errors/toast (shared patterns) | 20 |
+| **Total** | **~530** |
+
+## PR Grouping Suggestion
+
+- **PR 1:** F001 (namespace JSON) + F002 (ROUTE_NAMESPACES) + F010-F014 (BillingSettings + small General-tab components) -- ~5 files, ~75 keys
+- **PR 2:** F020-F021 + F030-F031 (ServiceCategoriesSettings + ServiceTypeSettings) -- ~2 files, ~80 keys  
+- **PR 3:** F040-F041 + F050-F051 + F060-F062 (ServiceCatalog + Products + QuickAdd dialogs) -- ~4 files, ~165 keys
+- **PR 4:** F070-F085 + F090-F092 (All tax components + TaxSettingsForm) -- ~6 files, ~210 keys
+- **PR 5:** F100-F107 (Translations for 6 languages + pseudo-locales + validation) -- namespace only, no component changes
