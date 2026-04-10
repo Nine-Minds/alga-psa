@@ -282,6 +282,24 @@ const WORKFLOW_RUN_DIALOG_PICKER_FALLBACKS: Record<string, { resource: string; f
   clientid: { resource: 'client', fixedValueHint: 'Select Client' },
 };
 
+const resolveConcreteFieldSchema = (schema: JsonSchema): JsonSchema => {
+  if (schema.anyOf?.length) {
+    const variant = schema.anyOf.find((candidate) => normalizeSchemaType(candidate) && normalizeSchemaType(candidate) !== 'null');
+    if (variant) {
+      return resolveConcreteFieldSchema(variant);
+    }
+  }
+
+  if (schema.oneOf?.length) {
+    const variant = schema.oneOf.find((candidate) => normalizeSchemaType(candidate) && normalizeSchemaType(candidate) !== 'null');
+    if (variant) {
+      return resolveConcreteFieldSchema(variant);
+    }
+  }
+
+  return schema;
+};
+
 const resolveRunDialogPickerField = (
   schema: JsonSchema,
   path: Array<string | number>
@@ -291,13 +309,14 @@ const resolveRunDialogPickerField = (
     return null;
   }
 
-  if (normalizeSchemaType(schema) !== 'string') {
+  const concreteSchema = resolveConcreteFieldSchema(schema);
+  if (normalizeSchemaType(concreteSchema) !== 'string') {
     return null;
   }
 
   // Preferred path: annotate the schema itself with x-workflow-editor / x-workflow-picker-kind
   // so the properties dialog and run dialog light up the same picker without adding UI-only logic here.
-  const schemaEditor = resolveWorkflowSchemaFieldEditor(schema);
+  const schemaEditor = resolveWorkflowSchemaFieldEditor(schema) ?? resolveWorkflowSchemaFieldEditor(concreteSchema);
   const schemaPickerResource = schemaEditor?.picker?.resource;
   if (schemaEditor?.kind === 'picker' && schemaPickerResource && WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES.has(schemaPickerResource)) {
     return {
