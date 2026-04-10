@@ -102,7 +102,7 @@
   {
     "id": "F021",
     "description": "Wire useTranslation('msp/billing') in FixedContractLineServicesList.tsx — table headers (Service Name/Category/Billing Method/Quantity/Default Rate/Actions), billing method options (Fixed Price/Hourly/Usage Based), Product/Service badges, action menu items (Edit Quantity/Remove), tooltip text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F022",
