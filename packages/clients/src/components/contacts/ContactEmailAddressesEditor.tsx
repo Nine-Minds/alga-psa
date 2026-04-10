@@ -41,7 +41,9 @@ export type ContactEmailAddressesEditorChange = {
 
 type NormalizedContactEmailAddresses = ContactEmailAddressesEditorChange;
 
-const CANONICAL_EMAIL_TYPE_OPTIONS = (CONTACT_EMAIL_CANONICAL_TYPES ?? []).map((value) => ({
+const CANONICAL_EMAIL_TYPES: readonly ContactEmailCanonicalType[] = CONTACT_EMAIL_CANONICAL_TYPES ?? [];
+
+const CANONICAL_EMAIL_TYPE_OPTIONS = CANONICAL_EMAIL_TYPES.map((value) => ({
   value,
   label: value.charAt(0).toUpperCase() + value.slice(1),
 }));
@@ -67,7 +69,7 @@ function createRowLocalId(index: number): string {
 }
 
 function isCanonicalEmailType(value: string | null | undefined): value is ContactEmailCanonicalType {
-  return (CONTACT_EMAIL_CANONICAL_TYPES ?? []).includes((value ?? '') as ContactEmailCanonicalType);
+  return CANONICAL_EMAIL_TYPES.includes((value ?? '') as ContactEmailCanonicalType);
 }
 
 function normalizeAdditionalEmailRowForDraft(
