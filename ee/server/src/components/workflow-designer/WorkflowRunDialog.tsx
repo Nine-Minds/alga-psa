@@ -176,6 +176,27 @@ const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unkn
   }
 };
 
+const UUID_SAMPLE_VALUE = '00000000-0000-4000-8000-000000000001';
+
+const toDateTimeLocalInputValue = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const fromDateTimeLocalInputValue = (value: string): string => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
+};
+
 const buildSyntheticValueFromSchema = (schema: JsonSchema, root: JsonSchema, path: Array<string | number> = []): unknown => {
   const resolved = resolveSchemaRef(schema, root);
 
@@ -218,7 +239,10 @@ const buildSyntheticValueFromSchema = (schema: JsonSchema, root: JsonSchema, pat
     case 'string': {
       if (resolved.format === 'date-time') return new Date().toISOString();
       if (resolved.format === 'date') return new Date().toISOString().slice(0, 10);
-      if (resolved.format === 'uuid' || fieldName.endsWith('id') || fieldName === 'id') {
+      if (resolved.format === 'uuid') {
+        return UUID_SAMPLE_VALUE;
+      }
+      if (fieldName.endsWith('id') || fieldName === 'id') {
         return `${fieldName || 'id'}-sample-123`;
       }
       if (fieldName.includes('email')) return 'sample@example.com';
@@ -1271,16 +1295,29 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     }
 
     const inputType = resolved.format === 'date-time' ? 'datetime-local' : resolved.format === 'date' ? 'date' : 'text';
+    const renderedValue = (() => {
+      if (value == null) return '';
+      if (resolved.format === 'date-time' && typeof value === 'string') {
+        return toDateTimeLocalInputValue(value);
+      }
+      return String(value);
+    })();
     return (
       <div className="space-y-1">
         {commonHeader}
         <Input
           id={`run-form-${fieldPath}`}
           type={type === 'number' || type === 'integer' ? 'number' : inputType}
-          value={value == null ? '' : String(value)}
+          value={renderedValue}
           onChange={(event) => {
             const raw = event.target.value;
-            const parsed = raw === '' ? null : (type === 'number' || type === 'integer' ? Number(raw) : raw);
+            const parsed = raw === ''
+              ? null
+              : (type === 'number' || type === 'integer'
+                ? Number(raw)
+                : resolved.format === 'date-time'
+                  ? fromDateTimeLocalInputValue(raw)
+                  : raw);
             updateFormValue((prev) => setValueAtPath(prev, path, parsed));
           }}
         />
