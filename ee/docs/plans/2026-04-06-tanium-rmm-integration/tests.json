@@ -1,0 +1,62 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: provider registry resolves RMM providers and exposes capability metadata that drives shared UI and server selection.",
+    "implemented": false,
+    "featureIds": ["F002", "F003", "F004", "F017", "F019"]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed integration: shared scope sync upserts rmm_organization_mappings from normalized external scopes and preserves client assignments on refresh.",
+    "implemented": false,
+    "featureIds": ["F005", "F014"]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed integration: shared asset ingestion creates a new asset plus tenant_external_entity_mappings row from a normalized device payload.",
+    "implemented": false,
+    "featureIds": ["F006", "F007", "F015"]
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed integration: shared asset ingestion updates an existing mapped asset without creating duplicate mappings or duplicate extension rows.",
+    "implemented": false,
+    "featureIds": ["F006", "F007", "F015"]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed integration: unmapped or client-less external scopes are skipped or surfaced as actionable sync results instead of creating orphaned assets.",
+    "implemented": false,
+    "featureIds": ["F005", "F006", "F015"]
+  },
+  {
+    "id": "T006",
+    "description": "Integration: Tanium configuration actions persist settings, report connection state, and reject unsupported or incomplete credential/config combinations.",
+    "implemented": false,
+    "featureIds": ["F011", "F012", "F021"]
+  },
+  {
+    "id": "T007",
+    "description": "Integration: Tanium inventory sync uses the shared provider pipeline to create and update assets for mapped scopes.",
+    "implemented": false,
+    "featureIds": ["F013", "F014", "F015"]
+  },
+  {
+    "id": "T008",
+    "description": "Integration: when aged-out inventory fallback is enabled, the provider uses the documented fallback source and records explicit unsupported/error state when fallback data is unavailable.",
+    "implemented": false,
+    "featureIds": ["F013", "F016", "F021"]
+  },
+  {
+    "id": "T009",
+    "description": "UI integration: RMM settings renders Tanium from the registry and only shows controls that match Tanium's declared capabilities.",
+    "implemented": false,
+    "featureIds": ["F003", "F004", "F017", "F018", "F019"]
+  },
+  {
+    "id": "T010",
+    "description": "Regression integration: NinjaOne and Tactical still complete their existing core sync/config flows after being wrapped by the shared adapter and ingestion seams.",
+    "implemented": false,
+    "featureIds": ["F008", "F009", "F010", "F020"]
+  }
+]

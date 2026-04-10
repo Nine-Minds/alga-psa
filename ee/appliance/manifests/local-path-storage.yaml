@@ -115,7 +115,7 @@ metadata:
   name: local-path
 provisioner: rancher.io/local-path
 volumeBindingMode: WaitForFirstConsumer
-reclaimPolicy: Delete
+reclaimPolicy: Retain
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -128,7 +128,7 @@ data:
       "nodePathMap": [
         {
           "node": "DEFAULT_PATH_FOR_NON_LISTED_NODES",
-          "paths": ["/opt/local-path-provisioner"]
+          "paths": ["/var/mnt/alga-data/local-path-provisioner"]
         }
       ]
     }

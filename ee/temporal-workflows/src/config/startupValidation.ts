@@ -41,7 +41,6 @@ const REQUIRED_CONFIGS = {
   TEMPORAL_ADDRESS: 'Temporal server address (e.g., temporal-frontend:7233)',
   TEMPORAL_NAMESPACE: 'Temporal namespace (e.g., default)',
   TEMPORAL_TASK_QUEUE: 'Temporal task queue name',
-  PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE: 'Existing VirtualService name that anchors portal routing',
 } as const;
 
 /**
@@ -142,7 +141,7 @@ export async function validateRequiredConfiguration(): Promise<void> {
     TEMPORAL_NAMESPACE: validatedConfigs.TEMPORAL_NAMESPACE,
     TEMPORAL_TASK_QUEUE: validatedConfigs.TEMPORAL_TASK_QUEUE,
     PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE:
-      validatedConfigs.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE,
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE || 'not set (portal-domain sync disabled)',
   });
 }
 

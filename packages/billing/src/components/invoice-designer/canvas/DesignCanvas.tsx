@@ -13,7 +13,9 @@ import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
 import { resolveFieldPreviewScaffold, resolveLabelPreviewScaffold } from './previewScaffolds';
 import { resolveContainerLayoutStyle, resolveNodeBoxStyle } from '../utils/cssLayout';
+import { resolveMediaFrameSize } from '../utils/mediaSizing';
 import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from '../utils/nodeProps';
+import { inferHeightMode } from '../utils/sizeModes';
 import { resolveSortableStrategy } from '../utils/sortableStrategy';
 import {
   formatBoundValue,
@@ -469,7 +471,8 @@ const resolveTotalsRowPreviewModel = (
 
 const renderTablePreview = (
   metadata: Record<string, unknown>,
-  previewData: WasmInvoiceViewModel | null
+  previewData: WasmInvoiceViewModel | null,
+  options: { fillHeight: boolean }
 ): React.ReactNode => {
   const borderConfig = resolveTableBorderConfig(metadata);
   const headerWeightClass = FONT_WEIGHT_CLASS[
@@ -496,7 +499,8 @@ const renderTablePreview = (
   return (
     <div
       className={clsx(
-        'h-full overflow-hidden text-[10px] text-slate-700 dark:text-slate-300 rounded-sm bg-white dark:bg-slate-800',
+        options.fillHeight ? 'h-full' : 'h-auto',
+        'overflow-hidden text-[10px] text-slate-700 dark:text-slate-300 rounded-sm bg-white dark:bg-slate-800',
         borderConfig.outer && ['border', INVOICE_BORDER_STRONG_COLOR_CLASS]
       )}
     >
@@ -603,11 +607,21 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         invoice: previewData,
         bindingKey,
         format: metadata.format,
+        displayFormat:
+          metadata.displayFormat === 'single-line' ||
+          metadata.displayFormat === 'multiline' ||
+          metadata.displayFormat === 'raw'
+            ? metadata.displayFormat
+            : undefined,
       });
-      if (boundValue) {
+      if (boundValue.text) {
         return {
-          content: boundValue,
-          singleLine: true,
+          content: boundValue.multiline ? (
+            <span className="whitespace-pre-line break-words">{boundValue.text}</span>
+          ) : (
+            boundValue.text
+          ),
+          singleLine: !boundValue.multiline,
         };
       }
       const preview = resolveFieldPreviewScaffold(node);
@@ -733,8 +747,9 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     }
     case 'table':
     case 'dynamic-table': {
+      const fillHeight = inferHeightMode(getNodeStyle(node)) === 'fixed';
       return {
-        content: renderTablePreview(metadata, previewData),
+        content: renderTablePreview(metadata, previewData, { fillHeight }),
       };
     }
     case 'action-button':
@@ -769,6 +784,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
               ? metadata.fit
               : 'contain';
         const objectFit = getNodeStyle(node)?.objectFit ?? fallbackFit;
+        const objectPosition = getNodeStyle(node)?.objectPosition;
 
         if (!src) {
           const label = node.type === 'qr' ? 'QR Code' : node.type === 'logo' ? 'Logo' : 'Image';
@@ -790,6 +806,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
                 width: '100%',
                 height: '100%',
                 objectFit,
+                objectPosition,
                 display: 'block',
               }}
             />
@@ -856,6 +873,10 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const astHadHeight = metadata.__astHadHeight === true;
   const allowInferredFlowMinWidth = !astImported || astHadWidth;
   const allowInferredFlowMinHeight = !astImported || astHadHeight;
+  const isMediaNode = node.type === 'image' || node.type === 'logo' || node.type === 'qr';
+  const mediaFrameSize = isMediaNode ? resolveMediaFrameSize(resolvedBoxStyle) : {};
+  const resolvedMediaWidth = mediaFrameSize.width;
+  const resolvedMediaHeight = mediaFrameSize.height;
   // Strip visual styles (backgroundColor, color, border) from resolved AST inline styles
   // so that Tailwind dark-mode classes on the canvas node can take effect.
   const { backgroundColor: _bg, color: _fg, border: _bdr, ...layoutBoxStyle } = resolvedBoxStyle;
@@ -865,17 +886,17 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     boxSizing: 'border-box',
     // In flow layouts (flex/grid), do not force a fixed width/height from legacy node.size.
     // Instead, treat the authored size as a minimum box size so flex/grid can stretch items naturally.
-    width: isFlowPositioning ? resolvedWidth : (resolvedWidth ?? inferredWidth),
-    height: isFlowPositioning ? resolvedHeight : (resolvedHeight ?? inferredHeight),
+    width: isFlowPositioning ? (resolvedWidth ?? resolvedMediaWidth) : (resolvedWidth ?? resolvedMediaWidth ?? inferredWidth),
+    height: isFlowPositioning ? (resolvedHeight ?? resolvedMediaHeight) : (resolvedHeight ?? resolvedMediaHeight ?? inferredHeight),
     minWidth:
       isFlowPositioning
         ? (resolvedBoxStyle.minWidth ??
-          (resolvedWidth ? undefined : allowInferredFlowMinWidth ? inferredWidth : undefined))
+          (resolvedWidth || resolvedMediaWidth ? undefined : allowInferredFlowMinWidth ? inferredWidth : undefined))
         : resolvedBoxStyle.minWidth,
     minHeight:
       isFlowPositioning
         ? (resolvedBoxStyle.minHeight ??
-          (resolvedHeight ? undefined : allowInferredFlowMinHeight ? inferredHeight : undefined))
+          (resolvedHeight || resolvedMediaHeight ? undefined : allowInferredFlowMinHeight ? inferredHeight : undefined))
         : resolvedBoxStyle.minHeight,
     top: isFlowPositioning ? undefined : node.position.y,
     left: isFlowPositioning ? undefined : node.position.x,
@@ -883,6 +904,11 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     transform: transform && !isDragging ? CSS.Transform.toString(transform) : undefined,
     transition,
     zIndex: isDragging ? 40 : isSelected ? 30 : 10,
+    ...(isMediaNode && !isContainer
+      ? {
+          overflow: 'hidden',
+        }
+      : {}),
   };
   const shouldDeemphasize = shouldDeemphasizeNode(hasActiveSelection, isInSelectionContext, isDragging);
   const sectionCue = node.type === 'section' ? getSectionSemanticCue(getNodeName(node)) : null;
@@ -891,7 +917,6 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const isTextNode = node.type === 'text';
   const isFieldNode = node.type === 'field';
   const fieldDisplayLabel = isFieldNode ? asTrimmedString(metadata.label) : '';
-  const isMediaNode = node.type === 'image' || node.type === 'logo' || node.type === 'qr';
   const labelWeightClass = FONT_WEIGHT_CLASS[
     resolveFontWeightStyle(metadata.fontWeight ?? metadata.labelFontWeight, 'semibold')
   ];
@@ -909,6 +934,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     node.type !== 'page' &&
     node.type !== 'divider' &&
     node.type !== 'spacer';
+  const showOverlayNodeBadge = isContainer || !isCompactLeaf;
 
   const combinedRef = useCallback(
     (element: HTMLDivElement | null) => {
@@ -1094,17 +1120,19 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           )}
         />
       )}
+      {showOverlayNodeBadge && (
+        <div className="absolute left-2 top-1 z-10 flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded bg-slate-900/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white pointer-events-none">
+          <span className="truncate">{getNodeName(node)} · {node.type}</span>
+          {sectionCue && (
+            <span className={clsx('rounded border px-1 py-0.5 text-[9px] font-semibold', sectionCue.chipClass)}>
+              {sectionCue.label}
+            </span>
+          )}
+        </div>
+      )}
       {isContainer ? (
         <div className="relative w-full h-full">
           {sectionCue && <div className={clsx('absolute inset-y-0 left-0 w-1 rounded-l-md', sectionCue.accentClass)} />}
-          <div className="absolute left-2 top-1 text-[10px] uppercase tracking-wide text-slate-700 dark:text-slate-300 pointer-events-none z-10 flex items-center gap-1.5">
-            <span>{getNodeName(node)} · {node.type}</span>
-            {sectionCue && (
-              <span className={clsx('rounded border px-1 py-0.5 text-[9px] font-semibold', sectionCue.chipClass)}>
-                {sectionCue.label}
-              </span>
-            )}
-          </div>
           <div
             className="relative w-full h-full"
             style={resolveContainerLayoutStyle(getNodeLayout(node))}
@@ -1119,7 +1147,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
               className={clsx(
                 'h-full text-[11px] text-slate-500 gap-1.5',
                 fieldSurfaceClasses,
-                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
+                previewContent.singleLine ? 'whitespace-nowrap overflow-hidden' : 'items-start',
                 previewContent.isPlaceholder && 'text-slate-400'
               )}
             >
@@ -1131,7 +1159,9 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
                   {fieldDisplayLabel}:
                 </span>
               )}
-              <span className="min-w-0 truncate">{previewContent.content}</span>
+              <span className={clsx('min-w-0', previewContent.singleLine ? 'truncate' : 'whitespace-pre-line break-words')}>
+                {previewContent.content}
+              </span>
             </div>
           ) : (
             <div
@@ -1153,10 +1183,6 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           )
         ) : (
           <>
-            <div className="px-2 py-1 border-b bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center justify-between">
-              <span className="truncate">{getNodeName(node)}</span>
-              <span className="text-[10px] uppercase tracking-wide text-slate-400">{node.type}</span>
-            </div>
 	            <div
 	              className={clsx(
 	                'text-[11px] text-slate-500',

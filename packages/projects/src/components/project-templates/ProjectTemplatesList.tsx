@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
+import { useTranslation } from 'react-i18next';
 
 const PROJECT_TEMPLATES_PAGE_SIZE_KEY = 'project_templates_page_size';
 
@@ -33,6 +34,7 @@ interface ProjectTemplatesListProps {
 }
 
 export default function ProjectTemplatesList({ initialTemplates, initialCategories }: ProjectTemplatesListProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const router = useRouter();
   const [templates, setTemplates] = useState<IProjectTemplate[]>(initialTemplates);
   const [categories] = useState<string[]>(initialCategories);
@@ -74,7 +76,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
 
       setTemplates(templatesData);
     } catch (error) {
-      handleError(error, 'Failed to load templates');
+      handleError(error, t('templates.list.loadFailed', 'Failed to load templates'));
     } finally {
       setLoading(false);
     }
@@ -84,10 +86,10 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
     if (!deleteConfirmation) return;
     try {
       await deleteTemplate(deleteConfirmation.templateId);
-      toast.success('Template deleted successfully');
+      toast.success(t('templates.list.deletedSuccess', 'Template deleted successfully'));
       loadData();
     } catch (error) {
-      handleError(error, 'Failed to delete template');
+      handleError(error, t('templates.list.deleteFailed', 'Failed to delete template'));
     } finally {
       setDeleteConfirmation(null);
     }
@@ -100,7 +102,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
 
   const columns: ColumnDefinition<IProjectTemplate>[] = [
     {
-      title: 'Name',
+      title: t('templates.list.columns.name', 'Name'),
       dataIndex: 'template_name',
       width: '25%',
       render: (value, row) => (
@@ -115,7 +117,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
       )
     },
     {
-      title: 'Description',
+      title: t('templates.list.columns.description', 'Description'),
       dataIndex: 'description',
       width: '30%',
       render: (value) => (
@@ -125,25 +127,25 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
       )
     },
     {
-      title: 'Category',
+      title: t('templates.list.columns.category', 'Category'),
       dataIndex: 'category',
       render: (value) => (value as string) || '-'
     },
     {
-      title: 'Times Used',
+      title: t('templates.list.columns.timesUsed', 'Times Used'),
       dataIndex: 'use_count',
       render: (value) => value as number
     },
     {
-      title: 'Last Used',
+      title: t('templates.list.columns.lastUsed', 'Last Used'),
       dataIndex: 'last_used_at',
       render: (value) =>
         value
           ? new Date(value as string).toLocaleDateString()
-          : 'Never'
+          : t('templates.list.neverUsed', 'Never')
     },
     {
-      title: 'Actions',
+      title: t('templates.list.columns.actions', 'Actions'),
       dataIndex: 'template_id',
       render: (_value, row) => (
         <DropdownMenu>
@@ -153,6 +155,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
               variant="ghost"
               size="sm"
               onClick={(e) => e.stopPropagation()}
+              aria-label={t('common:actions.openMenu', 'Open menu')}
             >
               <MoreVertical className="h-4 w-4" />
             </Button>
@@ -162,18 +165,18 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
               onClick={() => router.push(`/msp/projects/templates/${row.template_id}`)}
             >
               <Pencil className="mr-2 h-4 w-4" />
-              Edit
+              {t('templates.list.edit', 'Edit')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleApply(row)}>
               <Play className="mr-2 h-4 w-4" />
-              Apply Template
+              {t('templates.list.applyTemplate', 'Apply Template')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setDeleteConfirmation({ templateId: row.template_id, templateName: row.template_name })}
               className="text-destructive"
             >
               <Trash className="mr-2 h-4 w-4" />
-              Delete
+              {t('common:actions.delete', 'Delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -188,10 +191,12 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
           isOpen={true}
           onClose={() => setDeleteConfirmation(null)}
           onConfirm={handleDelete}
-          title="Delete Template"
-          message={`Are you sure you want to delete template "${deleteConfirmation.templateName}"? This action cannot be undone.`}
-          confirmLabel="Delete"
-          cancelLabel="Cancel"
+          title={t('templates.list.deleteTitle', 'Delete Template')}
+          message={t('templates.list.deleteMessage', 'Are you sure you want to delete template "{{templateName}}"? This action cannot be undone.', {
+            templateName: deleteConfirmation.templateName,
+          })}
+          confirmLabel={t('common:actions.delete', 'Delete')}
+          cancelLabel={t('common:actions.cancel', 'Cancel')}
         />
       )}
 
@@ -232,7 +237,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
 
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Project Templates</h1>
+          <h1 className="text-2xl font-bold">{t('templates.list.title', 'Project Templates')}</h1>
           <div className="flex gap-2">
             <Button
               id="apply-template"
@@ -243,7 +248,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
               variant="outline"
             >
               <Play className="h-4 w-4 mr-2" />
-              Apply Template
+              {t('templates.list.applyTemplate', 'Apply Template')}
             </Button>
             <Button
               id="add-template"
@@ -251,7 +256,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
               className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
             >
               <Wand2 className="h-4 w-4 mr-2" />
-              Add Template
+              {t('templates.list.addTemplate', 'Add Template')}
             </Button>
             <Button
               id="create-template-from-project"
@@ -259,7 +264,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
               variant="default"
             >
               <Plus className="h-4 w-4" />
-              Create from Project
+              {t('templates.list.createFromProject', 'Create from Project')}
             </Button>
           </div>
         </div>
@@ -269,7 +274,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
           <Input
             id="search-templates"
             type="text"
-            placeholder="Search templates..."
+            placeholder={t('templates.list.searchPlaceholder', 'Search templates...')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -280,16 +285,16 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
             value={selectedCategory}
             onValueChange={setSelectedCategory}
             options={[
-              { value: '', label: 'All Categories' },
+              { value: '', label: t('templates.list.allCategories', 'All Categories') },
               ...categories.map(cat => ({ value: cat, label: cat }))
             ]}
-            placeholder="Filter by category"
+            placeholder={t('templates.list.categoryPlaceholder', 'Filter by category')}
           />
         </div>
       </div>
 
       {loading ? (
-        <div>Loading...</div>
+        <div>{t('templates.list.loading', 'Loading...')}</div>
       ) : (
         <DataTable
           id="project-templates-table"

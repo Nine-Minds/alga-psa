@@ -50,8 +50,8 @@
     },
     "checkout": {
       "title": "11111",
-      "summary": "11111",
-      "total": "11111",
+      "summary": "11111 {{quantity}} 11111 {{licenseLabel}} 11111 {{price}} 11111 {{interval}} 11111",
+      "total": "11111 {{total}} 11111 {{interval}} 11111",
       "cancel": "11111"
     },
     "confirmation": {
@@ -67,11 +67,11 @@
       "paymentMethod": "11111",
       "changePaymentMethod": "11111",
       "immediateChargeTitle": "11111",
-      "immediateChargeDescription": "11111",
-      "prorationDescription": "11111",
+      "immediateChargeDescription": "11111 {{amountDue}} 11111",
+      "prorationDescription": "11111 {{amount}} 11111",
       "scheduledTitle": "11111",
-      "scheduledDescription": "11111",
-      "scheduledKeepAccess": "11111",
+      "scheduledDescription": "11111 {{date}} 11111",
+      "scheduledKeepAccess": "11111 {{count}} 11111",
       "cancel": "11111",
       "confirmPayNow": "11111",
       "confirmSchedule": "11111"
@@ -84,9 +84,9 @@
       "totalLicenseCount": "11111"
     },
     "help": {
-      "totalLicenseCount": "11111",
+      "totalLicenseCount": "11111 {{minimum}} 11111 {{current}} 11111",
       "reduceViaAccount": "11111",
-      "quantityWarning": "11111"
+      "quantityWarning": "11111 {{used}} 11111 {{quantity}} 11111"
     },
     "pricing": {
       "pricePerLicense": "11111",
@@ -96,7 +96,7 @@
     "actions": {
       "creatingCheckout": "11111",
       "noChange": "11111",
-      "updateToTotal": "11111"
+      "updateToTotal": "11111 {{quantity}} 11111 {{difference}} 11111 {{licenseLabel}} 11111"
     },
     "info": {
       "totalQuantity": "11111",
@@ -113,12 +113,12 @@
     },
     "fields": {
       "newLicenseCount": "11111",
-      "minimum": "11111"
+      "minimum": "11111 {{count}} 11111"
     },
     "validation": {
       "positiveInteger": "11111",
       "useAddFlow": "11111",
-      "deactivateUsers": "11111"
+      "deactivateUsers": "11111 {{activeUsers}} 11111 {{usersToDeactivate}} 11111 {{userLabel}} 11111"
     },
     "actions": {
       "goToUserManagement": "11111",
@@ -127,7 +127,7 @@
     },
     "scheduled": {
       "title": "11111",
-      "description": "11111",
+      "description": "11111 {{current}} 11111 {{next}} 11111",
       "creditDescription": "11111"
     },
     "confirmation": {
@@ -145,7 +145,7 @@
       "removeFailed": "11111"
     },
     "success": {
-      "scheduled": "11111"
+      "scheduled": "11111 {{current}} 11111 {{next}} 11111 {{effectiveDate}} 11111"
     }
   },
   "shared": {
@@ -153,8 +153,8 @@
     "licensePlural": "11111",
     "userSingular": "11111",
     "userPlural": "11111",
-    "licenseCount": "11111",
-    "perInterval": "11111",
+    "licenseCount": "11111 {{count}} 11111 {{licenseLabel}} 11111",
+    "perInterval": "11111 {{amount}} 11111 {{interval}} 11111",
     "none": "11111",
     "intervals": {
       "month": "11111",

@@ -101,7 +101,6 @@ export * from './ThemeToggle';
 export * from './TimePicker';
 export * from './TimezonePicker';
 export { default as TimezonePicker } from './TimezonePicker';
-export * from './ToggleGroup';
 export * from './Tooltip';
 export * from './TreeSelect';
 export { default as TreeSelect } from './TreeSelect';

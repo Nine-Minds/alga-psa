@@ -79,6 +79,7 @@ describe('renderTemplateOnServer AST integration', () => {
 
     expect(result.html).toContain('INV-AST-001');
     expect(result.html).toContain('110');
+    expect(result.html).not.toContain('border-bottom:1px solid #cbd5e1');
     expect(typeof result.css).toBe('string');
     expect(getAllTemplatesMock).not.toHaveBeenCalled();
   });

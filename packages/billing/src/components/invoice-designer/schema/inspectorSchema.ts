@@ -106,4 +106,13 @@ export type DesignerInspectorField =
       widget: 'table-editor';
       domId?: string;
       visibleWhen?: DesignerInspectorVisibleWhen;
+    }
+  | {
+      kind: 'widget';
+      id: string;
+      widget: 'field-binding-picker';
+      label: string;
+      path: string;
+      domId?: string;
+      visibleWhen?: DesignerInspectorVisibleWhen;
     };

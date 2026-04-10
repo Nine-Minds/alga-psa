@@ -6,7 +6,8 @@ import { getAssetDetailBundle } from '@alga-psa/assets/actions/assetActions';
 import { getClientById, getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getProject } from '@alga-psa/projects/actions/projectActions';
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { findCommentsByTicketId } from '@alga-psa/tickets/actions/comment-actions';
+import { getCurrentUser, findUserById } from '@alga-psa/user-composition/actions';
 import { getRegistry } from '../chat/registry/apiRegistry.indexer';
 import {
   ChatApiRegistryEntry,
@@ -68,6 +69,11 @@ type ChatUiContext = {
     label: string;
   };
   record?: ChatUiContextRecord;
+};
+
+type ChatMention = {
+  type: 'ticket' | 'client' | 'contact' | 'project' | 'asset' | 'user';
+  id: string;
 };
 
 export interface FunctionMetadata {
@@ -209,11 +215,11 @@ export class ChatCompletionsService {
 
   static async *createStructuredCompletionStream(
     messages: ChatCompletionMessage[],
-    options: { signal?: AbortSignal; uiContext?: ChatUiContext } = {},
+    options: { signal?: AbortSignal; uiContext?: ChatUiContext; mentions?: ChatMention[] } = {},
   ): AsyncGenerator<ChatCompletionStreamEvent> {
     const provider = await resolveChatProvider();
     let conversation = this.normalizeConversationHistory(messages);
-    const promptContext = await this.buildPromptContext(options.uiContext);
+    const promptContext = await this.buildPromptContext(options.uiContext, options.mentions);
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
       if (options.signal?.aborted) {
@@ -1589,7 +1595,218 @@ export class ChatCompletionsService {
     }
   }
 
-  private static async buildPromptContext(uiContext?: ChatUiContext): Promise<string | null> {
+  private static async resolveMentionedEntities(
+    mentions: ChatMention[],
+  ): Promise<string[]> {
+    const results = await Promise.allSettled(
+      mentions.map(async (mention) => {
+        switch (mention.type) {
+          case 'ticket': {
+            const [ticket, comments] = await Promise.all([
+              getTicketById(mention.id),
+              findCommentsByTicketId(mention.id).catch(() => []),
+            ]);
+            if (!ticket) return null;
+            const t = ticket as any;
+            const lines: string[] = [];
+            lines.push(`[Ticket] #${ticket.ticket_number} - ${ticket.title || 'Untitled'}`);
+            lines.push(`  ticket_id: ${ticket.ticket_id}`);
+            lines.push(`  status: ${t.status_name || 'unknown'} (status_id: ${ticket.status_id})${t.is_closed ? ' [CLOSED]' : ''}`);
+            lines.push(`  priority: ${t.priority_name || 'unknown'}${ticket.priority_id ? ` (priority_id: ${ticket.priority_id})` : ''}`);
+            lines.push(`  board: ${t.board_name || 'unknown'} (board_id: ${ticket.board_id})`);
+            lines.push(`  client: ${t.client_name || 'unknown'}${ticket.client_id ? ` (client_id: ${ticket.client_id})` : ''}`);
+            lines.push(`  contact: ${t.contact_name || 'none'}${ticket.contact_name_id ? ` (contact_name_id: ${ticket.contact_name_id})` : ''}`);
+            lines.push(`  assigned_to: ${t.assigned_to_name || 'unassigned'}${ticket.assigned_to ? ` (user_id: ${ticket.assigned_to})` : ''}`);
+            lines.push(`  entered_by: ${ticket.entered_by}`);
+            lines.push(`  entered_at: ${ticket.entered_at || 'unknown'}`);
+            if (ticket.updated_at) lines.push(`  updated_at: ${ticket.updated_at}`);
+            if (ticket.closed_at) lines.push(`  closed_at: ${ticket.closed_at}`);
+            if (ticket.due_date) lines.push(`  due_date: ${ticket.due_date}`);
+            if (ticket.estimated_hours) lines.push(`  estimated_hours: ${ticket.estimated_hours}`);
+            if (ticket.category_id) lines.push(`  category_id: ${ticket.category_id}`);
+            if (ticket.subcategory_id) lines.push(`  subcategory_id: ${ticket.subcategory_id}`);
+            if (ticket.response_state) lines.push(`  response_state: ${ticket.response_state}`);
+            if (ticket.url) lines.push(`  description/url: ${ticket.url}`);
+            if (t.additionalAgents?.length) {
+              lines.push(`  additional_agents: ${t.additionalAgents.map((a: any) => a.name || a.user_id).join(', ')}`);
+            }
+            if (ticket.tags?.length) {
+              lines.push(`  tags: ${ticket.tags.map((tag: any) => tag.tag_text || tag.tag_name || tag).join(', ')}`);
+            }
+            // Comments
+            if (comments && Array.isArray(comments) && comments.length > 0) {
+              lines.push(`  comments (${comments.length} total):`);
+              // Include most recent comments, limit to keep prompt reasonable
+              const recentComments = comments.slice(-15);
+              for (const c of recentComments) {
+                const internal = c.is_internal ? ' [internal]' : '';
+                const resolution = c.is_resolution ? ' [resolution]' : '';
+                const author = c.author_type || 'unknown';
+                const date = c.created_at || '';
+                // Prefer markdown_content (clean text) over note (verbose BlockNote JSON)
+                let noteText = c.markdown_content || '';
+                if (!noteText || noteText === '[No content]' || noteText === '[No markdown content]') {
+                  // Fall back to extracting text from BlockNote JSON in note
+                  const raw = c.note || '';
+                  if (raw.startsWith('[{') || raw.startsWith('[')) {
+                    try {
+                      const blocks = JSON.parse(raw);
+                      noteText = blocks.map((b: any) => {
+                        if (typeof b === 'string') return b;
+                        const content = b.content;
+                        if (!content) return '';
+                        return content.map((ic: any) => ic.text || '').join('');
+                      }).filter(Boolean).join('\n');
+                    } catch {
+                      noteText = raw.slice(0, 300);
+                    }
+                  } else {
+                    noteText = raw;
+                  }
+                }
+                // Truncate very long comments
+                if (noteText.length > 500) {
+                  noteText = noteText.slice(0, 500) + '...';
+                }
+                lines.push(`    [${date}] (${author}${internal}${resolution}): ${noteText}`);
+              }
+              if (comments.length > 15) {
+                lines.push(`    ... and ${comments.length - 15} earlier comments`);
+              }
+            }
+            return lines.join('\n');
+          }
+          case 'client': {
+            const client = await getClientById(mention.id);
+            if (!client) return null;
+            const c = client as any;
+            const lines: string[] = [];
+            lines.push(`[Client] ${client.client_name}`);
+            lines.push(`  client_id: ${client.client_id}`);
+            lines.push(`  type: ${client.client_type || 'unknown'}`);
+            lines.push(`  active: ${!client.is_inactive}`);
+            if (c.location_email || client.email) lines.push(`  email: ${c.location_email || client.email}`);
+            if (c.location_phone || client.phone_no) lines.push(`  phone: ${c.location_phone || client.phone_no}`);
+            if (c.location_address || client.address) lines.push(`  address: ${c.location_address || client.address}`);
+            if (client.city || client.state) lines.push(`  city/state: ${[client.city, client.state, client.zip].filter(Boolean).join(', ')}`);
+            if (client.country) lines.push(`  country: ${client.country}`);
+            if (c.account_manager_full_name) lines.push(`  account_manager: ${c.account_manager_full_name}${client.account_manager_id ? ` (user_id: ${client.account_manager_id})` : ''}`);
+            if (client.payment_terms) lines.push(`  payment_terms: ${client.payment_terms}`);
+            if (client.billing_cycle) lines.push(`  billing_cycle: ${client.billing_cycle}`);
+            if (client.tax_region) lines.push(`  tax_region: ${client.tax_region}`);
+            if (client.is_tax_exempt) lines.push(`  tax_exempt: true`);
+            if (client.credit_balance) lines.push(`  credit_balance: ${client.credit_balance}`);
+            if (client.notes) lines.push(`  notes: ${client.notes.slice(0, 300)}`);
+            if (client.tags?.length) {
+              lines.push(`  tags: ${client.tags.map((tag: any) => tag.tag_text || tag.tag_name || tag).join(', ')}`);
+            }
+            return lines.join('\n');
+          }
+          case 'contact': {
+            const contact = await getContactByContactNameId(mention.id);
+            if (!contact) return null;
+            const lines: string[] = [];
+            lines.push(`[Contact] ${contact.full_name}`);
+            lines.push(`  contact_name_id: ${contact.contact_name_id}`);
+            if (contact.email) lines.push(`  email: ${contact.email}`);
+            if (contact.role) lines.push(`  role: ${contact.role}`);
+            if (contact.client_id) lines.push(`  client_id: ${contact.client_id}`);
+            if ((contact as any).client_name) lines.push(`  client: ${(contact as any).client_name}`);
+            if (contact.phone_numbers?.length) {
+              const defaultPhone = contact.phone_numbers.find((p) => p.is_default) || contact.phone_numbers[0];
+              if (defaultPhone) lines.push(`  phone: ${defaultPhone.phone_number} (${defaultPhone.canonical_type || defaultPhone.custom_type || 'primary'})`);
+            }
+            if (contact.additional_email_addresses?.length) {
+              lines.push(`  additional_emails: ${contact.additional_email_addresses.map((e) => e.email_address).join(', ')}`);
+            }
+            lines.push(`  active: ${!contact.is_inactive}`);
+            if (contact.notes) lines.push(`  notes: ${contact.notes.slice(0, 300)}`);
+            if (contact.tags?.length) {
+              lines.push(`  tags: ${contact.tags.map((tag: any) => tag.tag_text || tag.tag_name || tag).join(', ')}`);
+            }
+            return lines.join('\n');
+          }
+          case 'project': {
+            const project = await getProject(mention.id);
+            if (!project || !('project_name' in project)) return null;
+            const p = project as any;
+            const lines: string[] = [];
+            lines.push(`[Project] ${project.project_name}`);
+            lines.push(`  project_id: ${project.project_id}`);
+            lines.push(`  project_number: ${project.project_number || 'none'}`);
+            lines.push(`  status: ${p.status_name || project.status || 'unknown'}${p.is_closed ? ' [CLOSED]' : ''}`);
+            if (project.client_id) lines.push(`  client_id: ${project.client_id}`);
+            if (p.client_name) lines.push(`  client: ${p.client_name}`);
+            if (project.description) lines.push(`  description: ${project.description.slice(0, 500)}`);
+            if (project.start_date) lines.push(`  start_date: ${project.start_date}`);
+            if (project.end_date) lines.push(`  end_date: ${project.end_date}`);
+            if (project.budgeted_hours) lines.push(`  budgeted_hours: ${project.budgeted_hours}`);
+            if (project.wbs_code) lines.push(`  wbs_code: ${project.wbs_code}`);
+            if (project.assigned_to) lines.push(`  assigned_to: ${project.assigned_to}`);
+            if (p.contact_name) lines.push(`  contact: ${p.contact_name}${p.contact_name_id ? ` (contact_name_id: ${p.contact_name_id})` : ''}`);
+            if (project.tags?.length) {
+              lines.push(`  tags: ${project.tags.map((tag: any) => tag.tag_text || tag.tag_name || tag).join(', ')}`);
+            }
+            return lines.join('\n');
+          }
+          case 'asset': {
+            const bundle = await getAssetDetailBundle(mention.id);
+            if (!bundle.asset) return null;
+            const asset = bundle.asset as any;
+            const lines: string[] = [];
+            lines.push(`[Asset] ${asset.name}${asset.asset_tag ? ` (${asset.asset_tag})` : ''}`);
+            lines.push(`  asset_id: ${asset.asset_id}`);
+            lines.push(`  type: ${asset.asset_type || 'unknown'}`);
+            lines.push(`  status: ${asset.status || 'unknown'}`);
+            if (asset.serial_number) lines.push(`  serial_number: ${asset.serial_number}`);
+            if (asset.client_id) lines.push(`  client_id: ${asset.client_id}`);
+            if (asset.client_name) lines.push(`  client: ${asset.client_name}`);
+            if (asset.location) lines.push(`  location: ${asset.location}`);
+            if (asset.manufacturer) lines.push(`  manufacturer: ${asset.manufacturer}`);
+            if (asset.model) lines.push(`  model: ${asset.model}`);
+            if (asset.purchase_date) lines.push(`  purchase_date: ${asset.purchase_date}`);
+            if (asset.warranty_end_date) lines.push(`  warranty_end_date: ${asset.warranty_end_date}`);
+            if (bundle.tickets?.length) {
+              lines.push(`  linked_tickets (${bundle.tickets.length}): ${bundle.tickets.slice(0, 5).map((t: any) => `#${t.ticket_number || t.ticket_id}`).join(', ')}${bundle.tickets.length > 5 ? '...' : ''}`);
+            }
+            if (bundle.maintenanceReport) {
+              const mr = bundle.maintenanceReport as any;
+              if (mr.total_maintenance_count) lines.push(`  total_maintenance_records: ${mr.total_maintenance_count}`);
+            }
+            return lines.join('\n');
+          }
+          case 'user': {
+            const u = await findUserById(mention.id);
+            if (!u) return null;
+            const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ').trim();
+            const lines: string[] = [];
+            lines.push(`[User] ${fullName || u.username || u.email}`);
+            lines.push(`  user_id: ${u.user_id}`);
+            lines.push(`  email: ${u.email || 'unknown'}`);
+            if (u.username) lines.push(`  username: ${u.username}`);
+            if (u.phone) lines.push(`  phone: ${u.phone}`);
+            if (u.user_type) lines.push(`  user_type: ${u.user_type}`);
+            lines.push(`  active: ${!u.is_inactive}`);
+            if (u.roles?.length) {
+              lines.push(`  roles: ${u.roles.map((r) => r.role_name).join(', ')}`);
+            }
+            if (u.timezone) lines.push(`  timezone: ${u.timezone}`);
+            if (u.reports_to) lines.push(`  reports_to: ${u.reports_to}`);
+            return lines.join('\n');
+          }
+          default:
+            return null;
+        }
+      }),
+    );
+
+    return results
+      .filter((r): r is PromiseFulfilledResult<string | null> => r.status === 'fulfilled')
+      .map((r) => r.value)
+      .filter((v): v is string => v !== null);
+  }
+
+  private static async buildPromptContext(uiContext?: ChatUiContext, mentions?: ChatMention[]): Promise<string | null> {
     const user = await getCurrentUser();
     if (!user || !user.user_id) {
       return null;
@@ -1619,6 +1836,22 @@ export class ChatCompletionsService {
       );
     }
 
+    if (mentions && mentions.length > 0) {
+      const entityLines = await this.resolveMentionedEntities(mentions);
+      if (entityLines.length > 0) {
+        lines.push('');
+        lines.push('IMPORTANT — The following entities were explicitly mentioned by the user via @mentions. Their full details have already been fetched and are provided below. DO NOT call any API endpoints to look up or re-fetch these entities. Use the data below directly in your response.');
+        lines.push('');
+        lines.push(...entityLines);
+        lines.push('');
+        lines.push('Rules for mentioned entities:');
+        lines.push('- You ALREADY HAVE all the data for these entities above. DO NOT call List Contacts, List Clients, or any search/list endpoint to find them again.');
+        lines.push('- The IDs provided (ticket_id, client_id, contact_name_id, project_id, asset_id, user_id) are real UUIDs. Use them directly if you need to perform actions (update, close, assign, etc.) via API calls.');
+        lines.push('- Only re-fetch an entity if the user explicitly asks for "latest", "refreshed", or "updated" data.');
+        lines.push('- For tickets with comments, consider the conversation history when answering questions about the ticket status, issues, or resolution.');
+      }
+    }
+
     return lines.join('\n');
   }
 
@@ -1634,7 +1867,7 @@ export class ChatCompletionsService {
         `Every assistant turn must contain exactly one function call: ${SEARCH_TOOL_NAME}, ${EXECUTE_TOOL_NAME}, or ${FINISH_TOOL_NAME}. ` +
         `Do not return plain assistant text without a function call. When you are ready to answer the user, call ${FINISH_TOOL_NAME} and put the final user-visible reply in ${FINISH_TOOL_NAME}.message. ` +
         'Always consult the enterprise API registry before executing actions so you understand every required parameter. ' +
-        'When the registry or endpoint descriptions mention prerequisite data (such as IDs for boards, clients, categories, priorities, or other related resources), proactively call the appropriate lookup endpoints to gather that information instead of asking the user. ' +
+        'When the registry or endpoint descriptions mention prerequisite data (such as IDs for boards, clients, categories, priorities, or other related resources): for write operations (create, update, delete), proactively call the appropriate lookup endpoints to gather that information instead of asking the user; for read operations (list, get), call the endpoint directly and only look up prerequisite data if the user explicitly asks to filter by it. ' +
         'For ticket-creation calls, first use search_api_registry to locate the list endpoints you need, gather current data (e.g. call GET /api/v1/tickets to sample board_id/status_id/priority_id combinations and GET /api/v1/clients to confirm client_id), and do not proceed until you have concrete UUIDs for board_id, client_id, status_id, and priority_id collected from prior API responses. When sampling GET /api/v1/tickets, pick the first record with non-null board_id, status_id, and priority_id and reuse those UUIDs unless the user specifies different values. ' +
         'Never invent field names for a fields query parameter. Only send fields values that are explicitly documented in the registry description, parameters, or examples for that exact endpoint. If the registry does not enumerate exact field names, omit fields entirely. For GET /api/v1/tickets specifically, the only valid fields values are ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, and mobile_list. Do not use aliases like id, subject, status, priority, client, created_at, or description. ' +
         'When you only need discovery data, prefer list endpoints with small limits and explicit fields instead of full payloads. Once you have a resource ID, prefer the detail endpoint over repeatedly expanding list responses. ' +
@@ -1642,6 +1875,7 @@ export class ChatCompletionsService {
         'Clearly explain the plan before each tool call, execute the necessary lookup calls to satisfy all requirements, then call the target endpoint once the inputs are ready. ' +
         'Use the documented request schemas exactly as written—populate *_id fields with the UUIDs you retrieved (never human-friendly names), and skip optional fields when you do not have authoritative values. ' +
         'Never include properties that are not defined for the selected endpoint; if the user mentions data that cannot be expressed with the documented schema (for example a project name when the ticket create payload does not accept project_id), acknowledge it in the natural-language response but leave it out of the API request. ' +
+        'When reading ticket comments, always pass content_format=markdown as a query parameter. This returns compact responses with only markdown_content (readable text) and metadata, instead of the large BlockNote JSON in comment_text. Never use field_ranges on comment_text — use content_format=markdown instead. ' +
         'When handling documents, do not assume null file_id means empty content; in-app documents may store content in document_block_content or document_content. Call GET /api/documents/{documentId}/content to retrieve readable content before concluding the document has no data. ' +
         'Do not create or modify unrelated master data (such as categories, boards, or projects) unless the user explicitly asks for that; prefer reusing existing records you just looked up. ' +
         'When users ask questions that could be answered by internal documentation (e.g. how-to questions, troubleshooting, process questions), proactively search the knowledge base using GET /api/v1/kb-articles with a relevant search query. If matching articles are found, read their content with GET /api/v1/kb-articles/{id}/content and use that information in your response. When creating KB articles from resolved tickets, use POST /api/v1/kb-articles/from-ticket/{ticketId} and then review the generated content. ' +

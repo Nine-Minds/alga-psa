@@ -1,4 +1,5 @@
 import { logger, redact } from "../logging/logger";
+import { captureException } from "./sentry";
 
 function omitHttpBodies(value: unknown, depth: number = 0): unknown {
   if (depth > 6) return "[omitted]";
@@ -47,6 +48,7 @@ export function buildErrorReportPayload(error: unknown, context?: Record<string,
 
 export function reportError(error: unknown, context?: Record<string, unknown>) {
   logger.error("app.error", redact(buildErrorReportPayload(error, context)));
+  captureException(error, context);
 }
 
 export function installGlobalErrorHandler() {

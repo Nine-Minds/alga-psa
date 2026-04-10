@@ -106,10 +106,17 @@ spec:
           args:
             - |
               if [ "${SETUP_RUN_SEEDS}" = "true" ]; then
-                echo "Waiting for bootstrap seeds to create initial data..."
-                until PGPASSWORD="${DB_PASSWORD_ADMIN}" psql -h "${DB_HOST_ADMIN}" -p "${DB_PORT_ADMIN}" -U "${DB_USER_ADMIN}" -d "${DB_NAME_SERVER}" -Atqc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);" 2>/dev/null | grep -q '^t$'; do
-                  sleep 2
-                done
+                if [ "${APPLIANCE_BOOTSTRAP_ENABLED}" = "true" ]; then
+                  echo "Waiting for appliance bootstrap migrations to finish..."
+                  until PGPASSWORD="${DB_PASSWORD_ADMIN}" psql -h "${DB_HOST_ADMIN}" -p "${DB_PORT_ADMIN}" -U "${DB_USER_ADMIN}" -d "${DB_NAME_SERVER}" -Atqc "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users');" 2>/dev/null | grep -q '^t$'; do
+                    sleep 2
+                  done
+                else
+                  echo "Waiting for bootstrap seeds to create initial data..."
+                  until PGPASSWORD="${DB_PASSWORD_ADMIN}" psql -h "${DB_HOST_ADMIN}" -p "${DB_PORT_ADMIN}" -U "${DB_USER_ADMIN}" -d "${DB_NAME_SERVER}" -Atqc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);" 2>/dev/null | grep -q '^t$'; do
+                    sleep 2
+                  done
+                fi
               elif [ "${SETUP_RUN_MIGRATIONS}" = "true" ]; then
                 echo "Waiting for bootstrap job to create application databases..."
                 until PGPASSWORD="${DB_PASSWORD_ADMIN}" psql -h "${DB_HOST_ADMIN}" -p "${DB_PORT_ADMIN}" -U "${DB_USER_ADMIN}" -d postgres -Atqc "SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname='${DB_NAME_SERVER}');" 2>/dev/null | grep -q '^t$'; do
@@ -123,6 +130,8 @@ spec:
               value: {{ ternary "true" "false" .Values.setup.runSeeds | quote }}
             - name: DB_NAME_SERVER
               value: "server"
+            - name: APPLIANCE_BOOTSTRAP_ENABLED
+              value: {{ ternary "true" "false" .Values.setup.applianceBootstrap.enabled | quote }}
             - name: DB_USER_ADMIN
               value: "postgres"
             {{- if .Values.db.enabled }}

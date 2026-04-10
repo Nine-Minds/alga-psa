@@ -5,6 +5,614 @@ import { ChatApiRegistryEntry } from './apiRegistry.schema';
 
 export const chatApiRegistry: ChatApiRegistryEntry[] = [
   {
+    "id": "get-_api_v1_boards",
+    "method": "get",
+    "path": "/api/v1/boards",
+    "displayName": "List Boards",
+    "summary": "Fetch ticket boards",
+    "description": "Returns paginated board records for the current tenant. Use this to discover valid board_id values before creating tickets or statuses. Each board has its own set of statuses, categories, and priorities.",
+    "tags": [
+      "Boards"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Case-insensitive search on board name or description.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "include_inactive",
+        "in": "query",
+        "required": false,
+        "description": "When true, include inactive boards (excluded by default).",
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Number of records per page (default 25, max 100).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Pagination page number starting at 1.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/BoardApiResponse"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "List active boards",
+        "request": {
+          "query": {
+            "limit": 10
+          }
+        },
+        "notes": "Use the board_id from the response when creating tickets or querying statuses. The first active board is a safe default if the user does not specify a board."
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_boards",
+    "method": "post",
+    "path": "/api/v1/boards",
+    "displayName": "Create Board",
+    "summary": "Create a new ticket board",
+    "description": "Creates a new board. After creating a board, create at least one status for it via POST /api/v1/statuses so tickets can be assigned to the board.",
+    "tags": [
+      "Boards"
+    ],
+    "approvalRequired": true,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "board_name": {
+          "type": "string",
+          "description": "Board display name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional board description."
+        },
+        "is_default": {
+          "type": "boolean",
+          "description": "Whether this is the default board."
+        },
+        "is_inactive": {
+          "type": "boolean",
+          "description": "Whether the board is inactive."
+        },
+        "category_type": {
+          "type": "string",
+          "enum": [
+            "custom",
+            "itil"
+          ],
+          "description": "Category classification type."
+        },
+        "priority_type": {
+          "type": "string",
+          "enum": [
+            "custom",
+            "itil"
+          ],
+          "description": "Priority classification type."
+        }
+      },
+      "required": [
+        "board_name"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/BoardApiResponse"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Create a new board",
+        "request": {
+          "body": {
+            "board_name": "Support",
+            "description": "General support board"
+          }
+        },
+        "notes": "After creating, add statuses via POST /api/v1/statuses with the new board_id and status_type 'ticket'."
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_boards_id",
+    "method": "get",
+    "path": "/api/v1/boards/{id}",
+    "displayName": "Get Board",
+    "summary": "Get board by ID",
+    "description": "Returns a single board record by its UUID.",
+    "tags": [
+      "Boards"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Board identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/BoardApiResponse"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_boards_id",
+    "method": "put",
+    "path": "/api/v1/boards/{id}",
+    "displayName": "Update Board",
+    "summary": "Update a board",
+    "description": "Updates an existing board. All fields are optional — only send the fields you want to change.",
+    "tags": [
+      "Boards"
+    ],
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Board identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "board_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "is_default": {
+          "type": "boolean"
+        },
+        "is_inactive": {
+          "type": "boolean"
+        },
+        "category_type": {
+          "type": "string",
+          "enum": [
+            "custom",
+            "itil"
+          ]
+        },
+        "priority_type": {
+          "type": "string",
+          "enum": [
+            "custom",
+            "itil"
+          ]
+        },
+        "default_assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "display_itil_impact": {
+          "type": "boolean"
+        },
+        "display_itil_urgency": {
+          "type": "boolean"
+        },
+        "enable_live_ticket_timer": {
+          "type": "boolean"
+        }
+      },
+      "description": "Payload for updating a board. All fields are optional."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/BoardApiResponse"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_boards_id",
+    "method": "delete",
+    "path": "/api/v1/boards/{id}",
+    "displayName": "Delete board",
+    "summary": "Delete board",
+    "description": "Deletes a board by its UUID. This will fail if the board has associated tickets.",
+    "tags": [
+      "Boards"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Board UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Board UUID."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_statuses",
+    "method": "get",
+    "path": "/api/v1/statuses",
+    "displayName": "List Statuses",
+    "summary": "Fetch statuses",
+    "description": "Returns paginated status records. For ticket statuses, always filter by board_id to get statuses that belong to a specific board. Use this to resolve a valid status_id before creating or updating tickets.",
+    "tags": [
+      "Statuses"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "type",
+        "in": "query",
+        "required": false,
+        "description": "Filter by status type: ticket, project, project_task, or interaction.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project",
+            "project_task",
+            "interaction"
+          ]
+        }
+      },
+      {
+        "name": "board_id",
+        "in": "query",
+        "required": false,
+        "description": "Required when type=ticket. Filter statuses belonging to a specific board.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Case-insensitive search on status name.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Number of records per page (default 25, max 100).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Pagination page number starting at 1.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/StatusApiResponse"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "List ticket statuses for a board",
+        "request": {
+          "query": {
+            "type": "ticket",
+            "board_id": "11111111-1111-1111-1111-111111111111",
+            "limit": 25
+          }
+        },
+        "notes": "Always pair type=ticket with board_id. Use the status_id from results when creating tickets — the status_id must belong to the same board_id used on the ticket."
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_statuses",
+    "method": "post",
+    "path": "/api/v1/statuses",
+    "displayName": "Create Status",
+    "summary": "Create a new status",
+    "description": "Creates a new status. For ticket statuses, board_id is required. The status_type must be one of: ticket, project, project_task, interaction.",
+    "tags": [
+      "Statuses"
+    ],
+    "approvalRequired": true,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Status display name."
+        },
+        "status_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project",
+            "project_task",
+            "interaction"
+          ],
+          "description": "Type of entity this status applies to."
+        },
+        "board_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required for ticket statuses. The board this status belongs to."
+        },
+        "is_closed": {
+          "type": "boolean",
+          "description": "Whether this status represents a closed state."
+        },
+        "is_default": {
+          "type": "boolean",
+          "description": "Whether this is the default status for the board."
+        },
+        "order_number": {
+          "type": "integer",
+          "description": "Display order position."
+        },
+        "color": {
+          "type": "string",
+          "description": "Hex color code (e.g. #3B82F6)."
+        },
+        "icon": {
+          "type": "string",
+          "description": "Lucide icon name (e.g. Clipboard, PlayCircle)."
+        }
+      },
+      "required": [
+        "name",
+        "status_type"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/StatusApiResponse"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Create a ticket status for a board",
+        "request": {
+          "body": {
+            "name": "In Progress",
+            "status_type": "ticket",
+            "board_id": "11111111-1111-1111-1111-111111111111",
+            "is_closed": false,
+            "color": "#3B82F6"
+          }
+        },
+        "notes": "Use GET /api/v1/boards first to resolve the board_id. The board_id is required for ticket statuses."
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_statuses_id",
+    "method": "get",
+    "path": "/api/v1/statuses/{id}",
+    "displayName": "Get status by ID",
+    "summary": "Get status by ID",
+    "description": "Returns a single status by its UUID.",
+    "tags": [
+      "Statuses"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Status UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Status UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/StatusApiResponse"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_statuses_id",
+    "method": "put",
+    "path": "/api/v1/statuses/{id}",
+    "displayName": "Update Status",
+    "summary": "Update a status",
+    "description": "Updates an existing status. All fields are optional — only send the fields you want to change. Cannot change status_type or board_id after creation.",
+    "tags": [
+      "Statuses"
+    ],
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Status identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "is_closed": {
+          "type": "boolean"
+        },
+        "is_default": {
+          "type": "boolean"
+        },
+        "order_number": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$"
+        },
+        "icon": {
+          "type": "string",
+          "maxLength": 50
+        }
+      },
+      "description": "Payload for updating a status. All fields are optional."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/StatusApiResponse"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_statuses_id",
+    "method": "delete",
+    "path": "/api/v1/statuses/{id}",
+    "displayName": "Delete status",
+    "summary": "Delete status",
+    "description": "Deletes a status by its UUID. Cannot delete the last default status for a board.",
+    "tags": [
+      "Statuses"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Status UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Status UUID."
+        }
+      }
+    ]
+  },
+  {
     "id": "get-_api_v1_categories_service",
     "method": "get",
     "path": "/api/v1/categories/service",
@@ -10538,7 +11146,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets",
     "displayName": "List Tickets",
     "summary": "List tickets",
-    "description": "Returns a paginated list of tickets for the current tenant. Use this both for reporting and to sample existing board_id, status_id, priority_id, and assigned_to values before creating a new ticket. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
+    "description": "Returns a paginated list of tickets for the current tenant. Use GET /api/v1/boards and GET /api/v1/statuses for board/status lookups instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
     "tags": [
       "tickets"
     ],
@@ -10738,7 +11346,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets",
     "displayName": "Create Ticket",
     "summary": "Create a new ticket",
-    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls.",
+    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls. IMPORTANT: status_id must belong to the same board as board_id — use GET /api/v1/statuses?type=ticket&board_id=... to discover valid statuses for the chosen board.",
     "tags": [
       "tickets"
     ],
@@ -10755,7 +11363,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "board_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Ticket board identifier. If you do not already know an active board_id, call GET /api/v1/tickets?limit=5 to sample existing tickets and reuse a board_id that is valid for this tenant. Always provide the UUID, never the board name, slug, or display label."
+          "description": "Ticket board identifier. Call GET /api/v1/boards to list available boards and pick a valid board_id. Always provide the UUID, never the board name, slug, or display label."
         },
         "client_id": {
           "type": "string",
@@ -10765,12 +11373,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "status_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Initial ticket status identifier. Sample existing tickets via GET /api/v1/tickets?limit=5 to collect a valid status_id and send that UUID (do not send a status label like \"Open\" or a field named \"status\")."
+          "description": "Initial ticket status identifier. Call GET /api/v1/statuses?type=ticket&board_id=... to list valid statuses for the chosen board. The status_id MUST belong to the same board as board_id. Do not send a status label like \"Open\" or a field named \"status\"."
         },
         "priority_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Ticket priority identifier. Sample existing tickets with GET /api/v1/tickets?limit=5 to obtain a valid priority_id and include the UUID (never send fields named \"priority\" or the textual priority name)."
+          "description": "Ticket priority identifier. Use GET /api/v1/priorities or sample existing tickets to obtain a valid priority_id. Always include the UUID (never send fields named \"priority\" or the textual priority name)."
         },
         "contact_name_id": {
           "type": "string",
@@ -10892,7 +11500,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "contact_name_id": "55555555-5555-5555-5555-555555555555"
           }
         },
-        "notes": "Before calling this endpoint, resolve every referenced identifier by invoking the appropriate lookup APIs. For example, call GET /api/v1/clients to choose client_id, GET /api/v1/contacts?client_id=... for contact_name_id, GET /api/v1/clients/{client_id}/locations for location_id, GET /api/v1/categories/ticket for category/subcategory options, GET /api/v1/users to select the assignee, GET /api/v1/tags to reuse tag names, and GET /api/v1/tickets?limit=5 to sample valid board_id, status_id, and priority_id values already in use. Always send the UUID fields exactly as documented—do not substitute human-readable names such as \"High\" or \"In Progress,\" and do not introduce extra fields that are not part of this schema (e.g., project_id or priority). If the user supplies labels, translate them to *_id values and omit the original textual fields. When sampling tickets for IDs, it is acceptable to reuse the first ticket record that contains non-null values for board_id, status_id, and priority_id."
+        "notes": "Before calling this endpoint, resolve every referenced identifier by invoking the appropriate lookup APIs: GET /api/v1/boards to choose board_id, GET /api/v1/statuses?type=ticket&board_id=... to choose a status_id that belongs to that board, GET /api/v1/clients to choose client_id, GET /api/v1/contacts?client_id=... for contact_name_id, GET /api/v1/clients/{client_id}/locations for location_id, GET /api/v1/categories/ticket for category/subcategory options, GET /api/v1/users to select the assignee, and GET /api/v1/tags to reuse tag names. CRITICAL: status_id must belong to the same board as board_id — mismatched values will be rejected with a 400 error. Always send UUID fields exactly as documented — do not substitute human-readable names such as \"High\" or \"In Progress,\" and do not introduce extra fields that are not part of this schema."
       }
     ]
   },
@@ -11097,7 +11705,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/comments",
     "displayName": "Get Ticket Comments",
     "summary": "List comments for a ticket",
-    "description": "Returns the comments attached to a ticket. Use small limits and field-scoped byte ranges when comment bodies are large.",
+    "description": "Returns the comments attached to a ticket. Always use content_format=markdown to get compact readable responses. Only omit content_format when the caller needs the raw BlockNote JSON.",
     "tags": [
       "tickets"
     ],
@@ -11149,10 +11757,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "content_format",
+        "in": "query",
+        "required": false,
+        "description": "Set to 'markdown' to return compact responses with only markdown_content (readable text) and metadata. Omit or set to 'full' for the complete response with comment_text (raw BlockNote JSON), comment_html, avatars, and reactions. Always use 'markdown' unless the raw format is specifically needed.",
+        "schema": {
+          "type": "string",
+          "enum": ["full", "markdown"]
+        }
+      },
+      {
         "name": "field_ranges[comment_text]",
         "in": "query",
         "required": false,
-        "description": "Optional UTF-8 byte range for comment_text, formatted as start-end (for example 0-4095). Use meta.truncated_fields to continue fetching long comments.",
+        "description": "Deprecated — use content_format=markdown instead. Optional UTF-8 byte range for comment_text.",
         "schema": {
           "type": "string",
           "pattern": "^\\d+-\\d+$"
@@ -11162,7 +11780,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "field_ranges[comment_html]",
         "in": "query",
         "required": false,
-        "description": "Optional UTF-8 byte range for comment_html, formatted as start-end (for example 0-4095).",
+        "description": "Deprecated — use content_format=markdown instead. Optional UTF-8 byte range for comment_html.",
         "schema": {
           "type": "string",
           "pattern": "^\\d+-\\d+$"
@@ -11175,18 +11793,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     },
     "examples": [
       {
-        "name": "Read recent comments with ranged comment text",
+        "name": "Read recent comments as markdown",
         "request": {
           "params": {
             "id": "11111111-1111-1111-1111-111111111111"
           },
           "query": {
-            "limit": 5,
+            "limit": 10,
             "order": "desc",
-            "field_ranges[comment_text]": "0-4095"
+            "content_format": "markdown"
           }
         },
-        "notes": "Prefer this endpoint over large ticket list payloads when the user asks for comment history or long comment bodies."
+        "notes": "Always use content_format=markdown for readable, compact comment responses."
       }
     ]
   },
@@ -14880,164 +15498,488 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "post-_api_extbundles_abort",
-    "method": "post",
-    "path": "/api/ext-bundles/abort",
-    "displayName": "POST ext-bundles",
-    "summary": "POST ext-bundles",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-bundles"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_extbundles_finalize",
-    "method": "post",
-    "path": "/api/ext-bundles/finalize",
-    "displayName": "POST ext-bundles",
-    "summary": "POST ext-bundles",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-bundles"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_extbundles_uploadproxy",
-    "method": "post",
-    "path": "/api/ext-bundles/upload-proxy",
-    "displayName": "POST ext-bundles",
-    "summary": "POST ext-bundles",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-bundles"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_extensions_installinfo",
+    "id": "get-_api_v1_storage_namespaces_namespace_records",
     "method": "get",
-    "path": "/api/extensions/install-info",
-    "displayName": "GET extensions",
-    "summary": "GET extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "path": "/api/v1/storage/namespaces/{namespace}/records",
+    "displayName": "List records in a namespace",
+    "summary": "List records in a namespace",
     "tags": [
-      "extensions"
+      "Storage"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "namespace",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "keyPrefix",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "maxLength": 256
+        }
+      },
+      {
+        "name": "includeValues",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      {
+        "name": "includeMetadata",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
-    }
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/StorageListItem"
+          }
+        },
+        "nextCursor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "nextCursor"
+      ]
+    },
+    "playbooks": [
+      "storage/list-namespace"
+    ],
+    "examples": [
+      {
+        "name": "List records with prefix filter",
+        "request": {
+          "params": {
+            "namespace": "integrations:zendesk"
+          },
+          "query": {
+            "prefix": "tickets/"
+          }
+        }
+      }
+    ]
   },
   {
-    "id": "get-_api_extensions_registrydbcheck",
+    "id": "post-_api_v1_storage_namespaces_namespace_records",
+    "method": "post",
+    "path": "/api/v1/storage/namespaces/{namespace}/records",
+    "displayName": "Bulk insert or update records",
+    "summary": "Bulk insert or update records",
+    "tags": [
+      "Storage"
+    ],
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "namespace",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "value": {},
+              "metadata": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "ttlSeconds": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "ifRevision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "schemaVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "key"
+            ]
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "items"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "ttlExpiresAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "key",
+              "revision",
+              "ttlExpiresAt"
+            ]
+          }
+        }
+      },
+      "required": [
+        "namespace",
+        "items"
+      ]
+    },
+    "playbooks": [
+      "storage/bulk-upsert-records"
+    ],
+    "examples": [
+      {
+        "name": "Bulk upsert configuration values",
+        "request": {
+          "params": {
+            "namespace": "automation:workflow"
+          },
+          "body": {
+            "records": [
+              {
+                "key": "webhook/url",
+                "value": "https://hooks.example.com/inbound",
+                "contentType": "text/plain"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_storage_namespaces_namespace_records_key",
     "method": "get",
-    "path": "/api/extensions/registry-db-check",
-    "displayName": "GET extensions",
-    "summary": "GET extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "path": "/api/v1/storage/namespaces/{namespace}/records/{key}",
+    "displayName": "Get a record by key",
+    "summary": "Get a record by key",
     "tags": [
-      "extensions"
+      "Storage"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "namespace",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      {
+        "name": "key",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      {
+        "name": "if-revision-match",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
-    }
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "value": {},
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "ttlExpiresAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "namespace",
+        "key",
+        "revision",
+        "metadata",
+        "ttlExpiresAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "playbooks": [
+      "storage/get-record"
+    ],
+    "examples": [
+      {
+        "name": "Retrieve a workflow record",
+        "request": {
+          "params": {
+            "namespace": "automation:workflow",
+            "key": "webhook/url"
+          }
+        }
+      }
+    ]
   },
   {
-    "id": "post-_api_extensions_reprovision",
-    "method": "post",
-    "path": "/api/extensions/reprovision",
-    "displayName": "POST extensions",
-    "summary": "POST extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "id": "put-_api_v1_storage_namespaces_namespace_records_key",
+    "method": "put",
+    "path": "/api/v1/storage/namespaces/{namespace}/records/{key}",
+    "displayName": "Create or update a record by key",
+    "summary": "Create or update a record by key",
     "tags": [
-      "extensions"
+      "Storage"
     ],
-    "approvalRequired": false,
-    "parameters": [],
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "namespace",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      {
+        "name": "key",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {
+        "value": {},
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "ttlSeconds": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "ifRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "schemaVersion": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
-    }
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "ttlExpiresAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "namespace",
+        "key",
+        "revision",
+        "ttlExpiresAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "playbooks": [
+      "storage/put-record"
+    ],
+    "examples": [
+      {
+        "name": "Set workflow webhook URL",
+        "request": {
+          "params": {
+            "namespace": "automation:workflow",
+            "key": "webhook/url"
+          },
+          "body": {
+            "value": "https://hooks.example.com/inbound",
+            "contentType": "text/plain"
+          }
+        }
+      }
+    ]
   },
   {
-    "id": "post-_api_provisioning_tenants",
-    "method": "post",
-    "path": "/api/provisioning/tenants",
-    "displayName": "POST provisioning",
-    "summary": "POST provisioning",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "id": "delete-_api_v1_storage_namespaces_namespace_records_key",
+    "method": "delete",
+    "path": "/api/v1/storage/namespaces/{namespace}/records/{key}",
+    "displayName": "Delete a record by key",
+    "summary": "Delete a record by key",
     "tags": [
-      "provisioning"
+      "Storage"
     ],
     "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_auth_verify",
-    "method": "post",
-    "path": "/api/v1/auth/verify",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
+    "parameters": [
+      {
+        "name": "namespace",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      {
+        "name": "key",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      {
+        "name": "ifRevision",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    ]
   }
 ];
 

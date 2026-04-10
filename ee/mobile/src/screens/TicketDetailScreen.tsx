@@ -30,6 +30,7 @@ import { useTicketWatch } from "../features/ticketDetail/hooks/useTicketWatch";
 import { useTimeEntry } from "../features/ticketDetail/hooks/useTimeEntry";
 import { useTicketAssignment } from "../features/ticketDetail/hooks/useTicketAssignment";
 import { useTicketTitle } from "../features/ticketDetail/hooks/useTicketTitle";
+import { useTicketContact } from "../features/ticketDetail/hooks/useTicketContact";
 import { useTicketQa } from "../features/ticketDetail/hooks/useTicketQa";
 
 // Components
@@ -41,6 +42,7 @@ import { TimeEntryModal } from "../features/ticketDetail/components/TimeEntryMod
 import { PriorityPickerModal } from "../features/ticketDetail/components/PriorityPickerModal";
 import { StatusPickerModal } from "../features/ticketDetail/components/StatusPickerModal";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
+import { ContactPickerModal } from "../features/ticketDetail/components/ContactPickerModal";
 
 // Utils
 import { getDueDateIso, getWatcherUserIds, isoToDateInput, stringOrDash } from "../features/ticketDetail/utils";
@@ -179,6 +181,7 @@ export function TicketDetailBody({
   const watchHook = useTicketWatch({ ...deps, ticket, fetchTicket });
   const timeEntryHook = useTimeEntry(deps);
   const assignmentHook = useTicketAssignment({ ...deps, fetchTicket });
+  const contactHook = useTicketContact({ ...deps, fetchTicket });
   const titleHook = useTicketTitle({ ...deps, ticket, setTicket: ticketData.setTicket });
   const qaHook = useTicketQa({
     qaScenario,
@@ -492,6 +495,25 @@ export function TicketDetailBody({
                 </Text>
               </Pressable>
             ) : null}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
+              <ActionChip
+                label={t("detail.changeContact")}
+                disabled={contactHook.contactUpdating}
+                onPress={contactHook.openContactPicker}
+              />
+              {ticket.contact_name ? (
+                <ActionChip
+                  label={t("detail.removeContact")}
+                  disabled={contactHook.contactUpdating}
+                  onPress={() => { void contactHook.removeContact(); }}
+                />
+              ) : null}
+            </View>
+            {contactHook.contactError ? (
+              <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+                {contactHook.contactError}
+              </Text>
+            ) : null}
           </KeyValue>
           <View style={{ height: spacing.sm }} />
           <KeyValue
@@ -632,8 +654,6 @@ export function TicketDetailBody({
           <KeyValue label={t("detail.due")} value={formatDateTimeWithRelative(getDueDateIso(ticket))} />
           <View style={{ height: spacing.sm }} />
           <KeyValue label={t("detail.closed")} value={formatDateTimeWithRelative(ticket.closed_at)} />
-          <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.ticketId")} value={ticket.ticket_id} />
         </View>
       </ScrollView>
 
@@ -700,6 +720,20 @@ export function TicketDetailBody({
         onSelect={(userId) => { void assignmentHook.assignToUser(userId); }}
         onUnassign={() => { void assignmentHook.unassign(); assignmentHook.closeAgentPicker(); }}
         onClose={assignmentHook.closeAgentPicker}
+        client={client}
+        apiKey={session?.accessToken ?? ""}
+        baseUrl={config.ok ? config.baseUrl : null}
+      />
+
+      <ContactPickerModal
+        visible={contactHook.contactPickerOpen}
+        updating={contactHook.contactUpdating}
+        updateError={contactHook.contactError}
+        currentContactName={ticket.contact_name}
+        clientId={(ticket as Record<string, unknown>).client_id as string | null | undefined}
+        onSelect={(contactNameId) => { void contactHook.selectContact(contactNameId); }}
+        onRemove={() => { void contactHook.removeContact(); }}
+        onClose={contactHook.closeContactPicker}
         client={client}
         apiKey={session?.accessToken ?? ""}
         baseUrl={config.ok ? config.baseUrl : null}

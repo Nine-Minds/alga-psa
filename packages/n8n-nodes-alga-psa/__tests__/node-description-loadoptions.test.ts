@@ -170,6 +170,9 @@ describe('Node description and load options', () => {
 
     expect(additionalNames).toEqual([
       'email',
+      'primary_email_canonical_type',
+      'primary_email_custom_type',
+      'additional_email_addresses',
       'client_id',
       'role',
       'notes',
@@ -186,6 +189,9 @@ describe('Node description and load options', () => {
     expect(additionalNames).toEqual([
       'full_name',
       'email',
+      'primary_email_canonical_type',
+      'primary_email_custom_type',
+      'additional_email_addresses',
       'client_id',
       'role',
       'notes',

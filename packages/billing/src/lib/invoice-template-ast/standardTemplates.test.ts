@@ -28,6 +28,9 @@ describe('standard invoice template AST definitions', () => {
       tenantClientLogo: { path: 'tenantClient.logoUrl' },
       tenantClientAddress: { path: 'tenantClient.address' },
       customerAddress: { path: 'customer.address' },
+      recurringServicePeriodStart: { path: 'recurringServicePeriodStart' },
+      recurringServicePeriodEnd: { path: 'recurringServicePeriodEnd' },
+      recurringServicePeriodLabel: { path: 'recurringServicePeriodLabel' },
     });
 
     const serializedLayout = JSON.stringify(detailedAst?.layout);

@@ -2,20 +2,20 @@
   "configuration": {
     "loading": "11111",
     "feedback": {
-      "testingConnection": "11111",
-      "connectionSuccess": "11111",
+      "testingConnection": "11111 {{providerName}} 11111",
+      "connectionSuccess": "11111 {{providerName}} 11111",
       "connectionError": "11111",
       "refreshWatchError": "11111",
       "renewalError": "11111",
       "initiateOauthError": "11111",
-      "resyncing": "11111",
+      "resyncing": "11111 {{providerName}} 11111",
       "resyncError": "11111",
-      "resyncStarted": "11111",
+      "resyncStarted": "11111 {{providerName}} 11111",
       "enterpriseOnly": "11111"
     },
     "editDrawer": {
       "title": "11111",
-      "description": "11111"
+      "description": "11111 {{providerName}} 11111"
     },
     "header": {
       "title": "11111",
@@ -24,8 +24,8 @@
         "standard": "11111"
       },
       "counts": {
-        "enterprise": "11111",
-        "standard": "11111"
+        "enterprise": "11111 {{gmail}} 11111 {{microsoft}} 11111 {{imap}} 11111",
+        "standard": "11111 {{gmail}} 11111 {{imap}} 11111"
       }
     },
     "actions": {
@@ -65,7 +65,7 @@
   },
   "list": {
     "header": {
-      "title": "11111"
+      "title": "11111 {{count}} 11111"
     },
     "filters": {
       "searchPlaceholder": "11111",
@@ -126,7 +126,7 @@
   "wizard": {
     "title": {
       "select": "11111",
-      "setup": "11111"
+      "setup": "11111 {{provider}} 11111"
     },
     "actions": {
       "cancel": "11111",
@@ -137,8 +137,8 @@
   "providerCard": {
     "subscription": {
       "expired": "11111",
-      "expiresInHours": "11111",
-      "expiresInDays": "11111"
+      "expiresInHours": "11111 {{count}} 11111",
+      "expiresInDays": "11111 {{count}} 11111"
     },
     "badges": {
       "disabled": "11111",
@@ -151,9 +151,9 @@
     "lastSync": {
       "never": "11111",
       "justNow": "11111",
-      "minutesAgo": "11111",
-      "hoursAgo": "11111",
-      "daysAgo": "11111"
+      "minutesAgo": "11111 {{count}} 11111",
+      "hoursAgo": "11111 {{count}} 11111",
+      "daysAgo": "11111 {{count}} 11111"
     },
     "actions": {
       "edit": "11111",
@@ -187,8 +187,8 @@
       "imap": "11111"
     },
     "filters": {
-      "folders": "11111",
-      "labels": "11111"
+      "folders": "11111 {{filters}} 11111",
+      "labels": "11111 {{filters}} 11111"
     },
     "warnings": {
       "inboundDefaults": "11111"
@@ -290,7 +290,7 @@
         "popupFailed": "11111"
       },
       "messages": {
-        "setupIncomplete": "11111",
+        "setupIncomplete": "11111 {{error}} 11111",
         "warningsTitle": "11111",
         "settingUp": "11111"
       },

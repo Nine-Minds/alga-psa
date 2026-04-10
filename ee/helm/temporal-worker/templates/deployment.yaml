@@ -188,6 +188,21 @@ spec:
                 secretKeyRef:
                   name: {{ include "temporal-worker.fullname" . }}-secrets
                   key: ALGA_AUTH_KEY
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.auth.nextauthSecretSecret.name }}
+                  name: {{ .Values.auth.nextauthSecretSecret.name }}
+                  key: {{ .Values.auth.nextauthSecretSecret.key | default "NEXTAUTH_SECRET" }}
+                  {{- else }}
+                  name: {{ include "temporal-worker.fullname" . }}-secrets
+                  key: NEXTAUTH_SECRET
+                  {{- end }}
+            {{- end }}
+
+            {{- if .Values.portalDomain.baseVirtualService }}
+            - name: PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE
+              value: {{ .Values.portalDomain.baseVirtualService | quote }}
             {{- end }}
             
             # NM Store callback configuration

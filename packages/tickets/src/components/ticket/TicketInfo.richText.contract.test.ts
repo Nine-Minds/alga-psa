@@ -31,6 +31,7 @@ describe('TicketInfo rich-text description contract', () => {
     expect(source).toContain('isOpen={descriptionUploadSession.showDraftCancelDialog}');
     expect(source).toContain('onConfirm={descriptionUploadSession.deleteTrackedDraftClipboardImages}');
     expect(source).toContain('onCancel={descriptionUploadSession.keepDraftClipboardImages}');
-    expect(source).toContain('thirdButtonLabel="Keep Images"');
+    expect(source).toContain("thirdButtonLabel={t('conversation.keepUploadedImages', 'Keep Images')}");
+    expect(source).toContain("message={t('info.clipboardDraftMessage', 'This description includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?')}");
   });
 });

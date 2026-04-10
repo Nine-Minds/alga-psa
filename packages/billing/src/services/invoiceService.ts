@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType } from '@alga-psa/types'; // Renamed for clarity
-import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType } from '@alga-psa/types'; // Added import
+import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily } from '@alga-psa/types'; // Added import
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
@@ -66,7 +66,8 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
   invoiceChargeId: string;
   invoiceChargeDetailId: string;
   configId?: string | null;
-  chargeFamily: 'fixed' | 'product' | 'license';
+  contractLineId?: string | null;
+  chargeFamily: RecurringChargeFamily;
   servicePeriodStart?: string | null;
   servicePeriodEnd?: string | null;
   billingTiming?: 'arrears' | 'advance' | null;
@@ -80,6 +81,7 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     invoiceChargeId,
     invoiceChargeDetailId,
     configId,
+    contractLineId,
     chargeFamily,
     servicePeriodStart,
     servicePeriodEnd,
@@ -87,7 +89,7 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     linkedAt,
   } = params;
 
-  if (!configId || !servicePeriodStart || !servicePeriodEnd || !billingTiming) {
+  if ((!configId && !contractLineId) || !servicePeriodStart || !servicePeriodEnd || !billingTiming) {
     return 0;
   }
 
@@ -112,21 +114,26 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     return 0;
   }
 
-  const configBuilder = tx('contract_line_service_configuration') as any;
-  if (!configBuilder || typeof configBuilder.where !== 'function') {
-    return 0;
+  let resolvedContractLineId = contractLineId ?? null;
+  if (!resolvedContractLineId && configId) {
+    const configBuilder = tx('contract_line_service_configuration') as any;
+    if (!configBuilder || typeof configBuilder.where !== 'function') {
+      return 0;
+    }
+
+    const configRow = await configBuilder
+      .where({ tenant, config_id: configId })
+      .first('contract_line_id') as { contract_line_id?: string } | undefined;
+
+    resolvedContractLineId = configRow?.contract_line_id ?? null;
   }
 
-  const configRow = await configBuilder
-    .where({ tenant, config_id: configId })
-    .first('contract_line_id') as { contract_line_id?: string } | undefined;
-
-  if (!configRow?.contract_line_id) {
+  if (!resolvedContractLineId) {
     return 0;
   }
 
   const obligationCandidates = buildPostDropRecurringObligationCandidates({
-    contractLineId: configRow.contract_line_id,
+    contractLineId: resolvedContractLineId,
     chargeFamily: chargeFamily,
   }).map((candidate) => ({
     obligation_type: candidate.obligationType,
@@ -172,6 +179,23 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
       invoice_linked_at: linkedAt,
       updated_at: linkedAt,
     });
+}
+
+function getRecurringChargeFamilyForInvoiceLinkage(
+  charge: IBillingCharge,
+): RecurringChargeFamily | null {
+  switch (charge.type) {
+    case 'fixed':
+    case 'product':
+    case 'license':
+    case 'bucket':
+    case 'usage':
+      return charge.type;
+    case 'time':
+      return 'hourly';
+    default:
+      return null;
+  }
 }
 
 export async function validateSessionAndTenant(): Promise<InvoiceContext> {
@@ -558,6 +582,11 @@ async function persistFixedInvoiceCharges(
 ): Promise<number> {
   let fixedSubtotal = 0;
   const now = Temporal.Now.instant().toString();
+  const isRecurringFixedCharge = (charge: IFixedPriceCharge) =>
+    Boolean(
+      charge.client_contract_line_id &&
+        (charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming),
+    );
   const fixedPlanDetailsMap = new Map<string, {
     sourceClientContractLineId: string;
     consolidatedItem: any;
@@ -571,7 +600,7 @@ async function persistFixedInvoiceCharges(
     console.log('[persistFixedInvoiceCharges] charge.config_id:', charge.config_id, 'Type:', typeof charge.config_id);
     // --- END DEBUG LOGGING ---
     // Rely on config_id being present and truthy, as 'in' check might be unreliable depending on object creation
-    if (charge.config_id) {
+    if (charge.config_id || isRecurringFixedCharge(charge)) {
       // Use assignment + line identity so sibling assignments that share a base line id
       // cannot collapse into one consolidated fixed recurring parent charge.
       const clientContractLineId = charge.client_contract_line_id;
@@ -805,6 +834,12 @@ async function persistFixedInvoiceCharges(
       const allocatedAmountCents = Number(detail.allocated_amount ?? detail.total ?? 0);
       const taxAmountCents = Number(detail.tax_amount || 0);
       const detailQuantity = Number(detail.quantity ?? 1) || 1;
+      if (!detail.serviceId) {
+        throw new Error('Internal error: Detailed fixed recurring charge must include a serviceId.');
+      }
+      if (!detail.config_id) {
+        throw new Error('Internal error: Detailed fixed recurring charge must include a config_id.');
+      }
       const unitPriceCents = detailQuantity !== 0
         ? Math.round(allocatedAmountCents / detailQuantity)
         : allocatedAmountCents;
@@ -843,7 +878,8 @@ async function persistFixedInvoiceCharges(
         invoiceId,
         invoiceChargeId: parentItemId,
         invoiceChargeDetailId: detailId,
-        configId: detail.config_id ?? null,
+        configId: detail.config_id,
+        contractLineId: detail.client_contract_line_id ?? null,
         chargeFamily: 'fixed',
         servicePeriodStart: detail.servicePeriodStart ?? null,
         servicePeriodEnd: detail.servicePeriodEnd ?? null,
@@ -941,14 +977,22 @@ export async function persistInvoiceCharges(
     };
     await tx('invoice_charges').insert(invoiceItem);
 
-    if (charge.type === 'product' || charge.type === 'license') {
+    const recurringChargeFamily = getRecurringChargeFamilyForInvoiceLinkage(charge);
+    const shouldPersistDetail =
+      recurringChargeFamily !== null
+      && Boolean(charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming);
+
+    if (shouldPersistDetail) {
       const detailId = uuidv4();
+      if (!charge.config_id) {
+        throw new Error(`Internal error: Recurring ${charge.type} charge must include a config_id.`);
+      }
 
       await tx('invoice_charge_details').insert({
         item_detail_id: detailId,
         item_id: invoiceItem.item_id,
         service_id: charge.serviceId,
-        config_id: charge.config_id ?? null,
+        config_id: charge.config_id,
         quantity: charge.quantity ?? 1,
         rate: charge.rate ?? 0,
         service_period_start: charge.servicePeriodStart ?? null,
@@ -966,8 +1010,9 @@ export async function persistInvoiceCharges(
         invoiceId,
         invoiceChargeId: invoiceItem.item_id,
         invoiceChargeDetailId: detailId,
-        configId: charge.config_id ?? null,
-        chargeFamily: charge.type,
+        configId: charge.config_id,
+        contractLineId: charge.client_contract_line_id ?? null,
+        chargeFamily: recurringChargeFamily,
         servicePeriodStart: charge.servicePeriodStart ?? null,
         servicePeriodEnd: charge.servicePeriodEnd ?? null,
         billingTiming: charge.billingTiming ?? null,

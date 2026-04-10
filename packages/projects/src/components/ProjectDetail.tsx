@@ -36,6 +36,7 @@ import MoveTaskDialog from './MoveTaskDialog';
 import ProjectPhases from './ProjectPhases';
 import PhaseTaskImportDialog from './PhaseTaskImportDialog';
 import KanbanBoard from './KanbanBoard';
+import { useKanbanPan } from './useKanbanPan';
 import KanbanZoomControl, { calculateColumnWidth } from './KanbanZoomControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
@@ -49,6 +50,7 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { getTeamsBasic, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTheme } from 'next-themes';
+import { useTranslation } from 'react-i18next';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
@@ -156,6 +158,7 @@ export default function ProjectDetail({
   initialPhaseId,
   onUrlUpdate
 }: ProjectDetailProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   useTagPermissions(['project', 'project_task']);
   const { getDocumentCountsForEntities } = useDocumentsCrossFeature();
   const { resolvedTheme } = useTheme();
@@ -574,6 +577,7 @@ export default function ProjectDetail({
 
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
+  useKanbanPan(kanbanBoardRef, viewMode === 'kanban');
   const kanbanHeaderRef = useRef<HTMLDivElement>(null);
   const scrollbarTrackRef = useRef<HTMLDivElement>(null);
   const scrollbarThumbRef = useRef<HTMLDivElement>(null);
@@ -985,23 +989,23 @@ export default function ProjectDetail({
         setAllProjectTasks(prev => prev.map(t =>
           t.task_id === taskId ? { ...t, phase_id: newPhaseId, project_status_mapping_id: newStatusMappingId } : t
         ));
-        toast.success('Task moved to new phase');
+        toast.success(t('projectDetail.taskMovedToNewPhase', 'Task moved to new phase'));
       } else if (task.project_status_mapping_id !== newStatusMappingId) {
         // Same phase, different status
         await updateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
         setAllProjectTasks(prev => prev.map(t =>
           t.task_id === taskId ? { ...t, project_status_mapping_id: newStatusMappingId } : t
         ));
-        toast.success('Task status updated');
+        toast.success(t('projectDetail.taskStatusUpdated', 'Task status updated'));
       } else {
         // Same phase and status - just reorder
         await reorderTask(taskId, beforeTaskId, afterTaskId);
-        toast.success('Task reordered');
+        toast.success(t('projectDetail.taskReordered', 'Task reordered'));
       }
     } catch (error) {
       handleError(error, 'Failed to move task');
     }
-  }, [allProjectTasks]);
+  }, [allProjectTasks, t]);
   
   // Handle tag changes
   const handleProjectTagsChange = (tags: ITag[]) => {
@@ -1249,14 +1253,14 @@ export default function ProjectDetail({
       try {
         const task = await getTaskById(initialTaskId);
         if (!task) {
-          toast.error('Task not found');
+          toast.error(t('projectDetail.taskNotFound', 'Task not found'));
           return;
         }
 
         // Find the phase for this task
         const taskPhase = projectPhases.find(phase => phase.phase_id === task.phase_id);
         if (!taskPhase) {
-          toast.error('Task phase not found');
+          toast.error(t('projectDetail.taskPhaseNotFound', 'Task phase not found'));
           return;
         }
 
@@ -1276,7 +1280,7 @@ export default function ProjectDetail({
     };
 
     loadTaskAndSelectPhase();
-  }, [initialTaskId, projectPhases, initialPhaseId, onUrlUpdate]);
+  }, [initialTaskId, projectPhases, initialPhaseId, onUrlUpdate, t]);
 
   // Second effect: Once tasks are loaded, open the specific task
   useEffect(() => {
@@ -1336,7 +1340,7 @@ export default function ProjectDetail({
       } catch (error) {
         if (!stale) {
           console.error('Error fetching comment counts:', error);
-          toast.error('Failed to load comment counts');
+          toast.error(t('projectDetail.commentCountsLoadError', 'Failed to load comment counts'));
           setTaskCommentCounts({});
         }
       }
@@ -1344,7 +1348,7 @@ export default function ProjectDetail({
 
     fetchCommentCounts();
     return () => { stale = true; };
-  }, [selectedPhase, phaseTaskIds]);
+  }, [selectedPhase, phaseTaskIds, t]);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData('text/plain', taskId);
@@ -1405,7 +1409,7 @@ export default function ProjectDetail({
           });
         }, 500);
         
-        toast.success(`Task moved to new status`);
+        toast.success(t('projectDetail.taskMovedToNewStatus', 'Task moved to new status'));
       } else {
         // Reorder within same status - use the new reorderTask function
         await reorderTask(draggedTaskId, beforeTaskId, afterTaskId);
@@ -1641,7 +1645,7 @@ export default function ProjectDetail({
         });
       }, 500);
       
-      toast.success('Phase reordered successfully');
+      toast.success(t('projectDetail.phaseReorderedSuccess', 'Phase reordered successfully'));
     } catch (error) {
       handleError(error, 'Failed to reorder phase');
     }
@@ -1726,7 +1730,11 @@ export default function ProjectDetail({
         t.task_id === updatedTask.task_id ? { ...t, phase_id: moveConfirmation.targetPhase.phase_id } : t
       ));
 
-      toast.success(`Task moved to ${moveConfirmation.targetPhase.phase_name}`);
+      toast.success(
+        t('projectDetail.taskMovedToPhase', 'Task moved to {{phaseName}}', {
+          phaseName: moveConfirmation.targetPhase.phase_name,
+        }),
+      );
     } catch (error) {
       handleError(error, 'Failed to move task');
     } finally {
@@ -1775,17 +1783,17 @@ export default function ProjectDetail({
         }));
 
         setShowQuickAdd(false);
-        toast.success('New task added successfully!');
+        toast.success(t('projectDetail.taskAddedSuccess', 'New task added successfully!'));
       } else {
         console.error('New task does not match selected phase');
-        toast.error('Error adding new task: Phase mismatch');
+        toast.error(t('projectDetail.taskPhaseMismatch', 'Error adding new task: Phase mismatch'));
       }
     } catch (error) {
       handleError(error, 'Error adding new task. Please try again.');
     } finally {
       setIsAddingTask(false);
     }
-  }, [selectedPhase, currentPhase]);
+  }, [selectedPhase, currentPhase, t]);
 
   const handleCloseQuickAdd = useCallback(() => {
     setShowQuickAdd(false);
@@ -1806,12 +1814,12 @@ export default function ProjectDetail({
     if (onUrlUpdate) {
       onUrlUpdate(newPhase.phase_id, null);
     }
-    toast.success('New phase added successfully!');
-  }, [onUrlUpdate]);
+    toast.success(t('projectDetail.phaseAddedSuccess', 'New phase added successfully!'));
+  }, [onUrlUpdate, t]);
 
   const handleAddCard = useCallback((status: ProjectStatus) => {
     if (!selectedPhase) {
-      toast.error('Please select a phase before adding a card.');
+      toast.error(t('projectDetail.selectPhaseToAddCard', 'Please select a phase before adding a card.'));
       return;
     }
     
@@ -1820,7 +1828,7 @@ export default function ProjectDetail({
     setCurrentPhase(selectedPhase);
     setSelectedTask(null);
     setShowQuickAdd(true);
-  }, [selectedPhase]);
+  }, [selectedPhase, t]);
 
   const handleTaskUpdated = useCallback(async (updatedTask: IProjectTask | null) => {
     if (updatedTask) {
@@ -1867,7 +1875,11 @@ export default function ProjectDetail({
           [updatedTask.task_id]: taskResources
         }));
 
-        toast.success(taskWithChecklist.task_id ? 'Task updated successfully!' : 'Task added successfully!');
+        toast.success(
+          taskWithChecklist.task_id
+            ? t('projectDetail.taskUpdatedSuccess', 'Task updated successfully!')
+            : t('projectDetail.taskAddedSuccess', 'New task added successfully!'),
+        );
       } catch (error) {
         handleError(error, 'Failed to update task');
       }
@@ -1882,13 +1894,13 @@ export default function ProjectDetail({
         // Remove from shared project-wide state
         setAllProjectTasks(prev => prev.filter(t => t.task_id !== deletedTaskId));
 
-        toast.success('Task deleted successfully!');
+        toast.success(t('projectDetail.taskDeletedGeneric', 'Task deleted successfully!'));
       }
     }
     setShowQuickAdd(false);
     setSelectedTask(null);
     setIsAddingTask(false);
-  }, []);
+  }, [t]);
 
   const handleTaskSelected = useCallback((task: IProjectTask) => {
     // Log that we're using the cached project tree data for editing
@@ -1937,7 +1949,7 @@ export default function ProjectDetail({
           t.task_id === taskId ? taskWithChecklist : t
         ));
 
-        toast.success('Task assignee updated successfully!');
+        toast.success(t('projectDetail.taskAssigneeUpdatedSuccess', 'Task assignee updated successfully!'));
       }
     } catch (error) {
       handleError(error, 'Failed to update task assignee. Please try again.');
@@ -1956,7 +1968,7 @@ export default function ProjectDetail({
   const handleSavePhase = async (phase: IProjectPhase) => {
     try {
       if (!editingPhaseName.trim()) {
-        toast.error('Phase name cannot be empty');
+        toast.error(t('projectDetail.phaseNameRequired', 'Phase name cannot be empty'));
         return;
       }
   
@@ -1994,7 +2006,7 @@ export default function ProjectDetail({
       setEditingPhaseDescription(null);
       setEditingStartDate(undefined);
       setEditingEndDate(undefined);
-      toast.success('Phase updated successfully!');
+      toast.success(t('projectDetail.phaseUpdatedSuccess', 'Phase updated successfully!'));
     } catch (error) {
       handleError(error, 'Failed to update phase. Please try again.');
     }
@@ -2023,7 +2035,7 @@ export default function ProjectDetail({
       if (selectedPhase?.phase_id === deletePhaseConfirmation.phaseId) {
         setSelectedPhase(null);
       }
-      toast.success('Phase deleted successfully!');
+      toast.success(t('projectDetail.phaseDeletedSuccess', 'Phase deleted successfully!'));
     } catch (error) {
       handleError(error, 'Failed to delete phase. Please try again.');
     } finally {
@@ -2066,7 +2078,7 @@ export default function ProjectDetail({
         }
       });
       setProjectTasks(updatedTasks);
-      toast.success('Tasks reordered successfully');
+      toast.success(t('projectDetail.tasksReorderedSuccess', 'Tasks reordered successfully'));
     } catch (error) {
       handleError(error, 'Failed to reorder tasks');
     }
@@ -2083,7 +2095,7 @@ export default function ProjectDetail({
 
     const placeholderTargetPhase = projectPhases.find(p => p.phase_id !== task.phase_id) || projectPhases[0]; // Just picking another phase for demo
     if (!placeholderTargetPhase) {
-        toast.error("Could not find a target phase to duplicate to.");
+        toast.error(t('projectDetail.duplicateNoTargetPhase', 'Could not find a target phase to duplicate to.'));
         return;
     }
     // Using placeholderTargetPhase directly in the dialog
@@ -2143,16 +2155,26 @@ export default function ProjectDetail({
           setAllProjectTasks(prev => prev.map(t =>
             t.task_id === movedTask.task_id ? { ...t, phase_id: targetPhaseId, project_status_mapping_id: targetStatusId || t.project_status_mapping_id } : t
           ));
-          toast.success(`Task "${taskToMove.task_name}" moved to different phase successfully! Switch to the target phase to see it.`);
+          toast.success(
+            t(
+              'projectDetail.taskMovedCrossPhaseSuccess',
+              'Task "{{taskName}}" moved to different phase successfully! Switch to the target phase to see it.',
+              { taskName: taskToMove.task_name },
+            ),
+          );
         } else {
           // Task moved within the same phase (to different status) - update in place
           setProjectTasks(prevTasks =>
             prevTasks.map(t => t.task_id === movedTask.task_id ? taskWithDetails : t)
           );
-          toast.success(`Task "${taskToMove.task_name}" moved successfully!`);
+          toast.success(
+            t('projectDetail.taskMovedSuccess', 'Task "{{taskName}}" moved successfully!', {
+              taskName: taskToMove.task_name,
+            }),
+          );
         }
       } else {
-        toast.error("Failed to move task. Please try again.");
+        toast.error(t('projectDetail.moveTaskFailed', 'Failed to move task. Please try again.'));
       }
     } catch (error) {
       handleError(error, 'Failed to move task');
@@ -2171,9 +2193,9 @@ export default function ProjectDetail({
         <div className="mb-4 space-y-3 flex-shrink-0">
           {/* Top row: Title + Pin + View Switcher */}
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Task List</h2>
+            <h2 className="text-xl font-bold">{t('projectDetail.taskList', 'Task List')}</h2>
             <div className="flex items-center gap-4">
-              <Tooltip content={isHeaderPinned ? "Unpin header" : "Pin header to top"}>
+              <Tooltip content={isHeaderPinned ? t('projectDetail.unpinHeader', 'Unpin header') : t('projectDetail.pinHeader', 'Pin header to top')}>
                 <Button
                   id="pin-header-toggle-list"
                   variant="ghost"
@@ -2184,7 +2206,7 @@ export default function ProjectDetail({
                       : 'text-gray-400 hover:text-gray-600'
                   }`}
                   onClick={() => setIsHeaderPinned(!isHeaderPinned)}
-                  aria-label={isHeaderPinned ? "Unpin header" : "Pin header to top"}
+                  aria-label={isHeaderPinned ? t('projectDetail.unpinHeader', 'Unpin header') : t('projectDetail.pinHeader', 'Pin header to top')}
                 >
                   <Pin className={`h-4 w-4 ${isHeaderPinned ? 'fill-current' : ''}`} />
                 </Button>
@@ -2193,8 +2215,8 @@ export default function ProjectDetail({
                 currentView={viewMode}
                 onChange={(v) => setViewMode(v as ProjectViewMode)}
                 options={[
-                  { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
-                  { value: 'list', label: 'List', icon: List }
+                  { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
+                  { value: 'list', label: t('listView', 'List'), icon: List }
                 ]}
               />
             </div>
@@ -2209,7 +2231,7 @@ export default function ProjectDetail({
                 <input
                   id="task-search-list"
                   type="text"
-                  placeholder="Search tasks..."
+                  placeholder={t('projectDetail.searchTasksPlaceholder', 'Search tasks...')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded-md w-64 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
@@ -2221,7 +2243,7 @@ export default function ProjectDetail({
                     size="sm"
                     className="absolute right-1 top-1/2 -translate-y-1/2 p-1 h-auto w-auto text-gray-400 hover:text-gray-600"
                     onClick={() => setSearchQuery('')}
-                    aria-label="Clear search"
+                    aria-label={t('projectDetail.clearSearch', 'Clear search')}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -2232,16 +2254,16 @@ export default function ProjectDetail({
                 variant={searchWholeWord ? 'soft' : 'outline'}
                 size="xs"
                 onClick={() => setSearchWholeWord(!searchWholeWord)}
-                title="Whole word"
+                title={t('projectDetail.wholeWord', 'Whole word')}
               >
-                Word
+                {t('projectDetail.wholeWordShort', 'Word')}
               </Button>
               <Button
                 id="search-case-sensitive-list"
                 variant={searchCaseSensitive ? 'soft' : 'outline'}
                 size="xs"
                 onClick={() => setSearchCaseSensitive(!searchCaseSensitive)}
-                title="Case sensitive"
+                title={t('projectDetail.caseSensitive', 'Case sensitive')}
               >
                 Aa
               </Button>
@@ -2274,7 +2296,7 @@ export default function ProjectDetail({
                   includeUnassigned={includeUnassignedAgents}
                   onUnassignedChange={setIncludeUnassignedAgents}
                   compactDisplay={true}
-                  placeholder="All Agents"
+                  placeholder={t('projectDetail.allAgents', 'All Agents')}
                 />
               </div>
               {selectedAgentFilter.length === 1 && (
@@ -2283,9 +2305,9 @@ export default function ProjectDetail({
                   variant={primaryAgentOnly ? 'soft' : 'outline'}
                   size="xs"
                   onClick={() => setPrimaryAgentOnly(!primaryAgentOnly)}
-                  title="Only show tasks where selected agent is the primary assignee"
+                  title={t('projectDetail.primaryAssigneeOnly', 'Only show tasks where selected agent is the primary assignee')}
                 >
-                  Primary
+                  {t('projectDetail.primaryShort', 'Primary')}
                 </Button>
               )}
             </div>
@@ -2295,7 +2317,7 @@ export default function ProjectDetail({
               value={selectedPriorityFilter}
               onValueChange={setSelectedPriorityFilter}
               options={[
-                { value: 'all', label: 'All Priorities' },
+                { value: 'all', label: t('taskTicketLinks.allPriorities', 'All Priorities') },
                 ...priorities.map(p => ({
                   value: p.priority_id,
                   label: p.priority_name,
@@ -2303,7 +2325,7 @@ export default function ProjectDetail({
                 }))
               ]}
               className="w-40"
-              placeholder="Priority"
+              placeholder={t('projectDetail.priority', 'Priority')}
             />
 
             {/* Task Type Filter */}
@@ -2311,7 +2333,7 @@ export default function ProjectDetail({
               value={selectedTaskTypeFilter}
               onValueChange={setSelectedTaskTypeFilter}
               options={[
-                { value: 'all', label: 'All Types' },
+                { value: 'all', label: t('projectDetail.allTypes', 'All Types') },
                 ...taskTypes.map(t => {
                   const Icon = taskTypeIcons[t.type_key] || CheckSquare;
                   return {
@@ -2329,7 +2351,7 @@ export default function ProjectDetail({
                 })
               ]}
               className="w-40"
-              placeholder="Task Type"
+              placeholder={t('projectDetail.taskType', 'Task Type')}
             />
 
             {/* Reset filters button */}
@@ -2352,7 +2374,7 @@ export default function ProjectDetail({
               disabled={!(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all')}
             >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('common:actions.reset', 'Reset')}
             </Button>
           </div>
         </div>
@@ -2366,7 +2388,9 @@ export default function ProjectDetail({
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold">
-              {selectedPhase ? `Kanban Board: ${selectedPhase.phase_name}` : 'Kanban Board'}
+              {selectedPhase
+                ? t('projectDetail.kanbanBoardWithPhase', 'Kanban Board: {{phaseName}}', { phaseName: selectedPhase.phase_name })
+                : t('projectDetail.kanbanBoard', 'Kanban Board')}
             </h2>
             {selectedPhase?.description && (
               <p className="text-sm text-gray-600 mt-0.5">{selectedPhase.description}</p>
@@ -2377,7 +2401,7 @@ export default function ProjectDetail({
               zoomLevel={kanbanZoomLevel}
               onZoomChange={setKanbanZoomLevel}
             />
-            <Tooltip content={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}>
+            <Tooltip content={showStickyStatusNames ? t('projectDetail.hideStickyStatusNames', 'Hide sticky status names') : t('projectDetail.showStickyStatusNames', 'Show sticky status names')}>
               <Button
                 id="sticky-status-names-toggle-kanban"
                 variant="ghost"
@@ -2388,12 +2412,12 @@ export default function ProjectDetail({
                     : 'text-gray-400 hover:text-gray-600'
                 }`}
                 onClick={() => setShowStickyStatusNames(!showStickyStatusNames)}
-                aria-label={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}
+                aria-label={showStickyStatusNames ? t('projectDetail.hideStickyStatusNames', 'Hide sticky status names') : t('projectDetail.showStickyStatusNames', 'Show sticky status names')}
               >
                 <Columns3 className="h-4 w-4" />
               </Button>
             </Tooltip>
-            <Tooltip content={isHeaderPinned ? "Unpin header" : "Pin header to top"}>
+            <Tooltip content={isHeaderPinned ? t('projectDetail.unpinHeader', 'Unpin header') : t('projectDetail.pinHeader', 'Pin header to top')}>
               <Button
                 id="pin-header-toggle-kanban"
                 variant="ghost"
@@ -2404,7 +2428,7 @@ export default function ProjectDetail({
                     : 'text-gray-400 hover:text-gray-600'
                 }`}
                 onClick={() => setIsHeaderPinned(!isHeaderPinned)}
-                aria-label={isHeaderPinned ? "Unpin header" : "Pin header to top"}
+                aria-label={isHeaderPinned ? t('projectDetail.unpinHeader', 'Unpin header') : t('projectDetail.pinHeader', 'Pin header to top')}
               >
                 <Pin className={`h-4 w-4 ${isHeaderPinned ? 'fill-current' : ''}`} />
               </Button>
@@ -2413,8 +2437,8 @@ export default function ProjectDetail({
               currentView={viewMode}
               onChange={(v) => setViewMode(v as ProjectViewMode)}
               options={[
-                { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
-                { value: 'list', label: 'List', icon: List }
+                { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
+                { value: 'list', label: t('listView', 'List'), icon: List }
               ]}
             />
           </div>
@@ -2430,7 +2454,7 @@ export default function ProjectDetail({
                 <input
                   id="task-search-kanban"
                   type="text"
-                  placeholder="Search tasks..."
+                  placeholder={t('projectDetail.searchTasksPlaceholder', 'Search tasks...')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded-md w-64 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
@@ -2442,7 +2466,7 @@ export default function ProjectDetail({
                     size="sm"
                     className="absolute right-1 top-1/2 -translate-y-1/2 p-1 h-auto w-auto text-gray-400 hover:text-gray-600"
                     onClick={() => setSearchQuery('')}
-                    aria-label="Clear search"
+                    aria-label={t('projectDetail.clearSearch', 'Clear search')}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -2453,16 +2477,16 @@ export default function ProjectDetail({
                 variant={searchWholeWord ? 'soft' : 'outline'}
                 size="xs"
                 onClick={() => setSearchWholeWord(!searchWholeWord)}
-                title="Whole word"
+                title={t('projectDetail.wholeWord', 'Whole word')}
               >
-                Word
+                {t('projectDetail.wholeWordShort', 'Word')}
               </Button>
               <Button
                 id="search-case-sensitive-kanban"
                 variant={searchCaseSensitive ? 'soft' : 'outline'}
                 size="xs"
                 onClick={() => setSearchCaseSensitive(!searchCaseSensitive)}
-                title="Case sensitive"
+                title={t('projectDetail.caseSensitive', 'Case sensitive')}
               >
                 Aa
               </Button>
@@ -2495,7 +2519,7 @@ export default function ProjectDetail({
                   includeUnassigned={includeUnassignedAgents}
                   onUnassignedChange={setIncludeUnassignedAgents}
                   compactDisplay={true}
-                  placeholder="All Agents"
+                  placeholder={t('projectDetail.allAgents', 'All Agents')}
                 />
               </div>
               {selectedAgentFilter.length === 1 && (
@@ -2504,9 +2528,9 @@ export default function ProjectDetail({
                   variant={primaryAgentOnly ? 'soft' : 'outline'}
                   size="xs"
                   onClick={() => setPrimaryAgentOnly(!primaryAgentOnly)}
-                  title="Only show tasks where selected agent is the primary assignee"
+                  title={t('projectDetail.primaryAssigneeOnly', 'Only show tasks where selected agent is the primary assignee')}
                 >
-                  Primary
+                  {t('projectDetail.primaryShort', 'Primary')}
                 </Button>
               )}
             </div>
@@ -2516,7 +2540,7 @@ export default function ProjectDetail({
               value={selectedPriorityFilter}
               onValueChange={setSelectedPriorityFilter}
               options={[
-                { value: 'all', label: 'All Priorities' },
+                { value: 'all', label: t('taskTicketLinks.allPriorities', 'All Priorities') },
                 ...priorities.map(p => ({
                   value: p.priority_id,
                   label: p.priority_name,
@@ -2524,7 +2548,7 @@ export default function ProjectDetail({
                 }))
               ]}
               className="w-40"
-              placeholder="Priority"
+              placeholder={t('projectDetail.priority', 'Priority')}
             />
 
             {/* Task Type Filter */}
@@ -2532,7 +2556,7 @@ export default function ProjectDetail({
               value={selectedTaskTypeFilter}
               onValueChange={setSelectedTaskTypeFilter}
               options={[
-                { value: 'all', label: 'All Types' },
+                { value: 'all', label: t('projectDetail.allTypes', 'All Types') },
                 ...taskTypes.map(t => {
                   const Icon = taskTypeIcons[t.type_key] || CheckSquare;
                   return {
@@ -2550,7 +2574,7 @@ export default function ProjectDetail({
                 })
               ]}
               className="w-40"
-              placeholder="Task Type"
+              placeholder={t('projectDetail.taskType', 'Task Type')}
             />
 
             {/* Reset filters button */}
@@ -2573,7 +2597,7 @@ export default function ProjectDetail({
               disabled={!(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all')}
             >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('common:actions.reset', 'Reset')}
             </Button>
           </div>
 
@@ -2582,10 +2606,17 @@ export default function ProjectDetail({
             <div className="flex items-center gap-2">
               <DonutChart
                 percentage={completionPercentage}
-                tooltipContent={`Shows the percentage of completed tasks for the selected phase "${selectedPhase.phase_name}" only`}
+                tooltipContent={t(
+                  'projectDetail.selectedPhaseCompletionHelp',
+                  'Shows the percentage of completed tasks for the selected phase "{{phaseName}}" only',
+                  { phaseName: selectedPhase.phase_name },
+                )}
               />
               <span className="text-sm font-medium text-gray-600">
-                {completedTasksCount} / {filteredTasks.length} Done
+                {t('projectDetail.completionSummary', '{{completed}} / {{total}} Done', {
+                  completed: completedTasksCount,
+                  total: filteredTasks.length,
+                })}
               </span>
             </div>
           )}
@@ -2602,7 +2633,7 @@ export default function ProjectDetail({
       if (!projectTaskDataLoaded) {
         return (
           <div className="flex items-center justify-center h-64">
-            <div className="text-gray-500">Loading list view...</div>
+            <div className="text-gray-500">{t('projectDetail.loadingListView', 'Loading list view...')}</div>
           </div>
         );
       }
@@ -2659,8 +2690,8 @@ export default function ProjectDetail({
         <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
           <div className="text-center">
             <p className="text-xl text-gray-600 flex items-center justify-center gap-2">
-              Please select or create a phase to view the Kanban board.
-              <Tooltip content="A phase is a distinct stage or milestone in your project timeline. Each phase can contain multiple tasks and helps organize work into manageable sections.">
+              {t('projectDetail.selectPhaseToViewKanban', 'Please select or create a phase to view the Kanban board.')}
+              <Tooltip content={t('projectDetail.phaseHelp', 'A phase is a distinct stage or milestone in your project timeline. Each phase can contain multiple tasks and helps organize work into manageable sections.')}>
                 <HelpCircle className="w-5 h-5 text-gray-500 cursor-help" />
               </Tooltip>
             </p>
@@ -2738,8 +2769,8 @@ export default function ProjectDetail({
               <CollapseToggleButton
                 id="toggle-phases-panel"
                 isCollapsed={!isPhasesPanelVisible}
-                collapsedLabel="Show phases panel"
-                expandedLabel="Hide phases panel"
+                collapsedLabel={t('projectDetail.showPhasesPanel', 'Show phases panel')}
+                expandedLabel={t('projectDetail.hidePhasesPanel', 'Hide phases panel')}
                 className={styles.phasesPanelToggle}
                 onClick={() => setIsPhasesPanelVisible(!isPhasesPanelVisible)}
               />
@@ -2763,7 +2794,7 @@ export default function ProjectDetail({
                   onPhaseSelect={handlePhaseSelect}
                   onAddTask={() => {
                     if (!selectedPhase) {
-                      toast.error('Please select a phase before adding a task.');
+                      toast.error(t('projectDetail.selectPhaseToAddTask', 'Please select a phase before adding a task.'));
                       return;
                     }
                     setCurrentPhase(selectedPhase);
@@ -2849,7 +2880,7 @@ export default function ProjectDetail({
                             size="sm"
                             onClick={() => handleAddCard(status)}
                             disabled={isAddingTask || !selectedPhase}
-                            tooltipText="Add Task"
+                            tooltipText={t('common:actions.add', 'Add')}
                             tooltip={true}
                             className="!w-5 !h-5 !p-0 !min-w-0 flex-shrink-0"
                           >
@@ -2916,10 +2947,18 @@ export default function ProjectDetail({
           isOpen={true}
           onClose={() => setMoveConfirmation(null)}
           onConfirm={handleMoveConfirm}
-          title="Move Task"
-          message={`Are you sure you want to move task "${moveConfirmation.taskName}" from phase "${moveConfirmation.sourcePhase.phase_name}" to "${moveConfirmation.targetPhase.phase_name}"?`}
-          confirmLabel="Move"
-          cancelLabel="Cancel"
+          title={t('dialogs.moveTask.title', 'Move Task')}
+          message={t(
+            'projectDetail.confirmMoveTaskMessage',
+            'Are you sure you want to move task "{{taskName}}" from phase "{{sourcePhase}}" to "{{targetPhase}}"?',
+            {
+              taskName: moveConfirmation.taskName,
+              sourcePhase: moveConfirmation.sourcePhase.phase_name,
+              targetPhase: moveConfirmation.targetPhase.phase_name,
+            },
+          )}
+          confirmLabel={t('common:actions.confirm', 'Confirm')}
+          cancelLabel={t('common:actions.cancel', 'Cancel')}
         />
       )}
 
@@ -2928,10 +2967,14 @@ export default function ProjectDetail({
           isOpen={true}
           onClose={() => setDeletePhaseConfirmation(null)}
           onConfirm={handleDeletePhase}
-          title="Delete Phase"
-          message={`Are you sure you want to delete phase "${deletePhaseConfirmation.phaseName}"? This will also delete all tasks and their checklists in this phase.`}
-          confirmLabel="Delete"
-          cancelLabel="Cancel"
+          title={t('projectDetail.deletePhaseTitle', 'Delete Phase')}
+          message={t(
+            'projectDetail.deletePhaseMessage',
+            'Are you sure you want to delete phase "{{phaseName}}"? This will also delete all tasks and their checklists in this phase.',
+            { phaseName: deletePhaseConfirmation.phaseName },
+          )}
+          confirmLabel={t('common:actions.delete', 'Delete')}
+          cancelLabel={t('common:actions.cancel', 'Cancel')}
         />
       )}
 
@@ -2965,7 +3008,11 @@ export default function ProjectDetail({
               // Add to allProjectTasks for filtered counts
               setAllProjectTasks(prev => [...prev, taskWithChecklist]);
 
-              toast.success(`Task "${newTask.task_name}" duplicated successfully!`);
+              toast.success(
+                t('projectDetail.taskDuplicatedSuccess', 'Task "{{taskName}}" duplicated successfully!', {
+                  taskName: newTask.task_name,
+                }),
+              );
               setIsDuplicateDialogOpen(false);
               setTaskToDuplicate(null);
               setDuplicateTaskToggleDetails(null);
@@ -3003,17 +3050,25 @@ export default function ProjectDetail({
               setProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
               // Remove from allProjectTasks for filtered counts
               setAllProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
-              toast.success(`Task "${taskToDelete.task_name}" deleted successfully!`);
+              toast.success(
+                t('projectDetail.taskDeletedSuccess', 'Task "{{taskName}}" deleted successfully!', {
+                  taskName: taskToDelete.task_name,
+                }),
+              );
               setTaskToDelete(null);
             } catch (error) {
               handleError(error, "Failed to delete task.");
               setTaskToDelete(null);
             }
           }}
-          title="Delete Task"
-          message={`Are you sure you want to delete task "${taskToDelete.task_name}"? This action cannot be undone.`}
-          confirmLabel="Delete"
-          cancelLabel="Cancel"
+          title={t('projectDetail.deleteTaskTitle', 'Delete Task')}
+          message={t(
+            'projectDetail.deleteTaskMessage',
+            'Are you sure you want to delete task "{{taskName}}"? This action cannot be undone.',
+            { taskName: taskToDelete.task_name },
+          )}
+          confirmLabel={t('common:actions.delete', 'Delete')}
+          cancelLabel={t('common:actions.cancel', 'Cancel')}
         />
       )}
 
@@ -3025,11 +3080,20 @@ export default function ProjectDetail({
         onImportComplete={(result) => {
           setShowImportDialog(false);
           if (result.success || result.tasksCreated > 0) {
-            toast.success(`Imported ${result.phasesCreated} phases and ${result.tasksCreated} tasks`);
+            toast.success(
+              t('projectDetail.importSuccess', 'Imported {{phases}} phases and {{tasks}} tasks', {
+                phases: result.phasesCreated,
+                tasks: result.tasksCreated,
+              }),
+            );
             // Refresh the page to show imported data
             window.location.reload();
           } else if (result.errors.length > 0) {
-            toast.error(`Import failed: ${result.errors[0]}`);
+            toast.error(
+              t('projectDetail.importFailed', 'Import failed: {{error}}', {
+                error: result.errors[0],
+              }),
+            );
           }
         }}
       />

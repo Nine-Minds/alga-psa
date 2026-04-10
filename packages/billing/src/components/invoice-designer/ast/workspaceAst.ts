@@ -1,8 +1,10 @@
 import type {
   TemplateAst,
+  TemplateFieldBorderStyle,
   TemplateNode,
   TemplatePrintSettings,
   TemplateNodeStyleRef,
+  TemplateFieldDisplayFormat,
   TemplateTableColumn,
   TemplateTotalsRow,
   TemplateValueExpression,
@@ -28,6 +30,7 @@ import type {
 import { createEmptyDesignerTransformWorkspace, DOCUMENT_NODE_ID } from '../state/designerStore';
 import { getDefinition } from '../constants/componentCatalog';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
+import { resolveMediaFrameSize } from '../utils/mediaSizing';
 import {
   toTemplateTransformPipeline,
   validateDesignerTransformWorkspace,
@@ -50,6 +53,18 @@ const isTemplateValueFormat = (value: unknown): value is TemplateValueFormat =>
 
 const parseTemplateValueFormat = (value: unknown): TemplateValueFormat | undefined =>
   isTemplateValueFormat(value) ? value : undefined;
+
+const isTemplateFieldDisplayFormat = (value: unknown): value is TemplateFieldDisplayFormat =>
+  value === 'single-line' || value === 'multiline' || value === 'raw';
+
+const parseTemplateFieldDisplayFormat = (value: unknown): TemplateFieldDisplayFormat | undefined =>
+  isTemplateFieldDisplayFormat(value) ? value : undefined;
+
+const isTemplateFieldBorderStyle = (value: unknown): value is TemplateFieldBorderStyle =>
+  value === 'underline' || value === 'box' || value === 'none';
+
+const parseTemplateFieldBorderStyle = (value: unknown): TemplateFieldBorderStyle | undefined =>
+  isTemplateFieldBorderStyle(value) ? value : undefined;
 
 const isTemplateValueExpression = (value: unknown): value is TemplateValueExpression => {
   if (!isRecord(value)) {
@@ -111,6 +126,9 @@ const normalizeInvoiceBindingPath = (bindingKey: string): string => {
     'invoice.discount': 'discount',
     'invoice.currencyCode': 'currencyCode',
     'invoice.poNumber': 'poNumber',
+    'invoice.recurringServicePeriodStart': 'recurringServicePeriodStart',
+    'invoice.recurringServicePeriodEnd': 'recurringServicePeriodEnd',
+    'invoice.recurringServicePeriodLabel': 'recurringServicePeriodLabel',
     'quote.quoteNumber': 'quoteNumber',
     'quote.quoteDate': 'quoteDate',
     'quote.validUntil': 'validUntil',
@@ -153,6 +171,8 @@ const normalizeInvoiceBindingPath = (bindingKey: string): string => {
   }
   return aliases[normalized] ?? normalized;
 };
+
+const supportsFieldDisplayFormat = (bindingPath: string): boolean => bindingPath.trim().endsWith('.address');
 
 const TEMPLATE_TOKEN_PATTERN = /\{\{\s*([^{}]+?)\s*\}\}/g;
 const SIMPLE_BINDING_ALIASES = new Set([
@@ -417,6 +437,7 @@ const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined
 
   if (style.aspectRatio) inline.aspectRatio = style.aspectRatio;
   if (style.objectFit) inline.objectFit = style.objectFit;
+  if (style.objectPosition) inline.objectPosition = style.objectPosition;
   if (style.margin) inline.margin = style.margin;
   if (style.border) inline.border = style.border;
   if (style.borderRadius) inline.borderRadius = style.borderRadius;
@@ -662,6 +683,9 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   if (aspectRatio) style.aspectRatio = aspectRatio;
   const objectFit = coerceObjectFit(inline.objectFit);
   if (objectFit) style.objectFit = objectFit;
+  if (typeof inline.objectPosition === 'string' && inline.objectPosition.trim().length > 0) {
+    style.objectPosition = inline.objectPosition.trim();
+  }
 
   const margin = coerceCssLength(inline.margin);
   if (margin) style.margin = margin;
@@ -765,11 +789,18 @@ const mapTableColumns = (node: WorkspaceNode): TemplateTableColumn[] => {
         ? column.valueExpression
         : null;
       const parsedFormat = parseTemplateValueFormat(column.format ?? column.type);
+      const placeholderKey = sanitizeId(id);
+      const resolvedValue =
+        preservedExpression?.type === 'path'
+          ? { type: 'path' as const, path: key.length > 0 ? key : 'description' }
+          : key.length > 0 && key !== placeholderKey
+            ? { type: 'path' as const, path: key }
+            : preservedExpression ?? { type: 'path' as const, path: key.length > 0 ? key : 'description' };
 
       const mapped: TemplateTableColumn = {
         id: sanitizeId(id),
         header: header.length > 0 ? header : undefined,
-        value: preservedExpression ?? { type: 'path', path: key.length > 0 ? key : 'description' },
+        value: resolvedValue,
       };
       const style = mapColumnStyle(column.style);
       if (style) {
@@ -948,11 +979,17 @@ const mapDesignerNodeToAstNode = (
       const bindingId = registerValueBinding(bindingPath);
       const explicitLabel = asTrimmedString(metadata.label);
       const format = parseTemplateValueFormat(metadata.format);
+      const displayFormat = parseTemplateFieldDisplayFormat(metadata.displayFormat);
+      const borderStyle = parseTemplateFieldBorderStyle(metadata.fieldBorderStyle);
       const astImported = metadata.__astImported === true;
       const hadImportedFormat = metadata.__astFieldHadFormat === true;
       const hadImportedEmptyValue = metadata.__astFieldHadEmptyValue === true;
+      const hadImportedPlaceholder = metadata.__astFieldHadPlaceholder === true;
       const hasExplicitEmptyValue = typeof metadata.emptyValue === 'string';
       const emptyValue = hasExplicitEmptyValue ? asTrimmedString(metadata.emptyValue) : '';
+      const hasExplicitPlaceholder = typeof metadata.placeholder === 'string';
+      const placeholder = hasExplicitPlaceholder ? asTrimmedString(metadata.placeholder) : '';
+      const hasExplicitBorderStyle = typeof metadata.fieldBorderStyle === 'string';
       const mapped: TemplateNode = {
         ...createBaseNode(node),
         type: 'field',
@@ -970,8 +1007,19 @@ const mapDesignerNodeToAstNode = (
         // Designer-authored fields default to empty string; imported templates only retain this when explicitly present.
         mapped.emptyValue = '';
       }
+      if (hasExplicitPlaceholder) {
+        mapped.placeholder = placeholder;
+      } else if (astImported && hadImportedPlaceholder) {
+        mapped.placeholder = '';
+      }
       if (format && (!astImported || hadImportedFormat || format !== 'text')) {
         mapped.format = format;
+      }
+      if (displayFormat && supportsFieldDisplayFormat(bindingPath)) {
+        mapped.displayFormat = displayFormat;
+      }
+      if (hasExplicitBorderStyle && borderStyle) {
+        mapped.borderStyle = borderStyle;
       }
       return mapped;
     }
@@ -1354,6 +1402,9 @@ const denormalizeBindingPath = (path: string): string => {
     discount: 'invoice.discount',
     currencyCode: 'invoice.currencyCode',
     poNumber: 'invoice.poNumber',
+    recurringServicePeriodStart: 'invoice.recurringServicePeriodStart',
+    recurringServicePeriodEnd: 'invoice.recurringServicePeriodEnd',
+    recurringServicePeriodLabel: 'invoice.recurringServicePeriodLabel',
     quoteNumber: 'quote.quoteNumber',
     quoteDate: 'quote.quoteDate',
     validUntil: 'quote.validUntil',
@@ -1389,12 +1440,42 @@ const denormalizeBindingPath = (path: string): string => {
   return aliases[path] ?? path;
 };
 
+const resolveImportedCollectionBindingPath = (
+  astInput: TemplateAst,
+  bindingId: string,
+  fallbackPath = 'items'
+): string => {
+  const trimmedBindingId = asTrimmedString(bindingId);
+  if (trimmedBindingId.length === 0) {
+    return fallbackPath;
+  }
+
+  const registeredPath = astInput.bindings?.collections?.[trimmedBindingId]?.path;
+  if (typeof registeredPath === 'string' && registeredPath.trim().length > 0) {
+    return registeredPath;
+  }
+
+  const transformOutputBindingId = normalizeInvoiceBindingPath(
+    asTrimmedString(astInput.transforms?.outputBindingId)
+  );
+  if (transformOutputBindingId.length > 0 && normalizeInvoiceBindingPath(trimmedBindingId) === transformOutputBindingId) {
+    return transformOutputBindingId;
+  }
+
+  return fallbackPath;
+};
+
 const parseSizeFromStyle = (node: TemplateNode): { width?: number; height?: number } => {
   const inline = node.style?.inline ?? {};
-  return {
-    width: parsePxLength(inline.width),
-    height: parsePxLength(inline.height),
-  };
+
+  if (node.type !== 'image') {
+    return {
+      width: parsePxLength(inline.width),
+      height: parsePxLength(inline.height),
+    };
+  }
+
+  return resolveMediaFrameSize(inline);
 };
 
 export const importTemplateAstToWorkspace = (
@@ -1680,8 +1761,18 @@ export const importTemplateAstToWorkspace = (
           metadata.bindingKey = denormalizeBindingPath(bindingPath);
           metadata.__astFieldHadFormat = Object.prototype.hasOwnProperty.call(inputNode, 'format');
           metadata.__astFieldHadEmptyValue = Object.prototype.hasOwnProperty.call(inputNode, 'emptyValue');
+          metadata.__astFieldHadPlaceholder = Object.prototype.hasOwnProperty.call(inputNode, 'placeholder');
+          metadata.__astFieldHadBorderStyle = Object.prototype.hasOwnProperty.call(inputNode, 'borderStyle');
           if (inputNode.format) {
             metadata.format = inputNode.format;
+          }
+          if (inputNode.displayFormat) {
+            metadata.displayFormat = inputNode.displayFormat;
+          }
+          if (inputNode.borderStyle) {
+            metadata.fieldBorderStyle = inputNode.borderStyle;
+          } else {
+            metadata.fieldBorderStyle = 'none';
           }
           if (inputNode.label) {
             metadata.label = inputNode.label;
@@ -1689,13 +1780,16 @@ export const importTemplateAstToWorkspace = (
           if (typeof inputNode.emptyValue === 'string') {
             metadata.emptyValue = inputNode.emptyValue;
           }
+          if (typeof inputNode.placeholder === 'string') {
+            metadata.placeholder = inputNode.placeholder;
+          }
         } else if (inputNode.type === 'dynamic-table' || inputNode.type === 'table') {
-          const collectionPath =
-            astInput.bindings?.collections?.[
-              inputNode.type === 'dynamic-table'
-                ? inputNode.repeat.sourceBinding.bindingId
-                : inputNode.sourceBinding.bindingId
-            ]?.path ?? 'items';
+          const collectionPath = resolveImportedCollectionBindingPath(
+            astInput,
+            inputNode.type === 'dynamic-table'
+              ? inputNode.repeat.sourceBinding.bindingId
+              : inputNode.sourceBinding.bindingId
+          );
           metadata.collectionBindingKey = denormalizeBindingPath(collectionPath);
           metadata.columns = inputNode.columns.map((column) => {
             const mappedColumn: Record<string, unknown> = {
@@ -1724,9 +1818,11 @@ export const importTemplateAstToWorkspace = (
             if (hs.color) metadata.headerColor = hs.color;
           }
         } else if (inputNode.type === 'totals') {
-          const sourcePath =
-            astInput.bindings?.collections?.[inputNode.sourceBinding.bindingId]?.path ??
-            inputNode.sourceBinding.bindingId;
+          const sourcePath = resolveImportedCollectionBindingPath(
+            astInput,
+            inputNode.sourceBinding.bindingId,
+            inputNode.sourceBinding.bindingId
+          );
           metadata.collectionBindingKey = denormalizeBindingPath(sourcePath);
           metadata.totalsRows = inputNode.rows.map((row) => ({
             id: row.id,

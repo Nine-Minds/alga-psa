@@ -43,4 +43,34 @@ describe('ComponentPalette fields tab', () => {
     expect(screen.getByText('Currency Code')).toBeTruthy();
     expect(screen.queryByText('Tenant Address')).toBeNull();
   });
+
+  it('shows recurring service period fields in the fields tab', () => {
+    render(
+      <DndContext>
+        <ComponentPalette />
+      </DndContext>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'FIELDS' }));
+    fireEvent.change(screen.getByPlaceholderText('Search fields...'), {
+      target: { value: 'recurring service period' },
+    });
+
+    expect(screen.getByText('Recurring Service Period')).toBeTruthy();
+    expect(screen.getByText('Recurring Service Period Start')).toBeTruthy();
+    expect(screen.getByText('Recurring Service Period End')).toBeTruthy();
+  });
+
+  it('keeps address field descriptions neutral in the fields tab', () => {
+    render(
+      <DndContext>
+        <ComponentPalette />
+      </DndContext>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'FIELDS' }));
+
+    expect(screen.getByText('The customer billing address.')).toBeTruthy();
+    expect(screen.queryByText(/property panel/i)).toBeNull();
+  });
 });

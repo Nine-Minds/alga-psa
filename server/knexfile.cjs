@@ -57,6 +57,8 @@ const getClient = () => {
 
 const { validate: uuidValidate } = require('uuid');
 
+const seedsDirectory = process.env.SEEDS_DIR || './seeds/dev';
+
 function isValidTenantId(tenantId) {
   if (!tenantId) return true;
   if (tenantId === 'default') return true;
@@ -102,7 +104,7 @@ const migrationConfig = {
     loadExtensions: ['.cjs', '.js']
   },
   seeds: {
-    directory: "./seeds/dev",
+    directory: seedsDirectory,
     loadExtensions: ['.cjs', '.js']
   }
 };
@@ -130,7 +132,7 @@ const knexfile = {
     // But keeps postgres user connection for migrations
     migrations: migrationConfig.migrations,
     seeds: {
-      directory: "./seeds/dev",
+      directory: seedsDirectory,
       loadExtensions: ['.cjs', '.js']
     }
   },

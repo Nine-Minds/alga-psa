@@ -35,6 +35,11 @@ type IncomingUiContext = {
   };
 };
 
+type IncomingMention = {
+  type: 'ticket' | 'client' | 'contact' | 'project' | 'asset' | 'user';
+  id: string;
+};
+
 type RawCompletionChunk = {
   type?: unknown;
   delta?: unknown;
@@ -46,7 +51,7 @@ type RawCompletionChunk = {
 type ChatCompletionsServiceLike = {
   createStructuredCompletionStream: (
     conversation: IncomingChatMessage[],
-    options?: { signal?: AbortSignal; uiContext?: IncomingUiContext },
+    options?: { signal?: AbortSignal; uiContext?: IncomingUiContext; mentions?: IncomingMention[] },
   ) => Promise<AsyncIterable<RawCompletionChunk>>;
 };
 
@@ -176,6 +181,30 @@ function validateUiContext(raw: unknown): IncomingUiContext | undefined {
   };
 }
 
+const VALID_MENTION_TYPES = new Set(['ticket', 'client', 'contact', 'project', 'asset', 'user']);
+const MAX_MENTIONS = 10;
+
+function validateMentions(raw: unknown): IncomingMention[] {
+  if (raw === undefined || raw === null) {
+    return [];
+  }
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const mentions: IncomingMention[] = [];
+  for (const item of raw.slice(0, MAX_MENTIONS)) {
+    if (!item || typeof item !== 'object') continue;
+    const obj = item as Record<string, unknown>;
+    const type = typeof obj.type === 'string' ? obj.type : '';
+    const id = typeof obj.id === 'string' ? obj.id : '';
+    if (VALID_MENTION_TYPES.has(type) && id.length > 0) {
+      mentions.push({ type: type as IncomingMention['type'], id });
+    }
+  }
+  return mentions;
+}
+
 function encodeSseData(encoder: TextEncoder, payload: unknown): Uint8Array {
   return encoder.encode(`data: ${JSON.stringify(payload)}\n\n`);
 }
@@ -253,10 +282,12 @@ export async function POST(req: NextRequest) {
 
   let messages: IncomingChatMessage[];
   let uiContext: IncomingUiContext | undefined;
+  let mentions: IncomingMention[];
   try {
     const bodyObj = asRecord(body);
     messages = validateMessages(bodyObj.messages);
     uiContext = validateUiContext(bodyObj.uiContext);
+    mentions = validateMentions(bodyObj.mentions);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Invalid payload';
     return new Response(JSON.stringify({ error: message }), {
@@ -289,7 +320,7 @@ export async function POST(req: NextRequest) {
         };
         const completionStream = await mod.ChatCompletionsService.createStructuredCompletionStream(
           messages,
-          { signal: req.signal, uiContext },
+          { signal: req.signal, uiContext, mentions: mentions.length > 0 ? mentions : undefined },
         );
 
         for await (const event of completionStream) {

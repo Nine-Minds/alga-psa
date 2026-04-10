@@ -108,6 +108,7 @@ export interface DesignerNodeStyle {
   // Media
   aspectRatio?: string; // e.g. '16 / 9', '1'
   objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+  objectPosition?: string;
 
   // Visual
   margin?: CssLength;

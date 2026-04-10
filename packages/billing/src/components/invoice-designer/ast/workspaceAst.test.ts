@@ -209,6 +209,46 @@ describe('exportWorkspaceToTemplateAst', () => {
     });
   });
 
+  it('exports edited dynamic-table column keys over stale imported path expressions', () => {
+    const workspace = createWorkspaceWithFieldAndDynamicTable();
+    const table = workspace.nodesById['ast-table-1'];
+    if (!table) return;
+
+    workspace.nodesById['ast-table-1'] = {
+      ...table,
+      props: {
+        ...table.props,
+        metadata: {
+          ...(table.props.metadata as Record<string, unknown>),
+          columns: [
+            { id: 'col-desc', header: 'Description', key: 'item.description' },
+            {
+              id: 'col-total',
+              header: 'Amount',
+              key: 'item.aggregates.sumTotal',
+              valueExpression: { type: 'path', path: 'total' },
+              format: 'currency',
+            },
+          ],
+        },
+      },
+    };
+
+    const ast = exportWorkspaceToTemplateAst(workspace);
+    const pageSection = ast.layout.children?.find((child) => child.type === 'section');
+    expect(pageSection).toBeTruthy();
+    if (!pageSection || pageSection.type !== 'section') return;
+
+    const dynamicTable = pageSection.children.find((child) => child.type === 'dynamic-table');
+    expect(dynamicTable).toBeTruthy();
+    if (!dynamicTable || dynamicTable.type !== 'dynamic-table') return;
+
+    expect(dynamicTable.columns.find((column) => column.id === 'col-total')?.value).toEqual({
+      type: 'path',
+      path: 'aggregates.sumTotal',
+    });
+  });
+
   it('roundtrips CSS-like layout/style props through AST inline styles', () => {
     const base = useInvoiceDesignerStore.getState().exportWorkspace();
     const pageNode = Object.values(base.nodesById).find((node) => node.type === 'page');
@@ -415,6 +455,25 @@ describe('exportWorkspaceToTemplateAst', () => {
     const hydrated = importTemplateAstToWorkspace(ast1);
     const ast2 = exportWorkspaceToTemplateAst(hydrated);
     expect(ast2).toEqual(ast1);
+  });
+
+  it('hydrates imported logo nodes from media width and max-height constraints', () => {
+    const sourceAst = getStandardTemplateAstByCode('standard-detailed');
+    expect(sourceAst).toBeTruthy();
+    if (!sourceAst) return;
+
+    const hydrated = importTemplateAstToWorkspace(sourceAst);
+    const hydratedLogo = hydrated.nodesById['issuer-logo'];
+
+    expect(hydratedLogo?.type).toBe('image');
+    expect((hydratedLogo?.props as any)?.style).toMatchObject({
+      width: '180px',
+      maxHeight: '72px',
+    });
+    expect((hydratedLogo?.props as any)?.size).toMatchObject({
+      width: 180,
+      height: 72,
+    });
   });
 
   it('omits transforms from generated AST when the workspace has no authored transform pipeline', () => {

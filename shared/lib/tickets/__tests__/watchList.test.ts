@@ -245,4 +245,37 @@ describe('watchList utilities', () => {
       },
     ]);
   });
+
+  it('T048: watch-list entries remain email-keyed snapshots when duplicate contact metadata is re-seen later', () => {
+    expect(
+      mergeTicketWatchListRecipients(
+        [
+          {
+            email: 'snapshot@example.com',
+            active: true,
+            entity_type: 'contact',
+            entity_id: 'contact-1',
+            name: 'Original Snapshot',
+          },
+        ],
+        [
+          {
+            email: 'snapshot@example.com',
+            active: true,
+            entity_type: 'contact',
+            entity_id: 'contact-2',
+            name: 'Re-resolved Contact',
+          },
+        ]
+      )
+    ).toEqual([
+      {
+        email: 'snapshot@example.com',
+        active: true,
+        entity_type: 'contact',
+        entity_id: 'contact-1',
+        name: 'Original Snapshot',
+      },
+    ]);
+  });
 });

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { UnsavedChangesContext } from '@alga-psa/ui/context/UnsavedChangesContext';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAdjacentTicketIds } from '../../actions/optimizedTicketActions';
 import { parseReturnFilters, DEFAULT_TICKET_LIST_FILTERS } from '../../lib/ticketFilterUtils';
 
@@ -13,6 +14,7 @@ interface TicketNavigationProps {
 }
 
 export default function TicketNavigation({ currentTicketId }: TicketNavigationProps) {
+  const { t } = useTranslation('features/tickets');
   const searchParams = useSearchParams();
   const unsavedChangesContext = useContext(UnsavedChangesContext);
 
@@ -114,13 +116,13 @@ export default function TicketNavigation({ currentTicketId }: TicketNavigationPr
       <Button
         id="ticket-nav-prev"
         variant="outline"
-        size="sm"
+        size="xs"
         disabled={!adjacentData.prevTicketId}
         onClick={() => adjacentData.prevTicketId && navigateToTicket(adjacentData.prevTicketId)}
-        className="h-7 w-7 p-0"
-        aria-label="Previous ticket"
+        className="h-5 w-5 p-0"
+        aria-label={t('navigation.previousTicket', 'Previous ticket')}
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="h-3 w-3" />
       </Button>
 
       <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap px-1">
@@ -130,13 +132,13 @@ export default function TicketNavigation({ currentTicketId }: TicketNavigationPr
       <Button
         id="ticket-nav-next"
         variant="outline"
-        size="sm"
+        size="xs"
         disabled={!adjacentData.nextTicketId}
         onClick={() => adjacentData.nextTicketId && navigateToTicket(adjacentData.nextTicketId)}
-        className="h-7 w-7 p-0"
-        aria-label="Next ticket"
+        className="h-5 w-5 p-0"
+        aria-label={t('navigation.nextTicket', 'Next ticket')}
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h3 w-3" />
       </Button>
     </div>
   );

@@ -22,6 +22,18 @@
       "android": {
         "distribution": "store"
       }
+    },
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_ALGA_ENV": "prod",
+        "EXPO_PUBLIC_ANALYTICS_ENABLED": "true"
+      },
+      "ios": {
+        "distribution": "store"
+      },
+      "android": {
+        "distribution": "store"
+      }
     }
   },
   "submit": {
@@ -33,6 +45,16 @@
     "playInternal": {
       "android": {
         "track": "internal",
+        "releaseStatus": "draft",
+        "serviceAccountKeyPath": "./google-service-account.json"
+      }
+    },
+    "production": {
+      "ios": {
+        "ascAppId": "6760326836"
+      },
+      "android": {
+        "track": "production",
         "releaseStatus": "draft",
         "serviceAccountKeyPath": "./google-service-account.json"
       }

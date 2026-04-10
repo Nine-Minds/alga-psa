@@ -1,198 +1,198 @@
 {
   "profile": {
-    "pageTitle": "11111",
+    "pageTitle": "55555",
     "tabs": {
-      "profile": "11111",
-      "security": "11111",
-      "sso": "11111",
-      "apiKeys": "11111",
-      "notifications": "11111",
-      "calendar": "11111"
+      "profile": "55555",
+      "security": "55555",
+      "sso": "55555",
+      "apiKeys": "55555",
+      "notifications": "55555",
+      "calendar": "55555"
     },
     "basicInfo": {
-      "title": "11111"
+      "title": "55555"
     },
     "fields": {
       "firstName": {
-        "label": "11111"
+        "label": "55555"
       },
       "lastName": {
-        "label": "11111"
+        "label": "55555"
       },
       "email": {
-        "label": "11111"
+        "label": "55555"
       },
       "phoneNumber": {
-        "label": "11111"
+        "label": "55555"
       },
       "timeZone": {
-        "label": "11111"
+        "label": "55555"
       }
     },
     "actions": {
-      "saveChanges": "11111"
+      "saveChanges": "55555"
     },
     "notifications": {
-      "title": "11111",
+      "title": "55555",
       "viewSwitcher": {
-        "email": "11111",
-        "internal": "11111"
+        "email": "55555",
+        "internal": "55555"
       }
     },
-    "loading": "11111",
+    "loading": "55555",
     "messages": {
       "success": {
-        "profileUpdated": "11111"
+        "profileUpdated": "55555"
       },
       "error": {
-        "userNotFound": "11111",
-        "fillRequiredFields": "11111",
-        "loadFailed": "11111",
-        "saveFailed": "11111",
-        "errorPrefix": "11111"
+        "userNotFound": "55555",
+        "fillRequiredFields": "55555",
+        "loadFailed": "55555",
+        "saveFailed": "55555",
+        "errorPrefix": "55555 {{error}} 55555"
       }
     },
     "validation": {
-      "firstNameRequired": "11111",
-      "lastNameRequired": "11111"
+      "firstNameRequired": "55555",
+      "lastNameRequired": "55555"
     },
     "changePassword": {
-      "title": "11111",
-      "current": "11111",
-      "new": "11111",
-      "confirm": "11111",
-      "validationFailed": "11111",
-      "requirements": "11111",
-      "submit": "11111",
-      "success": "11111",
-      "error": "11111",
-      "passwordMismatch": "11111",
-      "unknownError": "11111"
+      "title": "55555",
+      "current": "55555",
+      "new": "55555",
+      "confirm": "55555",
+      "validationFailed": "55555",
+      "requirements": "55555",
+      "submit": "55555",
+      "success": "55555",
+      "error": "55555",
+      "passwordMismatch": "55555",
+      "unknownError": "55555"
     },
     "loadingStates": {
       "sso": {
-        "title": "11111",
-        "description": "11111"
+        "title": "55555",
+        "description": "55555"
       },
       "calendar": {
-        "title": "11111",
-        "description": "11111"
+        "title": "55555",
+        "description": "55555"
       }
     }
   },
   "security": {
-    "title": "11111",
+    "title": "55555",
     "tabs": {
-      "roles": "11111",
-      "sessions": "11111",
-      "sso": "11111",
-      "permissions": "11111",
-      "userRoles": "11111",
-      "policies": "11111",
-      "apiKeys": "11111"
+      "roles": "55555",
+      "sessions": "55555",
+      "sso": "55555",
+      "permissions": "55555",
+      "userRoles": "55555",
+      "policies": "55555",
+      "apiKeys": "55555"
     },
     "loading": {
-      "roles": "11111",
-      "permissions": "11111",
-      "userRoles": "11111",
-      "policies": "11111",
-      "apiKeys": "11111",
-      "sso": "11111",
-      "sessions": "11111"
+      "roles": "55555",
+      "permissions": "55555",
+      "userRoles": "55555",
+      "policies": "55555",
+      "apiKeys": "55555",
+      "sso": "55555",
+      "sessions": "55555"
     },
     "userRoles": {
-      "title": "11111",
+      "title": "55555",
       "description": {
-        "msp": "11111",
-        "client": "11111"
+        "msp": "55555",
+        "client": "55555"
       },
       "viewSwitcher": {
-        "msp": "11111",
-        "clientPortal": "11111"
+        "msp": "55555",
+        "clientPortal": "55555"
       },
-      "showInactive": "11111",
+      "showInactive": "55555",
       "fields": {
-        "selectUser": "11111",
-        "selectRole": "11111"
+        "selectUser": "55555",
+        "selectRole": "55555"
       },
       "actions": {
-        "assignRole": "11111"
+        "assignRole": "55555"
       },
       "table": {
-        "user": "11111",
-        "email": "11111",
-        "roles": "11111",
-        "actions": "11111"
+        "user": "55555",
+        "email": "55555",
+        "roles": "55555",
+        "actions": "55555"
       },
-      "unnamedUser": "11111",
-      "noRolesAssigned": "11111",
-      "removeRole": "11111",
+      "unnamedUser": "55555",
+      "noRolesAssigned": "55555",
+      "removeRole": "55555 {{role}} 55555",
       "emptyState": {
-        "noUsers": "11111",
-        "inactiveHidden": "11111"
+        "noUsers": "55555 {{type}} 55555",
+        "inactiveHidden": "55555"
       },
-      "inactiveTag": "11111"
+      "inactiveTag": "55555"
     },
     "sessions": {
-      "title": "11111",
-      "subtitle": "11111",
-      "subtitle_plural": "11111",
+      "title": "55555",
+      "subtitle": "55555 {{sessionCount}} 55555 {{userCount}} 55555",
+      "subtitle_plural": "55555 {{sessionCount}} 55555 {{userCount}} 55555",
       "filters": {
-        "search": "11111",
-        "searchPlaceholder": "11111",
-        "user": "11111",
-        "allUsers": "11111",
-        "loginMethod": "11111",
-        "allMethods": "11111",
-        "userType": "11111",
-        "allTypes": "11111",
-        "from": "11111",
-        "to": "11111",
-        "selectDate": "11111",
-        "reset": "11111"
+        "search": "55555",
+        "searchPlaceholder": "55555",
+        "user": "55555",
+        "allUsers": "55555",
+        "loginMethod": "55555",
+        "allMethods": "55555",
+        "userType": "55555",
+        "allTypes": "55555",
+        "from": "55555",
+        "to": "55555",
+        "selectDate": "55555",
+        "reset": "55555"
       },
       "loginMethods": {
-        "password": "11111",
-        "google": "11111",
-        "microsoft": "11111",
-        "keycloak": "11111"
+        "password": "55555",
+        "google": "55555",
+        "microsoft": "55555",
+        "keycloak": "55555"
       },
       "userTypes": {
-        "internal": "11111",
-        "client": "11111"
+        "internal": "55555",
+        "client": "55555"
       },
       "session": {
-        "yourSession": "11111",
-        "unknownDevice": "11111",
-        "lastActive": "11111",
-        "logout": "11111",
-        "revoke": "11111",
-        "revoking": "11111"
+        "yourSession": "55555",
+        "unknownDevice": "55555",
+        "lastActive": "55555 {{time}} 55555",
+        "logout": "55555",
+        "revoke": "55555",
+        "revoking": "55555"
       },
-      "oauthWarning": "11111",
-      "confirmLogout": "11111",
+      "oauthWarning": "55555 {{provider}} 55555 {{provider}} 55555",
+      "confirmLogout": "55555",
       "messages": {
-        "loadFailed": "11111",
-        "loggingOut": "11111",
-        "revoked": "11111",
-        "revokeFailed": "11111"
+        "loadFailed": "55555",
+        "loggingOut": "55555",
+        "revoked": "55555",
+        "revokeFailed": "55555"
       },
       "emptyState": {
-        "loading": "11111",
-        "noMatch": "11111",
-        "noSessions": "11111"
+        "loading": "55555",
+        "noMatch": "55555",
+        "noSessions": "55555"
       }
     }
   },
   "platformUpdates": {
     "detail": {
-      "back": "11111",
+      "back": "55555",
       "labels": {
-        "info": "11111",
-        "warning": "11111",
-        "destructive": "11111",
-        "success": "11111",
-        "default": "11111"
+        "info": "55555",
+        "warning": "55555",
+        "destructive": "55555",
+        "success": "55555",
+        "default": "55555"
       }
     }
   }

@@ -12,6 +12,7 @@ import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { createTemplateFromProject, getTemplateCategories } from '../../actions/projectTemplateActions';
 import { getProjects } from '../../actions/projectActions';
+import { useTranslation } from 'react-i18next';
 
 interface CreateTemplateDialogProps {
   onClose: () => void;
@@ -20,6 +21,7 @@ interface CreateTemplateDialogProps {
 }
 
 const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, onTemplateCreated, initialProjectId }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [projects, setProjects] = useState<IProject[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,11 +60,11 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
         setProjects(projectsResult);
         setCategories(categoriesData);
       } catch (error) {
-        handleError(error, 'Failed to load projects and categories');
+        handleError(error, t('templates.create.loadFailed', 'Failed to load projects and categories'));
       }
     };
     fetchData();
-  }, []);
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +87,7 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
         copyOptions
       );
 
-      toast.success('Template created successfully');
+      toast.success(t('templates.create.createdSuccess', 'Template created successfully'));
 
       if (onTemplateCreated) {
         onTemplateCreated(templateId);
@@ -93,7 +95,7 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
 
       onClose();
     } catch (error) {
-      handleError(error, 'Failed to create template');
+      handleError(error, t('templates.create.createFailed', 'Failed to create template'));
     } finally {
       setIsSubmitting(false);
     }
@@ -106,7 +108,7 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
         setHasAttemptedSubmit(false);
         onClose();
       }}
-      title="Create Template from Project"
+      title={t('templates.create.title', 'Create Template from Project')}
       className="max-w-[600px]"
     >
       <DialogContent>
@@ -114,7 +116,7 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Source Project *
+                {t('templates.create.sourceProjectLabel', 'Source Project *')}
               </label>
               <CustomSelect
                 id="source-project"
@@ -124,14 +126,14 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
                   value: p.project_id,
                   label: `${p.project_name} (${p.wbs_code})`
                 }))}
-                placeholder="Select a project"
+                placeholder={t('templates.create.sourceProjectPlaceholder', 'Select a project')}
                 className={hasAttemptedSubmit && !formData.project_id ? 'ring-1 ring-red-500' : ''}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Template Name *
+                {t('templates.create.templateNameLabel', 'Template Name *')}
               </label>
               <Input
                 id="template-name"
@@ -139,7 +141,7 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFormData({ ...formData, template_name: e.target.value })
                 }
-                placeholder="Enter template name"
+                placeholder={t('templates.create.templateNamePlaceholder', 'Enter template name')}
                 className={hasAttemptedSubmit && !formData.template_name.trim() ? 'ring-1 ring-red-500' : ''}
                 autoFocus
               />
@@ -147,7 +149,7 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
+                {t('templates.create.descriptionLabel', 'Description')}
               </label>
               <TextArea
                 id="template-description"
@@ -155,14 +157,14 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Enter template description"
+                placeholder={t('templates.create.descriptionPlaceholder', 'Enter template description')}
                 rows={3}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category
+                {t('templates.create.categoryLabel', 'Category')}
               </label>
               <Input
                 id="template-category"
@@ -170,7 +172,7 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFormData({ ...formData, category: e.target.value })
                 }
-                placeholder="e.g., Software Development, Network Setup"
+                placeholder={t('templates.create.categoryPlaceholder', 'e.g., Software Development, Network Setup')}
                 list="category-suggestions"
               />
               <datalist id="category-suggestions">
@@ -182,24 +184,24 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
 
             <div className="border-t pt-4 mt-2">
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                What to include from the project:
+                {t('templates.create.whatToInclude', 'What to include from the project:')}
               </label>
               <div className="space-y-3">
                 <Checkbox
                   id="copy-phases"
-                  label="Copy project phases"
+                  label={t('templates.create.copyPhases', 'Copy project phases')}
                   checked={copyOptions.copyPhases}
                   onChange={(e) => setCopyOptions({ ...copyOptions, copyPhases: e.target.checked })}
                 />
                 <Checkbox
                   id="copy-statuses"
-                  label="Copy project columns/statuses"
+                  label={t('templates.create.copyStatuses', 'Copy project columns/statuses')}
                   checked={copyOptions.copyStatuses}
                   onChange={(e) => setCopyOptions({ ...copyOptions, copyStatuses: e.target.checked })}
                 />
                 <Checkbox
                   id="copy-tasks"
-                  label="Copy project tasks"
+                  label={t('templates.create.copyTasks', 'Copy project tasks')}
                   checked={copyOptions.copyTasks}
                   onChange={(e) => {
                     setCopyOptions({
@@ -214,21 +216,21 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
                 />
                 <Checkbox
                   id="copy-checklists"
-                  label="Copy task checklists"
+                  label={t('templates.create.copyChecklists', 'Copy task checklists')}
                   checked={copyOptions.copyChecklists}
                   disabled={!copyOptions.copyTasks}
                   onChange={(e) => setCopyOptions({ ...copyOptions, copyChecklists: e.target.checked })}
                 />
                 <Checkbox
                   id="copy-services"
-                  label="Copy task services"
+                  label={t('templates.create.copyServices', 'Copy task services')}
                   checked={copyOptions.copyServices}
                   disabled={!copyOptions.copyTasks}
                   onChange={(e) => setCopyOptions({ ...copyOptions, copyServices: e.target.checked })}
                 />
                 <Checkbox
                   id="copy-assignments"
-                  label="Copy task assignments"
+                  label={t('templates.create.copyAssignments', 'Copy task assignments')}
                   checked={copyOptions.copyAssignments}
                   disabled={!copyOptions.copyTasks}
                   onChange={(e) => setCopyOptions({ ...copyOptions, copyAssignments: e.target.checked })}
@@ -246,7 +248,7 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
                 }}
                 disabled={isSubmitting}
               >
-                Cancel
+                {t('common:actions.cancel', 'Cancel')}
               </Button>
               <Button
                 id="create-button"
@@ -254,7 +256,9 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
                 disabled={isSubmitting}
                 className={!formData.project_id || !formData.template_name.trim() ? 'opacity-50' : ''}
               >
-                {isSubmitting ? 'Creating...' : 'Create Template'}
+                {isSubmitting
+                  ? t('templates.create.creating', 'Creating...')
+                  : t('templates.create.create', 'Create Template')}
               </Button>
             </div>
           </div>

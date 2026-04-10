@@ -26,3 +26,14 @@ db:
     key: DB_PASSWORD_SUPERUSER
 
 applicationUrl: http://alga-core.msp.svc.cluster.local:3000
+
+auth:
+  nextauthSecretSecret:
+    name: alga-core-sebastian-secrets
+    key: NEXTAUTH_SECRET
+
+portalDomain:
+  certificateNamespace: ""
+  gatewayNamespace: ""
+  secretReplicationEnabled: false
+  baseVirtualService: ""

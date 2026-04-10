@@ -1,427 +1,427 @@
 {
   "common": {
-    "loading": "11111"
+    "loading": "55555"
   },
   "moduleFrame": {
-    "title": "11111",
-    "description": "11111",
-    "badge": "11111",
+    "title": "55555",
+    "description": "55555",
+    "badge": "55555",
     "nav": {
-      "dashboard": "11111",
-      "responses": "11111",
-      "analytics": "11111",
-      "setup": "11111"
+      "dashboard": "55555",
+      "responses": "55555",
+      "analytics": "55555",
+      "setup": "55555"
     }
   },
   "settings": {
-    "tabLabel": "11111",
-    "title": "11111",
-    "subtitle": "11111",
+    "tabLabel": "55555",
+    "title": "55555",
+    "subtitle": "55555",
     "tabs": {
-      "templates": "11111",
-      "triggers": "11111"
+      "templates": "55555",
+      "triggers": "55555"
     },
     "templateList": {
-      "title": "11111",
-      "description": "11111",
-      "createButton": "11111",
-      "emptyTitle": "11111",
-      "emptyDescription": "11111",
-      "defaultBadge": "11111",
+      "title": "55555",
+      "description": "55555",
+      "createButton": "55555",
+      "emptyTitle": "55555",
+      "emptyDescription": "55555",
+      "defaultBadge": "55555",
       "table": {
-        "name": "11111",
-        "rating": "11111",
-        "status": "11111",
-        "updated": "11111",
-        "actions": "11111"
+        "name": "55555",
+        "rating": "55555",
+        "status": "55555",
+        "updated": "55555",
+        "actions": "55555"
       },
       "status": {
-        "enabled": "11111",
-        "disabled": "11111"
+        "enabled": "55555",
+        "disabled": "55555"
       },
       "actions": {
-        "setDefault": "11111"
+        "setDefault": "55555"
       },
       "toasts": {
-        "created": "11111",
-        "updated": "11111",
-        "deleted": "11111",
-        "error": "11111",
-        "setDefault": "11111"
+        "created": "55555",
+        "updated": "55555",
+        "deleted": "55555",
+        "error": "55555",
+        "setDefault": "55555"
       },
       "errors": {
-        "load": "11111"
+        "load": "55555"
       },
       "delete": {
-        "validationFailed": "11111",
-        "error": "11111",
-        "entityFallback": "11111"
+        "validationFailed": "55555",
+        "error": "55555",
+        "entityFallback": "55555"
       },
-      "actionsMenuAria": "11111"
+      "actionsMenuAria": "55555 {{name}} 55555"
     },
     "templateForm": {
-      "titleCreate": "11111",
-      "titleEdit": "11111",
+      "titleCreate": "55555",
+      "titleEdit": "55555",
       "ratingTypes": {
-        "stars": "11111",
-        "numbers": "11111",
-        "emojis": "11111"
+        "stars": "55555",
+        "numbers": "55555",
+        "emojis": "55555"
       },
       "defaults": {
-        "promptText": "11111",
-        "commentPrompt": "11111",
-        "thankYouText": "11111"
+        "promptText": "55555",
+        "commentPrompt": "55555",
+        "thankYouText": "55555"
       },
       "labels": {
-        "name": "11111",
-        "ratingType": "11111",
-        "ratingScale": "11111",
-        "ratingLabels": "11111",
-        "preview": "11111",
-        "promptText": "11111",
-        "commentPrompt": "11111",
-        "thankYouText": "11111",
-        "isDefault": "11111",
-        "enabled": "11111"
+        "name": "55555",
+        "ratingType": "55555",
+        "ratingScale": "55555",
+        "ratingLabels": "55555",
+        "preview": "55555",
+        "promptText": "55555",
+        "commentPrompt": "55555",
+        "thankYouText": "55555",
+        "isDefault": "55555",
+        "enabled": "55555"
       },
       "placeholders": {
-        "ratingLabels": "11111"
+        "ratingLabels": "55555"
       },
       "help": {
-        "ratingLabels": "11111"
+        "ratingLabels": "55555"
       },
       "actions": {
-        "create": "11111",
-        "save": "11111",
-        "delete": "11111"
+        "create": "55555",
+        "save": "55555",
+        "delete": "55555"
       },
       "delete": {
-        "validationFailed": "11111",
-        "error": "11111",
-        "entityFallback": "11111"
+        "validationFailed": "55555",
+        "error": "55555",
+        "entityFallback": "55555"
       }
     },
     "triggerList": {
-      "title": "11111",
-      "description": "11111",
-      "createButton": "11111",
-      "emptyTitle": "11111",
-      "emptyDescription": "11111",
+      "title": "55555",
+      "description": "55555",
+      "createButton": "55555",
+      "emptyTitle": "55555",
+      "emptyDescription": "55555",
       "table": {
-        "template": "11111",
-        "type": "11111",
-        "conditions": "11111",
-        "status": "11111",
-        "updated": "11111",
-        "actions": "11111"
+        "template": "55555",
+        "type": "55555",
+        "conditions": "55555",
+        "status": "55555",
+        "updated": "55555",
+        "actions": "55555"
       },
       "status": {
-        "enabled": "11111",
-        "disabled": "11111"
+        "enabled": "55555",
+        "disabled": "55555"
       },
       "conditions": {
-        "unrestricted": "11111",
-        "boards": "11111",
-        "statuses": "11111",
-        "priorities": "11111",
-        "any": "11111"
+        "unrestricted": "55555",
+        "boards": "55555",
+        "statuses": "55555",
+        "priorities": "55555",
+        "any": "55555"
       },
       "toasts": {
-        "created": "11111",
-        "updated": "11111",
-        "deleted": "11111",
-        "error": "11111",
-        "deleteError": "11111"
+        "created": "55555",
+        "updated": "55555",
+        "deleted": "55555",
+        "error": "55555",
+        "deleteError": "55555"
       },
       "errors": {
-        "load": "11111"
+        "load": "55555"
       },
-      "deleteConfirm": "11111",
-      "actionsMenuAria": "11111"
+      "deleteConfirm": "55555",
+      "actionsMenuAria": "55555 {{target}} 55555"
     },
     "triggerForm": {
-      "titleCreate": "11111",
-      "titleEdit": "11111",
+      "titleCreate": "55555",
+      "titleEdit": "55555",
       "triggerTypes": {
-        "ticket_closed": "11111",
-        "project_completed": "11111"
+        "ticket_closed": "55555",
+        "project_completed": "55555"
       },
       "labels": {
-        "template": "11111",
-        "triggerType": "11111",
-        "boardIds": "11111",
-        "statusIds": "11111",
-        "priorities": "11111",
-        "enabled": "11111"
+        "template": "55555",
+        "triggerType": "55555",
+        "boardIds": "55555",
+        "statusIds": "55555",
+        "priorities": "55555",
+        "enabled": "55555"
       },
       "placeholders": {
-        "boardIds": "11111",
-        "statusIds": "11111",
-        "priorities": "11111"
+        "boardIds": "55555",
+        "statusIds": "55555",
+        "priorities": "55555"
       },
       "boardFilters": {
-        "active": "11111",
-        "inactive": "11111",
-        "all": "11111"
+        "active": "55555",
+        "inactive": "55555",
+        "all": "55555"
       },
       "help": {
-        "conditions": "11111"
+        "conditions": "55555"
       },
       "actions": {
-        "create": "11111",
-        "save": "11111",
-        "delete": "11111"
+        "create": "55555",
+        "save": "55555",
+        "delete": "55555"
       },
-      "noTemplates": "11111",
-      "prioritiesMixed": "11111",
+      "noTemplates": "55555",
+      "prioritiesMixed": "55555",
       "errors": {
-        "reference": "11111"
+        "reference": "55555"
       }
     }
   },
   "response": {
-    "pageTitle": "11111",
-    "invalidTitle": "11111",
-    "invalidMessage": "11111",
-    "ratingPrompt": "11111",
-    "ratingAssistive": "11111",
-    "commentLabel": "11111",
-    "submitButton": "11111",
-    "submitting": "11111",
-    "submittedTitle": "11111",
-    "submittedMessage": "11111",
-    "ratingSubmitted": "11111",
-    "retryButton": "11111",
-    "selectRatingError": "11111",
-    "errorMessage": "11111",
-    "supportMessage": "11111"
+    "pageTitle": "55555",
+    "invalidTitle": "55555",
+    "invalidMessage": "55555",
+    "ratingPrompt": "55555",
+    "ratingAssistive": "55555 {{scale}} 55555",
+    "commentLabel": "55555",
+    "submitButton": "55555",
+    "submitting": "55555",
+    "submittedTitle": "55555",
+    "submittedMessage": "55555 {{thankYouText}} 55555",
+    "ratingSubmitted": "55555",
+    "retryButton": "55555",
+    "selectRatingError": "55555",
+    "errorMessage": "55555",
+    "supportMessage": "55555"
   },
   "rating": {
-    "buttonAriaWithLabel": "11111",
-    "buttonAria": "11111",
+    "buttonAriaWithLabel": "55555 {{rating}} 55555 {{label}} 55555",
+    "buttonAria": "55555 {{rating}} 55555 {{scale}} 55555",
     "defaults": {
       "3": {
-        "1": "11111",
-        "2": "11111",
-        "3": "11111"
+        "1": "55555",
+        "2": "55555",
+        "3": "55555"
       },
       "5": {
-        "1": "11111",
-        "2": "11111",
-        "3": "11111",
-        "4": "11111",
-        "5": "11111"
+        "1": "55555",
+        "2": "55555",
+        "3": "55555",
+        "4": "55555",
+        "5": "55555"
       },
       "10": {
-        "1": "11111",
-        "2": "11111",
-        "3": "11111",
-        "4": "11111",
-        "5": "11111",
-        "6": "11111",
-        "7": "11111",
-        "8": "11111",
-        "9": "11111",
-        "10": "11111"
+        "1": "55555",
+        "2": "55555",
+        "3": "55555",
+        "4": "55555",
+        "5": "55555",
+        "6": "55555",
+        "7": "55555",
+        "8": "55555",
+        "9": "55555",
+        "10": "55555"
       }
     }
   },
   "responses": {
     "filters": {
       "labels": {
-        "template": "11111",
-        "technician": "11111",
-        "client": "11111",
-        "dateRange": "11111"
+        "template": "55555",
+        "technician": "55555",
+        "client": "55555",
+        "dateRange": "55555"
       },
       "placeholders": {
-        "allTemplates": "11111",
-        "allTechnicians": "11111",
-        "allClients": "11111"
+        "allTemplates": "55555",
+        "allTechnicians": "55555",
+        "allClients": "55555"
       },
       "actions": {
-        "apply": "11111",
-        "reset": "11111"
+        "apply": "55555",
+        "reset": "55555"
       }
     },
     "page": {
-      "filterTitle": "11111",
-      "loading": "11111",
-      "error": "11111",
+      "filterTitle": "55555",
+      "loading": "55555",
+      "error": "55555",
       "pageSizeOptions": {
-        "10": "11111",
-        "25": "11111",
-        "50": "11111"
+        "10": "55555",
+        "25": "55555",
+        "50": "55555"
       },
-      "itemLabel": "11111"
+      "itemLabel": "55555"
     },
     "detail": {
-      "title": "11111",
-      "empty": "11111",
+      "title": "55555",
+      "empty": "55555",
       "labels": {
-        "submittedAt": "11111",
-        "client": "11111",
-        "contact": "11111",
-        "technician": "11111",
-        "ticket": "11111",
-        "rating": "11111",
-        "comment": "11111"
+        "submittedAt": "55555",
+        "client": "55555",
+        "contact": "55555",
+        "technician": "55555",
+        "ticket": "55555",
+        "rating": "55555",
+        "comment": "55555"
       },
       "fallbacks": {
-        "unknown": "11111",
-        "unassigned": "11111",
-        "none": "11111",
-        "noComment": "11111"
+        "unknown": "55555",
+        "unassigned": "55555",
+        "none": "55555",
+        "noComment": "55555"
       }
     }
   },
   "dashboard": {
-    "loadingInsights": "11111",
+    "loadingInsights": "55555",
     "responseMetrics": {
       "cards": {
-        "sent": "11111",
-        "responses": "11111",
-        "responseRate": "11111",
-        "averageRating": "11111",
-        "outstanding": "11111",
-        "negative": "11111"
+        "sent": "55555",
+        "responses": "55555",
+        "responseRate": "55555",
+        "averageRating": "55555",
+        "outstanding": "55555",
+        "negative": "55555"
       },
       "badges": {
-        "awaitingResponses": "11111",
-        "needsReview": "11111"
+        "awaitingResponses": "55555",
+        "needsReview": "55555"
       }
     },
     "responseTrend": {
-      "title": "11111",
-      "emptyTitle": "11111",
-      "emptyDescription": "11111",
+      "title": "55555",
+      "emptyTitle": "55555",
+      "emptyDescription": "55555",
       "tooltip": {
-        "averageRating": "11111",
-        "responses": "11111",
-        "date": "11111"
+        "averageRating": "55555",
+        "responses": "55555",
+        "date": "55555 {{label}} 55555"
       }
     },
     "responsesList": {
-      "title": "11111",
-      "emptyTitle": "11111",
-      "emptyDescription": "11111",
+      "title": "55555",
+      "emptyTitle": "55555",
+      "emptyDescription": "55555",
       "table": {
-        "submitted": "11111",
-        "client": "11111",
-        "technician": "11111",
-        "rating": "11111",
-        "comment": "11111",
-        "ticket": "11111"
+        "submitted": "55555",
+        "client": "55555",
+        "technician": "55555",
+        "rating": "55555",
+        "comment": "55555",
+        "ticket": "55555"
       },
       "fallbacks": {
-        "unknownClient": "11111",
-        "unassigned": "11111",
-        "noComment": "11111"
+        "unknownClient": "55555",
+        "unassigned": "55555",
+        "noComment": "55555"
       }
     },
     "satisfactionDistribution": {
-      "title": "11111",
-      "emptyTitle": "11111",
-      "emptyDescription": "11111",
+      "title": "55555",
+      "emptyTitle": "55555",
+      "emptyDescription": "55555",
       "axes": {
-        "rating": "11111",
-        "responses": "11111"
+        "rating": "55555",
+        "responses": "55555"
       },
       "tooltip": {
-        "percent": "11111",
-        "responses": "11111",
-        "rating": "11111"
+        "percent": "55555",
+        "responses": "55555",
+        "rating": "55555 {{label}} 55555"
       }
     },
     "topIssues": {
-      "title": "11111",
-      "emptyTitle": "11111",
-      "emptyDescription": "11111",
+      "title": "55555",
+      "emptyTitle": "55555",
+      "emptyDescription": "55555",
       "fallbacks": {
-        "unknownClient": "11111",
-        "ticket": "11111",
-        "noComment": "11111",
-        "assignedTo": "11111"
+        "unknownClient": "55555",
+        "ticket": "55555 {{ticket}} 55555",
+        "noComment": "55555",
+        "assignedTo": "55555 {{name}} 55555"
       }
     }
   },
   "analytics": {
     "filters": {
       "labels": {
-        "customerSegment": "11111",
-        "surveyTemplate": "11111",
-        "timeframe": "11111",
-        "calendarView": "11111"
+        "customerSegment": "55555",
+        "surveyTemplate": "55555",
+        "timeframe": "55555",
+        "calendarView": "55555"
       },
       "defaults": {
         "segments": {
-          "all": "11111",
-          "managed": "11111",
-          "project": "11111"
+          "all": "55555",
+          "managed": "55555",
+          "project": "55555"
         },
         "templates": {
-          "all": "11111",
-          "default": "11111"
+          "all": "55555",
+          "default": "55555"
         },
         "timeframes": {
-          "30d": "11111",
-          "90d": "11111",
-          "365d": "11111"
+          "30d": "55555",
+          "90d": "55555",
+          "365d": "55555"
         }
       },
       "actions": {
-        "apply": "11111",
-        "reset": "11111",
-        "calendar": "11111"
+        "apply": "55555",
+        "reset": "55555",
+        "calendar": "55555"
       }
     },
     "page": {
-      "filtersTitle": "11111",
-      "overviewTitle": "11111",
-      "overviewDescription": "11111"
+      "filtersTitle": "55555",
+      "overviewTitle": "55555",
+      "overviewDescription": "55555"
     },
     "chart": {
-      "empty": "11111",
+      "empty": "55555",
       "tooltip": {
-        "averageRating": "11111",
-        "responseRate": "11111"
+        "averageRating": "55555",
+        "responseRate": "55555"
       },
       "legend": {
-        "averageRating": "11111",
-        "responseRate": "11111"
+        "averageRating": "55555",
+        "responseRate": "55555"
       }
     },
     "export": {
-      "csv": "11111",
-      "shareSnapshot": "11111",
-      "emailDigest": "11111"
+      "csv": "55555",
+      "shareSnapshot": "55555",
+      "emailDigest": "55555"
     }
   },
   "clientSummary": {
-    "title": "11111",
-    "empty": "11111",
+    "title": "55555",
+    "empty": "55555",
     "labels": {
-      "averageRating": "11111",
-      "responseRate": "11111",
-      "totalResponses": "11111",
-      "lastResponse": "11111",
-      "rollingTrend": "11111"
+      "averageRating": "55555",
+      "responseRate": "55555",
+      "totalResponses": "55555",
+      "lastResponse": "55555",
+      "rollingTrend": "55555"
     },
     "fallbacks": {
-      "none": "11111",
-      "noResponsesYet": "11111"
+      "none": "55555",
+      "noResponsesYet": "55555"
     }
   },
   "ticketSummary": {
-    "title": "11111",
-    "empty": "11111",
+    "title": "55555",
+    "empty": "55555",
     "labels": {
-      "latestRating": "11111",
-      "comment": "11111",
-      "totalResponses": "11111"
+      "latestRating": "55555",
+      "comment": "55555",
+      "totalResponses": "55555"
     },
     "fallbacks": {
-      "none": "11111"
+      "none": "55555"
     }
   }
 }

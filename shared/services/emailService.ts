@@ -18,6 +18,7 @@ export interface FindContactByEmailOutput {
   contact_id: string;
   name: string;
   email: string;
+  matched_email?: string;
   client_id: string;
   client_name: string;
   phone?: string;
@@ -246,35 +247,35 @@ export class EmailService {
         return null;
       }
 
-      const contact = await this.knex('contacts')
-        .leftJoin('clients', 'contacts.client_id', 'clients.client_id')
-        .select(
-          'contacts.contact_name_id as contact_id',
-          'contacts.full_name as name',
-          'contacts.email',
-          'contacts.client_id',
-          'clients.client_name',
-          'contacts.role as title'
-        )
-        .where({
-          'contacts.tenant': this.tenant,
-          'contacts.email': normalizedEmail
-        })
-        .first();
+      const hydratedContact = await ContactModel.getContactByEmail(
+        normalizedEmail,
+        this.tenant,
+        this.knex as Knex.Transaction
+      );
 
-      if (!contact) {
+      if (!hydratedContact) {
         return null;
       }
 
-      const hydratedContact = await ContactModel.getContactById(contact.contact_id, this.tenant, this.knex as Knex.Transaction);
+      const client = hydratedContact.client_id
+        ? await this.knex('clients')
+            .select('client_name')
+            .where({
+              tenant: this.tenant,
+              client_id: hydratedContact.client_id,
+            })
+            .first<{ client_name: string }>()
+        : null;
+
       return {
-        contact_id: contact.contact_id,
-        name: contact.name,
-        email: contact.email,
-        client_id: contact.client_id || '',
-        client_name: contact.client_name || '',
-        phone: hydratedContact ? getDefaultPhoneNumber(hydratedContact) : undefined,
-        title: contact.title
+        contact_id: hydratedContact.contact_name_id,
+        name: hydratedContact.full_name,
+        email: hydratedContact.email || normalizedEmail,
+        matched_email: normalizedEmail,
+        client_id: hydratedContact.client_id || '',
+        client_name: client?.client_name || '',
+        phone: getDefaultPhoneNumber(hydratedContact),
+        title: hydratedContact.role || undefined,
       };
     } catch (error: any) {
       logger.error('Error finding contact by email:', error);

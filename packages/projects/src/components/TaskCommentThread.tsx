@@ -12,6 +12,7 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { getCurrentUser, getCurrentUserAvatarUrl } from '@alga-psa/user-composition/actions';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from 'react-i18next';
 
 interface TaskCommentThreadProps {
   taskId: string;
@@ -24,6 +25,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   projectId,
   onCommentCountChange
 }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [comments, setComments] = useState<IProjectTaskCommentWithUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<{ user_id: string; name: string; avatarUrl: string | null } | null>(null);
@@ -98,6 +100,9 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const handleToggleReaction = useCallback(async (taskCommentId: string, emoji: string) => {
     try {
       const { added } = await toggleTaskCommentReaction(taskCommentId, emoji);
+      if (added && currentUser?.user_id && currentUser.name) {
+        setReactionUserNames(prev => prev[currentUser.user_id] ? prev : { ...prev, [currentUser.user_id]: currentUser.name });
+      }
       const userId = currentUser?.user_id || '';
       setReactionsMap((prev) => {
         const existing = prev[taskCommentId] || [];
@@ -127,7 +132,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     } catch (err) {
       console.error('Failed to toggle reaction:', err);
     }
-  }, [currentUser?.user_id]);
+  }, [currentUser?.user_id, currentUser?.name]);
 
   // Sort comments based on reverseOrder
   const sortedComments = [...comments].sort((a, b) => {
@@ -148,7 +153,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
             {...withDataAutomationId({ id: 'task-comments-title' })}
             className="text-lg font-semibold text-gray-900"
           >
-            Comments
+            {t('comments.title', 'Comments')}
           </h3>
           <Badge
             {...withDataAutomationId({ id: 'task-comments-internal-badge' })}
@@ -156,7 +161,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
             className="flex items-center gap-1"
           >
             <Lock className="h-3 w-3" />
-            Internal Only
+            {t('comments.internalOnly', 'Internal Only')}
           </Badge>
         </div>
         <div className="flex items-center gap-2">
@@ -166,7 +171,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
             className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700 px-3 py-1 rounded hover:bg-gray-100"
           >
             <ArrowUpDown className="w-4 h-4" />
-            <span>{reverseOrder ? 'Newest first' : 'Oldest first'}</span>
+            <span>{reverseOrder ? t('comments.newestFirst', 'Newest first') : t('comments.oldestFirst', 'Oldest first')}</span>
           </button>
           {!showEditor && (
             <Button
@@ -178,7 +183,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
                 setShowEditor(true);
               }}
             >
-              Add Comment
+              {t('comments.addComment', 'Add Comment')}
             </Button>
           )}
         </div>
@@ -218,7 +223,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
           {...withDataAutomationId({ id: 'task-comments-loading' })}
           className="text-center py-8 text-gray-500"
         >
-          Loading...
+          {t('comments.loading', 'Loading...')}
         </div>
       )}
 
@@ -228,7 +233,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
           {...withDataAutomationId({ id: 'task-comments-empty' })}
           className="text-center py-8 text-gray-500"
         >
-          No comments yet. Be the first to comment!
+          {t('comments.empty', 'No comments yet. Be the first to comment!')}
         </div>
       )}
 

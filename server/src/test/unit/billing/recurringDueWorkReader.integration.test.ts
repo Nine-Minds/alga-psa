@@ -634,6 +634,172 @@ describe('recurring due-work reader', () => {
     expect(result.invoiceCandidates.map((candidate) => candidate.clientId)).not.toContain('client-2');
   });
 
+  it('T119: backfill-materialized compatibility rows stay out of ready invoice work so the canonical repair gap remains visible', async () => {
+    mocks.rowsByTable.client_billing_cycles = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        client_name: 'Acme Co',
+        billing_cycle_id: 'cycle-2025-03',
+        billing_cycle: 'monthly',
+        period_start_date: '2025-03-01',
+        period_end_date: '2025-04-01',
+        effective_date: '2025-03-01',
+        invoice_id: null,
+      },
+    ];
+
+    mocks.rowsByTable.client_contracts = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        client_contract_line_id: 'assignment-canonical',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        start_date: '2025-03-01',
+        end_date: null,
+        is_active: true,
+      },
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        client_contract_line_id: 'assignment-compatibility',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        start_date: '2025-03-01',
+        end_date: null,
+        is_active: true,
+      },
+    ];
+
+    mocks.rowsByTable.recurring_service_periods = [
+      {
+        tenant: 'tenant-1',
+        record_id: 'rsp-backfill-compatibility',
+        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-compatibility:client:advance',
+        period_key: 'period:2025-03-01:2025-04-01',
+        lifecycle_state: 'generated',
+        reason_code: 'backfill_materialization',
+        cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        service_period_start: '2025-03-01',
+        service_period_end: '2025-04-01',
+        invoice_window_start: '2025-03-01',
+        invoice_window_end: '2025-04-01',
+        invoice_charge_detail_id: null,
+        client_id: 'client-1',
+        client_name: 'Acme Co',
+        billing_cycle_id: 'cycle-2025-03',
+        contract_id: 'contract-2',
+        contract_name: 'Acme Monthly Support',
+        contract_line_id: 'assignment-compatibility',
+        contract_line_name: 'Compatibility Fixed Fee',
+      },
+    ];
+
+    const result = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      searchTerm: 'Acme',
+    });
+
+    expect(result.invoiceCandidates).toEqual([]);
+    expect(result.materializationGaps).toEqual([
+      expect.objectContaining({
+        clientId: 'client-1',
+        scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-canonical:client:advance',
+        periodKey: 'period:2025-03-01:2025-04-01',
+        reason: 'missing_service_period_materialization',
+      }),
+    ]);
+  });
+
+  it('T120: singleton backfill-materialized rows remain ready when they already satisfy the canonical execution identity', async () => {
+    mocks.rowsByTable.client_billing_cycles = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-hourly',
+        client_name: 'AI Med Consult',
+        billing_cycle_id: 'cycle-2025-03',
+        billing_cycle: 'monthly',
+        period_start_date: '2025-03-01',
+        period_end_date: '2025-04-01',
+        effective_date: '2025-03-01',
+        invoice_id: null,
+      },
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-hourly',
+        client_name: 'AI Med Consult',
+        billing_cycle_id: 'cycle-2025-04',
+        billing_cycle: 'monthly',
+        period_start_date: '2025-04-01',
+        period_end_date: '2025-05-01',
+        effective_date: '2025-04-01',
+        invoice_id: null,
+      },
+    ];
+
+    mocks.rowsByTable.client_contracts = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-hourly',
+        client_contract_line_id: 'assignment-hourly',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'arrears',
+        start_date: '2025-03-01',
+        end_date: null,
+        is_active: true,
+      },
+    ];
+
+    mocks.rowsByTable.recurring_service_periods = [
+      {
+        tenant: 'tenant-1',
+        record_id: 'rsp-ai-med-hourly',
+        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-hourly:client:arrears',
+        period_key: 'period:2025-03-01:2025-04-01',
+        lifecycle_state: 'generated',
+        reason_code: 'backfill_materialization',
+        cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        service_period_start: '2025-03-01',
+        service_period_end: '2025-04-01',
+        invoice_window_start: '2025-04-01',
+        invoice_window_end: '2025-05-01',
+        invoice_charge_detail_id: null,
+        client_id: 'client-hourly',
+        client_name: 'AI Med Consult',
+        billing_cycle_id: 'cycle-2025-04',
+        contract_id: 'contract-hourly',
+        contract_name: 'Software Development Services',
+        contract_line_id: 'assignment-hourly',
+        contract_line_name: 'Software Development Services - Hourly',
+      },
+    ];
+
+    const result = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      searchTerm: 'AI Med',
+    });
+
+    expect(result.materializationGaps).toEqual([]);
+    expect(result.invoiceCandidates).toHaveLength(1);
+    expect(result.invoiceCandidates[0]).toMatchObject({
+      clientId: 'client-hourly',
+      clientName: 'AI Med Consult',
+      servicePeriodStart: '2025-03-01',
+      servicePeriodEnd: '2025-04-01',
+      windowStart: '2025-04-01',
+      windowEnd: '2025-05-01',
+      cadenceSources: ['client_schedule'],
+    });
+  });
+
   it('T106: due-work candidate grouping keeps one parent candidate per client + invoice window while surfacing financial split reasons', async () => {
     mocks.rowsByTable.recurring_service_periods = [
       {

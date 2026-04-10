@@ -29,3 +29,9 @@ db:
   adminPasswordSecret:
     name: db-credentials
     key: DB_PASSWORD_SUPERUSER
+
+livenessProbe:
+  enabled: false
+
+readinessProbe:
+  enabled: false
