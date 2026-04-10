@@ -123,11 +123,25 @@ const SAMPLE_TEMPLATES: Array<{ id: string; label: string; payload: Record<strin
 ];
 
 const resolveSchemaRef = (schema: JsonSchema, root: JsonSchema): JsonSchema => {
-  if (schema.$ref && root?.definitions) {
-    const refKey = schema.$ref.replace('#/definitions/', '');
-    return root.definitions?.[refKey] ?? schema;
+  if (!schema.$ref?.startsWith('#/')) {
+    return schema;
   }
-  return schema;
+
+  const segments = schema.$ref
+    .slice(2)
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~'));
+
+  let current: unknown = root;
+  for (const segment of segments) {
+    if (!current || typeof current !== 'object') {
+      return schema;
+    }
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return current && typeof current === 'object' ? (current as JsonSchema) : schema;
 };
 
 const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unknown => {
@@ -282,26 +296,37 @@ const WORKFLOW_RUN_DIALOG_PICKER_FALLBACKS: Record<string, { resource: string; f
   clientid: { resource: 'client', fixedValueHint: 'Select Client' },
 };
 
-const resolveConcreteFieldSchema = (schema: JsonSchema): JsonSchema => {
-  if (schema.anyOf?.length) {
-    const variant = schema.anyOf.find((candidate) => normalizeSchemaType(candidate) && normalizeSchemaType(candidate) !== 'null');
+const resolveConcreteFieldSchema = (schema: JsonSchema, root: JsonSchema): JsonSchema => {
+  const resolved = resolveSchemaRef(schema, root);
+
+  if (resolved.anyOf?.length) {
+    const variant = resolved.anyOf.find((candidate) => {
+      const candidateResolved = resolveSchemaRef(candidate, root);
+      const candidateType = normalizeSchemaType(candidateResolved);
+      return candidateType && candidateType !== 'null';
+    });
     if (variant) {
-      return resolveConcreteFieldSchema(variant);
+      return resolveConcreteFieldSchema(variant, root);
     }
   }
 
-  if (schema.oneOf?.length) {
-    const variant = schema.oneOf.find((candidate) => normalizeSchemaType(candidate) && normalizeSchemaType(candidate) !== 'null');
+  if (resolved.oneOf?.length) {
+    const variant = resolved.oneOf.find((candidate) => {
+      const candidateResolved = resolveSchemaRef(candidate, root);
+      const candidateType = normalizeSchemaType(candidateResolved);
+      return candidateType && candidateType !== 'null';
+    });
     if (variant) {
-      return resolveConcreteFieldSchema(variant);
+      return resolveConcreteFieldSchema(variant, root);
     }
   }
 
-  return schema;
+  return resolved;
 };
 
 const resolveRunDialogPickerField = (
   schema: JsonSchema,
+  rootSchema: JsonSchema,
   path: Array<string | number>
 ): WorkflowActionInputPickerField | null => {
   const fieldKey = path[path.length - 1];
@@ -309,14 +334,14 @@ const resolveRunDialogPickerField = (
     return null;
   }
 
-  const concreteSchema = resolveConcreteFieldSchema(schema);
+  const concreteSchema = resolveConcreteFieldSchema(schema, rootSchema);
   if (normalizeSchemaType(concreteSchema) !== 'string') {
     return null;
   }
 
   // Preferred path: annotate the schema itself with x-workflow-editor / x-workflow-picker-kind
   // so the properties dialog and run dialog light up the same picker without adding UI-only logic here.
-  const schemaEditor = resolveWorkflowSchemaFieldEditor(schema) ?? resolveWorkflowSchemaFieldEditor(concreteSchema);
+  const schemaEditor = resolveWorkflowSchemaFieldEditor(resolveSchemaRef(schema, rootSchema)) ?? resolveWorkflowSchemaFieldEditor(concreteSchema);
   const schemaPickerResource = schemaEditor?.picker?.resource;
   if (schemaEditor?.kind === 'picker' && schemaPickerResource && WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES.has(schemaPickerResource)) {
     return {
@@ -958,7 +983,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     const isRequired = typeof fieldKey === 'string' && requiredSet.has(fieldKey);
     const fieldPath = pathToString(path);
     const fieldErrors = schemaErrors.filter((err) => err.path === fieldPath);
-    const pickerField = resolveRunDialogPickerField(resolved, path);
+    const pickerField = resolveRunDialogPickerField(resolved, rootSchema, path);
 
     const commonHeader = (
       <div className="flex items-center justify-between">
