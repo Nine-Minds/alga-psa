@@ -1845,13 +1845,27 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     [activeWorkflowRecord?.is_system, canAdmin, canManage]
   );
   const hasPublishedVersion = Boolean(activeWorkflowRecord?.published_version);
+  const blockingValidationError = useMemo(
+    () => currentValidationErrors[0] ?? null,
+    [currentValidationErrors]
+  );
+  const blockingValidationReason = useMemo(() => {
+    if (!blockingValidationError) return '';
+    if (blockingValidationError.stepPath.startsWith('root.trigger.payloadMapping') || blockingValidationError.code.startsWith('TRIGGER_MAPPING_')) {
+      return blockingValidationError.message || 'Fix workflow mapping errors before publishing or running.';
+    }
+    return blockingValidationError.message || 'Fix workflow validation errors before publishing or running.';
+  }, [blockingValidationError]);
+  const hasBlockingDraftErrors = currentValidationErrors.length > 0;
   const canPublishEnabled =
     canPublishPermission &&
+    !hasBlockingDraftErrors &&
     triggerSchemaPolicy.ok &&
     payloadSchemaPolicy.ok &&
     (!triggerRequiresEventCatalog || eventCatalogStatus === 'loaded');
   const canRunEnabled =
     canRunPermission &&
+    !hasBlockingDraftErrors &&
     (
       hasPublishedVersion ||
       (
@@ -1863,22 +1877,24 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   const publishDisabledReason = useMemo(() => {
     if (!canPublishPermission) return '';
+    if (hasBlockingDraftErrors) return blockingValidationReason;
     if (!triggerSchemaPolicy.ok) return triggerSchemaPolicy.message;
     if (!payloadSchemaPolicy.ok) return payloadSchemaPolicy.message;
     if (triggerRequiresEventCatalog && eventCatalogStatus !== 'loaded') return 'Event catalog is still loading. Publishing is disabled until it loads.';
     if (registryStatus !== 'loaded' && schemaRefs.length === 0) return 'Schema registry is still loading. Publishing is disabled until it loads.';
     return '';
-  }, [canPublishPermission, eventCatalogStatus, payloadSchemaPolicy, registryStatus, schemaRefs.length, triggerRequiresEventCatalog, triggerSchemaPolicy]);
+  }, [blockingValidationReason, canPublishPermission, eventCatalogStatus, hasBlockingDraftErrors, payloadSchemaPolicy, registryStatus, schemaRefs.length, triggerRequiresEventCatalog, triggerSchemaPolicy]);
 
   const runDisabledReason = useMemo(() => {
     if (!canRunPermission) return '';
+    if (hasBlockingDraftErrors) return blockingValidationReason;
     if (hasPublishedVersion) return '';
     if (!triggerSchemaPolicy.ok) return triggerSchemaPolicy.message;
     if (!payloadSchemaPolicy.ok) return payloadSchemaPolicy.message;
     if (triggerRequiresEventCatalog && eventCatalogStatus !== 'loaded') return 'Event catalog is still loading. Running is disabled until it loads.';
     if (registryStatus !== 'loaded' && schemaRefs.length === 0) return 'Schema registry is still loading. Running is disabled until it loads.';
     return '';
-  }, [canRunPermission, eventCatalogStatus, hasPublishedVersion, payloadSchemaPolicy, registryStatus, schemaRefs.length, triggerRequiresEventCatalog, triggerSchemaPolicy]);
+  }, [blockingValidationReason, canRunPermission, eventCatalogStatus, hasBlockingDraftErrors, hasPublishedVersion, payloadSchemaPolicy, registryStatus, schemaRefs.length, triggerRequiresEventCatalog, triggerSchemaPolicy]);
   const canEditMetadata = useMemo(
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
     [canManage, canAdmin, activeWorkflowRecord]
