@@ -12,6 +12,10 @@ export type DraftQuoteItem = {
   description: string;
   quantity: number;
   unit_price: number;
+  /** Product cost snapshot in minor currency units (from service_catalog). */
+  cost?: number | null;
+  /** ISO 4217 currency code for the cost field. */
+  cost_currency?: string | null;
   /** True when the service has no price in the quote's currency and the user must enter one. */
   needs_price?: boolean;
   unit_of_measure?: string | null;
@@ -57,6 +61,8 @@ export function createDraftQuoteItemFromQuoteItem(item: IQuoteItem): DraftQuoteI
     description: item.description,
     quantity: Number(item.quantity ?? 1),
     unit_price: Number(item.unit_price ?? 0),
+    cost: item.cost ?? null,
+    cost_currency: item.cost_currency ?? null,
     unit_of_measure: item.unit_of_measure ?? null,
     phase: item.phase ?? null,
     is_optional: Boolean(item.is_optional),
@@ -91,6 +97,8 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCu
     description: item.service_name,
     quantity: 1,
     unit_price: needsPrice ? 0 : Number(item.currency_rate ?? item.default_rate ?? 0),
+    cost: item.item_kind === 'product' ? (item.cost ?? null) : null,
+    cost_currency: item.item_kind === 'product' ? (item.cost_currency ?? null) : null,
     needs_price: needsPrice,
     unit_of_measure: item.unit_of_measure ?? null,
     phase: null,
