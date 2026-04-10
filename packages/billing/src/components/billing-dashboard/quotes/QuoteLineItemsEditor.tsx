@@ -5,7 +5,8 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Pencil } from 'lucide-react';
+import { Pencil, Info } from 'lucide-react';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import type { CatalogPickerItem } from '../../../actions/serviceActions';
 import ServiceCatalogPicker from '../contracts/ServiceCatalogPicker';
 import {
@@ -98,15 +99,57 @@ interface QuotePhaseSection {
   items: DraftQuoteItem[];
 }
 
+function computeEffectiveUnitPrice(item: DraftQuoteItem, items: DraftQuoteItem[]): number {
+  if (item.is_discount || item.quantity === 0) return item.unit_price;
+
+  const includedBaseItems = items.filter((i) => !i.is_discount && (!i.is_optional || i.is_selected !== false));
+  const itemKey = item.quote_item_id ?? item.local_id;
+  const isIncluded = includedBaseItems.some((i) => (i.quote_item_id ?? i.local_id) === itemKey);
+  if (!isIncluded) return item.unit_price;
+
+  const itemTotal = item.quantity * item.unit_price;
+  if (itemTotal === 0) return item.unit_price;
+
+  const quoteSubtotal = includedBaseItems.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
+
+  let totalReduction = 0;
+  for (const d of items) {
+    if (!d.is_discount) continue;
+
+    let baseAmount: number;
+    if (d.applies_to_item_id) {
+      if (d.applies_to_item_id !== itemKey) continue;
+      baseAmount = itemTotal;
+    } else if (d.applies_to_service_id) {
+      if (!item.service_id || d.applies_to_service_id !== item.service_id) continue;
+      baseAmount = includedBaseItems
+        .filter((i) => i.service_id === d.applies_to_service_id)
+        .reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
+    } else {
+      baseAmount = quoteSubtotal;
+    }
+
+    if (baseAmount <= 0) continue;
+
+    const discountAmount = d.discount_type === 'percentage'
+      ? baseAmount * ((d.discount_percentage ?? 0) / 100)
+      : d.quantity * d.unit_price;
+
+    totalReduction += discountAmount * (itemTotal / baseAmount);
+  }
+
+  return (itemTotal - totalReduction) / item.quantity;
+}
+
 function computeMarkupPercent(
-  unitPrice: number,
+  effectiveUnitPrice: number,
   cost: number | null | undefined,
   costCurrency: string | null | undefined,
   quoteCurrency: string
 ): number | null {
   if (cost == null || cost === 0) return null;
   if (costCurrency && costCurrency !== quoteCurrency) return null;
-  return ((unitPrice - cost) / cost) * 100;
+  return ((effectiveUnitPrice - cost) / cost) * 100;
 }
 
 const UNGROUPED_PHASE_KEY = '__ungrouped__';
@@ -424,8 +467,21 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               {item.needs_price && (
                 <p className="text-xs text-amber-600 dark:text-amber-400">No price in {currencyCode}</p>
               )}
-              {!isDiscount && item.service_item_kind === 'product' && (() => {
-                const markup = computeMarkupPercent(item.unit_price, item.cost, item.cost_currency, currencyCode);
+              {!isDiscount && item.service_item_kind === 'product' && item.cost != null && item.cost !== 0 && (() => {
+                if (item.cost_currency && item.cost_currency !== currencyCode) {
+                  return (
+                    <Tooltip
+                      content={`Markup can't be calculated because cost is tracked in ${item.cost_currency} and this quote is in ${currencyCode}.`}
+                    >
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Info className="h-3 w-3" aria-hidden="true" />
+                        Markup unavailable
+                      </span>
+                    </Tooltip>
+                  );
+                }
+                const effectiveUnitPrice = computeEffectiveUnitPrice(item, items);
+                const markup = computeMarkupPercent(effectiveUnitPrice, item.cost, item.cost_currency, currencyCode);
                 if (markup === null) return null;
                 const colorClass = markup < 0
                   ? 'text-red-600 dark:text-red-400'
