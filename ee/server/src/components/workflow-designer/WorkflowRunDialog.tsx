@@ -279,6 +279,31 @@ const pathToString = (path: Array<string | number>): string =>
 
 type ValidationError = { path: string; message: string };
 
+const IMPLICIT_RUN_CONTEXT_FIELD_KEYS = new Set(['tenantId']);
+
+const stripImplicitRunContextFields = (payload: Record<string, unknown>): Record<string, unknown> => {
+  const next = { ...payload };
+  for (const key of IMPLICIT_RUN_CONTEXT_FIELD_KEYS) {
+    delete next[key];
+  }
+  return next;
+};
+
+const applyImplicitRunContextFields = (
+  payload: Record<string, unknown>,
+  options: { tenantId?: string | null }
+): Record<string, unknown> => {
+  const next = stripImplicitRunContextFields(payload);
+  if (options.tenantId) {
+    next.tenantId = options.tenantId;
+  }
+  return next;
+};
+
+const isImplicitRunContextFieldPath = (path: Array<string | number>): boolean => (
+  path.length === 1 && typeof path[0] === 'string' && IMPLICIT_RUN_CONTEXT_FIELD_KEYS.has(path[0])
+);
+
 const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
   if (!schema?.type) return undefined;
   if (Array.isArray(schema.type)) {
@@ -476,6 +501,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const [mode, setMode] = useState<'json' | 'form'>('json');
   const [schemaErrors, setSchemaErrors] = useState<ValidationError[]>([]);
   const [showValidationSummary, setShowValidationSummary] = useState(false);
+  const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetName, setPresetName] = useState('');
   const [confirmSystemRun, setConfirmSystemRun] = useState(false);
@@ -634,10 +660,12 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       setIsLoadingEvents(true);
       try {
         const user = await getCurrentUser();
+        setCurrentTenantId(user?.tenant ?? null);
         if (!user?.tenant) return;
         const entries = await getEventCatalogEntries();
         setEventCatalogEntries(entries as EventCatalogEntry[]);
       } catch {
+        setCurrentTenantId(null);
         setEventCatalogEntries([]);
       } finally {
         setIsLoadingEvents(false);
@@ -737,9 +765,9 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   useEffect(() => {
     if (!isOpen || !hasLoadedOptions) return;
     if (payloadTouched) return;
-    const initialPayload = schemaSource === 'event' && activeSchema
+    const initialPayload = stripImplicitRunContextFields(schemaSource === 'event' && activeSchema
       ? buildInitialPayloadFromSchema(activeSchema)
-      : ((defaults ?? {}) as Record<string, unknown>);
+      : ((defaults ?? {}) as Record<string, unknown>));
     const text = JSON.stringify(initialPayload ?? {}, null, 2);
     setRunPayloadText(text);
     setFormValue(initialPayload ?? {});
@@ -779,9 +807,14 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         return null;
       }
     })() : formValue;
-    const errors = validateAgainstSchema(activeSchema, value ?? {}, activeSchema);
+    const effectiveValue = applyImplicitRunContextFields(
+      isObjectRecord(value) ? value : {},
+      { tenantId: currentTenantId }
+    );
+    const errors = validateAgainstSchema(activeSchema, effectiveValue, activeSchema)
+      .filter((error) => !IMPLICIT_RUN_CONTEXT_FIELD_KEYS.has(error.path));
     setSchemaErrors(errors);
-  }, [activeSchema, formValue, mode, runPayloadText]);
+  }, [activeSchema, currentTenantId, formValue, mode, runPayloadText]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -851,9 +884,10 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
   const applyTemplate = (payload: Record<string, unknown>, options: { markTouched?: boolean } = {}) => {
     const markTouched = options.markTouched ?? true;
-    const next = JSON.stringify(payload, null, 2);
+    const sanitizedPayload = stripImplicitRunContextFields(payload);
+    const next = JSON.stringify(sanitizedPayload, null, 2);
     setRunPayloadText(next);
-    setFormValue(payload);
+    setFormValue(sanitizedPayload);
     setRunPayloadError(null);
     setPayloadTouched(markTouched);
     setShowValidationSummary(markTouched);
@@ -898,9 +932,8 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   };
 
   const handleLoadPreset = (preset: Preset) => {
-    setRunPayloadText(preset.payload);
     try {
-      setFormValue(JSON.parse(preset.payload));
+      applyTemplate(JSON.parse(preset.payload) as Record<string, unknown>, { markTouched: true });
       setRunPayloadError(null);
     } catch (error) {
       setRunPayloadError(error instanceof Error ? error.message : 'Invalid JSON');
@@ -936,7 +969,10 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     }
     let payload: Record<string, unknown> = {};
     try {
-      payload = mode === 'json' ? JSON.parse(runPayloadText || '{}') : (formValue as Record<string, unknown>);
+      payload = applyImplicitRunContextFields(
+        mode === 'json' ? JSON.parse(runPayloadText || '{}') : (formValue as Record<string, unknown>),
+        { tenantId: currentTenantId }
+      );
     } catch (err) {
       setRunPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
       return;
@@ -982,6 +1018,10 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     const label = resolved.title ?? (typeof fieldKey === 'string' ? fieldKey : 'Payload');
     const isRequired = typeof fieldKey === 'string' && requiredSet.has(fieldKey);
     const fieldPath = pathToString(path);
+    if (isImplicitRunContextFieldPath(path)) {
+      return null;
+    }
+
     const fieldErrors = schemaErrors.filter((err) => err.path === fieldPath);
     const pickerField = resolveRunDialogPickerField(resolved, rootSchema, path);
 
