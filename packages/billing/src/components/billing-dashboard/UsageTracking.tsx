@@ -169,8 +169,8 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       setClients(fetchedClients);
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to load clients",
+        title: t('common.error', { defaultValue: 'Error' }),
+        description: t('usage.toast.loadClientsError', { defaultValue: 'Failed to load clients' }),
         variant: "destructive",
       });
     }
@@ -206,8 +206,8 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       setUsageRecords(records);
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to load usage records",
+        title: t('common.error', { defaultValue: 'Error' }),
+        description: t('usage.toast.loadUsageError', { defaultValue: 'Failed to load usage records' }),
         variant: "destructive",
       });
     } finally {
@@ -222,13 +222,13 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       setIsAddModalOpen(false);
       loadUsageRecords();
       toast({
-        title: "Success",
-        description: "Usage record created successfully",
+        title: t('common.success', { defaultValue: 'Success' }),
+        description: t('usage.toast.createSuccess', { defaultValue: 'Usage record created successfully' }),
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to create usage record",
+        title: t('common.error', { defaultValue: 'Error' }),
+        description: t('usage.toast.createError', { defaultValue: 'Failed to create usage record' }),
         variant: "destructive",
       });
     } finally {
@@ -248,13 +248,13 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       setEditingUsage(null);
       loadUsageRecords();
       toast({
-        title: "Success",
-        description: "Usage record updated successfully",
+        title: t('common.success', { defaultValue: 'Success' }),
+        description: t('usage.toast.updateSuccess', { defaultValue: 'Usage record updated successfully' }),
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to update usage record",
+        title: t('common.error', { defaultValue: 'Error' }),
+        description: t('usage.toast.updateError', { defaultValue: 'Failed to update usage record' }),
         variant: "destructive",
       });
     } finally {
@@ -275,13 +275,13 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       await deleteUsageRecord(usageToDelete);
       loadUsageRecords();
       toast({
-        title: "Success",
-        description: "Usage record deleted successfully",
+        title: t('common.success', { defaultValue: 'Success' }),
+        description: t('usage.toast.deleteSuccess', { defaultValue: 'Usage record deleted successfully' }),
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to delete usage record",
+        title: t('common.error', { defaultValue: 'Error' }),
+        description: t('usage.toast.deleteError', { defaultValue: 'Failed to delete usage record' }),
         variant: "destructive",
       });
     } finally {
@@ -521,13 +521,15 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
           resetForm();
         }}
         id="usage-form-dialog"
-        title={editingUsage ? 'Edit Usage Record' : 'Add Usage Record'}
+        title={editingUsage
+          ? t('usage.dialog.editTitle', { defaultValue: 'Edit Usage Record' })
+          : t('usage.dialog.addTitle', { defaultValue: 'Add Usage Record' })}
         disableFocusTrap
       >
         <DialogContent>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="client-select">Client</Label>
+              <Label htmlFor="client-select">{t('usage.dialog.fields.client', { defaultValue: 'Client' })}</Label>
               <ClientPicker
                 id="client-select"
                 clients={clients}
@@ -540,17 +542,17 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
               />
             </div>
             <div>
-              <Label htmlFor="service-select">Service</Label>
+              <Label htmlFor="service-select">{t('usage.dialog.fields.service', { defaultValue: 'Service' })}</Label>
               <CustomSelect
                 id="service-select"
                 value={newUsage.service_id}
                 onValueChange={(value: string) => setNewUsage({ ...newUsage, service_id: value })}
-                placeholder="Select service"
+                placeholder={t('usage.dialog.servicePlaceholder', { defaultValue: 'Select service' })}
                 options={usageServiceOptions}
               />
             </div>
             <div>
-              <Label htmlFor="quantity-input">Quantity</Label>
+              <Label htmlFor="quantity-input">{t('usage.dialog.fields.quantity', { defaultValue: 'Quantity' })}</Label>
               <Input
                 id="quantity-input"
                 type="number"
@@ -559,7 +561,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
               />
             </div>
             <div>
-              <Label htmlFor="usage-date-input">Usage Date</Label>
+              <Label htmlFor="usage-date-input">{t('usage.dialog.fields.usageDate', { defaultValue: 'Usage Date' })}</Label>
               <Input
                 id="usage-date-input"
                 type="date"
@@ -570,7 +572,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
               />
             </div>
             <div>
-              <Label htmlFor="comments-input">Comments (Optional)</Label>
+              <Label htmlFor="comments-input">{t('usage.dialog.fields.comments', { defaultValue: 'Comments (Optional)' })}</Label>
               <Input
                 id="comments-input"
                 type="text"
@@ -585,25 +587,25 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                   <Alert variant="info" className="mb-2">
                     <Info className="h-4 w-4" />
                     <AlertDescription>
-                      This service appears in multiple contract lines. Please select which contract line to bill against.
+                      {t('usage.contractLineGuidance.multipleLines', { defaultValue: 'This service appears in multiple contract lines. Please select which contract line to bill against.' })}
                     </AlertDescription>
                   </Alert>
                 )}
 
                 <div className="flex items-center space-x-1">
                   <label className={`block text-sm font-medium ${eligibleContractLines.length > 1 ? 'text-blue-700' : 'text-[rgb(var(--color-text-700))]'}`}>
-                    Contract Line <span className="text-red-500">*</span>
+                    {t('usage.dialog.fields.contractLine', { defaultValue: 'Contract Line' })} <span className="text-red-500">*</span>
                   </label>
                   <div className="relative inline-block">
                     <div
                       className="cursor-help"
                       title={!newUsage.client_id
-                        ? "Client information not available. Usage will route to the system-managed default contract."
+                        ? t('usage.contractLineGuidance.tooltipNoClient', { defaultValue: 'Client information not available. Usage will route to the system-managed default contract.' })
                         : eligibleContractLines.length > 1
-                          ? "This service appears in multiple contract lines. Please select which contract line to use. Bucket contract lines are typically used first until depleted."
+                          ? t('usage.contractLineGuidance.tooltipMultiple', { defaultValue: 'This service appears in multiple contract lines. Please select which contract line to use. Bucket contract lines are typically used first until depleted.' })
                           : eligibleContractLines.length === 1
-                            ? `This usage will be billed under the "${eligibleContractLines[0].contract_line_name}" contract line.`
-                            : "No eligible contract lines found for this service."}
+                            ? t('usage.contractLineGuidance.tooltipSingle', { defaultValue: 'This usage will be billed under the "{{name}}" contract line.', name: eligibleContractLines[0].contract_line_name })
+                            : t('usage.contractLineGuidance.tooltipNone', { defaultValue: 'No eligible contract lines found for this service.' })}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-muted-foreground">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -620,12 +622,12 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                   disabled={!newUsage.client_id || eligibleContractLines.length <= 1}
                   className={`${eligibleContractLines.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
                   placeholder={!newUsage.client_id
-                    ? "Using system-managed default contract"
+                    ? t('usage.contractLineGuidance.placeholderNoClient', { defaultValue: 'Using system-managed default contract' })
                     : eligibleContractLines.length === 0
-                      ? "No eligible contract lines"
+                      ? t('usage.contractLineGuidance.placeholderNone', { defaultValue: 'No eligible contract lines' })
                       : eligibleContractLines.length === 1
-                        ? `Using ${eligibleContractLines[0].contract_line_name}`
-                        : "Select a contract line"}
+                        ? t('usage.contractLineGuidance.placeholderSingle', { defaultValue: 'Using {{name}}', name: eligibleContractLines[0].contract_line_name })
+                        : t('usage.contractLineGuidance.placeholderSelect', { defaultValue: 'Select a contract line' })}
                   options={eligibleContractLines.map(plan => ({
                     value: plan.client_contract_line_id,
                     label: `${plan.contract_line_name} (${plan.contract_line_type})`
@@ -636,18 +638,18 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                   <div className="mt-1 text-xs text-muted-foreground">
                     <span className="flex items-center">
                       <AlertTriangle className="h-3 w-3 text-amber-500 mr-1" />
-                      Selecting the wrong contract line may result in incorrect billing
+                      {t('usage.contractLineGuidance.wrongContractLineWarning', { defaultValue: 'Selecting the wrong contract line may result in incorrect billing' })}
                     </span>
                   </div>
                 )}
 
                 {!newUsage.client_id ? (
                   <small className="text-muted-foreground mt-1">
-                    Client information not available. Usage will route to the system-managed default contract.
+                    {t('usage.contractLineGuidance.noClientNotice', { defaultValue: 'Client information not available. Usage will route to the system-managed default contract.' })}
                   </small>
                 ) : eligibleContractLines.length === 0 ? (
                   <small className="text-muted-foreground mt-1">
-                    No eligible contract lines found for this service.
+                    {t('usage.contractLineGuidance.noEligibleNotice', { defaultValue: 'No eligible contract lines found for this service.' })}
                   </small>
                 ) : <></>}
               </div>
@@ -659,14 +661,16 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 onClick={() => setIsAddModalOpen(false)}
                 disabled={isSaving}
               >
-                Cancel
+                {t('common.cancel', { defaultValue: 'Cancel' })}
               </Button>
               <Button
                 id="submit-usage-button"
                 onClick={editingUsage ? handleEditUsage : handleAddUsage}
                 disabled={isSaving}
               >
-                {editingUsage ? 'Update' : 'Add'} Usage
+                {editingUsage
+                  ? t('usage.actions.updateUsage', { defaultValue: 'Update Usage' })
+                  : t('usage.actions.addUsage', { defaultValue: 'Add Usage' })}
               </Button>
             </DialogFooter>
           </div>
@@ -677,10 +681,10 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={confirmDeleteUsage}
-        title="Delete Usage Record"
-        message="Are you sure you want to delete this usage record? This action cannot be undone."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t('usage.deleteDialog.title', { defaultValue: 'Delete Usage Record' })}
+        message={t('usage.deleteDialog.message', { defaultValue: 'Are you sure you want to delete this usage record? This action cannot be undone.' })}
+        confirmLabel={t('common.delete', { defaultValue: 'Delete' })}
+        cancelLabel={t('common.cancel', { defaultValue: 'Cancel' })}
       />
     </ReflectionContainer>
   );

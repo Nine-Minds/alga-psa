@@ -133,6 +133,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F015 complete** -- Continued `DiscrepancyDetail.tsx` by translating the transaction-history tab labels, expanded transaction metadata labels, the credit-tracking tab labels, and the credit-entry detail labels/status text. No new locale keys were needed because `discrepancy.tabs.*`, `discrepancy.cards.*`, `discrepancy.fields.*`, `discrepancy.status.*`, and `discrepancy.empty.*` were already seeded in F001.
 - **(2026-04-10) F016 complete** -- Finished `DiscrepancyDetail.tsx` by translating the issue-details tab, recommended-fix copy, credit-applications table headings, resolve-discrepancy dialog labels, and the remaining empty/error states. This closes out the discrepancy detail screen without expanding the locale schema beyond the keys already seeded in F001.
 - **(2026-04-10) F017 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/UsageTracking.tsx` for the bucket overview title, usage table headers, contract-line summary text, filter labels/placeholders, loading state, and row action menu labels.
+- **(2026-04-10) F018 complete** -- Finished `UsageTracking.tsx` by translating the add/edit dialog labels, contract-line selector guidance/placeholder copy, create-update-delete toasts, and the delete confirmation dialog. This closes out the usage-tracking screen without introducing new locale keys after the foundational namespace work.
 
 ## Runbook
 

@@ -87,7 +87,7 @@
   {
     "id": "F018",
     "description": "Wire UsageTracking.tsx — add/edit usage dialog (field labels: Client/Service/Quantity/Usage Date/Comments, contract line selector guidance, placeholders), toast messages (success/error for create/update/delete), delete confirmation dialog",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F019",
