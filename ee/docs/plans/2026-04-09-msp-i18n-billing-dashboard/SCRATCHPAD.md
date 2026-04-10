@@ -122,6 +122,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F007 complete** -- Generated `server/public/locales/pl/msp/billing.json` and verified it parses. At this point all real-language locale files for `msp/billing` exist; pseudo-locales and parity validation are next.
 - **(2026-04-10) F008 complete** -- Ran `node scripts/generate-pseudo-locales.cjs`, which regenerated `server/public/locales/xx/msp/billing.json` and `server/public/locales/yy/msp/billing.json` from the English source. Verified both pseudo-locale files now exist.
 - **(2026-04-10) F009 complete** -- Ran `node scripts/validate-translations.cjs` after cleaning up the stray `--help` locale directory. Validation passed with 0 errors / 0 warnings across `de`, `es`, `fr`, `it`, `nl`, `pl`, `xx`, and `yy`.
+- **(2026-04-10) F010 complete** -- Updated `packages/core/src/lib/i18n/config.ts` so `ROUTE_NAMESPACES['/msp/billing']` now loads `msp/billing` alongside `common`, `msp/core`, `features/billing`, and `msp/reports`. This is the only route-config change needed for this batch.
 
 ## Runbook
 

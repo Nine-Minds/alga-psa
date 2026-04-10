@@ -47,7 +47,7 @@
   {
     "id": "F010",
     "description": "Update ROUTE_NAMESPACES in packages/core/src/lib/i18n/config.ts: add 'msp/billing' to '/msp/billing' route entry",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F011",
