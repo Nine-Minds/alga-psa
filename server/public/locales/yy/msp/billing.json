@@ -1,0 +1,738 @@
+{
+  "common": {
+    "back": "55555",
+    "cancel": "55555",
+    "close": "55555",
+    "confirm": "55555",
+    "create": "55555",
+    "delete": "55555",
+    "edit": "55555",
+    "error": "55555",
+    "loading": "55555",
+    "new": "55555",
+    "next": "55555",
+    "notAvailable": "55555",
+    "openMenu": "55555",
+    "processing": "55555",
+    "refresh": "55555",
+    "remove": "55555",
+    "reset": "55555",
+    "save": "55555",
+    "saving": "55555",
+    "success": "55555",
+    "update": "55555",
+    "yes": "55555",
+    "no": "55555"
+  },
+  "dashboard": {
+    "title": "55555",
+    "beta": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "errorPrefix": "55555",
+    "backToPresets": "55555",
+    "quoteTemplatesHeading": "55555",
+    "tabs": {
+      "quotes": "55555",
+      "quoteLayouts": "55555",
+      "quoteTemplates": "55555",
+      "clientContracts": "55555",
+      "accountingExports": "55555",
+      "contractTemplates": "55555",
+      "invoicing": "55555",
+      "invoiceLayouts": "55555",
+      "taxRates": "55555",
+      "contractLinePresets": "55555",
+      "billingCycles": "55555",
+      "servicePeriods": "55555",
+      "usageTracking": "55555",
+      "reports": "55555",
+      "serviceCatalog": "55555",
+      "products": "55555"
+    }
+  },
+  "overview": {
+    "errors": {
+      "loadTitle": "55555",
+      "loadData": "55555"
+    },
+    "metrics": {
+      "activeContractLines": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "billingClients": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "monthlyRevenue": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "activeServices": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "outstandingAmount": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "creditBalance": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "pendingApprovals": {
+        "title": "55555",
+        "subtitle": "55555"
+      }
+    },
+    "states": {
+      "ellipsis": "55555",
+      "error": "55555",
+      "zero": "55555",
+      "zeroHours": "55555"
+    },
+    "sections": {
+      "monthlyActivity": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "serviceCatalog": {
+        "title": "55555",
+        "description": "55555",
+        "activeServicesLabel": "55555",
+        "button": "55555"
+      }
+    },
+    "features": {
+      "paymentProcessing": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "billingCycles": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "servicePeriods": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "invoiceManagement": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "overduePayments": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "serviceCatalog": {
+        "title": "55555",
+        "description": "55555"
+      }
+    },
+    "debug": {
+      "reportExecuted": "55555",
+      "executionTime": "55555",
+      "reportVersion": "55555"
+    }
+  },
+  "reconciliation": {
+    "title": "55555",
+    "steps": {
+      "review": "55555",
+      "approval": "55555",
+      "confirmation": "55555"
+    },
+    "sections": {
+      "discrepancyDetails": "55555",
+      "balanceComparison": "55555",
+      "issueDetails": "55555",
+      "resolutionOptions": "55555",
+      "approvalDetails": "55555",
+      "correctionSummary": "55555",
+      "confirmResolution": "55555",
+      "resolutionDetails": "55555",
+      "impactSummary": "55555",
+      "resolutionComplete": "55555",
+      "resolutionSummary": "55555"
+    },
+    "fields": {
+      "client": "55555",
+      "status": "55555",
+      "detected": "55555",
+      "issueType": "55555",
+      "expectedBalance": "55555",
+      "actualBalance": "55555",
+      "difference": "55555",
+      "transactionId": "55555",
+      "transactionType": "55555",
+      "transactionAmount": "55555",
+      "transactionDate": "55555",
+      "creditId": "55555",
+      "originalAmount": "55555",
+      "expectedRemaining": "55555",
+      "actualRemaining": "55555",
+      "reportId": "55555",
+      "resolutionType": "55555",
+      "correctionAmount": "55555",
+      "currentBalance": "55555",
+      "newBalance": "55555",
+      "resolutionNotes": "55555",
+      "previousBalance": "55555"
+    },
+    "issueTypes": {
+      "missingCreditTrackingEntry": "55555",
+      "inconsistentCreditRemainingAmount": "55555"
+    },
+    "transactionHistory": {
+      "title": "55555",
+      "columns": {
+        "transactionId": "55555",
+        "date": "55555",
+        "amount": "55555"
+      }
+    },
+    "recommendedFix": {
+      "title": "55555",
+      "missingTrackingDescription": "55555",
+      "missingTrackingRemainingAmount": "55555",
+      "inconsistentRemainingDescription": "55555"
+    },
+    "resolutionTypes": {
+      "recommended": "55555",
+      "custom": "55555",
+      "noAction": "55555"
+    },
+    "customCorrection": {
+      "label": "55555",
+      "hint": "55555"
+    },
+    "notes": {
+      "label": "55555",
+      "placeholder": "55555",
+      "hint": "55555"
+    },
+    "fourEyes": {
+      "requiredTitle": "55555",
+      "requiredDescription": "55555",
+      "approverName": "55555",
+      "approverEmail": "55555",
+      "sendRequest": "55555",
+      "requestSentTitle": "55555",
+      "requestSentDescription": "55555",
+      "verificationCode": "55555",
+      "verifyCode": "55555",
+      "verificationHint": "55555",
+      "verifiedTitle": "55555",
+      "verifiedDescription": "55555"
+    },
+    "confirmation": {
+      "importantTitle": "55555",
+      "importantDescription": "55555",
+      "verifiedTitle": "55555",
+      "verifiedDescription": "55555",
+      "thankYouTitle": "55555",
+      "thankYouDescription": "55555",
+      "confirmButton": "55555",
+      "closeButton": "55555"
+    },
+    "status": {
+      "open": "55555"
+    },
+    "buttons": {
+      "cancel": "55555",
+      "back": "55555",
+      "next": "55555",
+      "confirm": "55555"
+    },
+    "errors": {
+      "loadData": "55555",
+      "secondaryApprovalRequired": "55555",
+      "secondaryApproverRequired": "55555",
+      "invalidVerificationCode": "55555",
+      "unknown": "55555",
+      "reportNotFound": "55555"
+    }
+  },
+  "discrepancy": {
+    "backToReconciliation": "55555",
+    "title": "55555",
+    "tabs": {
+      "transactionHistory": "55555",
+      "creditTrackingEntries": "55555",
+      "issueDetails": "55555"
+    },
+    "cards": {
+      "relatedTransactions": "55555",
+      "creditTrackingEntries": "55555",
+      "issueDetails": "55555",
+      "discrepancyDetails": "55555",
+      "balanceComparison": "55555"
+    },
+    "status": {
+      "open": "55555",
+      "inReview": "55555",
+      "resolved": "55555",
+      "expired": "55555",
+      "active": "55555"
+    },
+    "fields": {
+      "client": "55555",
+      "status": "55555",
+      "detected": "55555",
+      "resolved": "55555",
+      "resolutionNotes": "55555",
+      "issueType": "55555",
+      "expectedBalance": "55555",
+      "actualBalance": "55555",
+      "difference": "55555",
+      "transactionId": "55555",
+      "createdAt": "55555",
+      "clientId": "55555",
+      "userId": "55555",
+      "invoiceId": "55555",
+      "metadata": "55555",
+      "creditId": "55555",
+      "created": "55555",
+      "amount": "55555",
+      "remaining": "55555",
+      "expiration": "55555",
+      "originalAmount": "55555",
+      "remainingAmount": "55555",
+      "expirationDate": "55555",
+      "description": "55555",
+      "type": "55555",
+      "balanceAfter": "55555"
+    },
+    "empty": {
+      "transactions": "55555",
+      "creditTrackingEntries": "55555",
+      "issueDetails": "55555",
+      "batchNotFound": "55555",
+      "noNotesProvided": "55555",
+      "noExpiration": "55555"
+    },
+    "issueTypes": {
+      "missingCreditTrackingEntry": "55555",
+      "inconsistentCreditRemainingAmount": "55555"
+    },
+    "recommendedFix": {
+      "title": "55555",
+      "missingTrackingDescription": "55555",
+      "missingTrackingRemainingAmount": "55555",
+      "inconsistentRemainingDescription": "55555"
+    },
+    "resolutionDialog": {
+      "title": "55555",
+      "notesPlaceholder": "55555",
+      "confirmButton": "55555"
+    },
+    "actions": {
+      "applyFix": "55555",
+      "resolveReport": "55555"
+    },
+    "errors": {
+      "unknown": "55555"
+    }
+  },
+  "recommendedFix": {
+    "title": "55555",
+    "panels": {
+      "recommendedFix": "55555",
+      "alternativeFix": "55555",
+      "noActionRequired": "55555",
+      "customAdjustment": "55555"
+    },
+    "buttons": {
+      "createTrackingEntry": "55555",
+      "updateRemainingAmount": "55555",
+      "applyAdjustment": "55555",
+      "applyCustomAdjustment": "55555",
+      "markResolvedNoAction": "55555",
+      "cancel": "55555",
+      "confirm": "55555"
+    },
+    "descriptions": {
+      "createTrackingEntry": "55555",
+      "updateRemainingAmount": "55555",
+      "applyAdjustment": "55555",
+      "customAdjustment": "55555",
+      "noAction": "55555",
+      "missingTrackingRecommended": "55555",
+      "missingTrackingAlternative": "55555",
+      "missingTrackingNoAction": "55555",
+      "inconsistentRemainingRecommended": "55555",
+      "inconsistentRemainingAlternative": "55555",
+      "inconsistentRemainingNoAction": "55555",
+      "genericRecommended": "55555",
+      "genericCustom": "55555"
+    },
+    "dialog": {
+      "adjustmentAmount": "55555",
+      "adjustmentHint": "55555",
+      "notes": "55555",
+      "notesPlaceholder": "55555"
+    },
+    "impactSummary": {
+      "title": "55555",
+      "currentBalance": "55555",
+      "newBalance": "55555"
+    },
+    "resolved": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "errors": {
+      "notesRequired": "55555",
+      "invalidAmount": "55555",
+      "unknown": "55555"
+    }
+  },
+  "usage": {
+    "bucketHoursOverview": "55555",
+    "usageRecords": "55555",
+    "actions": {
+      "addUsage": "55555",
+      "updateUsage": "55555",
+      "edit": "55555",
+      "delete": "55555",
+      "resetFilters": "55555"
+    },
+    "filters": {
+      "client": "55555",
+      "service": "55555",
+      "clientPlaceholder": "55555",
+      "servicePlaceholder": "55555",
+      "allClients": "55555",
+      "allServices": "55555"
+    },
+    "table": {
+      "client": "55555",
+      "service": "55555",
+      "quantity": "55555",
+      "usageDate": "55555",
+      "contractLine": "55555",
+      "actions": "55555",
+      "defaultContractLine": "55555",
+      "contractLineLabel": "55555 {{id}} 55555"
+    },
+    "states": {
+      "loadingRecords": "55555",
+      "noActiveBucketPlans": "55555"
+    },
+    "dialog": {
+      "addTitle": "55555",
+      "editTitle": "55555",
+      "fields": {
+        "client": "55555",
+        "service": "55555",
+        "quantity": "55555",
+        "usageDate": "55555",
+        "comments": "55555",
+        "contractLine": "55555"
+      },
+      "servicePlaceholder": "55555"
+    },
+    "contractLineGuidance": {
+      "multipleLines": "55555",
+      "tooltipNoClient": "55555",
+      "tooltipMultiple": "55555",
+      "tooltipSingle": "55555 {{name}} 55555",
+      "tooltipNone": "55555",
+      "placeholderNoClient": "55555",
+      "placeholderNone": "55555",
+      "placeholderSingle": "55555 {{name}} 55555",
+      "placeholderSelect": "55555",
+      "wrongContractLineWarning": "55555",
+      "noClientNotice": "55555",
+      "noEligibleNotice": "55555"
+    },
+    "deleteDialog": {
+      "title": "55555",
+      "message": "55555"
+    },
+    "toast": {
+      "loadClientsError": "55555",
+      "loadUsageError": "55555",
+      "createSuccess": "55555",
+      "createError": "55555",
+      "updateSuccess": "55555",
+      "updateError": "55555",
+      "deleteSuccess": "55555",
+      "deleteError": "55555"
+    }
+  },
+  "lineItem": {
+    "collapsed": {
+      "itemDiscount": "55555",
+      "invoiceDiscount": "55555",
+      "appliedTo": "55555 {{description}} 55555",
+      "selectService": "55555",
+      "taxable": "55555",
+      "nonTaxable": "55555",
+      "calculatedOnSave": "55555"
+    },
+    "expanded": {
+      "discount": "55555",
+      "item": "55555 {{number}} 55555",
+      "markedForRemoval": "55555"
+    },
+    "fields": {
+      "service": "55555",
+      "quantity": "55555",
+      "discountType": "55555",
+      "percentage": "55555",
+      "amount": "55555 {{currencySymbol}} 55555",
+      "discountDescription": "55555",
+      "applyDiscountTo": "55555",
+      "entireInvoice": "55555",
+      "rate": "55555 {{currencySymbol}} 55555",
+      "description": "55555"
+    },
+    "placeholders": {
+      "discountDescription": "55555"
+    },
+    "actions": {
+      "add": "55555",
+      "remove": "55555",
+      "restore": "55555"
+    },
+    "hints": {
+      "removed": "55555"
+    },
+    "summary": {
+      "percentageDiscount": "55555",
+      "fixedDiscount": "55555",
+      "itemTotal": "55555 {{percentage}} 55555",
+      "invoiceTotal": "55555 {{percentage}} 55555",
+      "amount": "55555 {{currencySymbol}} 55555 {{amount}} 55555",
+      "appliedTo": "55555 {{description}} 55555",
+      "subtotal": "55555 {{currencySymbol}} 55555 {{amount}} 55555"
+    },
+    "options": {
+      "percentage": "55555",
+      "fixedAmount": "55555"
+    }
+  },
+  "contractLineServices": {
+    "table": {
+      "serviceName": "55555",
+      "category": "55555",
+      "billingMethod": "55555",
+      "quantity": "55555",
+      "defaultRate": "55555",
+      "actions": "55555"
+    },
+    "billingMethods": {
+      "fixed": "55555",
+      "hourly": "55555",
+      "usageBased": "55555",
+      "usage": "55555"
+    },
+    "badges": {
+      "product": "55555",
+      "service": "55555"
+    },
+    "actions": {
+      "editQuantity": "55555",
+      "remove": "55555",
+      "addSelectedServices": "55555",
+      "addSelectedServicesWithCount": "55555 {{count}} 55555"
+    },
+    "tooltip": {
+      "defaultRate": "55555"
+    },
+    "states": {
+      "loading": "55555",
+      "emptyAssociated": "55555",
+      "emptyAvailable": "55555",
+      "missingPrice": "55555 {{currency}} 55555"
+    },
+    "addSection": {
+      "title": "55555",
+      "serviceType": "55555 {{value}} 55555",
+      "method": "55555 {{value}} 55555",
+      "rate": "55555 {{value}} 55555",
+      "catalogPrice": "55555 {{currency}} 55555 {{value}} 55555",
+      "catalogPriceMissing": "55555 {{currency}} 55555",
+      "customRate": "55555 {{currency}} 55555",
+      "productMissingPrice": "55555 {{name}} 55555 {{currency}} 55555"
+    },
+    "errors": {
+      "loadData": "55555",
+      "addServices": "55555",
+      "removeService": "55555"
+    },
+    "unknownService": "55555"
+  },
+  "presetServices": {
+    "warnings": {
+      "unsavedChanges": "55555"
+    },
+    "table": {
+      "serviceName": "55555",
+      "category": "55555",
+      "billingMethod": "55555",
+      "quantity": "55555",
+      "defaultRate": "55555",
+      "actions": "55555"
+    },
+    "tooltip": {
+      "defaultRate": "55555"
+    },
+    "states": {
+      "loading": "55555",
+      "emptyAssociated": "55555",
+      "emptyAvailable": "55555"
+    },
+    "addSection": {
+      "title": "55555",
+      "serviceType": "55555 {{value}} 55555",
+      "method": "55555 {{value}} 55555",
+      "rate": "55555 {{value}} 55555"
+    },
+    "actions": {
+      "remove": "55555",
+      "addSelectedServices": "55555",
+      "addSelectedServicesWithCount": "55555 {{count}} 55555",
+      "saveChanges": "55555",
+      "saveChangesDirty": "55555",
+      "saving": "55555",
+      "reset": "55555"
+    },
+    "navigationDialog": {
+      "title": "55555",
+      "message": "55555",
+      "confirmLabel": "55555",
+      "cancelLabel": "55555"
+    },
+    "toast": {
+      "saveSuccess": "55555",
+      "saveError": "55555"
+    },
+    "unknownService": "55555"
+  },
+  "accountingExports": {
+    "title": "55555",
+    "description": "55555",
+    "table": {
+      "batch": "55555",
+      "adapter": "55555",
+      "status": "55555",
+      "created": "55555",
+      "updated": "55555",
+      "actions": "55555"
+    },
+    "actions": {
+      "refresh": "55555",
+      "newExport": "55555",
+      "open": "55555",
+      "execute": "55555",
+      "createBatch": "55555",
+      "creating": "55555"
+    },
+    "states": {
+      "loadingBatches": "55555",
+      "empty": "55555",
+      "loadingDetails": "55555",
+      "batchNotFound": "55555"
+    },
+    "createDialog": {
+      "title": "55555",
+      "fields": {
+        "adapter": "55555",
+        "startDate": "55555",
+        "endDate": "55555",
+        "clientSearch": "55555",
+        "invoiceStatuses": "55555",
+        "notes": "55555"
+      },
+      "placeholders": {
+        "clientSearch": "55555",
+        "invoiceStatuses": "55555",
+        "notes": "55555"
+      }
+    },
+    "detailDialog": {
+      "title": "55555",
+      "subtitle": "55555",
+      "fields": {
+        "batchId": "55555",
+        "adapter": "55555",
+        "status": "55555",
+        "created": "55555",
+        "lines": "55555",
+        "errors": "55555",
+        "delivered": "55555"
+      }
+    },
+    "toast": {
+      "created": "55555",
+      "executing": "55555",
+      "loadBatchesError": "55555",
+      "loadDetailError": "55555",
+      "createError": "55555",
+      "executeError": "55555"
+    }
+  },
+  "templateRenderer": {
+    "loading": "55555",
+    "errorPrefix": "55555",
+    "empty": "55555"
+  },
+  "templateDesigner": {
+    "propertyEditor": {
+      "selectField": "55555",
+      "content": "55555",
+      "dataField": "55555",
+      "width": "55555",
+      "height": "55555",
+      "fontSize": "55555",
+      "color": "55555",
+      "columns": "55555 {{count}} 55555",
+      "rows": "55555 {{count}} 55555"
+    },
+    "conditionalRules": {
+      "title": "55555",
+      "selectAction": "55555",
+      "show": "55555",
+      "hide": "55555",
+      "format": "55555",
+      "conditionPlaceholder": "55555",
+      "targetPlaceholder": "55555",
+      "addRule": "55555"
+    }
+  },
+  "contractsHub": {
+    "title": "55555",
+    "tabs": {
+      "templates": "55555",
+      "clientContracts": "55555"
+    }
+  },
+  "editQuantityDialog": {
+    "title": "55555 {{serviceName}} 55555",
+    "fields": {
+      "quantity": "55555"
+    },
+    "validation": {
+      "empty": "55555",
+      "positiveWholeNumber": "55555"
+    },
+    "actions": {
+      "cancel": "55555",
+      "saveQuantity": "55555",
+      "saving": "55555"
+    },
+    "errors": {
+      "saveFailed": "55555"
+    }
+  },
+  "templateRendererCore": {
+    "notAvailable": "55555",
+    "unknownValue": "55555",
+    "noDataForList": "55555 {{name}} 55555",
+    "uncategorized": "55555"
+  }
+}

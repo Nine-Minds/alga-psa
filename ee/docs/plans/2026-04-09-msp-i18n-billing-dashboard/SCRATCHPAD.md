@@ -119,8 +119,10 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F005 complete** -- Generated `server/public/locales/nl/msp/billing.json` and verified it parses. The translation endpoint threw one transient 500 during generation; resuming from the on-disk cache completed the locale without losing prior progress.
 - **(2026-04-10) F006 complete** -- Generated `server/public/locales/it/msp/billing.json` and verified it parses. The explicit Italian accent audit still needs the global validation pass, but the locale file is now present and structurally correct.
 - **(2026-04-10) F007 complete** -- Generated `server/public/locales/pl/msp/billing.json` and verified it parses. At this point all real-language locale files for `msp/billing` exist; pseudo-locales and parity validation are next.
+- **(2026-04-10) F008 complete** -- Ran `node scripts/generate-pseudo-locales.cjs`, which regenerated `server/public/locales/xx/msp/billing.json` and `server/public/locales/yy/msp/billing.json` from the English source. Verified both pseudo-locale files now exist.
 
 ## Runbook
 
 - `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/billing.json','utf8')); console.log('ok')"`
 - `node - <<'NODE' ... generate translated locale from en/msp/billing.json via translate.googleapis.com while preserving {{placeholders}} ... NODE`
+- `node scripts/generate-pseudo-locales.cjs`

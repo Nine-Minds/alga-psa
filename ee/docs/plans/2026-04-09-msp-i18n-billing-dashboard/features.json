@@ -37,7 +37,7 @@
   {
     "id": "F008",
     "description": "Run `node scripts/generate-pseudo-locales.cjs` to regenerate xx/ and yy/ pseudo-locale files from updated English source",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",
