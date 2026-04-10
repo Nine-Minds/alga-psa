@@ -174,6 +174,14 @@
     ]
   },
   {
+    "id": "T020A",
+    "description": "Unit: AccountingExportsTab renders translated status labels for batch rows and detail dialog instead of raw backend codes",
+    "implemented": false,
+    "featureIds": [
+      "F024A"
+    ]
+  },
+  {
     "id": "T021",
     "description": "Unit: FixedContractLinePresetServicesList renders table headers and save/reset buttons via t()",
     "implemented": false,
