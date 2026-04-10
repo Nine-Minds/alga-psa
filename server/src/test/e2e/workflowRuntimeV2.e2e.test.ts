@@ -32,6 +32,7 @@ import {
   actionCallStep,
   stateSetStep,
   eventWaitStep,
+  timeWaitStep,
   tryCatchStep,
   resetTestActionState,
   getSideEffectCount
@@ -355,6 +356,143 @@ describe('workflow runtime v2 E2E tests', () => {
     expect(resumed?.status).toBe('SUCCEEDED');
   });
 
+  it('T001: event.wait filters require matching event name, correlation key, and all filter clauses. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        eventWaitStep('wait-1', {
+          eventName: 'PROJECT_STATUS_CHANGED',
+          correlationKeyExpr: { $expr: '"project-1"' },
+          filters: [
+            { path: 'newStatus', op: '=', value: 'Live' },
+            { path: 'priority', op: '>=', value: 2 }
+          ]
+        }),
+        stateSetStep('state-1', 'DONE')
+      ]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'OTHER_EVENT',
+      correlationKey: 'project-1',
+      payload: { newStatus: 'Live', priority: 2 }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'PROJECT_STATUS_CHANGED',
+      correlationKey: 'project-2',
+      payload: { newStatus: 'Live', priority: 2 }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'PROJECT_STATUS_CHANGED',
+      correlationKey: 'project-1',
+      payload: { newStatus: 'Live', priority: 1 }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'PROJECT_STATUS_CHANGED',
+      correlationKey: 'project-1',
+      payload: { newStatus: 'Live', priority: 2 }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('SUCCEEDED');
+  });
+
+  it('T002: event.wait supports in/not_in filters with array literals. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        eventWaitStep('wait-1', {
+          eventName: 'PROJECT_STATUS_CHANGED',
+          correlationKeyExpr: { $expr: '"project-2"' },
+          filters: [
+            { path: 'newStatus', op: 'in', value: ['Live', 'Complete'] }
+          ]
+        }),
+        stateSetStep('state-1', 'DONE')
+      ]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'PROJECT_STATUS_CHANGED',
+      correlationKey: 'project-2',
+      payload: { newStatus: 'Pending' }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'PROJECT_STATUS_CHANGED',
+      correlationKey: 'project-2',
+      payload: { newStatus: 'Live' }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('SUCCEEDED');
+  });
+
+  it('T003: legacy event.wait without filters remains backward compatible. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        eventWaitStep('wait-1', { eventName: 'LEGACY_WAIT', correlationKeyExpr: { $expr: '"legacy-key"' } }),
+        stateSetStep('state-1', 'DONE')
+      ]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({ eventName: 'LEGACY_WAIT', correlationKey: 'legacy-key', payload: { ok: true } });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('SUCCEEDED');
+  });
+
+  it('T008: onboarding-style event.wait resumes only on first matching event and runs downstream path once. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        eventWaitStep('wait-1', {
+          eventName: 'project.status.changed',
+          correlationKeyExpr: { $expr: '"project-008"' },
+          filters: [{ path: 'newStatus', op: 'in', value: ['Live', 'Complete'] }]
+        }),
+        actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })
+      ]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+
+    await submitWorkflowEventAction({
+      eventName: 'project.status.changed',
+      correlationKey: 'project-008',
+      payload: { newStatus: 'Pending' }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('WAITING');
+    expect(getSideEffectCount()).toBe(0);
+
+    await submitWorkflowEventAction({
+      eventName: 'project.status.changed',
+      correlationKey: 'project-008',
+      payload: { newStatus: 'Live' }
+    });
+    expect((await WorkflowRunModelV2.getById(db, run.runId))?.status).toBe('SUCCEEDED');
+    expect(getSideEffectCount()).toBe(1);
+
+    await submitWorkflowEventAction({
+      eventName: 'project.status.changed',
+      correlationKey: 'project-008',
+      payload: { newStatus: 'Complete' }
+    });
+    expect(getSideEffectCount()).toBe(1);
+  });
+
   it('E2E: timeout on event.wait routes to catch pipe and completes with handled error. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [tryCatchStep('try-1', { trySteps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' }, timeoutMs: 1 })], catchSteps: [stateSetStep('state-1', 'TIMEOUT_HANDLED')] })]
@@ -369,6 +507,75 @@ describe('workflow runtime v2 E2E tests', () => {
     const snapshots = await WorkflowRunSnapshotModelV2.listByRun(db, run.runId);
     const last = snapshots[snapshots.length - 1].envelope_json as any;
     expect(last.meta.state).toBe('TIMEOUT_HANDLED');
+  });
+
+  it('T004: filtered event.wait timeout still propagates through try/catch. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [tryCatchStep('try-1', {
+        trySteps: [eventWaitStep('wait-1', {
+          eventName: 'FILTER_TIMEOUT',
+          correlationKeyExpr: { $expr: '"timeout-key"' },
+          filters: [{ path: 'newStatus', op: '=', value: 'Live' }],
+          timeoutMs: 1
+        })],
+        catchSteps: [stateSetStep('state-1', 'FILTER_TIMEOUT_HANDLED')]
+      })]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    await db('workflow_run_waits').where({ run_id: run.runId }).update({ timeout_at: new Date(Date.now() - 1000).toISOString() });
+    const worker = new WorkflowRuntimeV2Worker('worker');
+    await worker.tick();
+
+    const snapshots = await WorkflowRunSnapshotModelV2.listByRun(db, run.runId);
+    const last = snapshots[snapshots.length - 1].envelope_json as any;
+    expect(last.meta.state).toBe('FILTER_TIMEOUT_HANDLED');
+  });
+
+  it('T005: time.wait duration mode resumes due waits through worker pickup. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [timeWaitStep('wait-1', { mode: 'duration', durationMs: 60_000 }), stateSetStep('state-1', 'DONE')]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    const waitRow = await db('workflow_run_waits').where({ run_id: run.runId, wait_type: 'time' }).first();
+    expect(waitRow).toBeTruthy();
+
+    await db('workflow_run_waits')
+      .where({ run_id: run.runId, wait_type: 'time' })
+      .update({ timeout_at: new Date(Date.now() - 1000).toISOString() });
+    const worker = new WorkflowRuntimeV2Worker('worker');
+    await worker.tick();
+
+    const record = await WorkflowRunModelV2.getById(db, run.runId);
+    expect(record?.status).toBe('SUCCEEDED');
+  });
+
+  it('T006: time.wait until mode validates malformed config and resumes valid waits. Mocks: non-target dependencies.', async () => {
+    const invalidWorkflowId = await createDraftWorkflow({
+      steps: [timeWaitStep('wait-1', { mode: 'until' })]
+    });
+    const invalidPublish = await publishWorkflow(invalidWorkflowId, 1);
+    expect((invalidPublish as any)?.ok).toBe(false);
+    expect(((invalidPublish as any)?.errors ?? []).some((err: any) => err.code === 'INVALID_CONFIG')).toBe(true);
+
+    const workflowId = await createDraftWorkflow({
+      steps: [timeWaitStep('wait-1', { mode: 'until', untilExpr: { $expr: '"2099-01-01T00:00:00.000Z"' } }), stateSetStep('state-1', 'DONE')]
+    });
+    const publish = await publishWorkflow(workflowId, 1);
+    expect((publish as any)?.ok).toBe(true);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    await db('workflow_run_waits')
+      .where({ run_id: run.runId, wait_type: 'time' })
+      .update({ timeout_at: new Date(Date.now() - 1000).toISOString() });
+    const worker = new WorkflowRuntimeV2Worker('worker');
+    await worker.tick();
+
+    const record = await WorkflowRunModelV2.getById(db, run.runId);
+    expect(record?.status).toBe('SUCCEEDED');
   });
 
   it('E2E: retryable action failure schedules retry and eventually succeeds. Mocks: non-target dependencies.', async () => {

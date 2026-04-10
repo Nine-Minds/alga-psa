@@ -17,10 +17,15 @@ import {
   listWorkflowDesignerActionCatalogAction,
   getWorkflowSchemaAction,
   startWorkflowRunAction,
+  submitWorkflowEventAction,
   cancelWorkflowRunAction,
   resumeWorkflowRunAction,
+  replayWorkflowRunAction,
   getWorkflowRunAction,
-  listWorkflowRunStepsAction
+  listWorkflowRunsAction,
+  listWorkflowRunTimelineEventsAction,
+  listWorkflowRunStepsAction,
+  listWorkflowEventsAction
 } from '@alga-psa/workflows/actions';
 import WorkflowDefinitionVersionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionVersionModelV2';
 import WorkflowDefinitionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionModelV2';
@@ -39,6 +44,14 @@ import {
   returnStep,
   TEST_SCHEMA_REF
 } from '../helpers/workflowRuntimeV2TestHelpers';
+
+const {
+  startWorkflowRuntimeV2TemporalRunMock,
+  cancelWorkflowRuntimeV2TemporalRunMock
+} = vi.hoisted(() => ({
+  startWorkflowRuntimeV2TemporalRunMock: vi.fn(),
+  cancelWorkflowRuntimeV2TemporalRunMock: vi.fn()
+}));
 
 vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
@@ -92,6 +105,11 @@ vi.mock('@alga-psa/auth', () => {
     preCheckDeletion: vi.fn()
   };
 });
+
+vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
+  startWorkflowRuntimeV2TemporalRun: (...args: unknown[]) => startWorkflowRuntimeV2TemporalRunMock(...args),
+  cancelWorkflowRuntimeV2TemporalRun: (...args: unknown[]) => cancelWorkflowRuntimeV2TemporalRunMock(...args)
+}));
 
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
 const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
@@ -208,6 +226,13 @@ beforeEach(async () => {
   mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
   mockedGetCurrentTenantId.mockReturnValue(tenantId);
   mockedGetCurrentUser.mockResolvedValue({ user_id: userId, tenant: tenantId, roles: [] } as any);
+  startWorkflowRuntimeV2TemporalRunMock.mockReset();
+  cancelWorkflowRuntimeV2TemporalRunMock.mockReset();
+  startWorkflowRuntimeV2TemporalRunMock.mockResolvedValue({
+    workflowId: 'workflow-runtime-v2:run:run-replayed',
+    firstExecutionRunId: 'temporal-run-replayed'
+  });
+  cancelWorkflowRuntimeV2TemporalRunMock.mockResolvedValue(undefined);
   await db('tenant_extension_install').delete().catch(() => undefined);
   await db('extension_registry').delete().catch(() => undefined);
 });
@@ -425,6 +450,50 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     });
     const record = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(db, workflowId, 1);
     expect((record?.definition_json as any)?.name).toBe('Test Workflow');
+  });
+
+  it('Runs remain pinned to their original published version when newer definitions are published before resume. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"pin-key"' } }),
+        assignStep('assign-1', { 'payload.definitionMarker': { $expr: '"v1"' } }),
+        returnStep('return-1')
+      ]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    const waitingRecord = await WorkflowRunModelV2.getById(db, run.runId);
+    expect(waitingRecord?.workflow_version).toBe(1);
+    expect(waitingRecord?.status).toBe('WAITING');
+
+    await publishWorkflow(workflowId, 2, {
+      id: workflowId,
+      version: 2,
+      name: 'Pinned version test v2',
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      steps: [
+        eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"pin-key"' } }),
+        assignStep('assign-1', { 'payload.definitionMarker': { $expr: '"v2"' } }),
+        returnStep('return-1')
+      ]
+    });
+
+    const resumeResult = await submitWorkflowEventAction({
+      eventName: 'PING',
+      correlationKey: 'pin-key',
+      payload: {}
+    });
+    expect(resumeResult.status).toBe('resumed');
+    expect(resumeResult.runId).toBe(run.runId);
+
+    const finalRun = await WorkflowRunModelV2.getById(db, run.runId);
+    const stepHistory = await listWorkflowRunStepsAction({ runId: run.runId });
+    const latestSnapshot = stepHistory.snapshots[stepHistory.snapshots.length - 1];
+
+    expect(finalRun?.workflow_version).toBe(1);
+    expect(finalRun?.status).toBe('SUCCEEDED');
+    expect((latestSnapshot?.envelope_json as any)?.payload?.definitionMarker).toBe('v1');
   });
 
   it('Publish returns warnings without blocking when severity=warning. Mocks: non-target dependencies.', async () => {
@@ -769,6 +838,33 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     const runResult = await startWorkflowRunAction({ workflowId, payload: {} });
     const run = await WorkflowRunModelV2.getById(db, runResult.runId);
     expect(run?.workflow_version).toBe(2);
+  });
+
+  it('Start run launches a Temporal-backed workflow run instead of executing through the legacy DB runtime. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    await publishWorkflow(workflowId, 1);
+
+    const executeRunSpy = vi.spyOn(WorkflowRuntimeV2.prototype, 'executeRun');
+    executeRunSpy.mockClear();
+    try {
+      const runResult = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+      const run = await WorkflowRunModelV2.getById(db, runResult.runId);
+
+      expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: runResult.runId,
+          workflowId,
+          workflowVersion: 1,
+        })
+      );
+      expect(executeRunSpy).not.toHaveBeenCalled();
+      expect(run?.engine).toBe('temporal');
+      expect(run?.temporal_workflow_id).toBe('workflow-runtime-v2:run:run-replayed');
+      expect(run?.temporal_run_id).toBe('temporal-run-replayed');
+      expect(run?.status).toBe('RUNNING');
+    } finally {
+      executeRunSpy.mockRestore();
+    }
   });
 
   it('T045: no-trigger workflows still publish and run correctly after time-trigger support is added. Mocks: non-target dependencies.', async () => {
@@ -1119,6 +1215,35 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(events.some((event) => event.event_name === 'ADMIN_RESUME' && event.correlation_key === run.runId)).toBe(true);
   });
 
+  it('Replay run server action creates a fresh Temporal-native run from original input instead of DB snapshot resume. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    await publishWorkflow(workflowId, 1);
+    const originalRun = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: { foo: 'original' } });
+
+    await WorkflowRunModelV2.update(db, originalRun.runId, { node_path: 'root.steps[99]' });
+
+    const replayResult = await replayWorkflowRunAction({
+      runId: originalRun.runId,
+      reason: 'replay for test',
+      payload: {}
+    });
+
+    expect(replayResult.ok).toBe(true);
+    expect(replayResult.runId).not.toBe(originalRun.runId);
+
+    const originalRecord = await WorkflowRunModelV2.getById(db, originalRun.runId);
+    const replayRecord = await WorkflowRunModelV2.getById(db, replayResult.runId);
+
+    expect(replayRecord?.workflow_id).toBe(originalRecord?.workflow_id);
+    expect(replayRecord?.workflow_version).toBe(originalRecord?.workflow_version);
+    expect(replayRecord?.input_json).toEqual(originalRecord?.input_json);
+    expect(replayRecord?.node_path).toBe('root.steps[0]');
+    expect((replayRecord?.trigger_metadata_json as any)?.replayOfRunId).toBe(originalRun.runId);
+    expect(replayRecord?.temporal_workflow_id).toBe('workflow-runtime-v2:run:run-replayed');
+    expect(replayRecord?.temporal_run_id).toBe('temporal-run-replayed');
+    expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalled();
+  });
+
   it('Get run server action returns status, nodePath, and timestamps (API delegates). Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
     await publishWorkflow(workflowId, 1);
@@ -1144,6 +1269,75 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     const result = await listWorkflowRunStepsAction({ runId: run.runId });
     expect(result.steps.some((step) => step.snapshot_id)).toBe(true);
+  });
+
+  it('Run list/detail/event APIs reflect run, step, wait, action, and event projection lifecycle data. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        actionCallStep({
+          id: 'action-1',
+          actionId: 'test.echo',
+          inputMapping: { value: 'hello-world' },
+          saveAs: 'echoResult'
+        }),
+        eventWaitStep('wait-1', {
+          eventName: 'PING',
+          correlationKeyExpr: { $expr: '"projection-key"' }
+        }),
+        returnStep('return-1')
+      ]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+
+    const waitingRun = await WorkflowRunModelV2.getById(db, run.runId);
+    const waitingWaits = await db('workflow_run_waits').where({ run_id: run.runId, status: 'WAITING' });
+    const waitingInvocations = await db('workflow_action_invocations').where({ run_id: run.runId });
+
+    expect(waitingRun?.status).toBe('WAITING');
+    expect(waitingWaits.length).toBeGreaterThan(0);
+    expect(waitingInvocations.length).toBeGreaterThan(0);
+
+    const eventResult = await submitWorkflowEventAction({
+      eventName: 'PING',
+      correlationKey: 'projection-key',
+      payload: { source: 't020' }
+    });
+
+    expect(eventResult.status).toBe('resumed');
+    expect(eventResult.runId).toBe(run.runId);
+
+    const runRecord = await WorkflowRunModelV2.getById(db, run.runId);
+    const stepRecords = await db('workflow_run_steps').where({ run_id: run.runId });
+    const waitRecords = await db('workflow_run_waits').where({ run_id: run.runId });
+    const invocationRecords = await db('workflow_action_invocations').where({ run_id: run.runId });
+    const runtimeEventRecord = await db('workflow_runtime_events').where({ event_id: eventResult.eventId }).first();
+
+    expect(runRecord?.status).toBe('SUCCEEDED');
+    expect(stepRecords.length).toBeGreaterThan(0);
+    expect(waitRecords.some((wait: any) => wait.wait_type === 'event' && wait.status === 'RESOLVED')).toBe(true);
+    expect(invocationRecords.some((invocation: any) => invocation.action_id === 'test.echo' && invocation.status === 'SUCCEEDED')).toBe(true);
+    expect(runtimeEventRecord).toBeDefined();
+    expect(runtimeEventRecord?.matched_run_id).toBe(run.runId);
+
+    const runList = await listWorkflowRunsAction({ runId: run.runId, limit: 10, cursor: 0, sort: 'started_at:desc' });
+    expect(runList.runs.some((row: any) => row.run_id === run.runId && row.status === 'SUCCEEDED')).toBe(true);
+
+    const runDetail = await getWorkflowRunAction({ runId: run.runId });
+    expect(runDetail.status).toBe('SUCCEEDED');
+
+    const runSteps = await listWorkflowRunStepsAction({ runId: run.runId });
+    expect(runSteps.steps.length).toBeGreaterThan(0);
+    expect(runSteps.waits.some((wait: any) => wait.wait_type === 'event' && wait.status === 'RESOLVED')).toBe(true);
+    expect(runSteps.invocations.some((invocation: any) => invocation.action_id === 'test.echo' && invocation.status === 'SUCCEEDED')).toBe(true);
+
+    const timeline = await listWorkflowRunTimelineEventsAction({ runId: run.runId });
+    expect(timeline.events.some((event: any) => event.type === 'step')).toBe(true);
+    expect(timeline.events.some((event: any) => event.type === 'wait' && event.wait_type === 'event')).toBe(true);
+
+    const eventList = await listWorkflowEventsAction({ correlationKey: 'projection-key', limit: 10, cursor: 0 });
+    expect(eventList.events.some((event: any) => event.event_id === eventResult.eventId && event.status === 'matched')).toBe(true);
   });
 
   it('Lease prevents concurrent execution by two workers for the same run. Mocks: non-target dependencies.', async () => {

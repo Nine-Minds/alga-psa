@@ -2,7 +2,7 @@ services:
   temporal-dev:
     image: temporalio/auto-setup:1.24.2
     ports:
-      - "7233:7233"
+      - "${EXPOSE_TEMPORAL_PORT:-7233}:7233"
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -13,7 +13,7 @@ services:
       - -c
       - |
         export POSTGRES_PWD=$(cat /run/secrets/postgres_password)
-        exec /etc/temporal/entrypoint.sh
+        exec /etc/temporal/entrypoint.sh autosetup
     secrets:
       - postgres_password
     depends_on:
@@ -24,13 +24,20 @@ services:
 
   temporal-worker:
     image: temporal-worker-dev
+    build:
+      context: .
+      dockerfile: ee/temporal-workflows/Dockerfile
+      target: production
     working_dir: /app/ee/temporal-workflows
     entrypoint: ["docker-entrypoint.sh"]
     command: ["node", "dist/ee/temporal-workflows/src/worker.js"]
     environment:
       - LOG_LEVEL=INFO
       - SECRET_READ_CHAIN=filesystem,env
-      - APPLICATION_URL=${NEXTAUTH_URL}
+      - APPLICATION_URL=${APPLICATION_URL:-http://localhost:3000}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-local-nextauth-secret}
+      - ALGA_AUTH_KEY=${ALGA_AUTH_KEY:-local-alga-auth-key}
       - DB_HOST=${DB_HOST:-pgbouncer}
       - DB_PORT=${DB_PORT:-6432}
       - DB_NAME_SERVER=${DB_NAME_SERVER:-server}
@@ -39,6 +46,7 @@ services:
       - TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-temporal-dev:7233}
       - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-default}
       - TEMPORAL_TASK_QUEUE=${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
+      # Authored runtime queue ownership belongs to workflow-worker.
       - TEMPORAL_TASK_QUEUES=tenant-workflows,portal-domain-workflows,email-domain-workflows,alga-jobs
       - PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE=${PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE:-msp/alga-psa-vs}
       - REDIS_HOST=${REDIS_HOST:-redis}
@@ -75,9 +83,30 @@ services:
     environment:
       - TEMPORAL_ADDRESS=temporal-dev:7233
     ports:
-      - "8088:8080"
+      - "${EXPOSE_TEMPORAL_UI_PORT:-8088}:8080"
     depends_on:
       temporal-dev:
         condition: service_started
     networks:
       - app-network
+
+  workflow-worker:
+    # Temporal-native authored runtime polling should be independently verifiable
+    # without requiring the full API server process in this compose profile.
+    depends_on:
+      temporal-dev:
+        condition: service_started
+      postgres:
+        condition: service_started
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+      setup:
+        condition: service_started
+    environment:
+      - APPLICATION_URL=${APPLICATION_URL:-http://localhost:3000}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-local-nextauth-secret}
+      - ALGA_AUTH_KEY=${ALGA_AUTH_KEY:-local-alga-auth-key}
+      - WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING=true

@@ -8,6 +8,7 @@ import { z } from 'zod';
 export const WorkflowEventBaseSchema = z.object({
   event_id: z.string().uuid(),
   execution_id: z.string().uuid().optional(),
+  workflow_correlation_key: z.string().min(1).optional(),
   event_name: z.string(),
   event_type: z.string(),
   tenant: z.string(),
@@ -74,6 +75,7 @@ export function parseStreamEvent(message: RedisStreamMessage): WorkflowEventBase
     const eventForValidation = {
       event_id: rawEventData.event_id,
       execution_id: rawEventData.execution_id === '' ? undefined : rawEventData.execution_id,
+      workflow_correlation_key: rawEventData.workflow_correlation_key === '' ? undefined : rawEventData.workflow_correlation_key,
       event_name: rawEventData.event_name,
       event_type: rawEventData.event_type,
       tenant: rawEventData.tenant,

@@ -15,7 +15,7 @@ import {
   timeEntryToActivity,
   workflowTaskToActivity,
 } from '@alga-psa/types';
-import { getAllScheduleEntries } from '@alga-psa/core/lib/scheduleEntryRegistry';
+import { getAllScheduleEntries } from '@alga-psa/core';
 import { withAuth } from '@alga-psa/auth';
 import { ISO8601String } from '@alga-psa/types';
 import { IProjectTask } from '@alga-psa/types';

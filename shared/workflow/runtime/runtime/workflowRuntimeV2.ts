@@ -33,6 +33,7 @@ import WorkflowActionInvocationModelV2 from '../../persistence/workflowActionInv
 import WorkflowRunSnapshotModelV2 from '../../persistence/workflowRunSnapshotModelV2';
 import WorkflowRunLogModelV2 from '../../persistence/workflowRunLogModelV2';
 import { ZodError } from 'zod';
+import { createHash } from 'crypto';
 
 const SNAPSHOT_MAX_BYTES = 256 * 1024;
 const DEFAULT_SNAPSHOT_RETENTION_DAYS = 30;
@@ -56,6 +57,11 @@ export type StartRunParams = {
   eventType?: string | null;
   sourcePayloadSchemaRef?: string | null;
   triggerMappingApplied?: boolean;
+  definitionHash?: string | null;
+  runtimeSemanticsVersion?: string | null;
+  engine?: 'temporal' | 'db';
+  parentRunId?: string | null;
+  rootRunId?: string | null;
   secretResolver?: SecretResolver;
 };
 
@@ -119,6 +125,11 @@ export class WorkflowRuntimeV2 {
       event_type: params.eventType ?? null,
       source_payload_schema_ref: params.sourcePayloadSchemaRef ?? null,
       trigger_mapping_applied: params.triggerMappingApplied ?? false,
+      definition_hash: params.definitionHash ?? null,
+      runtime_semantics_version: params.runtimeSemanticsVersion ?? null,
+      engine: params.engine ?? null,
+      parent_run_id: params.parentRunId ?? null,
+      root_run_id: params.rootRunId ?? null,
       resume_event_name: params.triggerEvent?.name ?? null,
       resume_event_payload: params.triggerEvent?.payload ?? null
     });
@@ -149,6 +160,9 @@ export class WorkflowRuntimeV2 {
     const updated = await knex('workflow_runs')
       .where({ status: 'RUNNING' })
       .andWhere((builder) => {
+        builder.whereNull('engine').orWhere('engine', '!=', 'temporal');
+      })
+      .andWhere((builder) => {
         builder.whereNull('lease_expires_at').orWhere('lease_expires_at', '<=', nowIso);
       })
       .orderBy('updated_at', 'asc')
@@ -172,6 +186,13 @@ export class WorkflowRuntimeV2 {
     if (!run) {
       throw new Error(`Run ${runId} not found`);
     }
+    if (run.engine === 'temporal') {
+      throw createRuntimeError(
+        'ValidationError',
+        `WorkflowRuntimeV2.executeRun is unsupported for Temporal run ${runId}`,
+        run.node_path ?? 'root'
+      );
+    }
 
     if (run.lease_owner && run.lease_owner !== workerId) {
       return;
@@ -180,6 +201,21 @@ export class WorkflowRuntimeV2 {
     const definitionRecord = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(knex, run.workflow_id, run.workflow_version);
     if (!definitionRecord) {
       throw new Error(`Workflow definition ${run.workflow_id} v${run.workflow_version} not found`);
+    }
+    const expectedDefinitionHash = typeof (run as any).definition_hash === 'string'
+      ? String((run as any).definition_hash)
+      : null;
+    if (expectedDefinitionHash) {
+      const actualDefinitionHash = createHash('sha256')
+        .update(JSON.stringify(definitionRecord.definition_json ?? null))
+        .digest('hex');
+      if (actualDefinitionHash !== expectedDefinitionHash) {
+        throw createRuntimeError(
+          'ValidationError',
+          `Pinned workflow definition hash mismatch for ${run.workflow_id} v${run.workflow_version}`,
+          run.node_path ?? 'root'
+        );
+      }
     }
 
     const definition = workflowDefinitionSchema.parse(definitionRecord.definition_json);
@@ -705,7 +741,7 @@ export class WorkflowRuntimeV2 {
           );
         }
       },
-      publishWait: async (wait: { type: 'event' | 'human'; key?: string; eventName?: string; timeoutAt?: string; payload?: unknown }) => {
+      publishWait: async (wait: { type: 'event' | 'human' | 'time'; key?: string; eventName?: string; timeoutAt?: string; payload?: Record<string, unknown> | null }) => {
         const waitRecord = await WorkflowRunWaitModelV2.create(knex, {
           run_id: run.run_id,
           step_path: path,

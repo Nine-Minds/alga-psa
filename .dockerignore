@@ -10,6 +10,10 @@ npm-debug.log
 # Build outputs
 dist
 build
+**/dist
+!ee/packages/workflows/dist/**
+!packages/workflow-streams/dist/**
+!packages/event-schemas/dist/**
 
 # Environment variables
 .env
@@ -39,6 +43,7 @@ Thumbs.db
 
 # Testing
 coverage
+**/coverage
 
 # Temporary files
 tmp
@@ -59,7 +64,3 @@ temp_wasm_compile
 **/.nx
 .next
 **/.next
-
-# BUT allow server/.next for Docker builds (needed by EE Dockerfile)
-!server/.next
-!server/.next/**

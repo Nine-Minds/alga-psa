@@ -1,13 +1,13 @@
 import { z } from 'zod';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
-import { exprSchema, inputMappingSchema } from '../types';
+import { exprSchema, inputMappingSchema, eventWaitConfigSchema, timeWaitConfigSchema } from '../types';
 import { resolveExpressions } from '../utils/expressionResolver';
 import { resolveInputMapping, noOpSecretResolver } from '../utils/mappingResolver';
 import { applyAssignments } from '../utils/assignmentUtils';
 import type { Envelope } from '../types';
 import { safeSerialize } from '../utils/redactionUtils';
 import { parseEmailBodyWithFallback, renderCommentBlocksWithFallback } from './utils/emailNodes';
-import { getFormValidationService } from '@shared/task-inbox';
+import { getFormValidationService } from '../../../task-inbox';
 import {
   composeTextOutputsSchema,
   isWorkflowComposeTextAction,
@@ -30,13 +30,6 @@ function normalizeAssignmentPath(path: string): string {
 
 const stateSetSchema = z.object({
   state: z.string().min(1)
-}).strict();
-
-const eventWaitSchema = z.object({
-  eventName: z.string().min(1),
-  correlationKey: exprSchema,
-  timeoutMs: z.number().int().positive().optional(),
-  assign: z.record(exprSchema).optional()
 }).strict();
 
 const transformAssignSchema = z.object({
@@ -122,7 +115,7 @@ export function registerDefaultNodes(): void {
 
   registry.register({
     id: 'event.wait',
-    configSchema: eventWaitSchema,
+    configSchema: eventWaitConfigSchema,
     handler: async (env, config, ctx) => {
       if (ctx.resumeError) {
         throw { category: 'TimeoutError', message: ctx.resumeError.message || 'Timeout waiting for event' };
@@ -139,7 +132,8 @@ export function registerDefaultNodes(): void {
           type: 'event',
           key: String(correlation ?? ''),
           eventName: config.eventName,
-          timeoutAt
+          timeoutAt,
+          payload: config.filters?.length ? { filters: config.filters } : null
         });
         return { type: 'wait' } as const;
       }
@@ -164,6 +158,78 @@ export function registerDefaultNodes(): void {
       label: 'Wait for Event',
       category: 'Core',
       description: 'Wait for an external event'
+    }
+  });
+
+  registry.register({
+    id: 'time.wait',
+    configSchema: timeWaitConfigSchema,
+    handler: async (env, config, ctx) => {
+      if (!ctx.resumeEvent) {
+        let dueAt: Date | null = null;
+        if (config.mode === 'duration') {
+          dueAt = new Date(Date.now() + Number(config.durationMs));
+        } else {
+          if (!config.until) {
+            throw {
+              category: 'ValidationError',
+              message: 'time.wait until mode requires an until expression',
+              nodePath: ctx.stepPath,
+              at: new Date().toISOString()
+            };
+          }
+          const evaluated = await resolveExpressions(config.until, ctxToExpr(env));
+          const nextDate = new Date(String(evaluated ?? ''));
+          if (!Number.isFinite(nextDate.getTime())) {
+            throw {
+              category: 'ValidationError',
+              message: 'time.wait until expression did not resolve to a valid date/time',
+              nodePath: ctx.stepPath,
+              at: new Date().toISOString()
+            };
+          }
+          dueAt = nextDate;
+        }
+
+        await ctx.publishWait({
+          type: 'time',
+          timeoutAt: dueAt.toISOString(),
+          payload: {
+            mode: config.mode,
+            durationMs: config.durationMs ?? null,
+            dueAt: dueAt.toISOString()
+          }
+        });
+        return { type: 'wait' } as const;
+      }
+
+      const resumedPayload = ctx.resumeEvent.payload && typeof ctx.resumeEvent.payload === 'object'
+        ? (ctx.resumeEvent.payload as Record<string, unknown>)
+        : {};
+      env.vars.timeWait = {
+        mode: resumedPayload.mode ?? config.mode,
+        dueAt: resumedPayload.dueAt ?? null,
+        resumedAt: ctx.nowIso()
+      };
+
+      if (config.assign) {
+        for (const [path, expr] of Object.entries(config.assign)) {
+          const resolved = await resolveExpressions(expr, {
+            payload: env.payload,
+            vars: env.vars,
+            meta: env.meta,
+            error: env.error
+          });
+          env = applyAssignments(env, { [path]: resolved });
+        }
+      }
+
+      return env;
+    },
+    ui: {
+      label: 'Wait for Time',
+      category: 'Core',
+      description: 'Wait for a duration or until a date/time'
     }
   });
 

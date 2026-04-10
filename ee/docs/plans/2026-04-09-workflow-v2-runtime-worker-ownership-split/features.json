@@ -1,0 +1,266 @@
+[
+  {
+    "id": "F001",
+    "description": "Declare `workflow-worker` as the permanent execution owner of authored Workflow Runtime V2 Temporal runs.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "FR-1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Keep `temporal-worker` as the execution owner only for non-authored/domain Temporal workflows.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Configure `workflow-worker` to connect to Temporal in addition to its existing event-stream responsibilities.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1",
+      "FR-3",
+      "FR-7"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Make `workflow-worker` poll Temporal queue `workflow-runtime-v2` in the same process/container that already runs authored workflow support duties.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1",
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Ensure authored Workflow Runtime V2 Temporal runs execute successfully with `workflow-worker` as the only authored queue poller.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow 1",
+      "FR-1"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Remove `workflow-runtime-v2` from `temporal-worker` queue ownership.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Preserve all approved non-authored/domain Temporal queues in `temporal-worker` after removing authored queue ownership.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Prevent accidental dual ownership where both `workflow-worker` and `temporal-worker` poll `workflow-runtime-v2` at the same time.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks",
+      "FR-2",
+      "FR-9"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Add explicit Temporal startup/configuration in `workflow-worker` logs so authored queue ownership is obvious during support and local debugging.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-9",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Update `temporal-worker` startup/config logging so it is explicit that `workflow-runtime-v2` is no longer part of its expected scope.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-9"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Define a worker-safe authored runtime core surface in `@alga-psa/workflows` with no app/bootstrap side effects.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Separate AI inference wiring from the worker-safe authored runtime core surface.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Separate AI action registration from the worker-safe authored runtime core surface.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Separate any additional app/bootstrap-only runtime registration side effects from the worker-safe authored runtime core surface.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Provide a distinct bootstrap/app-wiring entrypoint for server-side workflow runtime initialization.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Update `workflow-worker` to import the worker-safe authored runtime surface instead of the mixed runtime/bootstrap barrel.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Keep server/app bootstrap paths on the richer bootstrap-oriented runtime surface where app-specific registrations are still needed.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Ensure authored runtime code used by `workflow-worker` no longer depends on unresolved `@shared/*` aliases.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Replace repo-layout-relative source imports in authored runtime startup paths with stable worker-safe imports or explicit local modules.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Prevent authored runtime startup from pulling UI-only modules into `workflow-worker`.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Prevent authored runtime startup from pulling app-only bootstrap modules into `workflow-worker` unless explicitly required and worker-safe.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Keep authored run launch and signal helpers targeting Temporal queue `workflow-runtime-v2` without requiring caller-side API/UI changes.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-8"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Preserve authored event-ingress and signal flow behavior while changing only the polling ownership from `temporal-worker` to `workflow-worker`.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow 2",
+      "FR-3",
+      "FR-8"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Update local Docker/compose configuration so `workflow-worker` receives the Temporal environment and queue settings needed for authored runtime polling.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-7"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Update local Docker/compose configuration so `temporal-worker` no longer claims authored queue ownership.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-7"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Ensure `workflow-worker` image/build includes the Temporal worker runtime dependencies required for authored queue polling.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3",
+      "FR-7"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Remove authored-runtime-specific packaging hacks from `temporal-worker` once they are no longer needed for non-authored/domain workflows.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2",
+      "Integration notes"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Keep authored runtime initialization deterministic and replay-safe after moving ownership and splitting runtime surfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Make Temporal UI show active workers for authored queue ownership through `workflow-worker` during local smoke testing.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Document the new authored-runtime ownership model so support/debugging expectations align with the worker split.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "FR-9"
+    ]
+  }
+]
