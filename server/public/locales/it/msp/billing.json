@@ -1,28 +1,28 @@
 {
   "common": {
     "back": "Indietro",
-    "cancel": "Cancellare",
-    "close": "Vicino",
-    "confirm": "Confermare",
-    "create": "Creare",
-    "delete": "Eliminare",
-    "edit": "Modificare",
+    "cancel": "Annulla",
+    "close": "Chiudi",
+    "confirm": "Conferma",
+    "create": "Crea",
+    "delete": "Elimina",
+    "edit": "Modifica",
     "error": "Errore",
     "loading": "Caricamento...",
     "new": "Nuovo",
-    "next": "Prossimo",
-    "notAvailable": "N / A",
+    "next": "Avanti",
+    "notAvailable": "N/A",
     "openMenu": "Apri il menu",
     "processing": "Elaborazione...",
     "refresh": "Aggiorna",
-    "remove": "Rimuovere",
-    "reset": "Reset",
+    "remove": "Rimuovi",
+    "reset": "Reimposta",
     "save": "Salva",
-    "saving": "Risparmio...",
+    "saving": "Salvataggio...",
     "success": "Successo",
-    "update": "Aggiornamento",
-    "yes": "SÌ",
-    "no": "NO"
+    "update": "Aggiorna",
+    "yes": "Sì",
+    "no": "No"
   },
   "dashboard": {
     "title": "Fatturazione",
@@ -34,7 +34,7 @@
     "backToPresets": "Torna all'elenco delle preimpostazioni della linea di contratto",
     "quoteTemplatesHeading": "Modelli di preventivo",
     "tabs": {
-      "quotes": "Citazioni",
+      "quotes": "Preventivi",
       "quoteLayouts": "Layout di preventivo",
       "quoteTemplates": "Modelli di preventivo",
       "clientContracts": "Contratti con i clienti",
@@ -75,7 +75,7 @@
         "subtitle": "Nel catalogo"
       },
       "outstandingAmount": {
-        "title": "Importo eccezionale",
+        "title": "Importo insoluto",
         "subtitle": "Fatture non pagate"
       },
       "creditBalance": {
@@ -140,13 +140,13 @@
   "reconciliation": {
     "title": "Risolvere la discrepanza del credito",
     "steps": {
-      "review": "Discrepanza di revisione",
+      "review": "Rivedi discrepanza",
       "approval": "Approvazione",
       "confirmation": "Conferma"
     },
     "sections": {
       "discrepancyDetails": "Dettagli sulla discrepanza",
-      "balanceComparison": "Confronto di equilibrio",
+      "balanceComparison": "Confronto dei saldi",
       "issueDetails": "Dettagli del problema",
       "resolutionOptions": "Opzioni di risoluzione",
       "approvalDetails": "Dettagli di approvazione",
@@ -177,7 +177,7 @@
       "resolutionType": "Tipo di risoluzione",
       "correctionAmount": "Importo della correzione",
       "currentBalance": "Saldo attuale",
-      "newBalance": "Nuovo equilibrio",
+      "newBalance": "Nuovo saldo",
       "resolutionNotes": "Note sulla risoluzione",
       "previousBalance": "Saldo precedente"
     },
@@ -235,15 +235,15 @@
       "thankYouTitle": "Grazie!",
       "thankYouDescription": "La discrepanza è stata risolta e i record di fatturazione sono stati aggiornati.",
       "confirmButton": "Conferma risoluzione",
-      "closeButton": "Vicino"
+      "closeButton": "Chiudi"
     },
     "status": {
-      "open": "Aprire"
+      "open": "Aperto"
     },
     "buttons": {
-      "cancel": "Cancellare",
+      "cancel": "Annulla",
       "back": "Indietro",
-      "next": "Prossimo",
+      "next": "Avanti",
       "confirm": "Conferma risoluzione"
     },
     "errors": {
@@ -256,7 +256,7 @@
     }
   },
   "discrepancy": {
-    "backToReconciliation": "Torniamo alla riconciliazione",
+    "backToReconciliation": "Torna alla riconciliazione",
     "title": "Risolvere la discrepanza del credito",
     "tabs": {
       "transactionHistory": "Cronologia delle transazioni",
@@ -268,10 +268,10 @@
       "creditTrackingEntries": "Voci di monitoraggio del credito",
       "issueDetails": "Dettagli del problema",
       "discrepancyDetails": "Dettagli sulla discrepanza",
-      "balanceComparison": "Confronto di equilibrio"
+      "balanceComparison": "Confronto dei saldi"
     },
     "status": {
-      "open": "Aprire",
+      "open": "Aperto",
       "inReview": "In revisione",
       "resolved": "Risolto",
       "expired": "Scaduto",
@@ -350,7 +350,7 @@
       "applyAdjustment": "Applicare la rettifica del credito",
       "applyCustomAdjustment": "Applica la regolazione personalizzata",
       "markResolvedNoAction": "Segna come risolto (nessuna azione)",
-      "cancel": "Cancellare",
+      "cancel": "Annulla",
       "confirm": "Applica correzione"
     },
     "descriptions": {
@@ -377,7 +377,7 @@
     "impactSummary": {
       "title": "Riepilogo dell'impatto",
       "currentBalance": "Saldo attuale",
-      "newBalance": "Nuovo equilibrio"
+      "newBalance": "Nuovo saldo"
     },
     "resolved": {
       "title": "Questa discrepanza è stata risolta",
@@ -395,9 +395,9 @@
     "actions": {
       "addUsage": "Aggiungi utilizzo",
       "updateUsage": "Aggiorna utilizzo",
-      "edit": "Modificare",
-      "delete": "Eliminare",
-      "resetFilters": "Reset"
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "resetFilters": "Reimposta"
     },
     "filters": {
       "client": "Cliente",
@@ -494,9 +494,9 @@
       "discountDescription": "ad esempio, sconto per pagamento anticipato"
     },
     "actions": {
-      "add": "Aggiungere",
-      "remove": "Rimuovere",
-      "restore": "Ripristinare"
+      "add": "Aggiungi",
+      "remove": "Rimuovi",
+      "restore": "Ripristina"
     },
     "hints": {
       "removed": "Questo elemento verrà rimosso quando salvi le modifiche"
@@ -536,7 +536,7 @@
     },
     "actions": {
       "editQuantity": "Modifica quantità",
-      "remove": "Rimuovere",
+      "remove": "Rimuovi",
       "addSelectedServices": "Aggiungi servizi selezionati",
       "addSelectedServicesWithCount": "Aggiungi servizi selezionati ({{count}})"
     },
@@ -593,12 +593,12 @@
       "rate": "Tariffa: ${{value}}"
     },
     "actions": {
-      "remove": "Rimuovere",
+      "remove": "Rimuovi",
       "addSelectedServices": "Aggiungi servizi selezionati",
       "addSelectedServicesWithCount": "Aggiungi servizi selezionati ({{count}})",
       "saveChanges": "Salva modifiche",
       "saveChangesDirty": "Salva modifiche *",
-      "saving": "Risparmio...",
+      "saving": "Salvataggio...",
       "reset": "Reset"
     },
     "navigationDialog": {
@@ -627,8 +627,8 @@
     "actions": {
       "refresh": "Aggiorna",
       "newExport": "Nuova esportazione",
-      "open": "Aprire",
-      "execute": "Eseguire",
+      "open": "Apri",
+      "execute": "Esegui",
       "createBatch": "Crea lotto",
       "creating": "Creazione..."
     },
@@ -700,17 +700,17 @@
       "height": "Altezza",
       "fontSize": "Dimensione carattere",
       "color": "Colore",
-      "columns": "Colonna/e {{count}}",
-      "rows": "Riga/e {{count}}"
+      "columns": "{{count}} colonna/e",
+      "rows": "{{count}} riga/e"
     },
     "conditionalRules": {
       "title": "Regole di visualizzazione condizionale",
-      "selectAction": "Seleziona Azione",
-      "show": "Spettacolo",
-      "hide": "Nascondere",
+      "selectAction": "Seleziona azione",
+      "show": "Mostra",
+      "hide": "Nascondi",
       "format": "Formato",
       "conditionPlaceholder": "Condizione",
-      "targetPlaceholder": "Bersaglio",
+      "targetPlaceholder": "Destinazione",
       "addRule": "Aggiungi regola"
     }
   },
@@ -731,16 +731,16 @@
       "positiveWholeNumber": "La quantità deve essere un numero intero positivo."
     },
     "actions": {
-      "cancel": "Cancellare",
-      "saveQuantity": "Risparmia quantità",
-      "saving": "Risparmio..."
+      "cancel": "Annulla",
+      "saveQuantity": "Salva quantità",
+      "saving": "Salvataggio..."
     },
     "errors": {
       "saveFailed": "Impossibile aggiornare la quantità. Per favore riprova."
     }
   },
   "templateRendererCore": {
-    "notAvailable": "N / A",
+    "notAvailable": "N/A",
     "unknownValue": "Valore sconosciuto",
     "noDataForList": "Nessun dato per l'elenco: {{name}}",
     "uncategorized": "Senza categoria"

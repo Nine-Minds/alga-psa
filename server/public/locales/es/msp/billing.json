@@ -2,7 +2,7 @@
   "common": {
     "back": "Atrás",
     "cancel": "Cancelar",
-    "close": "Cerca",
+    "close": "Cerrar",
     "confirm": "Confirmar",
     "create": "Crear",
     "delete": "Borrar",
@@ -11,14 +11,14 @@
     "loading": "Cargando...",
     "new": "Nuevo",
     "next": "Próximo",
-    "notAvailable": "N / A",
-    "openMenu": "abrir menú",
+    "notAvailable": "N/A",
+    "openMenu": "Abrir menú",
     "processing": "Tratamiento...",
     "refresh": "Refrescar",
     "remove": "Eliminar",
     "reset": "Reiniciar",
-    "save": "Ahorrar",
-    "saving": "Ahorro...",
+    "save": "Guardar",
+    "saving": "Guardando...",
     "success": "Éxito",
     "update": "Actualizar",
     "yes": "Sí",
@@ -34,7 +34,7 @@
     "backToPresets": "Volver a la lista de ajustes preestablecidos de líneas de contrato",
     "quoteTemplatesHeading": "Plantillas de cotización",
     "tabs": {
-      "quotes": "Citas",
+      "quotes": "Cotizaciones",
       "quoteLayouts": "Diseños de cotización",
       "quoteTemplates": "Plantillas de cotización",
       "clientContracts": "Contratos de clientes",
@@ -172,12 +172,12 @@
       "creditId": "ID de crédito",
       "originalAmount": "Monto original",
       "expectedRemaining": "Restante esperado",
-      "actualRemaining": "Resto real",
+      "actualRemaining": "Restante real",
       "reportId": "ID de informe",
       "resolutionType": "Tipo de resolución",
       "correctionAmount": "Cantidad de corrección",
       "currentBalance": "Saldo actual",
-      "newBalance": "nuevo equilibrio",
+      "newBalance": "Nuevo saldo",
       "resolutionNotes": "Notas de resolución",
       "previousBalance": "Saldo anterior"
     },
@@ -235,7 +235,7 @@
       "thankYouTitle": "¡Gracias!",
       "thankYouDescription": "Se resolvió la discrepancia y se actualizaron los registros de facturación.",
       "confirmButton": "Confirmar resolución",
-      "closeButton": "Cerca"
+      "closeButton": "Cerrar"
     },
     "status": {
       "open": "Abierto"
@@ -377,7 +377,7 @@
     "impactSummary": {
       "title": "Resumen de impacto",
       "currentBalance": "Saldo actual",
-      "newBalance": "nuevo equilibrio"
+      "newBalance": "Nuevo saldo"
     },
     "resolved": {
       "title": "Esta discrepancia ha sido resuelta",
@@ -390,11 +390,11 @@
     }
   },
   "usage": {
-    "bucketHoursOverview": "Descripción general de las horas del cubo",
+    "bucketHoursOverview": "Resumen de horas de bucket",
     "usageRecords": "Registros de uso",
     "actions": {
       "addUsage": "Agregar uso",
-      "updateUsage": "Uso de actualización",
+      "updateUsage": "Actualizar uso",
       "edit": "Editar",
       "delete": "Borrar",
       "resetFilters": "Reiniciar"
@@ -413,7 +413,7 @@
       "quantity": "Cantidad",
       "usageDate": "Fecha de uso",
       "contractLine": "Línea de contrato",
-      "actions": "Comportamiento",
+      "actions": "Acciones",
       "defaultContractLine": "Línea de contrato predeterminada",
       "contractLineLabel": "Línea de contrato: {{id}}..."
     },
@@ -522,7 +522,7 @@
       "billingMethod": "Método de facturación",
       "quantity": "Cantidad",
       "defaultRate": "Tasa predeterminada",
-      "actions": "Comportamiento"
+      "actions": "Acciones"
     },
     "billingMethods": {
       "fixed": "Precio fijo",
@@ -576,7 +576,7 @@
       "billingMethod": "Método de facturación",
       "quantity": "Cantidad",
       "defaultRate": "Tasa predeterminada",
-      "actions": "Comportamiento"
+      "actions": "Acciones"
     },
     "tooltip": {
       "defaultRate": "Tarifa estándar del servicio, utilizada para la asignación de valor interno y la generación de informes dentro del total del plan fijo."
@@ -598,7 +598,7 @@
       "addSelectedServicesWithCount": "Agregar servicios seleccionados ({{count}})",
       "saveChanges": "Guardar cambios",
       "saveChangesDirty": "Guardar cambios *",
-      "saving": "Ahorro...",
+      "saving": "Guardando...",
       "reset": "Reiniciar"
     },
     "navigationDialog": {
@@ -622,12 +622,12 @@
       "status": "Estado",
       "created": "Creado",
       "updated": "Actualizado",
-      "actions": "Comportamiento"
+      "actions": "Acciones"
     },
     "actions": {
       "refresh": "Refrescar",
       "newExport": "Nueva exportación",
-      "open": "Abierto",
+      "open": "Abrir",
       "execute": "Ejecutar",
       "createBatch": "Crear lote",
       "creating": "Creando..."
@@ -662,7 +662,7 @@
         "adapter": "Adaptador",
         "status": "Estado",
         "created": "Creado",
-        "lines": "Pauta",
+        "lines": "Líneas",
         "errors": "Errores",
         "delivered": "Entregado"
       }
@@ -700,14 +700,14 @@
       "height": "Altura",
       "fontSize": "Tamaño de fuente",
       "color": "Color",
-      "columns": "Columnas {{count}}",
+      "columns": "{{count}} columna(s)",
       "rows": "{{count}} fila(s)"
     },
     "conditionalRules": {
       "title": "Reglas de visualización condicional",
       "selectAction": "Seleccionar acción",
-      "show": "Espectáculo",
-      "hide": "Esconder",
+      "show": "Mostrar",
+      "hide": "Ocultar",
       "format": "Formato",
       "conditionPlaceholder": "Condición",
       "targetPlaceholder": "Objetivo",
@@ -733,14 +733,14 @@
     "actions": {
       "cancel": "Cancelar",
       "saveQuantity": "Guardar cantidad",
-      "saving": "Ahorro..."
+      "saving": "Guardando..."
     },
     "errors": {
       "saveFailed": "No se pudo actualizar la cantidad. Por favor inténtalo de nuevo."
     }
   },
   "templateRendererCore": {
-    "notAvailable": "N / A",
+    "notAvailable": "N/A",
     "unknownValue": "Valor desconocido",
     "noDataForList": "No hay datos para la lista: {{name}}",
     "uncategorized": "Sin categoría"

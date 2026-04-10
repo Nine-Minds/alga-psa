@@ -1,6 +1,6 @@
 {
   "common": {
-    "back": "Dos",
+    "back": "Retour",
     "cancel": "Annuler",
     "close": "Fermer",
     "confirm": "Confirmer",
@@ -11,14 +11,14 @@
     "loading": "Chargement...",
     "new": "Nouveau",
     "next": "Suivant",
-    "notAvailable": "N / A",
+    "notAvailable": "N/A",
     "openMenu": "Ouvrir le menu",
     "processing": "Traitement...",
     "refresh": "Rafraîchir",
     "remove": "Retirer",
     "reset": "Réinitialiser",
-    "save": "Sauvegarder",
-    "saving": "Économie...",
+    "save": "Enregistrer",
+    "saving": "Enregistrement...",
     "success": "Succès",
     "update": "Mise à jour",
     "yes": "Oui",
@@ -34,7 +34,7 @@
     "backToPresets": "Retour à la liste des préréglages de ligne de contrat",
     "quoteTemplatesHeading": "Modèles de devis",
     "tabs": {
-      "quotes": "Citations",
+      "quotes": "Devis",
       "quoteLayouts": "Mises en page des devis",
       "quoteTemplates": "Modèles de devis",
       "clientContracts": "Contrats clients",
@@ -140,7 +140,7 @@
   "reconciliation": {
     "title": "Résoudre l'écart de crédit",
     "steps": {
-      "review": "Écart entre les avis",
+      "review": "Examiner l'écart",
       "approval": "Approbation",
       "confirmation": "Confirmation"
     },
@@ -172,12 +172,12 @@
       "creditId": "Numéro de crédit",
       "originalAmount": "Montant initial",
       "expectedRemaining": "Restant prévu",
-      "actualRemaining": "Réel Restant",
+      "actualRemaining": "Restant réel",
       "reportId": "ID du rapport",
       "resolutionType": "Type de résolution",
       "correctionAmount": "Montant de la correction",
       "currentBalance": "Solde actuel",
-      "newBalance": "Nouvel équilibre",
+      "newBalance": "Nouveau solde",
       "resolutionNotes": "Notes de résolution",
       "previousBalance": "Solde précédent"
     },
@@ -238,11 +238,11 @@
       "closeButton": "Fermer"
     },
     "status": {
-      "open": "Ouvrir"
+      "open": "Ouvert"
     },
     "buttons": {
       "cancel": "Annuler",
-      "back": "Dos",
+      "back": "Retour",
       "next": "Suivant",
       "confirm": "Confirmer la résolution"
     },
@@ -271,8 +271,8 @@
       "balanceComparison": "Comparaison des soldes"
     },
     "status": {
-      "open": "Ouvrir",
-      "inReview": "En revue",
+      "open": "Ouvert",
+      "inReview": "En cours de revue",
       "resolved": "Résolu",
       "expired": "Expiré",
       "active": "Actif"
@@ -302,7 +302,7 @@
       "remainingAmount": "Montant restant",
       "expirationDate": "Date d'expiration",
       "description": "Description",
-      "type": "Taper",
+      "type": "Type",
       "balanceAfter": "Solde après"
     },
     "empty": {
@@ -377,7 +377,7 @@
     "impactSummary": {
       "title": "Résumé des impacts",
       "currentBalance": "Solde actuel",
-      "newBalance": "Nouvel équilibre"
+      "newBalance": "Nouveau solde"
     },
     "resolved": {
       "title": "Cet écart a été résolu",
@@ -390,11 +390,11 @@
     }
   },
   "usage": {
-    "bucketHoursOverview": "Présentation des heures de regroupement",
+    "bucketHoursOverview": "Aperçu des heures de bucket",
     "usageRecords": "Enregistrements d'utilisation",
     "actions": {
       "addUsage": "Ajouter une utilisation",
-      "updateUsage": "Utilisation de la mise à jour",
+      "updateUsage": "Mettre à jour l'utilisation",
       "edit": "Modifier",
       "delete": "Supprimer",
       "resetFilters": "Réinitialiser"
@@ -413,7 +413,7 @@
       "quantity": "Quantité",
       "usageDate": "Date d'utilisation",
       "contractLine": "Ligne de contrat",
-      "actions": "Actes",
+      "actions": "Actions",
       "defaultContractLine": "Ligne de contrat par défaut",
       "contractLineLabel": "Ligne de contrat : {{id}}..."
     },
@@ -521,8 +521,8 @@
       "category": "Catégorie",
       "billingMethod": "Méthode de facturation",
       "quantity": "Quantité",
-      "defaultRate": "Taux de défaut",
-      "actions": "Actes"
+      "defaultRate": "Taux par défaut",
+      "actions": "Actions"
     },
     "billingMethods": {
       "fixed": "Prix ​​fixe",
@@ -575,8 +575,8 @@
       "category": "Catégorie",
       "billingMethod": "Méthode de facturation",
       "quantity": "Quantité",
-      "defaultRate": "Taux de défaut",
-      "actions": "Actes"
+      "defaultRate": "Taux par défaut",
+      "actions": "Actions"
     },
     "tooltip": {
       "defaultRate": "Taux standard du service, utilisé pour l'allocation de valeur interne et le reporting dans le cadre du total fixe du plan."
@@ -598,7 +598,7 @@
       "addSelectedServicesWithCount": "Ajouter les services sélectionnés ({{count}})",
       "saveChanges": "Enregistrer les modifications",
       "saveChangesDirty": "Enregistrer les modifications *",
-      "saving": "Économie...",
+      "saving": "Enregistrement...",
       "reset": "Réinitialiser"
     },
     "navigationDialog": {
@@ -622,10 +622,10 @@
       "status": "Statut",
       "created": "Créé",
       "updated": "Mis à jour",
-      "actions": "Actes"
+      "actions": "Actions"
     },
     "actions": {
-      "refresh": "Rafraîchir",
+      "refresh": "Actualiser",
       "newExport": "Nouvelle exportation",
       "open": "Ouvrir",
       "execute": "Exécuter",
@@ -678,11 +678,11 @@
     "status": {
       "pending": "En attente",
       "validating": "Validation en cours",
-      "ready": "Pret",
-      "delivered": "Livre",
-      "posted": "Publie",
-      "failed": "Echec",
-      "cancelled": "Annule",
+      "ready": "Prêt",
+      "delivered": "Livré",
+      "posted": "Publié",
+      "failed": "Échec",
+      "cancelled": "Annulé",
       "needsAttention": "Attention requise"
     }
   },
@@ -700,14 +700,14 @@
       "height": "Hauteur",
       "fontSize": "Taille de la police",
       "color": "Couleur",
-      "columns": "Colonne(s) {{count}}",
-      "rows": "Ligne(s) {{count}}"
+      "columns": "{{count}} colonne(s)",
+      "rows": "{{count}} ligne(s)"
     },
     "conditionalRules": {
       "title": "Règles d'affichage conditionnel",
       "selectAction": "Sélectionnez une action",
-      "show": "Montrer",
-      "hide": "Cacher",
+      "show": "Afficher",
+      "hide": "Masquer",
       "format": "Format",
       "conditionPlaceholder": "Condition",
       "targetPlaceholder": "Cible",
@@ -732,15 +732,15 @@
     },
     "actions": {
       "cancel": "Annuler",
-      "saveQuantity": "Économiser la quantité",
-      "saving": "Économie..."
+      "saveQuantity": "Enregistrer la quantité",
+      "saving": "Enregistrement..."
     },
     "errors": {
       "saveFailed": "Échec de la mise à jour de la quantité. Veuillez réessayer."
     }
   },
   "templateRendererCore": {
-    "notAvailable": "N / A",
+    "notAvailable": "N/A",
     "unknownValue": "Valeur inconnue",
     "noDataForList": "Aucune donnée pour la liste : {{name}}",
     "uncategorized": "Non classé"

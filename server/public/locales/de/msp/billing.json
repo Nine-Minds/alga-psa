@@ -1,7 +1,7 @@
 {
   "common": {
     "back": "Zurück",
-    "cancel": "Stornieren",
+    "cancel": "Abbrechen",
     "close": "Schließen",
     "confirm": "Bestätigen",
     "create": "Erstellen",
@@ -10,19 +10,19 @@
     "error": "Fehler",
     "loading": "Laden...",
     "new": "Neu",
-    "next": "Nächste",
-    "notAvailable": "N / A",
+    "next": "Weiter",
+    "notAvailable": "N/A",
     "openMenu": "Menü öffnen",
     "processing": "Verarbeitung...",
     "refresh": "Aktualisieren",
     "remove": "Entfernen",
     "reset": "Zurücksetzen",
     "save": "Speichern",
-    "saving": "Sparen...",
+    "saving": "Speichern...",
     "success": "Erfolg",
     "update": "Aktualisieren",
     "yes": "Ja",
-    "no": "NEIN"
+    "no": "Nein"
   },
   "dashboard": {
     "title": "Abrechnung",
@@ -34,7 +34,7 @@
     "backToPresets": "Zurück zur Liste der Vertragszeilenvoreinstellungen",
     "quoteTemplatesHeading": "Angebotsvorlagen",
     "tabs": {
-      "quotes": "Zitate",
+      "quotes": "Angebote",
       "quoteLayouts": "Angebotslayouts",
       "quoteTemplates": "Angebotsvorlagen",
       "clientContracts": "Kundenverträge",
@@ -177,7 +177,7 @@
       "resolutionType": "Auflösungstyp",
       "correctionAmount": "Korrekturbetrag",
       "currentBalance": "Aktueller Kontostand",
-      "newBalance": "Neue Balance",
+      "newBalance": "Neuer Saldo",
       "resolutionNotes": "Lösungshinweise",
       "previousBalance": "Vorheriger Kontostand"
     },
@@ -241,9 +241,9 @@
       "open": "Offen"
     },
     "buttons": {
-      "cancel": "Stornieren",
+      "cancel": "Abbrechen",
       "back": "Zurück",
-      "next": "Nächste",
+      "next": "Weiter",
       "confirm": "Bestätigen Sie die Lösung"
     },
     "errors": {
@@ -256,7 +256,7 @@
     }
   },
   "discrepancy": {
-    "backToReconciliation": "Zurück zur Versöhnung",
+    "backToReconciliation": "Zurück zum Abgleich",
     "title": "Beheben Sie Kreditdiskrepanzen",
     "tabs": {
       "transactionHistory": "Transaktionsverlauf",
@@ -303,7 +303,7 @@
       "expirationDate": "Verfallsdatum",
       "description": "Beschreibung",
       "type": "Typ",
-      "balanceAfter": "Balance danach"
+      "balanceAfter": "Saldo danach"
     },
     "empty": {
       "transactions": "Keine zugehörigen Transaktionen gefunden.",
@@ -350,7 +350,7 @@
       "applyAdjustment": "Nehmen Sie eine Kreditanpassung vor",
       "applyCustomAdjustment": "Benutzerdefinierte Anpassung anwenden",
       "markResolvedNoAction": "Als gelöst markieren (keine Aktion)",
-      "cancel": "Stornieren",
+      "cancel": "Abbrechen",
       "confirm": "Fix anwenden"
     },
     "descriptions": {
@@ -377,7 +377,7 @@
     "impactSummary": {
       "title": "Zusammenfassung der Auswirkungen",
       "currentBalance": "Aktueller Kontostand",
-      "newBalance": "Neue Balance"
+      "newBalance": "Neuer Saldo"
     },
     "resolved": {
       "title": "Diese Diskrepanz wurde behoben",
@@ -468,7 +468,7 @@
       "itemDiscount": "Artikelrabatt",
       "invoiceDiscount": "Rechnungsrabatt",
       "appliedTo": "Angewendet auf: {{description}}",
-      "selectService": "Wählen Sie „Dienst“.",
+      "selectService": "Dienst auswählen",
       "taxable": "(Steuerpflichtig)",
       "nonTaxable": "(Nicht steuerpflichtig)",
       "calculatedOnSave": "(berechnet beim Speichern)"
@@ -598,7 +598,7 @@
       "addSelectedServicesWithCount": "Ausgewählte Dienste hinzufügen ({{count}})",
       "saveChanges": "Änderungen speichern",
       "saveChangesDirty": "Änderungen speichern *",
-      "saving": "Sparen...",
+      "saving": "Speichern...",
       "reset": "Zurücksetzen"
     },
     "navigationDialog": {
@@ -627,7 +627,7 @@
     "actions": {
       "refresh": "Aktualisieren",
       "newExport": "Neuer Export",
-      "open": "Offen",
+      "open": "Öffnen",
       "execute": "Ausführen",
       "createBatch": "Stapel erstellen",
       "creating": "Erstellen..."
@@ -662,7 +662,7 @@
         "adapter": "Adapter",
         "status": "Status",
         "created": "Erstellt",
-        "lines": "Linien",
+        "lines": "Zeilen",
         "errors": "Fehler",
         "delivered": "Geliefert"
       }
@@ -705,11 +705,11 @@
     },
     "conditionalRules": {
       "title": "Regeln für die bedingte Anzeige",
-      "selectAction": "Wählen Sie Aktion aus",
-      "show": "Zeigen",
-      "hide": "Verstecken",
+      "selectAction": "Aktion auswählen",
+      "show": "Anzeigen",
+      "hide": "Ausblenden",
       "format": "Format",
-      "conditionPlaceholder": "Zustand",
+      "conditionPlaceholder": "Bedingung",
       "targetPlaceholder": "Ziel",
       "addRule": "Regel hinzufügen"
     }
@@ -731,16 +731,16 @@
       "positiveWholeNumber": "Die Menge muss eine positive ganze Zahl sein."
     },
     "actions": {
-      "cancel": "Stornieren",
+      "cancel": "Abbrechen",
       "saveQuantity": "Menge speichern",
-      "saving": "Sparen..."
+      "saving": "Speichern..."
     },
     "errors": {
       "saveFailed": "Menge konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
     }
   },
   "templateRendererCore": {
-    "notAvailable": "N / A",
+    "notAvailable": "N/A",
     "unknownValue": "Unbekannter Wert",
     "noDataForList": "Keine Daten für Liste: {{name}}",
     "uncategorized": "Nicht kategorisiert"

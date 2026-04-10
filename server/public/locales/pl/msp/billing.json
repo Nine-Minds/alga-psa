@@ -1,28 +1,28 @@
 {
   "common": {
-    "back": "Z powrotem",
-    "cancel": "Anulować",
-    "close": "Zamknąć",
-    "confirm": "Potwierdzać",
-    "create": "Tworzyć",
-    "delete": "Usuwać",
-    "edit": "Redagować",
+    "back": "Wstecz",
+    "cancel": "Anuluj",
+    "close": "Zamknij",
+    "confirm": "Potwierdź",
+    "create": "Utwórz",
+    "delete": "Usuń",
+    "edit": "Edytuj",
     "error": "Błąd",
-    "loading": "Załadunek...",
+    "loading": "Ładowanie...",
     "new": "Nowy",
-    "next": "Następny",
+    "next": "Dalej",
     "notAvailable": "Nie dotyczy",
     "openMenu": "Otwórz menu",
     "processing": "Przetwarzanie...",
-    "refresh": "Odświeżać",
-    "remove": "Usunąć",
-    "reset": "Nastawić",
-    "save": "Ratować",
-    "saving": "Oszczędność...",
+    "refresh": "Odśwież",
+    "remove": "Usuń",
+    "reset": "Resetuj",
+    "save": "Zapisz",
+    "saving": "Zapisywanie...",
     "success": "Sukces",
-    "update": "Aktualizacja",
+    "update": "Aktualizuj",
     "yes": "Tak",
-    "no": "NIE"
+    "no": "Nie"
   },
   "dashboard": {
     "title": "Rozliczenia",
@@ -34,8 +34,8 @@
     "backToPresets": "Powrót do listy ustawień linii kontraktowej",
     "quoteTemplatesHeading": "Szablony ofert",
     "tabs": {
-      "quotes": "Cytaty",
-      "quoteLayouts": "Układy cytatów",
+      "quotes": "Oferty",
+      "quoteLayouts": "Układy ofert",
       "quoteTemplates": "Szablony ofert",
       "clientContracts": "Umowy klienckie",
       "accountingExports": "Eksport księgowy",
@@ -75,7 +75,7 @@
         "subtitle": "W katalogu"
       },
       "outstandingAmount": {
-        "title": "Znakomita kwota",
+        "title": "Kwota zaległa",
         "subtitle": "Niezapłacone faktury"
       },
       "creditBalance": {
@@ -162,8 +162,8 @@
       "status": "Status",
       "detected": "Wykryto",
       "issueType": "Typ problemu",
-      "expectedBalance": "Oczekiwany balans",
-      "actualBalance": "Rzeczywisty balans",
+      "expectedBalance": "Oczekiwane saldo",
+      "actualBalance": "Rzeczywiste saldo",
       "difference": "Różnica",
       "transactionId": "Identyfikator transakcji",
       "transactionType": "Typ transakcji",
@@ -177,7 +177,7 @@
       "resolutionType": "Typ rozdzielczości",
       "correctionAmount": "Kwota korekty",
       "currentBalance": "Aktualne saldo",
-      "newBalance": "Nowa równowaga",
+      "newBalance": "Nowe saldo",
       "resolutionNotes": "Uwagi do uchwały",
       "previousBalance": "Poprzednie saldo"
     },
@@ -235,15 +235,15 @@
       "thankYouTitle": "Dziękuję!",
       "thankYouDescription": "Rozbieżność została usunięta, a zapisy rozliczeniowe zaktualizowane.",
       "confirmButton": "Potwierdź rozwiązanie",
-      "closeButton": "Zamknąć"
+      "closeButton": "Zamknij"
     },
     "status": {
       "open": "Otwarte"
     },
     "buttons": {
-      "cancel": "Anulować",
-      "back": "Z powrotem",
-      "next": "Następny",
+      "cancel": "Anuluj",
+      "back": "Wstecz",
+      "next": "Dalej",
       "confirm": "Potwierdź rozwiązanie"
     },
     "errors": {
@@ -256,7 +256,7 @@
     }
   },
   "discrepancy": {
-    "backToReconciliation": "Powrót do Pojednania",
+    "backToReconciliation": "Powrót do uzgodnienia",
     "title": "Rozwiąż rozbieżności kredytowe",
     "tabs": {
       "transactionHistory": "Historia transakcji",
@@ -284,8 +284,8 @@
       "resolved": "Rozwiązany",
       "resolutionNotes": "Uwagi do uchwały",
       "issueType": "Typ problemu",
-      "expectedBalance": "Oczekiwany balans",
-      "actualBalance": "Rzeczywisty balans",
+      "expectedBalance": "Oczekiwane saldo",
+      "actualBalance": "Rzeczywiste saldo",
       "difference": "Różnica",
       "transactionId": "Identyfikator transakcji",
       "createdAt": "Utworzono o godz",
@@ -303,7 +303,7 @@
       "expirationDate": "Data ważności",
       "description": "Opis",
       "type": "Typ",
-      "balanceAfter": "Bilans po"
+      "balanceAfter": "Saldo po"
     },
     "empty": {
       "transactions": "Nie znaleziono powiązanych transakcji.",
@@ -350,7 +350,7 @@
       "applyAdjustment": "Zastosuj korektę kredytu",
       "applyCustomAdjustment": "Zastosuj dostosowanie niestandardowe",
       "markResolvedNoAction": "Oznacz jako rozwiązane (brak działań)",
-      "cancel": "Anulować",
+      "cancel": "Anuluj",
       "confirm": "Zastosuj poprawkę"
     },
     "descriptions": {
@@ -377,7 +377,7 @@
     "impactSummary": {
       "title": "Podsumowanie wpływu",
       "currentBalance": "Aktualne saldo",
-      "newBalance": "Nowa równowaga"
+      "newBalance": "Nowe saldo"
     },
     "resolved": {
       "title": "Ta rozbieżność została usunięta",
@@ -390,18 +390,18 @@
     }
   },
   "usage": {
-    "bucketHoursOverview": "Przegląd godzin wiader",
+    "bucketHoursOverview": "Przegląd godzin bucket",
     "usageRecords": "Zapisy użytkowania",
     "actions": {
       "addUsage": "Dodaj użycie",
       "updateUsage": "Aktualizuj użycie",
-      "edit": "Redagować",
-      "delete": "Usuwać",
-      "resetFilters": "Nastawić"
+      "edit": "Edytuj",
+      "delete": "Usuń",
+      "resetFilters": "Resetuj"
     },
     "filters": {
       "client": "Klient",
-      "service": "Praca",
+      "service": "Usługa",
       "clientPlaceholder": "Filtruj według klienta",
       "servicePlaceholder": "Filtruj według usługi",
       "allClients": "Wszyscy Klienci",
@@ -409,7 +409,7 @@
     },
     "table": {
       "client": "Klient",
-      "service": "Praca",
+      "service": "Usługa",
       "quantity": "Ilość",
       "usageDate": "Data użycia",
       "contractLine": "Linia kontraktowa",
@@ -426,7 +426,7 @@
       "editTitle": "Edytuj zapis użytkowania",
       "fields": {
         "client": "Klient",
-        "service": "Praca",
+        "service": "Usługa",
         "quantity": "Ilość",
         "usageDate": "Data użycia",
         "comments": "Komentarze (opcjonalnie)",
@@ -468,7 +468,7 @@
       "itemDiscount": "Rabat na przedmiot",
       "invoiceDiscount": "Rabat na fakturze",
       "appliedTo": "Dotyczy: {{description}}",
-      "selectService": "Wybierz opcję Usługa",
+      "selectService": "Wybierz usługę",
       "taxable": "(Podlegający opodatkowaniu)",
       "nonTaxable": "(Niepodlegające opodatkowaniu)",
       "calculatedOnSave": "(obliczane przy zapisie)"
@@ -479,7 +479,7 @@
       "markedForRemoval": "Oznaczone do usunięcia"
     },
     "fields": {
-      "service": "Praca",
+      "service": "Usługa",
       "quantity": "Ilość",
       "discountType": "Rodzaj rabatu",
       "percentage": "Procent",
@@ -487,16 +487,16 @@
       "discountDescription": "Opis rabatu",
       "applyDiscountTo": "Zastosuj rabat do",
       "entireInvoice": "Cała faktura",
-      "rate": "Szybkość ({{currencySymbol}})",
+      "rate": "Stawka ({{currencySymbol}})",
       "description": "Opis"
     },
     "placeholders": {
       "discountDescription": "np. rabat za wcześniejszą płatność"
     },
     "actions": {
-      "add": "Dodać",
-      "remove": "Usunąć",
-      "restore": "Przywrócić"
+      "add": "Dodaj",
+      "remove": "Usuń",
+      "restore": "Przywróć"
     },
     "hints": {
       "removed": "Ten element zostanie usunięty po zapisaniu zmian"
@@ -532,11 +532,11 @@
     },
     "badges": {
       "product": "Produkt",
-      "service": "Praca"
+      "service": "Usługa"
     },
     "actions": {
       "editQuantity": "Edytuj ilość",
-      "remove": "Usunąć",
+      "remove": "Usuń",
       "addSelectedServices": "Dodaj wybrane usługi",
       "addSelectedServicesWithCount": "Dodaj wybrane usługi ({{count}})"
     },
@@ -593,13 +593,13 @@
       "rate": "Stawka: ${{value}}"
     },
     "actions": {
-      "remove": "Usunąć",
+      "remove": "Usuń",
       "addSelectedServices": "Dodaj wybrane usługi",
       "addSelectedServicesWithCount": "Dodaj wybrane usługi ({{count}})",
       "saveChanges": "Zapisz zmiany",
       "saveChangesDirty": "Zapisz zmiany *",
-      "saving": "Oszczędność...",
-      "reset": "Nastawić"
+      "saving": "Zapisywanie...",
+      "reset": "Resetuj"
     },
     "navigationDialog": {
       "title": "Niezapisane zmiany",
@@ -625,10 +625,10 @@
       "actions": "Działania"
     },
     "actions": {
-      "refresh": "Odświeżać",
+      "refresh": "Odśwież",
       "newExport": "Nowy eksport",
-      "open": "Otwarte",
-      "execute": "Wykonać",
+      "open": "Otwórz",
+      "execute": "Wykonaj",
       "createBatch": "Utwórz partię",
       "creating": "Tworzenie..."
     },
@@ -662,7 +662,7 @@
         "adapter": "Adapter",
         "status": "Status",
         "created": "Stworzony",
-        "lines": "Kwestia",
+        "lines": "Wiersze",
         "errors": "Błędy",
         "delivered": "Dostarczony"
       }
@@ -676,11 +676,11 @@
       "executeError": "Nie udało się wykonać partii"
     },
     "status": {
-      "pending": "Oczekujace",
+      "pending": "Oczekujące",
       "validating": "W trakcie walidacji",
       "ready": "Gotowe",
       "delivered": "Dostarczone",
-      "posted": "Zaksiegowane",
+      "posted": "Zaksięgowane",
       "failed": "Niepowodzenie",
       "cancelled": "Anulowane",
       "needsAttention": "Wymaga uwagi"
@@ -700,16 +700,16 @@
       "height": "Wysokość",
       "fontSize": "Rozmiar czcionki",
       "color": "Kolor",
-      "columns": "Kolumna(y) {{count}}",
-      "rows": "Wiersz(y) {{count}}"
+      "columns": "{{count}} kolumna(y)",
+      "rows": "{{count}} wiersz(y)"
     },
     "conditionalRules": {
       "title": "Reguły wyświetlania warunkowego",
-      "selectAction": "Wybierz opcję Akcja",
-      "show": "Pokazywać",
-      "hide": "Ukrywać",
+      "selectAction": "Wybierz akcję",
+      "show": "Pokaż",
+      "hide": "Ukryj",
       "format": "Format",
-      "conditionPlaceholder": "Stan",
+      "conditionPlaceholder": "Warunek",
       "targetPlaceholder": "Cel",
       "addRule": "Dodaj regułę"
     }
@@ -731,9 +731,9 @@
       "positiveWholeNumber": "Ilość musi być dodatnią liczbą całkowitą."
     },
     "actions": {
-      "cancel": "Anulować",
+      "cancel": "Anuluj",
       "saveQuantity": "Zapisz ilość",
-      "saving": "Oszczędność..."
+      "saving": "Zapisywanie..."
     },
     "errors": {
       "saveFailed": "Nie udało się zaktualizować ilości. Spróbuj ponownie."

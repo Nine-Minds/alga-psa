@@ -1,24 +1,24 @@
 {
   "common": {
-    "back": "Rug",
+    "back": "Terug",
     "cancel": "Annuleren",
-    "close": "Dichtbij",
+    "close": "Sluiten",
     "confirm": "Bevestigen",
-    "create": "Creëren",
+    "create": "Aanmaken",
     "delete": "Verwijderen",
-    "edit": "Bewerking",
+    "edit": "Bewerken",
     "error": "Fout",
     "loading": "Laden...",
     "new": "Nieuw",
     "next": "Volgende",
-    "notAvailable": "N.v.t",
+    "notAvailable": "N.v.t.",
     "openMenu": "Menu openen",
     "processing": "Verwerken...",
     "refresh": "Vernieuwen",
     "remove": "Verwijderen",
     "reset": "Opnieuw instellen",
-    "save": "Redden",
-    "saving": "Besparing...",
+    "save": "Opslaan",
+    "saving": "Opslaan...",
     "success": "Succes",
     "update": "Update",
     "yes": "Ja",
@@ -34,7 +34,7 @@
     "backToPresets": "Terug naar de lijst met voorinstellingen voor contractregels",
     "quoteTemplatesHeading": "Offertesjablonen",
     "tabs": {
-      "quotes": "Citaten",
+      "quotes": "Offertes",
       "quoteLayouts": "Offerte-indelingen",
       "quoteTemplates": "Offertesjablonen",
       "clientContracts": "Klantcontracten",
@@ -140,7 +140,7 @@
   "reconciliation": {
     "title": "Los kredietverschillen op",
     "steps": {
-      "review": "Beoordelingsverschil",
+      "review": "Discrepantie beoordelen",
       "approval": "Goedkeuring",
       "confirmation": "Bevestiging"
     },
@@ -177,7 +177,7 @@
       "resolutionType": "Resolutietype",
       "correctionAmount": "Correctiebedrag",
       "currentBalance": "Huidig ​​saldo",
-      "newBalance": "Nieuwe balans",
+      "newBalance": "Nieuw saldo",
       "resolutionNotes": "Resolutie Opmerkingen",
       "previousBalance": "Vorig saldo"
     },
@@ -235,14 +235,14 @@
       "thankYouTitle": "Bedankt!",
       "thankYouDescription": "Het verschil is opgelost en de factureringsgegevens zijn bijgewerkt.",
       "confirmButton": "Bevestig de oplossing",
-      "closeButton": "Dichtbij"
+      "closeButton": "Sluiten"
     },
     "status": {
       "open": "Open"
     },
     "buttons": {
       "cancel": "Annuleren",
-      "back": "Rug",
+      "back": "Terug",
       "next": "Volgende",
       "confirm": "Bevestig de oplossing"
     },
@@ -256,7 +256,7 @@
     }
   },
   "discrepancy": {
-    "backToReconciliation": "Terug naar verzoening",
+    "backToReconciliation": "Terug naar afstemming",
     "title": "Los kredietverschillen op",
     "tabs": {
       "transactionHistory": "Transactiegeschiedenis",
@@ -377,7 +377,7 @@
     "impactSummary": {
       "title": "Impactsamenvatting",
       "currentBalance": "Huidig ​​saldo",
-      "newBalance": "Nieuwe balans"
+      "newBalance": "Nieuw saldo"
     },
     "resolved": {
       "title": "Deze discrepantie is opgelost",
@@ -395,7 +395,7 @@
     "actions": {
       "addUsage": "Gebruik toevoegen",
       "updateUsage": "Gebruik bijwerken",
-      "edit": "Bewerking",
+      "edit": "Bewerken",
       "delete": "Verwijderen",
       "resetFilters": "Opnieuw instellen"
     },
@@ -471,7 +471,7 @@
       "selectService": "Selecteer Dienst",
       "taxable": "(belastbaar)",
       "nonTaxable": "(Niet-belastbaar)",
-      "calculatedOnSave": "(berekend op basis van opslaan)"
+      "calculatedOnSave": "(berekend bij opslaan)"
     },
     "expanded": {
       "discount": "Korting",
@@ -598,7 +598,7 @@
       "addSelectedServicesWithCount": "Geselecteerde services toevoegen ({{count}})",
       "saveChanges": "Wijzigingen opslaan",
       "saveChangesDirty": "Wijzigingen opslaan *",
-      "saving": "Besparing...",
+      "saving": "Opslaan...",
       "reset": "Opnieuw instellen"
     },
     "navigationDialog": {
@@ -627,7 +627,7 @@
     "actions": {
       "refresh": "Vernieuwen",
       "newExport": "Nieuwe export",
-      "open": "Open",
+      "open": "Openen",
       "execute": "Uitvoeren",
       "createBatch": "Batch maken",
       "creating": "Creëren..."
@@ -662,7 +662,7 @@
         "adapter": "Adapter",
         "status": "Status",
         "created": "Gemaakt",
-        "lines": "Lijnen",
+        "lines": "Regels",
         "errors": "Fouten",
         "delivered": "Afgeleverd"
       }
@@ -705,8 +705,8 @@
     },
     "conditionalRules": {
       "title": "Voorwaardelijke weergaveregels",
-      "selectAction": "Selecteer Actie",
-      "show": "Show",
+      "selectAction": "Selecteer actie",
+      "show": "Tonen",
       "hide": "Verbergen",
       "format": "Formaat",
       "conditionPlaceholder": "Voorwaarde",
@@ -732,8 +732,8 @@
     },
     "actions": {
       "cancel": "Annuleren",
-      "saveQuantity": "Bespaar hoeveelheid",
-      "saving": "Besparing..."
+      "saveQuantity": "Hoeveelheid opslaan",
+      "saving": "Opslaan..."
     },
     "errors": {
       "saveFailed": "Kan aantal niet updaten. Probeer het opnieuw."
