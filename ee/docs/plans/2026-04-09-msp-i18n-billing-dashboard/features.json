@@ -162,7 +162,7 @@
   {
     "id": "F032",
     "description": "Wire useTranslation('msp/billing') in EditContractLineServiceQuantityDialog.tsx — dialog title pattern ('Edit Quantity for {serviceName}'), quantity label, validation messages (empty/not positive), save/cancel buttons, saving indicator text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F033",
