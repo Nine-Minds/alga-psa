@@ -42,6 +42,7 @@ credits, and service catalog are handled in separate plans.
   `['common', 'msp/core', 'features/billing', 'msp/reports']`. Adding `'msp/billing'` to
   this array is the only config change needed.
 - **(2026-04-10)** `server/public/locales/en/msp/billing.json` was created as a broad foundational namespace with shared vocabulary across dashboard, overview, reconciliation, discrepancy, usage, line-item, services, exports, template designer, and quantity-dialog surfaces. It intentionally front-loads reusable labels so later component wiring can reference stable keys instead of inventing ad hoc per-file strings.
+- **(2026-04-10)** Locale generation can be bootstrapped from the English namespace using `translate.googleapis.com` while preserving `{{interpolation}}` tokens. This is good enough for parity work, but repeated billing vocabulary still needs spot-auditing because machine translation is not domain-aware (for example, quote/billing terminology can drift).
 - **(2026-04-09)** `ReconciliationResolution.tsx` (1129 LOC) is the largest file and has
   ~80 user-visible strings spanning 3 wizard steps, resolution options, four-eyes approval
   flow, and a confirmation dialog. Split into 3 features (F020-F022).
@@ -112,7 +113,9 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 ## Progress Log
 
 - **(2026-04-10) F001 complete** -- Added `server/public/locales/en/msp/billing.json` with 14 top-level groups (`common`, `dashboard`, `overview`, `reconciliation`, `discrepancy`, `recommendedFix`, `usage`, `lineItem`, `contractLineServices`, `presetServices`, `accountingExports`, `templateRenderer`, `templateDesigner`, `contractsHub`, `editQuantityDialog`, `templateRendererCore`). Verified the file parses with `node -e "JSON.parse(...)"`. This gives the batch a stable namespace before locale generation and component wiring.
+- **(2026-04-10) F002 complete** -- Generated `server/public/locales/fr/msp/billing.json` from the English source with placeholder preservation and verified it parses. The first pass is machine-generated; keep an eye on MSP-specific wording during later UI smoke tests.
 
 ## Runbook
 
 - `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/billing.json','utf8')); console.log('ok')"`
+- `node - <<'NODE' ... generate translated locale from en/msp/billing.json via translate.googleapis.com while preserving {{placeholders}} ... NODE`
