@@ -77,7 +77,7 @@
   {
     "id": "F016",
     "description": "Wire DiscrepancyDetail.tsx — issue details tab (alerts, recommended fix text, credit applications table), resolution dialog (title, description, notes label, expected/actual/difference labels), error/empty states",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F017",

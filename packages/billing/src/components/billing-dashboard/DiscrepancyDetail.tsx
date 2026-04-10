@@ -205,7 +205,7 @@ const DiscrepancyDetail: React.FC = () => {
       setIsResolvingReport(false);
     } catch (error) {
       console.error('Error resolving report:', error);
-      setResolutionError(error instanceof Error ? error.message : 'An unknown error occurred');
+      setResolutionError(error instanceof Error ? error.message : t('discrepancy.errors.unknown', { defaultValue: 'An unknown error occurred' }));
       setIsResolvingReport(false);
     }
   };
@@ -580,11 +580,11 @@ const DiscrepancyDetail: React.FC = () => {
   if (isCreditTrackingIssue) {
     tabsContent.push({
       id: 'issue-details',
-      label: 'Issue Details',
+      label: t('discrepancy.tabs.issueDetails', { defaultValue: 'Issue Details' }),
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Issue Details</CardTitle>
+            <CardTitle>{t('discrepancy.cards.issueDetails', { defaultValue: 'Issue Details' })}</CardTitle>
             <CardDescription>
               Detailed information about the credit tracking issue
             </CardDescription>
@@ -592,46 +592,46 @@ const DiscrepancyDetail: React.FC = () => {
           <CardContent>
             {!report.metadata ? (
               <div className="text-center py-8 text-[rgb(var(--color-text-500))]">
-                No issue details available
+                {t('discrepancy.empty.issueDetails', { defaultValue: 'No issue details available.' })}
               </div>
             ) : report.metadata.issue_type === 'missing_credit_tracking_entry' ? (
               <div className="space-y-4">
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
-                  <div className="font-semibold">Missing Credit Tracking Entry</div>
+                  <div className="font-semibold">{t('discrepancy.issueTypes.missingCreditTrackingEntry', { defaultValue: 'Missing Credit Tracking Entry' })}</div>
                   <AlertDescription>
-                    A credit transaction was found without a corresponding credit tracking entry.
+                    {t('discrepancy.recommendedFix.missingTrackingDescription', { defaultValue: 'Create a credit tracking entry based on the original transaction details and set the remaining amount to match the original transaction amount.' })}
                   </AlertDescription>
                 </Alert>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Transaction ID</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.transactionId', { defaultValue: 'Transaction ID' })}</p>
                     <p className="font-medium font-mono">{report.metadata.transaction_id}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Transaction Type</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.type', { defaultValue: 'Type' })}</p>
                     <p className="font-medium">{report.metadata.transaction_type.replace(/_/g, ' ')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Transaction Amount</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.amount', { defaultValue: 'Amount' })}</p>
                     <p className="font-medium">{formatCurrency(report.metadata.transaction_amount)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Transaction Date</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.created', { defaultValue: 'Date' })}</p>
                     <p className="font-medium">{formatDateTime(parseISO(report.metadata.transaction_date), 'PPpp')}</p>
                   </div>
                 </div>
                 
                 <div className="mt-4">
-                  <h4 className="font-medium mb-2">Recommended Fix</h4>
+                  <h4 className="font-medium mb-2">{t('discrepancy.recommendedFix.title', { defaultValue: 'Recommended Fix' })}</h4>
                   <p className="text-sm text-[rgb(var(--color-text-500))]">
-                    Create a credit tracking entry for this transaction with the following details:
+                    {t('discrepancy.recommendedFix.missingTrackingDescription', { defaultValue: 'Create a credit tracking entry based on the original transaction details and set the remaining amount to match the original transaction amount.' })}
                   </p>
                   <ul className="list-disc list-inside mt-2 text-sm text-[rgb(var(--color-text-500))]">
-                    <li>Transaction ID: {report.metadata.transaction_id}</li>
-                    <li>Amount: {formatCurrency(report.metadata.transaction_amount)}</li>
-                    <li>Remaining Amount: Calculate based on any applications</li>
+                    <li>{t('discrepancy.fields.transactionId', { defaultValue: 'Transaction ID' })}: {report.metadata.transaction_id}</li>
+                    <li>{t('discrepancy.fields.amount', { defaultValue: 'Amount' })}: {formatCurrency(report.metadata.transaction_amount)}</li>
+                    <li>{t('discrepancy.recommendedFix.missingTrackingRemainingAmount', { defaultValue: 'Remaining Amount: Calculate based on any applications' })}</li>
                   </ul>
                 </div>
               </div>
@@ -639,48 +639,48 @@ const DiscrepancyDetail: React.FC = () => {
               <div className="space-y-4">
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
-                  <div className="font-semibold">Inconsistent Credit Remaining Amount</div>
+                  <div className="font-semibold">{t('discrepancy.issueTypes.inconsistentCreditRemainingAmount', { defaultValue: 'Inconsistent Credit Remaining Amount' })}</div>
                   <AlertDescription>
-                    The remaining amount in a credit tracking entry doesn't match the expected value based on transaction history.
+                    {t('discrepancy.recommendedFix.inconsistentRemainingDescription', { defaultValue: 'Update the credit tracking entry\\'s remaining amount to match the calculated expected balance based on applications.' })}
                   </AlertDescription>
                 </Alert>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Credit ID</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.creditId', { defaultValue: 'Credit ID' })}</p>
                     <p className="font-medium font-mono">{report.metadata.credit_id}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Transaction ID</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.transactionId', { defaultValue: 'Transaction ID' })}</p>
                     <p className="font-medium font-mono">{report.metadata.transaction_id}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Original Amount</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.originalAmount', { defaultValue: 'Original Amount' })}</p>
                     <p className="font-medium">{formatCurrency(report.metadata.original_amount)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Expected Remaining</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">{t('reconciliation.fields.expectedRemaining', { defaultValue: 'Expected Remaining' })}</p>
                     <p className="font-medium">{formatCurrency(report.expected_balance)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Actual Remaining</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">{t('reconciliation.fields.actualRemaining', { defaultValue: 'Actual Remaining' })}</p>
                     <p className="font-medium">{formatCurrency(report.actual_balance)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Difference</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.difference', { defaultValue: 'Difference' })}</p>
                     <p className="font-medium">{formatCurrency(report.difference)}</p>
                   </div>
                 </div>
                 
                 {report.metadata.applications && report.metadata.applications.length > 0 && (
                   <div className="mt-4">
-                    <h4 className="font-medium mb-2">Credit Applications</h4>
+                    <h4 className="font-medium mb-2">{t('reconciliation.transactionHistory.title', { defaultValue: 'Credit Applications' })}</h4>
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-[rgb(var(--color-border-200))]">
-                          <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Transaction ID</th>
-                          <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Date</th>
-                          <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">Amount</th>
+                          <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.transactionId', { defaultValue: 'Transaction ID' })}</th>
+                          <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.created', { defaultValue: 'Date' })}</th>
+                          <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">{t('discrepancy.fields.amount', { defaultValue: 'Amount' })}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -706,14 +706,14 @@ const DiscrepancyDetail: React.FC = () => {
                 )}
                 
                 <div className="mt-4">
-                  <h4 className="font-medium mb-2">Recommended Fix</h4>
+                  <h4 className="font-medium mb-2">{t('discrepancy.recommendedFix.title', { defaultValue: 'Recommended Fix' })}</h4>
                   <p className="text-sm text-[rgb(var(--color-text-500))]">
-                    Update the credit tracking entry's remaining amount to match the expected value:
+                    {t('discrepancy.recommendedFix.inconsistentRemainingDescription', { defaultValue: 'Update the credit tracking entry\\'s remaining amount to match the calculated expected balance based on applications.' })}
                   </p>
                   <ul className="list-disc list-inside mt-2 text-sm text-[rgb(var(--color-text-500))]">
-                    <li>Credit ID: {report.metadata.credit_id}</li>
-                    <li>Current Remaining Amount: {formatCurrency(report.actual_balance)}</li>
-                    <li>Corrected Remaining Amount: {formatCurrency(report.expected_balance)}</li>
+                    <li>{t('discrepancy.fields.creditId', { defaultValue: 'Credit ID' })}: {report.metadata.credit_id}</li>
+                    <li>{t('reconciliation.fields.actualRemaining', { defaultValue: 'Actual Remaining' })}: {formatCurrency(report.actual_balance)}</li>
+                    <li>{t('reconciliation.fields.expectedRemaining', { defaultValue: 'Expected Remaining' })}: {formatCurrency(report.expected_balance)}</li>
                   </ul>
                 </div>
               </div>
@@ -727,7 +727,7 @@ const DiscrepancyDetail: React.FC = () => {
             <div className="w-full flex justify-end">
               {report.status !== 'resolved' && (
                 <Button id="apply-fix-button" onClick={() => setIsResolutionDialogOpen(true)}>
-                  Apply Recommended Fix
+                  {t('recommendedFix.buttons.confirm', { defaultValue: 'Apply Fix' })}
                 </Button>
               )}
             </div>
@@ -748,41 +748,41 @@ const DiscrepancyDetail: React.FC = () => {
           <Dialog
             isOpen={isResolutionDialogOpen}
             onClose={() => setIsResolutionDialogOpen(false)}
-            title="Resolve Credit Discrepancy"
+            title={t('discrepancy.title', { defaultValue: 'Resolve Credit Discrepancy' })}
           >
             <DialogTrigger asChild>
               <Button id="resolve-report-button">
-                Resolve Discrepancy
+                {t('discrepancy.title', { defaultValue: 'Resolve Credit Discrepancy' })}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogDescription>
-                This will create a credit adjustment transaction to correct the balance discrepancy.
-                Please provide notes explaining the reason for this correction.
+                {t('recommendedFix.descriptions.applyAdjustment', { defaultValue: 'This will create a credit adjustment transaction to correct the balance.' })}{' '}
+                {t('reconciliation.notes.hint', { defaultValue: 'These notes will be recorded in the audit trail for this discrepancy.' })}
               </DialogDescription>
               
               <div className="py-4">
                 <div className="space-y-2">
-                  <h4 className="font-medium">Discrepancy Details</h4>
+                  <h4 className="font-medium">{t('discrepancy.cards.discrepancyDetails', { defaultValue: 'Discrepancy Details' })}</h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>Expected Balance:</div>
+                    <div>{t('discrepancy.fields.expectedBalance', { defaultValue: 'Expected Balance' })}:</div>
                     <div className="font-medium">{formatCurrency(report.expected_balance)}</div>
-                    <div>Actual Balance:</div>
+                    <div>{t('discrepancy.fields.actualBalance', { defaultValue: 'Actual Balance' })}:</div>
                     <div className="font-medium">{formatCurrency(report.actual_balance)}</div>
-                    <div>Difference:</div>
+                    <div>{t('discrepancy.fields.difference', { defaultValue: 'Difference' })}:</div>
                     <div className="font-medium">{formatCurrency(report.difference)}</div>
                   </div>
                 </div>
                 
                 <div className="mt-4">
                   <label htmlFor="resolution-notes" className="block text-sm font-medium mb-1">
-                    Resolution Notes
+                    {t('discrepancy.fields.resolutionNotes', { defaultValue: 'Resolution Notes' })}
                   </label>
                   <TextArea
                     id="resolution-notes"
                     value={resolutionNotes}
                     onChange={(e) => setResolutionNotes(e.target.value)}
-                    placeholder="Explain the reason for this correction..."
+                    placeholder={t('discrepancy.resolutionDialog.notesPlaceholder', { defaultValue: 'Explain the reason for this correction...' })}
                     className="w-full"
                     rows={4}
                   />
@@ -791,7 +791,7 @@ const DiscrepancyDetail: React.FC = () => {
                 {resolutionError && (
                   <Alert variant="destructive" className="mt-4">
                     <AlertCircle className="h-4 w-4" />
-                    <div className="font-semibold">Error</div>
+                    <div className="font-semibold">{t('common.error', { defaultValue: 'Error' })}</div>
                     <AlertDescription>{resolutionError}</AlertDescription>
                   </Alert>
                 )}
@@ -799,14 +799,16 @@ const DiscrepancyDetail: React.FC = () => {
               
               <DialogFooter>
                 <Button id="cancel-resolution-button" variant="outline" onClick={() => setIsResolutionDialogOpen(false)}>
-                  Cancel
+                  {t('common.cancel', { defaultValue: 'Cancel' })}
                 </Button>
                 <Button 
                   id="confirm-resolution-button"
                   onClick={handleResolveReport} 
                   disabled={isResolvingReport || !resolutionNotes.trim()}
                 >
-                  {isResolvingReport ? 'Processing...' : 'Confirm Resolution'}
+                  {isResolvingReport
+                    ? t('common.processing', { defaultValue: 'Processing...' })
+                    : t('discrepancy.resolutionDialog.confirmButton', { defaultValue: 'Confirm Resolution' })}
                 </Button>
               </DialogFooter>
             </DialogContent>

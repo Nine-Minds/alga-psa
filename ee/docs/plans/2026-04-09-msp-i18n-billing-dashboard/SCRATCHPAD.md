@@ -130,6 +130,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F013 complete** -- Finished the main reconciliation wizard shell: four-eyes approval copy, approval verification UI, correction summary labels, confirmation-step summary text, completion dialog copy, and user-facing error messages now read from `msp/billing`. Reused existing namespace keys throughout, so no locale-file regeneration was needed after F009.
 - **(2026-04-10) F014 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/DiscrepancyDetail.tsx` for the back navigation text, status badges, discrepancy detail labels, issue-type labels, and balance comparison card labels.
 - **(2026-04-10) F015 complete** -- Continued `DiscrepancyDetail.tsx` by translating the transaction-history tab labels, expanded transaction metadata labels, the credit-tracking tab labels, and the credit-entry detail labels/status text. No new locale keys were needed because `discrepancy.tabs.*`, `discrepancy.cards.*`, `discrepancy.fields.*`, `discrepancy.status.*`, and `discrepancy.empty.*` were already seeded in F001.
+- **(2026-04-10) F016 complete** -- Finished `DiscrepancyDetail.tsx` by translating the issue-details tab, recommended-fix copy, credit-applications table headings, resolve-discrepancy dialog labels, and the remaining empty/error states. This closes out the discrepancy detail screen without expanding the locale schema beyond the keys already seeded in F001.
 
 ## Runbook
 
