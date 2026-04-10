@@ -35,7 +35,7 @@ const ADD_USER_VALIDATION_ERRORS = new Set([
   'Cannot assign MSP role to client portal user',
   'Cannot assign client portal role to MSP user',
   'A user with this email address already exists',
-  "You've reached your MSP user licence limit.",
+  "You've reached your MSP user license limit.",
   SOLO_USER_LIMIT_MESSAGE,
 ]);
 
@@ -149,7 +149,7 @@ export const addUser = withAuth(async (
         }
 
         if (limit !== null && used >= limit) {
-          return { success: false, error: "You've reached your MSP user licence limit." };
+          return { success: false, error: "You've reached your MSP user license limit." };
         }
 
       }
