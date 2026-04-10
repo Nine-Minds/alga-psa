@@ -164,6 +164,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) T003 complete** -- Extended the same ReconciliationResolution audit test to cover the three resolution-option labels (`Recommended Fix`, `Custom Correction`, `No Action Required`) and verified the updated file passes under the billing package Vitest config.
 - **(2026-04-10) T004 complete** -- Extended the ReconciliationResolution audit to cover the translated balance-comparison labels and the four-eyes approval copy (`requiredTitle`, `requiredDescription`, approver fields, verification code, verified badge title). The billing-package Vitest run remained green.
 - **(2026-04-10) T005 complete** -- Extended the ReconciliationResolution audit to cover the confirmation-step copy (`importantTitle`, `importantDescription`, confirm/close buttons, thank-you title) and the key reconciliation error messages. The shared audit file still passed under the billing-package Vitest config.
+- **(2026-04-10) T006 complete** -- Added a pseudo-locale coverage assertion to the same ReconciliationResolution audit, verifying that representative step, resolution-type, four-eyes, and confirmation keys are present in `server/public/locales/xx/msp/billing.json` rather than falling back to raw English.
 
 ## Runbook
 

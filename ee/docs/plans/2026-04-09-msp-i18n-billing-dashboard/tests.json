@@ -50,7 +50,7 @@
   {
     "id": "T006",
     "description": "Unit: ReconciliationResolution pseudo-locale (xx) shows pseudo-text for all visible strings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",
