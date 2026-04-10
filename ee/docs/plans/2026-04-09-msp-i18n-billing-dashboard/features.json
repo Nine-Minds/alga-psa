@@ -167,7 +167,7 @@
   {
     "id": "F033",
     "description": "Make billingTabsConfig.ts tab labels translatable — either convert label strings to translation keys consumed by the rendering component, or export a hook/function that returns translated labels. Covers all 16 tab labels: Quotes, Quote Layouts, Quote Templates, Client Contracts, Accounting Exports, Contract Templates, Invoicing, Invoice Layouts, Tax Rates, Contract Line Presets, Billing Cycles, Service Periods, Usage Tracking, Reports, Service Catalog, Products",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F034",

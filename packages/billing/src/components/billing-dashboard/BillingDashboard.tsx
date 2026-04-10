@@ -60,11 +60,16 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
 
   const tabDefinitions = useMemo(() => {
-    if (isQuotingEnabled) return billingTabDefinitions;
-    return billingTabDefinitions.filter(
+    const translatedDefinitions = billingTabDefinitions.map((tab) => ({
+      ...tab,
+      label: t(tab.labelKey, { defaultValue: tab.label }),
+    }));
+
+    if (isQuotingEnabled) return translatedDefinitions;
+    return translatedDefinitions.filter(
       (tab) => tab.value !== 'quotes' && tab.value !== 'quote-templates' && tab.value !== 'quote-business-templates'
     );
-  }, [isQuotingEnabled]);
+  }, [isQuotingEnabled, t]);
 
   const initialSearchParams = useMemo(() => {
     const params = new URLSearchParams();
