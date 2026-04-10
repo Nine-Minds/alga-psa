@@ -9,11 +9,8 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
-import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
-import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction, getTeamsBasic } from '@alga-psa/teams/actions';
-import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions';
 import type {
   IBoard,
   IClient,
@@ -90,6 +87,17 @@ const EMPTY_TICKET_FIELD_OPTIONS: TicketFieldOptions = {
   users: [],
   locations: [],
 };
+
+const loadClientActions = async () => import('@alga-psa/' + 'clients/actions') as Promise<typeof import('@alga-psa/clients/actions')>;
+const loadIntegrationActions = async () => import('@alga-psa/' + 'integrations/actions') as Promise<typeof import('@alga-psa/integrations/actions')>;
+const loadTicketActions = async () => import('@alga-psa/' + 'tickets/actions') as Promise<typeof import('@alga-psa/tickets/actions')>;
+
+const getAllContactsForPicker = async () => (await loadClientActions()).getAllContacts();
+const getContactsByClientForPicker = async (clientId: string) => (await loadClientActions()).getContactsByClient(clientId);
+const getAvailableStatusesForPicker = async (boardId: string) => (await loadIntegrationActions()).getAvailableStatuses(boardId);
+const getTicketFieldOptionsForPicker = async () => (await loadIntegrationActions()).getTicketFieldOptions();
+const getTicketByIdForPicker = async (ticketId: string) => (await loadTicketActions()).getTicketById(ticketId);
+const getTicketsForListForPicker = async (input: { boardFilterState: 'active' | 'inactive' | 'all'; searchQuery: string }) => (await loadTicketActions()).getTicketsForList(input);
 
 const TICKET_PICKER_DEPENDENCY_HINTS: Partial<Record<string, Record<string, string>>> = {
   contact: {
@@ -407,7 +415,7 @@ const loadWorkflowPickerData = async (
       if (fixedBoard?.status === 'fixed' && fixedBoard.value) {
         boardId = fixedBoard.value;
       } else if (fixedTicket?.status === 'fixed' && fixedTicket.value) {
-        const ticket = await getTicketById(fixedTicket.value);
+        const ticket = await getTicketByIdForPicker(fixedTicket.value);
         boardId = ticket?.board_id ?? null;
       }
 
@@ -418,7 +426,7 @@ const loadWorkflowPickerData = async (
         };
       }
 
-      const { statuses } = await getAvailableStatuses(boardId);
+      const { statuses } = await getAvailableStatusesForPicker(boardId);
       return {
         ...EMPTY_PICKER_DATA,
         ticketOptions: {
@@ -430,8 +438,8 @@ const loadWorkflowPickerData = async (
     case 'contact': {
       const fixedClient = dependencies.find((dependency) => dependency.path === 'client_id');
       const contacts = fixedClient?.status === 'fixed' && fixedClient.value
-        ? await getContactsByClient(fixedClient.value)
-        : await getAllContacts();
+        ? await getContactsByClientForPicker(fixedClient.value)
+        : await getAllContactsForPicker();
       return {
         ...EMPTY_PICKER_DATA,
         contacts,
@@ -460,7 +468,7 @@ const loadWorkflowPickerData = async (
     default:
       return {
         ...EMPTY_PICKER_DATA,
-        ticketOptions: (await getTicketFieldOptions()).options,
+        ticketOptions: (await getTicketFieldOptionsForPicker()).options,
       };
   }
 };
@@ -487,7 +495,7 @@ const WorkflowTicketPicker: React.FC<{
           try {
             setIsLoading(true);
             setLoadError(null);
-            const ticket = await getTicketById(value);
+            const ticket = await getTicketByIdForPicker(value);
             if (!active) return;
             setOptions(ticket?.ticket_id ? ([{
               value: ticket.ticket_id,
@@ -515,7 +523,7 @@ const WorkflowTicketPicker: React.FC<{
       try {
         setIsLoading(true);
         setLoadError(null);
-        const result = await getTicketsForList({
+        const result = await getTicketsForListForPicker({
           boardFilterState: 'active',
           searchQuery: normalizedSearch,
         });
