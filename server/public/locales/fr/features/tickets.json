@@ -220,7 +220,17 @@
     "noStatusChange": "Ne changez pas de statut",
     "clipboardDraftCancelTitle": "Images collées détectées",
     "deleteUploadedImages": "Supprimer des images",
-    "keepUploadedImages": "Conserver les images"
+    "keepUploadedImages": "Conserver les images",
+    "bundledUpdate": "Mise à jour groupée",
+    "clientSuffix": " (Client)",
+    "internalCommentTooltip": "Commentaire interne",
+    "resolutionCommentTooltip": "Commentaire de résolution",
+    "unknownUser": "Utilisateur inconnu",
+    "editCommentAriaLabel": "Modifier le commentaire",
+    "deleteCommentAriaLabel": "Supprimer le commentaire",
+    "inboundChildReplies": "Réponses entrantes sur les tickets enfants (lecture seule)",
+    "childTicket": "Ticket enfant",
+    "ticketPrefix": "Ticket {{number}}"
   },
   "responseState": {
     "awaitingYourResponse": "En attente de votre réponse",
@@ -423,7 +433,8 @@
       "masterTicket": "Ticket principal",
       "selectMasterTicket": "Sélectionnez le ticket principal...",
       "syncUpdates": "Synchroniser les mises à jour du maître vers les enfants (réponses publiques + modifications du workflow)",
-      "syncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lorsqu’ils sont regroupés. Les champs de workflow sont verrouillés sur les enfants par défaut. Les notes internes restent sur le maître."
+      "syncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lorsqu’ils sont regroupés. Les champs de workflow sont verrouillés sur les enfants par défaut. Les notes internes restent sur le maître.",
+      "childrenDescription": "Les enfants conservent leur statut actuel ; les champs de workflow sont verrouillés sur les enfants. Les réponses entrantes des enfants sont affichées ci-dessous en lecture seule."
     },
     "auth": {
       "moveRequired": "Vous devez être connecté pour déplacer des tickets",

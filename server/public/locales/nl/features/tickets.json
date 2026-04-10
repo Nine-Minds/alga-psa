@@ -220,7 +220,17 @@
     "noStatusChange": "Status niet wijzigen",
     "clipboardDraftCancelTitle": "Geplakte afbeeldingen gevonden",
     "deleteUploadedImages": "Afbeeldingen verwijderen",
-    "keepUploadedImages": "Afbeeldingen behouden"
+    "keepUploadedImages": "Afbeeldingen behouden",
+    "bundledUpdate": "Gebundelde update",
+    "clientSuffix": " (Klant)",
+    "internalCommentTooltip": "Intern commentaar",
+    "resolutionCommentTooltip": "Oplossingscommentaar",
+    "unknownUser": "Onbekende gebruiker",
+    "editCommentAriaLabel": "Commentaar bewerken",
+    "deleteCommentAriaLabel": "Commentaar verwijderen",
+    "inboundChildReplies": "Inkomende reacties op onderliggende tickets (alleen-lezen)",
+    "childTicket": "Onderliggend ticket",
+    "ticketPrefix": "Ticket {{number}}"
   },
   "responseState": {
     "awaitingYourResponse": "Wacht op uw reactie",
@@ -423,7 +433,8 @@
       "masterTicket": "Hoofdticket selecteren",
       "selectMasterTicket": "Hoofdticket selecteren...",
       "syncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
-      "syncUpdatesHelp": "Onderliggende tickets behouden hun huidige status wanneer ze worden gebundeld. Workflowvelden zijn standaard vergrendeld op onderliggende tickets. Interne notities blijven op het hoofdticket."
+      "syncUpdatesHelp": "Onderliggende tickets behouden hun huidige status wanneer ze worden gebundeld. Workflowvelden zijn standaard vergrendeld op onderliggende tickets. Interne notities blijven op het hoofdticket.",
+      "childrenDescription": "Onderliggende behouden hun huidige status; workflowvelden zijn vergrendeld op onderliggende tickets. Inkomende reacties op onderliggende tickets worden hieronder als alleen-lezen weergegeven."
     },
     "auth": {
       "moveRequired": "Je moet zijn ingelogd om tickets te verplaatsen",

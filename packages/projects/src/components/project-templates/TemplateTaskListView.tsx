@@ -247,9 +247,9 @@ export default function TemplateTaskListView({
   };
 
   const getAssigneeName = (userId: string | null | undefined) => {
-    if (!userId) return 'Unassigned';
+    if (!userId) return t('projectList.unassigned');
     const user = users.find((u) => u.user_id === userId);
-    return user ? `${user.first_name} ${user.last_name}` : 'Unknown';
+    return user ? `${user.first_name} ${user.last_name}` : t('projectList.unknownUser');
   };
 
   const getAdditionalAssigneesCount = (taskId: string) => {

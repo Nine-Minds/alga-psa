@@ -220,7 +220,17 @@
     "noStatusChange": "55555",
     "clipboardDraftCancelTitle": "55555",
     "deleteUploadedImages": "55555",
-    "keepUploadedImages": "55555"
+    "keepUploadedImages": "55555",
+    "bundledUpdate": "55555",
+    "clientSuffix": "55555",
+    "internalCommentTooltip": "55555",
+    "resolutionCommentTooltip": "55555",
+    "unknownUser": "55555",
+    "editCommentAriaLabel": "55555",
+    "deleteCommentAriaLabel": "55555",
+    "inboundChildReplies": "55555",
+    "childTicket": "55555",
+    "ticketPrefix": "55555"
   },
   "responseState": {
     "awaitingYourResponse": "55555",
@@ -423,7 +433,8 @@
       "masterTicket": "55555",
       "selectMasterTicket": "55555",
       "syncUpdates": "55555",
-      "syncUpdatesHelp": "55555"
+      "syncUpdatesHelp": "55555",
+      "childrenDescription": "55555"
     },
     "auth": {
       "moveRequired": "55555",

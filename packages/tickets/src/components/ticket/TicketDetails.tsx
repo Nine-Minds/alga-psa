@@ -2022,7 +2022,7 @@ const handleClose = () => {
                                             </div>
                                         </div>
                                         <div className="text-xs text-gray-500 mb-2">
-                                            Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only.
+                                            {t('details.bundle.childrenDescription')}
                                         </div>
                                         <div className="flex items-center gap-2 mb-3" ref={searchContainerRef}>
                                             <div className="relative flex-1">

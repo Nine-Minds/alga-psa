@@ -220,7 +220,17 @@
     "noStatusChange": "Status nicht ändern",
     "clipboardDraftCancelTitle": "Eingefügte Bilder erkannt",
     "deleteUploadedImages": "Bilder löschen",
-    "keepUploadedImages": "Bilder behalten"
+    "keepUploadedImages": "Bilder behalten",
+    "bundledUpdate": "Gebündeltes Update",
+    "clientSuffix": " (Kunde)",
+    "internalCommentTooltip": "Interner Kommentar",
+    "resolutionCommentTooltip": "Lösungskommentar",
+    "unknownUser": "Unbekannter Benutzer",
+    "editCommentAriaLabel": "Kommentar bearbeiten",
+    "deleteCommentAriaLabel": "Kommentar löschen",
+    "inboundChildReplies": "Eingehende Antworten auf untergeordnete Tickets (schreibgeschützt)",
+    "childTicket": "Untergeordnetes Ticket",
+    "ticketPrefix": "Ticket {{number}}"
   },
   "responseState": {
     "awaitingYourResponse": "Warten auf Ihre Antwort",
@@ -423,7 +433,8 @@
       "masterTicket": "Hauptticket auswählen",
       "selectMasterTicket": "Hauptticket auswählen...",
       "syncUpdates": "Synchronisiere Aktualisierungen vom Hauptticket zu den Untertickets (öffentliche Antworten + Workflow-Änderungen)",
-      "syncUpdatesHelp": "Untertickets behalten beim Bündeln ihren aktuellen Status. Workflow-Felder sind bei Untertickets standardmäßig gesperrt. Interne Notizen bleiben auf dem Hauptticket."
+      "syncUpdatesHelp": "Untertickets behalten beim Bündeln ihren aktuellen Status. Workflow-Felder sind bei Untertickets standardmäßig gesperrt. Interne Notizen bleiben auf dem Hauptticket.",
+      "childrenDescription": "Untergeordnete behalten ihren aktuellen Status; Workflow-Felder sind bei untergeordneten Tickets gesperrt. Eingehende Antworten auf untergeordnete Tickets werden unten als schreibgeschützt angezeigt."
     },
     "auth": {
       "moveRequired": "Du musst angemeldet sein, um Tickets zu verschieben",

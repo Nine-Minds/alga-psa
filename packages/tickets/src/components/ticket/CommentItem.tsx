@@ -150,9 +150,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
   );
 
   const getAuthorName = () => {
-    if (conversation.is_system_generated) return 'Bundled update';
+    if (conversation.is_system_generated) return t('conversation.bundledUpdate');
     if (resolvedAuthor.source === 'user') {
-      return `${resolvedAuthor.displayName}${resolvedAuthor.userType === 'client' ? ' (Client)' : ''}`;
+      return `${resolvedAuthor.displayName}${resolvedAuthor.userType === 'client' ? t('conversation.clientSuffix') : ''}`;
     }
     if (resolvedAuthor.source === 'unknown' && inboundSenderIdentity.fromAddress) {
       return inboundSenderIdentity.fromName || inboundSenderIdentity.fromAddress;
@@ -292,7 +292,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             <UserAvatar
               {...withDataAutomationId({ id: `${commentId}-avatar` })}
               userId=""
-              userName="Unknown User"
+              userName={t('conversation.unknownUser')}
               avatarUrl={null}
               size="md"
             />
@@ -330,14 +330,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   {getAuthorName()}
                 </p>
                 {conversation.is_internal && (
-                  <Tooltip content="Internal Comment">
+                  <Tooltip content={t('conversation.internalCommentTooltip')}>
                     <span {...withDataAutomationId({ id: `${commentId}-internal-badge` })}>
                       <Lock className="h-4 w-4 text-amber-500" />
                     </span>
                   </Tooltip>
                 )}
                 {conversation.is_resolution && (
-                  <Tooltip content="Resolution Comment">
+                  <Tooltip content={t('conversation.resolutionCommentTooltip')}>
                     <span {...withDataAutomationId({ id: `${commentId}-resolution-badge` })}>
                       <CheckCircle className="h-4 w-4 text-green-500" />
                     </span>
@@ -406,7 +406,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => onEdit(conversation)}
-                  aria-label="Edit comment"
+                  aria-label={t('conversation.editCommentAriaLabel')}
                 >
                   <Pencil className="w-4 h-4" />
                 </Button>
@@ -415,7 +415,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => onDelete(conversation)}
-                  aria-label="Delete comment"
+                  aria-label={t('conversation.deleteCommentAriaLabel')}
                 >
                   <Trash className="w-4 h-4" />
                 </Button>
