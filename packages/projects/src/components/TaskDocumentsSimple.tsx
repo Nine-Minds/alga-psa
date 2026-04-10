@@ -15,6 +15,7 @@ import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
+import { useTranslation } from 'react-i18next';
 
 const DEFAULT_BLOCKS: PartialBlock[] = [{
   type: "paragraph",
@@ -58,6 +59,9 @@ export default function TaskDocumentsSimple({
   onPendingDocumentsChange,
   onDocumentAdded
 }: TaskDocumentsSimpleProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
+  const docT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
+    t(`taskDocuments.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
   const {
     getDocumentsByEntity,
     removeDocumentAssociations,
@@ -158,11 +162,11 @@ export default function TaskDocumentsSimple({
       setDocuments(response.documents);
       setDocumentsLoaded(true);
     } catch (error) {
-      handleError(error, 'Failed to load documents');
+      handleError(error, docT('loadFailed', 'Failed to load documents'));
     } finally {
       setLoading(false);
     }
-  }, [taskId, isPendingMode]);
+  }, [taskId, isPendingMode, docT]);
 
   // Handle document mutation - refetch documents to update local state immediately
   const handleDocumentMutation = useCallback(async () => {
@@ -186,7 +190,7 @@ export default function TaskDocumentsSimple({
       setDocuments(response.documents);
       setDocumentsLoaded(true);
     } catch (error) {
-      handleError(error, 'Failed to load documents');
+      handleError(error, docT('loadFailed', 'Failed to load documents'));
     } finally {
       setLoading(false);
     }
@@ -231,7 +235,7 @@ export default function TaskDocumentsSimple({
         setCurrentContent(DEFAULT_BLOCKS);
       }
     } catch (error) {
-      handleError(error, 'Failed to load document content');
+      handleError(error, docT('loadContentFailed', 'Failed to load document content'));
       setCurrentContent(DEFAULT_BLOCKS);
     } finally {
       setIsLoadingContent(false);
@@ -242,7 +246,7 @@ export default function TaskDocumentsSimple({
     // Fetch user if not already loaded
     const user = await fetchUser();
     if (!user) {
-      toast.error('Please log in to create documents');
+      toast.error(docT('loginToCreateError', 'Please log in to create documents'));
       return;
     }
 
@@ -271,14 +275,14 @@ export default function TaskDocumentsSimple({
 
   const handleSaveNewDocument = async () => {
     if (!newDocumentName.trim()) {
-      toast.error('Document name is required');
+      toast.error(docT('documentNameRequired', 'Document name is required'));
       return;
     }
 
     // Fetch user if not already loaded
     const user = await fetchUser();
     if (!user) {
-      toast.error('Please log in to save documents');
+      toast.error(docT('loginToSaveError', 'Please log in to save documents'));
       return;
     }
 
@@ -294,7 +298,7 @@ export default function TaskDocumentsSimple({
         folder_path: selectedFolderPath
       });
 
-      toast.success('Document created successfully');
+      toast.success(docT('createdSuccess', 'Document created successfully'));
 
       if (isPendingMode) {
         // Add to pending documents list
@@ -318,7 +322,7 @@ export default function TaskDocumentsSimple({
       setIsCreatingNew(false);
       setSelectedFolderPath(null); // Reset folder selection
     } catch (error) {
-      handleError(error, 'Failed to create document');
+      handleError(error, docT('createFailed', 'Failed to create document'));
     } finally {
       setIsSaving(false);
     }
@@ -330,7 +334,7 @@ export default function TaskDocumentsSimple({
     // Fetch user if not already loaded
     const user = await fetchUser();
     if (!user) {
-      toast.error('Please log in to save documents');
+      toast.error(docT('loginToSaveError', 'Please log in to save documents'));
       return;
     }
 
@@ -351,12 +355,12 @@ export default function TaskDocumentsSimple({
         });
       }
 
-      toast.success('Document updated successfully');
+      toast.success(docT('updatedSuccess', 'Document updated successfully'));
       await handleDocumentMutation();
       setHasContentChanged(false);
       setIsEditMode(false);
     } catch (error) {
-      handleError(error, 'Failed to save document');
+      handleError(error, docT('saveFailed', 'Failed to save document'));
     } finally {
       setIsSaving(false);
     }
@@ -422,26 +426,26 @@ export default function TaskDocumentsSimple({
       // For in-app documents, download as PDF
       if (!document.file_id) {
         const downloadUrl = `/api/documents/download/${document.document_id}?format=pdf`;
-        const filename = `${document.document_name || 'document'}.pdf`;
+        const filename = `${document.document_name || docT('documentFallbackName', 'document')}.pdf`;
         await downloadDocument(downloadUrl, filename, true);
       } else {
         // For uploaded files, use the enhanced download with file picker
         const downloadUrl = `/api/documents/download/${document.document_id}`;
-        const filename = document.document_name || 'download';
+        const filename = document.document_name || docT('downloadFallbackName', 'download');
         await downloadDocument(downloadUrl, filename, true);
       }
     } catch (error) {
-      handleError(error, 'Failed to download document');
+      handleError(error, docT('downloadFailed', 'Failed to download document'));
     }
   };
 
   const handlePDFExport = async (document: IDocument) => {
     try {
       const downloadUrl = `/api/documents/download/${document.document_id}?format=pdf`;
-      const filename = `${document.document_name || 'document'}.pdf`;
+      const filename = `${document.document_name || docT('documentFallbackName', 'document')}.pdf`;
       await downloadDocument(downloadUrl, filename, true);
     } catch (error) {
-      handleError(error, 'Failed to export PDF');
+      handleError(error, docT('exportPdfFailed', 'Failed to export PDF'));
     }
   };
 
@@ -460,7 +464,7 @@ export default function TaskDocumentsSimple({
               <ChevronRight className="h-4 w-4" />
             )}
             <Paperclip className="h-4 w-4" />
-            <h3 className="font-medium">Attachments</h3>
+            <h3 className="font-medium">{docT('attachmentsTitle', 'Attachments')}</h3>
             {(isPendingMode ? (pendingDocuments || []).length > 0 : documentsLoaded && documents.length > 0) && (
               <span className="text-sm text-gray-500">({isPendingMode ? (pendingDocuments || []).length : documents.length})</span>
             )}
@@ -472,10 +476,10 @@ export default function TaskDocumentsSimple({
               size="sm"
               variant="ghost"
               onClick={handleCreateNew}
-              title="Create new document"
+              title={docT('createNew', 'Create new document')}
             >
               <FileText className="h-4 w-4 mr-1" />
-              <span className="text-xs">New</span>
+              <span className="text-xs">{docT('newButton', 'New')}</span>
             </Button>
             <Button
               id="task-documents-upload-btn"
@@ -486,7 +490,7 @@ export default function TaskDocumentsSimple({
                 // Fetch user if not already loaded
                 const user = await fetchUser();
                 if (!user) {
-                  toast.error('Please log in to upload documents');
+                  toast.error(docT('loginToUploadError', 'Please log in to upload documents'));
                   return;
                 }
 
@@ -499,10 +503,10 @@ export default function TaskDocumentsSimple({
                 }
                 setShowUpload(!showUpload);
               }}
-              title="Upload file"
+              title={docT('uploadFile', 'Upload file')}
             >
               <Plus className="h-4 w-4 mr-1" />
-              <span className="text-xs">Upload</span>
+              <span className="text-xs">{docT('uploadButton', 'Upload')}</span>
             </Button>
             <Button
               id="task-documents-link-btn"
@@ -515,10 +519,10 @@ export default function TaskDocumentsSimple({
                 }
                 setShowSelector(true);
               }}
-              title="Link existing document"
+              title={docT('linkExisting', 'Link existing document')}
             >
               <Link className="h-4 w-4 mr-1" />
-              <span className="text-xs">Link</span>
+              <span className="text-xs">{docT('linkButton', 'Link')}</span>
             </Button>
           </div>
         </div>
@@ -540,7 +544,7 @@ export default function TaskDocumentsSimple({
               folderPath: undefined,
               onUploadComplete: async (result: any) => {
                 if (result?.success && result.document) {
-                  toast.success('Document uploaded successfully');
+                  toast.success(docT('uploadedSuccess', 'Document uploaded successfully'));
                   if (isPendingMode) {
                     // Use ref to get latest pending docs (avoids stale closure
                     // when multiple files upload sequentially in one loop).
@@ -580,7 +584,7 @@ export default function TaskDocumentsSimple({
           </div>
         ) : (isPendingMode ? (pendingDocuments || []).length === 0 : documents.length === 0) ? (
           <div className="text-center py-4 text-gray-500 text-sm">
-            No documents attached
+            {docT('noDocumentsAttached', 'No documents attached')}
           </div>
         ) : isPendingMode ? (
           /* Pending mode: simple list (limited IDocument data) */
@@ -602,10 +606,10 @@ export default function TaskDocumentsSimple({
                   onClick={() => {
                     const updatedPending = (pendingDocuments || []).filter(d => d.document_id !== pd.document_id);
                     onPendingDocumentsChange?.(updatedPending);
-                    toast.success('Document removed');
+                    toast.success(docT('removedSuccess', 'Document removed'));
                   }}
                   className="text-destructive hover:text-destructive"
-                  title="Remove"
+                  title={docT('remove', 'Remove')}
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -624,10 +628,10 @@ export default function TaskDocumentsSimple({
                 onDisassociate: async (docToRemove: any) => {
                   try {
                     await removeDocumentAssociations(taskId!, 'project_task', [docToRemove.document_id]);
-                    toast.success('Document removed from task');
+                    toast.success(docT('removedFromTaskSuccess', 'Document removed from task'));
                     await handleDocumentMutation();
                   } catch (error) {
-                    handleError(error, 'Failed to remove document');
+                    handleError(error, docT('removeFailed', 'Failed to remove document'));
                   }
                 },
                 onClick: () => handleDocumentClick(doc),
@@ -690,7 +694,11 @@ export default function TaskDocumentsSimple({
         <div className="flex flex-col h-full">
           <div className="flex justify-between items-center mb-4 pb-4 border-b border-[rgb(var(--color-border-200))]">
             <h2 className="text-lg font-semibold">
-              {isCreatingNew ? 'New Document' : (isEditMode ? 'Edit Document' : 'View Document')}
+              {isCreatingNew
+                ? docT('newDocumentTitle', 'New Document')
+                : (isEditMode
+                  ? docT('editDocumentTitle', 'Edit Document')
+                  : docT('viewDocumentTitle', 'View Document'))}
             </h2>
             <div className="flex items-center gap-2">
               {selectedDocument && !selectedDocument.file_id && (
@@ -702,7 +710,7 @@ export default function TaskDocumentsSimple({
                     size="sm"
                   >
                     <Download className="h-4 w-4 mr-1" />
-                    PDF
+                    {docT('pdfLabel', 'PDF')}
                   </Button>
                   {!isEditMode && (
                     <Button
@@ -711,7 +719,7 @@ export default function TaskDocumentsSimple({
                       variant="outline"
                       size="sm"
                     >
-                      Edit
+                      {t('common:actions.edit', 'Edit')}
                     </Button>
                   )}
                 </>
@@ -732,7 +740,7 @@ export default function TaskDocumentsSimple({
             <Input
               id="task-document-name-input"
               type="text"
-              placeholder="Document Name"
+              placeholder={docT('documentNamePlaceholder', 'Document Name')}
               value={isCreatingNew ? newDocumentName : documentName}
               onChange={(e) => {
                 if (isCreatingNew) {
@@ -752,23 +760,23 @@ export default function TaskDocumentsSimple({
               // File document - show download link
               <div className="flex flex-col items-center justify-center h-full text-gray-500">
                 <div className="mb-4"><File className="h-12 w-12" /></div>
-                <p className="mb-4">This is a file attachment</p>
+                <p className="mb-4">{docT('fileAttachment', 'This is a file attachment')}</p>
                 <Button
                   id="task-document-download-file-btn"
                   onClick={async () => {
                     try {
                       const result = await downloadDocumentInBrowser(selectedDocument.document_id, selectedDocument.document_name);
                       if (!result.success) {
-                        throw new Error(result.error || 'Download failed');
+                        throw new Error(result.error || docT('downloadFailedGeneric', 'Download failed'));
                       }
                     } catch (error) {
-                      handleError(error, 'Failed to download document');
+                      handleError(error, docT('downloadFailed', 'Failed to download document'));
                     }
                   }}
                   variant="default"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Download File
+                  {docT('downloadFile', 'Download File')}
                 </Button>
               </div>
             ) : isLoadingContent ? (
@@ -809,7 +817,7 @@ export default function TaskDocumentsSimple({
                 }}
                 variant="outline"
               >
-                Cancel
+                {t('common:actions.cancel', 'Cancel')}
               </Button>
               <Button
                 id="task-document-save-btn"
@@ -817,7 +825,7 @@ export default function TaskDocumentsSimple({
                 disabled={isSaving || (isCreatingNew && !newDocumentName.trim())}
                 variant="default"
               >
-                {isSaving ? 'Saving...' : 'Save'}
+                {isSaving ? docT('saving', 'Saving...') : docT('save', 'Save')}
               </Button>
             </div>
           )}
@@ -829,8 +837,8 @@ export default function TaskDocumentsSimple({
         isOpen: showFolderModal,
         onClose: () => setShowFolderModal(false),
         onSelectFolder: handleFolderSelected,
-        title: "Select Folder for New Document",
-        description: "Choose where to save this new document",
+        title: docT('selectFolderTitle', 'Select Folder for New Document'),
+        description: docT('selectFolderDescription', 'Choose where to save this new document'),
         entityId: isPendingMode ? undefined : taskId,
         entityType: "project_task",
       })}
@@ -843,10 +851,10 @@ export default function TaskDocumentsSimple({
             isOpen={showUnsavedChangesDialog}
             onClose={() => setShowUnsavedChangesDialog(false)}
             onConfirm={executeDrawerClose}
-            title="Unsaved Changes"
-            message="Are you sure you want to cancel? Any unsaved changes will be lost."
-            confirmLabel="Discard changes"
-            cancelLabel="Continue editing"
+            title={docT('unsavedTitle', 'Unsaved Changes')}
+            message={docT('unsavedMessage', 'Are you sure you want to cancel? Any unsaved changes will be lost.')}
+            confirmLabel={docT('discardChanges', 'Discard changes')}
+            cancelLabel={docT('continueEditing', 'Continue editing')}
           />
         </div>,
         document.body

@@ -17,6 +17,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import TicketSelect, { TicketOption } from './TicketSelect';
 import { mapTicketToTaskFields, TaskPrefillFields } from '../lib/taskTicketMapping';
+import { useTranslation } from 'react-i18next';
 
 interface SelectOption {
   value: string;
@@ -47,6 +48,7 @@ export default function PrefillFromTicketDialog({
   onPrefill,
   users
 }: PrefillFromTicketDialogProps): React.JSX.Element {
+  const { t } = useTranslation(['features/projects', 'common']);
   const {
     getTicketsForList,
     getConsolidatedTicketData,
@@ -72,10 +74,10 @@ export default function PrefillFromTicketDialog({
   const [selectedTicketStatus, setSelectedTicketStatus] = useState('all');
   const [selectedPriority, setSelectedPriority] = useState('');
   const [statusOptions, setStatusOptions] = useState<SelectOption[]>([
-    { value: 'all', label: 'All Statuses' }
+    { value: 'all', label: t('dialogs.prefillFromTicket.allStatuses', 'All Statuses') }
   ]);
   const [priorityOptions, setPriorityOptions] = useState<SelectOption[]>([
-    { value: 'all', label: 'All Priorities' }
+    { value: 'all', label: t('dialogs.prefillFromTicket.allPriorities', 'All Priorities') }
   ]);
   const [filterOptionsLoaded, setFilterOptionsLoaded] = useState(false);
 
@@ -117,7 +119,7 @@ export default function PrefillFromTicketDialog({
           const fetchedStatuses: IStatus[] = statuses || [];
 
           setStatusOptions([
-            { value: 'all', label: 'All Statuses' },
+            { value: 'all', label: t('dialogs.prefillFromTicket.allStatuses', 'All Statuses') },
             ...fetchedStatuses.map((status: IStatus): SelectOption => ({
               value: status.status_id!,
               label: status.name ?? ''
@@ -125,7 +127,7 @@ export default function PrefillFromTicketDialog({
           ]);
 
           setPriorityOptions([
-            { value: 'all', label: 'All Priorities' },
+            { value: 'all', label: t('dialogs.prefillFromTicket.allPriorities', 'All Priorities') },
             ...(priorities || []).map((priority): SelectOption => ({
               value: priority.priority_id,
               label: priority.priority_name
@@ -139,7 +141,7 @@ export default function PrefillFromTicketDialog({
       };
       fetchFilterOptions();
     }
-  }, [open, ticketsLoaded, filterOptionsLoaded]);
+  }, [open, ticketsLoaded, filterOptionsLoaded, t]);
 
   const clearAllFilters = () => {
     setSearchValue('');
@@ -235,14 +237,19 @@ export default function PrefillFromTicketDialog({
   };
 
   return (
-    <Dialog isOpen={open} onClose={() => onOpenChange(false)} title="Prefill From Ticket" className="max-w-xl">
+    <Dialog
+      isOpen={open}
+      onClose={() => onOpenChange(false)}
+      title={t('dialogs.prefillFromTicket.title', 'Prefill From Ticket')}
+      className="max-w-xl"
+    >
       <DialogContent>
         <div className="space-y-4">
           {/* Search and Category on same line */}
           <div className="flex gap-4">
             <div className="flex-1">
               <Input
-                placeholder="Search tickets..."
+                placeholder={t('dialogs.prefillFromTicket.searchTicketsPlaceholder', 'Search tickets...')}
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 className="w-full"
@@ -254,7 +261,7 @@ export default function PrefillFromTicketDialog({
                 categories,
                 selectedCategories,
                 onSelect: setSelectedCategories,
-                placeholder: 'Category',
+                placeholder: t('taskTicketLinks.categoryPlaceholder', 'Category'),
                 multiSelect: false,
               })}
             </div>
@@ -265,7 +272,7 @@ export default function PrefillFromTicketDialog({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Assigned To
+                  {t('taskTicketLinks.assignedToLabel', 'Assigned To')}
                 </label>
                 <UserPicker
                   value={selectedUser}
@@ -277,7 +284,7 @@ export default function PrefillFromTicketDialog({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Board
+                  {t('taskTicketLinks.boardLabel', 'Board')}
                 </label>
                 <BoardPicker
                   id="prefill-board-picker"
@@ -296,24 +303,24 @@ export default function PrefillFromTicketDialog({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
+                  {t('taskTicketLinks.statusLabel', 'Status')}
                 </label>
                 <CustomSelect
                   value={selectedTicketStatus}
                   onValueChange={setSelectedTicketStatus}
                   options={statusOptions}
-                  placeholder="All Statuses"
+                  placeholder={t('dialogs.prefillFromTicket.allStatuses', 'All Statuses')}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Priority
+                  {t('taskTicketLinks.priorityLabel', 'Priority')}
                 </label>
                 <CustomSelect
                   value={selectedPriority}
                   onValueChange={setSelectedPriority}
                   options={priorityOptions}
-                  placeholder="All Priorities"
+                  placeholder={t('dialogs.prefillFromTicket.allPriorities', 'All Priorities')}
                 />
               </div>
             </div>
@@ -324,7 +331,7 @@ export default function PrefillFromTicketDialog({
             <div className="flex flex-wrap gap-2">
               {searchValue && (
                 <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                  Search: {searchValue}
+                  {t('taskTicketLinks.searchFilterLabel', 'Search: {{value}}', { value: searchValue })}
                   <button onClick={() => removeFilter('search')} className="text-gray-500 hover:text-gray-700">
                     <X className="h-3 w-3" />
                   </button>
@@ -332,7 +339,7 @@ export default function PrefillFromTicketDialog({
               )}
               {selectedCategories.length > 0 && (
                 <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                  Categories: {selectedCategories.length}
+                  {t('taskTicketLinks.categoriesFilterLabel', 'Categories: {{count}}', { count: selectedCategories.length })}
                   <button onClick={() => removeFilter('category')} className="text-gray-500 hover:text-gray-700">
                     <X className="h-3 w-3" />
                   </button>
@@ -340,7 +347,9 @@ export default function PrefillFromTicketDialog({
               )}
               {selectedUser && (
                 <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                  Assigned: {users.find(u => u.user_id === selectedUser)?.first_name}
+                  {t('taskTicketLinks.assignedFilterLabel', 'Assigned: {{name}}', {
+                    name: users.find(u => u.user_id === selectedUser)?.first_name ?? '',
+                  })}
                   <button onClick={() => removeFilter('user')} className="text-gray-500 hover:text-gray-700">
                     <X className="h-3 w-3" />
                   </button>
@@ -348,7 +357,9 @@ export default function PrefillFromTicketDialog({
               )}
               {selectedBoard && (
                 <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                  Board: {boards.find(b => b.board_id === selectedBoard)?.board_name}
+                  {t('taskTicketLinks.boardFilterLabel', 'Board: {{name}}', {
+                    name: boards.find(b => b.board_id === selectedBoard)?.board_name ?? '',
+                  })}
                   <button onClick={() => removeFilter('board')} className="text-gray-500 hover:text-gray-700">
                     <X className="h-3 w-3" />
                   </button>
@@ -356,7 +367,9 @@ export default function PrefillFromTicketDialog({
               )}
               {selectedPriority && selectedPriority !== 'all' && (
                 <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                  Priority: {priorityOptions.find(p => p.value === selectedPriority)?.label}
+                  {t('taskTicketLinks.priorityFilterLabel', 'Priority: {{label}}', {
+                    label: priorityOptions.find(p => p.value === selectedPriority)?.label ?? '',
+                  })}
                   <button onClick={() => removeFilter('priority')} className="text-gray-500 hover:text-gray-700">
                     <X className="h-3 w-3" />
                   </button>
@@ -364,7 +377,9 @@ export default function PrefillFromTicketDialog({
               )}
               {selectedTicketStatus !== 'all' && (
                 <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                  Status: {statusOptions.find(s => s.value === selectedTicketStatus)?.label}
+                  {t('taskTicketLinks.statusFilterLabel', 'Status: {{label}}', {
+                    label: statusOptions.find(s => s.value === selectedTicketStatus)?.label ?? '',
+                  })}
                   <button onClick={() => removeFilter('status')} className="text-gray-500 hover:text-gray-700">
                     <X className="h-3 w-3" />
                   </button>
@@ -377,7 +392,7 @@ export default function PrefillFromTicketDialog({
                 onClick={clearAllFilters}
                 className="text-sm text-gray-500"
               >
-                Reset
+                {t('resetFilters', 'Reset')}
               </Button>
             </div>
           )}
@@ -385,7 +400,7 @@ export default function PrefillFromTicketDialog({
           {/* Ticket Select */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Select Ticket
+              {t('dialogs.prefillFromTicket.selectTicket', 'Select Ticket')}
             </label>
             <TicketSelect
               options={filteredOptions}
@@ -400,17 +415,17 @@ export default function PrefillFromTicketDialog({
             id="prefill-link-checkbox"
             checked={shouldLink}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => setShouldLink(event.target.checked)}
-            label="Link this ticket to the task"
+            label={t('dialogs.prefillFromTicket.linkTicketLabel', 'Link this ticket to the task')}
             containerClassName="mb-0"
           />
         </div>
 
         <div className="mt-6 flex justify-end space-x-2">
           <Button id="prefill-cancel-button" type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common:actions.cancel', 'Cancel')}
           </Button>
           <Button id="prefill-confirm-button" type="button" onClick={handleConfirm} disabled={!selectedTicketId || isSubmitting}>
-            Prefill
+            {t('dialogs.prefillFromTicket.confirm', 'Prefill')}
           </Button>
         </div>
       </DialogContent>

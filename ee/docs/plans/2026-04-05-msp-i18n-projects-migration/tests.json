@@ -1,0 +1,21 @@
+[
+  {"id": "T001", "description": "Lang-pack validation: `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` passes for all 9 locales after each namespace update (covers key parity, missing/extra keys, interpolation variables, pseudo-locale patterns, Italian accents). Single check, run on every commit.", "implemented": false, "featureIds": ["F001", "F002", "F003", "F004", "F100"]},
+
+  {"id": "T002", "description": "Static audit: automated grep confirms every target component file (all ~60 files listed in PRD sub-batches A/B/C) either contains `useTranslation` or is documented as zero-string. Run once per sub-batch PR. Can be a simple shell script or a single test file.", "implemented": false, "featureIds": ["F020", "F021", "F022", "F023", "F024", "F025", "F026", "F027", "F028", "F029", "F030", "F031", "F032", "F033", "F034", "F050", "F051", "F052", "F053", "F054", "F055", "F056", "F057", "F058", "F059", "F060", "F061", "F062", "F063", "F064", "F080", "F081", "F082", "F083", "F084", "F085", "F086", "F087", "F088", "F089", "F090", "F091", "F092", "F093", "F094"]},
+
+  {"id": "T003", "description": "Regression: existing project-related unit/integration tests still pass (`npm test` for packages/projects). No new test files needed — wiring uses `t('key', 'English fallback')` so rendered text is identical in en locale.", "implemented": false, "featureIds": ["F002", "F020", "F021", "F026", "F033", "F083"]},
+
+  {"id": "T010", "description": "Integration smoke: /msp/projects list page renders in xx pseudo-locale — filters, search placeholder, empty state, status tabs all show pseudo-text, no bare English in UI chrome.", "implemented": false, "featureIds": ["F023", "F085"]},
+
+  {"id": "T011", "description": "Integration smoke: /msp/projects/[id] detail page renders in xx pseudo-locale — tabs, phases, tasks, budget/hours, kanban controls, materials drawer, task form, task dependencies, task documents, task-ticket links all show pseudo-text.", "implemented": false, "featureIds": ["F020", "F021", "F024", "F025", "F026", "F027", "F032", "F033", "F034"]},
+
+  {"id": "T012", "description": "Integration smoke: /msp/projects/templates list + /msp/projects/templates/[id] editor + /msp/projects/templates/create wizard render in xx pseudo-locale — columns, filters, editor sections, wizard steps, nav buttons all show pseudo-text. Also verifies templates routes load features/projects namespace (F005).", "implemented": false, "featureIds": ["F005", "F050", "F051", "F052", "F053", "F054", "F055", "F056", "F057", "F058", "F059", "F060", "F061", "F062", "F063"]},
+
+  {"id": "T013", "description": "Integration smoke: /msp/settings/project-settings renders in xx pseudo-locale — ProjectSettings, ProjectStatusSettings, TenantProjectTaskStatusSettings, AddStatusDialog all show pseudo-text.", "implemented": false, "featureIds": ["F080", "F081", "F086", "F092"]},
+
+  {"id": "T014", "description": "Integration smoke: global quick-create dialog (ProjectQuickAdd reused in layout/QuickCreateDialog) renders in xx pseudo-locale with translated labels.", "implemented": false, "featureIds": ["F029"]},
+
+  {"id": "T020", "description": "Manual: visual check /msp/projects/[id] in en — no layout shifts from key length differences in phase/task panels.", "implemented": false, "featureIds": ["F020"]},
+  {"id": "T021", "description": "Manual: visual check /msp/projects/[id] in de — long German strings do not break TaskForm/TaskCard widths or kanban column headers.", "implemented": false, "featureIds": ["F020", "F021", "F033"]},
+  {"id": "T022", "description": "Manual: visual check template wizard in de — step titles and nav buttons fit without wrapping/overflow.", "implemented": false, "featureIds": ["F062"]}
+]

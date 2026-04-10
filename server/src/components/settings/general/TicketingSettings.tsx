@@ -42,32 +42,32 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
   const tabs = [
     {
       id: 'display',
-      label: "Display",
+      label: t('ticketing.tabs.display'),
       content: <DisplaySettings />
     },
     {
       id: 'ticket-numbering',
-      label: "Ticket Numbering",
+      label: t('ticketing.tabs.ticketNumbering'),
       content: <NumberingSettings entityType="TICKET" />
     },
     {
       id: 'boards',
-      label: "Boards",
+      label: t('ticketing.tabs.boards'),
       content: <BoardsSettings />
     },
     {
       id: 'statuses',
-      label: "Statuses",
+      label: t('ticketing.tabs.statuses'),
       content: <StatusSettings initialStatusType={typeParam} />
     },
     {
       id: 'priorities',
-      label: "Priorities",
+      label: t('ticketing.tabs.priorities'),
       content: <PrioritySettings initialPriorityType="ticket" />
     },
     {
       id: 'categories',
-      label: "Categories",
+      label: t('ticketing.tabs.categories'),
       content: <CategoriesSettings />
     }
   ];

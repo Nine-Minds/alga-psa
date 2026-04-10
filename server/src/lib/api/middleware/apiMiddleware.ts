@@ -306,6 +306,7 @@ export function handleApiError(error: any): NextResponse {
   console.error('API Error:', {
     name: error.name,
     message: error.message,
+    details: error.details,
     stack: error.stack,
     timestamp: new Date().toISOString()
   });

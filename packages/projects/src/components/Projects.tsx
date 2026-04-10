@@ -36,6 +36,7 @@ import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-c
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
+import { useTranslation } from 'react-i18next';
 
 export interface ProjectListFilters {
   searchQuery?: string;
@@ -135,6 +136,9 @@ export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
 };
 
 export default function Projects({ initialProjects, clients, initialFilters }: ProjectsProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
+  const projectListT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
+    t(`projectList.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
   const { getAllContacts, getContactByContactNameId, renderQuickAddContact, renderClientDetails } = useClientIntegration();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['project']);
@@ -472,14 +476,14 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: projectListT('deleteValidationFailed', 'Failed to validate deletion. Please try again.'),
         dependencies: [],
         alternatives: []
       });
     } finally {
       setIsDeleteValidating(false);
     }
-  }, []);
+  }, [projectListT]);
 
   const handleDelete = async (project: IProject) => {
     setProjectToDelete(project);
@@ -504,14 +508,14 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
       }
 
       setProjects(projects.filter(p => p.project_id !== projectToDelete.project_id));
-      toast.success('Project deleted successfully');
+      toast.success(projectListT('deletedSuccess', 'Project deleted successfully'));
       resetDeleteState();
     } catch (error) {
       console.error('Error deleting project:', error);
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to delete project.',
+        message: projectListT('deleteFailed', 'Failed to delete project.'),
         dependencies: [],
         alternatives: []
       });
@@ -533,7 +537,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
   };
 
   const formatDisplayDate = (value: unknown): string => {
-    if (value == null) return 'N/A';
+    if (value == null) return projectListT('notAvailable', 'N/A');
 
     const resolveDatePart = (): string | null => {
       if (typeof value === 'string') {
@@ -549,16 +553,16 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
     };
 
     const datePart = resolveDatePart();
-    if (!datePart) return 'N/A';
+    if (!datePart) return projectListT('notAvailable', 'N/A');
 
     // Use a date-only value to keep SSR and client rendering consistent regardless of timezone.
     const date = parse(datePart, 'yyyy-MM-dd', new Date());
-    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString();
+    return isNaN(date.getTime()) ? projectListT('notAvailable', 'N/A') : date.toLocaleDateString();
   };
 
   const columns: ColumnDefinition<IProject>[] = [
     {
-      title: 'Number',
+      title: projectListT('columns.number', 'Number'),
       dataIndex: 'project_number',
       width: '8%',
       render: (text: string, record: IProject) => {
@@ -570,7 +574,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
       },
     },
     {
-      title: 'Project Name',
+      title: projectListT('columns.projectName', 'Project Name'),
       dataIndex: 'project_name',
       width: '15%',
       render: (text: string, record: IProject) => (
@@ -580,12 +584,12 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
       ),
     },
     {
-      title: 'Client',
+      title: projectListT('columns.client', 'Client'),
       dataIndex: 'client_id',
       width: '12%',
       render: (value, record) => {
         const client = clients.find(c => c.client_id === value);
-        if (!client) return 'No Client';
+        if (!client) return projectListT('noClient', 'No Client');
 
         return (
           <button
@@ -601,45 +605,45 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
       }
     },
     {
-      title: 'Contact',
+      title: projectListT('columns.contact', 'Contact'),
       dataIndex: 'contact_name',
       width: '10%',
-      render: (name: string | null) => name || 'No Contact',
+      render: (name: string | null) => name || projectListT('noContact', 'No Contact'),
     },
     {
-      title: 'Status',
+      title: projectListT('columns.status', 'Status'),
       dataIndex: 'status_name',
       width: '8%',
       render: (_: string | null, record: IProject) => (
         <div className="inline-flex items-center px-2.5 py-0.5 text-sm text-gray-800">
-          {record.status_name || 'Unknown'}
+          {record.status_name || projectListT('statusUnknown', 'Unknown')}
         </div>
       ),
     },
     {
-      title: 'Deadline',
+      title: projectListT('columns.deadline', 'Deadline'),
       dataIndex: 'end_date',
       width: '8%',
       render: (value: unknown) => formatDisplayDate(value),
     },
     {
-      title: 'Created',
+      title: projectListT('columns.created', 'Created'),
       dataIndex: 'created_at',
       width: '8%',
       render: (value: unknown) => formatDisplayDate(value),
     },
     {
-      title: 'Project Manager',
+      title: projectListT('columns.projectManager', 'Project Manager'),
       dataIndex: 'assigned_to',
       width: '12%',
       render: (userId: string | null, record: IProject) => {
-        if (!userId) return 'Unassigned';
+        if (!userId) return projectListT('unassigned', 'Unassigned');
         const user = record.assigned_user;
-        return user ? `${user.first_name} ${user.last_name}` : 'Unassigned';
+        return user ? `${user.first_name} ${user.last_name}` : projectListT('unassigned', 'Unassigned');
       }
     },
     {
-      title: 'Tags',
+      title: projectListT('columns.tags', 'Tags'),
       dataIndex: 'tags',
       width: '14%',
       render: (value: string, record: IProject) => {
@@ -656,7 +660,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
       },
     },
     {
-      title: 'Actions',
+      title: projectListT('columns.actions', 'Actions'),
       dataIndex: 'actions',
       width: '5%',
       render: (_: unknown, record: IProject) => (
@@ -669,7 +673,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{projectListT('openMenu', 'Open menu')}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenu.Trigger>
@@ -682,7 +686,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
               }}
             >
               <Pen size={14} className="mr-2" />
-              Edit
+              {t('common:actions.edit', 'Edit')}
             </DropdownMenu.Item>
             <DropdownMenu.Item
               className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center text-destructive"
@@ -692,7 +696,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
               }}
             >
               <Trash2 size={14} className="mr-2" />
-              Delete
+              {t('common:actions.delete', 'Delete')}
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Root>
@@ -745,16 +749,16 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
     }
   };
 
-  const statusOptions = [
-    { value: 'all', label: 'All projects' },
-    { value: 'active', label: 'Active projects' },
-    { value: 'inactive', label: 'Inactive projects' }
-  ];
+  const statusOptions = useMemo(() => [
+    { value: 'all', label: projectListT('statusOptions.all', 'All projects') },
+    { value: 'active', label: projectListT('statusOptions.active', 'Active projects') },
+    { value: 'inactive', label: projectListT('statusOptions.inactive', 'Inactive projects') }
+  ], [projectListT]);
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Projects</h1>
+        <h1 className="text-2xl font-bold">{t('title', 'Projects')}</h1>
         <div className="flex items-center gap-3">
           <Button
             id='create-from-template-button'
@@ -762,10 +766,10 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
             variant="outline"
           >
             <FileText className="h-4 w-4 mr-2" />
-            Create from Template
+            {projectListT('createFromTemplate', 'Create from Template')}
           </Button>
           <Button id='add-project-button' onClick={() => setShowQuickAdd(true)}>
-            Add Project
+            {projectListT('addProject', 'Add Project')}
           </Button>
         </div>
       </div>
@@ -776,7 +780,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
           <div className="relative p-0.5 shrink-0">
             <Input
               type="text"
-              placeholder="Search projects"
+              placeholder={projectListT('searchPlaceholder', 'Search projects')}
               className="pl-10 pr-4 py-2 w-64"
               value={activeFilters.searchQuery || ''}
               onChange={(e) => handleFilterChange({ searchQuery: e.target.value || undefined })}
@@ -790,7 +794,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
               options={statusOptions}
               value={activeFilters.status || 'active'}
               onValueChange={(value) => handleFilterChange({ status: value as 'all' | 'active' | 'inactive' })}
-              placeholder="Select status"
+              placeholder={projectListT('statusPlaceholder', 'Select status')}
               customStyles={{
                 content: 'mt-1'
               }}
@@ -817,7 +821,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
             value={activeFilters.contactId || ''}
             onValueChange={(value) => handleFilterChange({ contactId: value || undefined })}
             clientId={activeFilters.clientId || undefined}
-            placeholder="Filter by contact"
+            placeholder={projectListT('contactPlaceholder', 'Filter by contact')}
             buttonWidth="fit"
             onAddNew={() => setIsQuickAddContactOpen(true)}
           />
@@ -847,7 +851,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
             onValueChange={(value) => handleFilterChange({ managerId: value || undefined })}
             users={users}
             getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-            placeholder="All managers"
+            placeholder={projectListT('managerPlaceholder', 'All managers')}
             buttonWidth="fit"
             labelStyle="none"
           />
@@ -871,7 +875,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
                 });
               }
             }}
-            placeholder="Filter by deadline"
+            placeholder={projectListT('deadlinePlaceholder', 'Filter by deadline')}
           />
 
           {/* Tag filter */}
@@ -911,7 +915,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
             disabled={!(activeFilters.searchQuery || activeFilters.status !== 'active' || (activeFilters.tags && activeFilters.tags.length > 0) || activeFilters.clientId || activeFilters.contactId || activeFilters.managerId || activeFilters.deadlineType)}
           >
             <XCircle className="h-4 w-4" />
-            Reset
+            {t('resetFilters', 'Reset')}
           </Button>
       </div>
 
@@ -955,7 +959,7 @@ export default function Projects({ initialProjects, clients, initialFilters }: P
         isOpen={!!projectToDelete}
         onClose={resetDeleteState}
         onConfirmDelete={confirmDelete}
-        entityName={projectToDelete?.project_name || 'this project'}
+        entityName={projectToDelete?.project_name || projectListT('thisProject', 'this project')}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}

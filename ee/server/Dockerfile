@@ -70,6 +70,7 @@ COPY ./server/src/ ./server/src/
 COPY ./ee/server/src /app/ee/server/src
 COPY ./ee/server/migrations/ ./server/migrations/
 COPY ./ee/server/seeds/ ./server/seeds/
+COPY ./ee/server/seeds/ /app/ee/server/seeds/
 
 # Copy core package.json for version info
 COPY packages/core/package.json /app/packages/core/package.json

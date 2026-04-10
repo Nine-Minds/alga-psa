@@ -274,7 +274,11 @@ data:
       if check_seeds_status; then
         log "Seeds already exist; skipping"
       else
-        log "Running seeds"
+        if [ -n "${SEEDS_DIR:-}" ] && [ ! -d "${SEEDS_DIR}" ]; then
+          log "ERROR: Configured seed directory does not exist: ${SEEDS_DIR}"
+          exit 1
+        fi
+        log "Running seeds from ${SEEDS_DIR:-./seeds/dev}"
         NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose
       fi
     else

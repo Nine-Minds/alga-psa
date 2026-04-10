@@ -679,7 +679,7 @@ function MainPane({
             React.createElement(
               Text,
               { color: COLOR_ERROR },
-              'Wipes namespace msp, namespace alga-system, and /opt/local-path-provisioner data.',
+              'Wipes namespace msp, namespace alga-system, and /var/mnt/alga-data/local-path-provisioner data.',
             ),
           )
         : null,

@@ -1,5 +1,5 @@
 import type { TemplateAst } from '@alga-psa/types';
-import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { DEFAULT_INVOICE_PRINT_SETTINGS, TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 const cloneAst = (ast: TemplateAst): TemplateAst =>
   JSON.parse(JSON.stringify(ast)) as TemplateAst;
@@ -60,6 +60,7 @@ const buildStandardDefaultAst = (templateName: string): TemplateAst => ({
   version: TEMPLATE_AST_VERSION,
   metadata: {
     templateName,
+    printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
   bindings: buildSharedBindings(),
   layout: {
@@ -148,6 +149,7 @@ const buildStandardDetailedAst = (): TemplateAst => ({
   version: TEMPLATE_AST_VERSION,
   metadata: {
     templateName: 'Detailed Template',
+    printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
   bindings: buildSharedBindings(),
   layout: {
@@ -487,7 +489,7 @@ const buildStandardGroupedAst = (): TemplateAst => ({
   version: TEMPLATE_AST_VERSION,
   metadata: {
     templateName: 'Grouped Template',
-    printSettings: { paperPreset: 'Letter', marginMm: 10.58 },
+    printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
   bindings: buildSharedBindings(),
   layout: {

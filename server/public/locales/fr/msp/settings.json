@@ -1246,6 +1246,94 @@
       }
     }
   },
+  "integrations": {
+    "betaNotice": "Certaines intégrations sont encore en cours de développement. Veuillez travailler dans un environnement sandbox lors de l'évaluation et partagez vos commentaires pour nous aider à nous améliorer.",
+    "emptyCategory": "Aucune intégration disponible dans cette catégorie.",
+    "rmmEnterpriseNote": "Les intégrations RMM sont disponibles dans l'édition Enterprise.",
+    "categoryHeading": "Intégrations {{label}}",
+    "loading": {
+      "payments": "Chargement des paramètres de paiement..."
+    },
+    "categories": {
+      "accounting": {
+        "label": "Comptabilité",
+        "description": "Sélectionnez un logiciel comptable pour configurer la synchronisation des factures, paiements et données fiscales."
+      },
+      "rmm": {
+        "label": "RMM",
+        "description": "Connectez des outils de surveillance et gestion à distance"
+      },
+      "communication": {
+        "label": "Communication",
+        "description": "Connectez des surfaces de boîte de réception et de collaboration pour le traitement des tickets, les workflows des opérateurs et l'accès à Microsoft Teams."
+      },
+      "calendar": {
+        "label": "Calendrier",
+        "description": "Synchronisation de calendrier exclusive Enterprise pour Google et Outlook maintient la répartition et les rendez-vous clients alignés."
+      },
+      "providers": {
+        "label": "Fournisseurs",
+        "description": {
+          "ee": "Configurez les identifiants de fournisseurs partagés utilisés par l'e-mail, le calendrier, le SSO MSP et d'autres intégrations.",
+          "oss": "Configurez les identifiants de fournisseurs partagés utilisés par l'e-mail, le SSO MSP et d'autres intégrations."
+        }
+      },
+      "identity": {
+        "label": "Identité",
+        "description": "Connectez des fournisseurs d'identité pour la découverte de locataires et la synchronisation des contacts."
+      },
+      "payments": {
+        "label": "Paiements",
+        "description": "Acceptez les paiements en ligne pour les factures"
+      }
+    },
+    "items": {
+      "accountingSetup": {
+        "name": "Intégrations comptables",
+        "description": "Configurez la synchronisation et les exportations comptables"
+      },
+      "rmmSetup": {
+        "name": "Intégrations RMM",
+        "description": "Sélectionnez et configurez votre fournisseur RMM"
+      },
+      "email": {
+        "name": "E-mail entrant",
+        "description": "Traitez les e-mails entrants en tickets",
+        "cardTitle": "Intégration d'e-mail entrant",
+        "cardDescription": "Configurez les fournisseurs d'e-mail pour traiter automatiquement les e-mails entrants en tickets"
+      },
+      "teams": {
+        "name": "Microsoft Teams",
+        "description": "Configurez les surfaces de collaboration Teams pour les techniciens MSP",
+        "upgradeDescription": "Configurez les surfaces de collaboration Microsoft Teams pour les techniciens MSP. Passez à Premium pour débloquer cette fonctionnalité."
+      },
+      "calendarSync": {
+        "name": "Synchronisation du calendrier",
+        "description": "Synchronisez les entrées de planification avec les calendriers Google ou Microsoft"
+      },
+      "google": {
+        "name": "Google",
+        "description": {
+          "ee": "Identifiants Google Cloud appartenant au locataire pour Gmail et Calendrier",
+          "oss": "Identifiants Google Cloud appartenant au locataire pour Gmail et les flux de support SSO MSP"
+        },
+        "cardTitle": "Identifiants du fournisseur",
+        "cardDescription": {
+          "ee": "Configurez d'abord Google et Microsoft, puis connectez les comptes fournisseurs depuis les écrans d'intégration d'e-mail entrant et de calendrier. La découverte de domaines SSO MSP utilise ces identifiants de fournisseur avec les mappages de domaines de connexion du locataire.",
+          "oss": "Configurez d'abord Google et Microsoft, puis connectez les comptes fournisseurs depuis l'écran d'intégration d'e-mail entrant. La découverte de domaines SSO MSP utilise ces identifiants de fournisseur avec les mappages de domaines de connexion du locataire."
+        }
+      },
+      "entra": {
+        "name": "Microsoft Entra",
+        "description": "Découvrez les locataires Microsoft gérés et synchronisez les utilisateurs vers les contacts",
+        "upgradeDescription": "Découvrez les locataires Microsoft Entra gérés et synchronisez les utilisateurs vers les contacts. Passez à Premium pour débloquer cette fonctionnalité."
+      },
+      "stripe": {
+        "name": "Stripe",
+        "description": "Acceptez les paiements par carte de crédit pour les factures via Stripe"
+      }
+    }
+  },
   "orgChart": {
     "emptyState": "Aucun utilisateur disponible.",
     "roles": {

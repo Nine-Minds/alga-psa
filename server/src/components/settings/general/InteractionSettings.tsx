@@ -38,12 +38,12 @@ const InteractionSettings = (): React.JSX.Element => {
   const tabs = [
     {
       id: 'interaction-types',
-      label: "Interaction Types",
+      label: t('interactions.tabs.types'),
       content: <InteractionTypesSettings />
     },
     {
       id: 'interaction-statuses',
-      label: "Interaction Statuses",
+      label: t('interactions.tabs.statuses'),
       content: <InteractionStatusSettings />
     }
   ];

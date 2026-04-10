@@ -1,19 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Linking, Platform, Text, View } from "react-native";
+import { Platform, Text, View } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { getAppConfig } from "../config/appConfig";
 import { logger } from "../logging/logger";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
-import { buildWebSignInUrl, createPendingMobileAuth, getAuthCallbackRedirectUri } from "../auth/mobileAuth";
+import { buildWebSignInUrl, createPendingMobileAuth, getAuthCallbackRedirectUri, parseAuthCallback } from "../auth/mobileAuth";
 import { createApiClient } from "../api";
 import { getAuthCapabilities, type MobileAuthCapabilities } from "../api/mobileAuth";
 import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
+import type { RootStackParamList } from "../navigation/types";
 
 export function SignInScreen() {
   const { t } = useTranslation("auth");
   const theme = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const config = useMemo(() => getAppConfig(), []);
   const [status, setStatus] = useState<"idle" | "opening">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -93,14 +98,19 @@ export function SignInScreen() {
       const redirectUri = getAuthCallbackRedirectUri();
       const loginUrl = buildWebSignInUrl({ baseUrl, redirectUri, state: pending.state });
 
-      const canOpen = await Linking.canOpenURL(loginUrl);
-      if (!canOpen) {
-        analytics.trackEvent(MobileAnalyticsEvents.authSignInOpenFailed, { reason: "cannot_open_url" });
-        setError(t("signIn.errors.cannotOpenBrowser"));
-        return;
+      const result = await WebBrowser.openAuthSessionAsync(loginUrl, redirectUri);
+      if (result.type === "success") {
+        analytics.trackEvent(MobileAnalyticsEvents.authSignInOpenedBrowser);
+        const parsed = parseAuthCallback(result.url);
+        navigation.navigate("AuthCallback", {
+          ott: parsed.ott,
+          state: parsed.state,
+          error: parsed.error,
+        });
+      } else {
+        // User cancelled or dismissed the in-app browser
+        analytics.trackEvent(MobileAnalyticsEvents.authSignInOpenFailed, { reason: "user_cancelled" });
       }
-      await Linking.openURL(loginUrl);
-      analytics.trackEvent(MobileAnalyticsEvents.authSignInOpenedBrowser);
     } catch (e) {
       logger.error("Failed to open sign-in URL", { error: e });
       analytics.trackEvent(MobileAnalyticsEvents.authSignInOpenFailed, { reason: "exception" });

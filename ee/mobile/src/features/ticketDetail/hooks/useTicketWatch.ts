@@ -46,7 +46,7 @@ export function useTicketWatch(
       const res = await updateTicketAttributes(client, {
         apiKey: session.accessToken,
         ticketId,
-        attributes: Object.keys(nextAttrs).length === 0 ? null : nextAttrs,
+        attributes: nextAttrs,
         auditHeaders,
       });
 

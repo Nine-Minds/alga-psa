@@ -28,6 +28,7 @@ import { IUserWithRoles } from '@alga-psa/types';
 import type { ITeam } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
 import { getEffectiveTemplateStatusMappings } from '../../../lib/templateStatusMappingUtils';
+import { useTranslation } from 'react-i18next';
 
 interface TemplateTasksStepProps {
   data: TemplateWizardData;
@@ -48,6 +49,7 @@ export function TemplateTasksStep({
   users,
   services,
 }: TemplateTasksStepProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(
@@ -156,9 +158,9 @@ export function TemplateTasksStep({
     return (
       <div className="text-center py-12 bg-gray-50 rounded-lg">
         <ListTodo className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <p className="text-lg text-gray-600 mb-2">No phases available</p>
+        <p className="text-lg text-gray-600 mb-2">{t('templates.wizard.tasks.empty', 'No phases available')}</p>
         <p className="text-sm text-gray-500">
-          Please add at least one phase in the previous step before adding tasks.
+          {t('templates.wizard.tasks.emptyDescription', 'Please add at least one phase in the previous step before adding tasks.')}
         </p>
       </div>
     );
@@ -167,15 +169,15 @@ export function TemplateTasksStep({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Tasks</h3>
+        <h3 className="text-lg font-semibold">{t('templates.wizard.tasks.title', 'Tasks')}</h3>
         <p className="text-sm text-gray-600">
-          Add tasks to each phase. You can also add checklist items to break down tasks further.
+          {t('templates.wizard.tasks.description', 'Add tasks to each phase. You can also add checklist items to break down tasks further.')}
         </p>
       </div>
 
       {/* Phase Selector */}
       <div>
-        <Label>Select Phase</Label>
+        <Label>{t('templates.wizard.tasks.selectPhase', 'Select Phase')}</Label>
         <CustomSelect
           value={selectedPhaseId || ''}
           onValueChange={setSelectedPhaseId}
@@ -192,11 +194,13 @@ export function TemplateTasksStep({
           <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
             <CheckSquare className="w-12 h-12 mx-auto text-gray-400 mb-3" />
             <p className="text-gray-600 mb-4">
-              No tasks in {selectedPhase?.phase_name || 'this phase'}
+              {t('templates.wizard.tasks.noTasksInPhase', 'No tasks in {{phaseName}}', {
+                phaseName: selectedPhase?.phase_name || t('templates.wizard.tasks.thisPhase', 'this phase'),
+              })}
             </p>
             <Button id="add-first-task" onClick={addTask}>
               <Plus className="w-4 h-4 mr-2" />
-              Add First Task
+              {t('templates.wizard.tasks.addFirstTask', 'Add First Task')}
             </Button>
           </div>
         ) : (
@@ -213,19 +217,19 @@ export function TemplateTasksStep({
                     {editingTaskId === task.temp_id ? (
                       <div className="space-y-3">
                         <div>
-                          <Label>Task Name *</Label>
+                          <Label>{t('templates.wizard.tasks.taskName', 'Task Name *')}</Label>
                           <Input
                             value={task.task_name}
                             onChange={(e) =>
                               updateTask(task.temp_id, { task_name: e.target.value })
                             }
-                            placeholder="e.g., Design database schema"
+                            placeholder={t('templates.wizard.tasks.taskNamePlaceholder', 'e.g., Design database schema')}
                             autoFocus
                           />
                         </div>
 
                         <div>
-                          <Label>Description</Label>
+                          <Label>{t('fields.description', 'Description')}</Label>
                           <TextEditor
                             key={`wizard-task-desc-${task.temp_id}`}
                             id={`wizard-task-description-${task.temp_id}`}
@@ -234,19 +238,19 @@ export function TemplateTasksStep({
                               updateTask(task.temp_id, serializeTaskDescriptions(blocks))
                             }
                             searchMentions={searchUsersForMentions}
-                            placeholder="Describe what needs to be done..."
+                            placeholder={t('templates.wizard.tasks.descriptionPlaceholder', 'Describe what needs to be done...')}
                           />
                         </div>
 
                         <div>
-                          <Label>Service (for time entries)</Label>
+                          <Label>{t('templates.wizard.tasks.service', 'Service (for time entries)')}</Label>
                           <CustomSelect
                             value={task.service_id || ''}
                             onValueChange={(value) =>
                               updateTask(task.temp_id, { service_id: value || undefined })
                             }
                             options={[
-                              { value: '', label: 'No service' },
+                              { value: '', label: t('templates.taskForm.noService', 'No service') },
                               ...services.map((s) => ({
                                 value: s.service_id,
                                 label: s.service_name,
@@ -254,13 +258,13 @@ export function TemplateTasksStep({
                             ]}
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            Auto-fills service when creating time entries from tasks.
+                            {t('templates.wizard.tasks.serviceHint', 'Auto-fills service when creating time entries from tasks.')}
                           </p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label>Estimated Hours</Label>
+                            <Label>{t('templates.wizard.tasks.estimatedHours', 'Estimated Hours')}</Label>
                             <Input
                               type="number"
                               min="0"
@@ -273,12 +277,12 @@ export function TemplateTasksStep({
                                     : undefined,
                                 })
                               }
-                              placeholder="Optional"
+                              placeholder={t('templates.wizard.phases.optionalPlaceholder', 'Optional')}
                             />
                           </div>
 
                           <div>
-                            <Label>Duration (days)</Label>
+                            <Label>{t('templates.wizard.tasks.duration', 'Duration (days)')}</Label>
                             <Input
                               type="number"
                               min="0"
@@ -290,14 +294,14 @@ export function TemplateTasksStep({
                                     : undefined,
                                 })
                               }
-                              placeholder="Optional"
+                              placeholder={t('templates.wizard.phases.optionalPlaceholder', 'Optional')}
                             />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label>Task Type</Label>
+                            <Label>{t('templates.wizard.tasks.taskType', 'Task Type')}</Label>
                             <CustomSelect
                               value={task.task_type_key || 'task'}
                               onValueChange={(value) =>
@@ -311,14 +315,14 @@ export function TemplateTasksStep({
                           </div>
 
                           <div>
-                            <Label>Priority</Label>
+                            <Label>{t('templates.wizard.tasks.priority', 'Priority')}</Label>
                             <CustomSelect
                               value={task.priority_id || ''}
                               onValueChange={(value) =>
                                 updateTask(task.temp_id, { priority_id: value || undefined })
                               }
                               options={[
-                                { value: '', label: 'No priority' },
+                                { value: '', label: t('templates.wizard.tasks.noPriority', 'No priority') },
                                 ...priorities.map((p) => ({
                                   value: p.priority_id,
                                   label: p.priority_name,
@@ -330,7 +334,7 @@ export function TemplateTasksStep({
 
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label>Assigned To</Label>
+                            <Label>{t('templates.wizard.tasks.assignedTo', 'Assigned To')}</Label>
                             {teamsV2Enabled ? (
                               <UserAndTeamPicker
                                 label=""
@@ -349,7 +353,7 @@ export function TemplateTasksStep({
                                 teams={teams}
                                 getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                                 getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                                placeholder="Not assigned"
+                                placeholder={t('templates.wizard.tasks.notAssigned', 'Not assigned')}
                               />
                             ) : (
                               <UserPicker
@@ -360,13 +364,13 @@ export function TemplateTasksStep({
                                 }
                                 users={users}
                                 getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                                placeholder="Not assigned"
+                                placeholder={t('templates.wizard.tasks.notAssigned', 'Not assigned')}
                               />
                             )}
                           </div>
 
                           <div>
-                            <Label>Additional Agents</Label>
+                            <Label>{t('templates.wizard.tasks.additionalAgents', 'Additional Agents')}</Label>
                               <MultiUserPicker
                                 values={task.additional_agents || []}
                                 onValuesChange={(values) =>
@@ -379,7 +383,7 @@ export function TemplateTasksStep({
                         </div>
 
                         <div>
-                          <Label>Status Column</Label>
+                          <Label>{t('templates.wizard.tasks.statusColumn', 'Status Column')}</Label>
                           <CustomSelect
                             value={task.template_status_mapping_id || ''}
                             onValueChange={(value) =>
@@ -393,17 +397,17 @@ export function TemplateTasksStep({
                                 : s.custom_status_name;
                               return {
                                 value: s.temp_id,
-                                label: statusName || `Status ${i + 1}`
+                                label: statusName || `${t('templates.editor.statusFallback', 'Status')} ${i + 1}`
                               };
                             })}
-                            placeholder="Select status column"
+                            placeholder={t('templates.wizard.tasks.statusPlaceholder', 'Select status column')}
                           />
                         </div>
 
                         {/* Checklist Items - Available during editing */}
                         <div className="border-t pt-3 mt-3">
                           <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold">Checklist</h3>
+                            <h3 className="font-semibold">{t('templates.wizard.tasks.checklist', 'Checklist')}</h3>
                             <ListChecks className="h-5 w-5 text-gray-500" />
                           </div>
 
@@ -436,7 +440,7 @@ export function TemplateTasksStep({
                                         removeChecklistItem(item.temp_id);
                                       }
                                     }}
-                                    placeholder="Checklist item"
+                                    placeholder={t('templates.wizard.tasks.checklistItemPlaceholder', 'Checklist item')}
                                     className={`w-full ${item.completed ? 'line-through text-gray-500' : ''}`}
                                     rows={1}
                                   />
@@ -447,7 +451,7 @@ export function TemplateTasksStep({
                                   className="text-destructive flex-none"
                                   onMouseDown={(e) => e.preventDefault()} // Prevent blur before click registers
                                 >
-                                  Remove
+                                  {t('common:actions.remove', 'Remove')}
                                 </button>
                               </div>
                             ))}
@@ -459,14 +463,14 @@ export function TemplateTasksStep({
                             variant="soft"
                             onClick={() => addChecklistItem(task.temp_id)}
                           >
-                            Add an item
+                            {t('templates.taskForm.addChecklistItem', 'Add an item')}
                           </Button>
                         </div>
 
                         <div>
                           {!task.task_name.trim() && saveAttempted.has(task.temp_id) && (
                             <p className="text-sm text-destructive mb-2">
-                              Task name is required
+                              {t('templates.taskForm.taskNameRequired', 'Task name is required')}
                             </p>
                           )}
                           <div className="flex gap-2">
@@ -487,7 +491,7 @@ export function TemplateTasksStep({
                               }}
                             >
                               <Check className="w-4 h-4 mr-1" />
-                              Done
+                              {t('templates.wizard.tasks.done', 'Done')}
                             </Button>
                             <Button
                               id={`cancel-task-${task.temp_id}`}
@@ -507,7 +511,7 @@ export function TemplateTasksStep({
                               }}
                             >
                               <X className="w-4 h-4 mr-1" />
-                              Cancel
+                              {t('common:actions.cancel', 'Cancel')}
                             </Button>
                           </div>
                         </div>
@@ -526,12 +530,12 @@ export function TemplateTasksStep({
                             )}
                             <div className="flex gap-4 mt-2 text-xs text-gray-600">
                               {task.estimated_hours && <span>{task.estimated_hours}h</span>}
-                              {task.duration_days && <span>{task.duration_days} days</span>}
+                              {task.duration_days && <span>{t('templates.wizard.tasks.durationSummaryShort', '{{days}} days', { days: task.duration_days })}</span>}
                               {task.task_type_key && (
                                 <span className="capitalize">{task.task_type_key}</span>
                               )}
                               {taskChecklists.length > 0 && (
-                                <span>{taskChecklists.length} checklist items</span>
+                                <span>{t('templates.wizard.tasks.checklistItemsSummary', '{{count}} checklist items', { count: taskChecklists.length })}</span>
                               )}
                             </div>
                           </div>
@@ -568,17 +572,18 @@ export function TemplateTasksStep({
               className="w-full"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Task to {selectedPhase?.phase_name}
+              {t('templates.wizard.tasks.addTaskToPhase', 'Add Task to {{phaseName}}', {
+                phaseName: selectedPhase?.phase_name || '',
+              })}
             </Button>
           </>
         )}
       </div>
 
       <Alert variant="info">
-        <AlertTitle>Tip</AlertTitle>
+        <AlertTitle>{t('templates.wizard.tasks.tipTitle', 'Tip')}</AlertTitle>
         <AlertDescription>
-          Add checklist items to break down complex tasks into smaller steps. These will help
-          team members track progress within each task.
+          {t('templates.wizard.tasks.tipDescription', 'Add checklist items to break down complex tasks into smaller steps. These will help team members track progress within each task.')}
         </AlertDescription>
       </Alert>
     </div>

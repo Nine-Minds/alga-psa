@@ -1246,6 +1246,94 @@
       }
     }
   },
+  "integrations": {
+    "betaNotice": "Algunas integraciones aún están en desarrollo. Por favor, trabaje en un entorno sandbox al evaluar y comparta sus comentarios para ayudarnos a mejorar.",
+    "emptyCategory": "No hay integraciones disponibles en esta categoría.",
+    "rmmEnterpriseNote": "Las integraciones RMM están disponibles en la edición Enterprise.",
+    "categoryHeading": "Integraciones de {{label}}",
+    "loading": {
+      "payments": "Cargando configuración de pagos..."
+    },
+    "categories": {
+      "accounting": {
+        "label": "Contabilidad",
+        "description": "Seleccione un paquete contable para configurar la sincronización de facturas, pagos y datos fiscales."
+      },
+      "rmm": {
+        "label": "RMM",
+        "description": "Conecte herramientas de monitoreo y gestión remota"
+      },
+      "communication": {
+        "label": "Comunicación",
+        "description": "Conecte superficies de bandeja de entrada y colaboración para procesamiento de tickets, flujos de trabajo de operadores y acceso a Microsoft Teams."
+      },
+      "calendar": {
+        "label": "Calendario",
+        "description": "Sincronización de calendario exclusiva de Enterprise para Google y Outlook mantiene el despacho y las citas con clientes alineados."
+      },
+      "providers": {
+        "label": "Proveedores",
+        "description": {
+          "ee": "Configure credenciales compartidas de proveedores utilizadas por correo electrónico, calendario, MSP SSO y otras integraciones.",
+          "oss": "Configure credenciales compartidas de proveedores utilizadas por correo electrónico, MSP SSO y otras integraciones."
+        }
+      },
+      "identity": {
+        "label": "Identidad",
+        "description": "Conecte proveedores de identidad para descubrimiento de inquilinos y sincronización de contactos."
+      },
+      "payments": {
+        "label": "Pagos",
+        "description": "Acepte pagos en línea para facturas"
+      }
+    },
+    "items": {
+      "accountingSetup": {
+        "name": "Integraciones contables",
+        "description": "Configure la sincronización y exportaciones contables"
+      },
+      "rmmSetup": {
+        "name": "Integraciones RMM",
+        "description": "Seleccione y configure su proveedor RMM"
+      },
+      "email": {
+        "name": "Correo entrante",
+        "description": "Procese correos entrantes como tickets",
+        "cardTitle": "Integración de correo entrante",
+        "cardDescription": "Configure proveedores de correo electrónico para procesar automáticamente correos entrantes como tickets"
+      },
+      "teams": {
+        "name": "Microsoft Teams",
+        "description": "Configure superficies de colaboración de Teams para técnicos MSP",
+        "upgradeDescription": "Configure superficies de colaboración de Microsoft Teams para técnicos MSP. Actualice a Premium para desbloquear esta función."
+      },
+      "calendarSync": {
+        "name": "Sincronización de calendario",
+        "description": "Sincronice entradas de programación con calendarios de Google o Microsoft"
+      },
+      "google": {
+        "name": "Google",
+        "description": {
+          "ee": "Credenciales de Google Cloud propiedad del inquilino para Gmail y Calendario",
+          "oss": "Credenciales de Google Cloud propiedad del inquilino para Gmail y flujos de soporte MSP SSO"
+        },
+        "cardTitle": "Credenciales de proveedor",
+        "cardDescription": {
+          "ee": "Configure Google y Microsoft primero, luego conecte cuentas de proveedores desde las pantallas de integración de correo entrante y calendario. El descubrimiento de dominios MSP SSO utiliza estas credenciales de proveedor con asignaciones de dominios de inicio de sesión del inquilino.",
+          "oss": "Configure Google y Microsoft primero, luego conecte cuentas de proveedores desde la pantalla de integración de correo entrante. El descubrimiento de dominios MSP SSO utiliza estas credenciales de proveedor con asignaciones de dominios de inicio de sesión del inquilino."
+        }
+      },
+      "entra": {
+        "name": "Microsoft Entra",
+        "description": "Descubra inquilinos Microsoft administrados y sincronice usuarios a contactos",
+        "upgradeDescription": "Descubra inquilinos Microsoft Entra administrados y sincronice usuarios a contactos. Actualice a Premium para desbloquear esta función."
+      },
+      "stripe": {
+        "name": "Stripe",
+        "description": "Acepte pagos con tarjeta de crédito para facturas a través de Stripe"
+      }
+    }
+  },
   "orgChart": {
     "emptyState": "No hay usuarios disponibles.",
     "roles": {
