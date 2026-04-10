@@ -1176,6 +1176,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const lastAppliedInferredRef = useRef<string | null>(null);
   const lastCapturedUnknownSchemaRef = useRef<string | null>(null);
   const [showTriggerMapping, setShowTriggerMapping] = useState(false);
+  const [showUseEventSchemaSuggestion, setShowUseEventSchemaSuggestion] = useState(false);
+  const [hasExplicitContractEdits, setHasExplicitContractEdits] = useState(false);
+  const [pendingEventSchemaPrompt, setPendingEventSchemaPrompt] = useState<{
+    eventName: string;
+    schemaRef: string;
+  } | null>(null);
   const [eventCatalogOptions, setEventCatalogOptions] = useState<WorkflowEventCatalogOptionV2[]>([]);
   const [eventCatalogStatus, setEventCatalogStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [showTriggerSchemaModal, setShowTriggerSchemaModal] = useState(false);
@@ -1585,8 +1591,29 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     [activeWorkflowRecord?.validation_warnings]
   );
 
-  const currentValidationErrors = publishErrors.length > 0 ? publishErrors : draftValidationErrors;
-  const currentValidationWarnings = publishWarnings.length > 0 ? publishWarnings : draftValidationWarnings;
+  const triggerSourceSchemaRefForValidation = useMemo(() => {
+    const trigger = activeDefinition?.trigger;
+    if (trigger?.type !== 'event') return null;
+    const override = (trigger as any)?.sourcePayloadSchemaRef;
+    if (typeof override === 'string' && override.trim()) return override.trim();
+    return inferredSchemaRef;
+  }, [activeDefinition?.trigger, inferredSchemaRef]);
+
+  const suppressTriggerMappingValidation = useMemo(() => {
+    const trigger = activeDefinition?.trigger;
+    if (trigger?.type !== 'event') return true;
+    const payloadRef = activeDefinition?.payloadSchemaRef ?? '';
+    return !(triggerSourceSchemaRefForValidation && payloadRef && triggerSourceSchemaRefForValidation !== payloadRef);
+  }, [activeDefinition?.payloadSchemaRef, activeDefinition?.trigger, triggerSourceSchemaRefForValidation]);
+
+  const currentValidationErrors = (publishErrors.length > 0 ? publishErrors : draftValidationErrors).filter((error) => {
+    if (!suppressTriggerMappingValidation) return true;
+    return !(typeof error?.stepPath === 'string' && error.stepPath.startsWith('root.trigger.payloadMapping'));
+  });
+  const currentValidationWarnings = (publishWarnings.length > 0 ? publishWarnings : draftValidationWarnings).filter((warning) => {
+    if (!suppressTriggerMappingValidation) return true;
+    return !(typeof warning?.stepPath === 'string' && warning.stepPath.startsWith('root.trigger.payloadMapping'));
+  });
 
   const triggerValidationErrors = useMemo(
     () => currentValidationErrors.filter((err) => typeof err?.stepPath === 'string' && err.stepPath.startsWith('root.trigger')),
@@ -1874,6 +1901,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       setSchemaInferenceEnabled(false);
       setPinnedPayloadSchemaRefDraft(EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF);
       setSchemaRefAdvanced(false);
+      setShowUseEventSchemaSuggestion(false);
+      setPendingEventSchemaPrompt(null);
+      setHasExplicitContractEdits(false);
       setActiveDefinition((current) => (
         current
           ? {
@@ -2355,6 +2385,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setActiveWorkflowId(record.workflow_id);
     setTriggerTypeSelection(normalizedDefinition.trigger?.type === 'event' ? 'event' : 'manual');
     setSelectedTriggerEventCategory('');
+    setShowUseEventSchemaSuggestion(false);
+    setPendingEventSchemaPrompt(null);
+    setHasExplicitContractEdits(false);
     
     // Always reset these when selecting a workflow
     setPublishErrors([]);
@@ -2405,6 +2438,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setContractSettingsExpanded(false);
     setSchemaRefAdvanced(false);
     setPinnedPayloadSchemaRefDraft(draft.payloadSchemaRef ?? '');
+    setShowUseEventSchemaSuggestion(false);
+    setPendingEventSchemaPrompt(null);
+    setHasExplicitContractEdits(false);
     setSelectedStepId(null);
     setSelectedPipePath('root');
     setPublishErrors([]);
@@ -2444,9 +2480,38 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     handleCreateDefinition();
   }, [handleCreateDefinition, mode, requestedNewWorkflow]);
 
-  const handleDefinitionChange = (changes: Partial<WorkflowDefinition>) => {
+  const handleDefinitionChange = useCallback((changes: Partial<WorkflowDefinition>) => {
     setActiveDefinition((current) => (current ? { ...current, ...changes } : current));
-  };
+  }, []);
+
+  const applyWorkflowInputSchemaRef = useCallback((schemaRef: string) => {
+    if (!schemaRef) return;
+    setPayloadSchemaModeDraft('pinned');
+    setSchemaInferenceEnabled(false);
+    setSchemaRefAdvanced(false);
+    setPinnedPayloadSchemaRefDraft(schemaRef);
+    setShowUseEventSchemaSuggestion(false);
+    setPendingEventSchemaPrompt(null);
+    handleDefinitionChange({ payloadSchemaRef: schemaRef });
+  }, [handleDefinitionChange]);
+
+  const handleUseEventSchemaForWorkflowInput = useCallback(() => {
+    if (!activeDefinition || activeDefinition.trigger?.type !== 'event' || !triggerSourceSchemaRef) {
+      return;
+    }
+
+    try {
+      analytics.capture('workflow.trigger_schema.use_event_schema_clicked', {
+        workflowId: activeWorkflowId ?? activeDefinition.id ?? null,
+        triggerEvent: activeDefinition.trigger.eventName,
+        sourceSchemaRef: triggerSourceSchemaRef,
+        previousPayloadSchemaRef: activeDefinition.payloadSchemaRef ?? null,
+      });
+    } catch {}
+
+    setHasExplicitContractEdits(true);
+    applyWorkflowInputSchemaRef(triggerSourceSchemaRef);
+  }, [activeDefinition, activeWorkflowId, applyWorkflowInputSchemaRef, triggerSourceSchemaRef]);
 
   const persistMetadataDraft = useCallback(async (
     workflowId: string,
@@ -3503,6 +3568,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                           return;
                                         }
 
+                                        setShowUseEventSchemaSuggestion(false);
+                                        setPendingEventSchemaPrompt(null);
                                         handleDefinitionChange({ trigger: undefined });
                                       }}
                                       options={eventCategoryOptions}
@@ -3525,6 +3592,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                       onChange={(value) => {
                                         const next = value.trim();
                                         if (!next) {
+                                          setShowUseEventSchemaSuggestion(false);
+                                          setPendingEventSchemaPrompt(null);
                                           handleDefinitionChange({ trigger: undefined });
                                           return;
                                         }
@@ -3533,12 +3602,43 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                           toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
                                           return;
                                         }
+
+                                        const chosenSchemaRef = typeof chosen?.payload_schema_ref === 'string' ? chosen.payload_schema_ref : '';
+                                        const currentPayloadSchemaRef = activeDefinition?.payloadSchemaRef ?? '';
+                                        const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
+                                        const mapping = (existing as any)?.payloadMapping ?? {};
+                                        const mappingProvided = mapping && typeof mapping === 'object' && Object.keys(mapping).length > 0;
+                                        const hasIntentionalContractChoice =
+                                          hasExplicitContractEdits ||
+                                          mappingProvided ||
+                                          (Boolean(currentPayloadSchemaRef) && currentPayloadSchemaRef !== EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF);
+                                        const shouldAutoAdoptEventSchema =
+                                          Boolean(chosenSchemaRef) &&
+                                          !hasIntentionalContractChoice &&
+                                          !mappingProvided &&
+                                          currentPayloadSchemaRef === EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF;
+                                        const shouldPromptForEventSchema =
+                                          Boolean(chosenSchemaRef) &&
+                                          hasIntentionalContractChoice &&
+                                          chosenSchemaRef !== currentPayloadSchemaRef;
+
                                         setTriggerTypeSelection('event');
                                         if (chosen) {
                                           setSelectedTriggerEventCategory(getWorkflowTriggerEventCategoryKey(chosen.category));
                                         }
-                                        const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
                                         handleDefinitionChange({ trigger: { ...(existing as any), type: 'event', eventName: next } });
+
+                                        if (shouldAutoAdoptEventSchema && chosenSchemaRef) {
+                                          applyWorkflowInputSchemaRef(chosenSchemaRef);
+                                          return;
+                                        }
+
+                                        setShowUseEventSchemaSuggestion(true);
+                                        setPendingEventSchemaPrompt(
+                                          shouldPromptForEventSchema && chosenSchemaRef
+                                            ? { eventName: next, schemaRef: chosenSchemaRef }
+                                            : null
+                                        );
                                       }}
                                       placeholder={selectedTriggerEventCategory ? 'Select event' : 'Select category first'}
                                       dropdownMode="overlay"
@@ -3686,18 +3786,32 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               <div>
                                 Mapping is required because trigger schema and workflow input schema do not match.
                               </div>
-                              <Button
-                                id="workflow-designer-trigger-mapping-jump-to-contract"
-                                variant="ghost"
-                                size="sm"
-                                type="button"
-                                className="h-auto px-2 py-1 text-xs text-destructive hover:opacity-80"
-                                onClick={() => {
-                                  setShowTriggerMapping(true);
-                                }}
-                              >
-                                Configure mapping
-                              </Button>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {showUseEventSchemaSuggestion && triggerSourceSchemaRef && (
+                                  <Button
+                                    id="workflow-designer-trigger-use-event-schema"
+                                    variant="outline"
+                                    size="sm"
+                                    type="button"
+                                    className="h-auto px-2 py-1 text-xs"
+                                    onClick={handleUseEventSchemaForWorkflowInput}
+                                  >
+                                    Use event schema
+                                  </Button>
+                                )}
+                                <Button
+                                  id="workflow-designer-trigger-mapping-jump-to-contract"
+                                  variant="ghost"
+                                  size="sm"
+                                  type="button"
+                                  className="h-auto px-2 py-1 text-xs text-destructive hover:opacity-80"
+                                  onClick={() => {
+                                    setShowTriggerMapping(true);
+                                  }}
+                                >
+                                  Configure mapping
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -3728,6 +3842,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     } else {
                                       nextTrigger.sourcePayloadSchemaRef = value;
                                     }
+                                    setHasExplicitContractEdits(true);
+                                    setShowUseEventSchemaSuggestion(true);
                                     handleDefinitionChange({ trigger: nextTrigger });
                                   }}
                                   placeholder="Use catalog schema…"
@@ -3801,6 +3917,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     onChange={(next) => {
                                       const nextTrigger: any = { ...activeDefinition.trigger };
                                       nextTrigger.payloadMapping = Object.keys(next).length > 0 ? next : undefined;
+                                      setHasExplicitContractEdits(true);
+                                      setShowUseEventSchemaSuggestion(false);
                                       handleDefinitionChange({ trigger: nextTrigger });
                                     }}
                                     targetFields={triggerMappingTargetFields}
@@ -3837,8 +3955,20 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         )}
                       </div>
                       {activeDefinition?.trigger?.type === 'event' && triggerPayloadMappingInfo.mappingRequired && !contractSettingsExpanded && (
-                        <div className="mt-1 text-xs text-warning-foreground">
-                          Trigger mapping is required. Open Advanced schema settings to configure it.
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-warning-foreground">
+                          <span>Trigger mapping is required. Open Advanced schema settings to configure it.</span>
+                          {showUseEventSchemaSuggestion && triggerSourceSchemaRef && !triggerPayloadMappingInfo.mappingProvided && (
+                            <Button
+                              id="workflow-designer-contract-use-event-schema"
+                              variant="ghost"
+                              size="sm"
+                              type="button"
+                              className="h-auto px-2 py-1 text-xs text-warning-foreground hover:opacity-80"
+                              onClick={handleUseEventSchemaForWorkflowInput}
+                            >
+                              Use event schema
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -3950,6 +4080,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                 } catch {}
                                 setPayloadSchemaModeDraft('pinned');
                                 setSchemaInferenceEnabled(false);
+                                setHasExplicitContractEdits(true);
+                                setShowUseEventSchemaSuggestion(false);
                                 const pinned = pinnedPayloadSchemaRefDraft || activeDefinition.payloadSchemaRef || '';
                                 if (pinned) {
                                   setPinnedPayloadSchemaRefDraft(pinned);
@@ -3970,6 +4102,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               setPayloadSchemaModeDraft('inferred');
                               setSchemaInferenceEnabled(true);
                               setSchemaRefAdvanced(false);
+                              setHasExplicitContractEdits(true);
+                              setShowUseEventSchemaSuggestion(false);
                               setPinnedPayloadSchemaRefDraft(activeDefinition.payloadSchemaRef ?? pinnedPayloadSchemaRefDraft ?? '');
                               lastAppliedInferredRef.current = null;
                               if (inferredSchemaRef && activeDefinition.payloadSchemaRef !== inferredSchemaRef) {
@@ -4005,6 +4139,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                   onChange={(value) => {
                                     if (isTimeTrigger(activeDefinition?.trigger)) return;
                                     setPinnedPayloadSchemaRefDraft(value);
+                                    setHasExplicitContractEdits(true);
+                                    setShowUseEventSchemaSuggestion(false);
                                     analytics.capture('workflow.payload_schema_ref.selected', {
                                       schemaRef: value || null,
                                       workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
@@ -4047,6 +4183,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                   value={activeDefinition?.payloadSchemaRef ?? ''}
                                   onChange={(event) => {
                                     setPinnedPayloadSchemaRefDraft(event.target.value);
+                                    setHasExplicitContractEdits(true);
+                                    setShowUseEventSchemaSuggestion(false);
                                     handleDefinitionChange({ payloadSchemaRef: event.target.value });
                                   }}
                                   disabled={!canManage}
@@ -4653,6 +4791,23 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         message="You have unsaved changes in this workflow. Discard them and continue?"
         confirmLabel="Discard changes"
         cancelLabel="Keep editing"
+      />
+
+      <ConfirmationDialog
+        id="workflow-designer-event-schema-adoption-dialog"
+        isOpen={pendingEventSchemaPrompt !== null}
+        onClose={() => setPendingEventSchemaPrompt(null)}
+        onConfirm={() => {
+          if (!pendingEventSchemaPrompt) return;
+          setHasExplicitContractEdits(true);
+          applyWorkflowInputSchemaRef(pendingEventSchemaPrompt.schemaRef);
+        }}
+        title="Switch workflow input schema?"
+        message={pendingEventSchemaPrompt
+          ? `The selected event ${pendingEventSchemaPrompt.eventName} uses ${pendingEventSchemaPrompt.schemaRef}. Do you want to switch this workflow to that event schema?`
+          : 'Do you want to switch this workflow to the selected event schema?'}
+        confirmLabel="Use event schema"
+        cancelLabel="Keep current schema"
       />
 
       <div className="flex-1 min-h-0 overflow-hidden">

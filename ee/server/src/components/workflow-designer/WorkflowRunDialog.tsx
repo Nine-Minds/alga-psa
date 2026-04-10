@@ -150,6 +150,83 @@ const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unkn
   }
 };
 
+const buildSyntheticValueFromSchema = (schema: JsonSchema, root: JsonSchema, path: Array<string | number> = []): unknown => {
+  const resolved = resolveSchemaRef(schema, root);
+
+  if (resolved.examples?.length) {
+    return resolved.examples[0];
+  }
+  if (resolved.example !== undefined) {
+    return resolved.example;
+  }
+  if (resolved.default !== undefined) {
+    return resolved.default;
+  }
+  if (resolved.anyOf?.length) {
+    return buildSyntheticValueFromSchema(resolved.anyOf[0], root, path);
+  }
+  if (resolved.oneOf?.length) {
+    return buildSyntheticValueFromSchema(resolved.oneOf[0], root, path);
+  }
+  if (resolved.enum?.length) {
+    return resolved.enum[0];
+  }
+
+  const type = Array.isArray(resolved.type) ? resolved.type[0] : resolved.type;
+  const fieldName = String(path[path.length - 1] ?? '').toLowerCase();
+
+  switch (type) {
+    case 'object': {
+      const required = new Set(resolved.required ?? []);
+      return Object.entries(resolved.properties ?? {}).reduce<Record<string, unknown>>((acc, [key, childSchema]) => {
+        if (required.has(key) || childSchema.default !== undefined || childSchema.example !== undefined || childSchema.examples?.length || childSchema.enum?.length) {
+          acc[key] = buildSyntheticValueFromSchema(childSchema, root, [...path, key]);
+        }
+        return acc;
+      }, {});
+    }
+    case 'array': {
+      if (!resolved.items) return [];
+      return [buildSyntheticValueFromSchema(resolved.items, root, [...path, 0])];
+    }
+    case 'string': {
+      if (resolved.format === 'date-time') return new Date().toISOString();
+      if (resolved.format === 'date') return new Date().toISOString().slice(0, 10);
+      if (resolved.format === 'uuid' || fieldName.endsWith('id') || fieldName === 'id') {
+        return `${fieldName || 'id'}-sample-123`;
+      }
+      if (fieldName.includes('email')) return 'sample@example.com';
+      if (fieldName.includes('name')) return 'Sample Name';
+      if (fieldName.includes('type')) return 'sample';
+      return fieldName ? `${fieldName}-sample` : 'sample';
+    }
+    case 'number':
+    case 'integer':
+      return 1;
+    case 'boolean':
+      return true;
+    default:
+      return null;
+  }
+};
+
+const buildInitialPayloadFromSchema = (schema: JsonSchema | null): Record<string, unknown> => {
+  if (!schema) return {};
+  const examples = schema.examples ?? (schema.example !== undefined ? [schema.example] : []);
+  const fromExample = examples.find((entry) => entry && typeof entry === 'object' && !Array.isArray(entry));
+  if (fromExample) {
+    return fromExample as Record<string, unknown>;
+  }
+  const synthetic = buildSyntheticValueFromSchema(schema, schema);
+  if (synthetic && typeof synthetic === 'object' && !Array.isArray(synthetic)) {
+    return synthetic as Record<string, unknown>;
+  }
+  const fallback = buildDefaultValueFromSchema(schema, schema);
+  return fallback && typeof fallback === 'object' && !Array.isArray(fallback)
+    ? fallback as Record<string, unknown>
+    : {};
+};
+
 const setValueAtPath = (root: unknown, path: Array<string | number>, value: unknown): unknown => {
   if (path.length === 0) return value;
   const [head, ...rest] = path;
@@ -280,6 +357,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const [isStartingRun, setIsStartingRun] = useState(false);
   const [mode, setMode] = useState<'json' | 'form'>('json');
   const [schemaErrors, setSchemaErrors] = useState<ValidationError[]>([]);
+  const [showValidationSummary, setShowValidationSummary] = useState(false);
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetName, setPresetName] = useState('');
   const [confirmSystemRun, setConfirmSystemRun] = useState(false);
@@ -385,6 +463,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       } catch {}
     } else if (triggerEventName) {
       setSchemaSource('event');
+      setMode('form');
     } else {
       setSchemaSource('payload');
     }
@@ -540,11 +619,15 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   useEffect(() => {
     if (!isOpen || !hasLoadedOptions) return;
     if (payloadTouched) return;
-    const text = JSON.stringify(defaults ?? {}, null, 2);
+    const initialPayload = schemaSource === 'event' && activeSchema
+      ? buildInitialPayloadFromSchema(activeSchema)
+      : ((defaults ?? {}) as Record<string, unknown>);
+    const text = JSON.stringify(initialPayload ?? {}, null, 2);
     setRunPayloadText(text);
-    setFormValue(defaults ?? {});
+    setFormValue(initialPayload ?? {});
     setRunPayloadError(null);
-  }, [defaults, hasLoadedOptions, isOpen, payloadTouched]);
+    setShowValidationSummary(false);
+  }, [activeSchema, defaults, hasLoadedOptions, isOpen, payloadTouched, schemaSource]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -638,6 +721,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const handleRunPayloadChange = (value: string) => {
     setRunPayloadText(value);
     setPayloadTouched(true);
+    setShowValidationSummary(true);
     try {
       const parsed = JSON.parse(value);
       setFormValue(parsed);
@@ -654,10 +738,14 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     setFormValue(payload);
     setRunPayloadError(null);
     setPayloadTouched(markTouched);
+    setShowValidationSummary(markTouched);
   };
 
   const handleResetDefaults = () => {
-    applyTemplate((defaults ?? {}) as Record<string, unknown>, { markTouched: true });
+    const resetPayload = schemaSource === 'event' && activeSchema
+      ? buildInitialPayloadFromSchema(activeSchema)
+      : ((defaults ?? {}) as Record<string, unknown>);
+    applyTemplate(resetPayload, { markTouched: true });
   };
 
   const handleCloneLatest = async () => {
@@ -735,6 +823,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       setRunPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
       return;
     }
+    setShowValidationSummary(true);
     setIsStartingRun(true);
     try {
       const result = await startWorkflowRunAction({
@@ -758,6 +847,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
   const updateFormValue = (updater: (prev: unknown) => unknown) => {
     setPayloadTouched(true);
+    setShowValidationSummary(true);
     setFormValue((prev: unknown) => updater(prev));
   };
 
@@ -1430,9 +1520,10 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             <div key={warning} className="text-xs text-yellow-700">{warning}</div>
           ))}
 
-          {schemaErrors.length > 0 && (
+          {showValidationSummary && schemaErrors.length > 0 && (
             <div className="rounded border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive space-y-1">
-              <div className="font-semibold">Schema validation errors</div>
+              <div className="font-semibold">Payload still needs required event fields before this run can start</div>
+              <div>Fill the missing fields below, switch to Form Builder, or use a sample payload button.</div>
               {schemaErrors.slice(0, 6).map((err, index) => (
                 <div key={`${err.path}-${index}`}>{err.path || 'payload'}: {err.message}</div>
               ))}
