@@ -508,35 +508,46 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Discrepancy Details</CardTitle>
+                <CardTitle>
+                  {t('reconciliation.sections.discrepancyDetails', { defaultValue: 'Discrepancy Details' })}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <div>
-                      <p className="text-sm text-[rgb(var(--color-text-500))]">Client</p>
+                      <p className="text-sm text-[rgb(var(--color-text-500))]">
+                        {t('reconciliation.fields.client', { defaultValue: 'Client' })}
+                      </p>
                       <p className="font-medium">{client?.name || report.client_id}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-[rgb(var(--color-text-500))]">Status</p>
+                      <p className="text-sm text-[rgb(var(--color-text-500))]">
+                        {t('reconciliation.fields.status', { defaultValue: 'Status' })}
+                      </p>
                       <Badge className="bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-900))] flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" /> Open
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {t('reconciliation.status.open', { defaultValue: 'Open' })}
                       </Badge>
                     </div>
                   </div>
                   
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Detected</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">
+                      {t('reconciliation.fields.detected', { defaultValue: 'Detected' })}
+                    </p>
                     <p className="font-medium">{formatDateTime(parseISO(report.detection_date), 'PPpp')}</p>
                   </div>
                   
                   {isCreditTrackingIssue && report.metadata && (
                     <div>
-                      <p className="text-sm text-[rgb(var(--color-text-500))]">Issue Type</p>
+                      <p className="text-sm text-[rgb(var(--color-text-500))]">
+                        {t('reconciliation.fields.issueType', { defaultValue: 'Issue Type' })}
+                      </p>
                       <p className="font-medium">
                         {report.metadata.issue_type === 'missing_credit_tracking_entry'
-                          ? 'Missing Credit Tracking Entry'
-                          : 'Inconsistent Credit Remaining Amount'}
+                          ? t('reconciliation.issueTypes.missingCreditTrackingEntry', { defaultValue: 'Missing Credit Tracking Entry' })
+                          : t('reconciliation.issueTypes.inconsistentCreditRemainingAmount', { defaultValue: 'Inconsistent Credit Remaining Amount' })}
                       </p>
                     </div>
                   )}
@@ -546,26 +557,34 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
             
             <Card>
               <CardHeader>
-                <CardTitle>Balance Comparison</CardTitle>
+                <CardTitle>
+                  {t('reconciliation.sections.balanceComparison', { defaultValue: 'Balance Comparison' })}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-[rgb(var(--color-primary-50))] p-4 rounded-lg">
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Expected Balance</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">
+                      {t('reconciliation.fields.expectedBalance', { defaultValue: 'Expected Balance' })}
+                    </p>
                     <p className="text-2xl font-bold text-[rgb(var(--color-primary-700))]">
                       {formatCurrency(report.expected_balance)}
                     </p>
                   </div>
                   
                   <div className="bg-[rgb(var(--color-accent-50))] p-4 rounded-lg">
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Actual Balance</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">
+                      {t('reconciliation.fields.actualBalance', { defaultValue: 'Actual Balance' })}
+                    </p>
                     <p className="text-2xl font-bold text-[rgb(var(--color-accent-700))]">
                       {formatCurrency(report.actual_balance)}
                     </p>
                   </div>
                   
                   <div className="col-span-2 bg-[rgb(var(--color-secondary-50))] p-4 rounded-lg">
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Difference</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">
+                      {t('reconciliation.fields.difference', { defaultValue: 'Difference' })}
+                    </p>
                     <p className={`text-2xl font-bold ${report.difference >= 0
                       ? 'text-[rgb(var(--color-primary-700))]'
                       : 'text-[rgb(var(--color-destructive-600))]'}`}>
@@ -581,7 +600,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
           {isCreditTrackingIssue && report.metadata && (
             <Card>
               <CardHeader>
-                <CardTitle>Issue Details</CardTitle>
+                <CardTitle>
+                  {t('reconciliation.sections.issueDetails', { defaultValue: 'Issue Details' })}
+                </CardTitle>
                 <CardDescription>
                   Detailed information about the credit tracking issue
                 </CardDescription>
@@ -591,7 +612,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                   <div className="space-y-4">
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
-                      <div className="font-semibold">Missing Credit Tracking Entry</div>
+                      <div className="font-semibold">
+                        {t('reconciliation.issueTypes.missingCreditTrackingEntry', { defaultValue: 'Missing Credit Tracking Entry' })}
+                      </div>
                       <AlertDescription>
                         A credit transaction was found without a corresponding credit tracking entry.
                       </AlertDescription>
@@ -632,7 +655,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                   <div className="space-y-4">
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
-                      <div className="font-semibold">Inconsistent Credit Remaining Amount</div>
+                      <div className="font-semibold">
+                        {t('reconciliation.issueTypes.inconsistentCreditRemainingAmount', { defaultValue: 'Inconsistent Credit Remaining Amount' })}
+                      </div>
                       <AlertDescription>
                         The remaining amount in a credit tracking entry doesn't match the expected value based on transaction history.
                       </AlertDescription>
