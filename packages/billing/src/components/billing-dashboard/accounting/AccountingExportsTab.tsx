@@ -10,6 +10,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   createAccountingExportBatch,
   executeAccountingExportBatch,
@@ -87,6 +88,7 @@ const DEFAULT_ADAPTERS = [
 ] as const;
 
 export default function AccountingExportsTab(): React.JSX.Element {
+  const { t } = useTranslation('msp/billing');
   const [loading, setLoading] = useState(true);
   const [batches, setBatches] = useState<AccountingExportBatch[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
@@ -115,11 +117,13 @@ export default function AccountingExportsTab(): React.JSX.Element {
       setBatches(Array.isArray(typedData) ? typedData : []);
     } catch (e) {
       setBatches([]);
-      handleError(e, 'Failed to load accounting export batches');
+      handleError(e, t('accountingExports.toast.loadBatchesError', {
+        defaultValue: 'Failed to load accounting export batches',
+      }));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const loadBatchDetail = useCallback(async (batchId: string) => {
     setDetailLoading(true);
@@ -198,11 +202,15 @@ export default function AccountingExportsTab(): React.JSX.Element {
         handleError(result.permissionError);
         return;
       }
-      toast.success('Batch execution started');
+      toast.success(t('accountingExports.toast.executing', {
+        defaultValue: 'Batch execution started',
+      }));
       await loadBatches();
       await loadBatchDetail(batchId);
     } catch (e) {
-      handleError(e, 'Failed to execute batch');
+      handleError(e, t('accountingExports.toast.executeError', {
+        defaultValue: 'Failed to execute batch',
+      }));
     }
   };
 
@@ -211,9 +219,11 @@ export default function AccountingExportsTab(): React.JSX.Element {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
-            <CardTitle>Accounting Exports</CardTitle>
+            <CardTitle>{t('accountingExports.title', { defaultValue: 'Accounting Exports' })}</CardTitle>
             <CardDescription>
-              Create export batches, validate mappings, and deliver files for manual import into your accounting system.
+              {t('accountingExports.description', {
+                defaultValue: 'Create export batches, validate mappings, and deliver files for manual import into your accounting system.',
+              })}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -223,28 +233,34 @@ export default function AccountingExportsTab(): React.JSX.Element {
               onClick={() => void loadBatches()}
               disabled={loading}
             >
-              Refresh
+              {t('accountingExports.actions.refresh', { defaultValue: 'Refresh' })}
             </Button>
             <Button onClick={() => setCreateOpen(true)} id="accounting-exports-new-batch">
-              New Export
+              {t('accountingExports.actions.newExport', { defaultValue: 'New Export' })}
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-sm text-muted-foreground">Loading batches...</div>
+            <div className="text-sm text-muted-foreground">
+              {t('accountingExports.states.loadingBatches', { defaultValue: 'Loading batches...' })}
+            </div>
           ) : batches.length === 0 ? (
-            <div className="text-sm text-muted-foreground">No export batches yet.</div>
+            <div className="text-sm text-muted-foreground">
+              {t('accountingExports.states.empty', { defaultValue: 'No export batches yet.' })}
+            </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Batch</TableHead>
-                  <TableHead>Adapter</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('accountingExports.table.batch', { defaultValue: 'Batch' })}</TableHead>
+                  <TableHead>{t('accountingExports.table.adapter', { defaultValue: 'Adapter' })}</TableHead>
+                  <TableHead>{t('accountingExports.table.status', { defaultValue: 'Status' })}</TableHead>
+                  <TableHead>{t('accountingExports.table.created', { defaultValue: 'Created' })}</TableHead>
+                  <TableHead>{t('accountingExports.table.updated', { defaultValue: 'Updated' })}</TableHead>
+                  <TableHead className="text-right">
+                    {t('accountingExports.table.actions', { defaultValue: 'Actions' })}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -263,7 +279,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
                           onClick={() => setSelectedBatchId(batch.batch_id)}
                           id={`accounting-exports-open-${batch.batch_id}`}
                         >
-                          Open
+                          {t('accountingExports.actions.open', { defaultValue: 'Open' })}
                         </Button>
                         <Button
                           variant="default"
@@ -271,7 +287,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
                           onClick={() => void onExecute(batch.batch_id)}
                           id={`accounting-exports-execute-${batch.batch_id}`}
                         >
-                          Execute
+                          {t('accountingExports.actions.execute', { defaultValue: 'Execute' })}
                         </Button>
                       </div>
                     </TableCell>

@@ -67,6 +67,7 @@ credits, and service catalog are handled in separate plans.
 - **(2026-04-10)** `UsageTracking.tsx` already had a clean separation between list-shell strings and dialog/toast strings. That makes it safe to split the i18n pass into F017 (table/filter shell) and F018 (dialog, guidance, toasts) without touching locale structure in between.
 - **(2026-04-10)** `LineItem.tsx` can be split cleanly between content labels/summary strings and the remaining chrome-only strings. The existing `lineItem.*` locale group already covers both halves, so F019/F020 do not need additional locale keys unless a hidden string surfaces during test coverage.
 - **(2026-04-10)** `FixedContractLineServicesList.tsx` already has a complete `contractLineServices.*` locale group for both the table shell and add-services drawer copy. The only extra reuse needed is `common.notAvailable` / `common.openMenu` for fallback and accessibility labels, so F021/F022 can stay locale-neutral unless a new error state appears.
+- **(2026-04-10)** `AccountingExportsTab.tsx` already has enough `accountingExports.*` keys for the card shell and both dialogs, but it does not yet have explicit status-label keys for backend values like `pending`, `delivered`, and `needs_attention`. Those raw status codes are still visible after the first shell pass and need a follow-up before the PRD is truly done.
 - **(2026-04-09)** `ContractsHub.tsx` is small (77 LOC) but renders tab labels that should
   use `msp/billing` namespace for consistency with the billing dashboard.
 - **(2026-04-09)** `PropertyEditor.tsx` and `ConditionalRuleManager.tsx` are part of the
@@ -140,6 +141,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F020 complete** -- Finished `LineItem.tsx` by translating the expanded header labels (`Discount`, `Item {{number}}`, `Marked for removal`), action buttons, discount type select options, the `Entire Invoice` target option, and the percentage-discount “calculated on save” hint. This closes out the top-level line-item editor without expanding the `lineItem.*` locale group.
 - **(2026-04-10) F021 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/FixedContractLineServicesList.tsx` for the associated-services table headers, billing-method labels, Product/Service badges, default-rate tooltip, action-menu labels, missing-price cell text, and the small accessibility/fallback strings (`Open menu`, `N/A`, `Unknown Service`). No locale regeneration was needed because the seeded `contractLineServices.*` keys plus `common.*` already covered the table shell.
 - **(2026-04-10) F022 complete** -- Finished `FixedContractLineServicesList.tsx` by translating the load/add/remove error messages, loading/empty states, add-services section heading, service metadata rows, product custom-rate label, count-aware add button, and the `Unknown Service` fallback passed into the quantity dialog. This closes out the fixed contract-line services list without adding new locale keys beyond the original `contractLineServices.*` plan.
+- **(2026-04-10) F023 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/accounting/AccountingExportsTab.tsx` for the card title/description, batch table headers, outer action buttons, list loading/empty states, and the list-side execute/load-batches feedback messages. This leaves the create/detail dialogs plus status-label normalization for follow-up commits.
 
 ## Runbook
 
@@ -149,3 +151,4 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - `rm -rf server/public/locales/--help && node scripts/validate-translations.cjs`
 - `npm exec eslint -- packages/billing/src/components/billing-dashboard/LineItem.tsx`
 - `npm exec eslint -- packages/billing/src/components/billing-dashboard/FixedContractLineServicesList.tsx`
+- `npm exec eslint -- packages/billing/src/components/billing-dashboard/accounting/AccountingExportsTab.tsx`

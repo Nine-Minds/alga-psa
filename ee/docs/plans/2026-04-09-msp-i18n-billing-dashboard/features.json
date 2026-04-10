@@ -112,7 +112,7 @@
   {
     "id": "F023",
     "description": "Wire useTranslation('msp/billing') in AccountingExportsTab.tsx — card title/description, batch table headers (Batch/Adapter/Status/Created/Updated/Actions), action buttons (Refresh/New Export/Open/Execute), loading/empty states",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F024",
