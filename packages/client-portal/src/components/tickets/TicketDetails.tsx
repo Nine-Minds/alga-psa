@@ -2,10 +2,10 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket details intentionally compose ticket feature UI for customer-facing support workflows. */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
-import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
+import { RichTextViewer } from '@alga-psa/ui/editor';
 import { Card } from '@alga-psa/ui/components/Card';
 import { TicketDocumentsSection, TicketConversation, TicketAppointmentRequests, TicketOriginBadge, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
@@ -23,7 +23,6 @@ import {
   updateClientTicketComment,
   deleteClientTicketComment,
   updateTicketStatus,
-  updateClientTicketDescription,
   getAppointmentRequestsByTicketId
 } from '@alga-psa/client-portal/actions';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -36,9 +35,6 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { IStatus } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { Button } from '@alga-psa/ui/components/Button';
-import { Pencil } from 'lucide-react';
-import { parseTicketRichTextContent, serializeTicketRichTextContent } from '@alga-psa/tickets/lib';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -81,49 +77,7 @@ export function TicketDetails({
   const [statusOptions] = useState<IStatus[]>(initialStatusOptions);
   const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
   const [ticketToUpdateStatus, setTicketToUpdateStatus] = useState<{ ticketId: string; newStatusId: string; currentStatusName: string; newStatusName: string; } | null>(null);
-  // Description editing state
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
-  const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
-    parseTicketRichTextContent(ticket.attributes?.description as string | undefined)
-  );
-  const originalDescriptionRef = useRef<PartialBlock[] | null>(null);
-  const [isDescriptionSubmitting, setIsDescriptionSubmitting] = useState(false);
-
-  // Sync description content when ticket data changes (but not while editing)
-  useEffect(() => {
-    if (isEditingDescription) return;
-    const parsed = parseTicketRichTextContent(ticket.attributes?.description as string | undefined);
-    setDescriptionContent(parsed);
-    originalDescriptionRef.current = parsed;
-  }, [ticket.attributes?.description, isEditingDescription]);
-
-  const handleSaveDescription = useCallback(async () => {
-    if (!ticket.ticket_id) return;
-    try {
-      setIsDescriptionSubmitting(true);
-      const serialized = serializeTicketRichTextContent(descriptionContent);
-      await updateClientTicketDescription(ticket.ticket_id, serialized);
-      originalDescriptionRef.current = descriptionContent;
-      setIsEditingDescription(false);
-      toast.success(t('messages.descriptionUpdated', 'Description updated successfully'));
-      // Refresh ticket data
-      const details = await getClientTicketDetails(ticketId);
-      setTicket(details);
-    } catch (error) {
-      handleError(error, t('messages.descriptionUpdateError', 'Failed to update description'));
-    } finally {
-      setIsDescriptionSubmitting(false);
-    }
-  }, [ticket.ticket_id, ticketId, descriptionContent, t]);
-
-  const handleCancelDescriptionEdit = useCallback(() => {
-    const original = originalDescriptionRef.current ??
-      parseTicketRichTextContent(ticket.attributes?.description as string | undefined);
-    setDescriptionContent(original);
-    setIsEditingDescription(false);
-  }, [ticket.attributes?.description]);
-
-  const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{
+  const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{ 
     type: "paragraph",
     props: {
       textAlignment: "left",
@@ -718,61 +672,23 @@ export function TicketDetails({
 
             {/* Description */}
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <label className="font-bold text-gray-900">
-                  {t('fields.description', 'Description')}
-                </label>
-                {!isEditingDescription && (
-                  <button
-                    id="client-portal-edit-description-btn"
-                    onClick={() => {
-                      originalDescriptionRef.current = descriptionContent;
-                      setIsEditingDescription(true);
-                    }}
-                    className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
-                    title={t('actions.editDescription', 'Edit description')}
-                  >
-                    <Pencil className="w-4 h-4 text-gray-500" />
-                  </button>
-                )}
+              <label className="font-bold text-gray-900 block mb-2">
+                {t('fields.description', 'Description')}
+              </label>
+              <div className="prose max-w-none break-words overflow-hidden min-w-0" style={{overflowWrap: 'break-word', wordBreak: 'break-word'}}>
+                {(() => {
+                  const description = ticket.attributes?.description;
+                  if (!description) {
+                    return t('messages.noDescription', 'No description found.');
+                  }
+                  return (
+                    <RichTextViewer
+                      content={description as string | PartialBlock[]}
+                      className="break-words max-w-full min-w-0"
+                    />
+                  );
+                })()}
               </div>
-
-              {isEditingDescription ? (
-                <div className="min-w-0 w-full">
-                  <TextEditor
-                    id="client-portal-description-editor"
-                    initialContent={descriptionContent}
-                    onContentChange={(content) => setDescriptionContent(content)}
-                  />
-                  <div className="flex justify-end space-x-2 mt-2">
-                    <Button
-                      id="client-portal-save-description-btn"
-                      onClick={handleSaveDescription}
-                      disabled={isDescriptionSubmitting}
-                    >
-                      {isDescriptionSubmitting
-                        ? t('actions.saving', 'Saving...')
-                        : t('actions.save', 'Save')}
-                    </Button>
-                    <Button
-                      id="client-portal-cancel-description-btn"
-                      variant="outline"
-                      onClick={handleCancelDescriptionEdit}
-                      disabled={isDescriptionSubmitting}
-                    >
-                      {t('actions.cancel', 'Cancel')}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="prose max-w-none break-words overflow-hidden min-w-0" style={{overflowWrap: 'break-word', wordBreak: 'break-word'}}>
-                  {(() => {
-                    const descriptionText = ticket.attributes?.description as string;
-                    if (!descriptionText) return t('messages.noDescription', 'No description found.');
-                    return <RichTextViewer content={descriptionText} className="break-words max-w-full min-w-0" />;
-                  })()}
-                </div>
-              )}
             </div>
           </div>
 
