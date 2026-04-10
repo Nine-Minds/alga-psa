@@ -69,10 +69,10 @@
       "notHelpful": "Niet nuttig"
     },
     "actions": {
-      "edit": "Bewerking",
+      "edit": "Bewerken",
       "submitForReview": "Ter beoordeling indienen",
       "publish": "Publiceren",
-      "archive": "Archief"
+      "archive": "Archiveren"
     },
     "pagination": {
       "itemsPerPage": {
@@ -86,7 +86,7 @@
     },
     "dialogs": {
       "archive": {
-        "title": "Archief artikel",
+        "title": "Artikel archiveren",
         "message": "Weet u zeker dat u \"{{title}}\" wilt archiveren? Hierdoor wordt het verwijderd uit de zichtbaarheid van de klant."
       }
     },
@@ -98,14 +98,14 @@
   "editor": {
     "header": {
       "untitled": "Naamloos artikel",
-      "back": "Rug"
+      "back": "Terug"
     },
     "actions": {
       "submitForReview": "Ter beoordeling indienen",
       "publish": "Publiceren",
-      "archive": "Archief",
+      "archive": "Archiveren",
       "saveMetadata": "Metagegevens opslaan",
-      "saving": "Besparing..."
+      "saving": "Opslaan..."
     },
     "feedback": {
       "permissionDenied": "Toestemming geweigerd",

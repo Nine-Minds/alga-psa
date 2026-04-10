@@ -11,7 +11,7 @@
       "compareAll": "Porównaj wszystko",
       "clearAll": "Wyczyść wszystko",
       "viewWeek": "Zobacz tydzień",
-      "compare": "Porównywać",
+      "compare": "Porównaj",
       "stopComparing": "Przestań porównywać"
     },
     "labels": {
@@ -23,7 +23,7 @@
     }
   },
   "agentView": {
-    "loading": "Załadunek...",
+    "loading": "Ładowanie...",
     "errors": {
       "loadPermissions": "Nie udało się załadować uprawnień użytkownika",
       "forbidden": "Nie masz uprawnień do przeglądania tego harmonogramu."
@@ -36,14 +36,14 @@
         "projectTask": "Zadanie projektowe",
         "nonBillableCategory": "Kategoria niepodlegająca rozliczeniu",
         "adHoc": "Wpis ad hoc",
-        "interaction": "Wzajemne oddziaływanie",
+        "interaction": "Interakcja",
         "appointmentRequest": "Zapytanie o spotkanie"
       },
       "showInactiveUsers": "Pokaż nieaktywnych użytkowników"
     },
     "loading": {
       "initial": "Ładowanie harmonogramu...",
-      "overlay": "Załadunek..."
+      "overlay": "Ładowanie..."
     },
     "errors": {
       "validateDeletion": "Nie udało się potwierdzić usunięcia. Spróbuj ponownie.",
@@ -72,7 +72,7 @@
       "fallbacks": {
         "unknownTechnician": "Nieznany",
         "unassigned": "Nieprzypisany",
-        "untitled": "Nieuprawny"
+        "untitled": "Bez tytułu"
       },
       "tooltip": {
         "scheduledFor": "Zaplanowano na: {{technicians}}",
@@ -85,7 +85,7 @@
       "title": "Usuń wpis harmonogramu",
       "messageRecurring": "Wybierz, które wydarzenia chcesz usunąć:",
       "messageSingle": "Czy na pewno chcesz usunąć tę pozycję harmonogramu? Tej akcji nie można cofnąć.",
-      "confirm": "Usuwać",
+      "confirm": "Usuń",
       "entityFallback": "ten wpis harmonogramu",
       "options": {
         "single": "Tylko to wydarzenie",
@@ -109,7 +109,7 @@
       "loadTicket": "Nie udało się załadować biletu",
       "assignTechnicianRequired": "Proszę przypisać technika",
       "approve": "Nie udało się zatwierdzić prośby",
-      "declineReasonRequired": "Podaj powód odmowy",
+      "declineReasonRequired": "Podaj powód odrzucenia",
       "decline": "Nie udało się odrzucić prośby"
     },
     "feedback": {
@@ -119,11 +119,11 @@
     "filters": {
       "statusLabel": "Filtruj według stanu",
       "statusOptions": {
-        "all": "Wszystko",
-        "pending": "Aż do",
-        "approved": "Zatwierdzony",
-        "declined": "Odrzucony",
-        "cancelled": "Odwołany"
+        "all": "Wszystkie",
+        "pending": "Oczekujące",
+        "approved": "Zatwierdzone",
+        "declined": "Odrzucone",
+        "cancelled": "Anulowane"
       }
     },
     "fallbacks": {
@@ -131,7 +131,7 @@
     },
     "list": {
       "title": "Prośby o spotkanie",
-      "badgeTotal": "Całkowity",
+      "badgeTotal": "Razem",
       "loading": "Ładowanie żądań...",
       "empty": "Nie znaleziono żądań {{status}}",
       "duration": "{{count}} minut",
@@ -144,7 +144,7 @@
       "back": "← Powrót do listy",
       "title": "Szczegóły żądania",
       "section": {
-        "requestInformation": "Poproś o informacje"
+        "requestInformation": "Informacje o żądaniu"
       },
       "labels": {
         "reference": "Odniesienie",
@@ -152,7 +152,7 @@
         "contact": "Kontakt",
         "email": "E-mail",
         "phone": "Telefon",
-        "service": "Praca",
+        "service": "Usługa",
         "requestedTime": "Żądany czas",
         "duration": "Czas trwania",
         "status": "Status",
@@ -174,8 +174,8 @@
         "linkedTicket": "Wprowadź identyfikator biletu, aby połączyć..."
       },
       "actions": {
-        "approve": "Zatwierdzić",
-        "decline": "Spadek"
+        "approve": "Zatwierdź",
+        "decline": "Odrzuć"
       }
     },
     "decline": {
@@ -187,8 +187,8 @@
         "reason": "Podaj powód odrzucenia tej prośby..."
       },
       "actions": {
-        "confirm": "Potwierdź odmowę",
-        "cancel": "Anulować"
+        "confirm": "Potwierdź odrzucenie",
+        "cancel": "Anuluj"
       }
     }
   },
@@ -214,18 +214,18 @@
     },
     "common": {
       "yes": "Tak",
-      "no": "NIE",
+      "no": "Nie",
       "columns": {
         "action": "Działanie"
       },
       "actions": {
-        "edit": "Redagować"
+        "edit": "Edytuj"
       },
       "defaultApprover": {
         "placeholder": "Wybierz osobę zatwierdzającą"
       },
       "teamSelect": {
-        "label": "Wybierz opcję Zespół",
+        "label": "Wybierz zespół",
         "placeholder": "Wybierz zespół"
       }
     },
@@ -272,8 +272,8 @@
         "description": "Możesz skonfigurować ustawienia dostępności dla dowolnego użytkownika w systemie. Poniższa tabela „Skonfigurowani użytkownicy” przedstawia wszystkich użytkowników z ustawieniami dostępności."
       },
       "userSelect": {
-        "label": "Wybierz opcję Użytkownik do skonfigurowania",
-        "placeholderSelectTeamFirst": "Najpierw wybierz drużynę",
+        "label": "Wybierz użytkownika do skonfigurowania",
+        "placeholderSelectTeamFirst": "Najpierw wybierz zespół",
         "placeholder": "Wybierz użytkownika do skonfigurowania"
       },
       "appointmentSettings": {
@@ -318,11 +318,11 @@
         }
       },
       "actions": {
-        "save": "Oszczędzaj godziny użytkownika"
+        "save": "Zapisz godziny użytkownika"
       },
       "feedback": {
         "selectUserError": "Wybierz użytkownika",
-        "saveSuccess": "Zaoszczędzone godziny użytkownika",
+        "saveSuccess": "Zapisano godziny użytkownika",
         "saveError": "Nie udało się zapisać godzin użytkownika"
       }
     },
@@ -372,7 +372,7 @@
       "form": {
         "title": "Dodaj wyjątek",
         "date": {
-          "label": "Wybierz opcję Data"
+          "label": "Wybierz datę"
         },
         "user": {
           "label": "Użytkownik (opcjonalnie — pozostaw puste dla całej firmy)",
@@ -397,7 +397,7 @@
         "empty": "Nie skonfigurowano żadnych wyjątków",
         "status": {
           "available": "Dostępny",
-          "unavailable": "Nie płynny"
+          "unavailable": "Niedostępny"
         }
       },
       "feedback": {
@@ -442,14 +442,14 @@
       "notes": "Notatki"
     },
     "actions": {
-      "cancel": "Anulować",
-      "close": "Zamknąć",
-      "save": "Ratować",
+      "cancel": "Anuluj",
+      "close": "Zamknij",
+      "save": "Zapisz",
       "delete": "Usuń wpis"
     },
     "workItem": {
       "adHocFallback": "Wpis ad-hoc (brak elementu roboczego)",
-      "openDetails": "Bliższe dane"
+      "openDetails": "Szczegóły"
     },
     "appointmentRequest": {
       "approved": {
@@ -478,36 +478,36 @@
       "declineReasonLabel": "Powód odrzucenia *",
       "declineReasonPlaceholder": "Podaj powód odrzucenia tej prośby...",
       "actions": {
-        "approve": "Zatwierdzić",
-        "decline": "Spadek",
-        "confirmDecline": "Potwierdź odmowę"
+        "approve": "Zatwierdź",
+        "decline": "Odrzuć",
+        "confirmDecline": "Potwierdź odrzucenie"
       },
       "toasts": {
         "assignTechnicianRequired": "Proszę przypisać technika",
         "approved": "Prośba o spotkanie została zatwierdzona",
         "approveFailed": "Nie udało się zatwierdzić prośby",
-        "declineReasonRequired": "Podaj powód odmowy",
+        "declineReasonRequired": "Podaj powód odrzucenia",
         "declined": "Prośba o spotkanie została odrzucona",
         "declineFailed": "Nie udało się odrzucić prośby"
       }
     },
     "recurrence": {
-      "label": "Nawrót",
+      "label": "Powtarzanie",
       "intervalLabel": "Interwał",
       "endLabel": "Koniec",
       "endDateLabel": "Data zakończenia",
-      "occurrencesLabel": "Zdarzenia",
+      "occurrencesLabel": "Wystąpienia",
       "workdaysOnly": "Tylko w dni robocze (od poniedziałku do piątku, z wyłączeniem świąt)",
       "options": {
-        "none": "Nic",
+        "none": "Brak",
         "daily": "Codziennie",
-        "weekly": "Tygodnik",
-        "monthly": "Miesięczny",
-        "yearly": "Rocznie"
+        "weekly": "Co tydzień",
+        "monthly": "Co miesiąc",
+        "yearly": "Co rok"
       },
       "endOptions": {
         "never": "Nigdy",
-        "date": "Na randce",
+        "date": "W dniu",
         "count": "Po"
       },
       "applyDialog": {
@@ -521,7 +521,7 @@
       "scopeDialog": {
         "title": "Usuń wpis harmonogramu",
         "message": "Wybierz, które wydarzenia chcesz usunąć:",
-        "confirm": "Kontynuować"
+        "confirm": "Kontynuuj"
       }
     },
     "scopeOptions": {

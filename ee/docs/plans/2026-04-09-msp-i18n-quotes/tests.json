@@ -153,5 +153,18 @@
     "description": "npm run build succeeds with no TypeScript errors after all quote i18n wiring is complete",
     "implemented": false,
     "featureIds": ["F019"]
+  },
+
+  {
+    "id": "T025",
+    "description": "QuoteLineItemsEditor.tsx markup badge and currency-mismatch tooltip use t() with {{value}}, {{costCurrency}}, and {{quoteCurrency}} interpolation -- no remaining hardcoded 'Markup unavailable', '% markup', or 'Markup can't be calculated...' literals in JSX, and the new keys exist under quoteLineItems.markup.* in all 9 locale files",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T026",
+    "description": "QuoteSendRecipientsField.tsx compiles with useTranslation('msp/quotes') -- trigger labels, search placeholder, empty states, kind badges, and Remove {{email}} aria-label all use t(); no remaining hardcoded English strings in JSX; quoteRecipients.* key group present in all 9 locale files",
+    "implemented": false,
+    "featureIds": ["F021"]
   }
 ]

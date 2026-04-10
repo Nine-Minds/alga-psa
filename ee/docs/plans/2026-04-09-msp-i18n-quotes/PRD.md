@@ -37,7 +37,7 @@ The entire quoting UI -- create/edit forms, detail views, quote lists, approval 
 | 2 | `QuoteDetail.tsx` | 1,106 | ~200-280 | Full detail view + all action dialogs + conversion preview + activity log |
 | 3 | `QuotesTab.tsx` | 656 | ~80-120 | Quote list tab with sub-tabs, filters, row actions, send/delete dialogs |
 | 4 | `QuoteDocumentTemplateEditor.tsx` | 596 | ~60-90 | Visual/code template editor with preview pipeline |
-| 5 | `QuoteLineItemsEditor.tsx` | 585 | ~70-100 | Line items table, discount panel, phase sections, inline editing |
+| 5 | `QuoteLineItemsEditor.tsx` | 676 | ~80-115 | Line items table, discount panel, phase sections, inline editing, **product markup badge (+tooltip for cost/quote currency mismatch)** |
 | 6 | `QuoteDocumentTemplatesPage.tsx` | 299 | ~30-45 | Template list page with actions menu |
 | 7 | `QuoteConversionDialog.tsx` | 293 | ~40-55 | Standalone conversion dialog with mode selection and item preview |
 | 8 | `QuoteApprovalDashboard.tsx` | 245 | ~35-50 | Approval queue with settings toggle |
@@ -45,7 +45,8 @@ The entire quoting UI -- create/edit forms, detail views, quote lists, approval 
 | 10 | `QuotePreviewPanel.tsx` | 215 | ~15-25 | Preview panel with template selector |
 | 11 | `QuoteStatusBadge.tsx` | 37 | 0 | Uses `QUOTE_STATUS_METADATA` -- no local strings |
 | 12 | `quoteLineItemDraft.ts` | 247 | 0 | Pure logic utilities -- no rendered strings |
-| | **Total** | **5,566** | **~535-1,050** | |
+| 13 | `QuoteSendRecipientsField.tsx` | 403 | ~10-15 | Searchable combobox for quote send recipients: trigger labels (Select a client first / No users or contacts available / Add internal user or client contact…), search placeholder, empty states (No recipients available / No matches), kind badges (Internal/Contact), remove aria-label with interpolated email |
+| | **Total** | **~6,060** | **~555-1,080** | |
 
 > String estimates use ~0.15-0.2 strings/LOC. Previous batches showed this overestimates by 1.5-2x. The lower bound (~535) is the more realistic target.
 
@@ -59,6 +60,8 @@ msp/quotes.json
   quoteForm.*          -- QuoteForm.tsx form labels, workflow buttons, dialogs
   quoteDetail.*        -- QuoteDetail.tsx detail sections, actions, dialogs, activity log
   quoteLineItems.*     -- QuoteLineItemsEditor.tsx table headers, discount panel, sections
+  quoteLineItems.markup.* -- Product markup badge ("{{value}}% markup"), "Markup unavailable" label, and currency-mismatch tooltip ({{costCurrency}}, {{quoteCurrency}})
+  quoteRecipients.*    -- QuoteSendRecipientsField.tsx trigger labels, search placeholder, empty states, kind badges, remove aria-label
   quoteConversion.*    -- QuoteConversionDialog.tsx mode labels, item mapping, summary
   quoteApproval.*      -- QuoteApprovalDashboard.tsx settings, filters, empty states
   quoteTemplates.*     -- QuoteTemplatesList.tsx list chrome, actions
@@ -86,7 +89,7 @@ Additionally, the existing `/msp/billing` entry should add `msp/quotes`:
 ## Acceptance Criteria
 
 1. `server/public/locales/en/msp/quotes.json` exists and contains all extracted keys.
-2. All 10 UI component files (excluding `QuoteStatusBadge.tsx` and `quoteLineItemDraft.ts`) import `useTranslation` from `@alga-psa/ui/lib/i18n/client` and use `t('key', { defaultValue: '...' })` for all user-visible strings.
+2. All 11 UI component files (excluding `QuoteStatusBadge.tsx` and `quoteLineItemDraft.ts`) import `useTranslation` from `@alga-psa/ui/lib/i18n/client` and use `t('key', { defaultValue: '...' })` for all user-visible strings. This includes `QuoteSendRecipientsField.tsx` (added post-planning, 2026-04-10) and the markup badge added to `QuoteLineItemsEditor.tsx`.
 3. Currency and date formatting uses `useFormatters()` where applicable, replacing hardcoded `new Intl.NumberFormat('en-US', ...)` calls.
 4. All 9 locale files exist: `{de,en,es,fr,it,nl,pl,xx,yy}/msp/quotes.json`.
 5. `validate-translations.cjs` passes with 0 errors and 0 warnings for `msp/quotes` across all 9 locales.
@@ -94,4 +97,4 @@ Additionally, the existing `/msp/billing` entry should add `msp/quotes`:
 7. Pseudo-locale `xx` shows `11111` patterns for visual QA.
 8. `ROUTE_NAMESPACES` in `packages/core/src/lib/i18n/config.ts` includes `/msp/quote-approvals` and `/msp/quote-document-templates` entries, and `/msp/billing` includes `msp/quotes`.
 9. `npm run build` succeeds with no TypeScript errors.
-10. No hardcoded English strings remain in the 10 wired component files (verified by grep for bare string literals in JSX).
+10. No hardcoded English strings remain in the 11 wired component files (verified by grep for bare string literals in JSX), including the markup badge/tooltip in `QuoteLineItemsEditor.tsx` and all trigger/search/empty-state strings in `QuoteSendRecipientsField.tsx`.

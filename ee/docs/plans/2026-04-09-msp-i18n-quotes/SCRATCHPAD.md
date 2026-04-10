@@ -12,6 +12,20 @@
 - (2026-04-09) **Currency formatting replacement**: Five components define local `formatCurrency()` helpers using `new Intl.NumberFormat('en-US', ...)`. These should be replaced with `useFormatters().formatCurrency()` or a shared locale-aware helper. The `quoteLineItemDraft.ts` utility also has `formatDraftQuoteMoney()` with `en-US` -- this should be made locale-aware as part of F012.
 - (2026-04-09) **Date formatting replacement**: Four components define local `formatDate()` helpers using `.toLocaleDateString()` with no locale argument (defaults to browser locale, which is correct). However, `QuoteDocumentTemplateEditor.tsx` uses `.toLocaleString()` for timestamps. These should use `useFormatters()` for consistency.
 
+## Post-planning additions (2026-04-10)
+
+- **(2026-04-10)** **Product markup on quote line items** landed after the planning commit (commits `6a40d09fa` "Show product markup on quote line items" and `3afa5763f` "Add recipient picker and discount-aware markup"). `QuoteLineItemsEditor.tsx` now renders, for product-kind items only:
+  - A live markup badge in the Unit Price cell: `` `${sign}${markup.toFixed(1)}% markup` `` -- needs a translation key with `{{value}}` interpolation (and probably a separate key for the sign, or format the whole string via t with `{{signedValue}}`).
+  - A "Markup unavailable" label + tooltip when `cost_currency` differs from the quote currency. Tooltip text: `` `Markup can't be calculated because cost is tracked in ${item.cost_currency} and this quote is in ${currencyCode}.` `` -- needs `{{costCurrency}}` and `{{quoteCurrency}}` interpolation.
+  - These all live under a new `quoteLineItems.markup.*` key group. F006 already covers QuoteLineItemsEditor wiring but predates the markup UI, so the wiring pass must explicitly hit these new strings (tracked as `F020`).
+- **(2026-04-10)** **New component `QuoteSendRecipientsField.tsx`** (403 LOC) was added in commits `3afa5763f` and `ead79deec` and is consumed by `QuoteDetail.tsx` and `QuoteForm.tsx` in their send dialogs. It is a searchable combobox with its own user-visible strings, none of which are covered by F002/F003:
+  - Trigger label (three-way ternary): `'Select a client first'`, `'No users or contacts available'`, `'Add internal user or client contact…'`.
+  - Search input `placeholder="Search by name or email…"`.
+  - Empty states: `'No recipients available'` and `'No matches'`.
+  - Kind badge values: `'Internal'` / `'Contact'`.
+  - Remove button `aria-label={`Remove ${r.email}`}` -- needs `{{email}}` interpolation.
+  - Tracked as `F021` / `T025` / `T026` below. New key group `quoteRecipients.*`.
+
 ## Discoveries / Constraints
 
 ### QuoteForm.tsx (1,072 LOC)

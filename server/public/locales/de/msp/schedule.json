@@ -12,14 +12,14 @@
       "clearAll": "Alles löschen",
       "viewWeek": "Woche anzeigen",
       "compare": "Vergleichen",
-      "stopComparing": "Hören Sie auf zu vergleichen"
+      "stopComparing": "Vergleich beenden"
     },
     "labels": {
       "inactive": "(Inaktiv)"
     },
     "aria": {
       "viewWeek": "Woche für {{name}} ansehen",
-      "compare": "Vergleichen Sie {{name}}"
+      "compare": "{{name}} vergleichen"
     }
   },
   "agentView": {
@@ -58,9 +58,9 @@
     },
     "toolbar": {
       "previousAria": "Vorheriger {{view}}",
-      "previous": "< Vorher",
+      "previous": "< Zurück",
       "today": "Heute",
-      "nextAria": "Weiter {{view}}",
+      "nextAria": "Nächster {{view}}",
       "next": "Weiter >",
       "views": {
         "month": "Monat",
@@ -88,9 +88,9 @@
       "confirm": "Löschen",
       "entityFallback": "diesen Zeitplaneintrag",
       "options": {
-        "single": "Nur diese Veranstaltung",
-        "future": "Diese und zukünftige Veranstaltungen",
-        "all": "Alle Veranstaltungen"
+        "single": "Nur dieses Ereignis",
+        "future": "Dieses und zukünftige Ereignisse",
+        "all": "Alle Ereignisse"
       }
     }
   },
@@ -107,7 +107,7 @@
       "load": "Terminanfragen konnten nicht geladen werden",
       "ticketNotFound": "Ticket nicht gefunden",
       "loadTicket": "Das Laden des Tickets ist fehlgeschlagen",
-      "assignTechnicianRequired": "Bitte beauftragen Sie einen Techniker",
+      "assignTechnicianRequired": "Bitte weisen Sie einen Techniker zu",
       "approve": "Die Anfrage konnte nicht genehmigt werden",
       "declineReasonRequired": "Bitte geben Sie einen Grund für die Ablehnung an",
       "decline": "Anfrage konnte nicht abgelehnt werden"
@@ -175,7 +175,7 @@
       },
       "actions": {
         "approve": "Genehmigen",
-        "decline": "Abfall"
+        "decline": "Ablehnen"
       }
     },
     "decline": {
@@ -187,8 +187,8 @@
         "reason": "Bitte geben Sie einen Grund für die Ablehnung dieser Anfrage an ..."
       },
       "actions": {
-        "confirm": "Bestätigen Sie die Ablehnung",
-        "cancel": "Stornieren"
+        "confirm": "Ablehnung bestätigen",
+        "cancel": "Abbrechen"
       }
     }
   },
@@ -214,7 +214,7 @@
     },
     "common": {
       "yes": "Ja",
-      "no": "NEIN",
+      "no": "Nein",
       "columns": {
         "action": "Aktion"
       },
@@ -234,14 +234,14 @@
     },
     "general": {
       "autoApproval": {
-        "title": "Aktivieren Sie die automatische Genehmigung",
-        "description": "Genehmigen Sie automatisch Termine, die die unten konfigurierten Kriterien erfüllen",
+        "title": "Automatische Genehmigung aktivieren",
+        "description": "Termine, die die unten konfigurierten Kriterien erfüllen, automatisch genehmigen",
         "criteriaTitle": "Kriterien für die automatische Genehmigung:",
         "criteria": {
           "requireAvailability": "Für den Techniker muss die Verfügbarkeit für die angeforderte Zeit konfiguriert sein",
           "requireContract": "Der Kunde muss über einen aktiven Vertrag verfügen (falls der Dienst dies erfordert)",
           "checkConflicts": "Keine Terminkonflikte mit bestehenden Terminen",
-          "respectBuffers": "Respektieren Sie Pufferzeiten vor/nach Terminen"
+          "respectBuffers": "Pufferzeiten vor/nach Terminen einhalten"
         }
       },
       "defaultApprover": {
@@ -318,11 +318,11 @@
         }
       },
       "actions": {
-        "save": "Sparen Sie Benutzerstunden"
+        "save": "Benutzerstunden speichern"
       },
       "feedback": {
         "selectUserError": "Bitte wählen Sie einen Benutzer aus",
-        "saveSuccess": "Benutzerstunden gespart",
+        "saveSuccess": "Benutzerstunden gespeichert",
         "saveError": "Benutzerstunden konnten nicht gespeichert werden"
       }
     },
@@ -442,14 +442,14 @@
       "notes": "Notizen"
     },
     "actions": {
-      "cancel": "Stornieren",
+      "cancel": "Abbrechen",
       "close": "Schließen",
       "save": "Speichern",
       "delete": "Eintrag löschen"
     },
     "workItem": {
       "adHocFallback": "Ad-hoc-Eintrag (kein Workitem)",
-      "openDetails": "Einzelheiten"
+      "openDetails": "Details"
     },
     "appointmentRequest": {
       "approved": {
@@ -459,7 +459,7 @@
       },
       "pending": {
         "title": "Ausstehende Terminanfrage",
-        "description": "Dies ist eine Terminanfrage eines Kunden. Sie können es unten genehmigen oder ablehnen."
+        "description": "Dies ist eine Terminanfrage eines Kunden. Sie können sie unten genehmigen oder ablehnen."
       },
       "declined": {
         "title": "Abgelehnte Terminanfrage",
@@ -479,11 +479,11 @@
       "declineReasonPlaceholder": "Bitte geben Sie einen Grund für die Ablehnung dieser Anfrage an ...",
       "actions": {
         "approve": "Genehmigen",
-        "decline": "Abfall",
-        "confirmDecline": "Bestätigen Sie die Ablehnung"
+        "decline": "Ablehnen",
+        "confirmDecline": "Ablehnung bestätigen"
       },
       "toasts": {
-        "assignTechnicianRequired": "Bitte beauftragen Sie einen Techniker",
+        "assignTechnicianRequired": "Bitte weisen Sie einen Techniker zu",
         "approved": "Terminanfrage genehmigt",
         "approveFailed": "Die Anfrage konnte nicht genehmigt werden",
         "declineReasonRequired": "Bitte geben Sie einen Grund für die Ablehnung an",
@@ -492,22 +492,22 @@
       }
     },
     "recurrence": {
-      "label": "Wiederauftreten",
+      "label": "Wiederholung",
       "intervalLabel": "Intervall",
       "endLabel": "Ende",
       "endDateLabel": "Enddatum",
       "occurrencesLabel": "Vorkommen",
       "workdaysOnly": "Nur werktags (Mo-Fr, außer an Feiertagen)",
       "options": {
-        "none": "Keiner",
+        "none": "Keine",
         "daily": "Täglich",
         "weekly": "Wöchentlich",
         "monthly": "Monatlich",
         "yearly": "Jährlich"
       },
       "endOptions": {
-        "never": "Niemals",
-        "date": "Am Datum",
+        "never": "Nie",
+        "date": "An Datum",
         "count": "Nach"
       },
       "applyDialog": {
@@ -521,13 +521,13 @@
       "scopeDialog": {
         "title": "Zeitplaneintrag löschen",
         "message": "Wählen Sie aus, welche Ereignisse gelöscht werden sollen:",
-        "confirm": "Weitermachen"
+        "confirm": "Fortfahren"
       }
     },
     "scopeOptions": {
-      "single": "Nur diese Veranstaltung",
-      "future": "Diese und zukünftige Veranstaltungen",
-      "all": "Alle Veranstaltungen"
+      "single": "Nur dieses Ereignis",
+      "future": "Dieses und zukünftige Ereignisse",
+      "all": "Alle Ereignisse"
     }
   }
 }
