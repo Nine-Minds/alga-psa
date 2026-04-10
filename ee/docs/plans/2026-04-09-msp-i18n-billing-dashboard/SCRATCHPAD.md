@@ -157,6 +157,7 @@ the actual `msp/billing.json` key count will likely be ~350-380 unique keys.
 - **(2026-04-10) F034 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/TemplateRenderer.tsx` for the loading text, destructive error prefix, and empty-state message shown before an invoice/template pair is selected. No locale updates were needed because `templateRenderer.*` already existed.
 - **(2026-04-10) F035 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/PropertyEditor.tsx` for the field labels, “Select a field” option, and the generated column/row size captions. The existing `templateDesigner.propertyEditor.*` keys covered the inspector without locale churn.
 - **(2026-04-10) F036 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/ConditionalRuleManager.tsx` for the heading, action select options, text-input placeholders, and add-rule button label. The existing `templateDesigner.conditionalRules.*` keys fully covered the component.
+- **(2026-04-10) F037 complete** -- Wired `useTranslation('msp/billing')` into `packages/billing/src/components/billing-dashboard/ContractsHub.tsx` for the hub heading and the two sub-tab labels. This closes out the contracts hub chrome with the existing `contractsHub.*` keys.
 
 ## Runbook
 

@@ -187,7 +187,7 @@
   {
     "id": "F037",
     "description": "Wire useTranslation('msp/billing') in ContractsHub.tsx — 'Contracts' heading, tab labels (Templates/Client Contracts)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F038",
