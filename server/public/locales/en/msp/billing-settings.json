@@ -873,7 +873,8 @@
       "nonZeroPriceRequired": "At least one non-zero price is required"
     },
     "errors": {
-      "save": "Failed to {{action}} product"
+      "create": "Failed to create product",
+      "update": "Failed to update product"
     }
   },
   "clientTaxSettings": {

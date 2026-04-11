@@ -261,3 +261,14 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   license-term selects now react to locale changes in the dialog.
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/billing/QuickAddService.tsx`
+- Completed `F018` in
+  [QuickAddProduct.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/QuickAddProduct.tsx).
+- Wired the add/edit dialog title, every field label/placeholder, pricing editor copy,
+  active/license option labels, validation errors, and cancel/create/save actions to
+  `quickAddProduct.*` and shared `common.*` keys.
+- Expanded the English namespace by replacing the generic `quickAddProduct.errors.save`
+  interpolation key with explicit `errors.create` and `errors.update` keys so the dialog
+  does not have to interpolate English verbs at runtime.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/billing/QuickAddProduct.tsx`
+  `node -e "const fs=require('fs');const p='server/public/locales/en/msp/billing-settings.json';JSON.parse(fs.readFileSync(p,'utf8'));console.log('ok')"`

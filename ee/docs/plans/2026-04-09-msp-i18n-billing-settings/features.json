@@ -87,7 +87,7 @@
   {
     "id": "F018",
     "description": "Wire useTranslation in QuickAddProduct.tsx -- dialog title (Add/Edit Product), all field labels (Product Name/Type/SKU/Category/Label/Vendor/Manufacturer/Cost/Billing Method/Pricing/Tax Rate/Active/Unit of Measure/License?/License Term/Description), pricing section strings, validation errors, cancel/create/save buttons, error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F019",
