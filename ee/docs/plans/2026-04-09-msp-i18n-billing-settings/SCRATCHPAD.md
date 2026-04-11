@@ -221,3 +221,12 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/billing/ServiceCatalogManager.tsx`
   `node -e "const fs=require('fs');const p='server/public/locales/en/msp/billing-settings.json';JSON.parse(fs.readFileSync(p,'utf8'));console.log('ok')"`
+- Completed `F014` in
+  [ProductsManager.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/ProductsManager.tsx).
+- Scoped this pass to the outer products-manager chrome: card title, add/search controls,
+  filter option labels, loading text, table headers, active/non-taxable display labels,
+  and row action menu labels.
+- Kept archive and permanent-delete dialog bodies, plus their fallback error strings,
+  deferred to `F015` so the confirmation flows land in a separate commit.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/billing/ProductsManager.tsx`

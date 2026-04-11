@@ -67,7 +67,7 @@
   {
     "id": "F014",
     "description": "Wire useTranslation in ProductsManager.tsx -- page heading, table columns (Product/SKU/Type/Category/Label/Pricing/Tax Rate/Active/Actions), action menu items (Edit/Restore/Archive/Delete), filter option labels (All Statuses/Active/Inactive/All Categories/All Types), search placeholder, loading state, Add Product button",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F015",
