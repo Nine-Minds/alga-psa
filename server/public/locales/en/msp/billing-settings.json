@@ -206,19 +206,22 @@
         "save": "Save Changes",
         "saving": "Saving..."
       },
-      "toast": {
-        "created": "Tax region created successfully.",
-        "updated": "Tax region updated successfully.",
-        "togglePending": "Attempting to {{action}} {{name}}...",
-        "toggled": "Tax region {{name}} {{action}}d successfully."
-      },
-      "errors": {
-        "load": "Failed to load tax regions.",
-        "create": "Failed to create tax region.",
-        "update": "Failed to update tax region.",
-        "toggle": "Failed to {{action}} tax region."
-      }
+    "toast": {
+      "created": "Tax region created successfully.",
+      "updated": "Tax region updated successfully.",
+      "activatePending": "Attempting to activate {{name}}...",
+      "deactivatePending": "Attempting to deactivate {{name}}...",
+      "activated": "Tax region {{name}} activated successfully.",
+      "deactivated": "Tax region {{name}} deactivated successfully."
     },
+    "errors": {
+      "load": "Failed to load tax regions.",
+      "create": "Failed to create tax region.",
+      "update": "Failed to update tax region.",
+      "activate": "Failed to activate tax region.",
+      "deactivate": "Failed to deactivate tax region."
+    }
+  },
     "thresholds": {
       "title": "Progressive Tax Brackets",
       "tooltip": "Define progressive tax brackets where different rates apply to different portions of the amount. Each bracket applies only to the amount within its range.",

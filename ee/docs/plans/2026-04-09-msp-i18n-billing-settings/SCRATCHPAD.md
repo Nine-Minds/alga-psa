@@ -279,3 +279,16 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   to `tax.source.*`.
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxSourceSettings.tsx`
+- Completed `F020` in
+  [TaxRegionsManager.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/tax/TaxRegionsManager.tsx).
+- Wired the tax-regions card title, loading state, add button, table headers/status badges,
+  row action menu labels, add/edit dialog copy, active toggle label, save/cancel actions,
+  create/update/toggle toasts, and fallback errors to `tax.regions.*` plus shared
+  `common.*` status/column/a11y keys.
+- Replaced the original generic activate/deactivate interpolation keys with explicit
+  `activatePending`, `deactivatePending`, `activated`, `deactivated`, `errors.activate`,
+  and `errors.deactivate` keys in the English namespace so later locale translations do
+  not have to reconstruct English verb inflections.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxRegionsManager.tsx`
+  `node -e "const fs=require('fs');const p='server/public/locales/en/msp/billing-settings.json';JSON.parse(fs.readFileSync(p,'utf8'));console.log('ok')"`

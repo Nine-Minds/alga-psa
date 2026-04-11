@@ -97,7 +97,7 @@
   {
     "id": "F020",
     "description": "Wire useTranslation in TaxRegionsManager.tsx -- card title, Add Tax Region button, table columns (Code/Name/Status/Actions), status badges (Active/Inactive), action menu items (Edit/Activate/Deactivate), activate/deactivate toast messages, loading state, dialog title (Add/Edit), field labels (Region Code/Region Name/Active), placeholders, cancel/save buttons, saving state, toast messages, error strings",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F021",
