@@ -18,7 +18,7 @@
   {
     "id": "T002",
     "description": "Namespace file exists: en/msp/billing-settings.json, fr/msp/billing-settings.json, es/msp/billing-settings.json, de/msp/billing-settings.json, nl/msp/billing-settings.json, it/msp/billing-settings.json, pl/msp/billing-settings.json, xx/msp/billing-settings.json, yy/msp/billing-settings.json all exist under server/public/locales/",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F030",

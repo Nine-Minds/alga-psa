@@ -416,3 +416,5 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Completed `T001` by running:
   `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
 - Result: `PASSED` with `Errors: 0`, `Warnings: 0` across `de, es, fr, it, nl, pl, xx, yy`.
+- Completed `T002` by verifying namespace file presence for all required locales:
+  `for l in en fr es de nl it pl xx yy; do test -f server/public/locales/$l/msp/billing-settings.json && echo "ok:$l" || echo "missing:$l"; done`
