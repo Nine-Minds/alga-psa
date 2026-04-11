@@ -41,7 +41,7 @@
   {
     "id": "T004",
     "description": "BillingSettings.tsx imports useTranslation and all tab labels (General/Quoting/Tax/Payments) use t() calls; tab id attributes remain ASCII kebab-case",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
