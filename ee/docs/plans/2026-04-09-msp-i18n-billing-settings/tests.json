@@ -33,7 +33,7 @@
   {
     "id": "T003",
     "description": "ROUTE_NAMESPACES: the '/msp/settings' entry in packages/core/src/lib/i18n/config.ts includes 'msp/billing-settings' in its namespace array",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]

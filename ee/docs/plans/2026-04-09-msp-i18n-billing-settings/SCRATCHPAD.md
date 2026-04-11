@@ -418,3 +418,5 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Result: `PASSED` with `Errors: 0`, `Warnings: 0` across `de, es, fr, it, nl, pl, xx, yy`.
 - Completed `T002` by verifying namespace file presence for all required locales:
   `for l in en fr es de nl it pl xx yy; do test -f server/public/locales/$l/msp/billing-settings.json && echo "ok:$l" || echo "missing:$l"; done`
+- Completed `T003` via config namespace assertion:
+  `rg -n "'/msp/settings'|msp/billing-settings" packages/core/src/lib/i18n/config.ts`
