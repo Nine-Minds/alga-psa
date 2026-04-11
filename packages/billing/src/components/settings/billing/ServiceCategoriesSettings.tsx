@@ -13,6 +13,7 @@ import {
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -29,6 +30,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 
 const ServiceCategoriesSettings: React.FC = () => {
+  const { t } = useTranslation('msp/billing-settings');
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -163,28 +165,28 @@ const ServiceCategoriesSettings: React.FC = () => {
 
   const columns: ColumnDefinition<IServiceCategory>[] = [
     {
-      title: 'Name',
+      title: t('common.columns.name', { defaultValue: 'Name' }),
       dataIndex: 'category_name',
       render: (value: string) => (
         <span className="text-[rgb(var(--color-text-700))] font-medium">{value}</span>
       ),
     },
     {
-      title: 'Description',
+      title: t('common.columns.description', { defaultValue: 'Description' }),
       dataIndex: 'description',
       render: (value: string | null) => (
-        <span className="text-muted-foreground">{value || '-'}</span>
+        <span className="text-muted-foreground">{value || t('common.emptyValue', { defaultValue: '-' })}</span>
       ),
     },
     {
-      title: 'Order',
+      title: t('common.columns.order', { defaultValue: 'Order' }),
       dataIndex: 'display_order',
       render: (value: number) => (
         <span className="text-muted-foreground">{value}</span>
       ),
     },
     {
-      title: 'Actions',
+      title: t('common.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'category_id',
       width: '10%',
       render: (value: string | null, record: IServiceCategory) => {
@@ -200,7 +202,7 @@ const ServiceCategoriesSettings: React.FC = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => startEditing(record)}>
-                Edit
+                {t('common.actions.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => setDeleteDialog({
@@ -210,7 +212,7 @@ const ServiceCategoriesSettings: React.FC = () => {
                 })}
                 className="text-red-600"
               >
-                Delete
+                {t('common.actions.delete', { defaultValue: 'Delete' })}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -222,7 +224,9 @@ const ServiceCategoriesSettings: React.FC = () => {
   return (
     <div className="bg-card p-6 rounded-lg shadow-sm">
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-[rgb(var(--color-text-800))]">Service Categories</h3>
+        <h3 className="text-lg font-semibold mb-4 text-[rgb(var(--color-text-800))]">
+          {t('serviceCategories.title', { defaultValue: 'Service Categories' })}
+        </h3>
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>{error}</AlertDescription>
@@ -248,7 +252,8 @@ const ServiceCategoriesSettings: React.FC = () => {
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"
           >
-            <Plus className="h-4 w-4 mr-2" /> Add Service Category
+            <Plus className="h-4 w-4 mr-2" />
+            {t('serviceCategories.actions.add', { defaultValue: 'Add Service Category' })}
           </Button>
           <Button 
             id="import-service-categories"
@@ -264,7 +269,9 @@ const ServiceCategoriesSettings: React.FC = () => {
               }
             }}
           >
-            Import from Standard Categories
+            {t('serviceCategories.actions.importFromStandard', {
+              defaultValue: 'Import from Standard Categories'
+            })}
           </Button>
         </div>
       </div>

@@ -172,3 +172,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   fallbacks to `general.renewal.*`.
 - Verification runs:
   `sed -n '1,280p' packages/billing/src/components/settings/billing/RenewalAutomationSettings.tsx`
+- Completed `F008` in
+  [ServiceCategoriesSettings.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/ServiceCategoriesSettings.tsx).
+- Scoped this pass to the outer chrome only: page heading, table column titles, row action
+  menu labels, and Add/Import buttons. Dialog bodies, validation, toasts, and import-flow
+  copy are intentionally left for `F009`.
+- Verification runs:
+  `sed -n '1,260p' packages/billing/src/components/settings/billing/ServiceCategoriesSettings.tsx`

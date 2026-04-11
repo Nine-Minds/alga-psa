@@ -37,7 +37,7 @@
   {
     "id": "F008",
     "description": "Wire useTranslation in ServiceCategoriesSettings.tsx -- page heading, table column titles (Name/Description/Order/Actions), action menu items (Edit/Delete), Add/Import buttons",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",
