@@ -273,7 +273,7 @@
   {
     "id": "T033",
     "description": "Integration: /msp/settings?tab=billing loads General tab in en with no hardcoded English visible in card titles, descriptions, field labels, or placeholders",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F004",
