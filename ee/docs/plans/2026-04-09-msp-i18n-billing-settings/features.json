@@ -27,7 +27,7 @@
   {
     "id": "F006",
     "description": "Wire useTranslation in CreditExpirationSettings.tsx -- enable toggle label, help text, expiration period label/help, notification days label/placeholder/help, save button, toast messages, error strings",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",

@@ -157,3 +157,9 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   and save/load fallback errors to `general.zeroDollar.*`.
 - Verification runs:
   `sed -n '1,220p' packages/billing/src/components/settings/billing/ZeroDollarInvoiceSettings.tsx`
+- Completed `F006` in
+  [CreditExpirationSettings.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/CreditExpirationSettings.tsx).
+- Wired the enable toggle, expiration/notification field copy, save button, success toast,
+  and save/load fallback errors to `general.creditExpiration.*`.
+- Verification runs:
+  `sed -n '1,240p' packages/billing/src/components/settings/billing/CreditExpirationSettings.tsx`
