@@ -377,3 +377,9 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Verification runs:
   `rg -n "ALGA_VAR|__" server/public/locales/es/msp/billing-settings.json || true`
   `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/es/msp/billing-settings.json','utf8')); console.log('es json ok')"`
+- Completed `F032` by generating
+  [de/msp/billing-settings.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/de/msp/billing-settings.json)
+  via the same automated translation script with interpolation preservation.
+- Verification runs:
+  `rg -n "ALGA_VAR|__" server/public/locales/de/msp/billing-settings.json || true`
+  `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/de/msp/billing-settings.json','utf8')); console.log('de json ok')"`
