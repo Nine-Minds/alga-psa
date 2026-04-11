@@ -249,7 +249,7 @@
   {
     "id": "T030",
     "description": "TaxSettingsForm.tsx imports useTranslation and page title, loading state, no-settings message, create button, error/success messages use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
