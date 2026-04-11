@@ -192,6 +192,46 @@ const isEnterpriseEdition = (): boolean => {
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
+const schemaDeclaresTopLevelProperty = (
+  schemaInput: unknown,
+  propertyName: string,
+  rootInput: unknown = schemaInput
+): boolean => {
+  if (!isObjectRecord(schemaInput) || !isObjectRecord(rootInput)) {
+    return false;
+  }
+
+  const resolved = resolveJsonSchemaRef(schemaInput, rootInput);
+  const properties = resolved.properties;
+  if (isObjectRecord(properties) && Object.prototype.hasOwnProperty.call(properties, propertyName)) {
+    return true;
+  }
+
+  const variants = [
+    ...(Array.isArray(resolved.anyOf) ? resolved.anyOf : []),
+    ...(Array.isArray(resolved.oneOf) ? resolved.oneOf : []),
+  ];
+  return variants.some((variant) => schemaDeclaresTopLevelProperty(variant, propertyName, rootInput));
+};
+
+const stripImplicitTenantIdFromManualRunPayload = (
+  payload: Record<string, unknown>,
+  payloadSchemaJson: unknown
+): Record<string, unknown> => {
+  if (!Object.prototype.hasOwnProperty.call(payload, 'tenantId')) {
+    return payload;
+  }
+  if (!isObjectRecord(payloadSchemaJson)) {
+    return payload;
+  }
+  if (schemaDeclaresTopLevelProperty(payloadSchemaJson, 'tenantId')) {
+    return payload;
+  }
+
+  const { tenantId: _tenantId, ...rest } = payload;
+  return rest;
+};
+
 const formatSchedulePayloadValidationMessage = (issues: Array<{ path?: Array<string | number>; message?: string }>): string => {
   if (!issues.length) {
     return 'Schedule payload failed validation against the latest published workflow schema.';
@@ -2045,9 +2085,16 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
     }
   }
 
+  const payloadSchemaJson = versionRecord.payload_schema_json
+    ?? (schemaRef && schemaRegistry.has(schemaRef) ? schemaRegistry.toJsonSchema(schemaRef) : null);
+
+  if (!inputIsSourcePayload) {
+    // Manual runs already carry authoritative tenant context outside payload; only keep a top-level
+    // tenantId when the workflow schema explicitly declares it as part of the business contract.
+    finalPayload = stripImplicitTenantIdFromManualRunPayload(finalPayload, payloadSchemaJson);
+  }
+
   if (!versionRecord.validation_status || versionRecord.validation_status === 'error') {
-    const payloadSchemaJson = versionRecord.payload_schema_json
-      ?? (schemaRef && schemaRegistry.has(schemaRef) ? schemaRegistry.toJsonSchema(schemaRef) : null);
     const validation = await computeValidation({
       definition: definition ?? {},
       payloadSchemaRef: schemaRef ?? undefined,
