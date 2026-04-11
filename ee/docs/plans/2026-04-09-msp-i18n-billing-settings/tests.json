@@ -81,7 +81,7 @@
   {
     "id": "T009",
     "description": "RenewalAutomationSettings.tsx imports useTranslation and all user-visible strings including dynamic placeholders (Loading boards.../Select board/etc.) use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
