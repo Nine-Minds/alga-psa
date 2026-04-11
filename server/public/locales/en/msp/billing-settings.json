@@ -229,6 +229,10 @@
       "empty": "No tax brackets defined. Add brackets to use progressive taxation.",
       "noLimit": "No limit",
       "above": "above",
+      "table": {
+        "minAmount": "Min Amount",
+        "maxAmount": "Max Amount"
+      },
       "issuesTitle": "Bracket configuration issues:",
       "issueNoMax": "Bracket starting at {{from}} has no max but is not the last bracket.",
       "issueGap": "Gap between {{from}} and {{to}}",

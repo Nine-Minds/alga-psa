@@ -102,7 +102,7 @@
   {
     "id": "F021",
     "description": "Wire useTranslation in TaxThresholdEditor.tsx -- section heading, tooltip content, Add Bracket button, table columns (Min Amount/Max Amount/Rate/Actions), 'No limit' label, action menu items (Edit/Delete), bracket issues alert title, loading/empty states, calculation preview labels (title, Amount, taxable, Total Tax, Effective)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F022",

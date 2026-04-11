@@ -292,3 +292,14 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxRegionsManager.tsx`
   `node -e "const fs=require('fs');const p='server/public/locales/en/msp/billing-settings.json';JSON.parse(fs.readFileSync(p,'utf8'));console.log('ok')"`
+- Completed `F021` in
+  [TaxThresholdEditor.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/tax/TaxThresholdEditor.tsx).
+- Scoped this pass to the outer thresholds editor surface: section heading/tooltip, add
+  button, table headers and action labels, no-limit/above labels, bracket-issue messages,
+  loading/empty states, and the calculation-preview labels and interpolated totals.
+- Added explicit `tax.thresholds.table.minAmount` and `tax.thresholds.table.maxAmount`
+  keys to the English namespace instead of deriving those headers by string-mangling the
+  form-field labels, which would have broken later locale translations.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxThresholdEditor.tsx`
+  `node -e "const fs=require('fs');const p='server/public/locales/en/msp/billing-settings.json';JSON.parse(fs.readFileSync(p,'utf8'));console.log('ok')"`

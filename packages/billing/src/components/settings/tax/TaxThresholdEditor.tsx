@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import { ITaxRateThreshold } from '@alga-psa/types';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -59,6 +60,7 @@ interface TaxThresholdEditorProps {
 }
 
 export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = false }: TaxThresholdEditorProps) {
+  const { t } = useTranslation('msp/billing-settings');
   const [thresholds, setThresholds] = useState<ITaxRateThreshold[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,11 +95,11 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
       const fetchedThresholds = await getTaxRateThresholdsByTaxRate(taxRateId);
       setThresholds(fetchedThresholds);
     } catch (error) {
-      handleError(error, 'Failed to load tax brackets.');
+      handleError(error, t('tax.thresholds.errors.load', { defaultValue: 'Failed to load tax brackets.' }));
     } finally {
       setIsLoading(false);
     }
-  }, [taxRateId]);
+  }, [taxRateId, t]);
 
   useEffect(() => {
     fetchThresholds();
@@ -115,17 +117,27 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
       if (next) {
         const currentMax = current.max_amount;
         if (currentMax === null || currentMax === undefined) {
-          issues.push(`Bracket starting at ${currency}${current.min_amount.toLocaleString()} has no max but is not the last bracket.`);
+          issues.push(t('tax.thresholds.issueNoMax', {
+            from: `${currency}${current.min_amount.toLocaleString()}`,
+            defaultValue: 'Bracket starting at {{from}} has no max but is not the last bracket.'
+          }));
         } else if (currentMax < next.min_amount) {
-          issues.push(`Gap between ${currency}${currentMax.toLocaleString()} and ${currency}${next.min_amount.toLocaleString()}`);
+          issues.push(t('tax.thresholds.issueGap', {
+            from: `${currency}${currentMax.toLocaleString()}`,
+            to: `${currency}${next.min_amount.toLocaleString()}`,
+            defaultValue: 'Gap between {{from}} and {{to}}'
+          }));
         } else if (currentMax > next.min_amount) {
-          issues.push(`Overlap between brackets at ${currency}${currentMax.toLocaleString()}`);
+          issues.push(t('tax.thresholds.issueOverlap', {
+            at: `${currency}${currentMax.toLocaleString()}`,
+            defaultValue: 'Overlap between brackets at {{at}}'
+          }));
         }
       }
     }
 
     return issues;
-  }, [thresholds, currency]);
+  }, [thresholds, currency, t]);
 
   // Get suggested min_amount for new bracket
   const getSuggestedMinAmount = useCallback(() => {
@@ -264,22 +276,23 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
 
   const columns: ColumnDefinition<ITaxRateThreshold>[] = [
     {
-      title: 'Min Amount',
+      title: t('tax.thresholds.table.minAmount', { defaultValue: 'Min Amount' }),
       dataIndex: 'min_amount',
       render: (value: number) => formatCurrency(value),
     },
     {
-      title: 'Max Amount',
+      title: t('tax.thresholds.table.maxAmount', { defaultValue: 'Max Amount' }),
       dataIndex: 'max_amount',
-      render: (value: number | null | undefined) => value ? formatCurrency(value) : 'No limit',
+      render: (value: number | null | undefined) =>
+        value ? formatCurrency(value) : t('tax.thresholds.noLimit', { defaultValue: 'No limit' }),
     },
     {
-      title: 'Rate',
+      title: t('common.columns.rate', { defaultValue: 'Rate' }),
       dataIndex: 'rate',
       render: (value: number) => `${value}%`,
     },
     {
-      title: 'Actions',
+      title: t('common.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'actions',
       width: '80px',
       render: (_: any, threshold: ITaxRateThreshold) => {
@@ -294,7 +307,7 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
                 onClick={(e: React.MouseEvent) => e.stopPropagation()}
                 disabled={isSubmitting}
               >
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">{t('common.a11y.openMenu', { defaultValue: 'Open menu' })}</span>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -307,7 +320,7 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
                 }}
                 disabled={isSubmitting}
               >
-                Edit
+                {t('tax.thresholds.actions.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -319,7 +332,7 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
                 className="text-red-600 focus:text-red-600"
                 disabled={isSubmitting}
               >
-                Delete
+                {t('tax.thresholds.actions.delete', { defaultValue: 'Delete' })}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -332,8 +345,12 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
     <div className="space-y-4" id="tax-threshold-editor">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h4 className="text-sm font-medium">Progressive Tax Brackets</h4>
-          <Tooltip content="Define progressive tax brackets where different rates apply to different portions of the amount. Each bracket applies only to the amount within its range.">
+          <h4 className="text-sm font-medium">
+            {t('tax.thresholds.title', { defaultValue: 'Progressive Tax Brackets' })}
+          </h4>
+          <Tooltip content={t('tax.thresholds.tooltip', {
+            defaultValue: 'Define progressive tax brackets where different rates apply to different portions of the amount. Each bracket applies only to the amount within its range.'
+          })}>
             <Info className="h-4 w-4 text-muted-foreground cursor-help" />
           </Tooltip>
         </div>
@@ -345,7 +362,7 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
             disabled={isSubmitting}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Bracket
+            {t('tax.thresholds.actions.add', { defaultValue: 'Add Bracket' })}
           </Button>
         )}
       </div>
@@ -354,7 +371,9 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
         <Alert variant="destructive" showIcon={false}>
           <AlertTriangle className="h-4 w-4 absolute left-4 top-4" />
           <AlertDescription>
-            <p className="font-medium">Bracket configuration issues:</p>
+            <p className="font-medium">
+              {t('tax.thresholds.issuesTitle', { defaultValue: 'Bracket configuration issues:' })}
+            </p>
             <ul className="list-disc list-inside mt-1">
               {bracketIssues.map((issue, index) => (
                 <li key={index}>{issue}</li>
@@ -364,11 +383,17 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
         </Alert>
       )}
 
-      {isLoading && <div className="text-center p-4 text-muted-foreground">Loading brackets...</div>}
+      {isLoading && (
+        <div className="text-center p-4 text-muted-foreground">
+          {t('tax.thresholds.loading', { defaultValue: 'Loading brackets...' })}
+        </div>
+      )}
 
       {!isLoading && thresholds.length === 0 && (
         <div className="text-center p-4 text-muted-foreground border border-dashed rounded-lg">
-          No tax brackets defined. Add brackets to use progressive taxation.
+          {t('tax.thresholds.empty', {
+            defaultValue: 'No tax brackets defined. Add brackets to use progressive taxation.'
+          })}
         </div>
       )}
 
@@ -389,9 +414,13 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
           {/* Progressive Tax Calculation Preview */}
           <div className="bg-muted/50 rounded-lg p-4 mt-4">
             <div className="flex items-center justify-between mb-3">
-              <h5 className="text-sm font-medium">Calculation Preview</h5>
+              <h5 className="text-sm font-medium">
+                {t('tax.thresholds.preview.title', { defaultValue: 'Calculation Preview' })}
+              </h5>
               <div className="flex items-center gap-2">
-                <Label htmlFor="preview-amount" className="text-sm">Amount:</Label>
+                <Label htmlFor="preview-amount" className="text-sm">
+                  {t('tax.thresholds.preview.amount', { defaultValue: 'Amount:' })}
+                </Label>
                 <Input
                   id="preview-amount"
                   type="number"
@@ -405,16 +434,29 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
               {calculatePreview.breakdown.map((item, index) => (
                 <div key={index} className="flex justify-between">
                   <span>
-                    {formatCurrency(item.min)} - {item.max ? formatCurrency(item.max) : 'above'} @ {item.rate}%:
+                    {formatCurrency(item.min)} - {item.max
+                      ? formatCurrency(item.max)
+                      : t('tax.thresholds.above', { defaultValue: 'above' })} @ {item.rate}%:
                   </span>
                   <span>
-                    {formatCurrency(item.taxable)} taxable = {formatCurrency(item.tax)}
+                    {t('tax.thresholds.preview.taxable', {
+                      amount: formatCurrency(item.taxable),
+                      tax: formatCurrency(item.tax),
+                      defaultValue: '{{amount}} taxable = {{tax}}'
+                    })}
                   </span>
                 </div>
               ))}
               <div className="border-t pt-1 mt-1 flex justify-between font-medium">
-                <span>Total Tax:</span>
-                <span>{formatCurrency(calculatePreview.totalTax)} (Effective: {calculatePreview.effectiveRate.toFixed(2)}%)</span>
+                <span>{t('tax.thresholds.preview.totalTax', { defaultValue: 'Total Tax:' })}</span>
+                <span>
+                  {formatCurrency(calculatePreview.totalTax)} (
+                  {t('tax.thresholds.preview.effective', {
+                    rate: calculatePreview.effectiveRate.toFixed(2),
+                    defaultValue: 'Effective: {{rate}}%'
+                  })}
+                  )
+                </span>
               </div>
             </div>
           </div>
