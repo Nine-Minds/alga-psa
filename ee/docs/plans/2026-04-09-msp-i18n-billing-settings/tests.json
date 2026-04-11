@@ -193,7 +193,7 @@
   {
     "id": "T023",
     "description": "TaxRegionsManager.tsx imports useTranslation and card title, button, column titles, status badges, action menu items, dialog strings, and toast messages use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
