@@ -319,3 +319,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   states, calculation-preview labels, and row action labels.
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxComponentEditor.tsx`
+- Completed `F024` in
+  [TaxComponentEditor.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/tax/TaxComponentEditor.tsx).
+- Wired the add/edit dialog titles, field labels/placeholders, compound-tax help text,
+  start/end date labels, save/cancel/delete states, create/update/delete toasts, fallback
+  errors, and delete-confirmation copy with component-name interpolation.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxComponentEditor.tsx`

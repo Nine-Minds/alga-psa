@@ -117,7 +117,7 @@
   {
     "id": "F024",
     "description": "Wire TaxComponentEditor.tsx dialog strings -- add/edit dialog title, field labels (Name/Rate/Sequence/Compound Tax toggle with description/Start Date/End Date), placeholders, delete confirmation (with component name interpolation), cancel/save/delete buttons, saving/deleting states, toast messages, error strings",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F025",

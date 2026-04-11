@@ -147,8 +147,12 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
   const onSubmit = async (data: TaxComponentFormData) => {
     setIsSubmitting(true);
     const isEditing = !!editingComponent;
-    const successMessage = isEditing ? 'Tax component updated successfully.' : 'Tax component created successfully.';
-    const errorMessage = isEditing ? 'Failed to update tax component.' : 'Failed to create tax component.';
+    const successMessage = isEditing
+      ? t('tax.components.toast.updated', { defaultValue: 'Tax component updated successfully.' })
+      : t('tax.components.toast.created', { defaultValue: 'Tax component created successfully.' });
+    const errorMessage = isEditing
+      ? t('tax.components.errors.update', { defaultValue: 'Failed to update tax component.' })
+      : t('tax.components.errors.create', { defaultValue: 'Failed to create tax component.' });
 
     try {
       if (isEditing) {
@@ -187,11 +191,11 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
 
     try {
       await deleteTaxComponent(componentToDelete.tax_component_id);
-      toast.success('Tax component deleted successfully.');
+      toast.success(t('tax.components.toast.deleted', { defaultValue: 'Tax component deleted successfully.' }));
       await fetchComponents();
       handleCloseDeleteDialog();
     } catch (error: any) {
-      handleError(error, 'Failed to delete tax component.');
+      handleError(error, t('tax.components.errors.delete', { defaultValue: 'Failed to delete tax component.' }));
     } finally {
       setIsSubmitting(false);
     }
@@ -411,15 +415,23 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
       <GenericDialog
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
-        title={editingComponent ? 'Edit Tax Component' : 'Add Tax Component'}
+        title={
+          editingComponent
+            ? t('tax.components.dialog.editTitle', { defaultValue: 'Edit Tax Component' })
+            : t('tax.components.dialog.addTitle', { defaultValue: 'Add Tax Component' })
+        }
         id="tax-component-dialog"
       >
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4" id="tax-component-form">
           <div className="space-y-1">
-            <Label htmlFor="tax-component-name-field">Name *</Label>
+            <Label htmlFor="tax-component-name-field">
+              {t('tax.components.fields.name.label', { defaultValue: 'Name *' })}
+            </Label>
             <Input
               id="tax-component-name-field"
-              placeholder="e.g., Federal Tax, State Tax"
+              placeholder={t('tax.components.fields.name.placeholder', {
+                defaultValue: 'e.g., Federal Tax, State Tax'
+              })}
               {...form.register('name')}
               disabled={isSubmitting}
               aria-invalid={form.formState.errors.name ? "true" : "false"}
@@ -433,7 +445,9 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="tax-component-rate-field">Rate (%) *</Label>
+              <Label htmlFor="tax-component-rate-field">
+                {t('tax.components.fields.rate.label', { defaultValue: 'Rate (%) *' })}
+              </Label>
               <Controller
                 name="rate"
                 control={form.control}
@@ -444,7 +458,9 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
                     step="0.01"
                     min="0"
                     max="100"
-                    placeholder="e.g., 10"
+                    placeholder={t('tax.components.fields.rate.placeholder', {
+                      defaultValue: 'e.g., 10'
+                    })}
                     value={field.value}
                     onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     disabled={isSubmitting}
@@ -460,7 +476,9 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="tax-component-sequence-field">Sequence *</Label>
+              <Label htmlFor="tax-component-sequence-field">
+                {t('tax.components.fields.sequence.label', { defaultValue: 'Sequence *' })}
+              </Label>
               <Controller
                 name="sequence"
                 control={form.control}
@@ -469,7 +487,9 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
                     id="tax-component-sequence-field"
                     type="number"
                     min="1"
-                    placeholder="e.g., 1"
+                    placeholder={t('tax.components.fields.sequence.placeholder', {
+                      defaultValue: 'e.g., 1'
+                    })}
                     value={field.value}
                     onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
                     disabled={isSubmitting}
@@ -491,9 +511,13 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
             render={({ field: { onChange, value, ref } }) => (
               <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                 <div className="space-y-0.5">
-                  <Label htmlFor="tax-component-compound-field">Compound Tax</Label>
+                  <Label htmlFor="tax-component-compound-field">
+                    {t('tax.components.fields.compound.label', { defaultValue: 'Compound Tax' })}
+                  </Label>
                   <p className="text-sm text-muted-foreground">
-                    Calculate on base + previous taxes
+                    {t('tax.components.fields.compound.help', {
+                      defaultValue: 'Calculate on base + previous taxes'
+                    })}
                   </p>
                 </div>
                 <Switch
@@ -509,7 +533,9 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="tax-component-start-date-field">Start Date (Optional)</Label>
+              <Label htmlFor="tax-component-start-date-field">
+                {t('tax.components.fields.startDate.label', { defaultValue: 'Start Date (Optional)' })}
+              </Label>
               <Input
                 id="tax-component-start-date-field"
                 type="date"
@@ -519,7 +545,9 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="tax-component-end-date-field">End Date (Optional)</Label>
+              <Label htmlFor="tax-component-end-date-field">
+                {t('tax.components.fields.endDate.label', { defaultValue: 'End Date (Optional)' })}
+              </Label>
               <Input
                 id="tax-component-end-date-field"
                 type="date"
@@ -531,10 +559,12 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={handleCloseDialog} id="tax-component-dialog-cancel-button">
-              Cancel
+              {t('tax.components.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button type="submit" disabled={isSubmitting} id="tax-component-dialog-save-button">
-              {isSubmitting ? 'Saving...' : 'Save'}
+              {isSubmitting
+                ? t('tax.components.actions.saving', { defaultValue: 'Saving...' })
+                : t('tax.components.actions.save', { defaultValue: 'Save' })}
             </Button>
           </div>
         </form>
@@ -544,17 +574,19 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
       <GenericDialog
         isOpen={isDeleteDialogOpen}
         onClose={handleCloseDeleteDialog}
-        title="Delete Tax Component"
+        title={t('tax.components.dialog.deleteTitle', { defaultValue: 'Delete Tax Component' })}
         id="tax-component-delete-dialog"
       >
         <div className="py-4">
           <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete the component "{componentToDelete?.name}"?
-            This action cannot be undone.
+            {t('tax.components.delete.message', {
+              name: componentToDelete?.name ?? '',
+              defaultValue: 'Are you sure you want to delete the component "{{name}}"? This action cannot be undone.'
+            })}
           </p>
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={handleCloseDeleteDialog} id="cancel-delete-tax-component-button">
-              Cancel
+              {t('tax.components.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               type="button"
@@ -563,7 +595,9 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
               disabled={isSubmitting}
               id="confirm-delete-tax-component-button"
             >
-              {isSubmitting ? 'Deleting...' : 'Delete'}
+              {isSubmitting
+                ? t('tax.components.actions.deleting', { defaultValue: 'Deleting...' })
+                : t('tax.components.actions.delete', { defaultValue: 'Delete' })}
             </Button>
           </div>
         </div>
