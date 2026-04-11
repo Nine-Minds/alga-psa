@@ -122,7 +122,7 @@
   {
     "id": "F025",
     "description": "Wire useTranslation in TaxHolidayManager.tsx -- section heading (with optional tax rate name interpolation), tooltip content, Add Holiday button, table columns (Start Date/End Date/Description/Status/Actions), status badges (Active/Upcoming/Expired), status summary labels, loading/empty states",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F026",

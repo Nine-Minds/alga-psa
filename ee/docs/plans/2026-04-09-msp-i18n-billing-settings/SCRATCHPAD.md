@@ -326,3 +326,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   errors, and delete-confirmation copy with component-name interpolation.
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxComponentEditor.tsx`
+- Completed `F025` in
+  [TaxHolidayManager.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/tax/TaxHolidayManager.tsx).
+- Scoped this pass to the outer holidays surface: title/title-with-name interpolation,
+  tooltip, add button, table headers, active/upcoming/expired badges, status summary
+  labels, loading/empty states, and row action labels.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxHolidayManager.tsx`

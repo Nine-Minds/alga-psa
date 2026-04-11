@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import { ITaxHoliday } from '@alga-psa/types';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -60,6 +61,7 @@ interface TaxHolidayManagerProps {
 }
 
 export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }: TaxHolidayManagerProps) {
+  const { t } = useTranslation('msp/billing-settings');
   const [holidays, setHolidays] = useState<ITaxHoliday[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,11 +95,11 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
       const fetchedHolidays = await getTaxHolidaysByTaxRate(taxRateId);
       setHolidays(fetchedHolidays);
     } catch (error) {
-      handleError(error, 'Failed to load tax holidays.');
+      handleError(error, t('tax.holidays.errors.load', { defaultValue: 'Failed to load tax holidays.' }));
     } finally {
       setIsLoading(false);
     }
-  }, [taxRateId]);
+  }, [taxRateId, t]);
 
   useEffect(() => {
     fetchHolidays();
@@ -225,37 +227,37 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
   const getStatusBadge = (status: HolidayStatus) => {
     switch (status) {
       case 'active':
-        return <Badge variant="success">Active</Badge>;
+        return <Badge variant="success">{t('common.statuses.active', { defaultValue: 'Active' })}</Badge>;
       case 'upcoming':
-        return <Badge variant="info">Upcoming</Badge>;
+        return <Badge variant="info">{t('common.statuses.upcoming', { defaultValue: 'Upcoming' })}</Badge>;
       case 'expired':
-        return <Badge variant="outline">Expired</Badge>;
+        return <Badge variant="outline">{t('common.statuses.expired', { defaultValue: 'Expired' })}</Badge>;
     }
   };
 
   const columns: ColumnDefinition<ITaxHoliday>[] = [
     {
-      title: 'Start Date',
+      title: t('common.columns.startDate', { defaultValue: 'Start Date' }),
       dataIndex: 'start_date',
       render: (value: string) => formatDate(value),
     },
     {
-      title: 'End Date',
+      title: t('common.columns.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
       render: (value: string) => formatDate(value),
     },
     {
-      title: 'Description',
+      title: t('common.columns.description', { defaultValue: 'Description' }),
       dataIndex: 'description',
-      render: (value: string | undefined) => value || '-',
+      render: (value: string | undefined) => value || t('common.emptyValue', { defaultValue: '-' }),
     },
     {
-      title: 'Status',
+      title: t('common.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: (_: any, holiday: ITaxHoliday) => getStatusBadge(getHolidayStatus(holiday)),
     },
     {
-      title: 'Actions',
+      title: t('common.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'actions',
       width: '80px',
       render: (_: any, holiday: ITaxHoliday) => {
@@ -270,7 +272,7 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
                 onClick={(e: React.MouseEvent) => e.stopPropagation()}
                 disabled={isSubmitting}
               >
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">{t('common.a11y.openMenu', { defaultValue: 'Open menu' })}</span>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -283,7 +285,7 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
                 }}
                 disabled={isSubmitting}
               >
-                Edit
+                {t('tax.holidays.actions.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -295,7 +297,7 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
                 className="text-red-600 focus:text-red-600"
                 disabled={isSubmitting}
               >
-                Delete
+                {t('tax.holidays.actions.delete', { defaultValue: 'Delete' })}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -308,8 +310,17 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
     <div className="space-y-4" id="tax-holiday-manager">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h4 className="text-sm font-medium">Tax Holidays{taxRateName ? ` for ${taxRateName}` : ''}</h4>
-          <Tooltip content="Tax holidays are temporary periods where this tax is not applied. Use them for promotions, seasonal exemptions, or government-mandated tax holidays.">
+          <h4 className="text-sm font-medium">
+            {taxRateName
+              ? t('tax.holidays.titleWithName', {
+                  name: taxRateName,
+                  defaultValue: 'Tax Holidays for {{name}}'
+                })
+              : t('tax.holidays.title', { defaultValue: 'Tax Holidays' })}
+          </h4>
+          <Tooltip content={t('tax.holidays.tooltip', {
+            defaultValue: 'Tax holidays are temporary periods where this tax is not applied. Use them for promotions, seasonal exemptions, or government-mandated tax holidays.'
+          })}>
             <Info className="h-4 w-4 text-muted-foreground cursor-help" />
           </Tooltip>
         </div>
@@ -321,7 +332,7 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
             disabled={isSubmitting}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Holiday
+            {t('tax.holidays.actions.add', { defaultValue: 'Add Holiday' })}
           </Button>
         )}
       </div>
@@ -331,24 +342,39 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
         <div className="flex gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
             <Calendar className="h-4 w-4 text-green-500" />
-            {holidayStats.active} active
+            {t('tax.holidays.summary.active', {
+              count: holidayStats.active,
+              defaultValue: '{{count}} active'
+            })}
           </span>
           <span className="flex items-center gap-1">
             <CalendarDays className="h-4 w-4 text-blue-500" />
-            {holidayStats.upcoming} upcoming
+            {t('tax.holidays.summary.upcoming', {
+              count: holidayStats.upcoming,
+              defaultValue: '{{count}} upcoming'
+            })}
           </span>
           <span className="flex items-center gap-1">
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            {holidayStats.expired} expired
+            {t('tax.holidays.summary.expired', {
+              count: holidayStats.expired,
+              defaultValue: '{{count}} expired'
+            })}
           </span>
         </div>
       )}
 
-      {isLoading && <div className="text-center p-4 text-muted-foreground">Loading holidays...</div>}
+      {isLoading && (
+        <div className="text-center p-4 text-muted-foreground">
+          {t('tax.holidays.loading', { defaultValue: 'Loading holidays...' })}
+        </div>
+      )}
 
       {!isLoading && holidays.length === 0 && (
         <div className="text-center p-4 text-muted-foreground border border-dashed rounded-lg">
-          No tax holidays defined. Add holidays to temporarily exempt this tax during specific periods.
+          {t('tax.holidays.empty', {
+            defaultValue: 'No tax holidays defined. Add holidays to temporarily exempt this tax during specific periods.'
+          })}
         </div>
       )}
 
