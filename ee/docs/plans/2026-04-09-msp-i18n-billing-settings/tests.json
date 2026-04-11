@@ -359,7 +359,7 @@
   {
     "id": "T040",
     "description": "Manual: visual diff on /msp/settings?tab=billing in de -- long German strings do not break card layouts, button widths, or select dropdowns",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F004",
