@@ -113,7 +113,7 @@
   {
     "id": "T013",
     "description": "ServiceTypeSettings.tsx imports useTranslation and card title/description, column titles, billing method display labels, loading state, and button labels use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
