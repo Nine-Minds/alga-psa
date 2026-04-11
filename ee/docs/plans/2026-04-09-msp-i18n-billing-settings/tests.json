@@ -137,7 +137,7 @@
   {
     "id": "T016",
     "description": "ServiceCatalogManager.tsx edit dialog field labels, pricing section strings (rate type labels, + Add Currency, Remove, help text), and save/cancel buttons use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
