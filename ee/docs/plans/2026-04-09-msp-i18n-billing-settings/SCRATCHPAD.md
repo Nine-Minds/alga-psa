@@ -230,3 +230,13 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   deferred to `F015` so the confirmation flows land in a separate commit.
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/billing/ProductsManager.tsx`
+- Completed `F015` in
+  [ProductsManager.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/ProductsManager.tsx).
+- Wired the archive confirmation copy, permanent-delete checking/confirm/blocked states,
+  cancel/delete labels, fallback `"this product"` interpolation value, and all user-facing
+  products-manager error fallbacks to `products.*`.
+- Expanded the English namespace with `products.thisProduct` so both confirmation flows can
+  interpolate a translated fallback name instead of hardcoding English in JSX.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/billing/ProductsManager.tsx`
+  `node -e "const fs=require('fs');const p='server/public/locales/en/msp/billing-settings.json';JSON.parse(fs.readFileSync(p,'utf8'));console.log('ok')"`

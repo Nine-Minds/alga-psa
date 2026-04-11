@@ -145,7 +145,7 @@ const ProductsManager: React.FC = () => {
       setError(null);
     } catch (e) {
       console.error('[ProductsManager] Failed to fetch products:', e);
-      setError('Failed to fetch products');
+      setError(t('products.errors.fetch', { defaultValue: 'Failed to fetch products' }));
     } finally {
       setIsLoading(false);
     }
@@ -288,7 +288,7 @@ const ProductsManager: React.FC = () => {
                     .then(() => fetchProducts())
                     .catch((err) => {
                       console.error('[ProductsManager] Failed to restore product:', err);
-                      setError('Failed to restore product');
+                      setError(t('products.errors.restore', { defaultValue: 'Failed to restore product' }));
                     });
                   return;
                 }
@@ -339,7 +339,7 @@ const ProductsManager: React.FC = () => {
       await fetchProducts();
     } catch (e) {
       console.error('[ProductsManager] Failed to archive product:', e);
-      setError('Failed to archive product');
+      setError(t('products.errors.archive', { defaultValue: 'Failed to archive product' }));
       setIsDeleteOpen(false);
       setProductToDelete(null);
     }
@@ -358,7 +358,13 @@ const ProductsManager: React.FC = () => {
       console.error('[ProductsManager] Failed to check product associations:', e);
       setPermanentDeleteCheck({
         canDelete: false,
-        associations: [{ type: 'error', count: 0, description: 'Failed to check associations' }]
+        associations: [{
+          type: 'error',
+          count: 0,
+          description: t('products.errors.checkAssociations', {
+            defaultValue: 'Failed to check associations'
+          })
+        }]
       });
     } finally {
       setIsCheckingDelete(false);
@@ -376,7 +382,11 @@ const ProductsManager: React.FC = () => {
       await fetchProducts();
     } catch (e) {
       console.error('[ProductsManager] Failed to permanently delete product:', e);
-      setError(e instanceof Error ? e.message : 'Failed to delete product');
+      setError(
+        e instanceof Error
+          ? e.message
+          : t('products.errors.delete', { defaultValue: 'Failed to delete product' })
+      );
       setIsPermanentDeleteOpen(false);
       setProductToPermanentDelete(null);
       setPermanentDeleteCheck(null);
@@ -518,35 +528,61 @@ const ProductsManager: React.FC = () => {
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={confirmArchive}
-        title="Archive Product"
-        message={`Archive ${productToDelete?.service_name || 'this product'}? It will be hidden from pickers by default and cannot be attached to new contracts/invoices until restored.`}
+        title={t('products.archive.title', { defaultValue: 'Archive Product' })}
+        message={t('products.archive.message', {
+          name: productToDelete?.service_name || t('products.thisProduct', { defaultValue: 'this product' }),
+          defaultValue:
+            'Archive {{name}}? It will be hidden from pickers by default and cannot be attached to new contracts/invoices until restored.'
+        })}
       />
 
       <ConfirmationDialog
         isOpen={isPermanentDeleteOpen}
         onClose={closePermanentDeleteDialog}
         onConfirm={confirmPermanentDelete}
-        title="Delete Product Permanently"
-        confirmLabel="Delete"
+        title={t('products.permanentDelete.title', { defaultValue: 'Delete Product Permanently' })}
+        confirmLabel={t('products.actions.delete', { defaultValue: 'Delete' })}
         isConfirming={!permanentDeleteCheck?.canDelete || isCheckingDelete}
-        cancelLabel="Cancel"
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
         message={
           isCheckingDelete ? (
-            <span>Checking if product can be deleted...</span>
+            <span>
+              {t('products.permanentDelete.checking', {
+                defaultValue: 'Checking if product can be deleted...'
+              })}
+            </span>
           ) : permanentDeleteCheck?.canDelete ? (
             <span>
-              Are you sure you want to permanently delete &quot;{productToPermanentDelete?.service_name}&quot;?
-              This action cannot be undone.
+              {t('products.permanentDelete.confirm', {
+                name:
+                  productToPermanentDelete?.service_name ||
+                  t('products.thisProduct', { defaultValue: 'this product' }),
+                defaultValue:
+                  'Are you sure you want to permanently delete "{{name}}"? This action cannot be undone.'
+              })}
             </span>
           ) : (
             <div className="space-y-2">
-              <p>Cannot delete &quot;{productToPermanentDelete?.service_name}&quot; because it is associated with existing data:</p>
+              <p>
+                {t('products.permanentDelete.blocked', {
+                  name:
+                    productToPermanentDelete?.service_name ||
+                    t('products.thisProduct', { defaultValue: 'this product' }),
+                  defaultValue:
+                    'Cannot delete "{{name}}" because it is associated with existing data:'
+                })}
+              </p>
               <ul className="list-disc list-inside text-sm">
                 {permanentDeleteCheck?.associations.map((a, i) => (
                   <li key={i}>{a.description}</li>
                 ))}
               </ul>
-              <p className="text-sm mt-2">To remove this product, first remove it from all associated records, or use Archive instead.</p>
+              <p className="text-sm mt-2">
+                {t('products.permanentDelete.archiveInstead', {
+                  defaultValue:
+                    'To remove this product, first remove it from all associated records, or use Archive instead.'
+                })}
+              </p>
             </div>
           )
         }

@@ -645,6 +645,7 @@
   "products": {
     "title": "Products",
     "loading": "Loading products",
+    "thisProduct": "this product",
     "actions": {
       "add": "Add Product",
       "search": "Search",

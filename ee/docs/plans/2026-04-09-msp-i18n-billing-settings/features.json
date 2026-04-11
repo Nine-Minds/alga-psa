@@ -72,7 +72,7 @@
   {
     "id": "F015",
     "description": "Wire ProductsManager.tsx confirmation dialog strings -- archive confirmation (with product name interpolation), permanent delete dialog (checking/can-delete/cannot-delete messages with associations list, archive-instead suggestion), error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F016",
