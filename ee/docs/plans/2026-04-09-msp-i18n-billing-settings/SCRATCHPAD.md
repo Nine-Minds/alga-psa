@@ -413,3 +413,6 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   `node scripts/validate-translations.cjs`
 - Validation result: `PASSED` with `Errors: 0` and `Warnings: 0` across
   `de, es, fr, it, nl, pl, xx, yy` relative to `en`.
+- Completed `T001` by running:
+  `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`
+- Result: `PASSED` with `Errors: 0`, `Warnings: 0` across `de, es, fr, it, nl, pl, xx, yy`.
