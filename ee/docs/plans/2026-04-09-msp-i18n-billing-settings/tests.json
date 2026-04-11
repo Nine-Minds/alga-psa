@@ -265,7 +265,7 @@
   {
     "id": "T032",
     "description": "TaxSettingsForm.tsx advanced tax options card strings (title, description, reverse charge toggle, tax source override select options, effective source description, override-not-available alert) use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
