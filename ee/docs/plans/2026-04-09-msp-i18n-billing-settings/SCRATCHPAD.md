@@ -397,3 +397,9 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/it/msp/billing-settings.json','utf8')); console.log('it json ok')"`
   `rg -n "perche|lunedi|qualita" server/public/locales/it/msp/billing-settings.json || true`
   `rg -n "perché|lunedì|qualità" server/public/locales/it/msp/billing-settings.json || true`
+- Completed `F035` by generating
+  [pl/msp/billing-settings.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/pl/msp/billing-settings.json)
+  with the same cached machine-translation pass and interpolation-token restoration.
+- Verification runs:
+  `rg -n "ALGA_VAR|__" server/public/locales/pl/msp/billing-settings.json || true`
+  `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/pl/msp/billing-settings.json','utf8')); console.log('pl json ok')"`
