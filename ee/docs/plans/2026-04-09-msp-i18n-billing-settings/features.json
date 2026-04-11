@@ -142,7 +142,7 @@
   {
     "id": "F029",
     "description": "Wire TaxSettingsForm.tsx advanced tax options card -- card title/description, reverse charge toggle label/tooltip/status, tax source override label/tooltip, select options (Use Tenant Default/Alga PSA Calculates Tax/Accounting Package Calculates Tax), effective source description (with override indicator), override-not-available alert with billing settings link, reset/update buttons, updating state",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F030",

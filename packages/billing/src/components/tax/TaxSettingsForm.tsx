@@ -141,13 +141,22 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       for (let i = 0; i < settings.tax_rate_thresholds.length; i++) {
         const threshold = settings.tax_rate_thresholds[i];
         if (threshold.min_amount < 0) {
-          return `Threshold ${i + 1} has a negative minimum amount`;
+          return t('clientTaxSettings.validation.thresholdNegativeMin', {
+            index: i + 1,
+            defaultValue: 'Threshold {{index}} has a negative minimum amount'
+          });
         }
         if (threshold.max_amount !== undefined && threshold.max_amount < threshold.min_amount) {
-          return `Threshold ${i + 1} has a maximum amount less than its minimum amount`;
+          return t('clientTaxSettings.validation.thresholdMaxLessThanMin', {
+            index: i + 1,
+            defaultValue: 'Threshold {{index}} has a maximum amount less than its minimum amount'
+          });
         }
         if (threshold.rate < 0) {
-          return `Threshold ${i + 1} has a negative rate`;
+          return t('clientTaxSettings.validation.thresholdNegativeRate', {
+            index: i + 1,
+            defaultValue: 'Threshold {{index}} has a negative rate'
+          });
         }
       }
     }
@@ -157,10 +166,16 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       for (let i = 0; i < settings.tax_holidays.length; i++) {
         const holiday = settings.tax_holidays[i];
         if (!holiday.start_date || !holiday.end_date) {
-          return `Holiday ${i + 1} is missing start or end date`;
+          return t('clientTaxSettings.validation.holidayMissingDates', {
+            index: i + 1,
+            defaultValue: 'Holiday {{index}} is missing start or end date'
+          });
         }
         if (new Date(holiday.start_date) > new Date(holiday.end_date)) {
-          return `Holiday ${i + 1} has an end date before its start date`;
+          return t('clientTaxSettings.validation.holidayEndBeforeStart', {
+            index: i + 1,
+            defaultValue: 'Holiday {{index}} has an end date before its start date'
+          });
         }
       }
     }
@@ -458,23 +473,35 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card id="reverse-charge-card">
           <CardHeader>
-            <CardTitle>Advanced Tax Options</CardTitle>
+            <CardTitle>
+              {t('clientTaxSettings.advanced.title', { defaultValue: 'Advanced Tax Options' })}
+            </CardTitle>
             <CardDescription>
-              Configure special tax handling for this client.
+              {t('clientTaxSettings.advanced.description', {
+                defaultValue: 'Configure special tax handling for this client.'
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Apply Reverse Charge</span>
-                  <Tooltip content="Reverse charge shifts the tax liability from the seller to the buyer. Common in B2B transactions across borders.">
+                  <span className="text-sm font-medium">
+                    {t('clientTaxSettings.advanced.reverseCharge.label', {
+                      defaultValue: 'Apply Reverse Charge'
+                    })}
+                  </span>
+                  <Tooltip content={t('clientTaxSettings.advanced.reverseCharge.tooltip', {
+                    defaultValue: 'Reverse charge shifts the tax liability from the seller to the buyer. Common in B2B transactions across borders.'
+                  })}>
                     <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                   </Tooltip>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
-                    {taxSettings.is_reverse_charge_applicable ? 'Enabled' : 'Disabled'}
+                    {taxSettings.is_reverse_charge_applicable
+                      ? t('common.statuses.enabled', { defaultValue: 'Enabled' })
+                      : t('common.statuses.disabled', { defaultValue: 'Disabled' })}
                   </span>
                   <Switch
                     id="reverseCharge"
@@ -492,9 +519,13 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <label htmlFor="tax-source-override" className="text-sm font-medium">
-                    Tax Source Override
+                    {t('clientTaxSettings.advanced.taxSourceOverride.label', {
+                      defaultValue: 'Tax Source Override'
+                    })}
                   </label>
-                  <Tooltip content="Override the tenant default tax source for this client. 'Internal' uses Alga's tax calculation. 'External' delegates tax calculation to the accounting system when invoices are exported.">
+                  <Tooltip content={t('clientTaxSettings.advanced.taxSourceOverride.tooltip', {
+                    defaultValue: 'Override the tenant default tax source for this client. \'Internal\' uses Alga\'s tax calculation. \'External\' delegates tax calculation to the accounting system when invoices are exported.'
+                  })}>
                     <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                   </Tooltip>
                 </div>
@@ -509,33 +540,74 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
                     setTaxSettings({ ...taxSettings, tax_source_override: newValue });
                   }}
                   options={[
-                    { value: '', label: 'Use Tenant Default' },
-                    { value: 'internal', label: 'Alga PSA Calculates Tax' },
-                    { value: 'external', label: 'Accounting Package Calculates Tax' },
+                    {
+                      value: '',
+                      label: t('clientTaxSettings.advanced.taxSourceOverride.options.default', {
+                        defaultValue: 'Use Tenant Default'
+                      })
+                    },
+                    {
+                      value: 'internal',
+                      label: t('clientTaxSettings.advanced.taxSourceOverride.options.internal', {
+                        defaultValue: 'Alga PSA Calculates Tax'
+                      })
+                    },
+                    {
+                      value: 'external',
+                      label: t('clientTaxSettings.advanced.taxSourceOverride.options.external', {
+                        defaultValue: 'Accounting Package Calculates Tax'
+                      })
+                    },
                   ]}
-                  placeholder="Select tax source..."
+                  placeholder={t('clientTaxSettings.advanced.taxSourceOverride.placeholder', {
+                    defaultValue: 'Select tax source...'
+                  })}
                   disabled={isSubmitting || !canOverrideTaxSource}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Current effective tax source: <span className="font-medium">
-                    {effectiveTaxSource === 'internal' ? 'Alga PSA Calculates Tax' : effectiveTaxSource === 'external' ? 'Accounting Package Calculates Tax' : 'Pending External'}
+                  {t('clientTaxSettings.advanced.taxSourceOverride.effective.label', {
+                    defaultValue: 'Current effective tax source:'
+                  })}{' '}
+                  <span className="font-medium">
+                    {effectiveTaxSource === 'internal'
+                      ? t('clientTaxSettings.advanced.taxSourceOverride.options.internal', {
+                          defaultValue: 'Alga PSA Calculates Tax'
+                        })
+                      : effectiveTaxSource === 'external'
+                        ? t('clientTaxSettings.advanced.taxSourceOverride.options.external', {
+                            defaultValue: 'Accounting Package Calculates Tax'
+                          })
+                        : t('clientTaxSettings.advanced.taxSourceOverride.effective.pendingExternal', {
+                            defaultValue: 'Pending External'
+                          })}
                   </span>
                   {taxSettings.tax_source_override && (
-                    <span className="ml-1">(overridden)</span>
+                    <span className="ml-1">
+                      {t('clientTaxSettings.advanced.taxSourceOverride.effective.overridden', {
+                        defaultValue: '(overridden)'
+                      })}
+                    </span>
                   )}
                 </p>
                 {!canOverrideTaxSource && (
                   <Alert variant="info" showIcon>
                     <AlertDescription>
                       <p className="text-sm">
-                        Tax source override is not available. This feature must be enabled in the{' '}
+                        {t('clientTaxSettings.advanced.taxSourceOverride.notAvailable.messageStart', {
+                          defaultValue: 'Tax source override is not available. This feature must be enabled in the'
+                        })}{' '}
                         <Link 
                           href="/msp/settings?tab=billing" 
                           className="text-primary-600 hover:text-primary-700 underline font-medium"
                         >
-                          billing settings
+                          {t('clientTaxSettings.advanced.taxSourceOverride.notAvailable.link', {
+                            defaultValue: 'billing settings'
+                          })}
                         </Link>
-                        {' '}to allow per-client tax source overrides.
+                        {' '}
+                        {t('clientTaxSettings.advanced.taxSourceOverride.notAvailable.messageEnd', {
+                          defaultValue: 'to allow per-client tax source overrides.'
+                        })}
                       </p>
                     </AlertDescription>
                   </Alert>
@@ -558,7 +630,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
             variant="outline"
             disabled={isSubmitting}
           >
-            Reset Changes
+            {t('clientTaxSettings.advanced.actions.reset', { defaultValue: 'Reset Changes' })}
           </Button>
           <Button
             id="update-tax-settings-button"
@@ -566,7 +638,9 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
             variant="default"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Updating...' : 'Update Tax Settings'}
+            {isSubmitting
+              ? t('clientTaxSettings.advanced.actions.updating', { defaultValue: 'Updating...' })
+              : t('clientTaxSettings.advanced.actions.update', { defaultValue: 'Update Tax Settings' })}
           </Button>
         </div>
       </form>

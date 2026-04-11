@@ -354,3 +354,11 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   tax-exempt enable/disable/update messages to `clientTaxSettings.taxExempt.*`.
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/tax/TaxSettingsForm.tsx`
+- Completed `F029` in
+  [TaxSettingsForm.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/tax/TaxSettingsForm.tsx).
+- Wired the advanced-options card title/description, reverse-charge label/tooltip/status,
+  tax-source override label/tooltip/options/placeholder/effective-source text, override
+  unavailability alert with billing-settings link text, reset/update buttons, updating
+  state, and the shared threshold/holiday validation messages surfaced by form submit.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/tax/TaxSettingsForm.tsx`
