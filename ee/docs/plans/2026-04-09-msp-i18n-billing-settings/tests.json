@@ -89,7 +89,7 @@
   {
     "id": "T010",
     "description": "RenewalAutomationSettings.tsx policy option labels and help text descriptions are translated at render time (not at const definition time)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
