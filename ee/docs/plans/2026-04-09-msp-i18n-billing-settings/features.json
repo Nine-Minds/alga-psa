@@ -112,7 +112,7 @@
   {
     "id": "F023",
     "description": "Wire useTranslation in TaxComponentEditor.tsx -- section heading, tooltip content, Add Component button, table columns (Seq/Name/Rate/Compound/Date Range/Actions), compound badges (Yes/No), date range display labels (Always/Any/Ongoing), loading/empty states, calculation preview labels (title with base amount, compound label, Total Tax, Effective)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F024",

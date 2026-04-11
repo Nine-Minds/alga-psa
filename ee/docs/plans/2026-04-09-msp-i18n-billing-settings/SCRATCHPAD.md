@@ -312,3 +312,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   `tax.thresholds.noLimit` token directly instead of lowercasing it in code.
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxThresholdEditor.tsx`
+- Completed `F023` in
+  [TaxComponentEditor.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/tax/TaxComponentEditor.tsx).
+- Scoped this pass to the outer tax-components surface: section heading/tooltip, add
+  button, table headers, yes/no compound badges, date-range display labels, loading/empty
+  states, calculation-preview labels, and row action labels.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxComponentEditor.tsx`

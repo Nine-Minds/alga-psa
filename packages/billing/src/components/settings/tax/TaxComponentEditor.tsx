@@ -23,6 +23,7 @@ import {
   DropdownMenuSeparator,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import { ITaxComponent } from '@alga-psa/types';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -51,6 +52,7 @@ interface TaxComponentEditorProps {
 }
 
 export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxComponentEditorProps) {
+  const { t } = useTranslation('msp/billing-settings');
   const [components, setComponents] = useState<ITaxComponent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,11 +89,11 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
       const fetchedComponents = await getTaxComponentsByTaxRate(taxRateId);
       setComponents(fetchedComponents);
     } catch (error) {
-      handleError(error, 'Failed to load tax components.');
+      handleError(error, t('tax.components.errors.load', { defaultValue: 'Failed to load tax components.' }));
     } finally {
       setIsLoading(false);
     }
-  }, [taxRateId]);
+  }, [taxRateId, t]);
 
   useEffect(() => {
     fetchComponents();
@@ -226,40 +228,48 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
 
   const columns: ColumnDefinition<ITaxComponent>[] = [
     {
-      title: 'Seq',
+      title: t('common.columns.sequence', { defaultValue: 'Seq' }),
       dataIndex: 'sequence',
       width: '60px',
     },
     {
-      title: 'Name',
+      title: t('common.columns.name', { defaultValue: 'Name' }),
       dataIndex: 'name',
     },
     {
-      title: 'Rate',
+      title: t('common.columns.rate', { defaultValue: 'Rate' }),
       dataIndex: 'rate',
       render: (value: number) => `${value}%`,
     },
     {
-      title: 'Compound',
+      title: t('tax.components.fields.compound.label', { defaultValue: 'Compound Tax' }),
       dataIndex: 'is_compound',
       render: (value: boolean) => (
         <Badge variant={value ? 'default' : 'outline'}>
-          {value ? 'Yes' : 'No'}
+          {value
+            ? t('common.statuses.yes', { defaultValue: 'Yes' })
+            : t('common.statuses.no', { defaultValue: 'No' })}
         </Badge>
       ),
     },
     {
-      title: 'Date Range',
+      title: t('common.columns.dateRange', { defaultValue: 'Date Range' }),
       dataIndex: 'start_date',
       render: (_: any, component: ITaxComponent) => {
-        if (!component.start_date && !component.end_date) return 'Always';
-        const start = component.start_date ? new Date(component.start_date).toLocaleDateString() : 'Any';
-        const end = component.end_date ? new Date(component.end_date).toLocaleDateString() : 'Ongoing';
+        if (!component.start_date && !component.end_date) {
+          return t('tax.components.dateRange.always', { defaultValue: 'Always' });
+        }
+        const start = component.start_date
+          ? new Date(component.start_date).toLocaleDateString()
+          : t('tax.components.dateRange.any', { defaultValue: 'Any' });
+        const end = component.end_date
+          ? new Date(component.end_date).toLocaleDateString()
+          : t('tax.components.dateRange.ongoing', { defaultValue: 'Ongoing' });
         return `${start} - ${end}`;
       },
     },
     {
-      title: 'Actions',
+      title: t('common.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'actions',
       width: '80px',
       render: (_: any, component: ITaxComponent) => {
@@ -274,7 +284,7 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
                 onClick={(e: React.MouseEvent) => e.stopPropagation()}
                 disabled={isSubmitting}
               >
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">{t('common.a11y.openMenu', { defaultValue: 'Open menu' })}</span>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -287,7 +297,7 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
                 }}
                 disabled={isSubmitting}
               >
-                Edit
+                {t('tax.components.actions.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -299,7 +309,7 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
                 className="text-red-600 focus:text-red-600"
                 disabled={isSubmitting}
               >
-                Delete
+                {t('tax.components.actions.delete', { defaultValue: 'Delete' })}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -312,8 +322,12 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
     <div className="space-y-4" id="tax-component-editor">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h4 className="text-sm font-medium">Tax Components</h4>
-          <Tooltip content="Components are applied in sequence order. Compound components calculate tax on the base amount plus previous taxes.">
+          <h4 className="text-sm font-medium">
+            {t('tax.components.title', { defaultValue: 'Tax Components' })}
+          </h4>
+          <Tooltip content={t('tax.components.tooltip', {
+            defaultValue: 'Components are applied in sequence order. Compound components calculate tax on the base amount plus previous taxes.'
+          })}>
             <Info className="h-4 w-4 text-muted-foreground cursor-help" />
           </Tooltip>
         </div>
@@ -325,16 +339,22 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
             disabled={isSubmitting}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Component
+            {t('tax.components.actions.add', { defaultValue: 'Add Component' })}
           </Button>
         )}
       </div>
 
-      {isLoading && <div className="text-center p-4 text-muted-foreground">Loading components...</div>}
+      {isLoading && (
+        <div className="text-center p-4 text-muted-foreground">
+          {t('tax.components.loading', { defaultValue: 'Loading components...' })}
+        </div>
+      )}
 
       {!isLoading && components.length === 0 && (
         <div className="text-center p-4 text-muted-foreground border border-dashed rounded-lg">
-          No tax components defined. Add components to create a composite tax.
+          {t('tax.components.empty', {
+            defaultValue: 'No tax components defined. Add components to create a composite tax.'
+          })}
         </div>
       )}
 
@@ -354,19 +374,33 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
 
           {/* Tax Calculation Preview */}
           <div className="bg-muted/50 rounded-lg p-4 mt-4">
-            <h5 className="text-sm font-medium mb-2">Calculation Preview (${calculatePreview.baseAmount.toFixed(2)} base)</h5>
+            <h5 className="text-sm font-medium mb-2">
+              {t('tax.components.preview.title', {
+                amount: `$${calculatePreview.baseAmount.toFixed(2)}`,
+                defaultValue: 'Calculation Preview ({{amount}} base)'
+              })}
+            </h5>
             <div className="space-y-1 text-sm">
               {calculatePreview.breakdown.map((item, index) => (
                 <div key={index} className="flex justify-between">
                   <span>
-                    {item.name} ({item.rate}%{item.isCompound ? ', compound' : ''}):
+                    {item.name} ({item.rate}%{item.isCompound
+                      ? t('tax.components.preview.compoundSuffix', { defaultValue: ', compound' })
+                      : ''}):
                   </span>
                   <span>${item.tax.toFixed(2)}</span>
                 </div>
               ))}
               <div className="border-t pt-1 mt-1 flex justify-between font-medium">
-                <span>Total Tax:</span>
-                <span>${calculatePreview.totalTax.toFixed(2)} (Effective: {calculatePreview.effectiveRate.toFixed(2)}%)</span>
+                <span>{t('tax.components.preview.totalTax', { defaultValue: 'Total Tax:' })}</span>
+                <span>
+                  ${calculatePreview.totalTax.toFixed(2)} (
+                  {t('tax.components.preview.effective', {
+                    rate: calculatePreview.effectiveRate.toFixed(2),
+                    defaultValue: 'Effective: {{rate}}%'
+                  })}
+                  )
+                </span>
               </div>
             </div>
           </div>
