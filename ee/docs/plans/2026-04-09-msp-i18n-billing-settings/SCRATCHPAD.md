@@ -179,3 +179,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   copy are intentionally left for `F009`.
 - Verification runs:
   `sed -n '1,260p' packages/billing/src/components/settings/billing/ServiceCategoriesSettings.tsx`
+- Completed `F009` in
+  [ServiceCategoriesSettings.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/ServiceCategoriesSettings.tsx).
+- Wired the delete confirmation dialog, add/edit dialog copy, validation/error messages,
+  create/update/delete/import toasts, import dialog copy, and conflict-resolution strings
+  to `serviceCategories.*`, `common.*`, and `import.*`.
+- Verification runs:
+  `sed -n '60,560p' packages/billing/src/components/settings/billing/ServiceCategoriesSettings.tsx`

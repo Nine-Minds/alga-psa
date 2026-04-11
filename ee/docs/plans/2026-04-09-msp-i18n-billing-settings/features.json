@@ -42,7 +42,7 @@
   {
     "id": "F009",
     "description": "Wire ServiceCategoriesSettings.tsx dialog strings -- add/edit dialog title, field labels (Category Name/Description/Display Order), placeholders, display order help text, validation error ('Category name is required'), cancel/create/update buttons, toast messages (created/updated/deleted), import dialog title and content, conflict resolution dialog strings",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",
