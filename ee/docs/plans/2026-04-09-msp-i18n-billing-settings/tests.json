@@ -97,7 +97,7 @@
   {
     "id": "T011",
     "description": "ServiceCategoriesSettings.tsx imports useTranslation and page heading, column titles, action menu items, and button labels use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
