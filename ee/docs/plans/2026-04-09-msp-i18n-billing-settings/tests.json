@@ -225,7 +225,7 @@
   {
     "id": "T027",
     "description": "TaxComponentEditor.tsx dialog strings (add/edit title, field labels, compound toggle description, delete confirmation with name interpolation) use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
