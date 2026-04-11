@@ -162,7 +162,7 @@
   {
     "id": "F033",
     "description": "Generate nl/msp/billing-settings.json translations for all keys",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F034",
