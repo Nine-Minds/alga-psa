@@ -295,7 +295,7 @@
   {
     "id": "T035",
     "description": "Integration: /msp/settings?tab=billing renders in de with translated tab labels, card titles, field labels, and option labels (no English leakage)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F004",
