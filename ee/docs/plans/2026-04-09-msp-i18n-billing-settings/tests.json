@@ -129,7 +129,7 @@
   {
     "id": "T015",
     "description": "ServiceCatalogManager.tsx imports useTranslation and page heading, column titles, filter placeholders, loading state, and action menu items use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
