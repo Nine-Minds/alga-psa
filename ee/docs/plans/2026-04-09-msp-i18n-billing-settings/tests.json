@@ -145,7 +145,7 @@
   {
     "id": "T017",
     "description": "ProductsManager.tsx imports useTranslation and page heading, column titles, action menu items (Edit/Restore/Archive/Delete), filter options, search placeholder, and Add Product button use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
