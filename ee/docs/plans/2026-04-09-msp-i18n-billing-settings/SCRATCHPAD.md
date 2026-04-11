@@ -272,3 +272,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/billing/QuickAddProduct.tsx`
   `node -e "const fs=require('fs');const p='server/public/locales/en/msp/billing-settings.json';JSON.parse(fs.readFileSync(p,'utf8'));console.log('ok')"`
+- Completed `F019` in
+  [TaxSourceSettings.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/tax/TaxSourceSettings.tsx).
+- Wired the card title/tooltip/description, internal vs external radio copy, external-tax
+  workflow alert, loading/saving states, save success toast, and load/save fallback errors
+  to `tax.source.*`.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxSourceSettings.tsx`

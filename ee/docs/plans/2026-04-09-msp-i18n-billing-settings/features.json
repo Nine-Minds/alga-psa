@@ -92,7 +92,7 @@
   {
     "id": "F019",
     "description": "Wire useTranslation in TaxSourceSettings.tsx -- card title, tooltip content, card description, radio option labels and descriptions (Internal/External), external workflow numbered steps, accounting system note, cancel/save buttons, saving state, loading state, toast messages, error strings",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F020",
