@@ -150,7 +150,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/service-requests': ['common', 'msp/core', 'features/tickets'],
   '/msp/settings/extensions': ['common', 'msp/core', 'msp/settings', 'msp/extensions'],
-  '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets'],
+  '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets', 'msp/billing-settings'],
   '/msp/profile': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
   '/msp/security-settings': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
   '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],

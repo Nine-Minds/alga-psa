@@ -134,3 +134,7 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   and tax/client-tax surfaces.
 - Validation run:
   `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/billing-settings.json','utf8')); console.log('ok')"`
+- Completed `F002` by adding `'msp/billing-settings'` to the `/msp/settings` entry in
+  [config.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/core/src/lib/i18n/config.ts).
+- Verification run:
+  `rg -n "'/msp/settings'|msp/billing-settings" packages/core/src/lib/i18n/config.ts`
