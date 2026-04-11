@@ -201,7 +201,7 @@
   {
     "id": "T024",
     "description": "TaxThresholdEditor.tsx imports useTranslation and section heading, tooltip, button, column titles, 'No limit' label, bracket issues alert, loading/empty states, and preview labels use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
