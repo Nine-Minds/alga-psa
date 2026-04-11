@@ -17,7 +17,7 @@
   {
     "id": "F004",
     "description": "Wire useTranslation in DefaultCurrencySettings.tsx -- currency select label, placeholder, toast success message, error fallback strings",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",

@@ -145,3 +145,9 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   text. Tab `id` values remain `general`, `quoting`, `tax`, and `payments`.
 - Verification runs:
   `rg -n "General'|Quoting'|Tax'|Payments'|Default Currency|Invoice Numbering|Zero-Dollar Invoices|Credit Expiration|Renewal Automation|Quote Numbering|Tax Regions|Payment Settings|Loading payment settings" packages/billing/src/components/settings/billing/BillingSettings.tsx`
+- Completed `F004` in
+  [DefaultCurrencySettings.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/DefaultCurrencySettings.tsx).
+- Wired the select label, placeholder, success toast, and `handleError` fallback strings to
+  `general.currency.*`.
+- Verification runs:
+  `sed -n '1,200p' packages/billing/src/components/settings/billing/DefaultCurrencySettings.tsx`
