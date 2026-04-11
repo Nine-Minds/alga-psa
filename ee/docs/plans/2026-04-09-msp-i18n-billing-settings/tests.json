@@ -177,7 +177,7 @@
   {
     "id": "T021",
     "description": "QuickAddProduct.tsx imports useTranslation and all field labels (Product Name through Description), pricing editor strings, validation errors, and dialog title (Add/Edit) use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
