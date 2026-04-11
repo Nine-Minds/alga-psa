@@ -240,3 +240,15 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/billing/ProductsManager.tsx`
   `node -e "const fs=require('fs');const p='server/public/locales/en/msp/billing-settings.json';JSON.parse(fs.readFileSync(p,'utf8'));console.log('ok')"`
+- Completed `F016` in
+  [QuickAddService.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/QuickAddService.tsx).
+- Scoped this pass to the shared quick-add-service dialog surface: trigger button, dialog
+  title, core field labels/placeholders, pricing section strings, tax-rate label, generic
+  validation summary/items, and cancel/save actions.
+- Moved billing-method option labels into `useMemo(..., [t])` so the select reacts to locale
+  changes instead of keeping module-scope English labels.
+- Left the unit-of-measure branch, hardware/license fields, tax-rate loading/select
+  placeholder, and fallback error strings for `F017`.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/billing/QuickAddService.tsx`
+  `rg -n "Unit of Measure \\*|Loading tax rates|Select Tax Rate \\(optional\\)|SKU is required for Hardware|License term is required for Software Licenses|Selected service type not found|Failed to fetch categories|Failed to load tax rates|Failed to create service|SKU|Inventory Count|Seat Limit|License Term" packages/billing/src/components/settings/billing/QuickAddService.tsx`

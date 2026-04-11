@@ -77,7 +77,7 @@
   {
     "id": "F016",
     "description": "Wire useTranslation in QuickAddService.tsx -- dialog title, field labels (Service Name/Service Type/Billing Method/Description/Tax Rate), pricing section (rate type labels, + Add Currency, Remove, help text), validation error list header and individual messages, cancel/save buttons",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F017",
