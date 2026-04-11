@@ -169,7 +169,7 @@
   {
     "id": "T020",
     "description": "QuickAddService.tsx conditional fields (unit of measure, hardware SKU/inventory, software license seat/term) and their validation messages use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
