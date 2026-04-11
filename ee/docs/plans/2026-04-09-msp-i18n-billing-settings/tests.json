@@ -209,7 +209,7 @@
   {
     "id": "T025",
     "description": "TaxThresholdEditor.tsx dialog strings (add/edit title, field labels, max amount help text, delete confirmation with bracket range interpolation, last-bracket warning) use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
