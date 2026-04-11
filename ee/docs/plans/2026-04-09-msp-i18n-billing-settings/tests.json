@@ -121,7 +121,7 @@
   {
     "id": "T014",
     "description": "ServiceTypeSettings.tsx dialog strings (add/edit title, field labels, validation prompt, delete confirmation with in-use error, import/conflict resolution) use t() calls with proper interpolation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
