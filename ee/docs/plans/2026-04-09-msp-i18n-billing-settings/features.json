@@ -22,7 +22,7 @@
   {
     "id": "F005",
     "description": "Wire useTranslation in ZeroDollarInvoiceSettings.tsx -- handling option labels (Create as Draft / Create and Finalize), invoice handling select label/placeholder, suppress toggle label, help text descriptions, toast messages, error strings",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",

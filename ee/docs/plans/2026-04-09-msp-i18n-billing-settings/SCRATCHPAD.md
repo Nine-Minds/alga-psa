@@ -151,3 +151,9 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   `general.currency.*`.
 - Verification runs:
   `sed -n '1,200p' packages/billing/src/components/settings/billing/DefaultCurrencySettings.tsx`
+- Completed `F005` in
+  [ZeroDollarInvoiceSettings.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/ZeroDollarInvoiceSettings.tsx).
+- Wired the handling options, select label/placeholder, suppress toggle copy, success toast,
+  and save/load fallback errors to `general.zeroDollar.*`.
+- Verification runs:
+  `sed -n '1,220p' packages/billing/src/components/settings/billing/ZeroDollarInvoiceSettings.tsx`
