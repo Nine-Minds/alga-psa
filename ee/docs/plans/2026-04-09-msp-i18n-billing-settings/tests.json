@@ -185,7 +185,7 @@
   {
     "id": "T022",
     "description": "TaxSourceSettings.tsx imports useTranslation and card title, tooltip, description, radio labels with descriptions, workflow steps, and buttons use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
