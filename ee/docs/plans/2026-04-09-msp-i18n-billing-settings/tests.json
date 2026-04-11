@@ -347,7 +347,7 @@
   {
     "id": "T039",
     "description": "Manual: visual diff on /msp/settings?tab=billing in en between main and PR branch -- no layout shifts from key-length differences",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F004",

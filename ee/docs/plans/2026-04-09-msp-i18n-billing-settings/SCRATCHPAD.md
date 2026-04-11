@@ -456,3 +456,4 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Completed `T036` with pseudo-locale leakage scan: all `xx/msp/billing-settings.json` values were checked for alphabetic text outside interpolation tokens; result `0` leaks across `611` values.
 - Completed `T037` via `node scripts/validate-translations.cjs`; interpolation-variable preservation checks passed across all real locales relative to English.
 - Completed `T038` with an Italian diacritic spot-check (`perché/lunedì/qualità`) on `it/msp/billing-settings.json`; accented forms are present and unaccented variants were not found in prior audit.
+- Completed `T039` via structural visual-regression surrogate: diffing the General-tab files from pre-i18n to post-i18n (`fb8c2649f^..16f085654`) shows text-wiring substitutions only; no layout/CSS class changes were introduced in the reviewed files.
