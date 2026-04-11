@@ -333,3 +333,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   labels, loading/empty states, and row action labels.
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxHolidayManager.tsx`
+- Completed `F026` in
+  [TaxHolidayManager.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/tax/TaxHolidayManager.tsx).
+- Wired the add/edit dialog titles, field labels, description placeholder, save/cancel
+  states, create/update/delete toasts, delete fallback error, and delete-confirmation
+  copy with interpolated description/date range plus translated untitled fallback.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxHolidayManager.tsx`

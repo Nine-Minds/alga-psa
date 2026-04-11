@@ -172,8 +172,12 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
   const onSubmit = async (data: TaxHolidayFormData) => {
     setIsSubmitting(true);
     const isEditing = !!editingHoliday;
-    const successMessage = isEditing ? 'Tax holiday updated successfully.' : 'Tax holiday created successfully.';
-    const errorMessage = isEditing ? 'Failed to update tax holiday.' : 'Failed to create tax holiday.';
+    const successMessage = isEditing
+      ? t('tax.holidays.toast.updated', { defaultValue: 'Tax holiday updated successfully.' })
+      : t('tax.holidays.toast.created', { defaultValue: 'Tax holiday created successfully.' });
+    const errorMessage = isEditing
+      ? t('tax.holidays.errors.update', { defaultValue: 'Failed to update tax holiday.' })
+      : t('tax.holidays.errors.create', { defaultValue: 'Failed to create tax holiday.' });
 
     try {
       if (isEditing) {
@@ -206,11 +210,11 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
 
     try {
       await deleteTaxHoliday(holidayToDelete.tax_holiday_id);
-      toast.success('Tax holiday deleted successfully.');
+      toast.success(t('tax.holidays.toast.deleted', { defaultValue: 'Tax holiday deleted successfully.' }));
       await fetchHolidays();
       handleCloseDeleteDialog();
     } catch (error: any) {
-      handleError(error, 'Failed to delete tax holiday.');
+      handleError(error, t('tax.holidays.errors.delete', { defaultValue: 'Failed to delete tax holiday.' }));
     } finally {
       setIsSubmitting(false);
     }
@@ -396,13 +400,19 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
       <GenericDialog
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
-        title={editingHoliday ? 'Edit Tax Holiday' : 'Add Tax Holiday'}
+        title={
+          editingHoliday
+            ? t('tax.holidays.dialog.editTitle', { defaultValue: 'Edit Tax Holiday' })
+            : t('tax.holidays.dialog.addTitle', { defaultValue: 'Add Tax Holiday' })
+        }
         id="tax-holiday-dialog"
       >
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4" id="tax-holiday-form">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="tax-holiday-start-date-field">Start Date *</Label>
+              <Label htmlFor="tax-holiday-start-date-field">
+                {t('tax.holidays.fields.startDate.label', { defaultValue: 'Start Date *' })}
+              </Label>
               <Input
                 id="tax-holiday-start-date-field"
                 type="date"
@@ -418,7 +428,9 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="tax-holiday-end-date-field">End Date *</Label>
+              <Label htmlFor="tax-holiday-end-date-field">
+                {t('tax.holidays.fields.endDate.label', { defaultValue: 'End Date *' })}
+              </Label>
               <Input
                 id="tax-holiday-end-date-field"
                 type="date"
@@ -435,10 +447,16 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="tax-holiday-description-field">Description (Optional)</Label>
+            <Label htmlFor="tax-holiday-description-field">
+              {t('tax.holidays.fields.description.label', {
+                defaultValue: 'Description (Optional)'
+              })}
+            </Label>
             <Input
               id="tax-holiday-description-field"
-              placeholder="e.g., Black Friday Sale, Government Tax Holiday"
+              placeholder={t('tax.holidays.fields.description.placeholder', {
+                defaultValue: 'e.g., Black Friday Sale, Government Tax Holiday'
+              })}
               {...form.register('description')}
               disabled={isSubmitting}
               aria-invalid={form.formState.errors.description ? "true" : "false"}
@@ -452,10 +470,12 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={handleCloseDialog} id="tax-holiday-dialog-cancel-button">
-              Cancel
+              {t('tax.holidays.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button type="submit" disabled={isSubmitting} id="tax-holiday-dialog-save-button">
-              {isSubmitting ? 'Saving...' : 'Save'}
+              {isSubmitting
+                ? t('tax.holidays.actions.saving', { defaultValue: 'Saving...' })
+                : t('tax.holidays.actions.save', { defaultValue: 'Save' })}
             </Button>
           </div>
         </form>
@@ -465,17 +485,20 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
       <GenericDialog
         isOpen={isDeleteDialogOpen}
         onClose={handleCloseDeleteDialog}
-        title="Delete Tax Holiday"
+        title={t('tax.holidays.dialog.deleteTitle', { defaultValue: 'Delete Tax Holiday' })}
         id="tax-holiday-delete-dialog"
       >
         <div className="py-4">
           <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete the holiday "{holidayToDelete?.description || 'Untitled'}" ({formatDate(holidayToDelete?.start_date || '')} - {formatDate(holidayToDelete?.end_date || '')})?
-            This action cannot be undone.
+            {t('tax.holidays.delete.message', {
+              description: holidayToDelete?.description || t('tax.holidays.delete.untitled', { defaultValue: 'Untitled' }),
+              dateRange: `${formatDate(holidayToDelete?.start_date || '')} - ${formatDate(holidayToDelete?.end_date || '')}`,
+              defaultValue: 'Are you sure you want to delete the holiday "{{description}}" ({{dateRange}})? This action cannot be undone.'
+            })}
           </p>
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={handleCloseDeleteDialog} id="cancel-delete-tax-holiday-button">
-              Cancel
+              {t('tax.holidays.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               type="button"
@@ -484,7 +507,9 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
               disabled={isSubmitting}
               id="confirm-delete-tax-holiday-button"
             >
-              {isSubmitting ? 'Deleting...' : 'Delete'}
+              {isSubmitting
+                ? t('tax.holidays.actions.deleting', { defaultValue: 'Deleting...' })
+                : t('tax.holidays.actions.delete', { defaultValue: 'Delete' })}
             </Button>
           </div>
         </div>

@@ -127,7 +127,7 @@
   {
     "id": "F026",
     "description": "Wire TaxHolidayManager.tsx dialog strings -- add/edit dialog title, field labels (Start Date/End Date/Description), placeholder, delete confirmation (with description and date range interpolation), cancel/save/delete buttons, saving/deleting states, toast messages, error strings",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F027",
