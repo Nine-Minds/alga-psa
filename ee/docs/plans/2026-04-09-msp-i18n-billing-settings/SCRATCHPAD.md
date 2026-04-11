@@ -207,3 +207,17 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   labels. The edit dialog remains intentionally deferred to `F013`.
 - Verification runs:
   `sed -n '1,700p' packages/billing/src/components/settings/billing/ServiceCatalogManager.tsx`
+- Completed `F013` in
+  [ServiceCatalogManager.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/ServiceCatalogManager.tsx).
+- Wired the edit dialog title, all dialog field labels/placeholders, pricing section copy,
+  tax-rate loading/select placeholders, conditional hardware/license fields, save/cancel
+  buttons, and update/delete fallback errors to `serviceCatalog.*` and `common.*`.
+- Moved billing-method and license-term option labels into `useMemo(..., [t])` inside the
+  component so the select options react to locale changes instead of staying stuck at the
+  module-scope English labels.
+- Also translated adjacent service-catalog strings still visible in the same surface:
+  the delete-dialog fallback entity name, `N/A` table fallbacks, and the row-action
+  `Open menu` accessibility label.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/billing/ServiceCatalogManager.tsx`
+  `node -e "const fs=require('fs');const p='server/public/locales/en/msp/billing-settings.json';JSON.parse(fs.readFileSync(p,'utf8'));console.log('ok')"`

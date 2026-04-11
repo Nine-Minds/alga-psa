@@ -62,7 +62,7 @@
   {
     "id": "F013",
     "description": "Wire ServiceCatalogManager.tsx edit dialog strings -- dialog title, field labels (Service Name/Service Type/Billing Method/Description/Pricing/Unit of Measure/Tax Rate/SKU/Inventory Count/Seat Limit/License Term), pricing section header with rate type labels (Monthly/Per Hour/Usage), + Add Currency button, Remove button, pricing help text, save/cancel buttons, error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F014",

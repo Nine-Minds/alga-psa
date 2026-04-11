@@ -33,21 +33,11 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Removed old SERVICE_TYPE_OPTIONS
 
-// Define billing method options (as per contract line)
-const BILLING_METHOD_OPTIONS = [
-  { value: 'fixed', label: 'Fixed Fee' },
-  { value: 'hourly', label: 'Hourly' },
-  { value: 'usage', label: 'Usage' },
-  { value: 'usage', label: 'Usage Based' }
-];
+const BILLING_METHOD_OPTION_VALUES = ['fixed', 'hourly', 'usage'] as const;
 
 // Removed hardcoded SERVICE_CATEGORY_OPTIONS - will use fetched categories instead
 
-const LICENSE_TERM_OPTIONS = [
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'annual', label: 'Annual' },
-  { value: 'perpetual', label: 'Perpetual' }
-];
+const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 
 const ServiceCatalogManager: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
@@ -89,16 +79,46 @@ const ServiceCatalogManager: React.FC = () => {
     return serviceTypeMatch && billingMethodMatch;
   });
   const memoizedFilteredServices = useMemo(() => filteredServices, [JSON.stringify(filteredServices)]);
+  const billingMethodOptions = useMemo(
+    () =>
+      BILLING_METHOD_OPTION_VALUES.map((value) => ({
+        value,
+        label:
+          value === 'fixed'
+            ? t('common.billingMethod.fixedFee', { defaultValue: 'Fixed Fee' })
+            : value === 'hourly'
+              ? t('common.billingMethod.hourly', { defaultValue: 'Hourly' })
+              : t('common.billingMethod.usage', { defaultValue: 'Usage' }),
+      })),
+    [t]
+  );
+  const licenseTermOptions = useMemo(
+    () =>
+      LICENSE_TERM_OPTION_VALUES.map((value) => ({
+        value,
+        label: t(`common.licenseTerm.${value}`, {
+          defaultValue: value.charAt(0).toUpperCase() + value.slice(1),
+        }),
+      })),
+    [t]
+  );
+  const selectedServiceTypeName = useMemo(
+    () => allServiceTypes.find((type) => type.id === editingService?.custom_service_type_id)?.name,
+    [allServiceTypes, editingService?.custom_service_type_id]
+  );
 
   // Track when page changes are from user interaction vs. programmatic updates
   const [userChangedPage, setUserChangedPage] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const serviceToDeleteName = useMemo(() => {
     if (!serviceToDelete) {
-      return 'this service';
+      return t('serviceCatalog.table.thisService', { defaultValue: 'this service' });
     }
-    return services.find((service) => service.service_id === serviceToDelete)?.service_name || 'this service';
-  }, [serviceToDelete, services]);
+    return (
+      services.find((service) => service.service_id === serviceToDelete)?.service_name ||
+      t('serviceCatalog.table.thisService', { defaultValue: 'this service' })
+    );
+  }, [serviceToDelete, services, t]);
   
   // Add effect to refetch data when page changes from user interaction
   useEffect(() => {
@@ -139,7 +159,9 @@ const ServiceCatalogManager: React.FC = () => {
       if (fetchError instanceof Error) {
         setError(fetchError.message);
       } else {
-        setError('An unknown error occurred while fetching service types');
+        setError(t('serviceCatalog.errors.fetchServiceTypesUnknown', {
+          defaultValue: 'An unknown error occurred while fetching service types'
+        }));
       }
     }
   };
@@ -154,7 +176,9 @@ const ServiceCatalogManager: React.FC = () => {
        setErrorTaxRates(null);
    } catch (error) {
        console.error('Error loading tax rates:', error);
-       setErrorTaxRates('Failed to load tax rates.');
+       setErrorTaxRates(t('serviceCatalog.errors.fetchTaxRates', {
+         defaultValue: 'Failed to load tax rates.'
+       }));
        setTaxRates([]); // Clear rates on error
    } finally {
        setIsLoadingTaxRates(false);
@@ -206,7 +230,7 @@ const ServiceCatalogManager: React.FC = () => {
       setError(null);
     } catch (error) {
       console.error('Error fetching services:', error);
-      setError('Failed to fetch services');
+      setError(t('serviceCatalog.errors.fetchServices', { defaultValue: 'Failed to fetch services' }));
     } finally {
       setIsLoading(false);
     }
@@ -219,7 +243,7 @@ const ServiceCatalogManager: React.FC = () => {
       setError(null);
     } catch (error) {
       console.error('Error fetching categories:', error);
-      setError('Failed to fetch categories');
+      setError(t('serviceCatalog.errors.fetchCategories', { defaultValue: 'Failed to fetch categories' }));
     }
   };
 
@@ -239,13 +263,13 @@ const ServiceCatalogManager: React.FC = () => {
     if (!editingService) return;
     // Check for custom_service_type_id
     if (!editingService.custom_service_type_id) {
-      setError('Service Type is required');
+      setError(t('serviceCatalog.errors.serviceTypeRequired', { defaultValue: 'Service Type is required' }));
       return;
     }
 
     // Validate at least one price is set
     if (editingPrices.length === 0) {
-      setError('At least one price is required');
+      setError(t('serviceCatalog.errors.priceRequired', { defaultValue: 'At least one price is required' }));
       return;
     }
 
@@ -256,7 +280,9 @@ const ServiceCatalogManager: React.FC = () => {
     try {
       // Ensure editingService is not null and has an ID
       if (!editingService?.service_id) {
-        setError('Cannot update service without an ID.');
+        setError(t('serviceCatalog.errors.missingId', {
+          defaultValue: 'Cannot update service without an ID.'
+        }));
         return;
       }
 
@@ -283,7 +309,7 @@ const ServiceCatalogManager: React.FC = () => {
       setError(null);
     } catch (error) {
       console.error('Error updating service:', error);
-      setError('Failed to update service');
+      setError(t('serviceCatalog.errors.update', { defaultValue: 'Failed to update service' }));
     }
   };
 
@@ -305,7 +331,9 @@ const ServiceCatalogManager: React.FC = () => {
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('serviceCatalog.errors.validateDelete', {
+          defaultValue: 'Failed to validate deletion. Please try again.'
+        }),
         dependencies: [],
         alternatives: []
       });
@@ -356,7 +384,7 @@ const ServiceCatalogManager: React.FC = () => {
       resetDeleteState();
     } catch (error) {
       console.error('Error deleting service:', error);
-      setError('Failed to delete service');
+      setError(t('serviceCatalog.errors.delete', { defaultValue: 'Failed to delete service' }));
       resetDeleteState();
     } finally {
       setIsDeleteProcessing(false);
@@ -376,7 +404,7 @@ const ServiceCatalogManager: React.FC = () => {
       resetDeleteState();
     } catch (error) {
       console.error('Error deactivating service:', error);
-      setError('Failed to deactivate service');
+      setError(t('serviceCatalog.errors.deactivate', { defaultValue: 'Failed to deactivate service' }));
     } finally {
       setIsDeleteProcessing(false);
     }
@@ -414,7 +442,7 @@ const ServiceCatalogManager: React.FC = () => {
         dataIndex: 'service_type_name', // Use the service_type_name field that comes from the join
         render: (value, record) => {
           const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-          return type?.name || value || 'N/A';
+          return type?.name || value || t('common.notAvailable', { defaultValue: 'N/A' });
         },
       },
       {
@@ -464,7 +492,10 @@ const ServiceCatalogManager: React.FC = () => {
       {
         title: t('serviceCatalog.table.unit', { defaultValue: 'Unit' }),
         dataIndex: 'unit_of_measure',
-        render: (value, record) => record.billing_method === 'usage' ? value || 'N/A' : 'N/A',
+        render: (value, record) =>
+          record.billing_method === 'usage'
+            ? value || t('common.notAvailable', { defaultValue: 'N/A' })
+            : t('common.notAvailable', { defaultValue: 'N/A' }),
       },
       // Updated Tax Column
       {
@@ -474,7 +505,8 @@ const ServiceCatalogManager: React.FC = () => {
           if (!tax_rate_id) return t('serviceCatalog.table.nonTaxable', { defaultValue: 'Non-Taxable' });
           const rate = taxRates.find(r => r.tax_rate_id === tax_rate_id);
           // Construct label using description/region_code from ITaxRate
-          const descriptionPart = rate?.description || rate?.region_code || 'N/A';
+          const descriptionPart =
+            rate?.description || rate?.region_code || t('common.notAvailable', { defaultValue: 'N/A' });
           const percentageValue = typeof rate?.tax_percentage === 'string'
               ? parseFloat(rate.tax_percentage)
               : Number(rate?.tax_percentage);
@@ -536,7 +568,7 @@ const ServiceCatalogManager: React.FC = () => {
               id={`service-actions-menu-${record.service_id}`}
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('common.a11y.openMenu', { defaultValue: 'Open menu' })}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -612,14 +644,7 @@ const ServiceCatalogManager: React.FC = () => {
                   options={[{
                     value: 'all',
                     label: t('serviceCatalog.filters.allBillingMethods', { defaultValue: 'All Billing Methods' })
-                  }, ...BILLING_METHOD_OPTIONS.map((option) => ({
-                    value: option.value,
-                    label: option.value === 'fixed'
-                      ? t('common.billingMethod.fixedFee', { defaultValue: 'Fixed Fee' })
-                      : option.value === 'hourly'
-                        ? t('common.billingMethod.hourly', { defaultValue: 'Hourly' })
-                        : t('common.billingMethod.usage', { defaultValue: 'Usage' })
-                  }))]}
+                  }, ...billingMethodOptions]}
                   value={selectedBillingMethod}
                   onValueChange={setSelectedBillingMethod}
                   placeholder={t('serviceCatalog.filters.billingMethodPlaceholder', {
@@ -680,18 +705,20 @@ const ServiceCatalogManager: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-      <Dialog 
+        <Dialog 
         isOpen={isEditDialogOpen} 
         onClose={() => setIsEditDialogOpen(false)} 
-        title="Edit Service"
+        title={t('serviceCatalog.dialog.editTitle', { defaultValue: 'Edit Service' })}
       >
         <DialogContent>
           <div className="space-y-4">
             <div>
-              <label htmlFor="service-name" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Service Name</label>
+              <label htmlFor="service-name" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                {t('serviceCatalog.fields.serviceName.label', { defaultValue: 'Service Name' })}
+              </label>
               <Input
                 id="service-name"
-                placeholder="Service Name"
+                placeholder={t('serviceCatalog.fields.serviceName.placeholder', { defaultValue: 'Service Name' })}
                 value={editingService?.service_name || ''}
                 onChange={(e) => setEditingService({ ...editingService!, service_name: e.target.value })}
               />
@@ -699,7 +726,7 @@ const ServiceCatalogManager: React.FC = () => {
             {/* Updated to use EditableServiceTypeSelect */}
             <div>
               <EditableServiceTypeSelect
-                label="Service Type"
+                label={t('serviceCatalog.fields.serviceType.label', { defaultValue: 'Service Type' })}
                 value={editingService?.custom_service_type_id || ''}
                 onChange={(value) => {
                   setEditingService({
@@ -723,26 +750,34 @@ const ServiceCatalogManager: React.FC = () => {
                   await deleteServiceTypeInline(id);
                   fetchAllServiceTypes(); // Refresh the service types list
                 }}
-                placeholder="Select service type..."
+                placeholder={t('serviceCatalog.fields.serviceType.placeholder', {
+                  defaultValue: 'Select service type...'
+                })}
               />
             </div>
             {/* Added Billing Method dropdown */}
             <div>
-              <label htmlFor="billing-method" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Billing Method</label>
+              <label htmlFor="billing-method" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                {t('serviceCatalog.fields.billingMethod.label', { defaultValue: 'Billing Method' })}
+              </label>
               <CustomSelect
                 id="billing-method"
-                options={BILLING_METHOD_OPTIONS}
+                options={billingMethodOptions}
                 value={editingService?.billing_method || 'fixed'}
                 onValueChange={(value) => setEditingService({ ...editingService!, billing_method: value as 'fixed' | 'hourly' | 'usage' })}
-                placeholder="Select billing method..."
+                placeholder={t('serviceCatalog.fields.billingMethod.placeholder', {
+                  defaultValue: 'Select billing method...'
+                })}
               />
             </div>
             
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Description</label>
+              <label htmlFor="description" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                {t('serviceCatalog.fields.description.label', { defaultValue: 'Description' })}
+              </label>
               <Input
                 id="description"
-                placeholder="Description"
+                placeholder={t('serviceCatalog.fields.description.placeholder', { defaultValue: 'Description' })}
                 value={editingService?.description || ''}
                 onChange={(e) => setEditingService({ ...editingService!, description: e.target.value })}
               />
@@ -751,9 +786,15 @@ const ServiceCatalogManager: React.FC = () => {
             <div className="col-span-2 border rounded-lg p-4 bg-muted">
               <div className="flex justify-between items-center mb-3">
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                  Pricing *
+                  {t('serviceCatalog.fields.pricing.label', { defaultValue: 'Pricing *' })}
                   <span className="text-xs font-normal text-muted-foreground ml-2">
-                    ({editingService?.billing_method === 'fixed' ? 'Monthly' : editingService?.billing_method === 'hourly' ? 'Per Hour' : 'Usage'})
+                    (
+                    {editingService?.billing_method === 'fixed'
+                      ? t('serviceCatalog.fields.pricing.rateType.monthly', { defaultValue: 'Monthly' })
+                      : editingService?.billing_method === 'hourly'
+                        ? t('serviceCatalog.fields.pricing.rateType.perHour', { defaultValue: 'Per Hour' })
+                        : t('serviceCatalog.fields.pricing.rateType.usage', { defaultValue: 'Usage' })}
+                    )
                   </span>
                 </label>
                 <Button
@@ -771,7 +812,7 @@ const ServiceCatalogManager: React.FC = () => {
                   }}
                   disabled={editingPrices.length >= CURRENCY_OPTIONS.length}
                 >
-                  + Add Currency
+                  {t('serviceCatalog.actions.addCurrency', { defaultValue: '+ Add Currency' })}
                 </Button>
               </div>
 
@@ -791,7 +832,9 @@ const ServiceCatalogManager: React.FC = () => {
                           newPrices[index] = { ...newPrices[index], currency_code: value };
                           setEditingPrices(newPrices);
                         }}
-                        placeholder="Currency"
+                        placeholder={t('serviceCatalog.fields.pricing.placeholders.currency', {
+                          defaultValue: 'Currency'
+                        })}
                       />
                     </div>
                     <div className="relative flex-1">
@@ -833,7 +876,7 @@ const ServiceCatalogManager: React.FC = () => {
                             setRateInput((cents / 100).toFixed(2));
                           }
                         }}
-                        placeholder="0.00"
+                        placeholder={t('serviceCatalog.fields.pricing.placeholders.rate', { defaultValue: '0.00' })}
                         className="pl-10"
                       />
                     </div>
@@ -856,14 +899,16 @@ const ServiceCatalogManager: React.FC = () => {
                           }
                         }}
                       >
-                        Remove
+                        {t('serviceCatalog.actions.remove', { defaultValue: 'Remove' })}
                       </Button>
                     )}
                   </div>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Add prices in multiple currencies. The first currency is the primary rate.
+                {t('serviceCatalog.fields.pricing.multiCurrencyHelp', {
+                  defaultValue: 'Add prices in multiple currencies. The first currency is the primary rate.'
+                })}
               </p>
             </div>
 
@@ -871,17 +916,25 @@ const ServiceCatalogManager: React.FC = () => {
             {editingService?.billing_method === 'usage' && (
               <>
                 <div>
-                  <label htmlFor="unit-of-measure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Unit of Measure *</label>
+                  <label htmlFor="unit-of-measure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('serviceCatalog.fields.unitOfMeasure.label', { defaultValue: 'Unit of Measure *' })}
+                  </label>
                   <Input
                     id="unit-of-measure"
                     type="text"
                     value={editingService?.unit_of_measure || ''}
                     onChange={(e) => setEditingService({ ...editingService!, unit_of_measure: e.target.value })}
-                    placeholder="e.g., GB, API call, user"
+                    placeholder={t('serviceCatalog.fields.unitOfMeasure.placeholder', {
+                      defaultValue: 'e.g., GB, API call, user'
+                    })}
                     required
                     className="w-full"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">The measurable unit for billing (e.g., GB, API call, user)</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('serviceCatalog.fields.unitOfMeasure.help', {
+                      defaultValue: 'The measurable unit for billing (e.g., GB, API call, user)'
+                    })}
+                  </p>
                 </div>
               </>
             )}
@@ -889,9 +942,15 @@ const ServiceCatalogManager: React.FC = () => {
             {/* Replaced Tax Region/Is Taxable with Tax Rate Selector */}
             <CustomSelect
                 id="edit-service-tax-rate-select"
-                label="Tax Rate (Optional)"
+                label={t('serviceCatalog.fields.taxRate.label', { defaultValue: 'Tax Rate (Optional)' })}
                 value={editingService?.tax_rate_id || ''} // Bind to tax_rate_id from IService
-                placeholder={isLoadingTaxRates ? "Loading rates..." : "Select Tax Rate (or leave blank for Non-Taxable)"}
+                placeholder={
+                  isLoadingTaxRates
+                    ? t('serviceCatalog.fields.taxRate.loading', { defaultValue: 'Loading rates...' })
+                    : t('serviceCatalog.fields.taxRate.placeholder', {
+                        defaultValue: 'Select Tax Rate (or leave blank for Non-Taxable)'
+                      })
+                }
                 onValueChange={(value) => {
                   if (editingService) { // Ensure editingService is not null
                     setEditingService({ ...editingService, tax_rate_id: value || null }); // Set null if cleared
@@ -899,7 +958,8 @@ const ServiceCatalogManager: React.FC = () => {
                 }}
                 // Populate with fetched tax rates, construct label using available fields
                 options={taxRates.map(r => { // r is ITaxRate
-                   const descriptionPart = r.description || r.region_code || 'N/A';
+                   const descriptionPart =
+                     r.description || r.region_code || t('common.notAvailable', { defaultValue: 'N/A' });
                    const percentageValue = typeof r.tax_percentage === 'string' ? parseFloat(r.tax_percentage) : Number(r.tax_percentage);
                    const percentagePart = !isNaN(percentageValue) ? percentageValue.toFixed(2) : '0.00';
                    return {
@@ -914,13 +974,15 @@ const ServiceCatalogManager: React.FC = () => {
             {/* Removed conditional rendering based on old service_type */}
             {/* Conditional Fields based on Service Type Name */}
             {/* Get the service type for conditional rendering */}
-            {allServiceTypes.find(t => t.id === editingService?.custom_service_type_id)?.name === 'Hardware' && (
+            {selectedServiceTypeName === 'Hardware' && (
               <>
                 <div>
-                  <label htmlFor="sku" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">SKU</label>
+                  <label htmlFor="sku" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('serviceCatalog.fields.sku.label', { defaultValue: 'SKU' })}
+                  </label>
                   <Input
                     id="sku"
-                    placeholder="SKU"
+                    placeholder={t('serviceCatalog.fields.sku.placeholder', { defaultValue: 'SKU' })}
                     value={editingService?.sku || ''}
                     onChange={(e) => {
                       if (editingService) {
@@ -933,11 +995,15 @@ const ServiceCatalogManager: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="inventory-count" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Inventory Count</label>
+                  <label htmlFor="inventory-count" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('serviceCatalog.fields.inventoryCount.label', { defaultValue: 'Inventory Count' })}
+                  </label>
                   <Input
                     id="inventory-count"
                     type="number"
-                    placeholder="Inventory Count"
+                    placeholder={t('serviceCatalog.fields.inventoryCount.placeholder', {
+                      defaultValue: 'Inventory Count'
+                    })}
                     value={editingService?.inventory_count ?? ''} // Use ?? for 0
                     onChange={(e) => {
                       if (editingService) {
@@ -952,14 +1018,18 @@ const ServiceCatalogManager: React.FC = () => {
               </>
             )}
             {/* Get the service type for conditional rendering */}
-            {allServiceTypes.find(t => t.id === editingService?.custom_service_type_id)?.name === 'Software License' && (
+            {selectedServiceTypeName === 'Software License' && (
               <>
                 <div>
-                  <label htmlFor="seat-limit" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Seat Limit</label>
+                  <label htmlFor="seat-limit" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('serviceCatalog.fields.seatLimit.label', { defaultValue: 'Seat Limit' })}
+                  </label>
                   <Input
                     id="seat-limit"
                     type="number"
-                    placeholder="Seat Limit"
+                    placeholder={t('serviceCatalog.fields.seatLimit.placeholder', {
+                      defaultValue: 'Seat Limit'
+                    })}
                     value={editingService?.seat_limit ?? ''} // Use ?? for 0
                     onChange={(e) => {
                       if (editingService) {
@@ -972,10 +1042,12 @@ const ServiceCatalogManager: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="license-term" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">License Term</label>
+                  <label htmlFor="license-term" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('serviceCatalog.fields.licenseTerm.label', { defaultValue: 'License Term' })}
+                  </label>
                   <CustomSelect
                     id="license-term"
-                    options={LICENSE_TERM_OPTIONS}
+                    options={licenseTermOptions}
                     value={editingService?.license_term || 'monthly'}
                     onValueChange={(value) => {
                       if (editingService) {
@@ -985,7 +1057,9 @@ const ServiceCatalogManager: React.FC = () => {
                         });
                       }
                     }}
-                    placeholder="Select license term..."
+                    placeholder={t('serviceCatalog.fields.licenseTerm.placeholder', {
+                      defaultValue: 'Select license term...'
+                    })}
                   />
                 </div>
               </>
@@ -997,13 +1071,17 @@ const ServiceCatalogManager: React.FC = () => {
               setEditingService(null);
               setRateInput('');
               setEditingPrices([]);
-            }}>Cancel</Button>
+            }}>
+              {t('serviceCatalog.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
             <Button id='save-button' onClick={() => {
               // Just call handleUpdateService - it will close the dialog
               handleUpdateService();
               // Don't call setIsEditDialogOpen(false) here as it's already done in handleUpdateService
               // and might cause race conditions with the pagination state
-            }}>Save Changes</Button>
+            }}>
+              {t('serviceCatalog.actions.saveChanges', { defaultValue: 'Save Changes' })}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
