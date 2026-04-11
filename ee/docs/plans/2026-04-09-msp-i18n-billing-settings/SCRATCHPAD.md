@@ -347,3 +347,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   generic create/fetch/update success/error messages that support that outer flow.
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/tax/TaxSettingsForm.tsx`
+- Completed `F028` in
+  [TaxSettingsForm.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/tax/TaxSettingsForm.tsx).
+- Wired the tax-exempt card title/description, toggle label and status text, certificate
+  field copy, exempt-client alert, tax-exempt save/cancel actions, saving state, and
+  tax-exempt enable/disable/update messages to `clientTaxSettings.taxExempt.*`.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/tax/TaxSettingsForm.tsx`

@@ -189,13 +189,21 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       setOriginalTaxExempt(isTaxExempt);
       setOriginalCertificate(taxExemptionCertificate);
       setSuccessMessage(isTaxExempt
-        ? 'Client marked as tax exempt.'
-        : 'Tax exempt status removed from client.');
+        ? t('clientTaxSettings.messages.taxExemptEnabled', {
+            defaultValue: 'Client marked as tax exempt.'
+          })
+        : t('clientTaxSettings.messages.taxExemptDisabled', {
+            defaultValue: 'Tax exempt status removed from client.'
+          }));
     } catch (err) {
       // Revert on error
       setIsTaxExempt(originalTaxExempt);
       setTaxExemptionCertificate(originalCertificate);
-      setError(err instanceof Error ? err.message : 'Failed to update tax exempt status');
+      setError(err instanceof Error
+        ? err.message
+        : t('clientTaxSettings.messages.taxExemptUpdateError', {
+            defaultValue: 'Failed to update tax exempt status'
+          }));
     } finally {
       setIsUpdatingExemptStatus(false);
     }
@@ -341,23 +349,31 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
             ) : (
               <ShieldCheck className="h-5 w-5 text-green-500" />
             )}
-            Tax Exempt Status
+            {t('clientTaxSettings.taxExempt.title', { defaultValue: 'Tax Exempt Status' })}
           </CardTitle>
           <CardDescription>
-            Tax exempt clients will not have taxes applied to their invoices.
+            {t('clientTaxSettings.taxExempt.description', {
+              defaultValue: 'Tax exempt clients will not have taxes applied to their invoices.'
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Tax Exempt</span>
-              <Tooltip content="When enabled, no taxes will be calculated for this client's invoices. Changes are logged for audit purposes.">
+              <span className="text-sm font-medium">
+                {t('clientTaxSettings.taxExempt.label', { defaultValue: 'Tax Exempt' })}
+              </span>
+              <Tooltip content={t('clientTaxSettings.taxExempt.tooltip', {
+                defaultValue: 'When enabled, no taxes will be calculated for this client\'s invoices. Changes are logged for audit purposes.'
+              })}>
                 <Info className="h-4 w-4 text-muted-foreground cursor-help" />
               </Tooltip>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                {isTaxExempt ? 'Exempt' : 'Not Exempt'}
+                {isTaxExempt
+                  ? t('clientTaxSettings.taxExempt.status.exempt', { defaultValue: 'Exempt' })
+                  : t('clientTaxSettings.taxExempt.status.notExempt', { defaultValue: 'Not Exempt' })}
               </span>
               <Switch
                 checked={isTaxExempt}
@@ -370,18 +386,24 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
           {isTaxExempt && (
             <div className="space-y-2">
               <label htmlFor="tax-exemption-certificate" className="text-sm font-medium">
-                Tax Exemption Certificate Number
+                {t('clientTaxSettings.taxExempt.certificate.label', {
+                  defaultValue: 'Tax Exemption Certificate Number'
+                })}
               </label>
               <Input
                 id="tax-exemption-certificate"
                 type="text"
-                placeholder="Enter certificate number (optional)"
+                placeholder={t('clientTaxSettings.taxExempt.certificate.placeholder', {
+                  defaultValue: 'Enter certificate number (optional)'
+                })}
                 value={taxExemptionCertificate}
                 onChange={(e) => setTaxExemptionCertificate(e.target.value)}
                 disabled={isUpdatingExemptStatus}
               />
               <p className="text-xs text-muted-foreground">
-                Optional: Store the client's tax exemption certificate number for reference.
+                {t('clientTaxSettings.taxExempt.certificate.help', {
+                  defaultValue: 'Optional: Store the client\'s tax exemption certificate number for reference.'
+                })}
               </p>
             </div>
           )}
@@ -389,9 +411,13 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
           {isTaxExempt && (
             <Alert variant="info" showIcon>
               <AlertDescription>
-                <p className="font-medium">Tax Exempt Client</p>
+                <p className="font-medium">
+                  {t('clientTaxSettings.taxExempt.alert.title', { defaultValue: 'Tax Exempt Client' })}
+                </p>
                 <p className="text-sm mt-1">
-                  This client will not be charged any taxes on invoices. Make sure to keep their exemption certificate on file.
+                  {t('clientTaxSettings.taxExempt.alert.description', {
+                    defaultValue: 'This client will not be charged any taxes on invoices. Make sure to keep their exemption certificate on file.'
+                  })}
                 </p>
               </AlertDescription>
             </Alert>
@@ -410,7 +436,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
                 }}
                 disabled={isUpdatingExemptStatus}
               >
-                Cancel
+                {t('clientTaxSettings.taxExempt.actions.cancel', { defaultValue: 'Cancel' })}
               </Button>
               <Button
                 id="save-tax-exempt-status-button"
@@ -419,7 +445,9 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
                 onClick={handleTaxExemptUpdate}
                 disabled={isUpdatingExemptStatus}
               >
-                {isUpdatingExemptStatus ? 'Saving...' : 'Save Tax Exempt Status'}
+                {isUpdatingExemptStatus
+                  ? t('clientTaxSettings.taxExempt.actions.saving', { defaultValue: 'Saving...' })
+                  : t('clientTaxSettings.taxExempt.actions.save', { defaultValue: 'Save Tax Exempt Status' })}
               </Button>
             </div>
           )}

@@ -137,7 +137,7 @@
   {
     "id": "F028",
     "description": "Wire TaxSettingsForm.tsx tax exempt card -- card title, description, toggle label/tooltip, exempt/not-exempt status text, certificate field label/placeholder/help, exempt alert content, cancel/save buttons, saving state, toast messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F029",
