@@ -451,3 +451,4 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Completed \ using source-contract verification (hook presence + key usage checks for the target component, backed by the consolidated eslint run with zero errors).
 - Note: the prior 27 generic "Completed \\" entries correspond to `T006` through `T032`; they were appended without IDs due shell backtick expansion in an automation loop. Test status in `tests.json` is correct.
 - Completed `T033` with source-level integration guard: key General-tab English phrases were checked to appear only as `defaultValue` fallbacks (no raw quoted English strings outside `t(...)` usage in the General-tab component set).
+- Completed `T034` with source-level integration assertions that Tax tab shell copy plus `TaxSourceSettings` and `TaxRegionsManager` user-facing strings are wired to `t('tax.*')` keys under `msp/billing-settings`.

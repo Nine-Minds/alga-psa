@@ -285,7 +285,7 @@
   {
     "id": "T034",
     "description": "Integration: /msp/settings?tab=billing&section=tax loads Tax tab in en with translated tax source settings and tax regions manager",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F019",
