@@ -641,7 +641,7 @@ const DiscrepancyDetail: React.FC = () => {
                   <AlertCircle className="h-4 w-4" />
                   <div className="font-semibold">{t('discrepancy.issueTypes.inconsistentCreditRemainingAmount', { defaultValue: 'Inconsistent Credit Remaining Amount' })}</div>
                   <AlertDescription>
-                    {t('discrepancy.recommendedFix.inconsistentRemainingDescription', { defaultValue: 'Update the credit tracking entry\\'s remaining amount to match the calculated expected balance based on applications.' })}
+                    {t('discrepancy.recommendedFix.inconsistentRemainingDescription', { defaultValue: 'Update the credit tracking entry\'s remaining amount to match the calculated expected balance based on applications.' })}
                   </AlertDescription>
                 </Alert>
                 
@@ -708,7 +708,7 @@ const DiscrepancyDetail: React.FC = () => {
                 <div className="mt-4">
                   <h4 className="font-medium mb-2">{t('discrepancy.recommendedFix.title', { defaultValue: 'Recommended Fix' })}</h4>
                   <p className="text-sm text-[rgb(var(--color-text-500))]">
-                    {t('discrepancy.recommendedFix.inconsistentRemainingDescription', { defaultValue: 'Update the credit tracking entry\\'s remaining amount to match the calculated expected balance based on applications.' })}
+                    {t('discrepancy.recommendedFix.inconsistentRemainingDescription', { defaultValue: 'Update the credit tracking entry\'s remaining amount to match the calculated expected balance based on applications.' })}
                   </p>
                   <ul className="list-disc list-inside mt-2 text-sm text-[rgb(var(--color-text-500))]">
                     <li>{t('discrepancy.fields.creditId', { defaultValue: 'Credit ID' })}: {report.metadata.credit_id}</li>
