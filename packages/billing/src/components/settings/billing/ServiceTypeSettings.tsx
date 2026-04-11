@@ -32,6 +32,7 @@ import {
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Type for the data returned by getServiceTypesForSelection
 type ServiceTypeSelectionItem = {
@@ -42,6 +43,7 @@ type ServiceTypeSelectionItem = {
 };
 
 const ServiceTypeSettings: React.FC = () => {
+  const { t } = useTranslation('msp/billing-settings');
   const [allTypes, setAllTypes] = useState<ServiceTypeSelectionItem[]>([]);
   const [tenantTypes, setTenantTypes] = useState<IServiceType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -283,33 +285,33 @@ const ServiceTypeSettings: React.FC = () => {
   // --- Column Definitions ---
   const tenantColumns: ColumnDefinition<IServiceType>[] = [
     { 
-      title: 'Name',
+      title: t('common.columns.name', { defaultValue: 'Name' }),
       dataIndex: 'name',
       width: '35%'
     },
     { 
-      title: 'Billing Method', 
+      title: t('common.columns.billingMethod', { defaultValue: 'Billing Method' }), 
       dataIndex: 'billing_method',
       width: '20%', 
       render: (value) => {
-        if (value === 'fixed') return 'Fixed';
-        if (value === 'hourly') return 'Hourly';
-        return 'Usage';
+        if (value === 'fixed') return t('common.billingMethod.fixed', { defaultValue: 'Fixed' });
+        if (value === 'hourly') return t('common.billingMethod.hourly', { defaultValue: 'Hourly' });
+        return t('common.billingMethod.usage', { defaultValue: 'Usage' });
       }
     },
     { 
-      title: 'Description',
+      title: t('common.columns.description', { defaultValue: 'Description' }),
       dataIndex: 'description',
       width: '20%',
-      render: (value) => value || '-' 
+      render: (value) => value || t('common.emptyValue', { defaultValue: '-' }) 
     },
     { 
-      title: 'Order',
+      title: t('common.columns.order', { defaultValue: 'Order' }),
       dataIndex: 'order_number',
       width: '10%' 
     },
     {
-      title: 'Actions',
+      title: t('common.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'id',
       width: '5%',
       render: (id, record) => (
@@ -333,7 +335,7 @@ const ServiceTypeSettings: React.FC = () => {
                 handleOpenEditDialog(record);
               }}
             >
-              Edit
+              {t('common.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-servicetype-${id}`}
@@ -343,7 +345,7 @@ const ServiceTypeSettings: React.FC = () => {
                 handleOpenDeleteDialog(record);
               }}
             >
-              Delete
+              {t('common.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -352,7 +354,7 @@ const ServiceTypeSettings: React.FC = () => {
   ];
 
   if (loading) {
-    return <div>Loading service types...</div>;
+    return <div>{t('serviceTypes.loading', { defaultValue: 'Loading service types...' })}</div>;
   }
 
   return (
@@ -362,8 +364,12 @@ const ServiceTypeSettings: React.FC = () => {
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Custom Service Types</CardTitle>
-              <CardDescription>Manage your organization's custom service types.</CardDescription>
+              <CardTitle>{t('serviceTypes.title', { defaultValue: 'Custom Service Types' })}</CardTitle>
+              <CardDescription>
+                {t('serviceTypes.description', {
+                  defaultValue: "Manage your organization's custom service types."
+                })}
+              </CardDescription>
             </div>
             <div className="flex gap-2">
               <Button 
@@ -376,10 +382,13 @@ const ServiceTypeSettings: React.FC = () => {
                   setShowImportDialog(true);
                 }}
               >
-                Import from Standard Service Types
+                {t('serviceTypes.actions.importFromStandard', {
+                  defaultValue: 'Import from Standard Service Types'
+                })}
               </Button>
               <Button id="add-custom-service-type-button" onClick={handleOpenAddDialog}>
-                <Plus className="mr-2 h-4 w-4" /> Add Custom Type
+                <Plus className="mr-2 h-4 w-4" />
+                {t('serviceTypes.actions.add', { defaultValue: 'Add Custom Type' })}
               </Button>
             </div>
           </div>

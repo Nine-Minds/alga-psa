@@ -47,7 +47,7 @@
   {
     "id": "F010",
     "description": "Wire useTranslation in ServiceTypeSettings.tsx -- card title/description, table columns (Name/Billing Method/Description/Order/Actions), billing method display labels (Fixed/Hourly/Usage), loading state, Add/Import buttons, action menu items (Edit/Delete)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F011",

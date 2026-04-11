@@ -186,3 +186,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   to `serviceCategories.*`, `common.*`, and `import.*`.
 - Verification runs:
   `sed -n '60,560p' packages/billing/src/components/settings/billing/ServiceCategoriesSettings.tsx`
+- Completed `F010` in
+  [ServiceTypeSettings.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/ServiceTypeSettings.tsx).
+- Scoped this pass to the loading state, card title/description, table column headers,
+  billing method display labels, row action menu labels, and Add/Import buttons.
+  Dialog, validation, delete-confirmation, and import-conflict strings are left for `F011`.
+- Verification runs:
+  `sed -n '286,322p' packages/billing/src/components/settings/billing/ServiceTypeSettings.tsx`
