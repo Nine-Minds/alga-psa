@@ -303,3 +303,12 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxThresholdEditor.tsx`
   `node -e "const fs=require('fs');const p='server/public/locales/en/msp/billing-settings.json';JSON.parse(fs.readFileSync(p,'utf8'));console.log('ok')"`
+- Completed `F022` in
+  [TaxThresholdEditor.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/tax/TaxThresholdEditor.tsx).
+- Wired the add/edit dialog titles, field labels/placeholders, save/cancel states,
+  create/update/delete toasts, delete fallback error, delete-confirmation message with
+  bracket-range interpolation, and the last-bracket warning to `tax.thresholds.*`.
+- Kept the delete-range interpolation locale-safe by reusing the translated
+  `tax.thresholds.noLimit` token directly instead of lowercasing it in code.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxThresholdEditor.tsx`

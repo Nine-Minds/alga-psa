@@ -107,7 +107,7 @@
   {
     "id": "F022",
     "description": "Wire TaxThresholdEditor.tsx dialog strings -- add/edit dialog title, field labels (Min Amount/Max Amount/Rate), max amount help text ('leave empty for no limit'), placeholders, delete confirmation dialog (with bracket range interpolation, last-bracket warning), cancel/save/delete buttons, saving/deleting states, toast messages, error strings",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F023",

@@ -184,8 +184,12 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
   const onSubmit = async (data: TaxThresholdFormData) => {
     setIsSubmitting(true);
     const isEditing = !!editingThreshold;
-    const successMessage = isEditing ? 'Tax bracket updated successfully.' : 'Tax bracket created successfully.';
-    const errorMessage = isEditing ? 'Failed to update tax bracket.' : 'Failed to create tax bracket.';
+    const successMessage = isEditing
+      ? t('tax.thresholds.toast.updated', { defaultValue: 'Tax bracket updated successfully.' })
+      : t('tax.thresholds.toast.created', { defaultValue: 'Tax bracket created successfully.' });
+    const errorMessage = isEditing
+      ? t('tax.thresholds.errors.update', { defaultValue: 'Failed to update tax bracket.' })
+      : t('tax.thresholds.errors.create', { defaultValue: 'Failed to create tax bracket.' });
 
     try {
       if (isEditing) {
@@ -218,11 +222,11 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
 
     try {
       await deleteTaxRateThreshold(thresholdToDelete.tax_rate_threshold_id);
-      toast.success('Tax bracket deleted successfully.');
+      toast.success(t('tax.thresholds.toast.deleted', { defaultValue: 'Tax bracket deleted successfully.' }));
       await fetchThresholds();
       handleCloseDeleteDialog();
     } catch (error: any) {
-      handleError(error, 'Failed to delete tax bracket.');
+      handleError(error, t('tax.thresholds.errors.delete', { defaultValue: 'Failed to delete tax bracket.' }));
     } finally {
       setIsSubmitting(false);
     }
@@ -467,13 +471,19 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
       <GenericDialog
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
-        title={editingThreshold ? 'Edit Tax Bracket' : 'Add Tax Bracket'}
+        title={
+          editingThreshold
+            ? t('tax.thresholds.dialog.editTitle', { defaultValue: 'Edit Tax Bracket' })
+            : t('tax.thresholds.dialog.addTitle', { defaultValue: 'Add Tax Bracket' })
+        }
         id="tax-threshold-dialog"
       >
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4" id="tax-threshold-form">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="tax-threshold-min-field">Min Amount *</Label>
+              <Label htmlFor="tax-threshold-min-field">
+                {t('tax.thresholds.fields.minAmount.label', { defaultValue: 'Min Amount *' })}
+              </Label>
               <Controller
                 name="min_amount"
                 control={form.control}
@@ -483,7 +493,9 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder="e.g., 0"
+                    placeholder={t('tax.thresholds.fields.minAmount.placeholder', {
+                      defaultValue: 'e.g., 0'
+                    })}
                     value={field.value}
                     onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     disabled={isSubmitting}
@@ -499,7 +511,11 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="tax-threshold-max-field">Max Amount (leave empty for no limit)</Label>
+              <Label htmlFor="tax-threshold-max-field">
+                {t('tax.thresholds.fields.maxAmount.label', {
+                  defaultValue: 'Max Amount (leave empty for no limit)'
+                })}
+              </Label>
               <Controller
                 name="max_amount"
                 control={form.control}
@@ -509,7 +525,9 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder="e.g., 10000 or empty"
+                    placeholder={t('tax.thresholds.fields.maxAmount.placeholder', {
+                      defaultValue: 'e.g., 10000 or empty'
+                    })}
                     value={field.value ?? ''}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -529,7 +547,9 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="tax-threshold-rate-field">Rate (%) *</Label>
+            <Label htmlFor="tax-threshold-rate-field">
+              {t('tax.thresholds.fields.rate.label', { defaultValue: 'Rate (%) *' })}
+            </Label>
             <Controller
               name="rate"
               control={form.control}
@@ -540,7 +560,9 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
                   step="0.01"
                   min="0"
                   max="100"
-                  placeholder="e.g., 10"
+                  placeholder={t('tax.thresholds.fields.rate.placeholder', {
+                    defaultValue: 'e.g., 10'
+                  })}
                   value={field.value}
                   onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                   disabled={isSubmitting}
@@ -557,10 +579,12 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={handleCloseDialog} id="tax-threshold-dialog-cancel-button">
-              Cancel
+              {t('tax.thresholds.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button type="submit" disabled={isSubmitting} id="tax-threshold-dialog-save-button">
-              {isSubmitting ? 'Saving...' : 'Save'}
+              {isSubmitting
+                ? t('tax.thresholds.actions.saving', { defaultValue: 'Saving...' })
+                : t('tax.thresholds.actions.save', { defaultValue: 'Save' })}
             </Button>
           </div>
         </form>
@@ -570,25 +594,33 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
       <GenericDialog
         isOpen={isDeleteDialogOpen}
         onClose={handleCloseDeleteDialog}
-        title="Delete Tax Bracket"
+        title={t('tax.thresholds.dialog.deleteTitle', { defaultValue: 'Delete Tax Bracket' })}
         id="tax-threshold-delete-dialog"
       >
         <div className="py-4">
           <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete the bracket {formatCurrency(thresholdToDelete?.min_amount ?? 0)} - {thresholdToDelete?.max_amount ? formatCurrency(thresholdToDelete.max_amount) : 'no limit'}?
-            This action cannot be undone.
+            {t('tax.thresholds.delete.message', {
+              range: `${formatCurrency(thresholdToDelete?.min_amount ?? 0)} - ${
+                thresholdToDelete?.max_amount
+                  ? formatCurrency(thresholdToDelete.max_amount)
+                  : t('tax.thresholds.noLimit', { defaultValue: 'No limit' })
+              }`,
+              defaultValue: 'Are you sure you want to delete the bracket {{range}}? This action cannot be undone.'
+            })}
           </p>
           {thresholds.length <= 1 && (
             <Alert variant="destructive" showIcon={false} className="mt-4">
               <AlertTriangle className="h-4 w-4 absolute left-4 top-4" />
               <AlertDescription>
-                Warning: This is the last bracket. Deleting it will disable progressive taxation for this rate.
+                {t('tax.thresholds.delete.lastWarning', {
+                  defaultValue: 'Warning: This is the last bracket. Deleting it will disable progressive taxation for this rate.'
+                })}
               </AlertDescription>
             </Alert>
           )}
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={handleCloseDeleteDialog} id="cancel-delete-tax-threshold-button">
-              Cancel
+              {t('tax.thresholds.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               type="button"
@@ -597,7 +629,9 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
               disabled={isSubmitting}
               id="confirm-delete-tax-threshold-button"
             >
-              {isSubmitting ? 'Deleting...' : 'Delete'}
+              {isSubmitting
+                ? t('tax.thresholds.actions.deleting', { defaultValue: 'Deleting...' })
+                : t('tax.thresholds.actions.delete', { defaultValue: 'Delete' })}
             </Button>
           </div>
         </div>
