@@ -32,7 +32,7 @@
   {
     "id": "F007",
     "description": "Wire useTranslation in RenewalAutomationSettings.tsx -- policy option labels (Create ticket/Queue only), due date action label/help, board/status select labels and dynamic placeholders (Loading boards.../Select board/Loading statuses.../Select status/Select a board first), status scoping help text, save/saving button, toast messages, error strings",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F008",

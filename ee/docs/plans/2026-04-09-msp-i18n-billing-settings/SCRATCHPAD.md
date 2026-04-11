@@ -163,3 +163,12 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   and save/load fallback errors to `general.creditExpiration.*`.
 - Verification runs:
   `sed -n '1,240p' packages/billing/src/components/settings/billing/CreditExpirationSettings.tsx`
+- Completed `F007` in
+  [RenewalAutomationSettings.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/RenewalAutomationSettings.tsx).
+- Moved the due-date action policy options into `React.useMemo(..., [t])` inside the
+  component so the option labels translate at render time and react to locale changes.
+- Wired the due-date action label/help, board and status labels, all loading/select
+  placeholders, board fallback label, save/saving button, success toast, and error
+  fallbacks to `general.renewal.*`.
+- Verification runs:
+  `sed -n '1,280p' packages/billing/src/components/settings/billing/RenewalAutomationSettings.tsx`
