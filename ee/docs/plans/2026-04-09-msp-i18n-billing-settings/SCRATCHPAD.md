@@ -20,6 +20,13 @@ currently defined outside components. To support locale-reactive labels, wrap th
 component body. Do NOT try to call `t()` at module scope -- it will not have access to
 the i18n context.
 
+### F001 English namespace shape
+`server/public/locales/en/msp/billing-settings.json` now exists and intentionally mixes
+component-specific groups (`serviceCatalog.*`, `clientTaxSettings.*`, `tax.thresholds.*`)
+with a small shared `common.*` / `import.*` layer. The file is broad rather than minimal:
+it includes strings for all 17 target components up front so later wiring PRs can mostly
+reuse existing keys instead of constantly expanding the namespace.
+
 ### Zod schema messages stay English
 Zod validation `.message()` strings in `TaxRegionsManager`, `TaxThresholdEditor`,
 `TaxComponentEditor`, and `TaxHolidayManager` are NOT translated. They are developer-
@@ -80,6 +87,11 @@ translated in a separate sub-batch covering the `reference-data` package namespa
    are defined inside the component function. The `t()` hook is accessible in the parent
    scope and can be used inside these inline components without issues.
 
+9. **English source already carries some cleanup opportunities** -- current components use
+   inconsistent variants like `Loading…` vs `Loading...`, `Usage` vs `Usage Based`, and
+   `-` vs `—`. Keep the namespace expressive enough to cover the current UI first; defer
+   normalization until the component wiring passes so behavior stays reviewable.
+
 ## Estimated String Counts by Group
 
 | Group | Est. Keys |
@@ -108,3 +120,17 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - **PR 3:** F040-F041 + F050-F051 + F060-F062 (ServiceCatalog + Products + QuickAdd dialogs) -- ~4 files, ~165 keys
 - **PR 4:** F070-F085 + F090-F092 (All tax components + TaxSettingsForm) -- ~6 files, ~210 keys
 - **PR 5:** F100-F107 (Translations for 6 languages + pseudo-locales + validation) -- namespace only, no component changes
+
+## Work Log
+
+### 2026-04-10
+- Completed `F001` by adding [billing-settings.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/billing-settings.json).
+- The English source includes the planned top-level groups: `tabs`, `general`, `quoting`,
+  `tax`, `payments`, `serviceCategories`, `serviceTypes`, `serviceCatalog`, `products`,
+  `quickAddService`, `quickAddProduct`, `clientTaxSettings`, `common`, `import`,
+  `validation`, `errors`, and `toast`.
+- Source inventories came from direct component reads plus parallel component-specific
+  inventories for general billing, service categories/types, service catalog/products,
+  and tax/client-tax surfaces.
+- Validation run:
+  `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/billing-settings.json','utf8')); console.log('ok')"`

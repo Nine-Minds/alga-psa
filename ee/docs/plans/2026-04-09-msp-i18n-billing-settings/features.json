@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Create en/msp/billing-settings.json with all keys for the 17 billing/tax settings components (~480 keys organized under tabs, general, quoting, tax, payments, serviceCategories, serviceTypes, serviceCatalog, products, quickAddService, quickAddProduct, clientTaxSettings, common, import, validation, errors, toast groups)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F002",
