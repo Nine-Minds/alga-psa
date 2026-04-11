@@ -241,7 +241,7 @@
   {
     "id": "T029",
     "description": "TaxHolidayManager.tsx dialog strings (add/edit title, field labels, placeholder, delete confirmation with description/date interpolation) use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
