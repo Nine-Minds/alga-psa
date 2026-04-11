@@ -257,7 +257,7 @@
   {
     "id": "T031",
     "description": "TaxSettingsForm.tsx tax exempt card strings (title, description, toggle, certificate field, exempt alert) use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
