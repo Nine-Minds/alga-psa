@@ -167,7 +167,7 @@
   {
     "id": "F034",
     "description": "Generate it/msp/billing-settings.json translations for all keys (with Italian accent audit)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F035",

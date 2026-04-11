@@ -389,3 +389,11 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Verification runs:
   `rg -n "ALGA_VAR|__" server/public/locales/nl/msp/billing-settings.json || true`
   `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/nl/msp/billing-settings.json','utf8')); console.log('nl json ok')"`
+- Completed `F034` by generating
+  [it/msp/billing-settings.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/billing-settings.json)
+  and running a lightweight accent audit for common diacritic-sensitive terms.
+- Verification runs:
+  `rg -n "ALGA_VAR|__" server/public/locales/it/msp/billing-settings.json || true`
+  `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/it/msp/billing-settings.json','utf8')); console.log('it json ok')"`
+  `rg -n "perche|lunedi|qualita" server/public/locales/it/msp/billing-settings.json || true`
+  `rg -n "perché|lunedì|qualità" server/public/locales/it/msp/billing-settings.json || true`
