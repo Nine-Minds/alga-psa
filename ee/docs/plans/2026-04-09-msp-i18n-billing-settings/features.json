@@ -82,7 +82,7 @@
   {
     "id": "F017",
     "description": "Wire QuickAddService.tsx conditional field labels and validation -- Unit of Measure label/placeholder/help (usage-based), Hardware fields (SKU/Inventory Count), Software License fields (Seat Limit/License Term), hardware/license validation errors, tax rate loading placeholder, error messages, toast",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F018",

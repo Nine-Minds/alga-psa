@@ -54,12 +54,7 @@ interface ServiceFormData {
 
 // Removed hardcoded SERVICE_CATEGORY_OPTIONS - will use fetched categories instead
 
-const LICENSE_TERM_OPTIONS = [
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'annual', label: 'Annual' },
-  { value: 'perpetual', label: 'Perpetual' }
-];
-
+const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 const BILLING_METHOD_OPTION_VALUES = ['fixed', 'hourly', 'usage'] as const;
 
 export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceTypesChange, isOpen, onClose, triggerId = 'add-service' }: QuickAddServiceProps) {
@@ -78,7 +73,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
         setServiceData((prev) => ({ ...prev, currency_code: currency }));
       })
       .catch(() => {});
-  }, []);
+  }, [t]);
 
   // In controlled mode, use external state; in uncontrolled mode, use internal state
   const dialogOpen = isControlled ? isOpen : internalOpen;
@@ -125,6 +120,16 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
       })),
     [t]
   )
+  const licenseTermOptions = useMemo(
+    () =>
+      LICENSE_TERM_OPTION_VALUES.map((value) => ({
+        value,
+        label: t(`common.licenseTerm.${value}`, {
+          defaultValue: value.charAt(0).toUpperCase() + value.slice(1),
+        }),
+      })),
+    [t]
+  )
 
   // Initialize service state
   const [serviceData, setServiceData] = useState<ServiceFormData>({
@@ -156,7 +161,9 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
         setCategories(fetchedCategories)
       } catch (error) {
         console.error('Error fetching categories:', error)
-        setError('Failed to fetch categories')
+        setError(t('quickAddService.errors.fetchCategories', {
+          defaultValue: 'Failed to fetch categories'
+        }))
       }
     }
 
@@ -172,7 +179,11 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
            setTaxRates(rates);
        } catch (error) {
            console.error('Error loading tax rates:', error);
-           const errorMessage = error instanceof Error ? error.message : 'Failed to load tax rates.';
+           const errorMessage = error instanceof Error
+             ? error.message
+             : t('quickAddService.errors.fetchTaxRates', {
+                 defaultValue: 'Failed to load tax rates.'
+               });
            setErrorTaxRates(errorMessage);
            setTaxRates([]); // Clear rates on error
        } finally {
@@ -182,7 +193,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
 
     fetchCategories(); // Keep fetching categories for now
     fetchTaxRates(); // Call fetchTaxRates
-  }, []);
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -236,12 +247,12 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
       // Removed category_id validation
 
       // Find the selected service type name for conditional checks
-      const selectedServiceTypeName = allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name;
-
       // Validate product-specific fields
       if (selectedServiceTypeName === 'Hardware') { // Check name
         if (!serviceData.sku) {
-          setError('SKU is required for Hardware')
+          setError(t('quickAddService.validation.skuRequiredForHardware', {
+            defaultValue: 'SKU is required for Hardware'
+          }))
           return
         }
       }
@@ -249,7 +260,9 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
       // Validate license-specific fields
       if (selectedServiceTypeName === 'Software License') { // Check name
         if (!serviceData.license_term) {
-          setError('License term is required for Software Licenses')
+          setError(t('quickAddService.validation.licenseTermRequired', {
+            defaultValue: 'License term is required for Software Licenses'
+          }))
           return
         }
       }
@@ -257,7 +270,9 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
 const selectedServiceType = allServiceTypes.find(t => t.id === serviceData.custom_service_type_id);
 
 if (!selectedServiceType) {
-  setError('Selected service type not found');
+  setError(t('quickAddService.validation.selectedTypeNotFound', {
+    defaultValue: 'Selected service type not found'
+  }));
   return;
 }
 
@@ -334,7 +349,7 @@ if (createdService?.service_id) {
       setValidationErrors([])
     } catch (error) {
       console.error('[QuickAddService] Error creating service:', error)
-      setError('Failed to create service')
+      setError(t('quickAddService.errors.create', { defaultValue: 'Failed to create service' }))
     }
   }
 
@@ -586,7 +601,11 @@ if (createdService?.service_id) {
             {/* Unit of Measure for usage-based services */}
             {serviceData.billing_method === 'usage' && (
               <div>
-                <Label htmlFor="unitOfMeasure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Unit of Measure *</Label>
+                <Label htmlFor="unitOfMeasure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                  {t('quickAddService.fields.unitOfMeasure.label', {
+                    defaultValue: 'Unit of Measure *'
+                  })}
+                </Label>
                 <Input
                   id="unitOfMeasure"
                   type="text"
@@ -595,11 +614,17 @@ if (createdService?.service_id) {
                     console.log('[QuickAddService] Unit of Measure onChange called with:', e.target.value);
                     setServiceData({ ...serviceData, unit_of_measure: e.target.value });
                   }}
-                  placeholder="e.g., GB, API call, user"
+                  placeholder={t('quickAddService.fields.unitOfMeasure.placeholder', {
+                    defaultValue: 'e.g., GB, API call, user'
+                  })}
                   required
                   className={`${hasAttemptedSubmit && !serviceData.unit_of_measure ? 'border-red-500' : ''}`}
                 />
-                <p className="text-xs text-muted-foreground mt-1">The measurable unit for billing (e.g., GB, API call, user)</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('quickAddService.fields.unitOfMeasure.help', {
+                    defaultValue: 'The measurable unit for billing (e.g., GB, API call, user)'
+                  })}
+                </p>
               </div>
             )}
 
@@ -614,13 +639,22 @@ if (createdService?.service_id) {
               <CustomSelect
                   id="quick-add-service-tax-rate-select"
                   value={serviceData.tax_rate_id || ''} // Bind to tax_rate_id
-                  placeholder={isLoadingTaxRates ? "Loading tax rates..." : "Select Tax Rate (optional)"}
+                  placeholder={
+                    isLoadingTaxRates
+                      ? t('quickAddService.fields.taxRate.loading', {
+                          defaultValue: 'Loading tax rates...'
+                        })
+                      : t('quickAddService.fields.taxRate.placeholder', {
+                          defaultValue: 'Select Tax Rate (optional)'
+                        })
+                  }
                   onValueChange={(value) => setServiceData({ ...serviceData, tax_rate_id: value || null })} // Set null if cleared
                   // Populate with fetched tax rates, construct label using regionMap
                   // Use description or region_code directly from the rate object
                   options={taxRates.map(r => { // r is now correctly typed as ITaxRate
                     // Construct label using fields directly from ITaxRate
-                    const descriptionPart = r.description || r.region_code || 'N/A'; // Use description or region_code
+                    const descriptionPart =
+                      r.description || r.region_code || t('common.notAvailable', { defaultValue: 'N/A' }); // Use description or region_code
 
                     // Ensure tax_percentage is treated as a number before calling toFixed
                     const percentageValue = typeof r.tax_percentage === 'string'
@@ -643,22 +677,30 @@ if (createdService?.service_id) {
             {selectedServiceTypeName === 'Hardware' && (
               <>
                 <div>
-                  <Label htmlFor="sku" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">SKU</Label>
+                  <Label htmlFor="sku" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('quickAddService.fields.sku.label', { defaultValue: 'SKU' })}
+                  </Label>
                   <Input
                     id="sku"
                     value={serviceData.sku || ''}
                     onChange={(e) => setServiceData({ ...serviceData, sku: e.target.value })}
-                    placeholder="SKU"
+                    placeholder={t('quickAddService.fields.sku.placeholder', { defaultValue: 'SKU' })}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="inventoryCount" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Inventory Count</Label>
+                  <Label htmlFor="inventoryCount" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('quickAddService.fields.inventoryCount.label', {
+                      defaultValue: 'Inventory Count'
+                    })}
+                  </Label>
                   <Input
                     id="inventoryCount"
                     type="number"
                     value={serviceData.inventory_count || 0}
                     onChange={(e) => setServiceData({ ...serviceData, inventory_count: parseInt(e.target.value) })}
-                    placeholder="Inventory Count"
+                    placeholder={t('quickAddService.fields.inventoryCount.placeholder', {
+                      defaultValue: 'Inventory Count'
+                    })}
                   />
                 </div>
               </>
@@ -668,22 +710,32 @@ if (createdService?.service_id) {
             {selectedServiceTypeName === 'Software License' && (
               <>
                 <div>
-                  <Label htmlFor="seatLimit" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Seat Limit</Label>
+                  <Label htmlFor="seatLimit" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('quickAddService.fields.seatLimit.label', { defaultValue: 'Seat Limit' })}
+                  </Label>
                   <Input
                     id="seatLimit"
                     type="number"
                     value={serviceData.seat_limit || 0}
                     onChange={(e) => setServiceData({ ...serviceData, seat_limit: parseInt(e.target.value) })}
-                    placeholder="Seat Limit"
+                    placeholder={t('quickAddService.fields.seatLimit.placeholder', {
+                      defaultValue: 'Seat Limit'
+                    })}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="licenseTerm" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">License Term</Label>
+                  <Label htmlFor="licenseTerm" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('quickAddService.fields.licenseTerm.label', {
+                      defaultValue: 'License Term'
+                    })}
+                  </Label>
                   <CustomSelect
-                    options={LICENSE_TERM_OPTIONS}
+                    options={licenseTermOptions}
                     value={serviceData.license_term || 'monthly'}
                     onValueChange={(value) => setServiceData({ ...serviceData, license_term: value })} // Corrected prop name
-                    placeholder="Select license term..."
+                    placeholder={t('quickAddService.fields.licenseTerm.placeholder', {
+                      defaultValue: 'Select license term...'
+                    })}
                     className="w-full"
                   />
                 </div>

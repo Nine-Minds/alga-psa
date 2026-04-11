@@ -252,3 +252,12 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/billing/QuickAddService.tsx`
   `rg -n "Unit of Measure \\*|Loading tax rates|Select Tax Rate \\(optional\\)|SKU is required for Hardware|License term is required for Software Licenses|Selected service type not found|Failed to fetch categories|Failed to load tax rates|Failed to create service|SKU|Inventory Count|Seat Limit|License Term" packages/billing/src/components/settings/billing/QuickAddService.tsx`
+- Completed `F017` in
+  [QuickAddService.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/QuickAddService.tsx).
+- Wired the usage-only unit-of-measure copy, tax-rate loading/select placeholders,
+  hardware/license field labels and placeholders, hardware/license validation fallbacks,
+  service-type-not-found fallback, and fetch/create error fallbacks to `quickAddService.*`.
+- Moved license-term option labels into `useMemo(..., [t])` so both billing-method and
+  license-term selects now react to locale changes in the dialog.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/settings/billing/QuickAddService.tsx`
