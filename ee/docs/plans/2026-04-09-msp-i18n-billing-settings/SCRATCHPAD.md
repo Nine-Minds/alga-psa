@@ -454,3 +454,4 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Completed `T034` with source-level integration assertions that Tax tab shell copy plus `TaxSourceSettings` and `TaxRegionsManager` user-facing strings are wired to `t('tax.*')` keys under `msp/billing-settings`.
 - Completed `T035` with locale-level integration checks: German namespace has translated tab/card labels and only 15/611 strings remain identical to English (mostly shared technical nouns like `Rate`, `Code`, `Name`).
 - Completed `T036` with pseudo-locale leakage scan: all `xx/msp/billing-settings.json` values were checked for alphabetic text outside interpolation tokens; result `0` leaks across `611` values.
+- Completed `T037` via `node scripts/validate-translations.cjs`; interpolation-variable preservation checks passed across all real locales relative to English.

@@ -324,7 +324,7 @@
   {
     "id": "T037",
     "description": "{{variables}} preserved: all locale files for msp/billing-settings preserve identical {{variable}} interpolation tokens as the English source (validated by scripts/validate-translations.cjs)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031",
