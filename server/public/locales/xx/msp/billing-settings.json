@@ -1,0 +1,1055 @@
+{
+  "tabs": {
+    "general": "11111",
+    "quoting": "11111",
+    "tax": "11111",
+    "payments": "11111"
+  },
+  "general": {
+    "currency": {
+      "title": "11111",
+      "description": "11111",
+      "fields": {
+        "currency": {
+          "label": "11111",
+          "placeholder": "11111"
+        }
+      },
+      "toast": {
+        "updated": "11111"
+      },
+      "errors": {
+        "load": "11111",
+        "save": "11111"
+      }
+    },
+    "invoiceNumbering": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "zeroDollar": {
+      "title": "11111",
+      "description": "11111",
+      "fields": {
+        "handling": {
+          "label": "11111",
+          "placeholder": "11111",
+          "help": "11111"
+        },
+        "suppress": {
+          "label": "11111",
+          "help": "11111"
+        }
+      },
+      "options": {
+        "draft": "11111",
+        "finalized": "11111"
+      },
+      "toast": {
+        "updated": "11111"
+      },
+      "errors": {
+        "load": "11111",
+        "save": "11111"
+      }
+    },
+    "creditExpiration": {
+      "title": "11111",
+      "description": "11111",
+      "fields": {
+        "enabled": {
+          "label": "11111",
+          "help": "11111"
+        },
+        "expirationDays": {
+          "label": "11111",
+          "help": "11111"
+        },
+        "notificationDays": {
+          "label": "11111",
+          "placeholder": "11111",
+          "help": "11111"
+        }
+      },
+      "actions": {
+        "save": "11111"
+      },
+      "toast": {
+        "updated": "11111"
+      },
+      "errors": {
+        "load": "11111",
+        "save": "11111"
+      }
+    },
+    "renewal": {
+      "title": "11111",
+      "description": "11111",
+      "fields": {
+        "dueDateAction": {
+          "label": "11111",
+          "help": "11111"
+        },
+        "ticketBoard": {
+          "label": "11111",
+          "placeholderLoading": "11111",
+          "placeholderSelect": "11111"
+        },
+        "ticketStatus": {
+          "label": "11111",
+          "placeholderLoading": "11111",
+          "placeholderSelect": "11111",
+          "placeholderSelectBoardFirst": "11111",
+          "help": "11111"
+        }
+      },
+      "options": {
+        "createTicket": "11111",
+        "queueOnly": "11111"
+      },
+      "states": {
+        "unnamedBoard": "11111"
+      },
+      "actions": {
+        "save": "11111",
+        "saving": "11111"
+      },
+      "toast": {
+        "updated": "11111"
+      },
+      "errors": {
+        "load": "11111",
+        "loadStatuses": "11111",
+        "save": "11111"
+      }
+    }
+  },
+  "quoting": {
+    "quoteNumbering": {
+      "title": "11111",
+      "description": "11111"
+    }
+  },
+  "tax": {
+    "taxRegions": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "source": {
+      "title": "11111",
+      "tooltip": "11111",
+      "description": "11111",
+      "fields": {
+        "defaultMethod": {
+          "label": "11111"
+        }
+      },
+      "options": {
+        "internal": {
+          "label": "11111",
+          "description": "11111"
+        },
+        "external": {
+          "label": "11111",
+          "description": "11111"
+        }
+      },
+      "workflow": {
+        "title": "11111",
+        "step1": "11111",
+        "step2": "11111",
+        "step3": "11111",
+        "step4": "11111",
+        "step5": "11111",
+        "note": "11111"
+      },
+      "loading": "11111",
+      "actions": {
+        "cancel": "11111",
+        "save": "11111",
+        "saving": "11111"
+      },
+      "toast": {
+        "saved": "11111"
+      },
+      "errors": {
+        "load": "11111",
+        "save": "11111"
+      }
+    },
+    "regions": {
+      "title": "11111",
+      "loading": "11111",
+      "fields": {
+        "code": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "name": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "active": {
+          "label": "11111"
+        }
+      },
+      "dialog": {
+        "addTitle": "11111",
+        "editTitle": "11111"
+      },
+      "actions": {
+        "add": "11111",
+        "edit": "11111",
+        "activate": "11111",
+        "deactivate": "11111",
+        "cancel": "11111",
+        "save": "11111",
+        "saving": "11111"
+      },
+      "toast": {
+        "created": "11111",
+        "updated": "11111",
+        "activatePending": "11111 {{name}} 11111",
+        "deactivatePending": "11111 {{name}} 11111",
+        "activated": "11111 {{name}} 11111",
+        "deactivated": "11111 {{name}} 11111"
+      },
+      "errors": {
+        "load": "11111",
+        "create": "11111",
+        "update": "11111",
+        "activate": "11111",
+        "deactivate": "11111"
+      }
+    },
+    "thresholds": {
+      "title": "11111",
+      "tooltip": "11111",
+      "loading": "11111",
+      "empty": "11111",
+      "noLimit": "11111",
+      "above": "11111",
+      "table": {
+        "minAmount": "11111",
+        "maxAmount": "11111"
+      },
+      "issuesTitle": "11111",
+      "issueNoMax": "11111 {{from}} 11111",
+      "issueGap": "11111 {{from}} 11111 {{to}} 11111",
+      "issueOverlap": "11111 {{at}} 11111",
+      "preview": {
+        "title": "11111",
+        "amount": "11111",
+        "taxable": "11111 {{amount}} 11111 {{tax}} 11111",
+        "totalTax": "11111",
+        "effective": "11111 {{rate}} 11111"
+      },
+      "dialog": {
+        "addTitle": "11111",
+        "editTitle": "11111",
+        "deleteTitle": "11111"
+      },
+      "fields": {
+        "minAmount": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "maxAmount": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "rate": {
+          "label": "11111",
+          "placeholder": "11111"
+        }
+      },
+      "actions": {
+        "add": "11111",
+        "edit": "11111",
+        "delete": "11111",
+        "cancel": "11111",
+        "save": "11111",
+        "saving": "11111",
+        "deleting": "11111"
+      },
+      "delete": {
+        "message": "11111 {{range}} 11111",
+        "lastWarning": "11111"
+      },
+      "toast": {
+        "created": "11111",
+        "updated": "11111",
+        "deleted": "11111"
+      },
+      "errors": {
+        "load": "11111",
+        "create": "11111",
+        "update": "11111",
+        "delete": "11111"
+      }
+    },
+    "components": {
+      "title": "11111",
+      "tooltip": "11111",
+      "loading": "11111",
+      "empty": "11111",
+      "preview": {
+        "title": "11111 {{amount}} 11111",
+        "compoundSuffix": "11111",
+        "totalTax": "11111",
+        "effective": "11111 {{rate}} 11111"
+      },
+      "dialog": {
+        "addTitle": "11111",
+        "editTitle": "11111",
+        "deleteTitle": "11111"
+      },
+      "fields": {
+        "name": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "rate": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "sequence": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "compound": {
+          "label": "11111",
+          "help": "11111"
+        },
+        "startDate": {
+          "label": "11111"
+        },
+        "endDate": {
+          "label": "11111"
+        }
+      },
+      "dateRange": {
+        "always": "11111",
+        "any": "11111",
+        "ongoing": "11111"
+      },
+      "actions": {
+        "add": "11111",
+        "edit": "11111",
+        "delete": "11111",
+        "cancel": "11111",
+        "save": "11111",
+        "saving": "11111",
+        "deleting": "11111"
+      },
+      "delete": {
+        "message": "11111 {{name}} 11111"
+      },
+      "toast": {
+        "created": "11111",
+        "updated": "11111",
+        "deleted": "11111"
+      },
+      "errors": {
+        "load": "11111",
+        "create": "11111",
+        "update": "11111",
+        "delete": "11111"
+      }
+    },
+    "holidays": {
+      "title": "11111",
+      "titleWithName": "11111 {{name}} 11111",
+      "tooltip": "11111",
+      "loading": "11111",
+      "empty": "11111",
+      "summary": {
+        "active": "11111 {{count}} 11111",
+        "upcoming": "11111 {{count}} 11111",
+        "expired": "11111 {{count}} 11111"
+      },
+      "dialog": {
+        "addTitle": "11111",
+        "editTitle": "11111",
+        "deleteTitle": "11111"
+      },
+      "fields": {
+        "startDate": {
+          "label": "11111"
+        },
+        "endDate": {
+          "label": "11111"
+        },
+        "description": {
+          "label": "11111",
+          "placeholder": "11111"
+        }
+      },
+      "actions": {
+        "add": "11111",
+        "edit": "11111",
+        "delete": "11111",
+        "cancel": "11111",
+        "save": "11111",
+        "saving": "11111",
+        "deleting": "11111"
+      },
+      "delete": {
+        "message": "11111 {{description}} 11111 {{dateRange}} 11111",
+        "untitled": "11111"
+      },
+      "toast": {
+        "created": "11111",
+        "updated": "11111",
+        "deleted": "11111"
+      },
+      "errors": {
+        "load": "11111",
+        "create": "11111",
+        "update": "11111",
+        "delete": "11111"
+      }
+    }
+  },
+  "payments": {
+    "title": "11111",
+    "description": "11111",
+    "loading": "11111"
+  },
+  "serviceCategories": {
+    "title": "11111",
+    "dialog": {
+      "addTitle": "11111",
+      "editTitle": "11111",
+      "deleteTitle": "11111"
+    },
+    "fields": {
+      "categoryName": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "description": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "displayOrder": {
+        "label": "11111",
+        "placeholder": "11111",
+        "help": "11111"
+      }
+    },
+    "actions": {
+      "add": "11111",
+      "importFromStandard": "11111",
+      "create": "11111",
+      "update": "11111"
+    },
+    "delete": {
+      "message": "11111 {{name}} 11111"
+    },
+    "import": {
+      "title": "11111",
+      "empty": "11111",
+      "description": "11111",
+      "fetchError": "11111"
+    },
+    "conflicts": {
+      "description": "11111",
+      "nameExists": "11111",
+      "rename": "11111",
+      "orderInUse": "11111 {{displayOrder}} 11111",
+      "reorder": "11111 {{order}} 11111"
+    },
+    "toast": {
+      "created": "11111",
+      "updated": "11111",
+      "deleted": "11111",
+      "imported": "11111"
+    },
+    "errors": {
+      "fetch": "11111",
+      "missingId": "11111",
+      "nameRequired": "11111",
+      "save": "11111",
+      "delete": "11111",
+      "import": "11111"
+    }
+  },
+  "serviceTypes": {
+    "title": "11111",
+    "description": "11111",
+    "loading": "11111",
+    "dialog": {
+      "addTitle": "11111",
+      "editTitle": "11111",
+      "deleteTitle": "11111"
+    },
+    "fields": {
+      "name": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "description": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "billingMethod": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "displayOrder": {
+        "label": "11111",
+        "placeholder": "11111",
+        "help": "11111",
+        "usedOrders": "11111 {{orders}} 11111"
+      }
+    },
+    "actions": {
+      "add": "11111",
+      "importFromStandard": "11111",
+      "save": "11111",
+      "close": "11111"
+    },
+    "validation": {
+      "summary": "11111",
+      "name": "11111",
+      "billingMethod": "11111",
+      "displayOrder": "11111",
+      "orderInUse": "11111 {{order}} 11111 {{name}} 11111"
+    },
+    "delete": {
+      "message": "11111 {{name}} 11111",
+      "errorPrefix": "11111 {{error}} 11111"
+    },
+    "import": {
+      "title": "11111",
+      "empty": "11111",
+      "description": "11111"
+    },
+    "conflicts": {
+      "description": "11111",
+      "nameExists": "11111",
+      "orderInUse": "11111 {{order}} 11111",
+      "rename": "11111",
+      "reorder": "11111"
+    },
+    "toast": {
+      "importedCount": "11111 {{count}} 11111",
+      "importedCount_other": "11111 {{count}} 11111",
+      "skippedItem": "11111 {{name}} 11111 {{reason}} 11111"
+    },
+    "errors": {
+      "fetch": "11111",
+      "save": "11111",
+      "delete": "11111",
+      "checkConflicts": "11111",
+      "import": "11111"
+    }
+  },
+  "serviceCatalog": {
+    "title": "11111",
+    "loading": "11111",
+    "dialog": {
+      "editTitle": "11111"
+    },
+    "filters": {
+      "allServiceTypes": "11111",
+      "serviceTypePlaceholder": "11111",
+      "allBillingMethods": "11111",
+      "billingMethodPlaceholder": "11111"
+    },
+    "fields": {
+      "serviceName": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "serviceType": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "billingMethod": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "description": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "pricing": {
+        "label": "11111",
+        "primaryRateHelp": "11111",
+        "multiCurrencyHelp": "11111",
+        "placeholders": {
+          "currency": "11111",
+          "rate": "11111"
+        },
+        "rateType": {
+          "monthly": "11111",
+          "perHour": "11111",
+          "usage": "11111",
+          "rate": "11111"
+        }
+      },
+      "unitOfMeasure": {
+        "label": "11111",
+        "placeholder": "11111",
+        "help": "11111"
+      },
+      "taxRate": {
+        "label": "11111",
+        "placeholder": "11111",
+        "loading": "11111"
+      },
+      "sku": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "inventoryCount": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "seatLimit": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "licenseTerm": {
+        "label": "11111",
+        "placeholder": "11111"
+      }
+    },
+    "actions": {
+      "edit": "11111",
+      "delete": "11111",
+      "addCurrency": "11111",
+      "remove": "11111",
+      "cancel": "11111",
+      "saveChanges": "11111"
+    },
+    "table": {
+      "serviceName": "11111",
+      "serviceType": "11111",
+      "billingMethod": "11111",
+      "pricing": "11111",
+      "unit": "11111",
+      "taxRate": "11111",
+      "nonTaxable": "11111",
+      "thisService": "11111"
+    },
+    "errors": {
+      "fetchServices": "11111",
+      "fetchCategories": "11111",
+      "fetchServiceTypesUnknown": "11111",
+      "fetchTaxRates": "11111",
+      "serviceTypeRequired": "11111",
+      "priceRequired": "11111",
+      "missingId": "11111",
+      "update": "11111",
+      "validateDelete": "11111",
+      "delete": "11111",
+      "deactivate": "11111"
+    }
+  },
+  "products": {
+    "title": "11111",
+    "loading": "11111",
+    "thisProduct": "11111",
+    "actions": {
+      "add": "11111",
+      "search": "11111",
+      "edit": "11111",
+      "restore": "11111",
+      "archive": "11111",
+      "delete": "11111"
+    },
+    "filters": {
+      "searchPlaceholder": "11111",
+      "allStatuses": "11111",
+      "active": "11111",
+      "inactive": "11111",
+      "allCategories": "11111",
+      "allTypes": "11111",
+      "loading": "11111"
+    },
+    "table": {
+      "product": "11111",
+      "sku": "11111",
+      "type": "11111",
+      "category": "11111",
+      "label": "11111",
+      "pricing": "11111",
+      "taxRate": "11111",
+      "active": "11111",
+      "nonTaxable": "11111"
+    },
+    "archive": {
+      "title": "11111",
+      "message": "11111 {{name}} 11111"
+    },
+    "permanentDelete": {
+      "title": "11111",
+      "checking": "11111",
+      "confirm": "11111 {{name}} 11111",
+      "blocked": "11111 {{name}} 11111",
+      "archiveInstead": "11111"
+    },
+    "errors": {
+      "fetch": "11111",
+      "restore": "11111",
+      "archive": "11111",
+      "checkAssociations": "11111",
+      "delete": "11111"
+    }
+  },
+  "quickAddService": {
+    "dialog": {
+      "title": "11111"
+    },
+    "actions": {
+      "trigger": "11111",
+      "addCurrency": "11111",
+      "remove": "11111",
+      "cancel": "11111",
+      "save": "11111"
+    },
+    "fields": {
+      "serviceName": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "serviceType": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "billingMethod": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "description": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "pricing": {
+        "label": "11111",
+        "help": "11111",
+        "placeholders": {
+          "currency": "11111",
+          "rate": "11111"
+        },
+        "rateType": {
+          "monthly": "11111",
+          "perHour": "11111",
+          "usage": "11111",
+          "rate": "11111"
+        }
+      },
+      "unitOfMeasure": {
+        "label": "11111",
+        "placeholder": "11111",
+        "help": "11111"
+      },
+      "taxRate": {
+        "label": "11111",
+        "placeholder": "11111",
+        "loading": "11111"
+      },
+      "sku": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "inventoryCount": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "seatLimit": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "licenseTerm": {
+        "label": "11111",
+        "placeholder": "11111"
+      }
+    },
+    "validation": {
+      "summary": "11111",
+      "serviceNameRequired": "11111",
+      "serviceTypeRequired": "11111",
+      "priceRequired": "11111",
+      "billingMethodRequired": "11111",
+      "skuRequiredForHardware": "11111",
+      "licenseTermRequired": "11111",
+      "selectedTypeNotFound": "11111"
+    },
+    "errors": {
+      "fetchCategories": "11111",
+      "fetchTaxRates": "11111",
+      "create": "11111"
+    }
+  },
+  "quickAddProduct": {
+    "dialog": {
+      "addTitle": "11111",
+      "editTitle": "11111"
+    },
+    "actions": {
+      "addCurrency": "11111",
+      "remove": "11111",
+      "cancel": "11111",
+      "create": "11111",
+      "save": "11111"
+    },
+    "fields": {
+      "productName": {
+        "label": "11111"
+      },
+      "type": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "sku": {
+        "label": "11111"
+      },
+      "category": {
+        "label": "11111",
+        "placeholder": "11111",
+        "loading": "11111"
+      },
+      "label": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "vendor": {
+        "label": "11111"
+      },
+      "manufacturer": {
+        "label": "11111"
+      },
+      "cost": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "billingMethod": {
+        "label": "11111"
+      },
+      "pricing": {
+        "label": "11111",
+        "help": "11111",
+        "rateType": {
+          "rate": "11111"
+        },
+        "placeholders": {
+          "currency": "11111",
+          "rate": "11111"
+        }
+      },
+      "taxRate": {
+        "label": "11111",
+        "placeholder": "11111",
+        "loading": "11111"
+      },
+      "active": {
+        "label": "11111"
+      },
+      "unitOfMeasure": {
+        "label": "11111",
+        "placeholder": "11111"
+      },
+      "license": {
+        "label": "11111"
+      },
+      "licenseTerm": {
+        "label": "11111"
+      },
+      "description": {
+        "label": "11111"
+      }
+    },
+    "options": {
+      "active": "11111",
+      "inactive": "11111",
+      "yes": "11111",
+      "no": "11111"
+    },
+    "validation": {
+      "productNameRequired": "11111",
+      "serviceTypeRequired": "11111",
+      "unitOfMeasureRequired": "11111",
+      "priceRequired": "11111",
+      "currencyRequired": "11111",
+      "currencyUnique": "11111",
+      "pricesNonNegative": "11111",
+      "nonZeroPriceRequired": "11111"
+    },
+    "errors": {
+      "create": "11111",
+      "update": "11111"
+    }
+  },
+  "clientTaxSettings": {
+    "title": "11111",
+    "loading": "11111",
+    "noSettingsFound": "11111",
+    "createDefaultButton": "11111",
+    "alerts": {
+      "dismissError": "11111",
+      "dismissSuccess": "11111"
+    },
+    "messages": {
+      "defaultCreated": "11111",
+      "createDefaultError": "11111",
+      "fetchError": "11111",
+      "updated": "11111",
+      "updateError": "11111",
+      "taxExemptEnabled": "11111",
+      "taxExemptDisabled": "11111",
+      "taxExemptUpdateError": "11111"
+    },
+    "validation": {
+      "thresholdNegativeMin": "11111 {{index}} 11111",
+      "thresholdMaxLessThanMin": "11111 {{index}} 11111",
+      "thresholdNegativeRate": "11111 {{index}} 11111",
+      "holidayMissingDates": "11111 {{index}} 11111",
+      "holidayEndBeforeStart": "11111 {{index}} 11111"
+    },
+    "taxExempt": {
+      "title": "11111",
+      "description": "11111",
+      "label": "11111",
+      "tooltip": "11111",
+      "status": {
+        "exempt": "11111",
+        "notExempt": "11111"
+      },
+      "certificate": {
+        "label": "11111",
+        "placeholder": "11111",
+        "help": "11111"
+      },
+      "alert": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "actions": {
+        "cancel": "11111",
+        "save": "11111",
+        "saving": "11111"
+      }
+    },
+    "advanced": {
+      "title": "11111",
+      "description": "11111",
+      "reverseCharge": {
+        "label": "11111",
+        "tooltip": "11111",
+        "status": {
+          "enabled": "11111",
+          "disabled": "11111"
+        }
+      },
+      "taxSourceOverride": {
+        "label": "11111",
+        "tooltip": "11111",
+        "placeholder": "11111",
+        "options": {
+          "default": "11111",
+          "internal": "11111",
+          "external": "11111"
+        },
+        "effective": {
+          "label": "11111",
+          "pendingExternal": "11111",
+          "overridden": "11111"
+        },
+        "notAvailable": {
+          "messageStart": "11111",
+          "link": "11111",
+          "messageEnd": "11111"
+        }
+      },
+      "actions": {
+        "reset": "11111",
+        "update": "11111",
+        "updating": "11111"
+      }
+    }
+  },
+  "common": {
+    "actions": {
+      "add": "11111",
+      "cancel": "11111",
+      "close": "11111",
+      "create": "11111",
+      "delete": "11111",
+      "edit": "11111",
+      "importSelected": "11111",
+      "importWithResolutions": "11111",
+      "remove": "11111",
+      "reset": "11111",
+      "save": "11111",
+      "update": "11111"
+    },
+    "columns": {
+      "actions": "11111",
+      "name": "11111",
+      "description": "11111",
+      "order": "11111",
+      "code": "11111",
+      "status": "11111",
+      "billingMethod": "11111",
+      "rate": "11111",
+      "dateRange": "11111",
+      "startDate": "11111",
+      "endDate": "11111",
+      "sequence": "11111"
+    },
+    "billingMethod": {
+      "fixed": "11111",
+      "fixedFee": "11111",
+      "hourly": "11111",
+      "usage": "11111",
+      "usageBased": "11111"
+    },
+    "licenseTerm": {
+      "monthly": "11111",
+      "annual": "11111",
+      "perpetual": "11111"
+    },
+    "statuses": {
+      "active": "11111",
+      "inactive": "11111",
+      "upcoming": "11111",
+      "expired": "11111",
+      "enabled": "11111",
+      "disabled": "11111",
+      "yes": "11111",
+      "no": "11111",
+      "nonTaxable": "11111"
+    },
+    "emptyValue": "11111",
+    "notAvailable": "11111",
+    "loading": "11111",
+    "a11y": {
+      "openMenu": "11111"
+    }
+  },
+  "import": {
+    "title": "11111",
+    "selectAll": "11111",
+    "skipItem": "11111",
+    "headers": {
+      "name": "11111",
+      "description": "11111",
+      "order": "11111",
+      "billingMethod": "11111"
+    }
+  },
+  "validation": {
+    "requiredFields": "11111"
+  },
+  "errors": {
+    "failedToLoadSettings": "11111",
+    "failedToSaveSettings": "11111"
+  },
+  "toast": {
+    "saved": "11111"
+  }
+}

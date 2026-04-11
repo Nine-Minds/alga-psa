@@ -403,3 +403,9 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Verification runs:
   `rg -n "ALGA_VAR|__" server/public/locales/pl/msp/billing-settings.json || true`
   `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/pl/msp/billing-settings.json','utf8')); console.log('pl json ok')"`
+- Completed `F036` by running pseudo-locale generation:
+  `node scripts/generate-pseudo-locales.cjs`
+- Result: generated the new namespace artifacts
+  [xx/msp/billing-settings.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/billing-settings.json)
+  and
+  [yy/msp/billing-settings.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/yy/msp/billing-settings.json).
