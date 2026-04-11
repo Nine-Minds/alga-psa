@@ -338,7 +338,7 @@
   {
     "id": "T038",
     "description": "Italian accent audit: it/msp/billing-settings.json preserves proper Italian diacritics (e.g., perche -> perché, lunedi -> lunedì, qualita -> qualità) -- validated by scripts/validate-translations.cjs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F037"
