@@ -362,3 +362,12 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   state, and the shared threshold/holiday validation messages surfaced by form submit.
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/tax/TaxSettingsForm.tsx`
+- Completed `F030` by generating
+  [fr/msp/billing-settings.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/fr/msp/billing-settings.json)
+  from the English namespace using a scripted machine-translation pass.
+- Generation approach: `node /tmp/generate_billing_locale.js fr` translates each leaf string,
+  caches repeated source phrases, and preserves i18next interpolation tokens like `{{name}}`
+  by replacing/restoring placeholder sentinels during translation.
+- Verification runs:
+  `rg -n "ALGA_VAR|__" server/public/locales/fr/msp/billing-settings.json || true`
+  `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/fr/msp/billing-settings.json','utf8')); console.log('fr json ok')"`
