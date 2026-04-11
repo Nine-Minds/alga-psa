@@ -87,7 +87,11 @@ const ServiceTypeSettings: React.FC = () => {
       setTenantTypes(tenantServiceTypes);
     } catch (fetchError) {
       console.error("Error fetching service types:", fetchError);
-      setError(fetchError instanceof Error ? fetchError.message : "Failed to fetch service types");
+      setError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : t('serviceTypes.errors.fetch', { defaultValue: 'Failed to fetch service types' })
+      );
     } finally {
       setLoading(false);
     }
@@ -143,16 +147,16 @@ const ServiceTypeSettings: React.FC = () => {
     // Validation
     const errors: string[] = [];
     if (!editingType.name?.trim()) {
-      errors.push("Service Type name");
+      errors.push(t('serviceTypes.validation.name', { defaultValue: 'Service Type name' }));
     }
     
     // Billing method is now mandatory for custom types
     if (!editingType.billing_method) {
-      errors.push("Billing method");
+      errors.push(t('serviceTypes.validation.billingMethod', { defaultValue: 'Billing method' }));
     }
     
     if (!editingType.order_number && editingType.order_number !== 0) {
-      errors.push("Display order");
+      errors.push(t('serviceTypes.validation.displayOrder', { defaultValue: 'Display order' }));
     }
     
     // Check for duplicate order number
@@ -162,7 +166,11 @@ const ServiceTypeSettings: React.FC = () => {
     );
     
     if (existingWithOrder) {
-      errors.push(`Order ${editingType.order_number} is already used by "${existingWithOrder.name}"`);
+      errors.push(t('serviceTypes.validation.orderInUse', {
+        defaultValue: 'Order {{order}} is already used by "{{name}}"',
+        order: editingType.order_number,
+        name: existingWithOrder.name
+      }));
     }
     
     if (errors.length > 0) {
@@ -193,7 +201,9 @@ const ServiceTypeSettings: React.FC = () => {
       await fetchTypes(); // Refresh list
     } catch (saveError) {
       console.error("Error saving service type:", saveError);
-      const errorMessage = saveError instanceof Error ? saveError.message : "Failed to save service type";
+      const errorMessage = saveError instanceof Error
+        ? saveError.message
+        : t('serviceTypes.errors.save', { defaultValue: 'Failed to save service type' });
       setValidationErrors([errorMessage]);
     }
   };
@@ -227,7 +237,7 @@ const ServiceTypeSettings: React.FC = () => {
       // Get the specific error message
       const errorMessage = deleteError instanceof Error
         ? deleteError.message
-        : "Failed to delete service type";
+        : t('serviceTypes.errors.delete', { defaultValue: 'Failed to delete service type' });
       
       // Set the error message to be displayed
       setError(errorMessage);
@@ -255,7 +265,9 @@ const ServiceTypeSettings: React.FC = () => {
         await handleImport();
       }
     } catch (error) {
-      handleError(error, 'Failed to check conflicts');
+      handleError(error, t('serviceTypes.errors.checkConflicts', {
+        defaultValue: 'Failed to check conflicts'
+      }));
     }
   };
 
@@ -264,11 +276,18 @@ const ServiceTypeSettings: React.FC = () => {
       const result = await importReferenceData('service_types', selectedImportTypes, undefined, conflictResolutions);
       
       if (result.imported.length > 0) {
-        toast.success(`Imported ${result.imported.length} service type${result.imported.length !== 1 ? 's' : ''}`);
+        toast.success(t('serviceTypes.toast.importedCount', {
+          count: result.imported.length,
+          defaultValue: 'Imported {{count}} service type'
+        }));
       }
       
       if (result.skipped.length > 0) {
-        const skippedMessage = (result.skipped as any[]).map((s: any) => `${s.name}: ${s.reason}`).join(', ');
+        const skippedMessage = (result.skipped as any[]).map((s: any) => t('serviceTypes.toast.skippedItem', {
+          defaultValue: '{{name}}: {{reason}}',
+          name: s.name,
+          reason: s.reason
+        })).join(', ');
         toast(skippedMessage, { icon: 'ℹ️' });
       }
       
@@ -278,7 +297,9 @@ const ServiceTypeSettings: React.FC = () => {
       setConflictResolutions({});
       await fetchTypes();
     } catch (error) {
-      handleError(error, 'Failed to import service types');
+      handleError(error, t('serviceTypes.errors.import', {
+        defaultValue: 'Failed to import service types'
+      }));
     }
   };
 
@@ -412,7 +433,9 @@ const ServiceTypeSettings: React.FC = () => {
       <Dialog 
         isOpen={isEditDialogOpen} 
         onClose={handleCloseEditDialog} 
-        title={`${editingType?.id ? 'Edit' : 'Add'} Custom Service Type`}
+        title={editingType?.id
+          ? t('serviceTypes.dialog.editTitle', { defaultValue: 'Edit Custom Service Type' })
+          : t('serviceTypes.dialog.addTitle', { defaultValue: 'Add Custom Service Type' })}
       >
         <DialogContent>
           <form onSubmit={(e) => { e.preventDefault(); handleSaveType(); }} noValidate>
@@ -420,7 +443,9 @@ const ServiceTypeSettings: React.FC = () => {
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive">
                 <AlertDescription>
-                  <p className="font-medium mb-2">Please fill in the required fields:</p>
+                  <p className="font-medium mb-2">
+                    {t('serviceTypes.validation.summary', { defaultValue: 'Please fill in the required fields:' })}
+                  </p>
                   <ul className="list-disc list-inside space-y-1">
                     {validationErrors.map((err, index) => (
                       <li key={index}>{err}</li>
@@ -430,7 +455,9 @@ const ServiceTypeSettings: React.FC = () => {
               </Alert>
             )}
             <div>
-              <label htmlFor="typeName" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Name *</label>
+              <label htmlFor="typeName" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                {t('serviceTypes.fields.name.label', { defaultValue: 'Name *' })}
+              </label>
               <Input
                 id="typeName"
                 value={editingType?.name || ''}
@@ -438,28 +465,36 @@ const ServiceTypeSettings: React.FC = () => {
                   setEditingType({ ...editingType, name: e.target.value });
                   clearErrorIfSubmitted();
                 }}
-                placeholder="e.g., Custom Support Tier *"
+                placeholder={t('serviceTypes.fields.name.placeholder', {
+                  defaultValue: 'e.g., Custom Support Tier *'
+                })}
                 required
                 className={hasAttemptedSubmit && !editingType?.name?.trim() ? 'border-red-500' : ''}
               />
             </div>
             <div>
-              <label htmlFor="typeDescription" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Description (Optional)</label>
+              <label htmlFor="typeDescription" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                {t('serviceTypes.fields.description.label', { defaultValue: 'Description (Optional)' })}
+              </label>
               <TextArea
                 id="typeDescription"
                 value={editingType?.description || ''}
                 onChange={(e) => setEditingType({ ...editingType, description: e.target.value })}
-                placeholder="Describe this service type"
+                placeholder={t('serviceTypes.fields.description.placeholder', {
+                  defaultValue: 'Describe this service type'
+                })}
               />
             </div>
             <div>
-              <Label htmlFor="billing-method-select">Billing Method *</Label>
+              <Label htmlFor="billing-method-select">
+                {t('serviceTypes.fields.billingMethod.label', { defaultValue: 'Billing Method *' })}
+              </Label>
               <CustomSelect
                 id="billing-method-select"
                 options={[
-                  { value: 'fixed', label: 'Fixed' },
-                  { value: 'hourly', label: 'Hourly' },
-                  { value: 'usage', label: 'Usage Based' },
+                  { value: 'fixed', label: t('common.billingMethod.fixed', { defaultValue: 'Fixed' }) },
+                  { value: 'hourly', label: t('common.billingMethod.hourly', { defaultValue: 'Hourly' }) },
+                  { value: 'usage', label: t('common.billingMethod.usageBased', { defaultValue: 'Usage Based' }) },
                 ]}
                 value={editingType?.billing_method || ''}
                 onValueChange={(value: string) => {
@@ -468,13 +503,17 @@ const ServiceTypeSettings: React.FC = () => {
                     clearErrorIfSubmitted();
                   }
                 }}
-                placeholder="Select billing method..."
+                placeholder={t('serviceTypes.fields.billingMethod.placeholder', {
+                  defaultValue: 'Select billing method...'
+                })}
                 required
                 className={hasAttemptedSubmit && !editingType?.billing_method ? 'ring-1 ring-red-500' : ''}
               />
             </div>
             <div>
-              <Label htmlFor="order-number">Display Order *</Label>
+              <Label htmlFor="order-number">
+                {t('serviceTypes.fields.displayOrder.label', { defaultValue: 'Display Order *' })}
+              </Label>
               <Input
                 id="order-number"
                 type="number"
@@ -484,27 +523,42 @@ const ServiceTypeSettings: React.FC = () => {
                   setEditingType({ ...editingType, order_number: value });
                   clearErrorIfSubmitted();
                 }}
-                placeholder="e.g., 1, 2, 3..."
+                placeholder={t('serviceTypes.fields.displayOrder.placeholder', {
+                  defaultValue: 'e.g., 1, 2, 3...'
+                })}
                 required
                 className={hasAttemptedSubmit && !editingType?.order_number ? 'border-red-500' : ''}
               />
               <p className="text-sm text-muted-foreground mt-1">
-                Controls the order in which service types appear in dropdown menus throughout the platform. Lower numbers appear first.
+                {t('serviceTypes.fields.displayOrder.help', {
+                  defaultValue: 'Controls the order in which service types appear in dropdown menus throughout the platform. Lower numbers appear first.'
+                })}
                 {tenantTypes.length > 0 && (
                   <span className="block">
-                    Used orders: {tenantTypes
-                      .filter(t => t.id !== editingType?.id)
-                      .map(t => t.order_number)
-                      .sort((a, b) => a - b)
-                      .join(', ')}
+                    {t('serviceTypes.fields.displayOrder.usedOrders', {
+                      defaultValue: 'Used orders: {{orders}}',
+                      orders: tenantTypes
+                        .filter(t => t.id !== editingType?.id)
+                        .map(t => t.order_number)
+                        .sort((a, b) => a - b)
+                        .join(', ')
+                    })}
                   </span>
                 )}
               </p>
             </div>
           </div>
           <DialogFooter>
-            <Button id="cancel-edit-type-button" variant="outline" onClick={handleCloseEditDialog}>Cancel</Button>
-            <Button id="save-type-button" type="submit" className={!editingType?.name?.trim() || !editingType?.billing_method || (!editingType?.order_number && editingType?.order_number !== 0) ? 'opacity-50' : ''}>Save</Button>
+            <Button id="cancel-edit-type-button" variant="outline" onClick={handleCloseEditDialog}>
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="save-type-button"
+              type="submit"
+              className={!editingType?.name?.trim() || !editingType?.billing_method || (!editingType?.order_number && editingType?.order_number !== 0) ? 'opacity-50' : ''}
+            >
+              {t('serviceTypes.actions.save', { defaultValue: 'Save' })}
+            </Button>
           </DialogFooter>
           </form>
         </DialogContent>
@@ -515,14 +569,22 @@ const ServiceTypeSettings: React.FC = () => {
         isOpen={isDeleteDialogOpen}
         onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
-        title="Delete Service Type"
+        title={t('serviceTypes.dialog.deleteTitle', { defaultValue: 'Delete Service Type' })}
         message={
           error && error.includes("in use")
-            ? `Error: ${error}`
-            : `Are you sure you want to delete the service type "${typeToDelete?.name}"? This cannot be undone.`
+            ? t('serviceTypes.delete.errorPrefix', {
+              defaultValue: 'Error: {{error}}',
+              error
+            })
+            : t('serviceTypes.delete.message', {
+              defaultValue: 'Are you sure you want to delete the service type "{{name}}"? This cannot be undone.',
+              name: typeToDelete?.name || ''
+            })
         }
-        confirmLabel={error && error.includes("in use") ? "Close" : "Delete"}
-        cancelLabel="Cancel"
+        confirmLabel={error && error.includes("in use")
+          ? t('serviceTypes.actions.close', { defaultValue: 'Close' })
+          : t('common.actions.delete', { defaultValue: 'Delete' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
       />
 
       {/* Import Dialog */}
@@ -532,24 +594,30 @@ const ServiceTypeSettings: React.FC = () => {
           setShowImportDialog(false);
           setSelectedImportTypes([]);
         }} 
-        title="Import Standard Service Types"
+        title={t('serviceTypes.import.title', { defaultValue: 'Import Standard Service Types' })}
       >
         <DialogContent>
           <div className="space-y-4">
             {availableReferenceTypes.length === 0 ? (
-              <p className="text-muted-foreground">No standard service types available to import.</p>
+              <p className="text-muted-foreground">
+                {t('serviceTypes.import.empty', {
+                  defaultValue: 'No standard service types available to import.'
+                })}
+              </p>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Select standard service types to import into your organization:
+                  {t('serviceTypes.import.description', {
+                    defaultValue: 'Select standard service types to import into your organization:'
+                  })}
                 </p>
                 <div className="border rounded-md">
                   {/* Table Header */}
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
                     <div className="w-8"></div> {/* Checkbox column */}
-                    <div className="flex-1">Name</div>
-                    <div className="w-24 text-center">Billing Method</div>
-                    <div className="w-16 text-center">Order</div>
+                    <div className="flex-1">{t('common.columns.name', { defaultValue: 'Name' })}</div>
+                    <div className="w-24 text-center">{t('common.columns.billingMethod', { defaultValue: 'Billing Method' })}</div>
+                    <div className="w-16 text-center">{t('common.columns.order', { defaultValue: 'Order' })}</div>
                   </div>
                   {/* Table Body */}
                   <div className="max-h-[300px] overflow-y-auto">
@@ -575,10 +643,10 @@ const ServiceTypeSettings: React.FC = () => {
                         <div className="flex-1">{type.name}</div>
                         <div className="w-24 text-center text-sm text-muted-foreground">
                           {type.billing_method === 'fixed'
-                            ? 'Fixed'
+                            ? t('common.billingMethod.fixed', { defaultValue: 'Fixed' })
                             : type.billing_method === 'hourly'
-                              ? 'Hourly'
-                              : 'Usage'}
+                              ? t('common.billingMethod.hourly', { defaultValue: 'Hourly' })
+                              : t('common.billingMethod.usage', { defaultValue: 'Usage' })}
                         </div>
                         <div className="w-16 text-center text-sm text-muted-foreground">
                           {type.display_order}
@@ -600,14 +668,14 @@ const ServiceTypeSettings: React.FC = () => {
               setSelectedImportTypes([]);
             }}
           >
-            Cancel
+            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button 
             id="confirm-import-service-types"
             onClick={handleCheckConflicts}
             disabled={selectedImportTypes.length === 0}
           >
-            Import Selected
+            {t('common.actions.importSelected', { defaultValue: 'Import Selected' })}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -619,12 +687,14 @@ const ServiceTypeSettings: React.FC = () => {
           setImportConflicts([]);
           setConflictResolutions({});
         }} 
-        title="Resolve Import Conflicts"
+        title={t('import.title', { defaultValue: 'Resolve Import Conflicts' })}
       >
         <DialogContent>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              The following items have conflicts that need to be resolved:
+              {t('serviceTypes.conflicts.description', {
+                defaultValue: 'The following items have conflicts that need to be resolved:'
+              })}
             </p>
             <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {importConflicts.map((conflict) => {
@@ -636,7 +706,14 @@ const ServiceTypeSettings: React.FC = () => {
                     <div>
                       <h4 className="font-medium">{conflict.referenceItem.name}</h4>
                       <p className="text-sm text-muted-foreground">
-                        Conflict: {conflict.conflictType === 'name' ? 'Name already exists' : `Order ${conflict.referenceItem.order_number || conflict.referenceItem.display_order} is already in use`}
+                        {conflict.conflictType === 'name'
+                          ? t('serviceTypes.conflicts.nameExists', {
+                            defaultValue: 'Conflict: Name already exists'
+                          })
+                          : t('serviceTypes.conflicts.orderInUse', {
+                            defaultValue: 'Conflict: Order {{order}} is already in use',
+                            order: conflict.referenceItem.order_number || conflict.referenceItem.display_order
+                          })}
                       </p>
                     </div>
                     
@@ -651,7 +728,7 @@ const ServiceTypeSettings: React.FC = () => {
                             [itemId]: { action: 'skip' }
                           })}
                         />
-                        <span>Skip this item</span>
+                        <span>{t('import.skipItem', { defaultValue: 'Skip this item' })}</span>
                       </label>
                       
                       {conflict.conflictType === 'name' && (
@@ -665,7 +742,7 @@ const ServiceTypeSettings: React.FC = () => {
                               [itemId]: { action: 'rename', newName: conflict.referenceItem.name + ' (2)' }
                             })}
                           />
-                          <span>Import with different name:</span>
+                          <span>{t('serviceTypes.conflicts.rename', { defaultValue: 'Import with different name:' })}</span>
                           {resolution.action === 'rename' && (
                             <Input
                               value={resolution.newName || ''}
@@ -691,7 +768,7 @@ const ServiceTypeSettings: React.FC = () => {
                               [itemId]: { action: 'reorder', newOrder: conflict.suggestedOrder }
                             })}
                           />
-                          <span>Import with different order:</span>
+                          <span>{t('serviceTypes.conflicts.reorder', { defaultValue: 'Import with different order:' })}</span>
                           {resolution.action === 'reorder' && (
                             <Input
                               type="number"
@@ -722,13 +799,13 @@ const ServiceTypeSettings: React.FC = () => {
               setConflictResolutions({});
             }}
           >
-            Cancel
+            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button 
             id="confirm-import-with-resolutions"
             onClick={handleImport}
           >
-            Import with Resolutions
+            {t('common.actions.importWithResolutions', { defaultValue: 'Import with Resolutions' })}
           </Button>
         </DialogFooter>
       </Dialog>

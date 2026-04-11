@@ -193,3 +193,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   Dialog, validation, delete-confirmation, and import-conflict strings are left for `F011`.
 - Verification runs:
   `sed -n '286,322p' packages/billing/src/components/settings/billing/ServiceTypeSettings.tsx`
+- Completed `F011` in
+  [ServiceTypeSettings.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/ServiceTypeSettings.tsx).
+- Wired the add/edit dialog copy, required-field summary, delete confirmation with in-use
+  error state, import dialog copy, conflict-resolution strings, and import/save/delete
+  fallback messaging to `serviceTypes.*`, `common.*`, and `import.*`.
+- Verification runs:
+  `sed -n '1,760p' packages/billing/src/components/settings/billing/ServiceTypeSettings.tsx`

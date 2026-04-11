@@ -52,7 +52,7 @@
   {
     "id": "F011",
     "description": "Wire ServiceTypeSettings.tsx dialog and validation strings -- add/edit dialog title, field labels (Name/Description/Billing Method/Display Order), placeholders, required-fields validation prompt, display order help text with used-orders list, delete confirmation dialog (with in-use error handling), import dialog and conflict resolution strings, toast messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",
