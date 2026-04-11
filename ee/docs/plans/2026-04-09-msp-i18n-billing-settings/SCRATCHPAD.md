@@ -340,3 +340,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   copy with interpolated description/date range plus translated untitled fallback.
 - Verification runs:
   `./node_modules/.bin/eslint packages/billing/src/components/settings/tax/TaxHolidayManager.tsx`
+- Completed `F027` in
+  [TaxSettingsForm.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/tax/TaxSettingsForm.tsx).
+- Scoped this pass to the page-level client-tax surface: page title, loading state,
+  no-settings-found state, create-default button, dismissible alert aria-labels, and the
+  generic create/fetch/update success/error messages that support that outer flow.
+- Verification runs:
+  `./node_modules/.bin/eslint packages/billing/src/components/tax/TaxSettingsForm.tsx`

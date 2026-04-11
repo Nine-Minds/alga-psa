@@ -132,7 +132,7 @@
   {
     "id": "F027",
     "description": "Wire useTranslation in TaxSettingsForm.tsx -- page title, loading state, no-settings-found message, Create Default Tax Settings button, error/success dismissible messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F028",

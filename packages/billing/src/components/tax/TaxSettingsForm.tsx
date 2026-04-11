@@ -22,12 +22,14 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ShieldOff, ShieldCheck, Info } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TaxSettingsFormProps {
   clientId: string;
 }
 
 const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
+  const { t } = useTranslation('msp/billing-settings');
   const [taxSettings, setTaxSettings] = useState<Omit<IClientTaxSettings, 'tenant'> | null>(null);
   const [originalSettings, setOriginalSettings] = useState<Omit<IClientTaxSettings, 'tenant'> | null>(null);
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
@@ -64,9 +66,13 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
             const defaultSettings = await createDefaultTaxSettings(clientId);
             setTaxSettings(defaultSettings);
             setOriginalSettings(JSON.parse(JSON.stringify(defaultSettings)));
-            setSuccessMessage('Default tax settings created successfully');
+            setSuccessMessage(t('clientTaxSettings.messages.defaultCreated', {
+              defaultValue: 'Default tax settings created successfully'
+            }));
           } catch (createErr) {
-            setError('Error creating default tax settings');
+            setError(t('clientTaxSettings.messages.createDefaultError', {
+              defaultValue: 'Error creating default tax settings'
+            }));
             setLoading(false);
             return;
           }
@@ -92,13 +98,15 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
 
         setLoading(false);
       } catch (err) {
-        setError('Error fetching tax settings');
+        setError(t('clientTaxSettings.messages.fetchError', {
+          defaultValue: 'Error fetching tax settings'
+        }));
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [clientId]);
+  }, [clientId, t]);
 
   // Handle creation of default tax settings when none exist
   const handleCreateDefaultSettings = async () => {
@@ -107,10 +115,14 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       const defaultSettings = await createDefaultTaxSettings(clientId);
       setTaxSettings(defaultSettings);
       setError(null);
-      setSuccessMessage('Default tax settings created successfully');
+      setSuccessMessage(t('clientTaxSettings.messages.defaultCreated', {
+        defaultValue: 'Default tax settings created successfully'
+      }));
       setLoading(false);
     } catch (err) {
-      setError('Error creating default tax settings');
+      setError(t('clientTaxSettings.messages.createDefaultError', {
+        defaultValue: 'Error creating default tax settings'
+      }));
       setLoading(false);
     }
   };
@@ -211,13 +223,19 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       // Update original settings after successful update
       setOriginalSettings(JSON.parse(JSON.stringify(updatedSettings)));
       setError(null);
-      setSuccessMessage('Tax settings updated successfully');
+      setSuccessMessage(t('clientTaxSettings.messages.updated', {
+        defaultValue: 'Tax settings updated successfully'
+      }));
     } catch (err) {
       // Revert to original settings on error
       if (originalSettings) {
         setTaxSettings(JSON.parse(JSON.stringify(originalSettings)));
       }
-      setError(err instanceof Error ? err.message : 'Error updating tax settings');
+      setError(err instanceof Error
+        ? err.message
+        : t('clientTaxSettings.messages.updateError', {
+            defaultValue: 'Error updating tax settings'
+          }));
     } finally {
       setIsSubmitting(false);
     }
@@ -232,7 +250,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator 
           layout="stacked" 
-          text="Loading tax settings..."
+          text={t('clientTaxSettings.loading', { defaultValue: 'Loading tax settings...' })}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -249,7 +267,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
           <button
             onClick={dismissError}
             className="ml-4 opacity-70 hover:opacity-100"
-            aria-label="Dismiss error"
+            aria-label={t('clientTaxSettings.alerts.dismissError', { defaultValue: 'Dismiss error' })}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -270,7 +288,9 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
           <button
             onClick={dismissSuccess}
             className="ml-4 opacity-70 hover:opacity-100"
-            aria-label="Dismiss success message"
+            aria-label={t('clientTaxSettings.alerts.dismissSuccess', {
+              defaultValue: 'Dismiss success message'
+            })}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -284,13 +304,19 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
     return (
       <div className="text-center">
         <ErrorMessage />
-        <p className="mb-4">No tax settings found for this client.</p>
+        <p className="mb-4">
+          {t('clientTaxSettings.noSettingsFound', {
+            defaultValue: 'No tax settings found for this client.'
+          })}
+        </p>
         <Button
           id="create-default-tax-settings-button"
           onClick={handleCreateDefaultSettings}
           variant="default"
         >
-          Create Default Tax Settings
+          {t('clientTaxSettings.createDefaultButton', {
+            defaultValue: 'Create Default Tax Settings'
+          })}
         </Button>
       </div>
     );
@@ -300,7 +326,9 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Client Tax Settings</h2>
+      <h2 className="text-2xl font-bold">
+        {t('clientTaxSettings.title', { defaultValue: 'Client Tax Settings' })}
+      </h2>
       <ErrorMessage />
       <SuccessMessage />
 
