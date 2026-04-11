@@ -57,7 +57,7 @@
   {
     "id": "T006",
     "description": "DefaultCurrencySettings.tsx imports useTranslation and all user-visible strings (label, placeholder, toast, error) use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
