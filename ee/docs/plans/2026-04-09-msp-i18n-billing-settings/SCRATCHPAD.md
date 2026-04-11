@@ -371,3 +371,9 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Verification runs:
   `rg -n "ALGA_VAR|__" server/public/locales/fr/msp/billing-settings.json || true`
   `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/fr/msp/billing-settings.json','utf8')); console.log('fr json ok')"`
+- Completed `F031` by generating
+  [es/msp/billing-settings.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/es/msp/billing-settings.json)
+  with the same token-safe machine-translation workflow used for French.
+- Verification runs:
+  `rg -n "ALGA_VAR|__" server/public/locales/es/msp/billing-settings.json || true`
+  `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/es/msp/billing-settings.json','utf8')); console.log('es json ok')"`
