@@ -233,7 +233,7 @@
   {
     "id": "T028",
     "description": "TaxHolidayManager.tsx imports useTranslation and section heading (with taxRateName interpolation), tooltip, button, column titles, status badges, status summary, loading/empty states use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
