@@ -105,7 +105,7 @@
   {
     "id": "T012",
     "description": "ServiceCategoriesSettings.tsx dialog strings (add/edit title, field labels, validation, import dialog, conflict resolution) all use t() calls with proper interpolation for category names",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
