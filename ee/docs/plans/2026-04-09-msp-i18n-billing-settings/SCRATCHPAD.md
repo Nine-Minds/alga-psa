@@ -409,3 +409,7 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   [xx/msp/billing-settings.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/billing-settings.json)
   and
   [yy/msp/billing-settings.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/yy/msp/billing-settings.json).
+- Completed `F037` by running full locale validation:
+  `node scripts/validate-translations.cjs`
+- Validation result: `PASSED` with `Errors: 0` and `Warnings: 0` across
+  `de, es, fr, it, nl, pl, xx, yy` relative to `en`.
