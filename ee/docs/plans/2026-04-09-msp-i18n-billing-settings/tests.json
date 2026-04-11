@@ -73,7 +73,7 @@
   {
     "id": "T008",
     "description": "CreditExpirationSettings.tsx imports useTranslation and all user-visible strings (toggle, labels, help text, placeholder, button, toast, error) use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
