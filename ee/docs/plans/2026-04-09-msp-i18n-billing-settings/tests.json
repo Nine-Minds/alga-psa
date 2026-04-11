@@ -49,7 +49,7 @@
   {
     "id": "T005",
     "description": "BillingSettings.tsx card titles and descriptions (Default Currency, Invoice Numbering, Zero-Dollar Invoices, Credit Expiration, Renewal Automation, Quote Numbering, Tax Regions, Payment Settings) all use t() calls -- no hardcoded English strings in JSX",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]

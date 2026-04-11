@@ -421,3 +421,4 @@ translated in a separate sub-batch covering the `reference-data` package namespa
 - Completed `T003` via config namespace assertion:
   `rg -n "'/msp/settings'|msp/billing-settings" packages/core/src/lib/i18n/config.ts`
 - Completed `T004` by asserting `BillingSettings.tsx` imports `useTranslation`, tab labels use `t('tabs.*')`, and tab ids remain ASCII (`general/quoting/tax/payments`).
+- Completed `T005` by asserting BillingSettings section card titles/descriptions are routed through `t(...)` keys for general, quoting, tax regions, and payments surfaces.
