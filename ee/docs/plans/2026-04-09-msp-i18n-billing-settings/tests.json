@@ -217,7 +217,7 @@
   {
     "id": "T026",
     "description": "TaxComponentEditor.tsx imports useTranslation and section heading, tooltip, button, column titles, compound badges, date range labels, loading/empty states, and preview labels use t() calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
