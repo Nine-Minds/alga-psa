@@ -1,5 +1,10 @@
 import { WorkflowScheduleStateModel } from '@alga-psa/workflows/persistence';
 import { computeNextFireAtForSchedule } from '@alga-psa/workflows/lib/computeNextFireAt';
+import {
+  isWorkflowOccurrenceEligible,
+  normalizeWorkflowDayTypeFilter,
+  resolveWorkflowBusinessDaySettings
+} from '@alga-psa/workflows/lib/workflowBusinessDayScheduling';
 import { createTenantKnex } from 'server/src/lib/db';
 import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
 import type { BaseJobData } from '../interfaces';
@@ -31,12 +36,12 @@ const buildScheduleTriggerMetadata = (params: {
   workflowId: string;
   workflowVersion: number;
   triggerType: 'schedule' | 'recurring';
-  runAt?: string | null;
+  scheduledFor?: string | null;
   cron?: string | null;
   timezone?: string | null;
 }) => {
   const firedAt = new Date().toISOString();
-  const scheduledFor = toIsoDateTime(params.runAt) ?? firedAt;
+  const scheduledFor = toIsoDateTime(params.scheduledFor) ?? firedAt;
   return {
     triggerType: params.triggerType,
     scheduleId: params.scheduleId,
@@ -74,16 +79,59 @@ async function runScheduledWorkflow(
   }
 
   const payload = (schedule.payload_json ?? {}) as Record<string, unknown>;
+  const scheduledOccurrenceIso = (
+    schedule.trigger_type === 'schedule'
+      ? toIsoDateTime(schedule.run_at)
+      : (toIsoDateTime(data.jobScheduledAt) ?? new Date().toISOString())
+  );
   const triggerMetadata = buildScheduleTriggerMetadata({
     scheduleId: schedule.id,
     scheduleName: schedule.name,
     workflowId: schedule.workflow_id,
     workflowVersion: schedule.workflow_version,
     triggerType: schedule.trigger_type,
-    runAt: schedule.run_at,
+    scheduledFor: scheduledOccurrenceIso,
     cron: schedule.cron,
     timezone: schedule.timezone
   });
+
+  if (schedule.trigger_type === 'recurring') {
+    const dayTypeFilter = normalizeWorkflowDayTypeFilter(schedule.day_type_filter);
+    const resolvedBusinessDaySettings = await resolveWorkflowBusinessDaySettings(knex, {
+      tenantId: tenant,
+      dayTypeFilter,
+      businessHoursScheduleId: schedule.business_hours_schedule_id ?? null
+    });
+
+    if (!resolvedBusinessDaySettings.ok) {
+      await WorkflowScheduleStateModel.update(knex, schedule.id, {
+        enabled: false,
+        status: 'failed',
+        last_fire_at: triggerMetadata.firedAt,
+        last_run_status: 'error',
+        last_error: resolvedBusinessDaySettings.issue.message,
+        last_fire_key: fireKey
+      });
+      return;
+    }
+
+    const isEligible = isWorkflowOccurrenceEligible({
+      dayTypeFilter,
+      occurrence: new Date(scheduledOccurrenceIso),
+      occurrenceTimezone: schedule.timezone ?? 'UTC',
+      resolution: resolvedBusinessDaySettings.value
+    });
+    if (!isEligible) {
+      await WorkflowScheduleStateModel.update(knex, schedule.id, {
+        last_fire_at: triggerMetadata.firedAt,
+        last_run_status: 'skipped',
+        last_error: null,
+        last_fire_key: fireKey,
+        next_fire_at: computeNextFireAtForSchedule(schedule)
+      });
+      return;
+    }
+  }
 
   try {
     await launchPublishedWorkflowRun(knex, {

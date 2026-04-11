@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const actionMocks = vi.hoisted(() => ({
   listWorkflowSchedulesAction: vi.fn(),
+  listWorkflowScheduleBusinessHoursAction: vi.fn(),
   listWorkflowDefinitionsPagedAction: vi.fn(),
   getWorkflowScheduleAction: vi.fn(),
   pauseWorkflowScheduleAction: vi.fn(),
@@ -390,6 +391,7 @@ vi.mock('@alga-psa/ui/components/Switch', () => ({
 
 vi.mock('@alga-psa/workflows/actions', () => ({
   listWorkflowSchedulesAction: actionMocks.listWorkflowSchedulesAction,
+  listWorkflowScheduleBusinessHoursAction: actionMocks.listWorkflowScheduleBusinessHoursAction,
   listWorkflowDefinitionsPagedAction: actionMocks.listWorkflowDefinitionsPagedAction,
   getWorkflowScheduleAction: actionMocks.getWorkflowScheduleAction,
   pauseWorkflowScheduleAction: actionMocks.pauseWorkflowScheduleAction,
@@ -433,6 +435,12 @@ describe('Schedules', () => {
       return { items };
     });
     actionMocks.listWorkflowDefinitionsPagedAction.mockResolvedValue({ items: workflowFixtures });
+    actionMocks.listWorkflowScheduleBusinessHoursAction.mockResolvedValue({
+      items: [
+        { schedule_id: 'bh-default', schedule_name: 'Default business hours', is_default: true, is_24x7: false },
+        { schedule_id: 'bh-night', schedule_name: 'Night shift', is_default: false, is_24x7: false }
+      ]
+    });
     actionMocks.getWorkflowScheduleAction.mockImplementation(async ({ scheduleId }: { scheduleId: string }) =>
       scheduleFixtures.find((schedule) => schedule.id === scheduleId)
     );
@@ -612,7 +620,30 @@ describe('Schedules', () => {
     expect(screen.getByLabelText('Frequency')).toBeInTheDocument();
     expect(screen.getByLabelText('Time')).toBeInTheDocument();
     expect(screen.getByLabelText('Timezone')).toBeInTheDocument();
+    expect(screen.getByLabelText('Run on')).toBeInTheDocument();
     expect(screen.getByText(/runs every day at/i)).toBeInTheDocument();
+  });
+
+  it('T012: shows recurring day-filter controls and calendar-source options only when relevant, including specific schedule options', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+
+    expect(screen.getByLabelText('Run on')).toHaveValue('any');
+    expect(screen.queryByLabelText('Calendar source')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Business-hours schedule')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Run on'), { target: { value: 'business' } });
+    expect(screen.getByLabelText('Calendar source')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Business-hours schedule')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Calendar source'), { target: { value: 'specific' } });
+    const scheduleSelect = screen.getByLabelText('Business-hours schedule');
+    expect(scheduleSelect).toBeInTheDocument();
+    expect(within(scheduleSelect).getByRole('option', { name: /default business hours/i })).toBeInTheDocument();
+    expect(within(scheduleSelect).getByRole('option', { name: /night shift/i })).toBeInTheDocument();
   });
 
   it('keeps UTC in the common timezone dropdown for new recurring schedules', async () => {
@@ -785,6 +816,31 @@ describe('Schedules', () => {
     await waitFor(() => {
       expect(screen.getByText('Schedules are only supported for workflows with a pinned payload schema.')).toBeInTheDocument();
       expect(screen.getByText('Create Schedule', { selector: 'button' })).toBeDisabled();
+    });
+  });
+
+  it('T013: surfaces save-time business-hours validation errors inline in the schedule dialog', async () => {
+    actionMocks.createWorkflowScheduleAction.mockResolvedValueOnce({
+      ok: false,
+      message: 'Business/non-business day filters require a default business-hours schedule or a specific override.'
+    });
+
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(screen.getByLabelText('Workflow'), {
+      target: { value: workflowFixtures[0].workflow_id }
+    });
+    await screen.findByLabelText('customerId');
+    fireEvent.change(screen.getByLabelText('Schedule name'), { target: { value: 'Filtered schedule' } });
+    fireEvent.change(screen.getByLabelText('Run on'), { target: { value: 'business' } });
+    fireEvent.change(screen.getByLabelText('customerId'), { target: { value: 'C-500' } });
+    fireEvent.click(screen.getByText('Create Schedule', { selector: 'button' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Business/non-business day filters require a default business-hours schedule or a specific override.')).toBeInTheDocument();
     });
   });
 });

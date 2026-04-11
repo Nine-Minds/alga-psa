@@ -23,6 +23,7 @@ import {
   createWorkflowScheduleAction as createWorkflowScheduleActionDefault,
   getWorkflowScheduleAction as getWorkflowScheduleActionDefault,
   getWorkflowSchemaAction,
+  listWorkflowScheduleBusinessHoursAction as listWorkflowScheduleBusinessHoursActionDefault,
   listWorkflowDefinitionsPagedAction,
   listWorkflowSchemaRefsAction,
   updateWorkflowScheduleAction as updateWorkflowScheduleActionDefault
@@ -71,6 +72,16 @@ type WorkflowOption = {
 };
 
 type RecurringEditorMode = 'builder' | 'advanced';
+type DayTypeFilter = 'any' | 'business' | 'non_business';
+type CalendarSource = 'tenant_default' | 'specific';
+
+type BusinessHoursScheduleOption = {
+  schedule_id: string;
+  schedule_name: string;
+  timezone?: string | null;
+  is_default?: boolean;
+  is_24x7?: boolean;
+};
 
 type WorkflowScheduleDialogProps = {
   isOpen: boolean;
@@ -85,12 +96,14 @@ type WorkflowScheduleDialogProps = {
 export type WorkflowScheduleDialogActions = {
   createWorkflowScheduleAction: typeof createWorkflowScheduleActionDefault;
   getWorkflowScheduleAction: typeof getWorkflowScheduleActionDefault;
+  listWorkflowScheduleBusinessHoursAction: typeof listWorkflowScheduleBusinessHoursActionDefault;
   updateWorkflowScheduleAction: typeof updateWorkflowScheduleActionDefault;
 };
 
 const defaultScheduleActions: WorkflowScheduleDialogActions = {
   createWorkflowScheduleAction: createWorkflowScheduleActionDefault,
   getWorkflowScheduleAction: getWorkflowScheduleActionDefault,
+  listWorkflowScheduleBusinessHoursAction: listWorkflowScheduleBusinessHoursActionDefault,
   updateWorkflowScheduleAction: updateWorkflowScheduleActionDefault,
 };
 
@@ -265,6 +278,10 @@ export default function WorkflowScheduleDialog({
   const [recurringMode, setRecurringMode] = useState<RecurringEditorMode>('builder');
   const [recurringBuilder, setRecurringBuilder] = useState<RecurringBuilderState>(DEFAULT_RECURRING_BUILDER_STATE);
   const [timezone, setTimezone] = useState('UTC');
+  const [dayTypeFilter, setDayTypeFilter] = useState<DayTypeFilter>('any');
+  const [calendarSource, setCalendarSource] = useState<CalendarSource>('tenant_default');
+  const [businessHoursScheduleId, setBusinessHoursScheduleId] = useState<string>('');
+  const [businessHoursOptions, setBusinessHoursOptions] = useState<BusinessHoursScheduleOption[]>([]);
   const [enabled, setEnabled] = useState(true);
   const [payloadSchema, setPayloadSchema] = useState<JsonSchema | null>(null);
   const [payloadMode, setPayloadMode] = useState<'form' | 'json'>('form');
@@ -292,7 +309,7 @@ export default function WorkflowScheduleDialog({
     const loadWorkflows = async () => {
       setIsLoadingWorkflows(true);
       try {
-        const [workflowResult, schemaRefResult] = await Promise.all([
+        const [workflowResult, schemaRefResult, businessHoursResult] = await Promise.all([
           listWorkflowDefinitionsPagedAction({
             page: 1,
             pageSize: 200,
@@ -301,16 +318,19 @@ export default function WorkflowScheduleDialog({
             sortBy: 'name',
             sortDirection: 'asc'
           }),
-          listWorkflowSchemaRefsAction()
+          listWorkflowSchemaRefsAction(),
+          scheduleActions.listWorkflowScheduleBusinessHoursAction()
         ]);
         if (cancelled) return;
         setWorkflowOptions(((workflowResult as { items?: WorkflowOption[] } | null)?.items ?? []) as WorkflowOption[]);
         setAvailableSchemaRefs(new Set(((schemaRefResult as { refs?: string[] } | null)?.refs ?? []) as string[]));
+        setBusinessHoursOptions(((businessHoursResult as { items?: BusinessHoursScheduleOption[] } | null)?.items ?? []) as BusinessHoursScheduleOption[]);
       } catch (error) {
         if (cancelled) return;
         console.error('Failed to load workflows for schedule dialog', error);
         setWorkflowOptions([]);
         setAvailableSchemaRefs(new Set());
+        setBusinessHoursOptions([]);
       } finally {
         if (!cancelled) {
           setIsLoadingWorkflows(false);
@@ -322,7 +342,7 @@ export default function WorkflowScheduleDialog({
     return () => {
       cancelled = true;
     };
-  }, [isOpen]);
+  }, [isOpen, scheduleActions]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -351,6 +371,11 @@ export default function WorkflowScheduleDialog({
             setRecurringMode('builder');
           }
           setTimezone(schedule.timezone ?? 'UTC');
+          const scheduleDayTypeFilter = (schedule.day_type_filter ?? 'any') as DayTypeFilter;
+          const scheduleBusinessHoursScheduleId = schedule.business_hours_schedule_id ?? '';
+          setDayTypeFilter(scheduleDayTypeFilter);
+          setCalendarSource(scheduleBusinessHoursScheduleId ? 'specific' : 'tenant_default');
+          setBusinessHoursScheduleId(scheduleBusinessHoursScheduleId);
           setEnabled(Boolean(schedule.enabled));
           const nextPayload = schedule.payload_json ?? {};
           setPayloadText(JSON.stringify(nextPayload, null, 2));
@@ -382,6 +407,9 @@ export default function WorkflowScheduleDialog({
     setRecurringMode('builder');
     setRecurringBuilder(DEFAULT_RECURRING_BUILDER_STATE);
     setTimezone('UTC');
+    setDayTypeFilter('any');
+    setCalendarSource('tenant_default');
+    setBusinessHoursScheduleId('');
     setEnabled(true);
     setPayloadText('{}');
     setFormValue({});
@@ -507,6 +535,12 @@ export default function WorkflowScheduleDialog({
     && (triggerType === 'schedule' || (timezone.trim() && (recurringMode === 'advanced'
       ? cron.trim()
       : buildCronFromRecurringBuilder(recurringBuilder))))
+    && (
+      triggerType !== 'recurring'
+      || dayTypeFilter === 'any'
+      || calendarSource === 'tenant_default'
+      || Boolean(businessHoursScheduleId)
+    )
   );
 
   const recurringValidationMessage = useMemo(
@@ -785,12 +819,24 @@ export default function WorkflowScheduleDialog({
         ? await scheduleActions.updateWorkflowScheduleAction({
           scheduleId,
           ...common,
+          dayTypeFilter: triggerType === 'recurring' ? dayTypeFilter : 'any',
+          businessHoursScheduleId: (
+            triggerType === 'recurring'
+            && dayTypeFilter !== 'any'
+            && calendarSource === 'specific'
+          ) ? businessHoursScheduleId : undefined,
           runAt: triggerType === 'schedule' ? runAt?.toISOString() : undefined,
           cron: triggerType === 'recurring' ? effectiveRecurringCron : undefined,
           timezone: triggerType === 'recurring' ? timezone.trim() : undefined
         })
         : await scheduleActions.createWorkflowScheduleAction({
           ...common,
+          dayTypeFilter: triggerType === 'recurring' ? dayTypeFilter : 'any',
+          businessHoursScheduleId: (
+            triggerType === 'recurring'
+            && dayTypeFilter !== 'any'
+            && calendarSource === 'specific'
+          ) ? businessHoursScheduleId : undefined,
           runAt: triggerType === 'schedule' ? runAt?.toISOString() : undefined,
           cron: triggerType === 'recurring' ? effectiveRecurringCron : undefined,
           timezone: triggerType === 'recurring' ? timezone.trim() : undefined
@@ -863,6 +909,11 @@ export default function WorkflowScheduleDialog({
                 onValueChange={(value) => {
                   const nextTriggerType = value as 'schedule' | 'recurring';
                   setTriggerType(nextTriggerType);
+                  if (nextTriggerType === 'schedule') {
+                    setDayTypeFilter('any');
+                    setCalendarSource('tenant_default');
+                    setBusinessHoursScheduleId('');
+                  }
                   if (nextTriggerType === 'recurring' && !cron.trim()) {
                     setRecurringMode('builder');
                   }
@@ -937,6 +988,71 @@ export default function WorkflowScheduleDialog({
                     </button>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <CustomSelect
+                    id="schedule-dialog-day-type-filter"
+                    label="Run on"
+                    value={dayTypeFilter}
+                    onValueChange={(value) => {
+                      const nextFilter = value as DayTypeFilter;
+                      setDayTypeFilter(nextFilter);
+                      if (nextFilter === 'any') {
+                        setCalendarSource('tenant_default');
+                        setBusinessHoursScheduleId('');
+                      }
+                    }}
+                    options={[
+                      { value: 'any', label: 'Any day' },
+                      { value: 'business', label: 'Business days only' },
+                      { value: 'non_business', label: 'Non-business days only' }
+                    ]}
+                  />
+                  {dayTypeFilter !== 'any' ? (
+                    <CustomSelect
+                      id="schedule-dialog-calendar-source"
+                      label="Calendar source"
+                      value={calendarSource}
+                      onValueChange={(value) => {
+                        const nextSource = value as CalendarSource;
+                        setCalendarSource(nextSource);
+                        if (nextSource === 'tenant_default') {
+                          setBusinessHoursScheduleId('');
+                        }
+                      }}
+                      options={[
+                        { value: 'tenant_default', label: 'Tenant default business hours' },
+                        { value: 'specific', label: 'Specific business-hours schedule' }
+                      ]}
+                    />
+                  ) : null}
+                </div>
+
+                {dayTypeFilter !== 'any' ? (
+                  <div className="space-y-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-3">
+                    <div className="flex items-start gap-2 text-xs text-[rgb(var(--color-text-600))]">
+                      <Info className="mt-0.5 h-4 w-4 text-[rgb(var(--color-primary-500))]" />
+                      <span>Holidays are always treated as non-business days.</span>
+                    </div>
+                    {calendarSource === 'specific' ? (
+                      <CustomSelect
+                        id="schedule-dialog-business-hours-schedule"
+                        label="Business-hours schedule"
+                        value={businessHoursScheduleId}
+                        onValueChange={setBusinessHoursScheduleId}
+                        options={businessHoursOptions.map((schedule) => ({
+                          value: schedule.schedule_id,
+                          label: `${schedule.schedule_name}${schedule.is_default ? ' (Default)' : ''}`
+                        }))}
+                        placeholder="Choose a business-hours schedule"
+                      />
+                    ) : (
+                      <div className="text-xs text-[rgb(var(--color-text-500))]">
+                        Uses the tenant default business-hours schedule.
+                      </div>
+                    )}
+                  </div>
+                ) : null}
 
                 {recurringMode === 'builder' ? (
                   <div className="space-y-4">

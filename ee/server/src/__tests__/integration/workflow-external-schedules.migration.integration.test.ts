@@ -25,17 +25,22 @@ async function resetToLegacyWorkflowScheduleTable(): Promise<void> {
   await legacyMigration.up(db);
 }
 
-async function applyExternalSchedulesMigration(): Promise<void> {
+async function applyWorkflowScheduleMigrations(): Promise<void> {
   const repoRoot = path.resolve(process.cwd(), '..', '..');
-  const migration = require(path.resolve(
-    repoRoot,
-    'ee',
-    'server',
-    'migrations',
-    '20260308130000_expand_workflow_schedule_for_external_schedules.cjs'
-  ));
+  for (const migrationName of [
+    '20260308130000_expand_workflow_schedule_for_external_schedules.cjs',
+    '20260410120000_add_workflow_schedule_business_day_fields.cjs'
+  ]) {
+    const migration = require(path.resolve(
+      repoRoot,
+      'ee',
+      'server',
+      'migrations',
+      migrationName
+    ));
 
-  await migration.up(db);
+    await migration.up(db);
+  }
 }
 
 describe('Workflow external schedules migration – DB integration', () => {
@@ -53,7 +58,7 @@ describe('Workflow external schedules migration – DB integration', () => {
 
   it('T001: migration removes the one-row-per-workflow constraint', async () => {
     await resetToLegacyWorkflowScheduleTable();
-    await applyExternalSchedulesMigration();
+    await applyWorkflowScheduleMigrations();
 
     const indexes = await db('pg_indexes')
       .where({ schemaname: 'public', tablename: 'tenant_workflow_schedule' })
@@ -63,6 +68,8 @@ describe('Workflow external schedules migration – DB integration', () => {
     expect(indexNames.has('tenant_workflow_schedule_workflow_unique')).toBe(false);
     expect(indexNames.has('tenant_workflow_schedule_tenant_workflow_status_idx')).toBe(true);
     expect(indexNames.has('tenant_workflow_schedule_tenant_name_idx')).toBe(true);
+    expect(indexNames.has('tenant_workflow_schedule_tenant_day_type_filter_idx')).toBe(true);
+    expect(indexNames.has('tenant_workflow_schedule_tenant_business_hours_schedule_idx')).toBe(true);
   });
 
   it('T002: legacy schedule rows survive migration with runner state intact', async () => {
@@ -98,12 +105,14 @@ describe('Workflow external schedules migration – DB integration', () => {
       updated_at: db.fn.now()
     });
 
-    await applyExternalSchedulesMigration();
+    await applyWorkflowScheduleMigrations();
 
     const row = await db('tenant_workflow_schedule').where({ id: scheduleId }).first();
     expect(row).toBeTruthy();
     expect(row.name).toBe('Legacy Workflow');
     expect(row.payload_json).toEqual({});
+    expect(row.day_type_filter).toBe('any');
+    expect(row.business_hours_schedule_id).toBeNull();
     expect(row.job_id).toBeTruthy();
     expect(row.runner_schedule_id).toBe('runner-schedule-1');
     expect(row.workflow_id).toBe(workflowId);

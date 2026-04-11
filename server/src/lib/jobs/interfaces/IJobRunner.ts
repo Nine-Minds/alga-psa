@@ -88,6 +88,8 @@ export interface BaseJobData extends Record<string, unknown> {
   jobServiceId?: string;
   /** Optional per-delivery execution identifier supplied by the runner */
   jobExecutionId?: string;
+  /** Optional scheduled occurrence timestamp supplied by the runner */
+  jobScheduledAt?: string;
 }
 
 /**

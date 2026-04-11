@@ -8,7 +8,8 @@ const {
   schemaRegistryGetMock,
   workflowGetByIdMock,
   workflowListVersionsMock,
-  createExternalWorkflowScheduleStateMock
+  createExternalWorkflowScheduleStateMock,
+  resolveWorkflowBusinessDaySettingsMock
 } = vi.hoisted(() => ({
   createTenantKnexMock: vi.fn(),
   hasPermissionMock: vi.fn(async () => true),
@@ -17,7 +18,8 @@ const {
   schemaRegistryGetMock: vi.fn(),
   workflowGetByIdMock: vi.fn(),
   workflowListVersionsMock: vi.fn(),
-  createExternalWorkflowScheduleStateMock: vi.fn()
+  createExternalWorkflowScheduleStateMock: vi.fn(),
+  resolveWorkflowBusinessDaySettingsMock: vi.fn()
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -59,11 +61,19 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   }
 }));
 
-vi.mock('@alga-psa/workflows/lib/workflowScheduleLifecycle', () => ({
+vi.mock('../../../../packages/workflows/src/lib/workflowScheduleLifecycle', () => ({
   createExternalWorkflowScheduleState: (...args: unknown[]) => createExternalWorkflowScheduleStateMock(...args),
   deleteWorkflowScheduleStateById: vi.fn(),
   setExternalWorkflowScheduleEnabled: vi.fn(),
   updateExternalWorkflowScheduleState: vi.fn()
+}));
+
+vi.mock('../../../../packages/workflows/src/lib/workflowBusinessDayScheduling', () => ({
+  normalizeWorkflowDayTypeFilter: (value: unknown) => (
+    value === 'business' || value === 'non_business' ? value : 'any'
+  ),
+  resolveWorkflowBusinessDaySettings: (...args: unknown[]) => resolveWorkflowBusinessDaySettingsMock(...args),
+  computeNextEligibleRecurringFireAt: vi.fn(() => null)
 }));
 
 import {
@@ -98,6 +108,7 @@ describe('workflow schedule actions', () => {
     workflowGetByIdMock.mockReset();
     workflowListVersionsMock.mockReset();
     createExternalWorkflowScheduleStateMock.mockReset();
+    resolveWorkflowBusinessDaySettingsMock.mockReset();
 
     hasPermissionMock.mockResolvedValue(true);
     schemaRegistryHasMock.mockReturnValue(true);
@@ -129,6 +140,7 @@ describe('workflow schedule actions', () => {
       name: 'Quarterly kickoff',
       trigger_type: 'schedule'
     });
+    resolveWorkflowBusinessDaySettingsMock.mockResolvedValue({ ok: true, value: null });
   });
 
   it('T042: creates schedules through the EE workflow action surface using the latest published workflow version', async () => {
@@ -186,7 +198,99 @@ describe('workflow schedule actions', () => {
 
     const result = await listWorkflowSchedulesAction({});
 
-    expect(result).toEqual({ items: rows });
+    expect(result).toEqual({
+      items: [
+        expect.objectContaining({
+          id: 'schedule-1',
+          workflow_id: 'workflow-1',
+          workflow_name: 'Workflow',
+          name: 'Quarterly kickoff',
+          effective_business_hours_schedule_id: null,
+          business_hours_schedule_source: null,
+          next_eligible_fire_at: null
+        })
+      ]
+    });
     expect(listQuery.where).toHaveBeenCalledWith('tws.tenant_id', 'tenant-1');
+  });
+
+  it('T002: rejects one-time schedules that set non-any day filters', async () => {
+    createTenantKnexMock.mockResolvedValue({ knex: vi.fn(), tenant: 'tenant-1' });
+
+    const result = await createWorkflowScheduleAction({
+      workflowId: '11111111-1111-4111-8111-111111111111',
+      name: 'Invalid one-time filter',
+      triggerType: 'schedule',
+      runAt: '2099-01-01T10:00:00.000Z',
+      dayTypeFilter: 'business',
+      payload: {},
+      enabled: true
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: 'DAY_FILTER_NOT_ALLOWED_FOR_ONE_TIME',
+      message: 'One-time schedules only support "Any day".'
+    });
+    expect(createExternalWorkflowScheduleStateMock).not.toHaveBeenCalled();
+  });
+
+  it('T003: rejects filtered recurring schedules when no effective business-hours schedule can be resolved', async () => {
+    createTenantKnexMock.mockResolvedValue({ knex: vi.fn(), tenant: 'tenant-1' });
+    resolveWorkflowBusinessDaySettingsMock.mockResolvedValueOnce({
+      ok: false,
+      issue: {
+        code: 'BUSINESS_HOURS_SCHEDULE_REQUIRED',
+        message: 'Business/non-business day filters require a default business-hours schedule or a specific override.'
+      }
+    });
+
+    const result = await createWorkflowScheduleAction({
+      workflowId: '11111111-1111-4111-8111-111111111111',
+      name: 'Missing calendar',
+      triggerType: 'recurring',
+      cron: '0 9 * * *',
+      timezone: 'UTC',
+      dayTypeFilter: 'business',
+      payload: {},
+      enabled: true
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: 'BUSINESS_HOURS_SCHEDULE_REQUIRED',
+      message: 'Business/non-business day filters require a default business-hours schedule or a specific override.'
+    });
+    expect(createExternalWorkflowScheduleStateMock).not.toHaveBeenCalled();
+  });
+
+  it('T004: rejects recurring schedules when override schedule is outside the tenant scope', async () => {
+    createTenantKnexMock.mockResolvedValue({ knex: vi.fn(), tenant: 'tenant-1' });
+    resolveWorkflowBusinessDaySettingsMock.mockResolvedValueOnce({
+      ok: false,
+      issue: {
+        code: 'BUSINESS_HOURS_OVERRIDE_NOT_FOUND',
+        message: 'Selected business-hours schedule is invalid for this tenant.'
+      }
+    });
+
+    const result = await createWorkflowScheduleAction({
+      workflowId: '11111111-1111-4111-8111-111111111111',
+      name: 'Foreign override',
+      triggerType: 'recurring',
+      cron: '0 9 * * *',
+      timezone: 'UTC',
+      dayTypeFilter: 'non_business',
+      businessHoursScheduleId: '22222222-2222-4222-8222-222222222222',
+      payload: {},
+      enabled: true
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: 'BUSINESS_HOURS_OVERRIDE_NOT_FOUND',
+      message: 'Selected business-hours schedule is invalid for this tenant.'
+    });
+    expect(createExternalWorkflowScheduleStateMock).not.toHaveBeenCalled();
   });
 });
