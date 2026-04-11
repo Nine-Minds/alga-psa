@@ -200,3 +200,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   fallback messaging to `serviceTypes.*`, `common.*`, and `import.*`.
 - Verification runs:
   `sed -n '1,760p' packages/billing/src/components/settings/billing/ServiceTypeSettings.tsx`
+- Completed `F012` in
+  [ServiceCatalogManager.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/ServiceCatalogManager.tsx).
+- Scoped this pass to the outer service catalog surface: page heading, filter labels and
+  placeholders, loading text, table column titles, non-taxable label, and row action menu
+  labels. The edit dialog remains intentionally deferred to `F013`.
+- Verification runs:
+  `sed -n '1,700p' packages/billing/src/components/settings/billing/ServiceCatalogManager.tsx`

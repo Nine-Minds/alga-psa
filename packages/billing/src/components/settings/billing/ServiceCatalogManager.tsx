@@ -29,6 +29,7 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Removed old SERVICE_TYPE_OPTIONS
 
@@ -49,6 +50,7 @@ const LICENSE_TERM_OPTIONS = [
 ];
 
 const ServiceCatalogManager: React.FC = () => {
+  const { t } = useTranslation('msp/billing-settings');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [services, setServices] = useState<IService[]>([]);
   // Note: Categories are currently hidden in favor of using Service Types for organization
@@ -404,11 +406,11 @@ const ServiceCatalogManager: React.FC = () => {
   const getColumns = (): ColumnDefinition<IService>[] => {
     const baseColumns: ColumnDefinition<IService>[] = [
       {
-        title: 'Service Name',
+        title: t('serviceCatalog.table.serviceName', { defaultValue: 'Service Name' }),
         dataIndex: 'service_name',
       },
       {
-        title: 'Service Type',
+        title: t('serviceCatalog.table.serviceType', { defaultValue: 'Service Type' }),
         dataIndex: 'service_type_name', // Use the service_type_name field that comes from the join
         render: (value, record) => {
           const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
@@ -416,12 +418,23 @@ const ServiceCatalogManager: React.FC = () => {
         },
       },
       {
-        title: 'Billing Method',
+        title: t('common.columns.billingMethod', { defaultValue: 'Billing Method' }),
         dataIndex: 'billing_method',
-        render: (value) => BILLING_METHOD_OPTIONS.find(opt => opt.value === value)?.label || value,
+        render: (value) => {
+          if (value === 'fixed') {
+            return t('common.billingMethod.fixedFee', { defaultValue: 'Fixed Fee' });
+          }
+          if (value === 'hourly') {
+            return t('common.billingMethod.hourly', { defaultValue: 'Hourly' });
+          }
+          if (value === 'usage') {
+            return t('common.billingMethod.usage', { defaultValue: 'Usage' });
+          }
+          return value;
+        },
       },
       {
-        title: 'Pricing',
+        title: t('serviceCatalog.table.pricing', { defaultValue: 'Pricing' }),
         dataIndex: 'prices',
         render: (prices: IServicePrice[] | undefined, record) => {
           if (!prices || prices.length === 0) {
@@ -449,16 +462,16 @@ const ServiceCatalogManager: React.FC = () => {
       //   render: (value, record) => categories.find(cat => cat.category_id === value)?.category_name || 'N/A',
       // },
       {
-        title: 'Unit', // Shortened title
+        title: t('serviceCatalog.table.unit', { defaultValue: 'Unit' }),
         dataIndex: 'unit_of_measure',
         render: (value, record) => record.billing_method === 'usage' ? value || 'N/A' : 'N/A',
       },
       // Updated Tax Column
       {
-        title: 'Tax Rate',
+        title: t('serviceCatalog.table.taxRate', { defaultValue: 'Tax Rate' }),
         dataIndex: 'tax_rate_id', // Use the new field from the DB
         render: (tax_rate_id) => {
-          if (!tax_rate_id) return 'Non-Taxable';
+          if (!tax_rate_id) return t('serviceCatalog.table.nonTaxable', { defaultValue: 'Non-Taxable' });
           const rate = taxRates.find(r => r.tax_rate_id === tax_rate_id);
           // Construct label using description/region_code from ITaxRate
           const descriptionPart = rate?.description || rate?.region_code || 'N/A';
@@ -511,7 +524,7 @@ const ServiceCatalogManager: React.FC = () => {
 
     // Always add actions column at the end
     baseColumns.push({
-      title: 'Actions',
+      title: t('common.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'service_id',
       width: '5%',
       render: (_, record) => (
@@ -543,7 +556,7 @@ const ServiceCatalogManager: React.FC = () => {
                 setIsEditDialogOpen(true);
               }}
             >
-              Edit
+              {t('common.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-service-${record.service_id}`}
@@ -553,7 +566,7 @@ const ServiceCatalogManager: React.FC = () => {
                 handleDeleteService(record.service_id!);
               }}
             >
-              Delete
+              {t('common.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -569,7 +582,9 @@ const ServiceCatalogManager: React.FC = () => {
     <>
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold">Service Catalog Management</h3>
+          <h3 className="text-lg font-semibold">
+            {t('serviceCatalog.title', { defaultValue: 'Service Catalog Management' })}
+          </h3>
         </CardHeader>
         <CardContent>
           {error && <div className="text-red-500 mb-4">{error}</div>}
@@ -580,7 +595,7 @@ const ServiceCatalogManager: React.FC = () => {
                 {/* Service Type filter */}
                 <CustomSelect
                   options={[
-                    { value: 'all', label: 'All Service Types' },
+                    { value: 'all', label: t('serviceCatalog.filters.allServiceTypes', { defaultValue: 'All Service Types' }) },
                     ...allServiceTypes.map(type => ({
                       value: type.id,
                       label: type.name
@@ -588,14 +603,28 @@ const ServiceCatalogManager: React.FC = () => {
                   ]}
                   value={selectedServiceType}
                   onValueChange={setSelectedServiceType}
-                  placeholder="Filter by service type..."
+                  placeholder={t('serviceCatalog.filters.serviceTypePlaceholder', {
+                    defaultValue: 'Filter by service type...'
+                  })}
                   className="w-[200px]"
                 />
                 <CustomSelect
-                  options={[{ value: 'all', label: 'All Billing Methods' }, ...BILLING_METHOD_OPTIONS]}
+                  options={[{
+                    value: 'all',
+                    label: t('serviceCatalog.filters.allBillingMethods', { defaultValue: 'All Billing Methods' })
+                  }, ...BILLING_METHOD_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: option.value === 'fixed'
+                      ? t('common.billingMethod.fixedFee', { defaultValue: 'Fixed Fee' })
+                      : option.value === 'hourly'
+                        ? t('common.billingMethod.hourly', { defaultValue: 'Hourly' })
+                        : t('common.billingMethod.usage', { defaultValue: 'Usage' })
+                  }))]}
                   value={selectedBillingMethod}
                   onValueChange={setSelectedBillingMethod}
-                  placeholder="Filter by billing method..."
+                  placeholder={t('serviceCatalog.filters.billingMethodPlaceholder', {
+                    defaultValue: 'Filter by billing method...'
+                  })}
                   className="w-[200px]"
                 />
               </div>
@@ -610,7 +639,7 @@ const ServiceCatalogManager: React.FC = () => {
                 layout="stacked"
                 className="py-10 text-muted-foreground"
                 spinnerProps={{ size: 'md' }}
-                text="Loading services"
+                text={t('serviceCatalog.loading', { defaultValue: 'Loading services' })}
               />
             ) : (
               <DataTable

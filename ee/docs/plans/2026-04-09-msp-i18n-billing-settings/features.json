@@ -57,7 +57,7 @@
   {
     "id": "F012",
     "description": "Wire useTranslation in ServiceCatalogManager.tsx -- page heading, table columns (Service Name/Service Type/Billing Method/Pricing/Unit/Tax Rate/Actions), filter placeholders (All Service Types/All Billing Methods), loading state, action menu items (Edit/Delete)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F013",
