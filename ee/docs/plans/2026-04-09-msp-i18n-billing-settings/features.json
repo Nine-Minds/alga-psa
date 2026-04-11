@@ -12,7 +12,7 @@
   {
     "id": "F003",
     "description": "Wire useTranslation('msp/billing-settings') in BillingSettings.tsx -- tab labels (General/Quoting/Tax/Payments), card titles and descriptions for all sections (Default Currency, Invoice Numbering, Zero-Dollar Invoices, Credit Expiration, Renewal Automation, Quote Numbering, Tax Regions, Payment Settings), loading text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",

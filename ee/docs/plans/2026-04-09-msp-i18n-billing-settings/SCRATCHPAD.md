@@ -138,3 +138,10 @@ translated in a separate sub-batch covering the `reference-data` package namespa
   [config.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/core/src/lib/i18n/config.ts).
 - Verification run:
   `rg -n "'/msp/settings'|msp/billing-settings" packages/core/src/lib/i18n/config.ts`
+- Completed `F003` in
+  [BillingSettings.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/billing/src/components/settings/billing/BillingSettings.tsx).
+- `BillingSettings.tsx` now imports `useTranslation('msp/billing-settings')`, translates the
+  four tab labels, all section card titles/descriptions, and the payment skeleton loading
+  text. Tab `id` values remain `general`, `quoting`, `tax`, and `payments`.
+- Verification runs:
+  `rg -n "General'|Quoting'|Tax'|Payments'|Default Currency|Invoice Numbering|Zero-Dollar Invoices|Credit Expiration|Renewal Automation|Quote Numbering|Tax Regions|Payment Settings|Loading payment settings" packages/billing/src/components/settings/billing/BillingSettings.tsx`
