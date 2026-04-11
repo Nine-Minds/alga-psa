@@ -309,7 +309,7 @@
   {
     "id": "T036",
     "description": "Integration: xx pseudo-locale smoke test on /msp/settings?tab=billing renders pseudo-text for all visible strings on General, Tax, and Payments tabs (no bare English leakage)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F004",
