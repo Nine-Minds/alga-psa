@@ -63,6 +63,7 @@ describe('TimeSheetTable quick add interaction state', () => {
     },
     isEditable: true,
     onDeleteWorkItem: vi.fn(async () => undefined),
+    onAddEntryForCell: vi.fn(),
     onAddWorkItem: vi.fn(),
     onWorkItemClick: vi.fn(),
     onDateNavigatorChange: vi.fn(),
@@ -100,8 +101,9 @@ describe('TimeSheetTable quick add interaction state', () => {
     expect(container.querySelector('#timesheet-quick-cancel-work-item-1-2026-03-10')).not.toBeNull();
   });
 
-  it('keeps quick-add button clicks isolated while cell margin clicks still open the dialog path', () => {
+  it('keeps quick-add button clicks isolated while the add-area still opens the dialog path', () => {
     const onCellClick = vi.fn();
+    const onAddEntryForCell = vi.fn();
     const onQuickAddSubmit = vi.fn(async () => undefined);
     const onQuickAddCancel = vi.fn();
 
@@ -110,6 +112,7 @@ describe('TimeSheetTable quick add interaction state', () => {
         React.createElement(TimeSheetTable, {
           ...commonProps,
           onCellClick,
+          onAddEntryForCell,
           activeQuickAdd: {
             workItem,
             date: '2026-03-10',
@@ -125,10 +128,10 @@ describe('TimeSheetTable quick add interaction state', () => {
 
     const saveButton = container.querySelector('#timesheet-quick-save-work-item-1-2026-03-10');
     const cancelButton = container.querySelector('#timesheet-quick-cancel-work-item-1-2026-03-10');
-    const cell = container.querySelector('[data-automation-id="time-cell-work-item-1-2026-03-10"]');
+    const addArea = container.querySelector('[data-automation-id="time-cell-add-area-work-item-1-2026-03-10"]');
 
-    if (!saveButton || !cancelButton || !cell) {
-      throw new Error('Expected quick add controls and cell');
+    if (!saveButton || !cancelButton || !addArea) {
+      throw new Error('Expected quick add controls and add area');
     }
 
     flushSync(() => {
@@ -136,16 +139,19 @@ describe('TimeSheetTable quick add interaction state', () => {
     });
     expect(onQuickAddSubmit).toHaveBeenCalledTimes(1);
     expect(onCellClick).not.toHaveBeenCalled();
+    expect(onAddEntryForCell).not.toHaveBeenCalled();
 
     flushSync(() => {
       cancelButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     expect(onQuickAddCancel).toHaveBeenCalledTimes(1);
     expect(onCellClick).not.toHaveBeenCalled();
+    expect(onAddEntryForCell).not.toHaveBeenCalled();
 
     flushSync(() => {
-      cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      addArea.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
-    expect(onCellClick).toHaveBeenCalledTimes(1);
+    expect(onAddEntryForCell).toHaveBeenCalledTimes(1);
+    expect(onCellClick).not.toHaveBeenCalled();
   });
 });

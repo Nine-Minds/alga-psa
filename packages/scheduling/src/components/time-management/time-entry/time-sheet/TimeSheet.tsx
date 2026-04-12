@@ -37,6 +37,7 @@ import { IntervalSection } from '../../interval-tracking/IntervalSection';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
+import { resolveQuickAddBehavior } from './quickAddUtils';
 
 const TIMESHEET_VIEW_MODE_SETTING = 'timesheet_view_mode';
 
@@ -252,6 +253,10 @@ export function TimeSheet({
 
     const [interactionState, setInteractionState] = useState<TimeSheetInteractionState>({ type: 'idle' });
 
+    useEffect(() => {
+        setTimeSheet(initialTimeSheet);
+    }, [initialTimeSheet]);
+
     const selectedCell = interactionState.type === 'dialog'
         ? interactionState.selection
         : null;
@@ -320,6 +325,19 @@ export function TimeSheet({
             },
         });
     }, [setViewMode]);
+
+    const handleAddEntryForCell = useCallback((selection: TimeEntrySelectionRequest) => {
+        const normalizedDate = toDateOnlyString(selection.date);
+
+        setInteractionState({
+            type: 'dialog',
+            selection: {
+                ...selection,
+                date: normalizedDate,
+                entries: [],
+            },
+        });
+    }, []);
 
     const initialDateObj = useMemo(() => {
         if (!initialDate) {
@@ -455,18 +473,18 @@ export function TimeSheet({
         date: string;
         durationInMinutes: number;
         existingEntry?: ITimeEntryWithWorkItemString;
-    }) => {
+    }): Promise<'saved' | 'dialog'> => {
         const { workItem, date, durationInMinutes, existingEntry } = params;
-        
+
         const workDate = date.slice(0, 10);
 
         // Set start time to 8 AM on the selected date (local time)
         const startTime = parseLocalDate(workDate);
         startTime.setHours(8, 0, 0, 0);
-        
+
         // Calculate end time based on duration
         const endTime = new Date(startTime.getTime() + durationInMinutes * 60 * 1000);
-        
+
         // Get entries for this date to check for overlaps
         const entriesForDate = (groupedTimeEntries[workItem.work_item_id] || [])
             .filter(entry => {
@@ -474,17 +492,32 @@ export function TimeSheet({
                 if (entryWorkDate) return entryWorkDate === workDate;
                 return parseISO(entry.start_time).toDateString() === startTime.toDateString();
             });
-        
+
         // If there are existing entries for this date, start after the last one
         if (entriesForDate.length > 0) {
-            const sortedEntries = [...entriesForDate].sort((a, b) => 
+            const sortedEntries = [...entriesForDate].sort((a, b) =>
                 parseISO(b.end_time).getTime() - parseISO(a.end_time).getTime()
             );
             const lastEndTime = parseISO(sortedEntries[0].end_time);
             startTime.setTime(lastEndTime.getTime());
             endTime.setTime(startTime.getTime() + durationInMinutes * 60 * 1000);
         }
-        
+
+        const quickAddBehavior = resolveQuickAddBehavior(workItem, existingEntry);
+        if (quickAddBehavior.mode === 'dialog') {
+            setInteractionState({
+                type: 'dialog',
+                selection: {
+                    workItem,
+                    date: workDate,
+                    entries: [],
+                    defaultStartTime: formatISO(startTime),
+                    defaultEndTime: formatISO(endTime),
+                },
+            });
+            return 'dialog';
+        }
+
         // Create the time entry, copying settings from existing entry if available
         const timeEntry: ITimeEntry = {
             entry_id: '',
@@ -492,21 +525,22 @@ export function TimeSheet({
             user_id: timeSheet.user_id,
             start_time: formatISO(startTime),
             end_time: formatISO(endTime),
-            billable_duration: existingEntry ? 
-                (existingEntry.billable_duration > 0 ? durationInMinutes : 0) : 
-                durationInMinutes, // Default to billable if no existing entry
+            billable_duration: existingEntry ?
+                (existingEntry.billable_duration > 0 ? durationInMinutes : 0) :
+                durationInMinutes,
             work_item_type: workItem.type,
             notes: existingEntry?.notes || '',
             approval_status: 'DRAFT' as TimeSheetStatus,
             created_at: formatISO(new Date()),
             updated_at: formatISO(new Date()),
             time_sheet_id: timeSheet.id,
-            service_id: existingEntry?.service_id || undefined,  // Use undefined instead of empty string
-            tax_region: existingEntry?.tax_region || undefined,  // Use undefined instead of empty string
-            contract_line_id: existingEntry?.contract_line_id || undefined  // Also handle contract_line_id
+            service_id: quickAddBehavior.serviceId,
+            tax_region: existingEntry?.tax_region || undefined,
+            contract_line_id: existingEntry?.contract_line_id || undefined
         };
-        
+
         await handleSaveTimeEntry(timeEntry);
+        return 'saved';
     };
 
     const refreshTimeSheetData = useCallback(async () => {
@@ -540,14 +574,16 @@ export function TimeSheet({
         const existingEntry = allEntriesForWorkItem.length > 0 ? allEntriesForWorkItem[0] : undefined;
 
         try {
-            await handleQuickAddTimeEntry({
+            const quickAddResult = await handleQuickAddTimeEntry({
                 workItem: activeQuickAdd.workItem,
                 date: activeQuickAdd.date,
                 durationInMinutes,
                 existingEntry,
             });
 
-            setInteractionState({ type: 'idle' });
+            if (quickAddResult === 'saved') {
+                setInteractionState({ type: 'idle' });
+            }
         } catch {
             // Error handling/toast is already performed downstream in handleSaveTimeEntry.
         }
@@ -859,6 +895,7 @@ export function TimeSheet({
                     isEditable={effectiveIsEditable}
                     isLoading={isLoadingTimeSheetData || isViewModeLoading}
                     onCellClick={handleTimeEntrySelection}
+                    onAddEntryForCell={handleAddEntryForCell}
                     onAddWorkItem={openAddWorkItemDialog}
                     activeQuickAdd={activeQuickAdd}
                     onActivateQuickAdd={activateQuickAdd}

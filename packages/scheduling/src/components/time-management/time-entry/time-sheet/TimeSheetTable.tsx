@@ -21,6 +21,7 @@ interface TimeSheetTableProps {
     isLoading?: boolean;
     onDeleteWorkItem: (workItemId: string) => Promise<void>;
     onCellClick: (params: TimeEntrySelectionRequest) => void;
+    onAddEntryForCell: (params: TimeEntrySelectionRequest) => void;
     onAddWorkItem: (date?: string) => void;
     onWorkItemClick: (workItem: IExtendedWorkItem) => void;
     activeQuickAdd?: TimeSheetQuickAddState | null;
@@ -75,6 +76,7 @@ export function TimeSheetTable({
     isEditable,
     isLoading = false,
     onCellClick,
+    onAddEntryForCell,
     onAddWorkItem,
     onWorkItemClick,
     onDeleteWorkItem,
@@ -140,6 +142,49 @@ export function TimeSheetTable({
     const canGoBack = currentPage > 0;
     const canGoForward = currentPage < totalPages - 1;
     const hasMultiplePages = totalPages > 1;
+
+    const buildCellSelection = useCallback((
+        workItem: IExtendedWorkItem,
+        date: Date,
+        dayEntries: ITimeEntryWithWorkItemString[]
+    ): TimeEntrySelectionRequest => {
+        let startTime: Date | undefined;
+        let endTime: Date | undefined;
+
+        if (workItem.type === 'ad_hoc' &&
+            'scheduled_start' in workItem &&
+            'scheduled_end' in workItem &&
+            workItem.scheduled_start &&
+            workItem.scheduled_end) {
+            startTime = typeof workItem.scheduled_start === 'string'
+                ? parseISO(workItem.scheduled_start)
+                : workItem.scheduled_start;
+            endTime = typeof workItem.scheduled_end === 'string'
+                ? parseISO(workItem.scheduled_end)
+                : workItem.scheduled_end;
+        }
+
+        if (!startTime && dayEntries.length > 0) {
+            const sortedEntries = [...dayEntries].sort((a, b) =>
+                parseISO(b.end_time).getTime() - parseISO(a.end_time).getTime()
+            );
+            startTime = parseISO(sortedEntries[0].end_time);
+            endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+        } else if (!startTime) {
+            startTime = new Date(date);
+            startTime.setHours(8, 0, 0, 0);
+            endTime = new Date(startTime);
+            endTime.setHours(9, 0, 0, 0);
+        }
+
+        return {
+            workItem,
+            date: formatISO(date),
+            entries: dayEntries,
+            defaultStartTime: startTime ? formatISO(startTime) : undefined,
+            defaultEndTime: endTime ? formatISO(endTime) : undefined,
+        };
+    }, []);
 
     // Get visible dates for current page
     const startIndex = currentPage * daysPerPage;
@@ -477,81 +522,66 @@ export function TimeSheetTable({
 	                                                        date: dateKey
                                                     })}
                                                     onMouseLeave={() => setHoveredCell(null)}
-                                                    onClick={() => {
-                                                        if (!canOpenCell) return;
-
-                                                        let startTime: Date | undefined;
-                                                        let endTime: Date | undefined;
-
-                                                        if (workItem.type === 'ad_hoc' &&
-                                                            'scheduled_start' in workItem &&
-                                                            'scheduled_end' in workItem &&
-                                                            workItem.scheduled_start &&
-                                                            workItem.scheduled_end) {
-                                                            startTime = typeof workItem.scheduled_start === 'string' ?
-                                                                parseISO(workItem.scheduled_start) :
-                                                                workItem.scheduled_start;
-                                                            endTime = typeof workItem.scheduled_end === 'string' ?
-                                                                parseISO(workItem.scheduled_end) :
-                                                                workItem.scheduled_end;
-                                                        }
-
-                                                        if (!startTime && dayEntries.length > 0) {
-                                                            const sortedEntries = [...dayEntries].sort((a, b) =>
-                                                                parseISO(b.end_time).getTime() - parseISO(a.end_time).getTime()
-                                                            );
-                                                            startTime = parseISO(sortedEntries[0].end_time);
-                                                            endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
-                                                        } else if (!startTime) {
-                                                            startTime = new Date(date);
-                                                            startTime.setHours(8, 0, 0, 0);
-                                                            endTime = new Date(startTime);
-                                                            endTime.setHours(9, 0, 0, 0);
-                                                        }
-
-                                                        onCellClick({
-                                                            workItem,
-                                                            date: formatISO(date),
-                                                            entries: dayEntries,
-                                                            defaultStartTime: startTime ? formatISO(startTime) : undefined,
-                                                            defaultEndTime: endTime ? formatISO(endTime) : undefined
-                                                        });
-                                                    }}
                                                 >
-		                                                    {dayEntries.length > 0 ? (
-		                                                        <div
-		                                                            className="relative rounded-lg p-2 text-xs h-full w-full flex items-center justify-center"
-		                                                            style={{
-		                                                                backgroundColor: colors.background,
-		                                                                borderColor: colors.border,
+                                                    <div className="relative h-full w-full p-1.5">
+                                                        {isEditable && (
+                                                            <button
+                                                                type="button"
+                                                                className={`absolute inset-1.5 rounded-xl transition-colors ${
+                                                                    dayEntries.length > 0
+                                                                        ? 'bg-white/70 hover:bg-white/90 dark:bg-gray-900/10 dark:hover:bg-gray-900/20'
+                                                                        : 'hover:bg-white/70 dark:hover:bg-gray-900/10'
+                                                                }`}
+                                                                data-automation-id={`time-cell-add-area-${workItem.work_item_id}-${dateKey}`}
+                                                                data-automation-type="time-entry-add-area"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    onAddEntryForCell(buildCellSelection(workItem, date, dayEntries));
+                                                                }}
+                                                                aria-label={`Add time entry for ${workItem.name} on ${dateKey}`}
+                                                            />
+                                                        )}
+	                                                    {dayEntries.length > 0 ? (
+	                                                        <button
+                                                                type="button"
+                                                                className="relative z-10 flex h-full w-full items-center justify-center rounded-xl p-3 text-xs shadow-sm transition-transform hover:scale-[1.01]"
+	                                                            style={{
+	                                                                backgroundColor: colors.background,
+	                                                                borderColor: colors.border,
 	                                                                borderWidth: '1px',
 	                                                                borderStyle: 'solid'
-		                                                            }}
-		                                                        >
-		                                                            {cellFeedbackState ? (
-		                                                                <span
-		                                                                    className={`absolute right-1.5 top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full ${
-		                                                                        cellFeedbackState === 'unresolved'
-		                                                                            ? 'bg-amber-100 text-amber-700'
-		                                                                            : 'bg-emerald-100 text-emerald-700'
-		                                                                    }`}
-		                                                                    title={prominentCellFeedback?.comment}
-		                                                                    data-feedback-state={cellFeedbackState}
-		                                                                    aria-label={cellFeedbackState === 'unresolved' ? 'Change requested' : 'Addressed'}
-		                                                                >
-		                                                                    {cellFeedbackState === 'unresolved' ? (
-		                                                                        <X className="h-3 w-3" />
-		                                                                    ) : (
-		                                                                        <Check className="h-3 w-3" />
-		                                                                    )}
-		                                                                </span>
-		                                                            ) : null}
-		                                                            <div className="font-medium text-gray-700 text-center">
-		                                                                {formatDuration(totalDuration)}
-		                                                            </div>
-	                                                        </div>
+	                                                            }}
+                                                                data-automation-id={`time-cell-entry-${workItem.work_item_id}-${dateKey}`}
+                                                                data-automation-type="time-entry-summary"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    onCellClick(buildCellSelection(workItem, date, dayEntries));
+                                                                }}
+	                                                        >
+	                                                            {cellFeedbackState ? (
+	                                                                <span
+	                                                                    className={`absolute right-1.5 top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full ${
+	                                                                        cellFeedbackState === 'unresolved'
+	                                                                            ? 'bg-amber-100 text-amber-700'
+	                                                                            : 'bg-emerald-100 text-emerald-700'
+	                                                                    }`}
+	                                                                    title={prominentCellFeedback?.comment}
+	                                                                    data-feedback-state={cellFeedbackState}
+	                                                                    aria-label={cellFeedbackState === 'unresolved' ? 'Change requested' : 'Addressed'}
+	                                                                >
+	                                                                    {cellFeedbackState === 'unresolved' ? (
+	                                                                        <X className="h-3 w-3" />
+	                                                                    ) : (
+	                                                                        <Check className="h-3 w-3" />
+	                                                                    )}
+	                                                                </span>
+	                                                            ) : null}
+	                                                            <div className="font-medium text-gray-700 text-center">
+	                                                                {formatDuration(totalDuration)}
+	                                                            </div>
+	                                                        </button>
 	                                                    ) : (
-                                                        <div className="h-full w-full">
+                                                        <div className="h-full w-full rounded-xl">
                                                             {shouldShowQuickAddPreview && (
                                                                 <div className="absolute bottom-2 left-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
                                                                     <button
@@ -631,8 +661,8 @@ export function TimeSheetTable({
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        )
-                                                    }
+                                                    )}
+                                                    </div>
                                                 </td>
                                             );
                                         })}
