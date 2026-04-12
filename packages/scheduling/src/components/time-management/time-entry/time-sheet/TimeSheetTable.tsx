@@ -1,20 +1,16 @@
 'use client'
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
 import { Trash, Plus, Check, X, ClipboardList, ArrowRight } from 'lucide-react';
 import { ITimeEntryWithWorkItemString } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { formatISO, parseISO, format, isToday } from 'date-fns';
-import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { BillabilityPercentage, billabilityColorScheme, formatDuration, formatWorkItemType } from './utils';
 import { BillableLegend } from './BillableLegend';
-import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
-import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { TimeSheetDateNavigatorState } from './types';
+import { TimeEntrySelectionRequest, TimeSheetDateNavigatorState, TimeSheetQuickAddState } from './types';
 import { getProminentTimeEntryChangeRequest } from '../../../../lib/timeEntryChangeRequests';
 
 interface TimeSheetTableProps {
@@ -24,28 +20,15 @@ interface TimeSheetTableProps {
     isEditable: boolean;
     isLoading?: boolean;
     onDeleteWorkItem: (workItemId: string) => Promise<void>;
-    onCellClick: (params: {
-        workItem: IExtendedWorkItem;
-        date: string;
-        entries: ITimeEntryWithWorkItemString[];
-        defaultStartTime?: string;
-        defaultEndTime?: string;
-    }) => void;
-    onAddEntryForCell: (params: {
-        workItem: IExtendedWorkItem;
-        date: string;
-        entries: ITimeEntryWithWorkItemString[];
-        defaultStartTime?: string;
-        defaultEndTime?: string;
-    }) => void;
+    onCellClick: (params: TimeEntrySelectionRequest) => void;
+    onAddEntryForCell: (params: TimeEntrySelectionRequest) => void;
     onAddWorkItem: (date?: string) => void;
     onWorkItemClick: (workItem: IExtendedWorkItem) => void;
-    onQuickAddTimeEntry?: (params: {
-        workItem: IExtendedWorkItem;
-        date: string;
-        durationInMinutes: number;
-        existingEntry?: ITimeEntryWithWorkItemString;
-    }) => Promise<void>;
+    activeQuickAdd?: TimeSheetQuickAddState | null;
+    onActivateQuickAdd: (quickAddTarget: Omit<TimeSheetQuickAddState, 'value'>) => void;
+    onQuickAddValueChange: (value: string) => void;
+    onQuickAddCancel: () => void;
+    onQuickAddSubmit: () => Promise<void>;
     onDateNavigatorChange?: (state: TimeSheetDateNavigatorState) => void;
 }
 
@@ -54,6 +37,37 @@ const WORK_ITEM_COLUMN_WIDTH = 180; // Width of the first column (work item name
 const DAY_COLUMN_WIDTH = 120; // Width of each day column
 const MIN_DAYS_PER_PAGE = 3; // Minimum days to show
 const MAX_DAYS_PER_PAGE = 14; // Maximum days to show
+
+function sanitizeQuickAddInput(value: string): string {
+    const sanitized = value.replace(/[^0-9:.]/g, '');
+
+    if (sanitized.includes(':')) {
+        const parts = sanitized.split(':');
+        if (parts.length === 2) {
+            const hours = parseInt(parts[0], 10) || 0;
+            const minutes = parts[1].substring(0, 2);
+            if (hours <= 24) {
+                return `${hours}:${minutes}`;
+            }
+        }
+        return sanitized.substring(0, 5);
+    }
+
+    if (sanitized.includes('.')) {
+        const decimal = parseFloat(sanitized);
+        if (!isNaN(decimal) && decimal <= 24 && decimal >= 0) {
+            return sanitized.substring(0, 5);
+        }
+        return '';
+    }
+
+    const num = parseInt(sanitized, 10);
+    if (sanitized === '' || (!isNaN(num) && num <= 24)) {
+        return sanitized.substring(0, 2);
+    }
+
+    return '';
+}
 
 export function TimeSheetTable({
     dates,
@@ -66,12 +80,15 @@ export function TimeSheetTable({
     onAddWorkItem,
     onWorkItemClick,
     onDeleteWorkItem,
-    onQuickAddTimeEntry,
+    activeQuickAdd = null,
+    onActivateQuickAdd,
+    onQuickAddValueChange,
+    onQuickAddCancel,
+    onQuickAddSubmit,
     onDateNavigatorChange
 }: TimeSheetTableProps): React.JSX.Element {
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
     const [hoveredCell, setHoveredCell] = useState<{ workItemId: string; date: string } | null>(null);
-    const [quickInputValues, setQuickInputValues] = useState<{ [key: string]: string }>({});
 
     // Container ref for measuring available width
     const containerRef = useRef<HTMLDivElement>(null);
@@ -130,7 +147,7 @@ export function TimeSheetTable({
         workItem: IExtendedWorkItem,
         date: Date,
         dayEntries: ITimeEntryWithWorkItemString[]
-    ) => {
+    ): TimeEntrySelectionRequest => {
         let startTime: Date | undefined;
         let endTime: Date | undefined;
 
@@ -240,55 +257,37 @@ export function TimeSheetTable({
     // Check if there are any work items
     const hasWorkItems = Object.values(workItemsByType).some(items => items.length > 0);
     const lastWorkItemId = Object.values(workItemsByType).flat().at(-1)?.work_item_id;
+    const activeQuickAddCellKey = useMemo(
+        () => activeQuickAdd ? `${activeQuickAdd.workItem.work_item_id}-${activeQuickAdd.date}` : null,
+        [activeQuickAdd]
+    );
 
-    // Register the timesheet table container
-    const { automationIdProps: tableProps } = useAutomationIdAndRegister<ContainerComponent>({
-        type: 'container',
+    const tableAutomationProps = {
         id: 'timesheet-table',
-        label: 'Time Sheet Data Table',
-    }, () => [
-        CommonActions.focus('Focus on timesheet table'),
-        {
-            type: 'click' as const,
-            available: true,
-            description: 'Click on time entry cells to add or edit time entries',
-            parameters: [
-                {
-                    name: 'workItemId',
-                    type: 'string' as const,
-                    required: true,
-                    description: 'ID of the work item'
-                },
-                {
-                    name: 'date',
-                    type: 'string' as const,
-                    required: true,
-                    description: 'Date for the time entry (YYYY-MM-DD format)'
-                }
-            ]
-        }
-    ]);
-
+        'data-automation-id': 'timesheet-table',
+        'data-automation-type': 'container',
+    } as const;
 
     return (
         <div ref={containerRef}>
         <ReflectionContainer id="timesheet-table" label="Time Sheet Data Table">
             <React.Fragment>
-            <ConfirmationDialog
-                isOpen={!!selectedWorkItemToDelete}
-                onConfirm={async () => {
-                    if (selectedWorkItemToDelete) {
+            {selectedWorkItemToDelete && (
+                <ConfirmationDialog
+                    id="timesheet-table-delete-work-item-confirmation"
+                    isOpen={true}
+                    onConfirm={async () => {
                         await onDeleteWorkItem(selectedWorkItemToDelete);
                         setSelectedWorkItemToDelete(null);
-                    }
-                }}
-                onClose={() => setSelectedWorkItemToDelete(null)}
-                title="Delete Work Item"
-                message="This will permanently delete all time entries for this work item. This action cannot be undone."
-                confirmLabel="Delete"
-            />
+                    }}
+                    onClose={() => setSelectedWorkItemToDelete(null)}
+                    title="Delete Work Item"
+                    message="This will permanently delete all time entries for this work item. This action cannot be undone."
+                    confirmLabel="Delete"
+                />
+            )}
 
-        <div className="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-md" {...tableProps}>
+        <div className="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-md" {...tableAutomationProps}>
             <div
                 className="transition-opacity duration-200 ease-in-out"
                 style={{ opacity: isAnimating ? 0 : 1 }}
@@ -402,7 +401,7 @@ export function TimeSheetTable({
                                     const entries = groupedTimeEntries[workItem.work_item_id] || [];
                                     return (
                                         <tr
-                                            key={`${workItem.work_item_id}-${Math.random()}`}
+                                            key={workItem.work_item_id}
                                             className={isLastWorkItemRow ? '' : 'border-b border-gray-200'}
                                         >
                                     <td
@@ -445,7 +444,7 @@ export function TimeSheetTable({
                                         </div>
                                         {isEditable && (
                                             <Button
-                                                id="delete-workitem-button"
+                                                id={`delete-workitem-${workItem.work_item_id}`}
                                                 variant="icon"
                                                 size="sm"
                                                 className="absolute right-1 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-100 hover:opacity-100"
@@ -485,11 +484,18 @@ export function TimeSheetTable({
                                             ) as BillabilityPercentage;
 
                                             const colors = billabilityColorScheme[billabilityTier];
-                                            const cellKey = `${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`;
+                                            const dateKey = formatISO(date, { representation: 'date' });
+                                            const cellKey = `${workItem.work_item_id}-${dateKey}`;
                                             const isHovered = hoveredCell?.workItemId === workItem.work_item_id &&
-                                                            hoveredCell?.date === formatISO(date, { representation: 'date' });
+                                                hoveredCell?.date === dateKey;
                                             const isTodayDate = isToday(date);
                                             const canOpenCell = isEditable || dayEntries.length > 0;
+                                            const isQuickAddActive = activeQuickAddCellKey === cellKey;
+                                            const shouldShowQuickAddPreview = isEditable && dayEntries.length === 0 && !activeQuickAddCellKey && isHovered;
+                                            const quickAddInputId = `timesheet-quick-input-${cellKey}`;
+                                            const quickAddSaveId = `timesheet-quick-save-${cellKey}`;
+                                            const quickAddCancelId = `timesheet-quick-cancel-${cellKey}`;
+                                            const quickAddTriggerId = `timesheet-quick-trigger-${cellKey}`;
                                             const cellFeedbackState = dayEntries.some((entry) => entry.change_request_state === 'unresolved')
                                               ? 'unresolved'
                                               : dayEntries.some((entry) => entry.change_request_state === 'handled')
@@ -505,274 +511,157 @@ export function TimeSheetTable({
 	                                                    className={`px-3 py-3 text-sm text-gray-500 border-r border-gray-200 transition-all relative h-20 ${
                                                             canOpenCell ? 'cursor-pointer' : 'cursor-default'
                                                         } ${
-	                                                        isHovered && isEditable ? 'bg-gray-50' : ''
+	                                                        (isHovered || isQuickAddActive) && isEditable ? 'bg-gray-50' : ''
 	                                                    } hover:bg-gray-50 ${isTodayDate ? 'bg-[rgb(var(--color-primary-50))]/30' : ''} ${
 	                                                        isLastWorkItemRow ? '' : 'border-b border-gray-200'
 	                                                    }`}
-	                                                    data-automation-id={`time-cell-${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`}
+	                                                    data-automation-id={`time-cell-${workItem.work_item_id}-${dateKey}`}
 	                                                    data-automation-type="time-entry-cell"
 	                                                    onMouseEnter={() => isEditable && setHoveredCell({
 	                                                        workItemId: workItem.work_item_id,
-	                                                        date: formatISO(date, { representation: 'date' })
+	                                                        date: dateKey
                                                     })}
                                                     onMouseLeave={() => setHoveredCell(null)}
                                                 >
-                                                    <div className="relative h-full w-full p-1.5">
+                                                    <div className="relative h-full w-full">
                                                         {isEditable && (
                                                             <button
                                                                 type="button"
-                                                                className={`absolute inset-1.5 rounded-xl transition-colors ${
+                                                                className={`absolute inset-0 transition-colors ${
                                                                     dayEntries.length > 0
-                                                                        ? 'bg-white/70 hover:bg-white/90 dark:bg-gray-900/10 dark:hover:bg-gray-900/20'
-                                                                        : 'hover:bg-white/70 dark:hover:bg-gray-900/10'
+                                                                        ? 'rounded-2xl bg-white/70 hover:bg-white/90 dark:bg-gray-900/10 dark:hover:bg-gray-900/20'
+                                                                        : 'rounded-xl hover:bg-white/70 dark:hover:bg-gray-900/10'
                                                                 }`}
-                                                                data-automation-id={`time-cell-add-area-${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`}
+                                                                data-automation-id={`time-cell-add-area-${workItem.work_item_id}-${dateKey}`}
                                                                 data-automation-type="time-entry-add-area"
-                                                                onClick={() => {
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
                                                                     onAddEntryForCell(buildCellSelection(workItem, date, dayEntries));
                                                                 }}
-                                                                aria-label={`Add time entry for ${workItem.name} on ${formatISO(date, { representation: 'date' })}`}
+                                                                aria-label={`Add time entry for ${workItem.name} on ${dateKey}`}
                                                             />
                                                         )}
-		                                                    {dayEntries.length > 0 ? (
-		                                                        <button
+	                                                    {dayEntries.length > 0 ? (
+	                                                        <button
                                                                 type="button"
-                                                                className="relative z-10 flex h-full w-full items-center justify-center rounded-xl p-3 text-xs shadow-sm transition-transform hover:scale-[1.01]"
-                                                                style={{
-		                                                                backgroundColor: colors.background,
-		                                                                borderColor: colors.border,
+                                                                className="absolute inset-2 z-10 flex items-center justify-center rounded-xl p-3 text-xs shadow-sm transition-transform hover:scale-[1.01]"
+	                                                            style={{
+	                                                                backgroundColor: colors.background,
+	                                                                borderColor: colors.border,
 	                                                                borderWidth: '1px',
 	                                                                borderStyle: 'solid'
-		                                                            }}
-                                                                data-automation-id={`time-cell-entry-${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`}
+	                                                            }}
+                                                                data-automation-id={`time-cell-entry-${workItem.work_item_id}-${dateKey}`}
                                                                 data-automation-type="time-entry-summary"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     onCellClick(buildCellSelection(workItem, date, dayEntries));
                                                                 }}
-		                                                        >
-		                                                            {cellFeedbackState ? (
-		                                                                <span
-		                                                                    className={`absolute right-1.5 top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full ${
-		                                                                        cellFeedbackState === 'unresolved'
-		                                                                            ? 'bg-amber-100 text-amber-700'
-		                                                                            : 'bg-emerald-100 text-emerald-700'
-		                                                                    }`}
-		                                                                    title={prominentCellFeedback?.comment}
-		                                                                    data-feedback-state={cellFeedbackState}
-		                                                                    aria-label={cellFeedbackState === 'unresolved' ? 'Change requested' : 'Addressed'}
-		                                                                >
-		                                                                    {cellFeedbackState === 'unresolved' ? (
-		                                                                        <X className="h-3 w-3" />
-		                                                                    ) : (
-		                                                                        <Check className="h-3 w-3" />
-		                                                                    )}
-		                                                                </span>
-		                                                            ) : null}
-		                                                            <div className="font-medium text-gray-700 text-center">
-		                                                                {formatDuration(totalDuration)}
-		                                                            </div>
+	                                                        >
+	                                                            {cellFeedbackState ? (
+	                                                                <span
+	                                                                    className={`absolute right-1.5 top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full ${
+	                                                                        cellFeedbackState === 'unresolved'
+	                                                                            ? 'bg-amber-100 text-amber-700'
+	                                                                            : 'bg-emerald-100 text-emerald-700'
+	                                                                    }`}
+	                                                                    title={prominentCellFeedback?.comment}
+	                                                                    data-feedback-state={cellFeedbackState}
+	                                                                    aria-label={cellFeedbackState === 'unresolved' ? 'Change requested' : 'Addressed'}
+	                                                                >
+	                                                                    {cellFeedbackState === 'unresolved' ? (
+	                                                                        <X className="h-3 w-3" />
+	                                                                    ) : (
+	                                                                        <Check className="h-3 w-3" />
+	                                                                    )}
+	                                                                </span>
+	                                                            ) : null}
+	                                                            <div className="font-medium text-gray-700 text-center">
+	                                                                {formatDuration(totalDuration)}
+	                                                            </div>
 	                                                        </button>
 	                                                    ) : (
                                                         <div className="h-full w-full rounded-xl">
-                                                            {/* Empty cell - click anywhere to open full dialog */}
-                                                            {isHovered && isEditable && (
-                                                                <div className="absolute bottom-3 left-3 right-3 z-10 flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-1 py-1 shadow-sm"
-                                                                     onClick={(e) => e.stopPropagation()}>
-                                                                    <Input
+                                                            {shouldShowQuickAddPreview && (
+                                                                <div className="absolute bottom-2 left-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
+                                                                    <button
+                                                                        id={quickAddTriggerId}
+                                                                        type="button"
+                                                                        data-automation-id={quickAddTriggerId}
+                                                                        className="flex w-full items-center justify-center rounded border border-dashed border-gray-300 bg-white/95 px-2 py-1 text-xs font-medium text-gray-500 shadow-sm transition hover:border-[rgb(var(--color-primary-300))] hover:text-[rgb(var(--color-primary-600))]"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            onActivateQuickAdd({
+                                                                                workItem,
+                                                                                date: dateKey,
+                                                                            });
+                                                                        }}
+                                                                    >
+                                                                        H:MM
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            {isQuickAddActive && activeQuickAdd && (
+                                                                <div
+                                                                    className="absolute bottom-2 left-2 right-2 z-20 flex items-center gap-1 rounded border border-gray-200 bg-white px-1 py-1 shadow-sm"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    <input
+                                                                        id={quickAddInputId}
+                                                                        data-automation-id={quickAddInputId}
                                                                         type="text"
                                                                         placeholder="H:MM"
-                                                                        className="!py-0.5 !px-1 !text-xs !border-gray-200 !min-h-0"
-                                                                        containerClassName="flex-1 !mb-0"
-                                                                        value={quickInputValues[cellKey] || ''}
-                                                                        onChange={(e) => {
-                                                                            const value = e.target.value;
+                                                                        className="h-7 min-h-0 flex-1 rounded border border-gray-200 px-1 py-0.5 text-xs text-gray-900 outline-none focus:border-[rgb(var(--color-primary-400))] focus:ring-1 focus:ring-[rgb(var(--color-primary-400))]"
+                                                                        value={activeQuickAdd.value}
+                                                                        onChange={(e) => onQuickAddValueChange(sanitizeQuickAddInput(e.target.value))}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        onKeyDown={async (e) => {
+                                                                            if (e.key === 'Enter') {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                await onQuickAddSubmit();
+                                                                            }
 
-                                                                            // Only allow digits, colon, and decimal point
-                                                                            const sanitized = value.replace(/[^0-9:.]/g, '');
-
-                                                                            // Validate the format and reasonable limits
-                                                                            if (sanitized.includes(':')) {
-                                                                                // H:MM or HH:MM format - max 24:00
-                                                                                const parts = sanitized.split(':');
-                                                                                if (parts.length === 2) {
-                                                                                    const hours = parseInt(parts[0], 10) || 0;
-                                                                                    const minutes = parts[1].substring(0, 2); // Max 2 digits for minutes
-                                                                                    if (hours <= 24) {
-                                                                                        setQuickInputValues(prev => ({
-                                                                                            ...prev,
-                                                                                            [cellKey]: `${hours}:${minutes}`
-                                                                                        }));
-                                                                                    }
-                                                                                }
-                                                                            } else if (sanitized.includes('.')) {
-                                                                                // Decimal format (e.g., 1.5) - max 24.0
-                                                                                const decimal = parseFloat(sanitized);
-                                                                                if (!isNaN(decimal) && decimal <= 24 && decimal >= 0) {
-                                                                                    setQuickInputValues(prev => ({
-                                                                                        ...prev,
-                                                                                        [cellKey]: sanitized.substring(0, 5) // Max 5 chars (XX.XX)
-                                                                                    }));
-                                                                                }
-                                                                            } else {
-                                                                                // Simple number format - max 24
-                                                                                const num = parseInt(sanitized, 10);
-                                                                                if (sanitized === '' || (!isNaN(num) && num <= 24)) {
-                                                                                    setQuickInputValues(prev => ({
-                                                                                        ...prev,
-                                                                                        [cellKey]: sanitized.substring(0, 2) // Max 2 digits
-                                                                                    }));
-                                                                                }
+                                                                            if (e.key === 'Escape') {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                onQuickAddCancel();
                                                                             }
                                                                         }}
-                                                                        onClick={(e) => e.stopPropagation()}
-                                                                    onKeyDown={async (e) => {
-                                                                        if (e.key === 'Enter') {
-                                                                            e.stopPropagation();
-                                                                            e.preventDefault();
-
-                                                                            const inputValue = quickInputValues[cellKey] || '';
-                                                                            let durationInMinutes = 0;
-
-                                                                            // Parse various duration formats
-                                                                            // Format: H:MM or HH:MM (e.g., 1:30, 01:30)
-                                                                            const colonMatch = inputValue.match(/^(\d{1,2}):(\d{1,2})$/);
-                                                                            if (colonMatch) {
-                                                                                const hours = parseInt(colonMatch[1], 10);
-                                                                                const minutes = parseInt(colonMatch[2], 10);
-                                                                                durationInMinutes = hours * 60 + minutes;
-                                                                            }
-                                                                            // Format: simple number as hours (e.g., 8 for 8 hours)
-                                                                            else if (inputValue.match(/^(\d+\.?\d*)$/)) {
-                                                                                const hours = parseFloat(inputValue);
-                                                                                durationInMinutes = Math.round(hours * 60);
-                                                                            }
-
-                                                                            if (durationInMinutes > 0 && onQuickAddTimeEntry) {
-                                                                                // Find any existing entry for this work item to copy settings from
-                                                                                const allEntriesForWorkItem = groupedTimeEntries[workItem.work_item_id] || [];
-                                                                                const existingEntry = allEntriesForWorkItem.length > 0 ? allEntriesForWorkItem[0] : undefined;
-
-                                                                                try {
-                                                                                    // Create the time entry directly without opening dialog
-                                                                                    await onQuickAddTimeEntry({
-                                                                                        workItem,
-                                                                                        date: formatISO(date),
-                                                                                        durationInMinutes,
-                                                                                        existingEntry
-                                                                                    });
-
-                                                                                    // Clear the input for this cell
-                                                                                    setQuickInputValues(prev => {
-                                                                                        const newValues = { ...prev };
-                                                                                        delete newValues[cellKey];
-                                                                                        return newValues;
-                                                                                    });
-                                                                                    setHoveredCell(null);
-                                                                                } catch (error) {
-                                                                                    console.error('Failed to create quick time entry:', error);
-                                                                                }
-                                                                            }
-                                                                        } else if (e.key === 'Escape') {
-                                                                            // Clear input on Escape
-                                                                            setQuickInputValues(prev => {
-                                                                                const newValues = { ...prev };
-                                                                                delete newValues[cellKey];
-                                                                                return newValues;
-                                                                            });
-                                                                            setHoveredCell(null);
-                                                                        }
-                                                                    }}
-                                                                    onBlur={(e) => {
-                                                                        // Check if focus is moving to one of our buttons
-                                                                        // If so, don't clear - let the button handler do its job
-                                                                        const relatedTarget = e.relatedTarget as HTMLElement | null;
-                                                                        const isClickingButton = relatedTarget?.closest('#quick-save-time-entry, #quick-cancel-time-entry');
-
-                                                                        if (!isClickingButton) {
-                                                                            // Clear input when focus is truly lost (not to our buttons)
-                                                                            setTimeout(() => {
-                                                                                setQuickInputValues(prev => {
-                                                                                    const newValues = { ...prev };
-                                                                                    delete newValues[cellKey];
-                                                                                    return newValues;
-                                                                                });
-                                                                            }, 200);
-                                                                        }
-                                                                    }}
                                                                         autoFocus
                                                                     />
-                                                                    <Button
-                                                                        id="quick-save-time-entry"
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="!h-6 !w-6 !p-0 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30"
-                                                                    onClick={async (e) => {
-                                                                        e.stopPropagation();
-                                                                        const inputValue = quickInputValues[cellKey] || '';
-                                                                        let durationInMinutes = 0;
-
-                                                                        // Parse various duration formats
-                                                                        const colonMatch = inputValue.match(/^(\d{1,2}):(\d{1,2})$/);
-                                                                        if (colonMatch) {
-                                                                            const hours = parseInt(colonMatch[1], 10);
-                                                                            const minutes = parseInt(colonMatch[2], 10);
-                                                                            durationInMinutes = hours * 60 + minutes;
-                                                                        }
-                                                                        else if (inputValue.match(/^(\d+\.?\d*)$/)) {
-                                                                            const hours = parseFloat(inputValue);
-                                                                            durationInMinutes = Math.round(hours * 60);
-                                                                        }
-
-                                                                        if (durationInMinutes > 0 && onQuickAddTimeEntry) {
-                                                                            const allEntriesForWorkItem = groupedTimeEntries[workItem.work_item_id] || [];
-                                                                            const existingEntry = allEntriesForWorkItem.length > 0 ? allEntriesForWorkItem[0] : undefined;
-
-                                                                            try {
-                                                                                await onQuickAddTimeEntry({
-                                                                                    workItem,
-                                                                                    date: formatISO(date),
-                                                                                    durationInMinutes,
-                                                                                    existingEntry
-                                                                                });
-
-                                                                                setQuickInputValues(prev => {
-                                                                                    const newValues = { ...prev };
-                                                                                    delete newValues[cellKey];
-                                                                                    return newValues;
-                                                                                });
-                                                                                setHoveredCell(null);
-                                                                            } catch (error) {
-                                                                                console.error('Failed to create quick time entry:', error);
-                                                                            }
-                                                                        }
-                                                                    }}
+                                                                    <button
+                                                                        id={quickAddSaveId}
+                                                                        type="button"
+                                                                        data-automation-id={quickAddSaveId}
+                                                                        className="flex h-6 w-6 items-center justify-center rounded text-green-600 hover:bg-green-50"
+                                                                        onClick={async (e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            await onQuickAddSubmit();
+                                                                        }}
                                                                         title="Save time entry"
                                                                     >
                                                                         <Check className="h-3 w-3" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        id="quick-cancel-time-entry"
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="!h-6 !w-6 !p-0 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setQuickInputValues(prev => {
-                                                                            const newValues = { ...prev };
-                                                                            delete newValues[cellKey];
-                                                                            return newValues;
-                                                                        });
-                                                                        setHoveredCell(null);
-                                                                    }}
+                                                                    </button>
+                                                                    <button
+                                                                        id={quickAddCancelId}
+                                                                        type="button"
+                                                                        data-automation-id={quickAddCancelId}
+                                                                        className="flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-gray-100"
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            onQuickAddCancel();
+                                                                        }}
                                                                         title="Cancel"
                                                                     >
                                                                         <X className="h-3 w-3" />
-                                                                    </Button>
+                                                                    </button>
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        )}
+                                                    )}
                                                     </div>
                                                 </td>
                                             );

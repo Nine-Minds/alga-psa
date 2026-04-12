@@ -9,11 +9,9 @@ import { Plus, ClipboardList, ArrowRight, ChevronDown, ChevronRight, Copy, Exter
 import { ITimeEntryWithWorkItemString } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { formatISO, parseISO, format } from 'date-fns';
-import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { BillabilityPercentage, billabilityColorScheme, formatDuration, formatWorkItemType, formatTimeRange } from './utils';
+import { TimeEntrySelectionRequest, TimeSheetListFocusFilter } from './types';
 import { BillableLegend } from './BillableLegend';
-import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
-import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { TimeEntryChangeRequestIndicator } from './TimeEntryChangeRequestFeedback';
 
@@ -24,15 +22,12 @@ interface TimeSheetListViewProps {
     isEditable: boolean;
     isLoading?: boolean;
     onDeleteWorkItem: (workItemId: string) => Promise<void>;
-    onCellClick: (params: {
-        workItem: IExtendedWorkItem;
-        date: string;
-        entries: ITimeEntryWithWorkItemString[];
-        defaultStartTime?: string;
-        defaultEndTime?: string;
-    }) => void;
+    onCellClick: (params: TimeEntrySelectionRequest) => void;
     onAddWorkItem: (date?: string) => void;
     onWorkItemClick: (workItem: IExtendedWorkItem) => void;
+    focusFilter?: TimeSheetListFocusFilter | null;
+    onClearFocusFilter?: () => void;
+    onBackToGrid?: () => void;
 }
 
 interface FlattenedEntry {
@@ -61,7 +56,10 @@ export function TimeSheetListView({
     onCellClick,
     onAddWorkItem,
     onWorkItemClick,
-    onDeleteWorkItem
+    onDeleteWorkItem,
+    focusFilter = null,
+    onClearFocusFilter,
+    onBackToGrid,
 }: TimeSheetListViewProps): React.JSX.Element {
     const { t } = useTranslation('msp/time-entry');
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
@@ -118,49 +116,81 @@ export function TimeSheetListView({
         return entries;
     }, [groupedTimeEntries, workItemsByType, dateRange]);
 
+    const filteredEntries = useMemo((): FlattenedEntry[] => {
+        if (!focusFilter) {
+            return flattenedEntries;
+        }
+
+        const focusEntryIds = new Set(focusFilter.entryIds);
+        return flattenedEntries.filter(({ entry, workItem, dateKey }) =>
+            workItem.work_item_id === focusFilter.workItemId &&
+            dateKey === focusFilter.date &&
+            typeof entry.entry_id === 'string' &&
+            focusEntryIds.has(entry.entry_id),
+        );
+    }, [flattenedEntries, focusFilter]);
+
     // Group entries by day
     const dayGroups = useMemo((): DayGroup[] => {
         const groups = new Map<string, DayGroup>();
 
-        // Initialize groups for all dates in the period
-        dates.forEach(date => {
-            const dateKey = format(date, 'yyyy-MM-dd');
-            groups.set(dateKey, {
-                dateKey,
-                date,
-                entries: [],
-                totalDuration: 0,
-                totalBillable: 0
+        if (focusFilter) {
+            filteredEntries.forEach((flatEntry) => {
+                const existingGroup = groups.get(flatEntry.dateKey);
+                if (existingGroup) {
+                    existingGroup.entries.push(flatEntry);
+                    existingGroup.totalDuration += flatEntry.duration;
+                    existingGroup.totalBillable += flatEntry.entry.billable_duration;
+                    return;
+                }
+
+                groups.set(flatEntry.dateKey, {
+                    dateKey: flatEntry.dateKey,
+                    date: flatEntry.date,
+                    entries: [flatEntry],
+                    totalDuration: flatEntry.duration,
+                    totalBillable: flatEntry.entry.billable_duration,
+                });
             });
-        });
+        } else {
+            dates.forEach(date => {
+                const dateKey = format(date, 'yyyy-MM-dd');
+                groups.set(dateKey, {
+                    dateKey,
+                    date,
+                    entries: [],
+                    totalDuration: 0,
+                    totalBillable: 0
+                });
+            });
 
-        // Add entries to their respective groups
-        flattenedEntries.forEach(entry => {
-            const group = groups.get(entry.dateKey);
-            if (group) {
-                group.entries.push(entry);
-                group.totalDuration += entry.duration;
-                group.totalBillable += entry.entry.billable_duration;
-            }
-        });
+            filteredEntries.forEach(entry => {
+                const group = groups.get(entry.dateKey);
+                if (group) {
+                    group.entries.push(entry);
+                    group.totalDuration += entry.duration;
+                    group.totalBillable += entry.entry.billable_duration;
+                }
+            });
+        }
 
-        // Sort entries within each group by start time
         groups.forEach(group => {
             group.entries.sort((a, b) => a.date.getTime() - b.date.getTime());
         });
 
         return Array.from(groups.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
-    }, [flattenedEntries, dates]);
+    }, [filteredEntries, dates, focusFilter]);
 
     // Calculate totals
     const totals = useMemo(() => {
-        return flattenedEntries.reduce((acc, { duration, entry }) => ({
+        return filteredEntries.reduce((acc, { duration, entry }) => ({
             totalDuration: acc.totalDuration + duration,
             totalBillable: acc.totalBillable + entry.billable_duration
         }), { totalDuration: 0, totalBillable: 0 });
-    }, [flattenedEntries]);
+    }, [filteredEntries]);
 
     const hasWorkItems = Object.values(workItemsByType).some(items => items.length > 0);
+    const hasVisibleEntries = filteredEntries.length > 0;
 
     const unresolvedFeedbackDayKeys = useMemo(
         () => dayGroups
@@ -206,31 +236,20 @@ export function TimeSheetListView({
         const { entry, workItem } = flatEntry;
         const dateStr = entry.work_date || formatISO(parseISO(entry.start_time), { representation: 'date' });
 
-        // Get all entries for this work item on this date
-        const entriesForDate = (groupedTimeEntries[workItem.work_item_id] || [])
-            .filter(e => {
-                const entryWorkDate = e.work_date?.slice(0, 10);
-                if (entryWorkDate) return entryWorkDate === dateStr.slice(0, 10);
-                return parseISO(e.start_time).toDateString() === parseISO(entry.start_time).toDateString();
-            });
-
         onCellClick({
             workItem,
             date: dateStr,
-            entries: entriesForDate,
+            entries: [entry],
             defaultStartTime: entry.start_time,
             defaultEndTime: entry.end_time
         });
     };
 
-    // Register the list view container
-    const { automationIdProps: listProps } = useAutomationIdAndRegister<ContainerComponent>({
-        type: 'container',
+    const listAutomationProps = {
         id: 'timesheet-list-view',
-        label: 'Time Sheet List View',
-    }, () => [
-        CommonActions.focus('Focus on timesheet list view')
-    ]);
+        'data-automation-id': 'timesheet-list-view',
+        'data-automation-type': 'container',
+    } as const;
 
     // Use the skeleton component
     const renderSkeleton = () => <TimeSheetListViewSkeleton dayCount={Math.min(dates.length, 5)} />;
@@ -239,23 +258,69 @@ export function TimeSheetListView({
         <div>
             <ReflectionContainer id="timesheet-list-view" label="Time Sheet List View">
                 <React.Fragment>
-                    <ConfirmationDialog
-                        isOpen={!!selectedWorkItemToDelete}
-                        onConfirm={async () => {
-                            if (selectedWorkItemToDelete) {
+                    {selectedWorkItemToDelete && (
+                        <ConfirmationDialog
+                            id="timesheet-list-delete-work-item-confirmation"
+                            isOpen={true}
+                            onConfirm={async () => {
                                 await onDeleteWorkItem(selectedWorkItemToDelete);
                                 setSelectedWorkItemToDelete(null);
-                            }
-                        }}
-                        onClose={() => setSelectedWorkItemToDelete(null)}
-                        title={t('timeSheetList.delete.title', { defaultValue: 'Delete Work Item' })}
-                        message={t('timeSheetList.delete.message', {
-                            defaultValue: 'This will permanently delete all time entries for this work item. This action cannot be undone.'
-                        })}
-                        confirmLabel={t('common.actions.delete', { defaultValue: 'Delete' })}
-                    />
+                            }}
+                            onClose={() => setSelectedWorkItemToDelete(null)}
+                            title={t('timeSheetList.delete.title', { defaultValue: 'Delete Work Item' })}
+                            message={t('timeSheetList.delete.message', {
+                                defaultValue: 'This will permanently delete all time entries for this work item. This action cannot be undone.'
+                            })}
+                            confirmLabel={t('common.actions.delete', { defaultValue: 'Delete' })}
+                        />
+                    )}
 
-                    <div className="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-md" {...listProps}>
+                    <div className="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-md" {...listAutomationProps}>
+                        {focusFilter && (
+                            <div
+                                id="timesheet-list-focus-filter"
+                                className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] px-3 py-3"
+                            >
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-[rgb(var(--color-primary-700))]">
+                                        {t('timeSheetList.focusFilter.summary', {
+                                            defaultValue: 'Showing {{count}} entries for {{workItem}} on {{date}}',
+                                            count: focusFilter.entryCount,
+                                            workItem: focusFilter.workItemLabel,
+                                            date: focusFilter.dateLabel,
+                                        })}
+                                    </p>
+                                    <p className="text-xs text-[rgb(var(--color-primary-600))]">
+                                        {t('timeSheetList.focusFilter.description', {
+                                            defaultValue: 'Only entries from the selected grid cell are visible.',
+                                        })}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {onClearFocusFilter && (
+                                        <Button
+                                            id="clear-time-entry-focus-filter-button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={onClearFocusFilter}
+                                        >
+                                            {t('common.actions.clearFilter', { defaultValue: 'Clear filter' })}
+                                        </Button>
+                                    )}
+                                    {onBackToGrid && (
+                                        <Button
+                                            id="back-to-grid-view-button"
+                                            variant="soft"
+                                            size="sm"
+                                            onClick={onBackToGrid}
+                                        >
+                                            {t('timeSheetList.focusFilter.backToGrid', { defaultValue: 'Back to grid' })}
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Header with Add button on left, totals right */}
                         <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -273,7 +338,7 @@ export function TimeSheetListView({
                             </div>
                             <div className="flex items-center gap-4 text-sm text-gray-500">
                                 <span>
-                                    {flattenedEntries.length} {flattenedEntries.length === 1
+                                    {filteredEntries.length} {filteredEntries.length === 1
                                         ? t('timeSheetList.summary.entryOne', { defaultValue: 'entry' })
                                         : t('timeSheetList.summary.entryOther', { defaultValue: 'entries' })}
                                 </span>
@@ -288,7 +353,7 @@ export function TimeSheetListView({
 
                         {isLoading ? (
                             renderSkeleton()
-                        ) : !hasWorkItems || flattenedEntries.length === 0 ? (
+                        ) : !hasWorkItems || !hasVisibleEntries ? (
                             <div className="flex w-full h-48 items-center justify-center py-8 px-4">
                                 <div className="flex flex-col items-center justify-center text-center max-w-md">
                                     <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
@@ -568,7 +633,7 @@ export function TimeSheetListView({
                     </div>
 
                     {/* Billable Legend */}
-                    {flattenedEntries.length > 0 && (
+                    {filteredEntries.length > 0 && (
                         <BillableLegend className="mt-6" />
                     )}
                 </React.Fragment>

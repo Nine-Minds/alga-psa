@@ -126,7 +126,11 @@ describe('TimeSheetTable feedback markers', () => {
     onAddEntryForCell: vi.fn(),
     onAddWorkItem: vi.fn(),
     onWorkItemClick: vi.fn(),
-    onQuickAddTimeEntry: vi.fn(async () => undefined),
+    activeQuickAdd: null,
+    onActivateQuickAdd: vi.fn(),
+    onQuickAddValueChange: vi.fn(),
+    onQuickAddCancel: vi.fn(),
+    onQuickAddSubmit: vi.fn(async () => undefined),
   };
 
   it('T016/T020: shows an X marker for unresolved feedback and preserves cell click behavior', () => {
@@ -243,6 +247,8 @@ describe('TimeSheetTable feedback markers', () => {
       throw new Error('Expected time entry summary');
     }
 
+    expect(entrySummary.getAttribute('class')).toContain('absolute inset-2');
+
     entrySummary.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(onCellClick).toHaveBeenCalledTimes(1);
@@ -271,6 +277,8 @@ describe('TimeSheetTable feedback markers', () => {
     if (!addArea) {
       throw new Error('Expected time entry add area');
     }
+
+    expect(addArea.getAttribute('class')).toContain('absolute inset-0');
 
     addArea.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 

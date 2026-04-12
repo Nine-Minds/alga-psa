@@ -116,6 +116,9 @@ describe('TimeSheetClient reopen flow', () => {
         currentUser={currentUser as any}
         isManager={false}
         canReopenForEdits={true}
+        initialEntries={[] as any}
+        initialWorkItems={[] as any}
+        initialComments={[] as any}
       />
     );
 
