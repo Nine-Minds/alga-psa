@@ -1,0 +1,180 @@
+[
+  {
+    "id": "F001",
+    "description": "Document and codify the product rule that any recurring invoice window containing matching billable time with `approval_status !== 'APPROVED'` is blocked in full, including windows that also contain non-time charges.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Product Decisions",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Implement contract-hourly approval-blocker detection using the same effective service-period, service-matching, assignment, client, and work-item semantics as approved recurring billing selection.",
+    "implemented": true,
+    "prdRefs": [
+      "Product Decisions",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Implement unresolved/non-contract approval-blocker detection only when unresolved/non-contract time is part of the recurring selection scope being represented.",
+    "implemented": true,
+    "prdRefs": [
+      "Product Decisions",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Treat any non-approved status as blocking while ignoring already invoiced time entries in approval-blocker counts.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Extend recurring due-work row and/or candidate types with approval-blocker metadata such as blocked entry count and approval-specific blocked reason.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Populate approval-blocker metadata during recurring due-work shaping so blocked windows can be classified before the UI renders Automatic Invoices.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Mark recurring due-work candidates with approval blockers as `canGenerate = false` and attach approval-specific blocked messaging instead of a generic ineligible state.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Add a dedicated Needs Approval section above Ready to Invoice in Automatic Invoices.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Move approval-blocked grouped windows out of Ready to Invoice and into Needs Approval while preserving existing grouped presentation semantics.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Render each Needs Approval grouped row with client, service period, invoice window, and `X unapproved entries`.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Add a `Review Approvals` action on Needs Approval rows that routes operators to the existing approval workflow.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Ensure Needs Approval rows are non-selectable, non-previewable for generation, and non-generatable from Automatic Invoices.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Preserve existing Ready to Invoice selection, preview, and generation behavior for windows that do not have approval blockers.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Centralize recurring approval-blocker detection in a shared helper or service so UI classification and server generation enforcement use the same logic.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Re-check approval blockers immediately before recurring invoice creation and reject blocked windows server-side with a descriptive error that includes the blocked entry count.",
+    "implemented": true,
+    "prdRefs": [
+      "Product Decisions",
+      "Requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Ensure grouped recurring billing runs continue processing unrelated eligible windows even when one selected target is rejected for approval blockers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Block mixed-charge invoice windows in full when matching billable time is not approved, rather than allowing partial recurring invoices for fixed or other non-time charges.",
+    "implemented": true,
+    "prdRefs": [
+      "Product Decisions",
+      "Requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Make approval-blocked windows transition cleanly from Needs Approval to Ready to Invoice after the relevant entries are approved and the page is refreshed.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Update in-product explanatory copy and plan/runbook documentation to state that the entire invoice window is blocked until the billable time is approved.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Rollout / Migration",
+      "Acceptance Criteria"
+    ]
+  }
+]

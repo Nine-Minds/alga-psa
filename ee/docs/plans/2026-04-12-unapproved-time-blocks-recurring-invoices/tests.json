@@ -1,0 +1,116 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed integration: a recurring contract-hourly window with at least one matching uninvoiced time entry whose approval status is not APPROVED is classified as approval-blocked and excluded from Ready to Invoice.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F004",
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed integration: a recurring window is not blocked by unrelated unapproved client time that falls outside the effective billable selection semantics for that window.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004",
+      "F014"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed integration: a mixed-charge recurring window containing fixed charges plus matching unapproved hourly time is blocked in full rather than partially invoiceable.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F017"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit/integration: any non-approved status used by time approval workflows (for example DRAFT, SUBMITTED, or CHANGES_REQUESTED) contributes to the approval-blocker count, while already invoiced entries do not.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F006"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Automatic Invoices renders a dedicated Needs Approval section above Ready to Invoice and moves approval-blocked grouped windows out of the ready list.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Needs Approval grouped rows show client, service period, invoice window, `X unapproved entries`, and a Review Approvals action, while remaining non-selectable and non-generatable.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F012"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Automatic Invoices preserves existing Ready to Invoice grouped selection behavior for windows that have no approval blockers.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Server generation guard: recurring invoice generation rejects a blocked window immediately before invoice creation and returns a descriptive error including the blocked entry count.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Server generation guard: a stale UI case where a window looked ready earlier but matching time becomes non-approved before generation is rejected by the server-side re-check.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Recurring billing run behavior: when one selected target is approval-blocked and another is eligible, the run records a blocker failure for the blocked target while continuing to process the unrelated eligible target.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Approval resolution flow: once the blocking entries are approved, the same recurring window leaves Needs Approval and appears in Ready to Invoice on refresh.",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Docs/copy coverage: in-product helper text and plan/runbook text state that the entire invoice window is blocked until the billable time is approved.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  }
+]

@@ -419,6 +419,7 @@ describe('selector-input recurring generation', () => {
     mocks.validateClientBillingEmail.mockResolvedValue({ valid: true });
     mocks.calculateBilling.mockResolvedValue(mocks.clientBillingResult);
     mocks.calculateBillingForExecutionWindow.mockResolvedValue(mocks.contractBillingResult);
+    mocks.rowsByTable.time_entries = [];
   });
 
   it('T006: recurring generation API accepts a client-cadence selector-input window with no `client_contract_lines` table', async () => {
@@ -631,5 +632,44 @@ describe('selector-input recurring generation', () => {
         expect.objectContaining({ client_contract_id: 'assignment-2' }),
       ]),
     );
+  });
+
+  it('T008/T009: selector-input generation re-checks approval blockers and rejects when matching recurring window time is non-approved', async () => {
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+    mocks.rowsByTable.recurring_service_periods.splice(
+      0,
+      mocks.rowsByTable.recurring_service_periods.length,
+      buildContractCadenceServicePeriodRow({
+        lifecycle_state: 'generated',
+        owner_client_id: 'client-1',
+        invoice_window_start: '2025-02-08',
+        invoice_window_end: '2025-03-08',
+      }),
+    );
+
+    mocks.rowsByTable.time_entries = [
+      {
+        tenant: 'tenant-1',
+        entry_id: 'entry-unapproved-1',
+        start_time: '2025-01-10',
+        end_time: '2025-01-10',
+        invoiced: false,
+        contract_line_id: 'line-1',
+        service_id: 'service-1',
+        approval_status: 'SUBMITTED',
+      },
+    ];
+
+    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
+      message: 'Blocked until approval: 1 unapproved entry.',
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+    });
+    expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
   });
 });
