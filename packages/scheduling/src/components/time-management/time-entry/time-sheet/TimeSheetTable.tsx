@@ -523,14 +523,14 @@ export function TimeSheetTable({
                                                     })}
                                                     onMouseLeave={() => setHoveredCell(null)}
                                                 >
-                                                    <div className="relative h-full w-full p-1.5">
+                                                    <div className="relative h-full w-full">
                                                         {isEditable && (
                                                             <button
                                                                 type="button"
-                                                                className={`absolute inset-1.5 rounded-xl transition-colors ${
+                                                                className={`absolute inset-0 transition-colors ${
                                                                     dayEntries.length > 0
-                                                                        ? 'bg-white/70 hover:bg-white/90 dark:bg-gray-900/10 dark:hover:bg-gray-900/20'
-                                                                        : 'hover:bg-white/70 dark:hover:bg-gray-900/10'
+                                                                        ? 'rounded-2xl bg-white/70 hover:bg-white/90 dark:bg-gray-900/10 dark:hover:bg-gray-900/20'
+                                                                        : 'rounded-xl hover:bg-white/70 dark:hover:bg-gray-900/10'
                                                                 }`}
                                                                 data-automation-id={`time-cell-add-area-${workItem.work_item_id}-${dateKey}`}
                                                                 data-automation-type="time-entry-add-area"
@@ -544,7 +544,7 @@ export function TimeSheetTable({
 	                                                    {dayEntries.length > 0 ? (
 	                                                        <button
                                                                 type="button"
-                                                                className="relative z-10 flex h-full w-full items-center justify-center rounded-xl p-3 text-xs shadow-sm transition-transform hover:scale-[1.01]"
+                                                                className="absolute inset-2 z-10 flex items-center justify-center rounded-xl p-3 text-xs shadow-sm transition-transform hover:scale-[1.01]"
 	                                                            style={{
 	                                                                backgroundColor: colors.background,
 	                                                                borderColor: colors.border,

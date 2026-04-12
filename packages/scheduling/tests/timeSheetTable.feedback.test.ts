@@ -247,6 +247,8 @@ describe('TimeSheetTable feedback markers', () => {
       throw new Error('Expected time entry summary');
     }
 
+    expect(entrySummary.getAttribute('class')).toContain('absolute inset-2');
+
     entrySummary.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(onCellClick).toHaveBeenCalledTimes(1);
@@ -275,6 +277,8 @@ describe('TimeSheetTable feedback markers', () => {
     if (!addArea) {
       throw new Error('Expected time entry add area');
     }
+
+    expect(addArea.getAttribute('class')).toContain('absolute inset-0');
 
     addArea.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
