@@ -468,7 +468,7 @@ export class ChatCompletionsService {
 
         if (functionName === FINISH_TOOL_NAME) {
           const finishPayload = this.parseFinishResponsePayload(parsedArgs);
-          if (!finishPayload.ok) {
+          if (finishPayload.ok === false) {
             this.logWarn('stream_retry_invalid_finish_response', {
               iteration,
               toolCallId,
@@ -1246,7 +1246,7 @@ export class ChatCompletionsService {
 
         if (functionName === FINISH_TOOL_NAME) {
           const finishPayload = this.parseFinishResponsePayload(parsedArgs);
-          if (!finishPayload.ok) {
+          if (finishPayload.ok === false) {
             this.logWarn('retry_invalid_finish_response', {
               iteration,
               toolCallId,
