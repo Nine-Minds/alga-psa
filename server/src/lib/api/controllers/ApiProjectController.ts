@@ -11,7 +11,9 @@ import {
   updateProjectSchema,
   projectListQuerySchema,
   projectSearchSchema,
-  projectExportQuerySchema
+  projectExportQuerySchema,
+  createProjectPhaseSchema,
+  createProjectTaskSchema
 } from '../schemas/project';
 import { 
   ApiKeyServiceForApi 
@@ -782,8 +784,8 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Project not found');
           }
 
-          // Parse body
-          const data = await req.json();
+          // Parse and validate body
+          const data = await this.validateData(apiRequest as AuthenticatedApiRequest, createProjectPhaseSchema);
 
           const phase = await this.projectService.createPhase(
             projectId,
@@ -1017,6 +1019,101 @@ export class ApiProjectController extends ApiBaseController {
           );
 
           return createSuccessResponse(tasks);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Create project phase task
+   */
+  createPhaseTask() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        // Create request with context
+        const apiRequest = req as ApiRequest;
+        apiRequest.context = {
+          userId: keyRecord.user_id,
+          tenant: keyRecord.tenant,
+          user
+        };
+
+        // Extract IDs from URL
+        const url = new URL(req.url);
+        const pathParts = url.pathname.split('/');
+        const projectsIndex = pathParts.findIndex(part => part === 'projects');
+        const phasesIndex = pathParts.findIndex(part => part === 'phases');
+        const projectId = pathParts[projectsIndex + 1];
+        const phaseId = pathParts[phasesIndex + 1];
+
+        // Run within tenant context
+        return await runWithTenant(tenantId!, async () => {
+          // Check permissions
+          const knex = await getConnection(tenantId!);
+          const hasAccess = await hasPermission(user, 'project', 'update', knex);
+          if (!hasAccess) {
+            throw new ForbiddenError('Permission denied: Cannot update project');
+          }
+
+          // Check project exists
+          const project = await this.projectService.getById(projectId, apiRequest.context!);
+          if (!project) {
+            throw new NotFoundError('Project not found');
+          }
+
+          const phase = await knex('project_phases')
+            .where({ phase_id: phaseId, project_id: projectId, tenant: tenantId })
+            .first('phase_id');
+
+          if (!phase) {
+            throw new NotFoundError('Project phase not found');
+          }
+
+          const data = await this.validateData(
+            apiRequest as AuthenticatedApiRequest,
+            createProjectTaskSchema,
+          );
+
+          const task = await this.projectService.createTask(
+            phaseId,
+            data,
+            apiRequest.context!
+          );
+
+          return createSuccessResponse(task, 201);
         });
       } catch (error) {
         return handleApiError(error);
