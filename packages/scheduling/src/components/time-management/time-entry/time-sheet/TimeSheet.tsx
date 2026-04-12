@@ -14,7 +14,7 @@ import {
 import { IExtendedWorkItem } from '@alga-psa/types';
 import TimeEntryDialog from './TimeEntryDialog';
 import { AddWorkItemDialog } from './AddWorkItemDialog';
-import { fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet, saveTimeEntry, submitTimeSheet, deleteWorkItem } from '../../../../actions/timeEntryActions';
+import { fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet, submitTimeSheet, deleteWorkItem } from '../../../../actions/timeEntryActions';
 import { updateScheduleEntry } from '@alga-psa/scheduling/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -24,21 +24,27 @@ import { formatISO, parseISO, format } from 'date-fns';
 import { TimeSheetTable } from './TimeSheetTable';
 import { TimeSheetListView } from './TimeSheetListView';
 import { TimeSheetHeader, TimeSheetViewMode } from './TimeSheetHeader';
-import { TimeSheetDateNavigatorState } from './types';
+import {
+    TimeEntrySelectionRequest,
+    TimeSheetDateNavigatorState,
+    TimeSheetInteractionState,
+    TimeSheetListFocusFilter,
+    TimeSheetQuickAddState,
+} from './types';
 import { TimeSheetComments } from '../../approvals/TimeSheetComments';
 import { WorkItemDrawer } from './WorkItemDrawer';
 import { IntervalSection } from '../../interval-tracking/IntervalSection';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
-import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 
 const TIMESHEET_VIEW_MODE_SETTING = 'timesheet_view_mode';
 
 interface TimeSheetProps {
     timeSheet: ITimeSheetView;
+    initialEntries: ITimeEntryWithWorkItem[];
+    initialWorkItems: IExtendedWorkItem[];
+    initialComments: ITimeSheetComment[];
     onSaveTimeEntry: (timeEntry: ITimeEntry) => Promise<void>;
     isManager?: boolean;
     subjectName?: string;
@@ -120,8 +126,84 @@ function getDatesInPeriod(timePeriod: ITimePeriodView): Date[] {
     return dates;
 }
 
+function getWorkItemDisplayName(workItem: IExtendedWorkItem): string {
+    if (workItem.type === 'ticket') {
+        return workItem.ticket_number
+            ? `${workItem.ticket_number} - ${workItem.title || workItem.name}`
+            : (workItem.title || workItem.name);
+    }
+
+    return workItem.name;
+}
+
+function groupWorkItemsByType(items: IExtendedWorkItem[]): Record<string, IExtendedWorkItem[]> {
+    return items.reduce((acc: Record<string, IExtendedWorkItem[]>, item) => {
+        if (!acc[item.type]) {
+            acc[item.type] = [];
+        }
+        acc[item.type].push(item);
+        return acc;
+    }, {});
+}
+
+function groupEntriesByWorkItem(
+    entries: ITimeEntryWithWorkItem[],
+    workItemsMap?: Record<string, IExtendedWorkItem[]>,
+): Record<string, ITimeEntryWithWorkItemString[]> {
+    const grouped = entries.reduce((acc: Record<string, ITimeEntryWithWorkItemString[]>, entry: ITimeEntryWithWorkItem) => {
+        const key = `${entry.work_item_id}`;
+        if (!acc[key]) {
+            acc[key] = [];
+        }
+        acc[key].push({
+            ...entry,
+            start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
+            end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
+        });
+        return acc;
+    }, {});
+
+    if (workItemsMap) {
+        Object.values(workItemsMap).forEach((items) => {
+            items.forEach((workItem) => {
+                if (!grouped[workItem.work_item_id]) {
+                    grouped[workItem.work_item_id] = [];
+                }
+            });
+        });
+    }
+
+    return grouped;
+}
+
+function parseQuickAddDurationToMinutes(value: string): number {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) {
+        return 0;
+    }
+
+    const colonMatch = trimmedValue.match(/^(\d{1,2}):(\d{1,2})$/);
+    if (colonMatch) {
+        const hours = parseInt(colonMatch[1], 10);
+        const minutes = parseInt(colonMatch[2], 10);
+        return Number.isFinite(hours) && Number.isFinite(minutes)
+            ? (hours * 60) + minutes
+            : 0;
+    }
+
+    if (/^(\d+\.?\d*)$/.test(trimmedValue)) {
+        const hours = parseFloat(trimmedValue);
+        return Number.isFinite(hours) ? Math.round(hours * 60) : 0;
+    }
+
+    return 0;
+}
+
 export function TimeSheet({
     timeSheet: initialTimeSheet,
+    initialEntries,
+    initialWorkItems,
+    initialComments,
     onSaveTimeEntry,
     isManager = false,
     subjectName,
@@ -138,14 +220,18 @@ export function TimeSheet({
 }: TimeSheetProps): React.JSX.Element {
     const [showIntervals, setShowIntervals] = useState(false);
     const [dateNavigator, setDateNavigator] = useState<TimeSheetDateNavigatorState | null>(null);
-    const [isLoadingTimeSheetData, setIsLoadingTimeSheetData] = useState(true);
+    const isLoadingTimeSheetData = false;
     const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
-    const [workItemsByType, setWorkItemsByType] = useState<Record<string, IExtendedWorkItem[]>>({});
-    const [groupedTimeEntries, setGroupedTimeEntries] = useState<Record<string, ITimeEntryWithWorkItemString[]>>({});
+    const [workItemsByType, setWorkItemsByType] = useState<Record<string, IExtendedWorkItem[]>>(() =>
+        groupWorkItemsByType(initialWorkItems)
+    );
+    const [groupedTimeEntries, setGroupedTimeEntries] = useState<Record<string, ITimeEntryWithWorkItemString[]>>(() =>
+        groupEntriesByWorkItem(initialEntries, groupWorkItemsByType(initialWorkItems))
+    );
     const [isAddWorkItemDialogOpen, setIsAddWorkItemDialogOpen] = useState(false);
     const [addWorkItemDate, setAddWorkItemDate] = useState<string | null>(null);
     const [localWorkItems, setLocalWorkItems] = useState<IExtendedWorkItem[]>([]);
-    const [comments, setComments] = useState<ITimeSheetComment[]>([]);
+    const [comments, setComments] = useState<ITimeSheetComment[]>(initialComments);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const { openDrawer, closeDrawer } = useDrawer();
 
@@ -159,135 +245,210 @@ export function TimeSheet({
         {
             defaultValue: 'grid',
             localStorageKey: TIMESHEET_VIEW_MODE_SETTING,
-            debounceMs: 300
+            debounceMs: 300,
+            skipServerFetch: true,
         }
     );
 
+    const [interactionState, setInteractionState] = useState<TimeSheetInteractionState>({ type: 'idle' });
+
+    const selectedCell = interactionState.type === 'dialog'
+        ? interactionState.selection
+        : null;
+    const listFocusFilter = interactionState.type === 'list-focus'
+        ? interactionState.filter
+        : null;
+    const activeQuickAdd = interactionState.type === 'quick-add'
+        ? interactionState.quickAdd
+        : null;
+
     const handleViewModeChange = useCallback((newMode: TimeSheetViewMode) => {
+        setInteractionState((currentInteraction) => {
+            if (currentInteraction.type === 'quick-add') {
+                return { type: 'idle' };
+            }
+
+            if (newMode === 'grid' && currentInteraction.type === 'list-focus') {
+                return { type: 'idle' };
+            }
+
+            return currentInteraction;
+        });
         setViewMode(newMode);
     }, [setViewMode]);
 
-    const [selectedCell, setSelectedCell] = useState<{
-        workItem: IExtendedWorkItem;
-        date: string;
-        entries: ITimeEntryWithWorkItemString[];
-        defaultStartTime?: string;
-        defaultEndTime?: string;
-    } | null>(null);
+    const handleClearListFocusFilter = useCallback(() => {
+        setInteractionState((currentInteraction) =>
+            currentInteraction.type === 'list-focus' ? { type: 'idle' } : currentInteraction
+        );
+    }, []);
 
-    const initialDateObj = initialDate ? parseISO(initialDate) : undefined;
-    if (initialDateObj) {
-        initialDateObj.setHours(0, 0, 0, 0);
-    }
+    const handleBackToGrid = useCallback(() => {
+        setInteractionState((currentInteraction) =>
+            currentInteraction.type === 'list-focus' ? { type: 'idle' } : currentInteraction
+        );
+        setViewMode('grid');
+    }, [setViewMode]);
+
+    const handleTimeEntrySelection = useCallback((selection: TimeEntrySelectionRequest) => {
+        const normalizedDate = toDateOnlyString(selection.date);
+
+        if (selection.entries.length > 1) {
+            setInteractionState({
+                type: 'list-focus',
+                filter: {
+                    workItemId: selection.workItem.work_item_id,
+                    workItemLabel: getWorkItemDisplayName(selection.workItem),
+                    date: normalizedDate,
+                    dateLabel: format(parseLocalDate(normalizedDate), 'MMM d'),
+                    entryIds: selection.entries
+                        .map((entry) => entry.entry_id)
+                        .filter((entryId): entryId is string => Boolean(entryId)),
+                    entryCount: selection.entries.length,
+                },
+            });
+            setViewMode('list');
+            return;
+        }
+
+        setInteractionState({
+            type: 'dialog',
+            selection: {
+                ...selection,
+                date: normalizedDate,
+                entries: selection.entries.slice(0, 1),
+            },
+        });
+    }, [setViewMode]);
+
+    const initialDateObj = useMemo(() => {
+        if (!initialDate) {
+            return undefined;
+        }
+
+        const parsedDate = parseISO(initialDate);
+        parsedDate.setHours(0, 0, 0, 0);
+        return parsedDate;
+    }, [initialDate]);
+
+    const syncListFocusFilter = useCallback((entries: ITimeEntryWithWorkItem[]) => {
+        setInteractionState((currentInteraction) => {
+            if (currentInteraction.type !== 'list-focus') {
+                return currentInteraction;
+            }
+
+            const currentFilter = currentInteraction.filter;
+            const matchingEntries = entries.filter((entry) => {
+                const entryDate = entry.work_date?.slice(0, 10) ?? toDateOnlyString(entry.start_time);
+                return entry.work_item_id === currentFilter.workItemId &&
+                    entryDate === currentFilter.date &&
+                    typeof entry.entry_id === 'string' &&
+                    currentFilter.entryIds.includes(entry.entry_id);
+            });
+
+            if (matchingEntries.length === 0) {
+                return { type: 'idle' };
+            }
+
+            return {
+                type: 'list-focus',
+                filter: {
+                    ...currentFilter,
+                    entryIds: matchingEntries
+                        .map((entry) => entry.entry_id)
+                        .filter((entryId): entryId is string => Boolean(entryId)),
+                    entryCount: matchingEntries.length,
+                },
+            };
+        });
+    }, []);
+
+    const applyTimeEntryUpdates = useCallback((entries: ITimeEntryWithWorkItem[], workItemsMap?: Record<string, IExtendedWorkItem[]>) => {
+        setGroupedTimeEntries(groupEntriesByWorkItem(entries, workItemsMap));
+        syncListFocusFilter(entries);
+    }, [syncListFocusFilter]);
+
+    const activateQuickAdd = useCallback((quickAddTarget: Omit<TimeSheetQuickAddState, 'value'>) => {
+        setInteractionState((currentInteraction) => {
+            if (
+                currentInteraction.type === 'quick-add' &&
+                currentInteraction.quickAdd.workItem.work_item_id === quickAddTarget.workItem.work_item_id &&
+                currentInteraction.quickAdd.date === quickAddTarget.date
+            ) {
+                return currentInteraction;
+            }
+
+            return {
+                type: 'quick-add',
+                quickAdd: {
+                    ...quickAddTarget,
+                    value: '',
+                },
+            };
+        });
+    }, []);
+
+    const updateQuickAddValue = useCallback((value: string) => {
+        setInteractionState((currentInteraction) =>
+            currentInteraction.type === 'quick-add'
+                ? {
+                    type: 'quick-add',
+                    quickAdd: {
+                        ...currentInteraction.quickAdd,
+                        value,
+                    },
+                }
+                : currentInteraction
+        );
+    }, []);
+
+    const cancelQuickAdd = useCallback(() => {
+        setInteractionState((currentInteraction) =>
+            currentInteraction.type === 'quick-add' ? { type: 'idle' } : currentInteraction
+        );
+    }, []);
 
     useEffect(() => {
-        const loadComments = async () => {
-            if (timeSheet.approval_status !== 'DRAFT') {
-                setIsLoadingComments(true);
-                try {
-                    const fetchedComments = await fetchTimeSheetComments(timeSheet.id);
-                    setComments(fetchedComments);
-                } catch (error) {
-                    console.error('Failed to fetch comments:', error);
-                } finally {
-                    setIsLoadingComments(false);
-                }
+        if (!initialWorkItem || !initialDateObj || !initialDuration) {
+            return;
+        }
+
+        let endTime = new Date();
+        const durationInMilliseconds = Math.ceil(initialDuration / 60) * 60 * 1000;
+        let startTime = new Date(endTime.getTime() - durationInMilliseconds);
+
+        startTime.setFullYear(initialDateObj.getFullYear(), initialDateObj.getMonth(), initialDateObj.getDate());
+        endTime.setFullYear(initialDateObj.getFullYear(), initialDateObj.getMonth(), initialDateObj.getDate());
+
+        if (startTime < initialDateObj) {
+            startTime = new Date(initialDateObj);
+            startTime.setHours(0, 0, 0, 0);
+            endTime = new Date(startTime.getTime() + durationInMilliseconds);
+        }
+
+        const endOfDay = new Date(initialDateObj);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (endTime > endOfDay) {
+            endTime = new Date(endOfDay);
+            startTime = new Date(endTime.getTime() - durationInMilliseconds);
+
+            if (startTime < initialDateObj) {
+                startTime = new Date(initialDateObj);
+                startTime.setHours(0, 0, 0, 0);
             }
-        };
+        }
 
-        loadComments();
-    }, [timeSheet.id, timeSheet.approval_status]);
-
-    useEffect(() => {
-        const loadData = async () => {
-            setIsLoadingTimeSheetData(true);
-            let groupedLocal: Record<string, ITimeEntryWithWorkItemString[]> = {};
-            try {
-                const [fetchedTimeEntries, fetchedWorkItems, updatedTimeSheet] = await Promise.all([
-                    fetchTimeEntriesForTimeSheet(timeSheet.id),
-                    fetchWorkItemsForTimeSheet(timeSheet.id),
-                    fetchTimeSheet(timeSheet.id)
-                ]);
-
-                setTimeSheet(updatedTimeSheet);
-
-                let workItems = fetchedWorkItems;
-                if (initialWorkItem && !workItems.some(item => item.work_item_id === initialWorkItem.work_item_id)) {
-                    workItems = [...workItems, initialWorkItem];
-                }
-
-                const fetchedWorkItemsByType = workItems.reduce((acc: Record<string, IExtendedWorkItem[]>, item) => {
-                    if (!acc[item.type]) {
-                        acc[item.type] = [];
-                    }
-                    acc[item.type].push(item);
-                    return acc;
-                }, {});
-                setWorkItemsByType(fetchedWorkItemsByType);
-
-                groupedLocal = fetchedTimeEntries.reduce((acc: Record<string, ITimeEntryWithWorkItemString[]>, entry: ITimeEntryWithWorkItem) => {
-                    const key = `${entry.work_item_id}`;
-                    if (!acc[key]) {
-                        acc[key] = [];
-                    }
-                    acc[key].push({
-                        ...entry,
-                        start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
-                        end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
-                    });
-                    return acc;
-                }, {});
-
-                workItems.forEach(workItem => {
-                    const key = workItem.work_item_id;
-                    if (!groupedLocal[key]) {
-                        groupedLocal[key] = [];
-                    }
-                });
-
-                setGroupedTimeEntries(groupedLocal);
-            } finally {
-                setIsLoadingTimeSheetData(false);
-            }
-
-            if (initialWorkItem && initialDateObj && initialDuration) {
-                let endTime = new Date();
-                const durationInMilliseconds = Math.ceil(initialDuration / 60) * 60 * 1000;
-                let startTime = new Date(endTime.getTime() - durationInMilliseconds);
-
-                startTime.setFullYear(initialDateObj.getFullYear(), initialDateObj.getMonth(), initialDateObj.getDate());
-                endTime.setFullYear(initialDateObj.getFullYear(), initialDateObj.getMonth(), initialDateObj.getDate());
-
-                if (startTime < initialDateObj) {
-                    startTime = new Date(initialDateObj);
-                    startTime.setHours(0, 0, 0, 0);
-                    endTime = new Date(startTime.getTime() + durationInMilliseconds);
-                }
-
-                const endOfDay = new Date(initialDateObj);
-                endOfDay.setHours(23, 59, 59, 999);
-                if (endTime > endOfDay) {
-                    endTime = new Date(endOfDay);
-                    startTime = new Date(endTime.getTime() - durationInMilliseconds);
-
-                    if (startTime < initialDateObj) {
-                        startTime = new Date(initialDateObj);
-                        startTime.setHours(0, 0, 0, 0);
-                    }
-                }
-
-                setSelectedCell({
-                    workItem: initialWorkItem,
-                    date: formatISO(initialDateObj, { representation: 'date' }),
-                    entries: groupedLocal[initialWorkItem.work_item_id] || [],
-                    defaultStartTime: formatISO(startTime),
-                    defaultEndTime: formatISO(endTime)
-                });
-            }
-        };
-
-        loadData();
-    }, [timeSheet.id, initialWorkItem, initialDateObj, initialDuration]);
+        setInteractionState({
+            type: 'dialog',
+            selection: {
+                workItem: initialWorkItem,
+                date: formatISO(initialDateObj, { representation: 'date' }),
+                entries: [],
+                defaultStartTime: formatISO(startTime),
+                defaultEndTime: formatISO(endTime)
+            },
+        });
+    }, [initialWorkItem, initialDateObj, initialDuration]);
 
     const handleQuickAddTimeEntry = async (params: {
         workItem: IExtendedWorkItem;
@@ -348,6 +509,50 @@ export function TimeSheet({
         await handleSaveTimeEntry(timeEntry);
     };
 
+    const refreshTimeSheetData = useCallback(async () => {
+        const [fetchedTimeEntries, fetchedWorkItems] = await Promise.all([
+            fetchTimeEntriesForTimeSheet(timeSheet.id),
+            fetchWorkItemsForTimeSheet(timeSheet.id)
+        ]);
+
+        const fetchedWorkItemsByType = groupWorkItemsByType(fetchedWorkItems);
+        setWorkItemsByType(fetchedWorkItemsByType);
+        applyTimeEntryUpdates(fetchedTimeEntries, fetchedWorkItemsByType);
+
+        return {
+            fetchedTimeEntries,
+            fetchedWorkItems,
+            fetchedWorkItemsByType,
+        };
+    }, [applyTimeEntryUpdates, timeSheet.id]);
+
+    const submitQuickAdd = useCallback(async () => {
+        if (!activeQuickAdd) {
+            return;
+        }
+
+        const durationInMinutes = parseQuickAddDurationToMinutes(activeQuickAdd.value);
+        if (durationInMinutes <= 0) {
+            return;
+        }
+
+        const allEntriesForWorkItem = groupedTimeEntries[activeQuickAdd.workItem.work_item_id] || [];
+        const existingEntry = allEntriesForWorkItem.length > 0 ? allEntriesForWorkItem[0] : undefined;
+
+        try {
+            await handleQuickAddTimeEntry({
+                workItem: activeQuickAdd.workItem,
+                date: activeQuickAdd.date,
+                durationInMinutes,
+                existingEntry,
+            });
+
+            setInteractionState({ type: 'idle' });
+        } catch {
+            // Error handling/toast is already performed downstream in handleSaveTimeEntry.
+        }
+    }, [activeQuickAdd, groupedTimeEntries, handleQuickAddTimeEntry]);
+
     const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
         try {
             // Ensure timeEntry has all required fields
@@ -363,47 +568,7 @@ export function TimeSheet({
             // Save the time entry and get the response
             await onSaveTimeEntry(completeTimeEntry);
 
-            // Refresh the data
-            const [fetchedTimeEntries, fetchedWorkItems] = await Promise.all([
-                fetchTimeEntriesForTimeSheet(timeSheet.id),
-                fetchWorkItemsForTimeSheet(timeSheet.id)
-            ]);
-
-            // Update work items state
-            const fetchedWorkItemsByType = fetchedWorkItems.reduce((acc: Record<string, IExtendedWorkItem[]>, item) => {
-                if (!acc[item.type]) {
-                    acc[item.type] = [];
-                }
-                acc[item.type].push(item);
-                return acc;
-            }, {});
-            setWorkItemsByType(fetchedWorkItemsByType);
-
-            // Update time entries state
-            const grouped = fetchedTimeEntries.reduce((acc: Record<string, ITimeEntryWithWorkItemString[]>, entry: ITimeEntryWithWorkItem) => {
-                const key = `${entry.work_item_id}`;
-                if (!acc[key]) {
-                    acc[key] = [];
-                }
-                acc[key].push({
-                    ...entry,
-                    start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
-                    end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
-                });
-                return acc;
-            }, {});
-
-            // Ensure all work items have an entry in groupedTimeEntries
-            Object.keys(workItemsByType).forEach(type => {
-                workItemsByType[type].forEach(workItem => {
-                    const key = workItem.work_item_id;
-                    if (!grouped[key]) {
-                        grouped[key] = [];
-                    }
-                });
-            });
-
-            setGroupedTimeEntries(grouped);
+            await refreshTimeSheetData();
 
             if (localWorkItems.length > 0) {
                 setLocalWorkItems([]);
@@ -430,6 +595,9 @@ export function TimeSheet({
     };
 
   const openAddWorkItemDialog = useCallback((date?: string) => {
+    setInteractionState((currentInteraction) =>
+      currentInteraction.type === 'quick-add' ? { type: 'idle' } : currentInteraction
+    );
     setAddWorkItemDate(normalizeOptionalDateInput(date));
     setIsAddWorkItemDialogOpen(true);
   }, []);
@@ -484,11 +652,11 @@ export function TimeSheet({
       defaultEndTime.setHours(9, 0, 0, 0); // 9:00 AM (1 hour duration)
     }
 
-    // Open the time entry dialog for the selected work item
-    // The work item will be added to the time sheet only when the time entry is saved
-    setSelectedCell({
+    // Open the time entry dialog for the selected work item.
+    // The work item will be added to the time sheet only when the time entry is saved.
+    handleTimeEntrySelection({
       workItem,
-      date: formatISO(currentDate, { representation: 'date' }), // Format as YYYY-MM-DD string
+      date: formatISO(currentDate, { representation: 'date' }),
       entries: [],
       defaultStartTime: defaultStartTime ? formatISO(defaultStartTime) : undefined,
       defaultEndTime: defaultEndTime ? formatISO(defaultEndTime) : undefined
@@ -512,24 +680,15 @@ export function TimeSheet({
         }
     };
 
-    const handleTaskUpdate = useCallback(async (updated: any) => {
+    const handleTaskUpdate = useCallback(async (_updated: any) => {
         try {
-            const fetchedWorkItems = await fetchWorkItemsForTimeSheet(timeSheet.id);
-            const fetchedWorkItemsByType = fetchedWorkItems.reduce((acc: Record<string, IExtendedWorkItem[]>, item) => {
-                if (!acc[item.type]) {
-                    acc[item.type] = [];
-                }
-                acc[item.type].push(item);
-                return acc;
-            }, {});
-            setWorkItemsByType(fetchedWorkItemsByType);
-
+            await refreshTimeSheetData();
             toast.success('Task updated successfully');
             closeDrawer();
         } catch (error) {
             handleError(error, 'Failed to update task');
         }
-    }, [timeSheet.id, closeDrawer]); // Added useCallback and dependencies
+    }, [closeDrawer, refreshTimeSheetData]);
 
     const handleScheduleUpdate = useCallback(async (updated: any) => {
         try {
@@ -547,63 +706,38 @@ export function TimeSheet({
                 return;
             }
 
-            const fetchedWorkItems = await fetchWorkItemsForTimeSheet(timeSheet.id);
-            const fetchedWorkItemsByType = fetchedWorkItems.reduce((acc: Record<string, IExtendedWorkItem[]>, item) => {
-                if (!acc[item.type]) {
-                    acc[item.type] = [];
-                }
-                acc[item.type].push(item);
-                return acc;
-            }, {});
-            setWorkItemsByType(fetchedWorkItemsByType);
-
+            await refreshTimeSheetData();
             toast.success('Changes saved successfully');
             closeDrawer();
         } catch (error) {
             handleError(error, 'Failed to save changes');
         }
-    }, [timeSheet.id, closeDrawer]); // Added useCallback and dependencies
+    }, [closeDrawer, refreshTimeSheetData]);
 
     const handleDeleteWorkItem = useCallback(async (workItemId: string) => {
         try {
             await deleteWorkItem(workItemId);
-
-            // Refresh work items and time entries after deletion
-            const [fetchedTimeEntries, fetchedWorkItems] = await Promise.all([
-                fetchTimeEntriesForTimeSheet(timeSheet.id),
-                fetchWorkItemsForTimeSheet(timeSheet.id)
-            ]);
-
-            // Update work items state
-            const fetchedWorkItemsByType = fetchedWorkItems.reduce((acc: Record<string, IExtendedWorkItem[]>, item) => {
-                if (!acc[item.type]) {
-                    acc[item.type] = [];
+            await refreshTimeSheetData();
+            setInteractionState((currentInteraction) => {
+                if (currentInteraction.type === 'quick-add' && currentInteraction.quickAdd.workItem.work_item_id === workItemId) {
+                    return { type: 'idle' };
                 }
-                acc[item.type].push(item);
-                return acc;
-            }, {});
-            setWorkItemsByType(fetchedWorkItemsByType);
 
-            // Update time entries state
-            const grouped = fetchedTimeEntries.reduce((acc: Record<string, ITimeEntryWithWorkItemString[]>, entry: ITimeEntryWithWorkItem) => {
-                const key = `${entry.work_item_id}`;
-                if (!acc[key]) {
-                    acc[key] = [];
+                if (currentInteraction.type === 'dialog' && currentInteraction.selection.workItem.work_item_id === workItemId) {
+                    return { type: 'idle' };
                 }
-                acc[key].push({
-                    ...entry,
-                    start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
-                    end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
-                });
-                return acc;
-            }, {});
 
-            setGroupedTimeEntries(grouped);
+                if (currentInteraction.type === 'list-focus' && currentInteraction.filter.workItemId === workItemId) {
+                    return { type: 'idle' };
+                }
+
+                return currentInteraction;
+            });
             toast.success('Work item deleted successfully');
         } catch (error) {
             handleError(error, 'Failed to delete work item');
         }
-    }, [timeSheet.id]);
+    }, [refreshTimeSheetData]);
 
     const handleWorkItemClick = useCallback((workItem: IExtendedWorkItem) => {
         openDrawer(
@@ -655,26 +789,15 @@ export function TimeSheet({
     const delegatedEditingBlocked = isDelegated && !allowDelegatedEditing;
     const effectiveIsEditable = isEditable && !delegatedEditingBlocked;
 
-    // Register the main TimeSheet container for UI automation
-    const { automationIdProps: timeSheetProps } = useAutomationIdAndRegister<ContainerComponent>({
-        type: 'container',
+    const timeSheetAutomationProps = {
         id: 'timesheet-main',
-        label: 'Time Sheet Management',
-    }, () => [
-        CommonActions.focus('Focus on time sheet'),
-        ...(effectiveIsEditable ? [
-            {
-                type: 'click' as const,
-                available: true,
-                description: 'Add new work item to timesheet',
-                parameters: []
-            }
-        ] : [])
-    ]);
+        'data-automation-id': 'timesheet-main',
+        'data-automation-type': 'container',
+    } as const;
 
     return (
         <ReflectionContainer id="timesheet-main" label="Time Sheet Management">
-            <div className="h-full overflow-y-auto" {...timeSheetProps}>
+            <div className="h-full overflow-y-auto" {...timeSheetAutomationProps}>
                 {delegatedEditingBlocked && (
                     <Alert variant="warning" className="mb-4">
                         <AlertDescription>
@@ -735,9 +858,13 @@ export function TimeSheet({
                     groupedTimeEntries={groupedTimeEntries}
                     isEditable={effectiveIsEditable}
                     isLoading={isLoadingTimeSheetData || isViewModeLoading}
-                    onCellClick={setSelectedCell}
+                    onCellClick={handleTimeEntrySelection}
                     onAddWorkItem={openAddWorkItemDialog}
-                    onQuickAddTimeEntry={handleQuickAddTimeEntry}
+                    activeQuickAdd={activeQuickAdd}
+                    onActivateQuickAdd={activateQuickAdd}
+                    onQuickAddValueChange={updateQuickAddValue}
+                    onQuickAddCancel={cancelQuickAdd}
+                    onQuickAddSubmit={submitQuickAdd}
                     onDateNavigatorChange={setDateNavigator}
                     onWorkItemClick={handleWorkItemClick}
                     onDeleteWorkItem={handleDeleteWorkItem}
@@ -749,10 +876,13 @@ export function TimeSheet({
                     groupedTimeEntries={groupedTimeEntries}
                     isEditable={effectiveIsEditable}
                     isLoading={isLoadingTimeSheetData || isViewModeLoading}
-                    onCellClick={setSelectedCell}
+                    onCellClick={handleTimeEntrySelection}
                     onAddWorkItem={openAddWorkItemDialog}
                     onWorkItemClick={handleWorkItemClick}
                     onDeleteWorkItem={handleDeleteWorkItem}
+                    focusFilter={listFocusFilter}
+                    onClearFocusFilter={handleClearListFocusFilter}
+                    onBackToGrid={handleBackToGrid}
                 />
             )}
 
@@ -760,7 +890,7 @@ export function TimeSheet({
                 <TimeEntryDialog
                     id="time-entry-dialog"
                     isOpen={true}
-                    onClose={() => setSelectedCell(null)}
+                    onClose={() => setInteractionState({ type: 'idle' })}
                     onSave={handleSaveTimeEntry}
                     workItem={selectedCell.workItem}
                     date={parseLocalDate(selectedCell.date)}
@@ -774,34 +904,14 @@ export function TimeSheet({
                     timeSheetId={timeSheet.id}
                     inDrawer={false}
                     onTimeEntriesUpdate={(entries) => {
-                        const grouped = entries.reduce((acc, entry) => {
-                            const key = `${entry.work_item_id}`;
-                            if (!acc[key]) {
-                                acc[key] = [];
-                            }
-                            acc[key].push(entry);
-                            return acc;
-                        }, {} as Record<string, ITimeEntryWithWorkItemString[]>);
-                        setGroupedTimeEntries(grouped);
-                        
-                        if (selectedCell) {
-                            const updatedEntries = entries.filter(entry => 
-                                entry.work_item_id === selectedCell.workItem.work_item_id &&
-                                (entry.work_date?.slice(0, 10) === selectedCell.date ||
-                                  parseISO(entry.start_time).toDateString() === parseLocalDate(selectedCell.date).toDateString())
-                            );
-                            setSelectedCell(prev => prev ? {
-                                ...prev,
-                                entries: updatedEntries
-                            } : null);
-                        }
+                        applyTimeEntryUpdates(entries as ITimeEntryWithWorkItem[]);
                     }}
                 />
             )}
 
-            {timeSheet.time_period && (
+            {timeSheet.time_period && isAddWorkItemDialogOpen && (
                 <AddWorkItemDialog
-                    isOpen={isAddWorkItemDialogOpen}
+                    isOpen={true}
                     onClose={() => {
                         setIsAddWorkItemDialogOpen(false);
                         setAddWorkItemDate(null);

@@ -20,7 +20,7 @@ describe('TimeSheetListView row interaction contract', () => {
 
     expect(source).toContain('id={`view-work-item-${entry.entry_id}`}');
     expect(source).toContain('onWorkItemClick(workItem);');
-    expect(source).toContain('title="View details"');
+    expect(source).toContain("defaultValue: 'View details'");
     expect(source).toContain('<ExternalLink className="h-4 w-4" />');
   });
 });

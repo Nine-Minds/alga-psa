@@ -125,7 +125,11 @@ describe('TimeSheetTable feedback markers', () => {
     onDeleteWorkItem: vi.fn(async () => undefined),
     onAddWorkItem: vi.fn(),
     onWorkItemClick: vi.fn(),
-    onQuickAddTimeEntry: vi.fn(async () => undefined),
+    activeQuickAdd: null,
+    onActivateQuickAdd: vi.fn(),
+    onQuickAddValueChange: vi.fn(),
+    onQuickAddCancel: vi.fn(),
+    onQuickAddSubmit: vi.fn(async () => undefined),
   };
 
   it('T016/T020: shows an X marker for unresolved feedback and preserves cell click behavior', () => {
