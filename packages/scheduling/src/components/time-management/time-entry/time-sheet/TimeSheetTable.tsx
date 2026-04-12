@@ -31,6 +31,13 @@ interface TimeSheetTableProps {
         defaultStartTime?: string;
         defaultEndTime?: string;
     }) => void;
+    onAddEntryForCell: (params: {
+        workItem: IExtendedWorkItem;
+        date: string;
+        entries: ITimeEntryWithWorkItemString[];
+        defaultStartTime?: string;
+        defaultEndTime?: string;
+    }) => void;
     onAddWorkItem: (date?: string) => void;
     onWorkItemClick: (workItem: IExtendedWorkItem) => void;
     onQuickAddTimeEntry?: (params: {
@@ -55,6 +62,7 @@ export function TimeSheetTable({
     isEditable,
     isLoading = false,
     onCellClick,
+    onAddEntryForCell,
     onAddWorkItem,
     onWorkItemClick,
     onDeleteWorkItem,
@@ -117,6 +125,49 @@ export function TimeSheetTable({
     const canGoBack = currentPage > 0;
     const canGoForward = currentPage < totalPages - 1;
     const hasMultiplePages = totalPages > 1;
+
+    const buildCellSelection = useCallback((
+        workItem: IExtendedWorkItem,
+        date: Date,
+        dayEntries: ITimeEntryWithWorkItemString[]
+    ) => {
+        let startTime: Date | undefined;
+        let endTime: Date | undefined;
+
+        if (workItem.type === 'ad_hoc' &&
+            'scheduled_start' in workItem &&
+            'scheduled_end' in workItem &&
+            workItem.scheduled_start &&
+            workItem.scheduled_end) {
+            startTime = typeof workItem.scheduled_start === 'string'
+                ? parseISO(workItem.scheduled_start)
+                : workItem.scheduled_start;
+            endTime = typeof workItem.scheduled_end === 'string'
+                ? parseISO(workItem.scheduled_end)
+                : workItem.scheduled_end;
+        }
+
+        if (!startTime && dayEntries.length > 0) {
+            const sortedEntries = [...dayEntries].sort((a, b) =>
+                parseISO(b.end_time).getTime() - parseISO(a.end_time).getTime()
+            );
+            startTime = parseISO(sortedEntries[0].end_time);
+            endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+        } else if (!startTime) {
+            startTime = new Date(date);
+            startTime.setHours(8, 0, 0, 0);
+            endTime = new Date(startTime);
+            endTime.setHours(9, 0, 0, 0);
+        }
+
+        return {
+            workItem,
+            date: formatISO(date),
+            entries: dayEntries,
+            defaultStartTime: startTime ? formatISO(startTime) : undefined,
+            defaultEndTime: endTime ? formatISO(endTime) : undefined,
+        };
+    }, []);
 
     // Get visible dates for current page
     const startIndex = currentPage * daysPerPage;
@@ -465,56 +516,40 @@ export function TimeSheetTable({
 	                                                        date: formatISO(date, { representation: 'date' })
                                                     })}
                                                     onMouseLeave={() => setHoveredCell(null)}
-                                                    onClick={() => {
-                                                        if (!canOpenCell) return;
-
-                                                        let startTime: Date | undefined;
-                                                        let endTime: Date | undefined;
-
-                                                        if (workItem.type === 'ad_hoc' &&
-                                                            'scheduled_start' in workItem &&
-                                                            'scheduled_end' in workItem &&
-                                                            workItem.scheduled_start &&
-                                                            workItem.scheduled_end) {
-                                                            startTime = typeof workItem.scheduled_start === 'string' ?
-                                                                parseISO(workItem.scheduled_start) :
-                                                                workItem.scheduled_start;
-                                                            endTime = typeof workItem.scheduled_end === 'string' ?
-                                                                parseISO(workItem.scheduled_end) :
-                                                                workItem.scheduled_end;
-                                                        }
-
-                                                        if (!startTime && dayEntries.length > 0) {
-                                                            const sortedEntries = [...dayEntries].sort((a, b) =>
-                                                                parseISO(b.end_time).getTime() - parseISO(a.end_time).getTime()
-                                                            );
-                                                            startTime = parseISO(sortedEntries[0].end_time);
-                                                            endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
-                                                        } else if (!startTime) {
-                                                            startTime = new Date(date);
-                                                            startTime.setHours(8, 0, 0, 0);
-                                                            endTime = new Date(startTime);
-                                                            endTime.setHours(9, 0, 0, 0);
-                                                        }
-
-                                                        onCellClick({
-                                                            workItem,
-                                                            date: formatISO(date),
-                                                            entries: dayEntries,
-                                                            defaultStartTime: startTime ? formatISO(startTime) : undefined,
-                                                            defaultEndTime: endTime ? formatISO(endTime) : undefined
-                                                        });
-                                                    }}
                                                 >
+                                                    <div className="relative h-full w-full p-1.5">
+                                                        {isEditable && (
+                                                            <button
+                                                                type="button"
+                                                                className={`absolute inset-1.5 rounded-xl transition-colors ${
+                                                                    dayEntries.length > 0
+                                                                        ? 'bg-white/70 hover:bg-white/90 dark:bg-gray-900/10 dark:hover:bg-gray-900/20'
+                                                                        : 'hover:bg-white/70 dark:hover:bg-gray-900/10'
+                                                                }`}
+                                                                data-automation-id={`time-cell-add-area-${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`}
+                                                                data-automation-type="time-entry-add-area"
+                                                                onClick={() => {
+                                                                    onAddEntryForCell(buildCellSelection(workItem, date, dayEntries));
+                                                                }}
+                                                                aria-label={`Add time entry for ${workItem.name} on ${formatISO(date, { representation: 'date' })}`}
+                                                            />
+                                                        )}
 		                                                    {dayEntries.length > 0 ? (
-		                                                        <div
-		                                                            className="relative rounded-lg p-2 text-xs h-full w-full flex items-center justify-center"
-		                                                            style={{
+		                                                        <button
+                                                                type="button"
+                                                                className="relative z-10 flex h-full w-full items-center justify-center rounded-xl p-3 text-xs shadow-sm transition-transform hover:scale-[1.01]"
+                                                                style={{
 		                                                                backgroundColor: colors.background,
 		                                                                borderColor: colors.border,
 	                                                                borderWidth: '1px',
 	                                                                borderStyle: 'solid'
 		                                                            }}
+                                                                data-automation-id={`time-cell-entry-${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`}
+                                                                data-automation-type="time-entry-summary"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    onCellClick(buildCellSelection(workItem, date, dayEntries));
+                                                                }}
 		                                                        >
 		                                                            {cellFeedbackState ? (
 		                                                                <span
@@ -537,12 +572,12 @@ export function TimeSheetTable({
 		                                                            <div className="font-medium text-gray-700 text-center">
 		                                                                {formatDuration(totalDuration)}
 		                                                            </div>
-	                                                        </div>
+	                                                        </button>
 	                                                    ) : (
-                                                        <div className="h-full w-full">
+                                                        <div className="h-full w-full rounded-xl">
                                                             {/* Empty cell - click anywhere to open full dialog */}
                                                             {isHovered && isEditable && (
-                                                                <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1 bg-white rounded shadow-sm border border-gray-200 px-1 py-1 z-10"
+                                                                <div className="absolute bottom-3 left-3 right-3 z-10 flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-1 py-1 shadow-sm"
                                                                      onClick={(e) => e.stopPropagation()}>
                                                                     <Input
                                                                         type="text"
@@ -737,8 +772,8 @@ export function TimeSheetTable({
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        )
-                                                    }
+                                                        )}
+                                                    </div>
                                                 </td>
                                             );
                                         })}

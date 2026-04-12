@@ -29,6 +29,13 @@ describe('reopen for edits (static)', () => {
     );
     expect(client).toContain('ConfirmationDialog');
     expect(client).toContain('reverseTimeSheetApproval');
+    expect(client).toContain('onTimeSheetChange={setTimeSheet}');
+
+    const timeSheet = readRepoFile(
+      'packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeSheet.tsx'
+    );
+    expect(timeSheet).toContain('onTimeSheetChange(updatedTimeSheet)');
+    expect(timeSheet).not.toContain('useState<ITimeSheetView>(initialTimeSheet)');
   });
 });
 

@@ -42,6 +42,7 @@ interface TimeEntryDialogProps {
   timeSheetId?: string;
   onTimeEntriesUpdate?: (entries: ITimeEntryWithWorkItemString[]) => void;
   inDrawer?: boolean;
+  startInAddMode?: boolean;
 }
 
 // Main dialog content component
@@ -62,6 +63,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     timeSheetId,
     onTimeEntriesUpdate,
     inDrawer,
+    startInAddMode = false,
   } = props;
   const {
     entries,
@@ -87,6 +89,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   const lastNoteInputRef = useRef<HTMLTextAreaElement>(null);
   const [shouldFocusNotes, setShouldFocusNotes] = useState(false);
   const hasSetInitialEditingIndex = useRef(false);
+  const hasTriggeredInitialAddMode = useRef(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; index: number | null }>({
     isOpen: false,
     index: null
@@ -170,6 +173,25 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     setEditingIndex(entries.length);
     setShouldFocusNotes(true);
   }, [isEditable, date, entries, workItem, defaultTaxRegion, updateEntry, setEditingIndex]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      hasTriggeredInitialAddMode.current = false;
+      return;
+    }
+
+    if (!startInAddMode || hasTriggeredInitialAddMode.current || !isEditable || isLoading) {
+      return;
+    }
+
+    if (!existingEntries || existingEntries.length === 0) {
+      hasTriggeredInitialAddMode.current = true;
+      return;
+    }
+
+    handleAddEntry();
+    hasTriggeredInitialAddMode.current = true;
+  }, [existingEntries, handleAddEntry, isEditable, isLoading, isOpen, startInAddMode]);
 
   const handleSaveEntry = useCallback(async (index: number, source: 'dialog' | 'entry' = 'entry') => {
     if (!isEditable) return;

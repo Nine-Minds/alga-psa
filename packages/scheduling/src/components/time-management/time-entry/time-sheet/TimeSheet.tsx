@@ -34,11 +34,13 @@ import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutoma
 import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
+import { resolveQuickAddBehavior } from './quickAddUtils';
 
 const TIMESHEET_VIEW_MODE_SETTING = 'timesheet_view_mode';
 
 interface TimeSheetProps {
     timeSheet: ITimeSheetView;
+    onTimeSheetChange: (timeSheet: ITimeSheetView) => void;
     onSaveTimeEntry: (timeEntry: ITimeEntry) => Promise<void>;
     isManager?: boolean;
     subjectName?: string;
@@ -120,8 +122,10 @@ function getDatesInPeriod(timePeriod: ITimePeriodView): Date[] {
     return dates;
 }
 
+
 export function TimeSheet({
-    timeSheet: initialTimeSheet,
+    timeSheet,
+    onTimeSheetChange,
     onSaveTimeEntry,
     isManager = false,
     subjectName,
@@ -139,7 +143,6 @@ export function TimeSheet({
     const [showIntervals, setShowIntervals] = useState(false);
     const [dateNavigator, setDateNavigator] = useState<TimeSheetDateNavigatorState | null>(null);
     const [isLoadingTimeSheetData, setIsLoadingTimeSheetData] = useState(true);
-    const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
     const [workItemsByType, setWorkItemsByType] = useState<Record<string, IExtendedWorkItem[]>>({});
     const [groupedTimeEntries, setGroupedTimeEntries] = useState<Record<string, ITimeEntryWithWorkItemString[]>>({});
     const [isAddWorkItemDialogOpen, setIsAddWorkItemDialogOpen] = useState(false);
@@ -173,6 +176,7 @@ export function TimeSheet({
         entries: ITimeEntryWithWorkItemString[];
         defaultStartTime?: string;
         defaultEndTime?: string;
+        startInAddMode?: boolean;
     } | null>(null);
 
     const initialDateObj = initialDate ? parseISO(initialDate) : undefined;
@@ -209,7 +213,7 @@ export function TimeSheet({
                     fetchTimeSheet(timeSheet.id)
                 ]);
 
-                setTimeSheet(updatedTimeSheet);
+                onTimeSheetChange(updatedTimeSheet);
 
                 let workItems = fetchedWorkItems;
                 if (initialWorkItem && !workItems.some(item => item.work_item_id === initialWorkItem.work_item_id)) {
@@ -287,7 +291,7 @@ export function TimeSheet({
         };
 
         loadData();
-    }, [timeSheet.id, initialWorkItem, initialDateObj, initialDuration]);
+    }, [initialDateObj, initialDuration, initialWorkItem, onTimeSheetChange, timeSheet.id]);
 
     const handleQuickAddTimeEntry = async (params: {
         workItem: IExtendedWorkItem;
@@ -296,16 +300,16 @@ export function TimeSheet({
         existingEntry?: ITimeEntryWithWorkItemString;
     }) => {
         const { workItem, date, durationInMinutes, existingEntry } = params;
-        
+
         const workDate = date.slice(0, 10);
 
         // Set start time to 8 AM on the selected date (local time)
         const startTime = parseLocalDate(workDate);
         startTime.setHours(8, 0, 0, 0);
-        
+
         // Calculate end time based on duration
         const endTime = new Date(startTime.getTime() + durationInMinutes * 60 * 1000);
-        
+
         // Get entries for this date to check for overlaps
         const entriesForDate = (groupedTimeEntries[workItem.work_item_id] || [])
             .filter(entry => {
@@ -313,17 +317,29 @@ export function TimeSheet({
                 if (entryWorkDate) return entryWorkDate === workDate;
                 return parseISO(entry.start_time).toDateString() === startTime.toDateString();
             });
-        
+
         // If there are existing entries for this date, start after the last one
         if (entriesForDate.length > 0) {
-            const sortedEntries = [...entriesForDate].sort((a, b) => 
+            const sortedEntries = [...entriesForDate].sort((a, b) =>
                 parseISO(b.end_time).getTime() - parseISO(a.end_time).getTime()
             );
             const lastEndTime = parseISO(sortedEntries[0].end_time);
             startTime.setTime(lastEndTime.getTime());
             endTime.setTime(startTime.getTime() + durationInMinutes * 60 * 1000);
         }
-        
+
+        const quickAddBehavior = resolveQuickAddBehavior(workItem, existingEntry);
+        if (quickAddBehavior.mode === 'dialog') {
+            setSelectedCell({
+                workItem,
+                date: workDate,
+                entries: entriesForDate,
+                defaultStartTime: formatISO(startTime),
+                defaultEndTime: formatISO(endTime),
+            });
+            return;
+        }
+
         // Create the time entry, copying settings from existing entry if available
         const timeEntry: ITimeEntry = {
             entry_id: '',
@@ -331,8 +347,8 @@ export function TimeSheet({
             user_id: timeSheet.user_id,
             start_time: formatISO(startTime),
             end_time: formatISO(endTime),
-            billable_duration: existingEntry ? 
-                (existingEntry.billable_duration > 0 ? durationInMinutes : 0) : 
+            billable_duration: existingEntry ?
+                (existingEntry.billable_duration > 0 ? durationInMinutes : 0) :
                 durationInMinutes, // Default to billable if no existing entry
             work_item_type: workItem.type,
             notes: existingEntry?.notes || '',
@@ -340,11 +356,11 @@ export function TimeSheet({
             created_at: formatISO(new Date()),
             updated_at: formatISO(new Date()),
             time_sheet_id: timeSheet.id,
-            service_id: existingEntry?.service_id || undefined,  // Use undefined instead of empty string
-            tax_region: existingEntry?.tax_region || undefined,  // Use undefined instead of empty string
-            contract_line_id: existingEntry?.contract_line_id || undefined  // Also handle contract_line_id
+            service_id: quickAddBehavior.serviceId,
+            tax_region: existingEntry?.tax_region || undefined,
+            contract_line_id: existingEntry?.contract_line_id || undefined
         };
-        
+
         await handleSaveTimeEntry(timeEntry);
     };
 
@@ -420,7 +436,7 @@ export function TimeSheet({
         try {
             await submitTimeSheet(timeSheet.id);
             const updatedTimeSheet = await fetchTimeSheet(timeSheet.id);
-            setTimeSheet(updatedTimeSheet);
+            onTimeSheetChange(updatedTimeSheet);
             if (onSubmitTimeSheet) {
                 await onSubmitTimeSheet();
             }
@@ -736,6 +752,10 @@ export function TimeSheet({
                     isEditable={effectiveIsEditable}
                     isLoading={isLoadingTimeSheetData || isViewModeLoading}
                     onCellClick={setSelectedCell}
+                    onAddEntryForCell={(params) => setSelectedCell({
+                        ...params,
+                        startInAddMode: params.entries.length > 0,
+                    })}
                     onAddWorkItem={openAddWorkItemDialog}
                     onQuickAddTimeEntry={handleQuickAddTimeEntry}
                     onDateNavigatorChange={setDateNavigator}
@@ -773,6 +793,7 @@ export function TimeSheet({
                     defaultStartTime={selectedCell.defaultStartTime ? parseISO(selectedCell.defaultStartTime) : undefined}
                     timeSheetId={timeSheet.id}
                     inDrawer={false}
+                    startInAddMode={selectedCell.startInAddMode}
                     onTimeEntriesUpdate={(entries) => {
                         const grouped = entries.reduce((acc, entry) => {
                             const key = `${entry.work_item_id}`;

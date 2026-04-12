@@ -123,6 +123,7 @@ describe('TimeSheetTable feedback markers', () => {
     },
     isEditable: false,
     onDeleteWorkItem: vi.fn(async () => undefined),
+    onAddEntryForCell: vi.fn(),
     onAddWorkItem: vi.fn(),
     onWorkItemClick: vi.fn(),
     onQuickAddTimeEntry: vi.fn(async () => undefined),
@@ -161,12 +162,12 @@ describe('TimeSheetTable feedback markers', () => {
     const marker = container.querySelector('[data-feedback-state="unresolved"]');
     expect(marker).not.toBeNull();
 
-    const cell = container.querySelector('[data-automation-id="time-cell-work-item-1-2026-03-10"]');
-    if (!cell) {
-      throw new Error('Expected time entry cell');
+    const entrySummary = container.querySelector('[data-automation-id="time-cell-entry-work-item-1-2026-03-10"]');
+    if (!entrySummary) {
+      throw new Error('Expected time entry summary');
     }
 
-    cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    entrySummary.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(onCellClick).toHaveBeenCalledTimes(1);
   });
 
@@ -217,5 +218,63 @@ describe('TimeSheetTable feedback markers', () => {
     });
 
     expect(container.querySelector('[data-feedback-state]')).toBeNull();
+  });
+
+  it('opens the existing entry when the entry summary is clicked', () => {
+    const onCellClick = vi.fn();
+    const onAddEntryForCell = vi.fn();
+
+    flushSync(() => {
+      root.render(
+        React.createElement(TimeSheetTable, {
+          ...commonProps,
+          isEditable: true,
+          groupedTimeEntries: {
+            'work-item-1': [createEntry()],
+          },
+          onCellClick,
+          onAddEntryForCell,
+        }),
+      );
+    });
+
+    const entrySummary = container.querySelector('[data-automation-id="time-cell-entry-work-item-1-2026-03-10"]');
+    if (!entrySummary) {
+      throw new Error('Expected time entry summary');
+    }
+
+    entrySummary.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(onCellClick).toHaveBeenCalledTimes(1);
+    expect(onAddEntryForCell).not.toHaveBeenCalled();
+  });
+
+  it('treats the surrounding cell area as add-entry space when editable', () => {
+    const onCellClick = vi.fn();
+    const onAddEntryForCell = vi.fn();
+
+    flushSync(() => {
+      root.render(
+        React.createElement(TimeSheetTable, {
+          ...commonProps,
+          isEditable: true,
+          groupedTimeEntries: {
+            'work-item-1': [createEntry()],
+          },
+          onCellClick,
+          onAddEntryForCell,
+        }),
+      );
+    });
+
+    const addArea = container.querySelector('[data-automation-id="time-cell-add-area-work-item-1-2026-03-10"]');
+    if (!addArea) {
+      throw new Error('Expected time entry add area');
+    }
+
+    addArea.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(onAddEntryForCell).toHaveBeenCalledTimes(1);
+    expect(onCellClick).not.toHaveBeenCalled();
   });
 });

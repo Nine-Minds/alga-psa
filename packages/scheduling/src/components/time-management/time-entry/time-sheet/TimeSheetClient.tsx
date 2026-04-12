@@ -40,6 +40,10 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
   const allowDelegatedEditing = delegatedTimeEntryEnabled && !delegatedTimeEntryLoading;
 
   useEffect(() => {
+    setTimeSheet(initialTimeSheet);
+  }, [initialTimeSheet]);
+
+  useEffect(() => {
     const loadSubjectUser = async () => {
       if (!isDelegated || !allowDelegatedEditing) {
         setSubjectUser(currentUser);
@@ -117,6 +121,7 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
     <>
       <TimeSheet
         timeSheet={timeSheet}
+        onTimeSheetChange={setTimeSheet}
         onSaveTimeEntry={handleSaveTimeEntry}
         isManager={isManager}
         subjectName={allowDelegatedEditing && subjectUser ? formatUserName(subjectUser) : undefined}
