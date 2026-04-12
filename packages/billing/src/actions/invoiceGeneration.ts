@@ -16,7 +16,8 @@ import {
   IInvoice,
   IRecurringDueSelectionInput,
   PreviewInvoiceResponse,
-  InvoiceViewModel
+  InvoiceViewModel,
+  DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
 } from '@alga-psa/types';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, BillingCycleType } from '@alga-psa/types';
@@ -59,6 +60,10 @@ import {
   POST_DROP_RECURRING_OBLIGATION_TYPES,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import { DUPLICATE_RECURRING_INVOICE_CODE } from './invoiceGeneration.constants';
+import {
+  detectRecurringApprovalBlockers,
+  formatApprovalBlockedReason,
+} from './recurringApprovalBlockers';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
 
@@ -762,6 +767,80 @@ function assertSameRecurringSelectionWindow(
     );
   }
   return first;
+}
+
+async function resolveApprovalBlockerRowsForSelectorInputs(params: {
+  knex: Knex;
+  tenant: string;
+  selectorInputs: IRecurringDueSelectionInput[];
+}): Promise<Array<{
+  executionIdentityKey: string;
+  clientId: string;
+  servicePeriodStart: ISO8601String;
+  servicePeriodEnd: ISO8601String;
+  contractLineId?: string | null;
+  scheduleKey?: string | null;
+}>> {
+  const canonicalSelection = assertSameRecurringSelectionWindow(params.selectorInputs);
+  const resolvedRows: Array<{
+    executionIdentityKey: string;
+    clientId: string;
+    servicePeriodStart: ISO8601String;
+    servicePeriodEnd: ISO8601String;
+    contractLineId?: string | null;
+    scheduleKey?: string | null;
+  }> = [];
+
+  const persistedWindowRows = await withTransaction(params.knex, async (trx: Knex.Transaction) =>
+    trx('recurring_service_periods as rsp')
+      .join('contract_lines as cl', function joinContractLines() {
+        this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
+          .andOn('cl.tenant', '=', 'rsp.tenant');
+      })
+      .join('contracts as ct', function joinContracts() {
+        this.on('ct.contract_id', '=', 'cl.contract_id')
+          .andOn('ct.tenant', '=', 'cl.tenant');
+      })
+      .where('rsp.tenant', params.tenant)
+      .where('ct.owner_client_id', canonicalSelection.clientId)
+      .where('rsp.invoice_window_start', canonicalSelection.windowStart)
+      .where('rsp.invoice_window_end', canonicalSelection.windowEnd)
+      .whereIn('rsp.obligation_type', ['contract_line', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE])
+      .whereIn('rsp.lifecycle_state', [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES])
+      .select('rsp.obligation_id', 'rsp.service_period_start', 'rsp.service_period_end', 'rsp.schedule_key'),
+  );
+
+  for (const row of persistedWindowRows) {
+    resolvedRows.push({
+      executionIdentityKey: canonicalSelection.executionWindow.identityKey,
+      clientId: canonicalSelection.clientId,
+      servicePeriodStart: row.service_period_start,
+      servicePeriodEnd: row.service_period_end,
+      contractLineId: row.obligation_id ?? null,
+      scheduleKey: row.schedule_key ?? null,
+    });
+  }
+
+  for (const selectorInput of params.selectorInputs) {
+    const executionWindow = selectorInput.executionWindow;
+    const unresolvedSelection = parseUnresolvedSelectionFromScheduleKey(
+      executionWindow.kind === 'client_cadence_window'
+        ? executionWindow.scheduleKey ?? null
+        : null,
+    );
+
+    if (unresolvedSelection?.chargeType === 'time') {
+      resolvedRows.push({
+        executionIdentityKey: canonicalSelection.executionWindow.identityKey,
+        clientId: selectorInput.clientId,
+        servicePeriodStart: selectorInput.windowStart,
+        servicePeriodEnd: selectorInput.windowEnd,
+        scheduleKey: executionWindow.scheduleKey ?? null,
+      });
+    }
+  }
+
+  return resolvedRows;
 }
 
 export async function calculateBillingForSelectionInputs(input: {
@@ -1602,6 +1681,27 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
         invoiceId: existingInvoice.invoiceId,
       });
     }
+  }
+
+  const approvalBlockerRows = await resolveApprovalBlockerRowsForSelectorInputs({
+    knex,
+    tenant,
+    selectorInputs: params.normalizedSelectorInputs,
+  });
+  const approvalBlockedCountsByExecutionIdentityKey = await detectRecurringApprovalBlockers({
+    knex,
+    tenant,
+    rows: approvalBlockerRows,
+  });
+  const approvalBlockedEntryCount = Array.from(approvalBlockedCountsByExecutionIdentityKey.values()).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
+  if (approvalBlockedEntryCount > 0) {
+    throw withRecurringWindowErrorContext(
+      new Error(formatApprovalBlockedReason(approvalBlockedEntryCount)),
+      normalizedSelectorInput,
+    );
   }
 
   const billingEngine = new BillingEngine();

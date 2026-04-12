@@ -190,6 +190,13 @@ const getTodayDate = (): Date => {
 const buildServicePeriodRepairHref = (scheduleKey: string) =>
   `/msp/billing?tab=service-periods&scheduleKey=${encodeURIComponent(scheduleKey)}`;
 
+const buildReviewApprovalsHref = (input: {
+  clientId: string;
+  windowStart: string;
+  windowEnd: string;
+}) =>
+  `/msp/time-sheet-approvals?clientId=${encodeURIComponent(input.clientId)}&windowStart=${encodeURIComponent(input.windowStart)}&windowEnd=${encodeURIComponent(input.windowEnd)}`;
+
 const isInvoiceDraftStatus = (status: string | null | undefined): boolean =>
   (status ?? '').toLowerCase() === 'draft';
 
@@ -500,10 +507,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   // For server-side pagination, filteredPeriods is just periods
   const filteredPeriods = periods;
   const parentGroups = buildRecurringInvoiceParentGroups(filteredPeriods);
-  const readyRows = parentGroups.flatMap((group) => group.childExecutionRows);
+  const needsApprovalParentGroups = parentGroups.filter(
+    (group) => (group.candidate.approvalBlockedEntryCount ?? 0) > 0,
+  );
+  const readyParentGroups = parentGroups.filter(
+    (group) => (group.candidate.approvalBlockedEntryCount ?? 0) === 0,
+  );
+  const readyRows = readyParentGroups.flatMap((group) => group.childExecutionRows);
   const childSelectionKeyForMember = (member: RecurringInvoiceParentGroup['childExecutionRows'][number]) =>
     `child-selection:${member.executionIdentityKey}`;
-  const selectedParentGroups = parentGroups.filter((group) =>
+  const selectedParentGroups = readyParentGroups.filter((group) =>
     selectedTargets.has(group.parentSummary.parentSelectionKey),
   );
   const selectedParentSelectionKeys = new Set(
@@ -546,7 +559,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     })),
     ...selectedChildRows
       .filter((member) => {
-        const parentGroup = parentGroups.find((group) =>
+        const parentGroup = readyParentGroups.find((group) =>
           group.childExecutionRows.some((groupMember) => groupMember.executionIdentityKey === member.executionIdentityKey),
         );
         return !parentGroup || !selectedParentSelectionKeys.has(parentGroup.parentSummary.parentSelectionKey);
@@ -575,8 +588,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
     return selectableChildren.every((member) => selectedTargets.has(childSelectionKeyForMember(member)));
   };
-  const allGroupsFullySelected = parentGroups.length > 0 && parentGroups.every((group) => isGroupFullySelected(group));
-  const hasAnyGroupSelection = parentGroups.some((group) => {
+  const allGroupsFullySelected = readyParentGroups.length > 0 && readyParentGroups.every((group) => isGroupFullySelected(group));
+  const hasAnyGroupSelection = readyParentGroups.some((group) => {
     if (selectedTargets.has(group.parentSummary.parentSelectionKey)) {
       return true;
     }
@@ -645,7 +658,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
       const nextSelections = new Set<string>();
-      for (const group of parentGroups) {
+      for (const group of readyParentGroups) {
         const selectableChildren = group.childExecutionRows.filter((member) => member.canGenerate);
         if (selectableChildren.length === 0) {
           continue;
@@ -1109,6 +1122,49 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       ) : (
       <div className="space-y-8">
         <div>
+          {needsApprovalParentGroups.length > 0 ? (
+            <div className="mb-6 rounded-md border border-warning/40 bg-warning/5 p-4" data-testid="needs-approval-section">
+              <h2 className="text-lg font-semibold">Needs Approval</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                These recurring windows contain billable time that is not approved yet. The entire invoice window is blocked until approvals are complete.
+              </p>
+              <div className="mt-4 space-y-3">
+                {needsApprovalParentGroups.map((group) => {
+                  const blockedEntryCount = group.candidate.approvalBlockedEntryCount ?? 0;
+                  const blockedEntryLabel = blockedEntryCount === 1 ? 'entry' : 'entries';
+                  return (
+                    <div
+                      key={`needs-approval-${group.parentSummary.candidateKey}`}
+                      className="rounded-md border border-warning/30 bg-background/90 p-3"
+                      data-testid={`needs-approval-row-${group.parentSummary.candidateKey}`}
+                    >
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div className="space-y-1 text-sm">
+                          <div className="font-medium">{group.parentSummary.clientName ?? 'Unknown client'}</div>
+                          <div>Service period: {group.parentSummary.servicePeriodLabel}</div>
+                          <div>Invoice window: {group.parentSummary.windowLabel}</div>
+                          <div className="text-warning">
+                            {blockedEntryCount} unapproved {blockedEntryLabel}
+                          </div>
+                        </div>
+                        <a
+                          href={buildReviewApprovalsHref({
+                            clientId: group.candidate.clientId,
+                            windowStart: group.candidate.windowStart,
+                            windowEnd: group.candidate.windowEnd,
+                          })}
+                          className="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
+                        >
+                          Review Approvals
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex justify-between items-center mb-4">
             <div>
               <h2 className="text-lg font-semibold">Ready to Invoice</h2>
@@ -1258,7 +1314,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <DataTable
             id="automatic-invoices-table"
             key={`${currentReadyPage}-${pageSize}`}
-            data={parentGroups}
+            data={readyParentGroups}
             // Add onRowClick prop - implementation depends on DataTable component
             // Assuming it takes a function like this:
             // Temporarily disabled invoice preview on row click
@@ -1276,7 +1332,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       checked={allGroupsFullySelected}
                       indeterminate={!allGroupsFullySelected && hasAnyGroupSelection}
                       onChange={handleSelectAll}
-                      disabled={parentGroups.length === 0}
+                      disabled={readyParentGroups.length === 0}
                     />
                   </div>
                 ),

@@ -506,6 +506,7 @@ export interface IRecurringDueWorkRow {
   dueState: RecurringDueWorkState;
   isEarly: boolean;
   canGenerate: boolean;
+  approvalBlockedEntryCount?: number;
   clientId: string;
   clientName?: string | null;
   /**
@@ -564,6 +565,8 @@ export interface IRecurringDueWorkInvoiceCandidate {
   memberCount: number;
   canGenerate: boolean;
   blockedReason?: string | null;
+  approvalBlockedEntryCount?: number;
+  hasApprovalBlockers?: boolean;
   attributionSummary?: IRecurringDueWorkCandidateAttributionSummary;
   members: IRecurringDueWorkRow[];
 }

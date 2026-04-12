@@ -42,6 +42,11 @@ import {
     CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import { BillingEngine } from '../lib/billing/billingEngine';
+import {
+    detectRecurringApprovalBlockers,
+    formatApprovalBlockedReason,
+    type RecurringApprovalBlockerCounts,
+} from './recurringApprovalBlockers';
 
 // Types for paginated billing periods
 export interface BillingPeriodWithMeta extends IClientContractLineCycle {
@@ -1036,6 +1041,66 @@ function applyClientCadenceMaterializationGapBlocks(
     });
 }
 
+function applyRecurringApprovalBlocksToInvoiceCandidates(
+    invoiceCandidates: IRecurringDueWorkInvoiceCandidate[],
+    blockedEntryCountsByExecutionIdentityKey: RecurringApprovalBlockerCounts,
+): IRecurringDueWorkInvoiceCandidate[] {
+    if (invoiceCandidates.length === 0 || blockedEntryCountsByExecutionIdentityKey.size === 0) {
+        return invoiceCandidates.map((candidate) => ({
+            ...candidate,
+            approvalBlockedEntryCount: 0,
+            hasApprovalBlockers: false,
+            members: candidate.members.map((member) => ({
+                ...member,
+                approvalBlockedEntryCount: member.approvalBlockedEntryCount ?? 0,
+            })),
+        }));
+    }
+
+    return invoiceCandidates.map((candidate) => {
+        const members = candidate.members.map((member) => {
+            const blockedEntryCount =
+                blockedEntryCountsByExecutionIdentityKey.get(member.executionIdentityKey) ?? 0;
+
+            if (blockedEntryCount <= 0) {
+                return {
+                    ...member,
+                    approvalBlockedEntryCount: 0,
+                };
+            }
+
+            return {
+                ...member,
+                canGenerate: false,
+                blockedReason: formatApprovalBlockedReason(blockedEntryCount),
+                approvalBlockedEntryCount: blockedEntryCount,
+            };
+        });
+        const approvalBlockedEntryCount = members.reduce(
+            (sum, member) => sum + (member.approvalBlockedEntryCount ?? 0),
+            0,
+        );
+
+        if (approvalBlockedEntryCount <= 0) {
+            return {
+                ...candidate,
+                members,
+                approvalBlockedEntryCount: 0,
+                hasApprovalBlockers: false,
+            };
+        }
+
+        return {
+            ...candidate,
+            members,
+            canGenerate: false,
+            blockedReason: formatApprovalBlockedReason(approvalBlockedEntryCount),
+            approvalBlockedEntryCount,
+            hasApprovalBlockers: true,
+        };
+    });
+}
+
 // Type Guards
 export async function isFixedPriceCharge(charge: IBillingCharge): Promise<boolean> {
     return charge.type === 'fixed';
@@ -1344,12 +1409,28 @@ export const getAvailableRecurringDueWork = withAuth(async (
             invoiceCandidates,
             materializationGaps,
         );
-        const total = blockedInvoiceCandidates.length;
+        const approvalBlockedEntryCountsByExecutionIdentityKey = await detectRecurringApprovalBlockers({
+            knex,
+            tenant,
+            rows: [...readyPersistedRows, ...unresolvedNonContractRows].map((row) => ({
+                executionIdentityKey: row.executionIdentityKey,
+                clientId: row.clientId,
+                servicePeriodStart: row.servicePeriodStart,
+                servicePeriodEnd: row.servicePeriodEnd,
+                contractLineId: row.contractLineId ?? null,
+                scheduleKey: row.scheduleKey ?? null,
+            })),
+        });
+        const approvalBlockedInvoiceCandidates = applyRecurringApprovalBlocksToInvoiceCandidates(
+            blockedInvoiceCandidates,
+            approvalBlockedEntryCountsByExecutionIdentityKey,
+        );
+        const total = approvalBlockedInvoiceCandidates.length;
         const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
         const offset = (page - 1) * pageSize;
 
         return {
-            invoiceCandidates: blockedInvoiceCandidates.slice(offset, offset + pageSize),
+            invoiceCandidates: approvalBlockedInvoiceCandidates.slice(offset, offset + pageSize),
             materializationGaps,
             total,
             page,
