@@ -893,6 +893,28 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     await expect(startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: { bar: 123 } })).rejects.toMatchObject({ status: 400 });
   });
 
+  it('Start run strips implicit tenantId for manual runs when the workflow schema does not declare it. Mocks: non-target dependencies.', async () => {
+    const registry = getSchemaRegistry();
+    const strictEmptyRef = `payload.StrictEmpty.${Date.now()}`;
+    registry.register(strictEmptyRef, z.object({}).strict());
+    const workflowId = await createDraftWorkflow({
+      steps: [stateSetStep('state-1', 'READY')],
+      payloadSchemaRef: strictEmptyRef
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const runResult = await startWorkflowRunAction({
+      workflowId,
+      workflowVersion: 1,
+      payload: { tenantId: tenantId }
+    });
+    const run = await WorkflowRunModelV2.getById(db, runResult.runId);
+
+    expect(run?.status).not.toBe('FAILED');
+    expect(run?.input_json ?? {}).toEqual({});
+    expect(run?.error_json ?? null).toBeNull();
+  });
+
   it('Start run blocks execution when published workflow fails validation. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: 'ok' } })]

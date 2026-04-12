@@ -144,6 +144,51 @@ const resolveSchemaRef = (schema: JsonSchema, root: JsonSchema): JsonSchema => {
   return current && typeof current === 'object' ? (current as JsonSchema) : schema;
 };
 
+const IMPLICIT_RUN_CONTEXT_FIELD_KEYS = new Set(['tenantId']);
+
+const schemaDeclaresTopLevelProperty = (
+  schema: JsonSchema | null | undefined,
+  propertyName: string,
+  root: JsonSchema | null | undefined = schema
+): boolean => {
+  if (!schema || !root) return false;
+
+  const resolved = resolveSchemaRef(schema, root);
+  if (resolved.properties && Object.prototype.hasOwnProperty.call(resolved.properties, propertyName)) {
+    return true;
+  }
+
+  const variants = [...(resolved.anyOf ?? []), ...(resolved.oneOf ?? [])];
+  return variants.some((variant) => schemaDeclaresTopLevelProperty(variant, propertyName, root));
+};
+
+const shouldInjectImplicitTenantId = (schema: JsonSchema | null | undefined, tenantId?: string | null): boolean => (
+  Boolean(tenantId && schemaDeclaresTopLevelProperty(schema, 'tenantId'))
+);
+
+const stripImplicitRunContextFields = (payload: Record<string, unknown>): Record<string, unknown> => {
+  const next = { ...payload };
+  for (const key of IMPLICIT_RUN_CONTEXT_FIELD_KEYS) {
+    delete next[key];
+  }
+  return next;
+};
+
+const applyImplicitRunContextFields = (
+  payload: Record<string, unknown>,
+  options: { tenantId?: string | null; schema?: JsonSchema | null }
+): Record<string, unknown> => {
+  const next = stripImplicitRunContextFields(payload);
+  if (options.tenantId && shouldInjectImplicitTenantId(options.schema, options.tenantId)) {
+    next.tenantId = options.tenantId;
+  }
+  return next;
+};
+
+const isImplicitRunContextFieldPath = (path: Array<string | number>): boolean => (
+  path.length === 1 && typeof path[0] === 'string' && IMPLICIT_RUN_CONTEXT_FIELD_KEYS.has(path[0])
+);
+
 const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unknown => {
   const resolved = resolveSchemaRef(schema, root);
   if (resolved.default !== undefined) {
@@ -302,31 +347,6 @@ const pathToString = (path: Array<string | number>): string =>
   );
 
 type ValidationError = { path: string; message: string };
-
-const IMPLICIT_RUN_CONTEXT_FIELD_KEYS = new Set(['tenantId']);
-
-const stripImplicitRunContextFields = (payload: Record<string, unknown>): Record<string, unknown> => {
-  const next = { ...payload };
-  for (const key of IMPLICIT_RUN_CONTEXT_FIELD_KEYS) {
-    delete next[key];
-  }
-  return next;
-};
-
-const applyImplicitRunContextFields = (
-  payload: Record<string, unknown>,
-  options: { tenantId?: string | null }
-): Record<string, unknown> => {
-  const next = stripImplicitRunContextFields(payload);
-  if (options.tenantId) {
-    next.tenantId = options.tenantId;
-  }
-  return next;
-};
-
-const isImplicitRunContextFieldPath = (path: Array<string | number>): boolean => (
-  path.length === 1 && typeof path[0] === 'string' && IMPLICIT_RUN_CONTEXT_FIELD_KEYS.has(path[0])
-);
 
 const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
   if (!schema?.type) return undefined;
@@ -875,7 +895,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     })() : formValue;
     const effectiveValue = applyImplicitRunContextFields(
       isObjectRecord(value) ? value : {},
-      { tenantId: currentTenantId }
+      { tenantId: currentTenantId, schema: activeSchema }
     );
     const errors = validateAgainstSchema(activeSchema, effectiveValue, activeSchema)
       .filter((error) => !IMPLICIT_RUN_CONTEXT_FIELD_KEYS.has(error.path));
@@ -1037,7 +1057,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     try {
       payload = applyImplicitRunContextFields(
         mode === 'json' ? JSON.parse(runPayloadText || '{}') : (formValue as Record<string, unknown>),
-        { tenantId: currentTenantId }
+        { tenantId: currentTenantId, schema: activeSchema }
       );
     } catch (err) {
       setRunPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
