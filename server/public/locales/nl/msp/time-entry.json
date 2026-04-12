@@ -202,6 +202,7 @@
       "billable": "Factureerbaar",
       "nonBillable": "Niet-factureerbaar",
       "workItem": "Werkitem",
+      "service": "Service",
       "duration": "Duur",
       "notes": "Opmerkingen",
       "entryChangeSuggestion": "Suggestie voor wijziging van invoer",
