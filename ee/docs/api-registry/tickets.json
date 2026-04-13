@@ -8,7 +8,7 @@
       "metadata": {
         "displayName": "List Tickets",
         "summary": "List tickets",
-        "description": "Returns a paginated list of tickets for the current tenant. Use GET /api/v1/boards and GET /api/v1/statuses for board/status lookups instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
+        "description": "Returns a paginated list of tickets for the current tenant. Supports filtering by board, status, priority, client, assignee, category, open/closed/overdue flags, and entered/closed date ranges — see the parameters list for all available filters. For aggregate counts (e.g. how many tickets are open or high priority), prefer GET /api/v1/tickets/stats or set limit=1 and read pagination.total from the response. Use GET /api/v1/boards, GET /api/v1/statuses, and GET /api/v1/priorities for lookup data instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
         "rbacResource": "ticket",
         "approvalRequired": false,
         "parameters": [
@@ -23,7 +23,7 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "Number of tickets per page (max 100, default 25).",
+            "description": "Number of tickets per page (max 100, default 25). Set limit=1 when you only need pagination.total for an aggregate count.",
             "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
           },
           {
@@ -34,18 +34,67 @@
             "schema": { "type": "string", "format": "uuid" }
           },
           {
+            "name": "board_name",
+            "in": "query",
+            "required": false,
+            "description": "Filter by board display name (case-sensitive exact match). Prefer board_id when you already have a UUID.",
+            "schema": { "type": "string" }
+          },
+          {
             "name": "status_id",
             "in": "query",
             "required": false,
-            "description": "Filter by ticket status.",
+            "description": "Filter by a single ticket status UUID.",
             "schema": { "type": "string", "format": "uuid" }
           },
           {
-            "name": "assigned_to",
+            "name": "status_ids",
             "in": "query",
             "required": false,
-            "description": "Filter tickets assigned to a specific technician.",
+            "description": "Filter by multiple status UUIDs as a comma-separated list (for example status_ids=uuid1,uuid2). Useful for matching several open or closed statuses at once.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "status_name",
+            "in": "query",
+            "required": false,
+            "description": "Filter by status display name (case-sensitive exact match). Prefer status_id/status_ids when you already have UUIDs.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "priority_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter by ticket priority UUID. Call GET /api/v1/priorities to discover priority UUIDs.",
             "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "priority_name",
+            "in": "query",
+            "required": false,
+            "description": "Filter by priority display name (case-sensitive exact match). Use this when the user asks for tickets of a specific priority like \"High\", \"Highest\", \"Medium\", or \"Low\" and you do not want to look up a UUID first.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter by ticket category UUID.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "subcategory_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter by ticket subcategory UUID.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "category_name",
+            "in": "query",
+            "required": false,
+            "description": "Filter by category display name (case-sensitive exact match).",
+            "schema": { "type": "string" }
           },
           {
             "name": "client_id",
@@ -55,11 +104,116 @@
             "schema": { "type": "string", "format": "uuid" }
           },
           {
+            "name": "client_name",
+            "in": "query",
+            "required": false,
+            "description": "Filter by client display name (case-sensitive exact match). Prefer client_id when you already have a UUID.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "location_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter by client location UUID.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "contact_name_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter by primary contact UUID on the ticket.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "contact_name",
+            "in": "query",
+            "required": false,
+            "description": "Filter by contact display name (case-sensitive exact match).",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "assigned_to",
+            "in": "query",
+            "required": false,
+            "description": "Filter tickets assigned to a specific technician (user UUID).",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "entered_by",
+            "in": "query",
+            "required": false,
+            "description": "Filter tickets created by a specific user UUID.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "title",
+            "in": "query",
+            "required": false,
+            "description": "Filter by ticket title (substring match).",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "ticket_number",
+            "in": "query",
+            "required": false,
+            "description": "Filter by ticket number (for example alga0001748).",
+            "schema": { "type": "string" }
+          },
+          {
             "name": "is_open",
             "in": "query",
             "required": false,
             "description": "When true, only open tickets are returned.",
             "schema": { "type": "boolean" }
+          },
+          {
+            "name": "is_closed",
+            "in": "query",
+            "required": false,
+            "description": "When true, only closed tickets are returned.",
+            "schema": { "type": "boolean" }
+          },
+          {
+            "name": "is_overdue",
+            "in": "query",
+            "required": false,
+            "description": "When true, only tickets past their due/SLA date are returned.",
+            "schema": { "type": "boolean" }
+          },
+          {
+            "name": "has_assignment",
+            "in": "query",
+            "required": false,
+            "description": "When true, only tickets that have an assignee are returned; when false, only unassigned tickets.",
+            "schema": { "type": "boolean" }
+          },
+          {
+            "name": "entered_from",
+            "in": "query",
+            "required": false,
+            "description": "Lower bound on entered_at as an ISO-8601 datetime (inclusive).",
+            "schema": { "type": "string", "format": "date-time" }
+          },
+          {
+            "name": "entered_to",
+            "in": "query",
+            "required": false,
+            "description": "Upper bound on entered_at as an ISO-8601 datetime (inclusive).",
+            "schema": { "type": "string", "format": "date-time" }
+          },
+          {
+            "name": "closed_from",
+            "in": "query",
+            "required": false,
+            "description": "Lower bound on closed_at as an ISO-8601 datetime (inclusive).",
+            "schema": { "type": "string", "format": "date-time" }
+          },
+          {
+            "name": "closed_to",
+            "in": "query",
+            "required": false,
+            "description": "Upper bound on closed_at as an ISO-8601 datetime (inclusive).",
+            "schema": { "type": "string", "format": "date-time" }
           },
           {
             "name": "fields",
@@ -130,6 +284,99 @@
               }
             },
             "notes": "Inspect the response payload to reuse board_id, status_id, priority_id, and assigned_to values that are known to be valid. Prefer fields=... to keep payloads compact, but only use the documented field names exactly as written. If you are unsure which field names are valid, omit fields instead of guessing. If you only need a single set of identifiers, take the first ticket in the data array that has non-null board_id, status_id, and priority_id and reuse those UUIDs for the new ticket."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/stats"
+      },
+      "metadata": {
+        "displayName": "Get Ticket Stats",
+        "summary": "Aggregate ticket counts and metrics",
+        "description": "Returns pre-computed ticket counts and metrics for the current tenant in a single call. Use this whenever the user asks aggregate questions like \"how many tickets are open\", \"how many high priority tickets\", \"how many overdue tickets\", or \"how many tickets per board/status/priority/category\". This endpoint returns totals grouped by status, priority, category, and board, plus counts of open/closed/overdue/unassigned tickets and tickets created today/this week/this month. Prefer this over paginating GET /api/v1/tickets and counting rows yourself.",
+        "rbacResource": "ticket",
+        "approvalRequired": false,
+        "parameters": [],
+        "responseBodySchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "Ticket statistics for the current tenant. Priority names (e.g. \"High\", \"Medium\") are the keys in tickets_by_priority and map directly to the priority_name values used by GET /api/v1/tickets.",
+              "properties": {
+                "total_tickets": {
+                  "type": "integer",
+                  "description": "Total number of tickets in the tenant, regardless of status."
+                },
+                "open_tickets": {
+                  "type": "integer",
+                  "description": "Number of tickets that are currently open (status.is_closed = false)."
+                },
+                "closed_tickets": {
+                  "type": "integer",
+                  "description": "Number of tickets whose status is marked closed."
+                },
+                "overdue_tickets": {
+                  "type": "integer",
+                  "description": "Number of open tickets past their due/SLA date."
+                },
+                "unassigned_tickets": {
+                  "type": "integer",
+                  "description": "Number of open tickets with no assignee."
+                },
+                "tickets_by_status": {
+                  "type": "object",
+                  "additionalProperties": { "type": "integer" },
+                  "description": "Map of status display name to ticket count, for example {\"New\": 42, \"In Progress\": 18, \"Closed\": 140}."
+                },
+                "tickets_by_priority": {
+                  "type": "object",
+                  "additionalProperties": { "type": "integer" },
+                  "description": "Map of priority display name to ticket count, for example {\"High\": 12, \"Highest\": 3, \"Medium\": 55, \"Low\": 20}. These keys are the same strings accepted by the priority_name filter on GET /api/v1/tickets."
+                },
+                "tickets_by_category": {
+                  "type": "object",
+                  "additionalProperties": { "type": "integer" },
+                  "description": "Map of category display name to ticket count."
+                },
+                "tickets_by_board": {
+                  "type": "object",
+                  "additionalProperties": { "type": "integer" },
+                  "description": "Map of board display name to ticket count."
+                },
+                "average_resolution_time": {
+                  "type": ["number", "null"],
+                  "description": "Average resolution time in hours across closed tickets, or null if there are no closed tickets."
+                },
+                "tickets_created_today": { "type": "integer" },
+                "tickets_created_this_week": { "type": "integer" },
+                "tickets_created_this_month": { "type": "integer" }
+              },
+              "required": [
+                "total_tickets",
+                "open_tickets",
+                "closed_tickets",
+                "overdue_tickets",
+                "unassigned_tickets",
+                "tickets_by_status",
+                "tickets_by_priority",
+                "tickets_by_category",
+                "tickets_by_board",
+                "tickets_created_today",
+                "tickets_created_this_week",
+                "tickets_created_this_month"
+              ]
+            }
+          }
+        },
+        "examples": [
+          {
+            "name": "Answer \"how many high priority tickets are open\" in one call",
+            "request": {},
+            "notes": "Call this endpoint and read data.tickets_by_priority[\"High\"] for the count of high-priority tickets. Note the map covers all tickets regardless of status — if the user asks specifically about OPEN high-priority tickets and you need to scope by status, fall back to GET /api/v1/tickets?is_open=true&priority_name=High&limit=1 and read pagination.total from that response."
           }
         ]
       }
