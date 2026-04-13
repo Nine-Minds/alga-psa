@@ -12879,15 +12879,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "is_overdue",
-        "in": "query",
-        "required": false,
-        "description": "When true, only tickets past their due/SLA date are returned.",
-        "schema": {
-          "type": "boolean"
-        }
-      },
-      {
         "name": "has_assignment",
         "in": "query",
         "required": false,
