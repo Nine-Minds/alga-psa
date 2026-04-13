@@ -1,0 +1,136 @@
+[
+  {
+    "id": "T001",
+    "description": "Parity test: Temporal-native expression evaluation accepts the same allowed functions and source normalization as the canonical workflow-expression contract, including `nowIso()`.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F033"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Parity test: Temporal-native expression evaluation rejects the same disallowed functions and enforces the same serialization/output guardrails as the canonical workflow-expression contract.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F033"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Determinism test: a Temporal workflow using canonical workflow expressions replays successfully without expression-contract drift.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F033"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "API/unit test: requesting resume on a Temporal run returns an explicit unsupported-action error and does not mutate waits, run status, or invoke `WorkflowRuntimeV2.executeRun(...)`.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F014",
+      "F017",
+      "F034"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "API/unit test: requesting retry on a Temporal run returns an explicit unsupported-action error and does not mutate run state or invoke `WorkflowRuntimeV2.executeRun(...)`.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014",
+      "F017",
+      "F034"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "API/unit test: canceling a Temporal run only projects canceled state after the Temporal cancel path succeeds, and a cancel failure does not silently leave the DB projection canceled.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F035"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Event-ingress test: a stream-ingested workflow event with explicit correlation routes candidate waits by tenant + event name + resolved correlation instead of `event_id`.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F021",
+      "F022",
+      "F023",
+      "F027",
+      "F036"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Event-ingress test: a stream-ingested workflow event without explicit correlation uses configured derivation to route candidate Temporal waits correctly.",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F021",
+      "F022",
+      "F023",
+      "F024",
+      "F036"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Event-ingress guard test: when correlation cannot be resolved where required, the event is audited clearly and does not false-match candidate waits.",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021",
+      "F036"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "API/ingress alignment test: API-submitted workflow events follow the same resolved-correlation contract as stream-ingested events and resume Temporal waits only through signals.",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F025",
+      "F026",
+      "F028",
+      "F036"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Cutover regression test: no supported Temporal run-control or event-ingress path invokes `WorkflowRuntimeV2.executeRun(...)` for a Temporal-backed Workflow Runtime V2 run.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F029",
+      "F030",
+      "F034"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Projection test: run, wait, and event projections remain accurate enough to explain unsupported operator actions and resolved event-correlation routing after the authority cleanup.",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F032",
+      "F037"
+    ]
+  }
+]

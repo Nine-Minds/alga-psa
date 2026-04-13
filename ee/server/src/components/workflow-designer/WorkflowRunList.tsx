@@ -731,7 +731,16 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <span>{run.workflow_name ?? run.workflow_id}</span>
+                      {run.workflow_id ? (
+                        <Link
+                          className="w-fit text-primary-600 hover:text-primary-700 hover:underline"
+                          href={`/msp/workflow-editor/${encodeURIComponent(run.workflow_id)}`}
+                        >
+                          {run.workflow_name ?? run.workflow_id}
+                        </Link>
+                      ) : (
+                        <span>{run.workflow_name ?? run.workflow_id}</span>
+                      )}
                       <div className="flex flex-wrap items-center gap-1">
                         <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-[10px]">
                           {run.trigger_type

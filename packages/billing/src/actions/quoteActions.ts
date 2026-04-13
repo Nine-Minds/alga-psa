@@ -505,6 +505,8 @@ export const createQuoteFromTemplate = withAuth(async (
         applies_to_item_id: templateItem.applies_to_item_id ?? null,
         applies_to_service_id: templateItem.applies_to_service_id ?? null,
         is_taxable: templateItem.is_taxable ?? true,
+        cost: templateItem.cost ?? null,
+        cost_currency: templateItem.cost_currency ?? null,
         created_by: actorUserId,
       });
     }
@@ -584,6 +586,8 @@ export const duplicateQuote = withAuth(async (
         is_taxable: sourceItem.is_taxable ?? true,
         tax_region: sourceItem.tax_region ?? null,
         tax_rate: sourceItem.tax_rate ?? null,
+        cost: sourceItem.cost ?? null,
+        cost_currency: sourceItem.cost_currency ?? null,
         created_by: actorUserId,
       });
     }
@@ -671,6 +675,8 @@ export const saveQuoteAsTemplate = withAuth(async (
         is_taxable: sourceItem.is_taxable ?? true,
         tax_region: sourceItem.tax_region ?? null,
         tax_rate: sourceItem.tax_rate ?? null,
+        cost: sourceItem.cost ?? null,
+        cost_currency: sourceItem.cost_currency ?? null,
         created_by: actorUserId,
       });
     }

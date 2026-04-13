@@ -56,8 +56,8 @@
     "deletePhase": "55555",
     "cancel": "55555",
     "save": "55555",
-    "taskCount": "{{count}} 55555",
-    "taskCount_other": "{{count}} 55555",
+    "taskCount": "55555 {{count}} 55555",
+    "taskCount_other": "55555 {{count}} 55555",
     "startLabel": "55555",
     "dueLabel": "55555",
     "notSet": "55555"

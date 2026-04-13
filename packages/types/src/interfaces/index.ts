@@ -45,6 +45,7 @@ export * from './microsoft365-diagnostics.interfaces';
 export * from './payment.interfaces';
 export * from './phaseTaskImport.interfaces';
 export * from './project.interfaces';
+export * from './ticketImport.interfaces';
 export * from './projectTaskComment.interface';
 export * from './projectTemplate.interfaces';
 export * from './quote.interfaces';

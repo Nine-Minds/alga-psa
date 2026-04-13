@@ -12,7 +12,8 @@ describe('time entry service validation contract', () => {
     const formSource = readSource('../src/components/time-management/time-entry/time-sheet/TimeEntryEditForm.tsx');
 
     expect(dialogSource).toContain("toast.error('Please select a service before saving time entries');");
-    expect(formSource).toContain("service: 'Service is required for time entries'");
-    expect(formSource).toContain('Service <span className="text-red-500">*</span>');
+    expect(formSource).toContain("defaultValue: 'Service is required for time entries'");
+    expect(formSource).toContain("defaultValue: 'Service'");
+    expect(formSource).toContain('<span className="text-red-500">*</span>');
   });
 });

@@ -1,0 +1,45 @@
+[
+  {"id": "T001", "description": "Lang-pack validation: `node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs` passes for all 9 locales after namespace creation (covers key parity, missing/extra keys, interpolation variables, pseudo-locale patterns, Italian accents)", "implemented": false, "featureIds": ["F001", "F002", "F003", "F004", "F005", "F006", "F007", "F008", "F009"]},
+  {"id": "T002", "description": "Namespace exists: server/public/locales/en/msp/credits.json is valid JSON with top-level groups (page, columns, status, actions, tabs, settings, charts, stats, management, reconciliation, application, expiration, expirationDialog, context)", "implemented": false, "featureIds": ["F001"]},
+
+  {"id": "T003", "description": "Route config: ROUTE_NAMESPACES entry for '/msp/billing/credits' exists and includes 'msp/credits' in its namespace array", "implemented": false, "featureIds": ["F010"]},
+  {"id": "T004", "description": "Route config: getNamespacesForRoute('/msp/billing/credits') returns array containing 'msp/credits' (longest prefix match works correctly)", "implemented": false, "featureIds": ["F010"]},
+
+  {"id": "T005", "description": "Unit: CreditsPage client wrapper renders column titles (Credit ID, Created, Description, Original Amount, Remaining, Expires, Status, Actions) via t() in en", "implemented": false, "featureIds": ["F011"]},
+  {"id": "T006", "description": "Unit: CreditsPage client wrapper renders status labels (Active, Expired, Expiring Soon) and tab labels (Active Credits, All Credits, Expired Credits) via t()", "implemented": false, "featureIds": ["F011"]},
+
+  {"id": "T007", "description": "Unit: CreditsPage CreditExpirationSettings labels (Credit Expiration, Enabled/Disabled, Expiration Period, Notification Days) render via t()", "implemented": false, "featureIds": ["F012"]},
+  {"id": "T008", "description": "Unit: CreditsPage no hardcoded English strings remain in rendered output (pseudo-locale xx coverage check)", "implemented": false, "featureIds": ["F011", "F012"]},
+
+  {"id": "T009", "description": "Unit: AddCreditButton renders button label, dialog title, Cancel/Add Credit buttons via t()", "implemented": false, "featureIds": ["F013"]},
+  {"id": "T010", "description": "Unit: AddCreditButton no hardcoded English in rendered output", "implemented": false, "featureIds": ["F013"]},
+
+  {"id": "T011", "description": "Unit: BackButton renders 'Back to Credits' via t()", "implemented": false, "featureIds": ["F014"]},
+  {"id": "T012", "description": "Unit: BackButton no hardcoded English in rendered output", "implemented": false, "featureIds": ["F014"]},
+
+  {"id": "T013", "description": "Unit: CreditManagement renders page title, chart titles, stat labels, column titles via t() in en", "implemented": false, "featureIds": ["F015", "F016"]},
+  {"id": "T014", "description": "Unit: CreditManagement chart legend labels (Credits Issued, Credits Applied, Credits Expired) rendered via t()", "implemented": false, "featureIds": ["F015"]},
+  {"id": "T015", "description": "Unit: CreditManagement renderCreditContext labels (Lineage Missing, Recurring Source, Financial Only, Service Period) rendered via t()", "implemented": false, "featureIds": ["F017"]},
+  {"id": "T016", "description": "Unit: CreditManagement no hardcoded English in rendered output (pseudo-locale xx coverage)", "implemented": false, "featureIds": ["F015", "F016", "F017"]},
+
+  {"id": "T017", "description": "Unit: CreditReconciliation renders dashboard title, filter labels, stat card labels via t() in en", "implemented": false, "featureIds": ["F018"]},
+  {"id": "T018", "description": "Unit: CreditReconciliation renders chart titles, column titles, tab labels, status badges via t()", "implemented": false, "featureIds": ["F019"]},
+  {"id": "T019", "description": "Unit: CreditReconciliation toast message uses interpolation for validation result ({{balanceCount}}, {{trackingCount}})", "implemented": false, "featureIds": ["F018"]},
+  {"id": "T020", "description": "Unit: CreditReconciliation no hardcoded English in rendered output (pseudo-locale xx coverage)", "implemented": false, "featureIds": ["F018", "F019"]},
+
+  {"id": "T021", "description": "Unit: CreditApplicationUI renders card title, column titles, labels, button text via t() in en", "implemented": false, "featureIds": ["F020"]},
+  {"id": "T022", "description": "Unit: CreditApplicationUI no hardcoded English; error/empty states translated", "implemented": false, "featureIds": ["F020"]},
+
+  {"id": "T023", "description": "Unit: CreditExpirationInfo renders card title, field labels, help text via t() in en", "implemented": false, "featureIds": ["F021"]},
+  {"id": "T024", "description": "Unit: CreditExpirationInfo description uses interpolation for applied amount ({{amount}})", "implemented": false, "featureIds": ["F021"]},
+
+  {"id": "T025", "description": "Unit: CreditExpirationModificationDialog renders dialog title, field labels, switch label, button text via t() in en", "implemented": false, "featureIds": ["F022"]},
+  {"id": "T026", "description": "Unit: CreditExpirationModificationDialog validation error ('past date') and generic error rendered via t()", "implemented": false, "featureIds": ["F022"]},
+
+  {"id": "T027", "description": "Italian accent preservation: it/msp/credits.json values with accented characters (e.g., 'Crediti', 'Scadenza', 'Disponibilita') retain correct Unicode accents after generation", "implemented": false, "featureIds": ["F006"]},
+  {"id": "T028", "description": "Variable preservation: all locale files preserve {{variable}} interpolation tokens (days, count, amount, balanceCount, trackingCount, period) identically to English source", "implemented": false, "featureIds": ["F002", "F003", "F004", "F005", "F006", "F007"]},
+
+  {"id": "T029", "description": "Visual: /msp/billing/credits renders correctly in en with all strings from msp/credits namespace", "implemented": false, "featureIds": ["F011", "F012", "F013", "F014"]},
+  {"id": "T030", "description": "Visual: credit management tab in /msp/billing renders CreditManagement and CreditReconciliation correctly in de with translated strings", "implemented": false, "featureIds": ["F015", "F016", "F017", "F018", "F019"]},
+  {"id": "T031", "description": "Visual: xx pseudo-locale smoke test across /msp/billing/credits and credit management tab shows pseudo-text everywhere (no bare English leakage)", "implemented": false, "featureIds": ["F008", "F011", "F015", "F018", "F020", "F021", "F022"]}
+]

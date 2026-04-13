@@ -19,6 +19,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import { Button } from '@alga-psa/ui/components/Button';
 import { getBillingOverview } from '@alga-psa/reporting';
 import type { ReportResult, FormattedMetricValue } from '@alga-psa/reporting';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface MetricCardProps {
   title: string;
@@ -37,9 +38,10 @@ const MetricCard: React.FC<MetricCardProps> = ({
   error = false,
   subtitle 
 }) => {
+  const { t } = useTranslation('msp/billing');
   const getDisplayValue = () => {
-    if (loading) return '...';
-    if (error) return 'Error';
+    if (loading) return t('overview.states.ellipsis', { defaultValue: '...' });
+    if (error) return t('overview.states.error', { defaultValue: 'Error' });
     
     // Handle formatted metric values
     if (value && typeof value === 'object' && 'formatted' in value) {
@@ -51,7 +53,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
       return value.toLocaleString();
     }
     
-    return value || '0';
+    return value || t('overview.states.zero', { defaultValue: '0' });
   };
 
   return (
@@ -95,6 +97,7 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: str
 );
 
 const Overview = () => {
+  const { t } = useTranslation('msp/billing');
   const [reportData, setReportData] = useState<ReportResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,14 +111,16 @@ const Overview = () => {
         setReportData(data);
       } catch (err) {
         console.error('Error fetching billing overview:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load billing data');
+        setError(err instanceof Error
+          ? err.message
+          : t('overview.errors.loadData', { defaultValue: 'Failed to load billing data' }));
       } finally {
         setLoading(false);
       }
     }
 
     fetchBillingOverview();
-  }, []);
+  }, [t]);
 
   const metrics = reportData?.metrics || {};
   const hasError = !!error;
@@ -126,7 +131,9 @@ const Overview = () => {
       {error && (
         <Alert variant="destructive">
           <AlertDescription>
-            <p className="font-medium">Unable to load billing data</p>
+            <p className="font-medium">
+              {t('overview.errors.loadTitle', { defaultValue: 'Unable to load billing data' })}
+            </p>
             <p className="text-sm">{error}</p>
           </AlertDescription>
         </Alert>
@@ -135,71 +142,73 @@ const Overview = () => {
       {/* Primary Billing Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
-          title="Active Contract Lines"
+          title={t('overview.metrics.activeContractLines.title', { defaultValue: 'Active Contract Lines' })}
           value={metrics.active_plans_count}
           icon={FileSpreadsheet}
           loading={loading}
           error={hasError}
-          subtitle="Active Contract Lines"
+          subtitle={t('overview.metrics.activeContractLines.subtitle', { defaultValue: 'Active Contract Lines' })}
         />
         <MetricCard
-          title="Billing Clients"
+          title={t('overview.metrics.billingClients.title', { defaultValue: 'Billing Clients' })}
           value={metrics.active_clients_count}
           icon={Building2}
           loading={loading}
           error={hasError}
-          subtitle="Total Clients"
+          subtitle={t('overview.metrics.billingClients.subtitle', { defaultValue: 'Total Clients' })}
         />
         <MetricCard
-          title="Monthly Revenue"
+          title={t('overview.metrics.monthlyRevenue.title', { defaultValue: 'Monthly Revenue' })}
           value={metrics.monthly_revenue}
           icon={Coins}
           loading={loading}
           error={hasError}
-          subtitle="Current Month"
+          subtitle={t('overview.metrics.monthlyRevenue.subtitle', { defaultValue: 'Current Month' })}
         />
       </div>
 
       {/* Secondary Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          title="Active Services"
+          title={t('overview.metrics.activeServices.title', { defaultValue: 'Active Services' })}
           value={metrics.active_services_count}
           icon={FileText}
           loading={loading}
           error={hasError}
-          subtitle="In Catalog"
+          subtitle={t('overview.metrics.activeServices.subtitle', { defaultValue: 'In Catalog' })}
         />
         <MetricCard
-          title="Outstanding Amount"
+          title={t('overview.metrics.outstandingAmount.title', { defaultValue: 'Outstanding Amount' })}
           value={metrics.outstanding_amount}
           icon={TrendingUp}
           loading={loading}
           error={hasError}
-          subtitle="Unpaid Invoices"
+          subtitle={t('overview.metrics.outstandingAmount.subtitle', { defaultValue: 'Unpaid Invoices' })}
         />
         <MetricCard
-          title="Credit Balance"
+          title={t('overview.metrics.creditBalance.title', { defaultValue: 'Credit Balance' })}
           value={metrics.total_credit_balance}
           icon={CreditCard}
           loading={loading}
           error={hasError}
-          subtitle="Total Credits"
+          subtitle={t('overview.metrics.creditBalance.subtitle', { defaultValue: 'Total Credits' })}
         />
         <MetricCard
-          title="Pending Approvals"
+          title={t('overview.metrics.pendingApprovals.title', { defaultValue: 'Pending Approvals' })}
           value={metrics.pending_time_entries}
           icon={Clock}
           loading={loading}
           error={hasError}
-          subtitle="Time Entries"
+          subtitle={t('overview.metrics.pendingApprovals.subtitle', { defaultValue: 'Time Entries' })}
         />
       </div>
 
       {/* Billable Hours Section */}
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold">Monthly Activity</h3>
+          <h3 className="text-lg font-semibold">
+            {t('overview.sections.monthlyActivity.title', { defaultValue: 'Monthly Activity' })}
+          </h3>
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-4">
@@ -208,11 +217,13 @@ const Overview = () => {
             </div>
             <div>
               <p className="text-2xl font-bold">
-                {loading ? '...' : hasError ? 'Error' : (
-                  metrics.monthly_billable_hours?.formatted || '0 hours'
+                {loading ? t('overview.states.ellipsis', { defaultValue: '...' }) : hasError ? t('overview.states.error', { defaultValue: 'Error' }) : (
+                  metrics.monthly_billable_hours?.formatted || t('overview.states.zeroHours', { defaultValue: '0 hours' })
                 )}
               </p>
-              <p className="text-sm text-muted-foreground">Billable hours this month</p>
+              <p className="text-sm text-muted-foreground">
+                {t('overview.sections.monthlyActivity.subtitle', { defaultValue: 'Billable hours this month' })}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -222,53 +233,72 @@ const Overview = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <FeatureCard
           icon={CreditCard}
-          title="Payment Processing"
-          description="Track and manage client payments, process refunds, and handle payment disputes"
+          title={t('overview.features.paymentProcessing.title', { defaultValue: 'Payment Processing' })}
+          description={t('overview.features.paymentProcessing.description', {
+            defaultValue: 'Track and manage client payments, process refunds, and handle payment disputes',
+          })}
         />
         <FeatureCard
           icon={Clock}
-          title="Billing Cycles"
-          description="Manage client billing schedules, cadence defaults, and invoice frequency settings"
+          title={t('overview.features.billingCycles.title', { defaultValue: 'Billing Cycles' })}
+          description={t('overview.features.billingCycles.description', {
+            defaultValue: 'Manage client billing schedules, cadence defaults, and invoice frequency settings',
+          })}
         />
         <FeatureCard
           icon={Calendar}
-          title="Service Periods"
-          description="Review recurring service periods and understand how invoice windows group them"
+          title={t('overview.features.servicePeriods.title', { defaultValue: 'Service Periods' })}
+          description={t('overview.features.servicePeriods.description', {
+            defaultValue: 'Review recurring service periods and understand how invoice windows group them',
+          })}
         />
         <FeatureCard
           icon={FileText}
-          title="Invoice Management"
-          description="Generate invoice windows for recurring service periods and create manual or prepayment documents when financial handling differs from recurring coverage"
+          title={t('overview.features.invoiceManagement.title', { defaultValue: 'Invoice Management' })}
+          description={t('overview.features.invoiceManagement.description', {
+            defaultValue: 'Generate invoice windows for recurring service periods and create manual or prepayment documents when financial handling differs from recurring coverage',
+          })}
         />
         <FeatureCard
           icon={AlertCircle}
-          title="Overdue Payments"
-          description="Monitor and follow up on overdue payments and payment reminders"
+          title={t('overview.features.overduePayments.title', { defaultValue: 'Overdue Payments' })}
+          description={t('overview.features.overduePayments.description', {
+            defaultValue: 'Monitor and follow up on overdue payments and payment reminders',
+          })}
         />
         <FeatureCard
           icon={FileSpreadsheet}
-          title="Service Catalog"
-          description="Manage your service offerings, pricing, and contracts"
+          title={t('overview.features.serviceCatalog.title', { defaultValue: 'Service Catalog' })}
+          description={t('overview.features.serviceCatalog.description', {
+            defaultValue: 'Manage your service offerings, pricing, and contracts',
+          })}
         />
       </div>
 
       {/* Service Catalog Quick Access */}
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold">Service Catalog Management</h3>
+          <h3 className="text-lg font-semibold">
+            {t('overview.sections.serviceCatalog.title', { defaultValue: 'Service Catalog Management' })}
+          </h3>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Manage your service offerings, pricing, and billing configurations</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                {t('overview.sections.serviceCatalog.description', {
+                  defaultValue: 'Manage your service offerings, pricing, and billing configurations',
+                })}
+              </p>
               <p>
                 <span className="font-semibold">
-                  {loading ? '...' : hasError ? 'Error' : (
+                  {loading ? t('overview.states.ellipsis', { defaultValue: '...' }) : hasError ? t('overview.states.error', { defaultValue: 'Error' }) : (
                     metrics.active_services_count?.formatted || 
                     metrics.active_services_count || 
-                    '0'
+                    t('overview.states.zero', { defaultValue: '0' })
                   )}
-                </span> Active Services
+                </span>{' '}
+                {t('overview.sections.serviceCatalog.activeServicesLabel', { defaultValue: 'Active Services' })}
               </p>
             </div>
             <Button
@@ -276,7 +306,7 @@ const Overview = () => {
               onClick={() => document.querySelector<HTMLButtonElement>('button[data-state="inactive"][value="service-catalog"]')?.click()}
               className="ml-4"
             >
-              Manage Service Catalog
+              {t('overview.sections.serviceCatalog.button', { defaultValue: 'Manage Service Catalog' })}
             </Button>
           </div>
         </CardContent>
@@ -285,9 +315,15 @@ const Overview = () => {
       {/* Debug info in development */}
       {reportData && process.env.NODE_ENV === 'development' && (
         <div className="text-xs text-muted-foreground p-4 bg-muted rounded">
-          <p>Report executed: {reportData.executedAt}</p>
-          <p>Execution time: {reportData.metadata.executionTime}ms</p>
-          <p>Report version: {reportData.metadata.version}</p>
+          <p>
+            {t('overview.debug.reportExecuted', { defaultValue: 'Report executed:' })} {reportData.executedAt}
+          </p>
+          <p>
+            {t('overview.debug.executionTime', { defaultValue: 'Execution time:' })} {reportData.metadata.executionTime}ms
+          </p>
+          <p>
+            {t('overview.debug.reportVersion', { defaultValue: 'Report version:' })} {reportData.metadata.version}
+          </p>
         </div>
       )}
     </div>

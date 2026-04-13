@@ -11,7 +11,7 @@
       "compareAll": "Confronta tutto",
       "clearAll": "Cancella tutto",
       "viewWeek": "Visualizza settimana",
-      "compare": "Confrontare",
+      "compare": "Confronta",
       "stopComparing": "Smetti di confrontare"
     },
     "labels": {
@@ -85,7 +85,7 @@
       "title": "Elimina voce di pianificazione",
       "messageRecurring": "Seleziona quali eventi eliminare:",
       "messageSingle": "Sei sicuro di voler eliminare questa voce di pianificazione? Questa azione non può essere annullata.",
-      "confirm": "Eliminare",
+      "confirm": "Elimina",
       "entityFallback": "questa voce di pianificazione",
       "options": {
         "single": "Solo questo evento",
@@ -174,8 +174,8 @@
         "linkedTicket": "Inserisci l'ID del ticket per collegare..."
       },
       "actions": {
-        "approve": "Approvare",
-        "decline": "Declino"
+        "approve": "Approva",
+        "decline": "Rifiuta"
       }
     },
     "decline": {
@@ -188,7 +188,7 @@
       },
       "actions": {
         "confirm": "Conferma rifiuto",
-        "cancel": "Cancellare"
+        "cancel": "Annulla"
       }
     }
   },
@@ -213,13 +213,13 @@
       "saturday": "Sabato"
     },
     "common": {
-      "yes": "SÌ",
-      "no": "NO",
+      "yes": "Sì",
+      "no": "No",
       "columns": {
         "action": "Azione"
       },
       "actions": {
-        "edit": "Modificare"
+        "edit": "Modifica"
       },
       "defaultApprover": {
         "placeholder": "Seleziona un approvatore"
@@ -318,7 +318,7 @@
         }
       },
       "actions": {
-        "save": "Risparmia ore utente"
+        "save": "Salva ore utente"
       },
       "feedback": {
         "selectUserError": "Seleziona un utente",
@@ -438,12 +438,12 @@
       "assignedUsers": "Utenti Assegnati *",
       "privateEntry": "Ingresso privato (non visibile agli altri utenti)",
       "start": "Inizio *",
-      "end": "FINE *",
+      "end": "Fine *",
       "notes": "Note"
     },
     "actions": {
-      "cancel": "Cancellare",
-      "close": "Vicino",
+      "cancel": "Annulla",
+      "close": "Chiudi",
       "save": "Salva",
       "delete": "Elimina voce"
     },
@@ -478,8 +478,8 @@
       "declineReasonLabel": "Motivo del rifiuto *",
       "declineReasonPlaceholder": "Si prega di fornire un motivo per rifiutare questa richiesta...",
       "actions": {
-        "approve": "Approvare",
-        "decline": "Declino",
+        "approve": "Approva",
+        "decline": "Rifiuta",
         "confirmDecline": "Conferma rifiuto"
       },
       "toasts": {
@@ -494,7 +494,7 @@
     "recurrence": {
       "label": "Ricorrenza",
       "intervalLabel": "Intervallo",
-      "endLabel": "FINE",
+      "endLabel": "Fine",
       "endDateLabel": "Data di fine",
       "occurrencesLabel": "Occorrenze",
       "workdaysOnly": "Solo giorni feriali (lun-ven, esclusi i festivi)",
@@ -521,7 +521,7 @@
       "scopeDialog": {
         "title": "Elimina voce di pianificazione",
         "message": "Seleziona quali eventi eliminare:",
-        "confirm": "Continuare"
+        "confirm": "Continua"
       }
     },
     "scopeOptions": {

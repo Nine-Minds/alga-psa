@@ -69,10 +69,10 @@
       "notHelpful": "Nieprzydatne"
     },
     "actions": {
-      "edit": "Redagować",
+      "edit": "Edytuj",
       "submitForReview": "Prześlij do recenzji",
-      "publish": "Publikować",
-      "archive": "Archiwum"
+      "publish": "Publikuj",
+      "archive": "Archiwizuj"
     },
     "pagination": {
       "itemsPerPage": {
@@ -98,14 +98,14 @@
   "editor": {
     "header": {
       "untitled": "Artykuł bez tytułu",
-      "back": "Z powrotem"
+      "back": "Wstecz"
     },
     "actions": {
       "submitForReview": "Prześlij do recenzji",
-      "publish": "Publikować",
-      "archive": "Archiwum",
+      "publish": "Publikuj",
+      "archive": "Archiwizuj",
       "saveMetadata": "Zapisz metadane",
-      "saving": "Oszczędność..."
+      "saving": "Zapisywanie..."
     },
     "feedback": {
       "permissionDenied": "Odmowa pozwolenia",
@@ -192,9 +192,9 @@
     "currentStatus": "Aktualny stan",
     "actions": {
       "submitForReview": "Prześlij do recenzji",
-      "publish": "Publikować",
+      "publish": "Publikuj",
       "approveAndPublish": "Zatwierdź i opublikuj",
-      "archive": "Archiwum",
+      "archive": "Archiwizuj",
       "republish": "Opublikuj ponownie"
     },
     "flow": {

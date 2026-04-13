@@ -8,6 +8,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { toast } from 'react-hot-toast';
 import { Edit2, Info } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { EntityType } from '@alga-psa/shared/services/numberingService';
 import { getNumberSettings, updateNumberSettings, canEditNumberingSettings, type NumberSettings } from '@alga-psa/reference-data/actions';
 
@@ -16,6 +17,7 @@ interface NumberingSettingsProps {
 }
 
 const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.Element => {
+  const { t } = useTranslation('msp/billing-settings');
   // General state
   const [settings, setSettings] = useState<NumberSettings | null>(null);
   const [canEdit, setCanEdit] = useState(false);
@@ -28,7 +30,6 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
   // Form state
   const [formState, setFormState] = useState<Partial<NumberSettings>>({});
 
-  const entityLabel = entityType.charAt(0) + entityType.slice(1).toLowerCase();
   const entityId = entityType.toLowerCase();
 
   useEffect(() => {
@@ -57,7 +58,7 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
 
         setCanEdit(hasEditPermission);
       } catch (err) {
-        setError(`Failed to load ${entityType.toLowerCase()} numbering settings`);
+        setError(t('numbering.errors.load'));
         console.error('Error:', err);
       }
     };
@@ -96,14 +97,14 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
       if (result.success && result.settings) {
         setSettings(result.settings);
         setFormState(result.settings);
-        toast.success('Settings updated successfully');
+        toast.success(t('numbering.toast.updated'));
         setIsEditing(false);
         setShowConfirmation(false);
       } else {
-        throw new Error(result.error || 'Failed to update settings');
+        throw new Error(result.error || t('numbering.errors.save'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update settings');
+      setError(err instanceof Error ? err.message : t('numbering.errors.save'));
       console.error(err);
     }
   };
@@ -152,8 +153,8 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
 
       {/* Section Header */}
       <div className="mb-6">
-        <h3 className="text-base font-semibold text-gray-900">Number Format</h3>
-        <p className="text-sm text-gray-500 mt-1">Define the prefix, digit padding, and current sequence</p>
+        <h3 className="text-base font-semibold text-gray-900">{t('numbering.section.title')}</h3>
+        <p className="text-sm text-gray-500 mt-1">{t('numbering.section.description')}</p>
       </div>
 
       <div className="space-y-6">
@@ -161,9 +162,9 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
         <div>
           <div className="flex items-center mb-2">
             <Label htmlFor={`${entityId}-prefix-input`} className="text-sm font-medium text-gray-700">
-              {entityLabel} Number Prefix
+              {t('numbering.fields.prefix.label')}
             </Label>
-            <InfoTooltip text={`Optional prefix for ${entityType.toLowerCase()} numbers. Leave empty for no prefix or enter a custom prefix (e.g., "${entityType === 'TICKET' ? 'TK-' : entityType === 'INVOICE' ? 'INV-' : entityType === 'PROJECT' ? 'PROJECT-' : ''}")`} />
+            <InfoTooltip text={t('numbering.fields.prefix.help')} />
           </div>
           <div className="flex items-center space-x-2">
             <Input
@@ -172,7 +173,15 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
               onChange={(e) => handleInputChange('prefix', e.target.value)}
               disabled={!isEditing}
               className="!w-48"
-              placeholder={entityType === 'TICKET' ? 'TK-' : entityType === 'INVOICE' ? 'INV-' : 'PRJ-'}
+              placeholder={
+                entityType === 'TICKET'
+                  ? 'TK-'
+                  : entityType === 'INVOICE'
+                  ? 'INV-'
+                  : entityType === 'QUOTE'
+                  ? 'QT-'
+                  : 'PRJ-'
+              }
             />
             {!isEditing && canEdit && (
               <Button
@@ -191,9 +200,9 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
         <div>
           <div className="flex items-center mb-2">
             <Label htmlFor={`${entityId}-padding-length-input`} className="text-sm font-medium text-gray-700">
-              Minimum Digits
+              {t('numbering.fields.minimumDigits.label')}
             </Label>
-            <InfoTooltip text="Minimum number of digits for the sequential number. For example, 6 makes '1' become '000001'" />
+            <InfoTooltip text={t('numbering.fields.minimumDigits.help')} />
           </div>
           <div className="flex items-center space-x-2">
             <Input
@@ -214,9 +223,9 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
           <div>
             <div className="flex items-center mb-2">
               <Label htmlFor={`${entityId}-initial-value-input`} className="text-sm font-medium text-gray-700">
-                Initial Value
+                {t('numbering.fields.initialValue.label')}
               </Label>
-              <InfoTooltip text="Set the starting number for the sequence. This can only be set once." />
+              <InfoTooltip text={t('numbering.fields.initialValue.help')} />
             </div>
             <div className="flex items-center space-x-2">
               <Input
@@ -227,7 +236,7 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
                 disabled={!isEditing}
                 className="!w-48"
                 min={1}
-                placeholder="Enter value"
+                placeholder={t('numbering.fields.initialValue.placeholder')}
               />
             </div>
           </div>
@@ -237,9 +246,9 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
         <div>
           <div className="flex items-center mb-2">
             <Label htmlFor={`${entityId}-last-number-input`} className="text-sm font-medium text-gray-700">
-              Last Used Number
+              {t('numbering.fields.lastUsedNumber.label')}
             </Label>
-            <InfoTooltip text="The last number that was assigned. The next number will be one higher than this value." />
+            <InfoTooltip text={t('numbering.fields.lastUsedNumber.help')} />
           </div>
           <div className="flex items-center space-x-2">
             <Input
@@ -258,9 +267,9 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
         <div className="pt-4 border-t">
           <div className="mb-2">
             <Label className="text-sm font-medium text-gray-700">
-              Next {entityLabel} Number Preview
+              {t('numbering.fields.nextPreview.label')}
             </Label>
-            <p className="text-xs text-gray-500 mt-1">This is the number that will be assigned to the next {entityType.toLowerCase()}</p>
+            <p className="text-xs text-gray-500 mt-1">{t('numbering.fields.nextPreview.help')}</p>
           </div>
           <div className="inline-block px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
             <span className="text-lg font-mono">{previewNumber}</span>
@@ -276,14 +285,14 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
               onClick={() => setShowConfirmation(true)}
               disabled={!canEdit}
             >
-              Save Changes
+              {t('numbering.actions.save')}
             </Button>
             <Button
               id={`cancel-${entityId}-settings-button`}
               variant="outline"
               onClick={handleCancel}
             >
-              Cancel
+              {t('numbering.actions.cancel')}
             </Button>
           </div>
         )}
@@ -294,9 +303,9 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
         isOpen={showConfirmation}
         onClose={() => setShowConfirmation(false)}
         onConfirm={handleSave}
-        title={`Update ${entityLabel} Number Settings`}
-        message={`Changing these settings will affect how new ${entityType.toLowerCase()} numbers are generated. This change will not affect existing ${entityType.toLowerCase()}s. Are you sure you want to proceed?`}
-        confirmLabel="Update Settings"
+        title={t('numbering.dialog.title')}
+        message={t('numbering.dialog.message')}
+        confirmLabel={t('numbering.dialog.confirm')}
       />
     </div>
   );

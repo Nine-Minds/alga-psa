@@ -17,6 +17,7 @@ import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteT
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
+import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 
 interface QuoteDetailProps {
   quoteId: string;
@@ -82,6 +83,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [approvalComment, setApprovalComment] = useState('');
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [sendMessage, setSendMessage] = useState('');
+  const [sendRecipients, setSendRecipients] = useState<QuoteRecipient[]>([]);
   const [additionalEmails, setAdditionalEmails] = useState('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
@@ -364,13 +366,19 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setIsWorking(true);
       setError(null);
       setNotice(null);
-      const parsedEmails = additionalEmails
-        .split(',')
-        .map((e) => e.trim())
-        .filter(Boolean);
+      const typedEmails = additionalEmails.split(',').map((e) => e.trim()).filter(Boolean);
+      const pickedEmails = sendRecipients.map((r) => r.email);
+      const seen = new Set<string>();
+      const combined: string[] = [];
+      for (const email of [...pickedEmails, ...typedEmails]) {
+        const key = email.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        combined.push(email);
+      }
       const result = await sendQuote(quote.quote_id, {
         message: sendMessage.trim() || undefined,
-        email_addresses: parsedEmails.length > 0 ? parsedEmails : undefined,
+        email_addresses: combined.length > 0 ? combined : undefined,
       });
 
       if ('permissionError' in result) {
@@ -380,6 +388,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setQuote(result);
       setIsSendDialogOpen(false);
       setSendMessage('');
+      setSendRecipients([]);
       setAdditionalEmails('');
       setNotice('Quote sent to the client.');
     } catch (actionError) {
@@ -1030,7 +1039,16 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           </DialogDescription>
           <div className="space-y-3 py-2">
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Additional recipients (comma-separated)
+              Recipients
+              <QuoteSendRecipientsField
+                id="quote-send-recipients"
+                clientId={quote?.client_id}
+                value={sendRecipients}
+                onChange={setSendRecipients}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Additional email addresses (comma-separated)
               <input
                 type="text"
                 value={additionalEmails}

@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { Input } from '@alga-psa/ui/components/Input';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -12,7 +13,7 @@ import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
 import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction, getTeamsBasic } from '@alga-psa/teams/actions';
-import { getTicketById } from '@alga-psa/tickets/actions';
+import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions';
 import type {
   IBoard,
   IClient,
@@ -57,11 +58,19 @@ type WorkflowPickerOption = SelectOption & {
   assigneeType?: 'user' | 'team';
 };
 
+type WorkflowTicketSearchResult = {
+  ticket_id: string;
+  ticket_number?: string | null;
+  title?: string | null;
+  status_name?: string | null;
+};
+
 type WorkflowPickerData = {
   ticketOptions: TicketFieldOptions | null;
   contacts: IContact[];
   users: IUser[];
   teams: ITeam[];
+  tickets: WorkflowTicketSearchResult[];
 };
 
 const EMPTY_PICKER_DATA: WorkflowPickerData = {
@@ -69,6 +78,7 @@ const EMPTY_PICKER_DATA: WorkflowPickerData = {
   contacts: [],
   users: [],
   teams: [],
+  tickets: [],
 };
 
 const EMPTY_TICKET_FIELD_OPTIONS: TicketFieldOptions = {
@@ -101,12 +111,27 @@ const TICKET_PICKER_DEPENDENCY_HINTS: Partial<Record<string, Record<string, stri
   },
 };
 
+export const WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES = new Set([
+  'board',
+  'client',
+  'contact',
+  'user',
+  'user-or-team',
+  'ticket',
+  'ticket-status',
+  'ticket-priority',
+  'ticket-category',
+  'ticket-subcategory',
+  'client-location',
+]);
+
 const DEDICATED_PICKER_KINDS = new Set([
   'board',
   'client',
   'contact',
   'user',
   'user-or-team',
+  'ticket',
 ]);
 
 const getPathSegments = (path: string): string[] =>
@@ -289,6 +314,11 @@ const mapWorkflowPickerOptions = (
           assigneeType: 'team' as const,
         })),
       ];
+    case 'ticket':
+      return data.tickets.map((ticket) => ({
+        value: ticket.ticket_id,
+        label: ticket.ticket_number ? `${ticket.ticket_number} · ${ticket.title ?? ticket.ticket_id}` : (ticket.title ?? ticket.ticket_id),
+      }));
     default:
       return mapTicketFieldOptions(kind, data.ticketOptions);
   }
@@ -435,6 +465,116 @@ const loadWorkflowPickerData = async (
   }
 };
 
+const WorkflowTicketPicker: React.FC<{
+  field: WorkflowActionInputPickerField;
+  value: string | null;
+  onChange: (value: string | null) => void;
+  idPrefix: string;
+  disabled?: boolean;
+}> = ({ field, value, onChange, idPrefix, disabled }) => {
+  const [search, setSearch] = useState('');
+  const [options, setOptions] = useState<WorkflowPickerOption[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const normalizedSearch = search.trim();
+
+    const loadOptions = async () => {
+      if (!normalizedSearch) {
+        if (value) {
+          try {
+            setIsLoading(true);
+            setLoadError(null);
+            const ticket = await getTicketById(value);
+            if (!active) return;
+            setOptions(ticket ? [{
+              value: ticket.ticket_id,
+              label: ticket.ticket_number ? `${ticket.ticket_number} · ${ticket.title ?? ticket.ticket_id}` : (ticket.title ?? ticket.ticket_id),
+            }] : []);
+          } catch (error) {
+            if (!active) return;
+            console.error('Failed to load selected workflow ticket picker value:', error);
+            setOptions(value ? [{ value, label: value }] : []);
+            setLoadError(error instanceof Error ? error.message : 'Failed to load ticket');
+          } finally {
+            if (active) {
+              setIsLoading(false);
+            }
+          }
+          return;
+        }
+
+        setOptions([]);
+        setLoadError(null);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+        const result = await getTicketsForList({
+          boardFilterState: 'active',
+          searchQuery: normalizedSearch,
+        });
+        if (!active) return;
+        const mapped = ((result as { tickets?: WorkflowTicketSearchResult[] } | null)?.tickets ?? [])
+          .slice(0, 25)
+          .map((ticket) => ({
+            value: ticket.ticket_id,
+            label: ticket.ticket_number ? `${ticket.ticket_number} · ${ticket.title ?? ticket.ticket_id}` : (ticket.title ?? ticket.ticket_id),
+          }));
+        setOptions(appendCurrentValueOption(mapped, value));
+      } catch (error) {
+        if (!active) return;
+        console.error('Failed to search tickets for workflow picker:', error);
+        setOptions(appendCurrentValueOption([], value));
+        setLoadError(error instanceof Error ? error.message : 'Failed to search tickets');
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      void loadOptions();
+    }, normalizedSearch ? 200 : 0);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [search, value]);
+
+  const placeholder = field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Search tickets by number or title';
+
+  return (
+    <div className="space-y-2">
+      <Input
+        id={`${idPrefix}-literal-ticket-search`}
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+      />
+      <CustomSelect
+        id={`${idPrefix}-literal-picker`}
+        options={options}
+        value={value ?? ''}
+        onValueChange={(nextValue) => onChange(nextValue || null)}
+        placeholder={search.trim().length > 0 ? 'Select ticket' : 'Type above to search tickets'}
+        disabled={disabled || isLoading || (search.trim().length === 0 && !value)}
+      />
+      {loadError && (
+        <p className="text-[11px] text-gray-500">{loadError}</p>
+      )}
+    </div>
+  );
+};
+
 const renderDedicatedPicker = ({
   field,
   pickerKind,
@@ -443,6 +583,7 @@ const renderDedicatedPicker = ({
   value,
   onChange,
   idPrefix,
+  disabled,
 }: {
   field: WorkflowActionInputPickerField;
   pickerKind: string;
@@ -451,6 +592,7 @@ const renderDedicatedPicker = ({
   value: string | null;
   onChange: (value: string | null) => void;
   idPrefix: string;
+  disabled?: boolean;
 }): React.ReactNode => {
   switch (pickerKind) {
     case 'board': {
@@ -526,6 +668,16 @@ const renderDedicatedPicker = ({
           buttonWidth="full"
         />
       );
+    case 'ticket':
+      return (
+        <WorkflowTicketPicker
+          field={field}
+          value={value}
+          onChange={onChange}
+          idPrefix={idPrefix}
+          disabled={disabled}
+        />
+      );
     default:
       return null;
   }
@@ -592,7 +744,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   const hasDedicatedPicker = pickerKind ? DEDICATED_PICKER_KINDS.has(pickerKind) : false;
 
   useEffect(() => {
-    if (!pickerKind) {
+    if (!pickerKind || pickerKind === 'ticket') {
       setData(EMPTY_PICKER_DATA);
       setLoadError(null);
       setLoadedDependencySignature(null);
@@ -676,6 +828,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
           value,
           onChange,
           idPrefix,
+          disabled,
         })
       )}
       {(disabledExplanation || loadError) && (

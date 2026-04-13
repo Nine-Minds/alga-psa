@@ -13,10 +13,11 @@ interface AddWorkItemDialogProps {
   onClose: () => void;
   onAdd: (workItem: IWorkItem) => void;
   availableWorkItems: IWorkItem[];
+  initialWorkItemId?: string | null;
   timePeriod?: ITimePeriodView;
 }
 
-export function AddWorkItemDialog({ isOpen, onClose, onAdd, availableWorkItems, timePeriod }: AddWorkItemDialogProps) {
+export function AddWorkItemDialog({ isOpen, onClose, onAdd, availableWorkItems, initialWorkItemId, timePeriod }: AddWorkItemDialogProps) {
   const { t } = useTranslation('msp/time-entry');
   const handleSelect = (workItem: IWorkItem | null) => {
     if (workItem) {
@@ -61,6 +62,7 @@ export function AddWorkItemDialog({ isOpen, onClose, onAdd, availableWorkItems, 
             <WorkItemPicker 
               onSelect={handleSelect} 
               availableWorkItems={availableWorkItems}
+              initialWorkItemId={initialWorkItemId}
               timePeriod={timePeriod}
             />
           </div>

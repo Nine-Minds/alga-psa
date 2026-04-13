@@ -153,6 +153,12 @@ const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUp
             : t('common.fallbacks.na', { defaultValue: 'N/A' })}
         </span>
         <span className="font-medium text-[rgb(var(--color-text-900))]">
+          {t('approval.labels.service', { defaultValue: 'Service' })}
+        </span>
+        <span className="text-[rgb(var(--color-text-700))]">
+          {entry.service_name || t('common.fallbacks.noServiceSelected', { defaultValue: 'No service selected' })}
+        </span>
+        <span className="font-medium text-[rgb(var(--color-text-900))]">
           {t('approval.labels.duration', { defaultValue: 'Duration' })}
         </span>
         <span className="text-[rgb(var(--color-text-700))]">

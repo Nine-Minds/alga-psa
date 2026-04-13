@@ -1,0 +1,1100 @@
+{
+  "tabs": {
+    "general": "Allgemein",
+    "quoting": "Zitieren",
+    "tax": "Steuer",
+    "payments": "Zahlungen"
+  },
+  "general": {
+    "currency": {
+      "title": "Standardwährung",
+      "description": "Legen Sie die Standardwährung für neue Produkte, Dienstleistungen, Verträge und Angebote fest. Dies kann pro Kunde in seiner Abrechnungskonfiguration überschrieben werden.",
+      "fields": {
+        "currency": {
+          "label": "Währung",
+          "placeholder": "Währung auswählen"
+        }
+      },
+      "toast": {
+        "updated": "Die Standardwährung wurde aktualisiert."
+      },
+      "errors": {
+        "load": "Die Einstellungen konnten nicht geladen werden",
+        "save": "Einstellungen konnten nicht gespeichert werden"
+      }
+    },
+    "invoiceNumbering": {
+      "title": "Rechnungsnummerierung",
+      "description": "Passen Sie an, wie Rechnungsnummern generiert und angezeigt werden."
+    },
+    "zeroDollar": {
+      "title": "Null-Dollar-Rechnungen",
+      "description": "Steuern Sie, wie Rechnungen ohne Gebühren gehandhabt werden.",
+      "fields": {
+        "handling": {
+          "label": "Rechnungsbearbeitung",
+          "placeholder": "Wählen Sie die Handhabungsoption",
+          "help": "Wählen Sie aus, wie Null-Dollar-Rechnungen bei der Erstellung behandelt werden sollen"
+        },
+        "suppress": {
+          "label": "Leere Rechnungen unterdrücken",
+          "help": "Überspringen Sie die Erstellung von Rechnungen ohne Einzelposten"
+        }
+      },
+      "options": {
+        "draft": "Als Entwurf erstellen",
+        "finalized": "Erstellen und abschließen"
+      },
+      "toast": {
+        "updated": "Die Einstellungen für Null-Dollar-Rechnungen wurden aktualisiert."
+      },
+      "errors": {
+        "load": "Die Einstellungen konnten nicht geladen werden",
+        "save": "Einstellungen konnten nicht gespeichert werden"
+      }
+    },
+    "creditExpiration": {
+      "title": "Ablauf des Guthabens",
+      "description": "Konfigurieren Sie, wann und wie Kundenguthaben ablaufen.",
+      "fields": {
+        "enabled": {
+          "label": "Aktivieren Sie den Ablauf des Guthabens",
+          "help": "Wenn aktiviert, verfallen Credits nach dem angegebenen Zeitraum"
+        },
+        "expirationDays": {
+          "label": "Ablaufzeitraum (Tage)",
+          "help": "Anzahl der Tage, nach denen Credits ablaufen"
+        },
+        "notificationDays": {
+          "label": "Benachrichtigungstage",
+          "placeholder": "z. B. 30, 7, 1",
+          "help": "Tage vor Ablauf zum Versenden von Benachrichtigungen (durch Kommas getrennt)"
+        }
+      },
+      "actions": {
+        "save": "Speichern"
+      },
+      "toast": {
+        "updated": "Die Einstellungen für den Ablauf des Guthabens wurden aktualisiert."
+      },
+      "errors": {
+        "load": "Die Einstellungen konnten nicht geladen werden",
+        "save": "Einstellungen konnten nicht gespeichert werden"
+      }
+    },
+    "renewal": {
+      "title": "Erneuerungsautomatisierung",
+      "description": "Konfigurieren Sie das Standardverhalten, wenn Verträge ihr Verlängerungsdatum erreichen.",
+      "fields": {
+        "dueDateAction": {
+          "label": "Fälligkeitsaktion",
+          "help": "Wählen Sie aus, ob durch Fälligkeitstermine für Verlängerungen Tickets erstellt werden sollen oder standardmäßig nur in der Warteschlange bleiben sollen."
+        },
+        "ticketBoard": {
+          "label": "Verlängerungskartentafel",
+          "placeholderLoading": "Lade Boards...",
+          "placeholderSelect": "Board auswählen"
+        },
+        "ticketStatus": {
+          "label": "Status des Verlängerungstickets",
+          "placeholderLoading": "Ladestatus...",
+          "placeholderSelect": "Status auswählen",
+          "placeholderSelectBoardFirst": "Wählen Sie zunächst ein Board aus",
+          "help": "Der Status von Verlängerungstickets bezieht sich auf das ausgewählte Board."
+        }
+      },
+      "options": {
+        "createTicket": "Ticket erstellen",
+        "queueOnly": "Nur Warteschlange"
+      },
+      "states": {
+        "unnamedBoard": "Unbenanntes Board"
+      },
+      "actions": {
+        "save": "Speichern",
+        "saving": "Sparen..."
+      },
+      "toast": {
+        "updated": "Die Einstellungen für die Automatisierung der Verlängerung wurden aktualisiert."
+      },
+      "errors": {
+        "load": "Die Einstellungen für die Verlängerungsautomatisierung konnten nicht geladen werden",
+        "loadStatuses": "Der Status des Verlängerungstickets konnte nicht geladen werden",
+        "save": "Die Einstellungen für die Verlängerungsautomatisierung konnten nicht gespeichert werden"
+      }
+    }
+  },
+  "quoting": {
+    "quoteNumbering": {
+      "title": "Angebotsnummerierung",
+      "description": "Passen Sie an, wie Angebotsnummern generiert und angezeigt werden."
+    }
+  },
+  "tax": {
+    "taxRegions": {
+      "title": "Steuerregionen",
+      "description": "Steuerregionen und zugehörige Einstellungen verwalten."
+    },
+    "source": {
+      "title": "Steuerberechnungsquelle",
+      "tooltip": "Wählen Sie, ob die Steuern von Alga PSA berechnet oder an Ihr externes Buchhaltungssystem delegiert werden sollen",
+      "description": "Konfigurieren Sie, wie Steuerbeträge für Rechnungen berechnet werden.",
+      "fields": {
+        "defaultMethod": {
+          "label": "Standardmethode zur Steuerberechnung"
+        }
+      },
+      "options": {
+        "internal": {
+          "label": "Intern (Algen-PSA)",
+          "description": "Steuern werden automatisch basierend auf den in Alga PSA konfigurierten Steuersätzen berechnet."
+        },
+        "external": {
+          "label": "Extern (Buchhaltungspaket)",
+          "description": "Rechnungen werden ohne Mehrwertsteuer exportiert. Die Steuer wird von Ihrem Buchhaltungssystem berechnet und zurückimportiert."
+        }
+      },
+      "workflow": {
+        "title": "Externer Steuerberechnungs-Workflow",
+        "step1": "Die Rechnung wird ohne Steuerbeträge erstellt",
+        "step2": "Die Rechnung wird in Ihr angeschlossenes Buchhaltungssystem (QuickBooks, Xero usw.) exportiert.",
+        "step3": "Die Steuer wird vom Buchhaltungssystem auf der Grundlage seiner Steuerregeln berechnet",
+        "step4": "Steuerbeträge werden zurück in Alga PSA importiert",
+        "step5": "Rechnungssummen werden mit der importierten Steuer aktualisiert",
+        "note": "Das verwendete Buchhaltungssystem wird automatisch ermittelt, je nachdem, in welches System Sie die Rechnung exportieren."
+      },
+      "loading": "Einstellungen werden geladen...",
+      "actions": {
+        "cancel": "Stornieren",
+        "save": "Einstellungen speichern",
+        "saving": "Sparen..."
+      },
+      "toast": {
+        "saved": "Steuerquelleneinstellungen erfolgreich gespeichert."
+      },
+      "errors": {
+        "load": "Die Steuerquelleneinstellungen konnten nicht geladen werden.",
+        "save": "Einstellungen konnten nicht gespeichert werden."
+      }
+    },
+    "regions": {
+      "title": "Steuerregionen verwalten",
+      "loading": "Regionen werden geladen...",
+      "fields": {
+        "code": {
+          "label": "Regionalcode",
+          "placeholder": "z. B. CA, NY, VAT-UK"
+        },
+        "name": {
+          "label": "Regionsname",
+          "placeholder": "z. B. Kalifornien, New York, UK-Mehrwertsteuer"
+        },
+        "active": {
+          "label": "Aktiv"
+        }
+      },
+      "dialog": {
+        "addTitle": "Neue Steuerregion hinzufügen",
+        "editTitle": "Steuerregion bearbeiten"
+      },
+      "actions": {
+        "add": "Steuerregion hinzufügen",
+        "edit": "Bearbeiten",
+        "activate": "Aktivieren",
+        "deactivate": "Deaktivieren",
+        "cancel": "Stornieren",
+        "save": "Änderungen speichern",
+        "saving": "Sparen..."
+      },
+      "toast": {
+        "created": "Steuerregion erfolgreich erstellt.",
+        "updated": "Steuerregion erfolgreich aktualisiert.",
+        "activatePending": "Es wird versucht, {{name}} zu aktivieren...",
+        "deactivatePending": "Es wird versucht, {{name}} zu deaktivieren...",
+        "activated": "Steuerregion {{name}} erfolgreich aktiviert.",
+        "deactivated": "Steuerregion {{name}} erfolgreich deaktiviert."
+      },
+      "errors": {
+        "load": "Steuerregionen konnten nicht geladen werden.",
+        "create": "Steuerregion konnte nicht erstellt werden.",
+        "update": "Steuerregion konnte nicht aktualisiert werden.",
+        "activate": "Steuerregion konnte nicht aktiviert werden.",
+        "deactivate": "Steuerregion konnte nicht deaktiviert werden."
+      }
+    },
+    "thresholds": {
+      "title": "Progressive Steuerklassen",
+      "tooltip": "Definieren Sie progressive Steuerklassen, bei denen für verschiedene Teile des Betrags unterschiedliche Sätze gelten. Jede Klammer gilt nur für den Betrag innerhalb ihres Bereichs.",
+      "loading": "Klammern werden geladen...",
+      "empty": "Keine Steuerklassen definiert. Fügen Sie Klammern hinzu, um die progressive Besteuerung zu verwenden.",
+      "noLimit": "Keine Begrenzung",
+      "above": "über",
+      "table": {
+        "minAmount": "Mindestbetrag",
+        "maxAmount": "Maximaler Betrag"
+      },
+      "issuesTitle": "Probleme mit der Klammerkonfiguration:",
+      "issueNoMax": "Die Klammer, die bei {{from}} beginnt, hat kein Maximum, ist aber nicht die letzte Klammer.",
+      "issueGap": "Lücke zwischen {{from}} und {{to}}",
+      "issueOverlap": "Überlappung zwischen Klammern bei {{at}}",
+      "preview": {
+        "title": "Berechnungsvorschau",
+        "amount": "Menge:",
+        "taxable": "{{amount}} steuerpflichtig = {{tax}}",
+        "totalTax": "Gesamtsteuer:",
+        "effective": "Effektiv: {{rate}} %"
+      },
+      "dialog": {
+        "addTitle": "Steuerklasse hinzufügen",
+        "editTitle": "Steuerklasse bearbeiten",
+        "deleteTitle": "Steuerklasse löschen"
+      },
+      "fields": {
+        "minAmount": {
+          "label": "Mindestbetrag *",
+          "placeholder": "z.B. 0"
+        },
+        "maxAmount": {
+          "label": "Maximaler Betrag (leer lassen für keine Begrenzung)",
+          "placeholder": "z. B. 10000 oder leer"
+        },
+        "rate": {
+          "label": "Rate (%) *",
+          "placeholder": "z.B. 10"
+        }
+      },
+      "actions": {
+        "add": "Klammer hinzufügen",
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "cancel": "Stornieren",
+        "save": "Speichern",
+        "saving": "Sparen...",
+        "deleting": "Löschen..."
+      },
+      "delete": {
+        "message": "Sind Sie sicher, dass Sie die Klammer {{range}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "lastWarning": "Achtung: Dies ist die letzte Klammer. Durch das Löschen wird die progressive Besteuerung für diesen Steuersatz deaktiviert."
+      },
+      "toast": {
+        "created": "Steuerklasse erfolgreich erstellt.",
+        "updated": "Steuerklasse erfolgreich aktualisiert.",
+        "deleted": "Steuerklasse erfolgreich gelöscht."
+      },
+      "errors": {
+        "load": "Steuerklassen konnten nicht geladen werden.",
+        "create": "Steuerklasse konnte nicht erstellt werden.",
+        "update": "Steuerklasse konnte nicht aktualisiert werden.",
+        "delete": "Steuerklasse konnte nicht gelöscht werden."
+      }
+    },
+    "components": {
+      "title": "Steuerkomponenten",
+      "tooltip": "Die Komponenten werden in der angegebenen Reihenfolge angewendet. Zusammengesetzte Komponenten berechnen die Steuer auf Basis des Grundbetrags zuzüglich früherer Steuern.",
+      "loading": "Komponenten werden geladen...",
+      "empty": "Keine Steuerkomponenten definiert. Fügen Sie Komponenten hinzu, um eine zusammengesetzte Steuer zu erstellen.",
+      "preview": {
+        "title": "Berechnungsvorschau ({{amount}} Basis)",
+        "compoundSuffix": ", Verbindung",
+        "totalTax": "Gesamtsteuer:",
+        "effective": "Effektiv: {{rate}} %"
+      },
+      "dialog": {
+        "addTitle": "Steuerkomponente hinzufügen",
+        "editTitle": "Steuerkomponente bearbeiten",
+        "deleteTitle": "Steuerkomponente löschen"
+      },
+      "fields": {
+        "name": {
+          "label": "Name *",
+          "placeholder": "z. B. Bundessteuer, Staatssteuer"
+        },
+        "rate": {
+          "label": "Rate (%) *",
+          "placeholder": "z.B. 10"
+        },
+        "sequence": {
+          "label": "Reihenfolge *",
+          "placeholder": "z.B. 1"
+        },
+        "compound": {
+          "label": "Zusammengesetzte Steuer",
+          "help": "Berechnen Sie auf Basis + frühere Steuern"
+        },
+        "startDate": {
+          "label": "Startdatum (optional)"
+        },
+        "endDate": {
+          "label": "Enddatum (optional)"
+        }
+      },
+      "dateRange": {
+        "always": "Stets",
+        "any": "Beliebig",
+        "ongoing": "Laufend"
+      },
+      "actions": {
+        "add": "Komponente hinzufügen",
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "cancel": "Stornieren",
+        "save": "Speichern",
+        "saving": "Sparen...",
+        "deleting": "Löschen..."
+      },
+      "delete": {
+        "message": "Sind Sie sicher, dass Sie die Komponente „{{name}}“ löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "toast": {
+        "created": "Steuerkomponente erfolgreich erstellt.",
+        "updated": "Steuerkomponente erfolgreich aktualisiert.",
+        "deleted": "Steuerkomponente erfolgreich gelöscht."
+      },
+      "errors": {
+        "load": "Steuerkomponenten konnten nicht geladen werden.",
+        "create": "Die Steuerkomponente konnte nicht erstellt werden.",
+        "update": "Die Steuerkomponente konnte nicht aktualisiert werden.",
+        "delete": "Steuerkomponente konnte nicht gelöscht werden."
+      }
+    },
+    "holidays": {
+      "title": "Steuerferien",
+      "titleWithName": "Steuerbefreiungen für {{name}}",
+      "tooltip": "Steuerferien sind vorübergehende Zeiträume, in denen diese Steuer nicht erhoben wird. Nutzen Sie sie für Werbeaktionen, saisonale Ausnahmen oder staatlich vorgeschriebene Steuerbefreiungen.",
+      "loading": "Feiertage werden geladen...",
+      "empty": "Keine Steuerferien definiert. Fügen Sie Feiertage hinzu, um diese Steuer in bestimmten Zeiträumen vorübergehend zu befreien.",
+      "summary": {
+        "active": "{{count}} aktiv",
+        "upcoming": "{{count}} steht bevor",
+        "expired": "{{count}} abgelaufen"
+      },
+      "dialog": {
+        "addTitle": "Steuerurlaub hinzufügen",
+        "editTitle": "Steuerurlaub bearbeiten",
+        "deleteTitle": "Steuerurlaub löschen"
+      },
+      "fields": {
+        "startDate": {
+          "label": "Startdatum *"
+        },
+        "endDate": {
+          "label": "Enddatum *"
+        },
+        "description": {
+          "label": "Beschreibung (optional)",
+          "placeholder": "z. B. Black Friday Sale, staatlicher Steuerurlaub"
+        }
+      },
+      "actions": {
+        "add": "Feiertag hinzufügen",
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "cancel": "Stornieren",
+        "save": "Speichern",
+        "saving": "Sparen...",
+        "deleting": "Löschen..."
+      },
+      "delete": {
+        "message": "Sind Sie sicher, dass Sie den Feiertag „{{description}}“ ({{dateRange}}) löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "untitled": "Ohne Titel"
+      },
+      "toast": {
+        "created": "Steuerurlaub erfolgreich erstellt.",
+        "updated": "Steuerurlaub erfolgreich aktualisiert.",
+        "deleted": "Steuerurlaub erfolgreich gelöscht."
+      },
+      "errors": {
+        "load": "Steuerferien konnten nicht geladen werden.",
+        "create": "Steuerbefreiung konnte nicht erstellt werden.",
+        "update": "Steuerurlaub konnte nicht aktualisiert werden.",
+        "delete": "Steuerurlaub konnte nicht gelöscht werden."
+      }
+    }
+  },
+  "payments": {
+    "title": "Zahlungseinstellungen",
+    "description": "Konfigurieren Sie, wie Zahlungslinks mit Ihren Rechnungen funktionieren.",
+    "loading": "Zahlungseinstellungen werden geladen..."
+  },
+  "serviceCategories": {
+    "title": "Servicekategorien",
+    "dialog": {
+      "addTitle": "Servicekategorie hinzufügen",
+      "editTitle": "Servicekategorie bearbeiten",
+      "deleteTitle": "Servicekategorie löschen"
+    },
+    "fields": {
+      "categoryName": {
+        "label": "Kategoriename *",
+        "placeholder": "Geben Sie den Kategorienamen ein"
+      },
+      "description": {
+        "label": "Beschreibung",
+        "placeholder": "Geben Sie eine Beschreibung ein"
+      },
+      "displayOrder": {
+        "label": "Reihenfolge anzeigen",
+        "placeholder": "Geben Sie die Anzeigereihenfolge ein",
+        "help": "Steuert die Reihenfolge, in der Servicekategorien in Dropdown-Menüs auf der gesamten Plattform angezeigt werden. Niedrigere Zahlen erscheinen zuerst."
+      }
+    },
+    "actions": {
+      "add": "Servicekategorie hinzufügen",
+      "importFromStandard": "Import aus Standardkategorien",
+      "create": "Erstellen",
+      "update": "Aktualisieren"
+    },
+    "delete": {
+      "message": "Sind Sie sicher, dass Sie „{{name}}“ löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "import": {
+      "title": "Standard-Servicekategorien importieren",
+      "empty": "Es stehen keine Standarddienstkategorien zum Importieren zur Verfügung.",
+      "description": "Wählen Sie Standarddienstkategorien aus, die Sie in Ihre Organisation importieren möchten:",
+      "fetchError": "Verfügbare Servicekategorien konnten nicht für den Import abgerufen werden"
+    },
+    "conflicts": {
+      "description": "Die folgenden Elemente weisen Konflikte auf. Wählen Sie, wie Sie die einzelnen Probleme lösen möchten:",
+      "nameExists": "Eine Kategorie mit diesem Namen existiert bereits.",
+      "rename": "Mit neuem Namen importieren:",
+      "orderInUse": "Anzeigereihenfolge {{displayOrder}} wird bereits verwendet.",
+      "reorder": "Import mit Auftrag {{order}}"
+    },
+    "toast": {
+      "created": "Servicekategorie erfolgreich erstellt",
+      "updated": "Servicekategorie erfolgreich aktualisiert",
+      "deleted": "Servicekategorie erfolgreich gelöscht",
+      "imported": "Servicekategorien erfolgreich importiert"
+    },
+    "errors": {
+      "fetch": "Dienstkategorien konnten nicht abgerufen werden",
+      "missingId": "Kategorie-ID fehlt",
+      "nameRequired": "Kategoriename ist erforderlich",
+      "save": "Die Servicekategorie konnte nicht gespeichert werden",
+      "delete": "Die Dienstkategorie konnte nicht gelöscht werden",
+      "import": "Dienstkategorien konnten nicht importiert werden"
+    }
+  },
+  "serviceTypes": {
+    "title": "Benutzerdefinierte Servicetypen",
+    "description": "Verwalten Sie die benutzerdefinierten Servicetypen Ihrer Organisation.",
+    "loading": "Diensttypen werden geladen...",
+    "dialog": {
+      "addTitle": "Benutzerdefinierten Servicetyp hinzufügen",
+      "editTitle": "Benutzerdefinierten Servicetyp bearbeiten",
+      "deleteTitle": "Servicetyp löschen"
+    },
+    "fields": {
+      "name": {
+        "label": "Name *",
+        "placeholder": "z. B. benutzerdefinierte Supportstufe *"
+      },
+      "description": {
+        "label": "Beschreibung (optional)",
+        "placeholder": "Beschreiben Sie diesen Servicetyp"
+      },
+      "billingMethod": {
+        "label": "Abrechnungsmethode *",
+        "placeholder": "Abrechnungsmethode auswählen..."
+      },
+      "displayOrder": {
+        "label": "Reihenfolge anzeigen *",
+        "placeholder": "z.B. 1, 2, 3...",
+        "help": "Steuert die Reihenfolge, in der Diensttypen in Dropdown-Menüs auf der gesamten Plattform angezeigt werden. Niedrigere Zahlen erscheinen zuerst.",
+        "usedOrders": "Verwendete Bestellungen: {{orders}}"
+      }
+    },
+    "actions": {
+      "add": "Benutzerdefinierten Typ hinzufügen",
+      "importFromStandard": "Import aus Standarddiensttypen",
+      "save": "Speichern",
+      "close": "Schließen"
+    },
+    "validation": {
+      "summary": "Bitte füllen Sie die erforderlichen Felder aus:",
+      "name": "Name des Diensttyps",
+      "billingMethod": "Abrechnungsmethode",
+      "displayOrder": "Reihenfolge anzeigen",
+      "orderInUse": "Auftrag {{order}} wird bereits von „{{name}}“ verwendet"
+    },
+    "delete": {
+      "message": "Sind Sie sicher, dass Sie den Diensttyp „{{name}}“ löschen möchten? Dies kann nicht rückgängig gemacht werden.",
+      "errorPrefix": "Fehler: {{error}}"
+    },
+    "import": {
+      "title": "Standarddiensttypen importieren",
+      "empty": "Es sind keine Standarddiensttypen zum Importieren verfügbar.",
+      "description": "Wählen Sie Standarddiensttypen aus, die Sie in Ihre Organisation importieren möchten:"
+    },
+    "conflicts": {
+      "description": "Bei den folgenden Elementen gibt es Konflikte, die gelöst werden müssen:",
+      "nameExists": "Konflikt: Name existiert bereits",
+      "orderInUse": "Konflikt: Auftrag {{order}} wird bereits verwendet",
+      "rename": "Mit anderem Namen importieren:",
+      "reorder": "Import mit anderer Reihenfolge:"
+    },
+    "toast": {
+      "importedCount": "Importierter Diensttyp {{count}}",
+      "importedCount_other": "Importierte {{count}}-Diensttypen",
+      "skippedItem": "{{name}}: {{reason}}"
+    },
+    "errors": {
+      "fetch": "Diensttypen konnten nicht abgerufen werden",
+      "save": "Der Diensttyp konnte nicht gespeichert werden",
+      "delete": "Der Diensttyp konnte nicht gelöscht werden",
+      "checkConflicts": "Konflikte konnten nicht überprüft werden",
+      "import": "Diensttypen konnten nicht importiert werden"
+    }
+  },
+  "serviceCatalog": {
+    "title": "Servicekatalogverwaltung",
+    "loading": "Ladedienste",
+    "dialog": {
+      "editTitle": "Dienst bearbeiten"
+    },
+    "filters": {
+      "allServiceTypes": "Alle Servicetypen",
+      "serviceTypePlaceholder": "Nach Servicetyp filtern...",
+      "allBillingMethods": "Alle Abrechnungsmethoden",
+      "billingMethodPlaceholder": "Nach Abrechnungsmethode filtern..."
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Dienstname",
+        "placeholder": "Dienstname"
+      },
+      "serviceType": {
+        "label": "Servicetyp",
+        "placeholder": "Servicetyp auswählen..."
+      },
+      "billingMethod": {
+        "label": "Abrechnungsmethode",
+        "placeholder": "Abrechnungsmethode auswählen..."
+      },
+      "description": {
+        "label": "Beschreibung",
+        "placeholder": "Beschreibung"
+      },
+      "pricing": {
+        "label": "Preise *",
+        "primaryRateHelp": "Die erste Währung ist der Primärkurs.",
+        "multiCurrencyHelp": "Fügen Sie Preise in mehreren Währungen hinzu. Die erste Währung ist der Primärkurs.",
+        "placeholders": {
+          "currency": "Währung",
+          "rate": "0,00"
+        },
+        "rateType": {
+          "monthly": "Monatlich",
+          "perHour": "Pro Stunde",
+          "usage": "Verwendung",
+          "rate": "Rate"
+        }
+      },
+      "unitOfMeasure": {
+        "label": "Maßeinheit *",
+        "placeholder": "z. B. GB, API-Aufruf, Benutzer",
+        "help": "Die messbare Einheit für die Abrechnung (z. B. GB, API-Aufruf, Benutzer)"
+      },
+      "taxRate": {
+        "label": "Steuersatz (optional)",
+        "placeholder": "Wählen Sie den Steuersatz aus (oder lassen Sie das Feld für nicht steuerpflichtig) leer.",
+        "loading": "Ladepreise..."
+      },
+      "sku": {
+        "label": "Artikelnummer",
+        "placeholder": "Artikelnummer"
+      },
+      "inventoryCount": {
+        "label": "Bestandszählung",
+        "placeholder": "Bestandszählung"
+      },
+      "seatLimit": {
+        "label": "Sitzplatzbegrenzung",
+        "placeholder": "Sitzplatzbegrenzung"
+      },
+      "licenseTerm": {
+        "label": "Lizenzlaufzeit",
+        "placeholder": "Lizenzlaufzeit auswählen..."
+      }
+    },
+    "actions": {
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "addCurrency": "+ Währung hinzufügen",
+      "remove": "Entfernen",
+      "cancel": "Stornieren",
+      "saveChanges": "Änderungen speichern"
+    },
+    "table": {
+      "serviceName": "Dienstname",
+      "serviceType": "Servicetyp",
+      "billingMethod": "Abrechnungsmethode",
+      "pricing": "Preise",
+      "unit": "Einheit",
+      "taxRate": "Steuersatz",
+      "nonTaxable": "Nicht steuerpflichtig",
+      "thisService": "diesen Dienst"
+    },
+    "errors": {
+      "fetchServices": "Dienste konnten nicht abgerufen werden",
+      "fetchCategories": "Kategorien konnten nicht abgerufen werden",
+      "fetchServiceTypesUnknown": "Beim Abrufen der Diensttypen ist ein unbekannter Fehler aufgetreten",
+      "fetchTaxRates": "Steuersätze konnten nicht geladen werden.",
+      "serviceTypeRequired": "Servicetyp ist erforderlich",
+      "priceRequired": "Es ist mindestens ein Preis erforderlich",
+      "missingId": "Der Dienst kann ohne ID nicht aktualisiert werden.",
+      "update": "Der Dienst konnte nicht aktualisiert werden",
+      "validateDelete": "Der Löschvorgang konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
+      "delete": "Der Dienst konnte nicht gelöscht werden",
+      "deactivate": "Der Dienst konnte nicht deaktiviert werden"
+    }
+  },
+  "products": {
+    "title": "Produkte",
+    "loading": "Produkte werden geladen",
+    "thisProduct": "dieses Produkt",
+    "actions": {
+      "add": "Produkt hinzufügen",
+      "search": "Suchen",
+      "edit": "Bearbeiten",
+      "restore": "Wiederherstellen",
+      "archive": "Archiv",
+      "delete": "Löschen"
+    },
+    "filters": {
+      "searchPlaceholder": "Suche nach Name, SKU, Beschreibung...",
+      "allStatuses": "Alle Status",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "allCategories": "Alle Kategorien",
+      "allTypes": "Alle Typen",
+      "loading": "Laden..."
+    },
+    "table": {
+      "product": "Produkt",
+      "sku": "Artikelnummer",
+      "type": "Typ",
+      "category": "Kategorie",
+      "label": "Etikett",
+      "pricing": "Preise",
+      "taxRate": "Steuersatz",
+      "active": "Aktiv",
+      "nonTaxable": "Nicht steuerpflichtig"
+    },
+    "archive": {
+      "title": "Produkt archivieren",
+      "message": "Archiv {{name}}? Es wird standardmäßig vor den Kommissionierern ausgeblendet und kann bis zur Wiederherstellung nicht an neue Verträge/Rechnungen angehängt werden."
+    },
+    "permanentDelete": {
+      "title": "Produkt dauerhaft löschen",
+      "checking": "Es wird geprüft, ob das Produkt gelöscht werden kann...",
+      "confirm": "Sind Sie sicher, dass Sie „{{name}}“ dauerhaft löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "blocked": "„{{name}}“ kann nicht gelöscht werden, da es mit vorhandenen Daten verknüpft ist:",
+      "archiveInstead": "Um dieses Produkt zu entfernen, entfernen Sie es zunächst aus allen zugehörigen Datensätzen oder verwenden Sie stattdessen „Archivieren“."
+    },
+    "errors": {
+      "fetch": "Produkte konnten nicht abgerufen werden",
+      "restore": "Produkt konnte nicht wiederhergestellt werden",
+      "archive": "Produkt konnte nicht archiviert werden",
+      "checkAssociations": "Die Zuordnungen konnten nicht überprüft werden",
+      "delete": "Das Produkt konnte nicht gelöscht werden"
+    }
+  },
+  "quickAddService": {
+    "dialog": {
+      "title": "Neuen Dienst hinzufügen"
+    },
+    "actions": {
+      "trigger": "Dienst hinzufügen",
+      "addCurrency": "+ Währung hinzufügen",
+      "remove": "Entfernen",
+      "cancel": "Stornieren",
+      "save": "Dienst speichern"
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Dienstname *",
+        "placeholder": "Dienstname"
+      },
+      "serviceType": {
+        "label": "Servicetyp *",
+        "placeholder": "Servicetyp auswählen..."
+      },
+      "billingMethod": {
+        "label": "Abrechnungsmethode *",
+        "placeholder": "Abrechnungsmethode auswählen..."
+      },
+      "description": {
+        "label": "Beschreibung",
+        "placeholder": "Servicebeschreibung"
+      },
+      "pricing": {
+        "label": "Preise *",
+        "help": "Fügen Sie Preise in mehreren Währungen hinzu. Die erste Währung ist der Primärkurs.",
+        "placeholders": {
+          "currency": "Währung",
+          "rate": "0,00"
+        },
+        "rateType": {
+          "monthly": "Monatlich",
+          "perHour": "Pro Stunde",
+          "usage": "Verwendung",
+          "rate": "Rate"
+        }
+      },
+      "unitOfMeasure": {
+        "label": "Maßeinheit *",
+        "placeholder": "z. B. GB, API-Aufruf, Benutzer",
+        "help": "Die messbare Einheit für die Abrechnung (z. B. GB, API-Aufruf, Benutzer)"
+      },
+      "taxRate": {
+        "label": "Steuersatz (optional)",
+        "placeholder": "Steuersatz auswählen (optional)",
+        "loading": "Steuersätze werden geladen..."
+      },
+      "sku": {
+        "label": "Artikelnummer",
+        "placeholder": "Artikelnummer"
+      },
+      "inventoryCount": {
+        "label": "Bestandszählung",
+        "placeholder": "Bestandszählung"
+      },
+      "seatLimit": {
+        "label": "Sitzplatzbegrenzung",
+        "placeholder": "Sitzplatzbegrenzung"
+      },
+      "licenseTerm": {
+        "label": "Lizenzlaufzeit",
+        "placeholder": "Lizenzlaufzeit auswählen..."
+      }
+    },
+    "validation": {
+      "summary": "Bitte beheben Sie die folgenden Fehler:",
+      "serviceNameRequired": "Dienstname ist erforderlich",
+      "serviceTypeRequired": "Servicetyp ist erforderlich",
+      "priceRequired": "Es ist mindestens ein Preis erforderlich",
+      "billingMethodRequired": "Abrechnungsmethode ist erforderlich",
+      "skuRequiredForHardware": "Für Hardware ist eine SKU erforderlich",
+      "licenseTermRequired": "Für Softwarelizenzen ist eine Lizenzlaufzeit erforderlich",
+      "selectedTypeNotFound": "Ausgewählter Diensttyp nicht gefunden"
+    },
+    "errors": {
+      "fetchCategories": "Kategorien konnten nicht abgerufen werden",
+      "fetchTaxRates": "Steuersätze konnten nicht geladen werden.",
+      "create": "Dienst konnte nicht erstellt werden"
+    }
+  },
+  "quickAddProduct": {
+    "dialog": {
+      "addTitle": "Produkt hinzufügen",
+      "editTitle": "Produkt bearbeiten"
+    },
+    "actions": {
+      "addCurrency": "+ Währung hinzufügen",
+      "remove": "Entfernen",
+      "cancel": "Stornieren",
+      "create": "Erstellen",
+      "save": "Speichern"
+    },
+    "fields": {
+      "productName": {
+        "label": "Produktname *"
+      },
+      "type": {
+        "label": "Typ *",
+        "placeholder": "Typ auswählen..."
+      },
+      "sku": {
+        "label": "Artikelnummer"
+      },
+      "category": {
+        "label": "Kategorie",
+        "placeholder": "Nicht kategorisiert",
+        "loading": "Laden..."
+      },
+      "label": {
+        "label": "Etikett",
+        "placeholder": "Optionales Freiformetikett"
+      },
+      "vendor": {
+        "label": "Verkäufer"
+      },
+      "manufacturer": {
+        "label": "Hersteller"
+      },
+      "cost": {
+        "label": "Kosten",
+        "placeholder": "0,00"
+      },
+      "billingMethod": {
+        "label": "Abrechnungsmethode"
+      },
+      "pricing": {
+        "label": "Preise *",
+        "help": "Fügen Sie Preise in mehreren Währungen hinzu. Die erste Währung ist der Primärkurs.",
+        "rateType": {
+          "rate": "Rate"
+        },
+        "placeholders": {
+          "currency": "Währung",
+          "rate": "0,00"
+        }
+      },
+      "taxRate": {
+        "label": "Steuersatz",
+        "placeholder": "Nicht steuerpflichtig",
+        "loading": "Laden..."
+      },
+      "active": {
+        "label": "Aktiv"
+      },
+      "unitOfMeasure": {
+        "label": "Maßeinheit *",
+        "placeholder": "z. B. „jeder“, „Artikel“, „Lizenz“."
+      },
+      "license": {
+        "label": "Lizenz?"
+      },
+      "licenseTerm": {
+        "label": "Lizenzlaufzeit"
+      },
+      "description": {
+        "label": "Beschreibung"
+      }
+    },
+    "options": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "yes": "Ja",
+      "no": "NEIN"
+    },
+    "validation": {
+      "productNameRequired": "Produktname ist erforderlich",
+      "serviceTypeRequired": "Servicetyp ist erforderlich",
+      "unitOfMeasureRequired": "Maßeinheit ist erforderlich",
+      "priceRequired": "Es ist mindestens ein Preis erforderlich",
+      "currencyRequired": "Für jeden Preis ist eine Währung erforderlich",
+      "currencyUnique": "Jede Währung kann nur einmal verwendet werden",
+      "pricesNonNegative": "Die Preise dürfen nicht negativ sein",
+      "nonZeroPriceRequired": "Es ist mindestens ein Preis ungleich Null erforderlich"
+    },
+    "errors": {
+      "create": "Produkt konnte nicht erstellt werden",
+      "update": "Das Produkt konnte nicht aktualisiert werden"
+    }
+  },
+  "clientTaxSettings": {
+    "title": "Kundensteuereinstellungen",
+    "loading": "Steuereinstellungen werden geladen...",
+    "noSettingsFound": "Für diesen Kunden wurden keine Steuereinstellungen gefunden.",
+    "createDefaultButton": "Erstellen Sie Standardsteuereinstellungen",
+    "alerts": {
+      "dismissError": "Fehler verwerfen",
+      "dismissSuccess": "Erfolgsmeldung verwerfen"
+    },
+    "messages": {
+      "defaultCreated": "Standardsteuereinstellungen erfolgreich erstellt",
+      "createDefaultError": "Fehler beim Erstellen der Standardsteuereinstellungen",
+      "fetchError": "Fehler beim Abrufen der Steuereinstellungen",
+      "updated": "Steuereinstellungen erfolgreich aktualisiert",
+      "updateError": "Fehler beim Aktualisieren der Steuereinstellungen",
+      "taxExemptEnabled": "Kunde als steuerbefreit markiert.",
+      "taxExemptDisabled": "Steuerbefreiungsstatus vom Kunden entfernt.",
+      "taxExemptUpdateError": "Der Steuerbefreiungsstatus konnte nicht aktualisiert werden"
+    },
+    "validation": {
+      "thresholdNegativeMin": "Der Schwellenwert {{index}} hat einen negativen Mindestbetrag",
+      "thresholdMaxLessThanMin": "Der Höchstbetrag des Schwellenwerts {{index}} liegt unter dem Mindestbetrag",
+      "thresholdNegativeRate": "Der Schwellenwert {{index}} hat eine negative Rate",
+      "holidayMissingDates": "An Feiertag {{index}} fehlt das Start- oder Enddatum",
+      "holidayEndBeforeStart": "Feiertag {{index}} hat ein Enddatum vor seinem Startdatum"
+    },
+    "taxExempt": {
+      "title": "Steuerbefreiungsstatus",
+      "description": "Bei steuerbefreiten Kunden werden auf ihre Rechnungen keine Steuern erhoben.",
+      "label": "Steuerbefreit",
+      "tooltip": "Wenn diese Option aktiviert ist, werden für die Rechnungen dieses Kunden keine Steuern berechnet. Änderungen werden zu Prüfzwecken protokolliert.",
+      "status": {
+        "exempt": "Befreit",
+        "notExempt": "Nicht befreit"
+      },
+      "certificate": {
+        "label": "Nummer der Steuerbefreiungsbescheinigung",
+        "placeholder": "Zertifikatsnummer eingeben (optional)",
+        "help": "Optional: Speichern Sie die Steuerbefreiungsbescheinigungsnummer des Kunden als Referenz."
+      },
+      "alert": {
+        "title": "Steuerbefreiter Kunde",
+        "description": "Diesem Kunden werden keine Steuern auf Rechnungen berechnet. Bewahren Sie unbedingt die Befreiungsbescheinigung auf."
+      },
+      "actions": {
+        "cancel": "Stornieren",
+        "save": "Steuerbefreiungsstatus speichern",
+        "saving": "Sparen..."
+      }
+    },
+    "advanced": {
+      "title": "Erweiterte Steueroptionen",
+      "description": "Konfigurieren Sie für diesen Kunden eine spezielle Steuerbehandlung.",
+      "reverseCharge": {
+        "label": "Wenden Sie die umgekehrte Steuerschuldnerschaft an",
+        "tooltip": "Bei der Umkehrung der Steuerschuldnerschaft wird die Steuerschuld vom Verkäufer auf den Käufer verlagert. Häufig bei grenzüberschreitenden B2B-Transaktionen.",
+        "status": {
+          "enabled": "Ermöglicht",
+          "disabled": "Deaktiviert"
+        }
+      },
+      "taxSourceOverride": {
+        "label": "Überschreibung der Steuerquelle",
+        "tooltip": "Überschreiben Sie die Standardsteuerquelle des Mieters für diesen Kunden. „Intern“ verwendet die Steuerberechnung von Alga. „Extern“ delegiert die Steuerberechnung beim Export von Rechnungen an das Buchhaltungssystem.",
+        "placeholder": "Steuerquelle auswählen...",
+        "options": {
+          "default": "Mandantenstandard verwenden",
+          "internal": "Alga PSA berechnet Steuer",
+          "external": "Buchhaltungspaket berechnet Steuern"
+        },
+        "effective": {
+          "label": "Derzeitige effektive Steuerquelle:",
+          "pendingExternal": "Ausstehend Extern",
+          "overridden": "(überschrieben)"
+        },
+        "notAvailable": {
+          "messageStart": "Die Überschreibung der Steuerquelle ist nicht verfügbar. Diese Funktion muss im aktiviert sein",
+          "link": "Abrechnungseinstellungen",
+          "messageEnd": "um Überschreibungen der Steuerquelle pro Kunde zu ermöglichen."
+        }
+      },
+      "actions": {
+        "reset": "Änderungen zurücksetzen",
+        "update": "Steuereinstellungen aktualisieren",
+        "updating": "Aktualisierung..."
+      }
+    }
+  },
+  "common": {
+    "actions": {
+      "add": "Hinzufügen",
+      "cancel": "Stornieren",
+      "close": "Schließen",
+      "create": "Erstellen",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "importSelected": "Ausgewählte importieren",
+      "importWithResolutions": "Mit Auflösungen importieren",
+      "remove": "Entfernen",
+      "reset": "Zurücksetzen",
+      "save": "Speichern",
+      "update": "Aktualisieren"
+    },
+    "columns": {
+      "actions": "Aktionen",
+      "name": "Name",
+      "description": "Beschreibung",
+      "order": "Befehl",
+      "code": "Code",
+      "status": "Status",
+      "billingMethod": "Abrechnungsmethode",
+      "rate": "Rate",
+      "dateRange": "Datumsbereich",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "sequence": "Seq"
+    },
+    "billingMethod": {
+      "fixed": "Behoben",
+      "fixedFee": "Feste Gebühr",
+      "hourly": "Stündlich",
+      "usage": "Verwendung",
+      "usageBased": "Nutzungsbasiert"
+    },
+    "licenseTerm": {
+      "monthly": "Monatlich",
+      "annual": "Jährlich",
+      "perpetual": "Ewig"
+    },
+    "statuses": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "upcoming": "Demnächst",
+      "expired": "Abgelaufen",
+      "enabled": "Ermöglicht",
+      "disabled": "Deaktiviert",
+      "yes": "Ja",
+      "no": "NEIN",
+      "nonTaxable": "Nicht steuerpflichtig"
+    },
+    "emptyValue": "-",
+    "notAvailable": "N / A",
+    "loading": "Laden...",
+    "a11y": {
+      "openMenu": "Menü öffnen"
+    }
+  },
+  "import": {
+    "title": "Importkonflikte lösen",
+    "selectAll": "Alles auswählen",
+    "skipItem": "Überspringen Sie diesen Artikel",
+    "headers": {
+      "name": "Name",
+      "description": "Beschreibung",
+      "order": "Befehl",
+      "billingMethod": "Abrechnungsmethode"
+    }
+  },
+  "validation": {
+    "requiredFields": "Bitte füllen Sie die erforderlichen Felder aus:"
+  },
+  "errors": {
+    "failedToLoadSettings": "Die Einstellungen konnten nicht geladen werden",
+    "failedToSaveSettings": "Einstellungen konnten nicht gespeichert werden"
+  },
+  "toast": {
+    "saved": "Erfolgreich gespeichert"
+  },
+  "numbering": {
+    "section": {
+      "title": "Nummernformat",
+      "description": "Legen Sie das Präfix, die Ziffernauffüllung und die aktuelle Sequenz fest."
+    },
+    "fields": {
+      "prefix": {
+        "label": "Nummernpräfix",
+        "help": "Optionales Präfix für die Nummernsequenz. Leer lassen für kein Präfix oder ein eigenes Präfix eingeben."
+      },
+      "minimumDigits": {
+        "label": "Mindestanzahl Ziffern",
+        "help": "Mindestanzahl der Ziffern für die laufende Nummer. Bei 6 wird z. B. aus '1' die Zahl '000001'."
+      },
+      "initialValue": {
+        "label": "Startwert",
+        "help": "Legen Sie die Anfangsnummer der Sequenz fest. Dies kann nur einmal festgelegt werden.",
+        "placeholder": "Wert eingeben"
+      },
+      "lastUsedNumber": {
+        "label": "Zuletzt verwendete Nummer",
+        "help": "Die letzte zugewiesene Nummer. Die nächste Nummer ist um eins höher als dieser Wert."
+      },
+      "nextPreview": {
+        "label": "Vorschau der nächsten Nummer",
+        "help": "Dies ist die Nummer, die dem nächsten Datensatz zugewiesen wird."
+      }
+    },
+    "actions": {
+      "save": "Änderungen speichern",
+      "cancel": "Abbrechen"
+    },
+    "dialog": {
+      "title": "Nummerierungseinstellungen aktualisieren",
+      "message": "Durch das Ändern dieser Einstellungen wird beeinflusst, wie neue Nummern erzeugt werden. Bestehende Datensätze sind davon nicht betroffen. Möchten Sie wirklich fortfahren?",
+      "confirm": "Einstellungen aktualisieren"
+    },
+    "toast": {
+      "updated": "Einstellungen erfolgreich aktualisiert."
+    },
+    "errors": {
+      "load": "Fehler beim Laden der Nummerierungseinstellungen.",
+      "save": "Fehler beim Aktualisieren der Einstellungen."
+    }
+  }
+}

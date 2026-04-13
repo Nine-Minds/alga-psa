@@ -347,6 +347,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
     if (step.type === 'control.forEach') return 'For Each';
     if (step.type === 'control.tryCatch') return 'Try/Catch';
     if (step.type === 'event.wait') return 'Wait for Event';
+    if (step.type === 'time.wait') return 'Wait for Time';
     if (step.type === 'human.task') return 'Human Task';
     if (step.type === 'state.set') return 'Set State';
     if (step.type === 'transform.assign') return 'Assign';

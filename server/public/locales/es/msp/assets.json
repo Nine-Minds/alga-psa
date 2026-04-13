@@ -4,21 +4,21 @@
       "add": "Agregar",
       "back": "Atrás",
       "cancel": "Cancelar",
-      "close": "Cerca",
+      "close": "Cerrar",
       "copy": "Copiar",
       "create": "Crear",
-      "delete": "Borrar",
+      "delete": "Eliminar",
       "download": "Descargar",
       "edit": "Editar",
-      "refresh": "Refrescar",
-      "remove": "Eliminar",
-      "retry": "Rever",
-      "save": "Ahorrar",
-      "saving": "Ahorro...",
+      "refresh": "Actualizar",
+      "remove": "Quitar",
+      "retry": "Reintentar",
+      "save": "Guardar",
+      "saving": "Guardando...",
       "search": "Buscar",
       "select": "Seleccionar",
       "update": "Actualizar",
-      "view": "Vista"
+      "view": "Ver"
     },
     "states": {
       "active": "Activo",
@@ -100,7 +100,7 @@
     "actions": {
       "openActionsForAsset": "Acciones abiertas para el activo {{name}}",
       "viewDetails": "Ver detalles",
-      "editAsset": "Editar recurso",
+      "editAsset": "Editar activo",
       "createTicket": "Crear ticket",
       "refreshData": "Actualizar datos"
     },
@@ -113,7 +113,7 @@
       "agent": "Agente",
       "client": "Cliente",
       "location": "Ubicación",
-      "actions": "Comportamiento"
+      "actions": "Acciones"
     },
     "metrics": {
       "totalAssets": {
@@ -194,7 +194,7 @@
       "agent_status": "estado del agente",
       "client_name": "nombre del cliente",
       "location": "ubicación",
-      "actions": "comportamiento"
+      "actions": "acciones"
     }
   },
   "assetDashboardGrid": {
@@ -212,7 +212,7 @@
     "tabs": {
       "overview": "Descripción general",
       "maintenance": "Mantenimiento",
-      "tickets": "Entradas",
+      "tickets": "Tickets",
       "configuration": "Configuración",
       "documents": "Documentos"
     },
@@ -231,7 +231,7 @@
     },
     "actions": {
       "openAssetRecord": "Abrir registro de activos",
-      "delete": "Borrar"
+      "delete": "Eliminar"
     },
     "overview": {
       "assetTag": "Etiqueta de activo {{tag}} • {{type}}",
@@ -258,11 +258,11 @@
       "noLogs": "Los registros de mantenimiento aparecerán aquí después de la primera entrada de servicio."
     },
     "tickets": {
-      "empty": "Aún no hay entradas vinculadas a este activo. Utilice la acción rápida para crear uno.",
+      "empty": "Aún no hay tickets vinculados a este activo. Utilice la acción rápida para crear uno.",
       "linked": "Vinculado {{date}}",
       "client": "Cliente: {{name}}",
-      "assignee": "Cesionario: {{name}}",
-      "openTicket": "billete abierto"
+      "assignee": "Asignado a: {{name}}",
+      "openTicket": "Abrir ticket"
     },
     "configuration": {
       "coreAttributes": "Atributos principales",
@@ -279,7 +279,7 @@
       "status": "Estado",
       "created": "Creado",
       "updated": "Actualizado",
-      "tenant": "Arrendatario"
+      "tenant": "Inquilino"
     },
     "typeDetails": {
       "workstation": "Detalles de la estación de trabajo",
@@ -307,7 +307,7 @@
       "model": "Modelo",
       "imei": "IMEI",
       "phoneNumber": "Número de teléfono",
-      "carrier": "Transportador",
+      "carrier": "Operador",
       "lastLogin": "Último inicio de sesión",
       "lastCheckIn": "último check-in",
       "notReported": "No reportado",
@@ -331,12 +331,12 @@
     "backToAssets": "Volver a Activos",
     "assetTag": "Etiqueta de activo: {{tag}}",
     "actions": {
-      "createTicket": "Crear billete",
-      "menu": "Comportamiento",
-      "refreshing": "Refrescante...",
+      "createTicket": "Crear ticket",
+      "menu": "Acciones",
+      "refreshing": "Actualizando...",
       "refreshData": "Actualizar datos",
       "rebootDevice": "Reiniciar dispositivo",
-      "editAsset": "Editar recurso",
+      "editAsset": "Editar activo",
       "deleteAsset": "Eliminar activo"
     },
     "values": {
@@ -394,7 +394,7 @@
       "operatingSystem": "Sistema operativo",
       "imei": "IMEI",
       "phoneNumber": "Número de teléfono",
-      "carrier": "Transportador",
+      "carrier": "Operador",
       "supervisionStatus": "Estado de supervisión",
       "ipAddress": "Dirección IP",
       "networkPrinter": "Impresora de red",
@@ -445,7 +445,7 @@
       "maintenance": "Mantenimiento"
     },
     "deviceTypes": {
-      "switch": "Cambiar",
+      "switch": "Switch",
       "router": "Enrutador",
       "firewall": "Cortafuegos",
       "access_point": "Punto de acceso",
@@ -463,7 +463,7 @@
   "assetForm": {
     "title": "Formulario de activo",
     "description": "Formulario de creación y edición de activos principales con campos de identidad, ciclo de vida, contrato y metadatos",
-    "heading": "Editar recurso",
+    "heading": "Editar activo",
     "loading": {
       "assetDetails": "Cargando detalles del activo..."
     },
@@ -493,7 +493,7 @@
       "osVersion": "OS Versión",
       "cpuModel": "CPU Modelo",
       "cpuCores": "CPU Núcleos",
-      "ramGb": "RAM (ES)",
+      "ramGb": "RAM (GB)",
       "storageType": "Tipo de almacenamiento",
       "storageCapacityGb": "Capacidad de almacenamiento (GB)",
       "gpuModel": "GPU Modelo",
@@ -510,7 +510,7 @@
       "model": "Modelo",
       "imei": "IMEI",
       "phoneNumber": "Número de teléfono",
-      "carrier": "Transportador",
+      "carrier": "Operador",
       "supervisedDevice": "Dispositivo supervisado",
       "ipAddress": "Dirección IP",
       "monthlyDutyCycle": "Ciclo de trabajo mensual",
@@ -542,7 +542,7 @@
       "maintenance": "Mantenimiento"
     },
     "networkDeviceTypes": {
-      "switch": "Cambiar",
+      "switch": "Switch",
       "router": "Enrutador",
       "firewall": "Cortafuegos",
       "access_point": "Punto de acceso",
@@ -554,13 +554,13 @@
       "nvme": "NVMe"
     },
     "osTypes": {
-      "windows": "ventanas",
+      "windows": "Windows",
       "macos": "macOS",
-      "linux": "linux"
+      "linux": "Linux"
     },
     "mobileOsTypes": {
       "ios": "iOS",
-      "android": "Androide"
+      "android": "Android"
     },
     "typeDetails": {
       "workstation": "Detalles de la estación de trabajo",
@@ -573,14 +573,14 @@
   "assetFormClient": {
     "title": "Cliente de formulario de activos",
     "description": "Envoltorio dinámico exclusivo del cliente para el formulario de activos y la experiencia de edición del esqueleto",
-    "loadingTitle": "Editar recurso"
+    "loadingTitle": "Editar activo"
   },
   "assetMetricsBanner": {
     "title": "Banner de métricas de activos",
     "description": "Tarjetas de métricas y resúmenes de tickets, mantenimiento, tiempo de actividad y indicadores de salud de activos",
     "labels": {
       "healthStatus": "Estado de salud",
-      "openTickets": "Entradas abiertas",
+      "openTickets": "Tickets abiertos",
       "securityStatus": "Estado de seguridad",
       "warranty": "Garantía"
     },
@@ -693,19 +693,19 @@
     },
     "defaultTitle": "Problema con {{name}}",
     "actions": {
-      "open": "Crear billete",
-      "create": "Crear billete",
+      "open": "Crear ticket",
+      "create": "Crear ticket",
       "creating": "Creando..."
     },
     "fields": {
       "title": "Título",
       "description": "Descripción",
-      "board": "Junta",
+      "board": "Tablero",
       "status": "Estado",
       "priority": "Prioridad"
     },
     "placeholders": {
-      "title": "Ingrese el título del boleto",
+      "title": "Ingrese el título del ticket",
       "description": "Describe el problema...",
       "loadingBoards": "Cargando tableros...",
       "selectBoard": "Seleccionar tablero...",
@@ -719,11 +719,11 @@
       "loadPriorities": "No se pudieron cargar las prioridades",
       "loadBoards": "No se pudieron cargar los tableros",
       "loadStatuses": "No se pudieron cargar los estados",
-      "requiredFields": "Complete el título, la junta directiva, el estado y la prioridad.",
+      "requiredFields": "Complete el título, el tablero, el estado y la prioridad.",
       "createFailed": "No se pudo crear el ticket"
     },
     "success": {
-      "created": "Boleto creado exitosamente"
+      "created": "Ticket creado exitosamente"
     }
   },
   "deleteAssetButton": {
@@ -802,7 +802,7 @@
       "printer": "Impresora"
     },
     "networkDeviceTypes": {
-      "switch": "Cambiar",
+      "switch": "Switch",
       "router": "Enrutador",
       "firewall": "Cortafuegos",
       "accessPoint": "Punto de acceso",
@@ -810,7 +810,7 @@
     },
     "mobileOsTypes": {
       "ios": "iOS",
-      "android": "Androide"
+      "android": "Android"
     }
   },
   "remoteAccessButton": {
@@ -878,7 +878,7 @@
       "utilization": "Utilización"
     },
     "values": {
-      "unknownCpu": "Desconocido CPU",
+      "unknownCpu": "CPU desconocida",
       "unknown": "Desconocido",
       "unifiedMemory": "{{size}}GB Memoria unificada",
       "memoryUsed": "({{size}}GB usado)",
@@ -891,7 +891,7 @@
     "title": "RMM Vitales y conectividad",
     "description": "RMM panel de signos vitales para detalles de latidos, monitoreo y estado del endpoint",
     "actions": {
-      "refresh": "Refrescar"
+      "refresh": "Actualizar"
     },
     "fields": {
       "agentStatus": "Estado del agente",
@@ -989,7 +989,7 @@
     "actions": {
       "create": "Crear horario",
       "creating": "Creando...",
-      "update": "Calendario de actualización",
+      "update": "Actualizar horario",
       "updating": "Actualizando..."
     },
     "fields": {
@@ -1054,7 +1054,7 @@
       "nextMaintenance": "Próximo mantenimiento",
       "lastMaintenance": "Último mantenimiento",
       "status": "Estado",
-      "actions": "Comportamiento"
+      "actions": "Acciones"
     },
     "frequency": {
       "every": "Cada {{count}} {{frequency}}{{suffix}}",
@@ -1062,7 +1062,7 @@
         "daily": "día",
         "weekly": "semana",
         "monthly": "mes",
-        "quarterly": "cuarto",
+        "quarterly": "trimestre",
         "yearly": "año"
       }
     },
@@ -1098,8 +1098,8 @@
     "description": "Pestaña para explorar y gestionar relaciones de activos relacionados",
     "loading": "Cargando recursos relacionados...",
     "actions": {
-      "linkAsset": "Activo de enlace",
-      "unlink": "Desconectar",
+      "linkAsset": "Vincular activo",
+      "unlink": "Desvincular",
       "linkEmptyState": "Vincular un activo"
     },
     "success": {
@@ -1115,13 +1115,13 @@
       "assetName": "Nombre del activo",
       "relationship": "Relación",
       "linkedDate": "Fecha vinculada",
-      "actions": "Comportamiento"
+      "actions": "Acciones"
     },
     "empty": {
       "linked": "No hay activos relacionados vinculados."
     },
     "dialog": {
-      "title": "Activo de enlace",
+      "title": "Vincular activo",
       "loadingAssets": "Cargando recursos...",
       "empty": "No se encontraron activos disponibles.",
       "search": {
@@ -1138,8 +1138,8 @@
       },
       "actions": {
         "selected": "Seleccionado",
-        "linking": "Enlace...",
-        "confirm": "Activo de enlace"
+        "linking": "Vinculando...",
+        "confirm": "Vincular activo"
       }
     },
     "relationshipTypes": {
@@ -1151,11 +1151,11 @@
     "title": "Historial de servicio",
     "description": "Pestaña de historial de servicio que resume la actividad de mantenimiento y tickets del activo",
     "actions": {
-      "createTicket": "Crear billete"
+      "createTicket": "Crear ticket"
     },
     "table": {
-      "ticketId": "ID del billete",
-      "subject": "Sujeto",
+      "ticketId": "ID del ticket",
+      "subject": "Asunto",
       "status": "Estado",
       "priority": "Prioridad",
       "dateLinked": "Fecha de vinculación"

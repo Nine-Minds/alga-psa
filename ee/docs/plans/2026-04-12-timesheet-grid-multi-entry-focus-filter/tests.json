@@ -1,0 +1,115 @@
+[
+  {
+    "id": "T001",
+    "description": "Component: Clicking a grid cell with multiple entries switches the timesheet to list view and does not open the dialog directly.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Component: Clicking an empty grid cell still opens the single-entry creation flow.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F015"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Component: Clicking a single-entry grid cell still opens direct single-entry editing.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F016"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Component: TimeSheetListView focus filtering renders only the exact matching rows for the clicked work item/date/entry-id set and hides unrelated groups.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Component: Filtered list mode shows a banner describing the focus filter and exposes Clear filter and Back to grid actions.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Interaction: Clear filter removes the focus filter while keeping the user in list view, and Back to grid clears the filter while restoring grid view.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Interaction: Clicking a row from filtered list mode opens the single-entry time-entry dialog for that row.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Component: TimeEntryDialog renders only one entry editor, one Save action, and no internal multi-entry list or Add Entry action.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Regression: Existing delete behavior for a single editable entry still works from the simplified single-entry dialog.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F018"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Interaction: If the active filtered row set becomes empty after delete/save, the UI clears the filter and lands in a coherent remaining view state.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Manual browser sanity: grid multi-entry cell \u2192 filtered list \u2192 single-entry dialog navigation works without failed network requests or browser console errors in the happy path.",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F004",
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Regression: Delegated or read-only timesheet rules continue to suppress editing actions correctly across grid, filtered list, and single-entry dialog flows.",
+    "implemented": false,
+    "featureIds": [
+      "F018"
+    ]
+  }
+]

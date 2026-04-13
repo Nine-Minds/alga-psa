@@ -47,6 +47,10 @@ import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
 import EventsCatalogV2 from '@alga-psa/workflows/components/automation-hub/EventsCatalogV2';
+import type { WorkflowPickerActions } from '@alga-psa/workflows/components/automation-hub/WorkflowActionInputFixedPicker';
+import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
+import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
+import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions';
 import WorkflowSchedules from './WorkflowSchedules';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
@@ -94,6 +98,7 @@ import { PaletteItemWithTooltip } from './PaletteItemWithTooltip';
 import { WorkflowStepNameField } from './WorkflowStepNameField';
 import { WorkflowStepSaveOutputSection } from './WorkflowStepSaveOutputSection';
 import { WorkflowActionInputSection } from './WorkflowActionInputSection';
+import { WorkflowActionInputFixedPicker } from './WorkflowActionInputFixedPicker';
 import { buildWorkflowReferenceFieldOptions } from './workflowReferenceOptions';
 import { shouldRenderWorkflowAiSchemaSection } from './workflowAiStepUtils';
 import { applyWorkflowActionPresentationHintsToList } from './workflowActionPresentation';
@@ -274,6 +279,27 @@ type PipeSegment = {
 type PipeLocation = {
   pipePath: string;
   label: string;
+};
+
+const workflowPickerActions: WorkflowPickerActions = {
+  getAllContacts,
+  getContactsByClient,
+  getAvailableStatuses,
+  getTicketFieldOptions,
+  getTicketById,
+  getTicketsForList: async ({ boardFilterState, searchQuery }) => {
+    const result = await getTicketsForList({ boardFilterState, searchQuery });
+    return {
+      tickets: (result?.tickets ?? [])
+        .filter((ticket): ticket is typeof ticket & { ticket_id: string } => Boolean(ticket.ticket_id))
+        .map((ticket) => ({
+          ticket_id: ticket.ticket_id,
+          ticket_number: ticket.ticket_number,
+          title: ticket.title,
+          status_name: ticket.status_name,
+        })),
+    };
+  },
 };
 
 const CONTROL_BLOCKS: Array<{ id: Step['type']; label: string; category: string; description: string }> = [
@@ -1063,6 +1089,56 @@ const generateSaveAsName = (actionId: string): string => {
   return camelCase + 'Result';
 };
 
+const cloneWorkflowStepValue = <T,>(value: T): T => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value);
+  }
+
+  return JSON.parse(JSON.stringify(value)) as T;
+};
+
+const duplicateWorkflowStepWithNewIds = (step: Step): Step => {
+  const clonedStep = cloneWorkflowStepValue(step);
+
+  if (clonedStep.type === 'control.if') {
+    const ifStep = clonedStep as IfBlock;
+    return {
+      ...ifStep,
+      id: uuidv4(),
+      then: ifStep.then.map(duplicateWorkflowStepWithNewIds),
+      else: ifStep.else ? ifStep.else.map(duplicateWorkflowStepWithNewIds) : ifStep.else
+    } satisfies IfBlock;
+  }
+
+  if (clonedStep.type === 'control.tryCatch') {
+    const tryCatchStep = clonedStep as TryCatchBlock;
+    return {
+      ...tryCatchStep,
+      id: uuidv4(),
+      try: tryCatchStep.try.map(duplicateWorkflowStepWithNewIds),
+      catch: tryCatchStep.catch.map(duplicateWorkflowStepWithNewIds)
+    } satisfies TryCatchBlock;
+  }
+
+  if (clonedStep.type === 'control.forEach') {
+    const forEachStep = clonedStep as ForEachBlock;
+    return {
+      ...forEachStep,
+      id: uuidv4(),
+      body: forEachStep.body.map(duplicateWorkflowStepWithNewIds)
+    } satisfies ForEachBlock;
+  }
+
+  return {
+    ...clonedStep,
+    id: uuidv4()
+  } as Step;
+};
+
 const createStepFromPalette = (
   type: Step['type'],
   nodeRegistry: Record<string, NodeRegistryItem>
@@ -1175,6 +1251,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const lastAppliedInferredRef = useRef<string | null>(null);
   const lastCapturedUnknownSchemaRef = useRef<string | null>(null);
   const [showTriggerMapping, setShowTriggerMapping] = useState(false);
+  const [showUseEventSchemaSuggestion, setShowUseEventSchemaSuggestion] = useState(false);
+  const [hasExplicitContractEdits, setHasExplicitContractEdits] = useState(false);
+  const [pendingEventSchemaPrompt, setPendingEventSchemaPrompt] = useState<{
+    eventName: string;
+    schemaRef: string;
+  } | null>(null);
   const [eventCatalogOptions, setEventCatalogOptions] = useState<WorkflowEventCatalogOptionV2[]>([]);
   const [eventCatalogStatus, setEventCatalogStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [showTriggerSchemaModal, setShowTriggerSchemaModal] = useState(false);
@@ -1584,8 +1666,29 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     [activeWorkflowRecord?.validation_warnings]
   );
 
-  const currentValidationErrors = publishErrors.length > 0 ? publishErrors : draftValidationErrors;
-  const currentValidationWarnings = publishWarnings.length > 0 ? publishWarnings : draftValidationWarnings;
+  const triggerSourceSchemaRefForValidation = useMemo(() => {
+    const trigger = activeDefinition?.trigger;
+    if (trigger?.type !== 'event') return null;
+    const override = (trigger as any)?.sourcePayloadSchemaRef;
+    if (typeof override === 'string' && override.trim()) return override.trim();
+    return inferredSchemaRef;
+  }, [activeDefinition?.trigger, inferredSchemaRef]);
+
+  const suppressTriggerMappingValidation = useMemo(() => {
+    const trigger = activeDefinition?.trigger;
+    if (trigger?.type !== 'event') return true;
+    const payloadRef = activeDefinition?.payloadSchemaRef ?? '';
+    return !(triggerSourceSchemaRefForValidation && payloadRef && triggerSourceSchemaRefForValidation !== payloadRef);
+  }, [activeDefinition?.payloadSchemaRef, activeDefinition?.trigger, triggerSourceSchemaRefForValidation]);
+
+  const currentValidationErrors = (publishErrors.length > 0 ? publishErrors : draftValidationErrors).filter((error) => {
+    if (!suppressTriggerMappingValidation) return true;
+    return !(typeof error?.stepPath === 'string' && error.stepPath.startsWith('root.trigger.payloadMapping'));
+  });
+  const currentValidationWarnings = (publishWarnings.length > 0 ? publishWarnings : draftValidationWarnings).filter((warning) => {
+    if (!suppressTriggerMappingValidation) return true;
+    return !(typeof warning?.stepPath === 'string' && warning.stepPath.startsWith('root.trigger.payloadMapping'));
+  });
 
   const triggerValidationErrors = useMemo(
     () => currentValidationErrors.filter((err) => typeof err?.stepPath === 'string' && err.stepPath.startsWith('root.trigger')),
@@ -1817,13 +1920,27 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     [activeWorkflowRecord?.is_system, canAdmin, canManage]
   );
   const hasPublishedVersion = Boolean(activeWorkflowRecord?.published_version);
+  const blockingValidationError = useMemo(
+    () => currentValidationErrors[0] ?? null,
+    [currentValidationErrors]
+  );
+  const blockingValidationReason = useMemo(() => {
+    if (!blockingValidationError) return '';
+    if (blockingValidationError.stepPath.startsWith('root.trigger.payloadMapping') || blockingValidationError.code.startsWith('TRIGGER_MAPPING_')) {
+      return blockingValidationError.message || 'Fix workflow mapping errors before publishing or running.';
+    }
+    return blockingValidationError.message || 'Fix workflow validation errors before publishing or running.';
+  }, [blockingValidationError]);
+  const hasBlockingDraftErrors = currentValidationErrors.length > 0;
   const canPublishEnabled =
     canPublishPermission &&
+    !hasBlockingDraftErrors &&
     triggerSchemaPolicy.ok &&
     payloadSchemaPolicy.ok &&
     (!triggerRequiresEventCatalog || eventCatalogStatus === 'loaded');
   const canRunEnabled =
     canRunPermission &&
+    !hasBlockingDraftErrors &&
     (
       hasPublishedVersion ||
       (
@@ -1835,22 +1952,24 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   const publishDisabledReason = useMemo(() => {
     if (!canPublishPermission) return '';
+    if (hasBlockingDraftErrors) return blockingValidationReason;
     if (!triggerSchemaPolicy.ok) return triggerSchemaPolicy.message;
     if (!payloadSchemaPolicy.ok) return payloadSchemaPolicy.message;
     if (triggerRequiresEventCatalog && eventCatalogStatus !== 'loaded') return 'Event catalog is still loading. Publishing is disabled until it loads.';
     if (registryStatus !== 'loaded' && schemaRefs.length === 0) return 'Schema registry is still loading. Publishing is disabled until it loads.';
     return '';
-  }, [canPublishPermission, eventCatalogStatus, payloadSchemaPolicy, registryStatus, schemaRefs.length, triggerRequiresEventCatalog, triggerSchemaPolicy]);
+  }, [blockingValidationReason, canPublishPermission, eventCatalogStatus, hasBlockingDraftErrors, payloadSchemaPolicy, registryStatus, schemaRefs.length, triggerRequiresEventCatalog, triggerSchemaPolicy]);
 
   const runDisabledReason = useMemo(() => {
     if (!canRunPermission) return '';
+    if (hasBlockingDraftErrors) return blockingValidationReason;
     if (hasPublishedVersion) return '';
     if (!triggerSchemaPolicy.ok) return triggerSchemaPolicy.message;
     if (!payloadSchemaPolicy.ok) return payloadSchemaPolicy.message;
     if (triggerRequiresEventCatalog && eventCatalogStatus !== 'loaded') return 'Event catalog is still loading. Running is disabled until it loads.';
     if (registryStatus !== 'loaded' && schemaRefs.length === 0) return 'Schema registry is still loading. Running is disabled until it loads.';
     return '';
-  }, [canRunPermission, eventCatalogStatus, hasPublishedVersion, payloadSchemaPolicy, registryStatus, schemaRefs.length, triggerRequiresEventCatalog, triggerSchemaPolicy]);
+  }, [blockingValidationReason, canRunPermission, eventCatalogStatus, hasBlockingDraftErrors, hasPublishedVersion, payloadSchemaPolicy, registryStatus, schemaRefs.length, triggerRequiresEventCatalog, triggerSchemaPolicy]);
   const canEditMetadata = useMemo(
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
     [canManage, canAdmin, activeWorkflowRecord]
@@ -1873,6 +1992,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       setSchemaInferenceEnabled(false);
       setPinnedPayloadSchemaRefDraft(EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF);
       setSchemaRefAdvanced(false);
+      setShowUseEventSchemaSuggestion(false);
+      setPendingEventSchemaPrompt(null);
+      setHasExplicitContractEdits(false);
       setActiveDefinition((current) => (
         current
           ? {
@@ -2354,6 +2476,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setActiveWorkflowId(record.workflow_id);
     setTriggerTypeSelection(normalizedDefinition.trigger?.type === 'event' ? 'event' : 'manual');
     setSelectedTriggerEventCategory('');
+    setShowUseEventSchemaSuggestion(false);
+    setPendingEventSchemaPrompt(null);
+    setHasExplicitContractEdits(false);
     
     // Always reset these when selecting a workflow
     setPublishErrors([]);
@@ -2404,6 +2529,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setContractSettingsExpanded(false);
     setSchemaRefAdvanced(false);
     setPinnedPayloadSchemaRefDraft(draft.payloadSchemaRef ?? '');
+    setShowUseEventSchemaSuggestion(false);
+    setPendingEventSchemaPrompt(null);
+    setHasExplicitContractEdits(false);
     setSelectedStepId(null);
     setSelectedPipePath('root');
     setPublishErrors([]);
@@ -2443,9 +2571,38 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     handleCreateDefinition();
   }, [handleCreateDefinition, mode, requestedNewWorkflow]);
 
-  const handleDefinitionChange = (changes: Partial<WorkflowDefinition>) => {
+  const handleDefinitionChange = useCallback((changes: Partial<WorkflowDefinition>) => {
     setActiveDefinition((current) => (current ? { ...current, ...changes } : current));
-  };
+  }, []);
+
+  const applyWorkflowInputSchemaRef = useCallback((schemaRef: string) => {
+    if (!schemaRef) return;
+    setPayloadSchemaModeDraft('pinned');
+    setSchemaInferenceEnabled(false);
+    setSchemaRefAdvanced(false);
+    setPinnedPayloadSchemaRefDraft(schemaRef);
+    setShowUseEventSchemaSuggestion(false);
+    setPendingEventSchemaPrompt(null);
+    handleDefinitionChange({ payloadSchemaRef: schemaRef });
+  }, [handleDefinitionChange]);
+
+  const handleUseEventSchemaForWorkflowInput = useCallback(() => {
+    if (!activeDefinition || activeDefinition.trigger?.type !== 'event' || !triggerSourceSchemaRef) {
+      return;
+    }
+
+    try {
+      analytics.capture('workflow.trigger_schema.use_event_schema_clicked', {
+        workflowId: activeWorkflowId ?? activeDefinition.id ?? null,
+        triggerEvent: activeDefinition.trigger.eventName,
+        sourceSchemaRef: triggerSourceSchemaRef,
+        previousPayloadSchemaRef: activeDefinition.payloadSchemaRef ?? null,
+      });
+    } catch {}
+
+    setHasExplicitContractEdits(true);
+    applyWorkflowInputSchemaRef(triggerSourceSchemaRef);
+  }, [activeDefinition, activeWorkflowId, applyWorkflowInputSchemaRef, triggerSourceSchemaRef]);
 
   const persistMetadataDraft = useCallback(async (
     workflowId: string,
@@ -2652,6 +2809,46 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     if (selectedStepId === stepId) {
       setSelectedStepId(null);
     }
+  };
+
+  const handleDuplicateStep = (stepId: string) => {
+    if (!activeDefinition) return;
+
+    const stepPathMap = buildStepPathMap(activeDefinition.steps as Step[]);
+    const stepPath = stepPathMap[stepId];
+    if (!stepPath) {
+      throw new Error(`Cannot duplicate step ${stepId}: step path was not found`);
+    }
+
+    const stepPathMatch = stepPath.match(/^(.*)\.steps\[(\d+)\]$/);
+    if (!stepPathMatch) {
+      throw new Error(`Cannot duplicate step ${stepId}: step path "${stepPath}" is invalid`);
+    }
+
+    const [, pipePath, stepIndexRaw] = stepPathMatch;
+    const stepIndex = Number(stepIndexRaw);
+    const segments = parsePipePath(pipePath);
+    const pipeSteps = getStepsAtPath(activeDefinition.steps as Step[], segments);
+    const sourceStep = pipeSteps[stepIndex];
+
+    if (!sourceStep) {
+      throw new Error(`Cannot duplicate step ${stepId}: source step was not found in pipe "${pipePath}"`);
+    }
+
+    const duplicatedStep = duplicateWorkflowStepWithNewIds(sourceStep);
+    const nextSteps = [
+      ...pipeSteps.slice(0, stepIndex + 1),
+      duplicatedStep,
+      ...pipeSteps.slice(stepIndex + 1)
+    ];
+
+    setActiveDefinition({
+      ...activeDefinition,
+      steps: updateStepsAtPath(activeDefinition.steps as Step[], segments, nextSteps)
+    });
+    setSelectedPipePath(pipePath);
+    setSelectedStepId(duplicatedStep.id);
+    setPendingInsertPosition(null);
   };
 
   const handleStepUpdate = (stepId: string, updater: (step: Step) => Step) => {
@@ -3080,6 +3277,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       case 'state.set': return <Database className={iconClass} />;
       case 'transform.assign': return <Settings className={iconClass} />;
       case 'event.wait': return <Clock className={iconClass} />;
+      case 'time.wait': return <Clock className={iconClass} />;
       case 'human.task': return <User className={iconClass} />;
       case 'action.call': return <Zap className={iconClass} />;
       default: return <Box className={iconClass} />;
@@ -3265,6 +3463,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     nodeRegistry={nodeRegistryMap}
                     actionRegistry={actionRegistry}
                     designerActionCatalog={designerActionCatalog}
+                    eventCatalogOptions={eventCatalogOptions}
                     fieldOptions={fieldOptions}
                     payloadSchema={payloadSchema}
                     definition={activeDefinition}
@@ -3500,6 +3699,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                           return;
                                         }
 
+                                        setShowUseEventSchemaSuggestion(false);
+                                        setPendingEventSchemaPrompt(null);
                                         handleDefinitionChange({ trigger: undefined });
                                       }}
                                       options={eventCategoryOptions}
@@ -3522,6 +3723,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                       onChange={(value) => {
                                         const next = value.trim();
                                         if (!next) {
+                                          setShowUseEventSchemaSuggestion(false);
+                                          setPendingEventSchemaPrompt(null);
                                           handleDefinitionChange({ trigger: undefined });
                                           return;
                                         }
@@ -3530,12 +3733,43 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                           toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
                                           return;
                                         }
+
+                                        const chosenSchemaRef = typeof chosen?.payload_schema_ref === 'string' ? chosen.payload_schema_ref : '';
+                                        const currentPayloadSchemaRef = activeDefinition?.payloadSchemaRef ?? '';
+                                        const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
+                                        const mapping = (existing as any)?.payloadMapping ?? {};
+                                        const mappingProvided = mapping && typeof mapping === 'object' && Object.keys(mapping).length > 0;
+                                        const hasIntentionalContractChoice =
+                                          hasExplicitContractEdits ||
+                                          mappingProvided ||
+                                          (Boolean(currentPayloadSchemaRef) && currentPayloadSchemaRef !== EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF);
+                                        const shouldAutoAdoptEventSchema =
+                                          Boolean(chosenSchemaRef) &&
+                                          !hasIntentionalContractChoice &&
+                                          !mappingProvided &&
+                                          currentPayloadSchemaRef === EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF;
+                                        const shouldPromptForEventSchema =
+                                          Boolean(chosenSchemaRef) &&
+                                          hasIntentionalContractChoice &&
+                                          chosenSchemaRef !== currentPayloadSchemaRef;
+
                                         setTriggerTypeSelection('event');
                                         if (chosen) {
                                           setSelectedTriggerEventCategory(getWorkflowTriggerEventCategoryKey(chosen.category));
                                         }
-                                        const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
                                         handleDefinitionChange({ trigger: { ...(existing as any), type: 'event', eventName: next } });
+
+                                        if (shouldAutoAdoptEventSchema && chosenSchemaRef) {
+                                          applyWorkflowInputSchemaRef(chosenSchemaRef);
+                                          return;
+                                        }
+
+                                        setShowUseEventSchemaSuggestion(true);
+                                        setPendingEventSchemaPrompt(
+                                          shouldPromptForEventSchema && chosenSchemaRef
+                                            ? { eventName: next, schemaRef: chosenSchemaRef }
+                                            : null
+                                        );
                                       }}
                                       placeholder={selectedTriggerEventCategory ? 'Select event' : 'Select category first'}
                                       dropdownMode="overlay"
@@ -3683,18 +3917,32 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               <div>
                                 Mapping is required because trigger schema and workflow input schema do not match.
                               </div>
-                              <Button
-                                id="workflow-designer-trigger-mapping-jump-to-contract"
-                                variant="ghost"
-                                size="sm"
-                                type="button"
-                                className="h-auto px-2 py-1 text-xs text-destructive hover:opacity-80"
-                                onClick={() => {
-                                  setShowTriggerMapping(true);
-                                }}
-                              >
-                                Configure mapping
-                              </Button>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {showUseEventSchemaSuggestion && triggerSourceSchemaRef && (
+                                  <Button
+                                    id="workflow-designer-trigger-use-event-schema"
+                                    variant="outline"
+                                    size="sm"
+                                    type="button"
+                                    className="h-auto px-2 py-1 text-xs"
+                                    onClick={handleUseEventSchemaForWorkflowInput}
+                                  >
+                                    Use event schema
+                                  </Button>
+                                )}
+                                <Button
+                                  id="workflow-designer-trigger-mapping-jump-to-contract"
+                                  variant="ghost"
+                                  size="sm"
+                                  type="button"
+                                  className="h-auto px-2 py-1 text-xs text-destructive hover:opacity-80"
+                                  onClick={() => {
+                                    setShowTriggerMapping(true);
+                                  }}
+                                >
+                                  Configure mapping
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -3725,6 +3973,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     } else {
                                       nextTrigger.sourcePayloadSchemaRef = value;
                                     }
+                                    setHasExplicitContractEdits(true);
+                                    setShowUseEventSchemaSuggestion(true);
                                     handleDefinitionChange({ trigger: nextTrigger });
                                   }}
                                   placeholder="Use catalog schema…"
@@ -3798,6 +4048,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     onChange={(next) => {
                                       const nextTrigger: any = { ...activeDefinition.trigger };
                                       nextTrigger.payloadMapping = Object.keys(next).length > 0 ? next : undefined;
+                                      setHasExplicitContractEdits(true);
+                                      setShowUseEventSchemaSuggestion(false);
                                       handleDefinitionChange({ trigger: nextTrigger });
                                     }}
                                     targetFields={triggerMappingTargetFields}
@@ -3834,8 +4086,20 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         )}
                       </div>
                       {activeDefinition?.trigger?.type === 'event' && triggerPayloadMappingInfo.mappingRequired && !contractSettingsExpanded && (
-                        <div className="mt-1 text-xs text-warning-foreground">
-                          Trigger mapping is required. Open Advanced schema settings to configure it.
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-warning-foreground">
+                          <span>Trigger mapping is required. Open Advanced schema settings to configure it.</span>
+                          {showUseEventSchemaSuggestion && triggerSourceSchemaRef && !triggerPayloadMappingInfo.mappingProvided && (
+                            <Button
+                              id="workflow-designer-contract-use-event-schema"
+                              variant="ghost"
+                              size="sm"
+                              type="button"
+                              className="h-auto px-2 py-1 text-xs text-warning-foreground hover:opacity-80"
+                              onClick={handleUseEventSchemaForWorkflowInput}
+                            >
+                              Use event schema
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -3947,6 +4211,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                 } catch {}
                                 setPayloadSchemaModeDraft('pinned');
                                 setSchemaInferenceEnabled(false);
+                                setHasExplicitContractEdits(true);
+                                setShowUseEventSchemaSuggestion(false);
                                 const pinned = pinnedPayloadSchemaRefDraft || activeDefinition.payloadSchemaRef || '';
                                 if (pinned) {
                                   setPinnedPayloadSchemaRefDraft(pinned);
@@ -3967,6 +4233,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               setPayloadSchemaModeDraft('inferred');
                               setSchemaInferenceEnabled(true);
                               setSchemaRefAdvanced(false);
+                              setHasExplicitContractEdits(true);
+                              setShowUseEventSchemaSuggestion(false);
                               setPinnedPayloadSchemaRefDraft(activeDefinition.payloadSchemaRef ?? pinnedPayloadSchemaRefDraft ?? '');
                               lastAppliedInferredRef.current = null;
                               if (inferredSchemaRef && activeDefinition.payloadSchemaRef !== inferredSchemaRef) {
@@ -4002,6 +4270,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                   onChange={(value) => {
                                     if (isTimeTrigger(activeDefinition?.trigger)) return;
                                     setPinnedPayloadSchemaRefDraft(value);
+                                    setHasExplicitContractEdits(true);
+                                    setShowUseEventSchemaSuggestion(false);
                                     analytics.capture('workflow.payload_schema_ref.selected', {
                                       schemaRef: value || null,
                                       workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
@@ -4044,6 +4314,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                   value={activeDefinition?.payloadSchemaRef ?? ''}
                                   onChange={(event) => {
                                     setPinnedPayloadSchemaRefDraft(event.target.value);
+                                    setHasExplicitContractEdits(true);
+                                    setShowUseEventSchemaSuggestion(false);
                                     handleDefinitionChange({ payloadSchemaRef: event.target.value });
                                   }}
                                   disabled={!canManage}
@@ -4408,6 +4680,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       selectedStepId={selectedStepId}
                       onSelectStep={setSelectedStepId}
                       onDeleteStep={handleDeleteStep}
+                      onDuplicateStep={handleDuplicateStep}
                       onSelectPipe={handlePipeSelect}
                       onPipeHover={handlePipeHover}
                       onInsertStep={(index) => handleInsertStep('root', index)}
@@ -4483,7 +4756,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   const eventCatalogContent = (
     <div className="h-full min-h-0 overflow-y-auto px-6 py-4">
-      <EventsCatalogV2 />
+      <EventsCatalogV2 pickerActions={workflowPickerActions} />
     </div>
   );
   const schedulesContent = (
@@ -4652,6 +4925,23 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         cancelLabel="Keep editing"
       />
 
+      <ConfirmationDialog
+        id="workflow-designer-event-schema-adoption-dialog"
+        isOpen={pendingEventSchemaPrompt !== null}
+        onClose={() => setPendingEventSchemaPrompt(null)}
+        onConfirm={() => {
+          if (!pendingEventSchemaPrompt) return;
+          setHasExplicitContractEdits(true);
+          applyWorkflowInputSchemaRef(pendingEventSchemaPrompt.schemaRef);
+        }}
+        title="Switch workflow input schema?"
+        message={pendingEventSchemaPrompt
+          ? `The selected event ${pendingEventSchemaPrompt.eventName} uses ${pendingEventSchemaPrompt.schemaRef}. Do you want to switch this workflow to that event schema?`
+          : 'Do you want to switch this workflow to the selected event schema?'}
+        confirmLabel="Use event schema"
+        cancelLabel="Keep current schema"
+      />
+
       <div className="flex-1 min-h-0 overflow-hidden">
         {isControlPanelMode ? (
           <CustomTabs
@@ -4683,6 +4973,7 @@ const Pipe: React.FC<{
   selectedStepId: string | null;
   onSelectStep: (id: string) => void;
   onDeleteStep: (id: string) => void;
+  onDuplicateStep: (id: string) => void;
   onSelectPipe: (pipePath: string) => void;
   onPipeHover: (pipePath: string) => void;
   onInsertStep?: (index: number) => void;
@@ -4699,6 +4990,7 @@ const Pipe: React.FC<{
   selectedStepId,
   onSelectStep,
   onDeleteStep,
+  onDuplicateStep,
   onSelectPipe,
   onPipeHover,
   onInsertStep,
@@ -4767,6 +5059,7 @@ const Pipe: React.FC<{
                       selectedStepId={selectedStepId}
                       onSelectStep={onSelectStep}
                       onDeleteStep={onDeleteStep}
+                      onDuplicateStep={onDuplicateStep}
                       onSelectPipe={onSelectPipe}
                       onPipeHover={onPipeHover}
                       onInsertStep={onInsertStep}
@@ -4821,6 +5114,7 @@ const StepCard: React.FC<{
   selectedStepId: string | null;
   onSelectStep: (id: string) => void;
   onDeleteStep: (id: string) => void;
+  onDuplicateStep: (id: string) => void;
   onSelectPipe: (pipePath: string) => void;
   onPipeHover: (pipePath: string) => void;
   onInsertStep?: (index: number) => void;
@@ -4839,6 +5133,7 @@ const StepCard: React.FC<{
   selectedStepId,
   onSelectStep,
   onDeleteStep,
+  onDuplicateStep,
   onSelectPipe,
   onPipeHover,
   onInsertStep,
@@ -4932,6 +5227,18 @@ const StepCard: React.FC<{
                 <GripVertical className="h-4 w-4" />
               </div>
               <Button
+                id={`workflow-step-duplicate-${step.id}`}
+                variant="ghost"
+                size="sm"
+                onClick={() => onDuplicateStep(step.id)}
+                className="text-gray-400 hover:text-primary-600 p-1 h-auto"
+                data-testid={`step-duplicate-${step.id}`}
+                title="Duplicate step"
+                aria-label={`Duplicate ${label} step`}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
                 id={`workflow-step-delete-${step.id}`}
                 variant="ghost"
                 size="sm"
@@ -4961,6 +5268,7 @@ const StepCard: React.FC<{
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
+                onDuplicateStep={onDuplicateStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(thenPath, index) : undefined}
@@ -4979,6 +5287,7 @@ const StepCard: React.FC<{
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
+                onDuplicateStep={onDuplicateStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(elsePath, index) : undefined}
@@ -5007,6 +5316,7 @@ const StepCard: React.FC<{
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
+                onDuplicateStep={onDuplicateStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(tryPath, index) : undefined}
@@ -5025,6 +5335,7 @@ const StepCard: React.FC<{
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
+                onDuplicateStep={onDuplicateStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(catchPath, index) : undefined}
@@ -5053,6 +5364,7 @@ const StepCard: React.FC<{
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
+                onDuplicateStep={onDuplicateStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
                 onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(bodyPath, index) : undefined}
@@ -5088,13 +5400,259 @@ const BlockSection: React.FC<{ title: string; idPrefix: string; children: React.
   );
 };
 
-const StepConfigPanel: React.FC<{
+type WaitFilterOperator =
+  | '='
+  | '!='
+  | 'in'
+  | 'not_in'
+  | 'exists'
+  | 'not_exists'
+  | '>'
+  | '>='
+  | '<'
+  | '<='
+  | 'contains'
+  | 'starts_with'
+  | 'ends_with';
+
+type EventWaitFilterClause = {
+  path: string;
+  op: WaitFilterOperator;
+  value?: unknown;
+};
+
+type EventSchemaScalarField = {
+  path: string;
+  type: 'string' | 'number' | 'boolean' | 'unknown';
+  enumValues?: Array<string | number | boolean>;
+  pickerKind?: string;
+  pickerDependencies?: string[];
+  pickerFixedValueHint?: string;
+};
+
+const WAIT_FILTER_OPERATOR_OPTIONS: Array<{ value: WaitFilterOperator; label: string }> = [
+  { value: '=', label: 'equals' },
+  { value: '!=', label: 'not equals' },
+  { value: 'in', label: 'in' },
+  { value: 'not_in', label: 'not in' },
+  { value: 'exists', label: 'exists' },
+  { value: 'not_exists', label: 'not exists' },
+  { value: '>', label: 'greater than' },
+  { value: '>=', label: 'greater than or equal' },
+  { value: '<', label: 'less than' },
+  { value: '<=', label: 'less than or equal' },
+  { value: 'contains', label: 'contains' },
+  { value: 'starts_with', label: 'starts with' },
+  { value: 'ends_with', label: 'ends with' }
+];
+
+const SUPPORTED_WAIT_FILTER_PICKER_RESOURCES = new Set([
+  'board',
+  'client',
+  'client-location',
+  'contact',
+  'ticket-category',
+  'ticket-priority',
+  'ticket-status',
+  'ticket-subcategory',
+  'user',
+  'user-or-team'
+]);
+
+const supportsWaitFilterPickerResource = (pickerKind: string | undefined): boolean =>
+  Boolean(pickerKind && SUPPORTED_WAIT_FILTER_PICKER_RESOURCES.has(pickerKind));
+
+const getDefaultWaitFilterScalarValue = (
+  fieldMeta: EventSchemaScalarField | undefined,
+  options?: { preferString?: boolean }
+): string | number | boolean => {
+  if (fieldMeta?.enumValues?.length) {
+    const [firstValue] = fieldMeta.enumValues;
+    if (typeof firstValue === 'string' || typeof firstValue === 'number' || typeof firstValue === 'boolean') {
+      return firstValue;
+    }
+  }
+
+  if (options?.preferString) {
+    return '';
+  }
+
+  if (fieldMeta?.type === 'boolean') {
+    return false;
+  }
+
+  if (fieldMeta?.type === 'number') {
+    return 0;
+  }
+
+  return '';
+};
+
+const normalizeWaitFilterValueForOperator = (
+  op: WaitFilterOperator,
+  currentValue: unknown,
+  fieldMeta: EventSchemaScalarField | undefined
+): string | number | boolean | Array<string | number | boolean> | undefined => {
+  if (op === 'exists' || op === 'not_exists') {
+    return undefined;
+  }
+
+  if (op === 'in' || op === 'not_in') {
+    if (Array.isArray(currentValue)) {
+      return currentValue.filter((item): item is string | number | boolean =>
+        typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean'
+      );
+    }
+    if (typeof currentValue === 'string' || typeof currentValue === 'number' || typeof currentValue === 'boolean') {
+      return [currentValue];
+    }
+    return [getDefaultWaitFilterScalarValue(fieldMeta)];
+  }
+
+  if (Array.isArray(currentValue)) {
+    const [firstValue] = currentValue;
+    if (typeof firstValue === 'string' || typeof firstValue === 'number' || typeof firstValue === 'boolean') {
+      if ((op === 'contains' || op === 'starts_with' || op === 'ends_with') && typeof firstValue !== 'string') {
+        return getDefaultWaitFilterScalarValue(fieldMeta, { preferString: true });
+      }
+      return firstValue;
+    }
+    return getDefaultWaitFilterScalarValue(fieldMeta, {
+      preferString: op === 'contains' || op === 'starts_with' || op === 'ends_with'
+    });
+  }
+
+  if (typeof currentValue === 'string' || typeof currentValue === 'number' || typeof currentValue === 'boolean') {
+    if ((op === 'contains' || op === 'starts_with' || op === 'ends_with') && typeof currentValue !== 'string') {
+      return getDefaultWaitFilterScalarValue(fieldMeta, { preferString: true });
+    }
+    return currentValue;
+  }
+
+  return getDefaultWaitFilterScalarValue(fieldMeta, {
+    preferString: op === 'contains' || op === 'starts_with' || op === 'ends_with'
+  });
+};
+
+const coerceWaitFilterValue = (
+  raw: string,
+  fieldMeta: EventSchemaScalarField | undefined
+): string | number | boolean => {
+  if (fieldMeta?.enumValues?.length) {
+    const matching = fieldMeta.enumValues.find((item) => String(item) === raw);
+    if (matching !== undefined) {
+      return matching;
+    }
+  }
+
+  if (fieldMeta?.type === 'boolean') {
+    return raw === 'true';
+  }
+
+  if (fieldMeta?.type === 'number') {
+    return Number(raw);
+  }
+
+  return raw;
+};
+
+const buildEventFilterDependencyMapping = (
+  filters: EventWaitFilterClause[],
+  activeIndex: number
+): InputMapping => {
+  const mapping: InputMapping = {};
+  for (const [index, filter] of filters.entries()) {
+    if (index === activeIndex) continue;
+    if (!filter.path.trim()) continue;
+    if (filter.op !== '=' && filter.op !== 'in' && filter.op !== 'not_in') continue;
+
+    const value = filter.value;
+    if (Array.isArray(value)) {
+      if (value.length === 1) {
+        mapping[filter.path] = value[0] as any;
+      }
+      continue;
+    }
+
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      mapping[filter.path] = value as any;
+    }
+  }
+  return mapping;
+};
+
+const isEventScalarSchema = (schema: JsonSchema): boolean => {
+  const type = normalizeSchemaType(schema);
+  return type === 'string' || type === 'number' || type === 'integer' || type === 'boolean' || Boolean(schema.enum?.length);
+};
+
+const collectEventSchemaScalarFields = (
+  schema: JsonSchema | null,
+  rootSchema: JsonSchema | null,
+  pathPrefix = ''
+): EventSchemaScalarField[] => {
+  if (!schema || !rootSchema) return [];
+  const resolved = resolveSchema(schema, rootSchema);
+  const properties = resolved.properties ?? {};
+  const fields: EventSchemaScalarField[] = [];
+
+  for (const [key, value] of Object.entries(properties)) {
+    const prop = resolveSchema(value as JsonSchema, rootSchema);
+    const nextPath = pathPrefix ? `${pathPrefix}.${key}` : key;
+    if (isEventScalarSchema(prop)) {
+      const type = normalizeSchemaType(prop);
+      const workflowEditor = (prop as any)['x-workflow-editor'] as
+        | { picker?: { resource?: string }; dependencies?: string[]; fixedValueHint?: string }
+        | undefined;
+      const legacyPickerKind = typeof (prop as any)['x-workflow-picker-kind'] === 'string'
+        ? String((prop as any)['x-workflow-picker-kind'])
+        : undefined;
+      const pickerKind = workflowEditor?.picker?.resource ?? legacyPickerKind;
+      const pickerDependenciesRaw = workflowEditor?.dependencies ?? (prop as any)['x-workflow-picker-dependencies'];
+      const pickerDependencies = Array.isArray(pickerDependenciesRaw)
+        ? pickerDependenciesRaw.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
+        : undefined;
+      const pickerFixedValueHint = workflowEditor?.fixedValueHint
+        ?? (typeof (prop as any)['x-workflow-picker-fixed-value-hint'] === 'string'
+          ? String((prop as any)['x-workflow-picker-fixed-value-hint'])
+          : undefined);
+      fields.push({
+        path: nextPath,
+        type: type === 'number' || type === 'integer'
+          ? 'number'
+          : type === 'boolean'
+            ? 'boolean'
+            : type === 'string'
+              ? 'string'
+              : 'unknown',
+        enumValues: Array.isArray(prop.enum)
+          ? prop.enum.filter((item): item is string | number | boolean =>
+            typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean'
+          )
+          : undefined,
+        pickerKind,
+        pickerDependencies,
+        pickerFixedValueHint
+      });
+      continue;
+    }
+
+    if (normalizeSchemaType(prop) === 'object') {
+      fields.push(...collectEventSchemaScalarFields(prop, rootSchema, nextPath));
+    }
+  }
+
+  return fields;
+};
+
+export const StepConfigPanel: React.FC<{
   step: Step;
   stepPath?: string;
   errors: PublishError[];
   nodeRegistry: Record<string, NodeRegistryItem>;
   actionRegistry: ActionRegistryItem[];
   designerActionCatalog: WorkflowDesignerCatalogRecord[];
+  eventCatalogOptions: WorkflowEventCatalogOptionV2[];
   fieldOptions: SelectOption[];
   payloadSchema: JsonSchema | null;
   definition: WorkflowDefinition;
@@ -5107,6 +5665,7 @@ const StepConfigPanel: React.FC<{
   nodeRegistry,
   actionRegistry,
   designerActionCatalog,
+  eventCatalogOptions,
   fieldOptions,
   payloadSchema,
   definition,
@@ -5286,6 +5845,135 @@ const StepConfigPanel: React.FC<{
     return null;
   }, [saveAs, dataContext.steps]);
 
+  const removeInvalidWaitConfigFields = useCallback((config: Record<string, unknown>): Record<string, unknown> => {
+    const nextConfig = { ...config };
+    delete nextConfig.saveAs;
+    return nextConfig;
+  }, []);
+
+  const eventWaitConfig = step.type === 'event.wait'
+    ? removeInvalidWaitConfigFields((((step as NodeStep).config as Record<string, unknown> | undefined) ?? {}))
+    : null;
+  const timeWaitConfig = step.type === 'time.wait'
+    ? removeInvalidWaitConfigFields((((step as NodeStep).config as Record<string, unknown> | undefined) ?? {}))
+    : null;
+  const selectedWaitEventName = typeof eventWaitConfig?.eventName === 'string' ? eventWaitConfig.eventName : '';
+  const selectedWaitEventOption = useMemo(
+    () => eventCatalogOptions.find((option) => option.event_type === selectedWaitEventName) ?? null,
+    [eventCatalogOptions, selectedWaitEventName]
+  );
+  const [eventWaitPayloadSchema, setEventWaitPayloadSchema] = useState<JsonSchema | null>(null);
+  const [eventWaitPayloadSchemaStatus, setEventWaitPayloadSchemaStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+
+  useEffect(() => {
+    if (step.type !== 'event.wait') return;
+    if (!selectedWaitEventName) {
+      setEventWaitPayloadSchema(null);
+      setEventWaitPayloadSchemaStatus('idle');
+      return;
+    }
+    let cancelled = false;
+    setEventWaitPayloadSchemaStatus('loading');
+    (async () => {
+      try {
+        if (selectedWaitEventOption?.payload_schema_ref_status === 'known' && selectedWaitEventOption.payload_schema_ref) {
+          const result = await getWorkflowSchemaAction({ schemaRef: selectedWaitEventOption.payload_schema_ref });
+          if (!cancelled) {
+            setEventWaitPayloadSchema(((result as any)?.schema ?? null) as JsonSchema | null);
+            setEventWaitPayloadSchemaStatus('loaded');
+          }
+          return;
+        }
+        const entry = await getEventCatalogEntryByEventType(selectedWaitEventName);
+        if (!cancelled) {
+          setEventWaitPayloadSchema((((entry as any)?.payload_schema ?? null) as JsonSchema | null));
+          setEventWaitPayloadSchemaStatus(((entry as any)?.payload_schema ? 'loaded' : 'error'));
+        }
+      } catch {
+        if (!cancelled) {
+          setEventWaitPayloadSchema(null);
+          setEventWaitPayloadSchemaStatus('error');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedWaitEventName, selectedWaitEventOption?.payload_schema_ref, selectedWaitEventOption?.payload_schema_ref_status, step.type]);
+
+  const eventFilterFields = useMemo(
+    () => collectEventSchemaScalarFields(eventWaitPayloadSchema, eventWaitPayloadSchema),
+    [eventWaitPayloadSchema]
+  );
+  const eventFilterFieldOptions = useMemo(
+    () => eventFilterFields.map((field) => ({ value: field.path, label: field.path })),
+    [eventFilterFields]
+  );
+
+  const updateWaitNodeConfig = useCallback((nextConfig: Record<string, unknown>) => {
+    const nodeStep = step as NodeStep;
+    onChange({
+      ...nodeStep,
+      config: removeInvalidWaitConfigFields(nextConfig)
+    });
+  }, [onChange, removeInvalidWaitConfigFields, step]);
+
+  const eventFilters = useMemo(() => {
+    if (!eventWaitConfig) return [] as EventWaitFilterClause[];
+    const raw = Array.isArray(eventWaitConfig.filters) ? eventWaitConfig.filters : [];
+    return raw
+      .filter((item): item is EventWaitFilterClause =>
+        !!item
+        && typeof item === 'object'
+        && typeof (item as any).path === 'string'
+        && typeof (item as any).op === 'string'
+      );
+  }, [eventWaitConfig]);
+
+  const updateEventFilterClause = useCallback((index: number, patch: Partial<EventWaitFilterClause>) => {
+    if (!eventWaitConfig) return;
+    const next = eventFilters.map((filter, currentIndex) => (
+      currentIndex === index
+        ? { ...filter, ...patch }
+        : filter
+    ));
+    updateWaitNodeConfig({ ...eventWaitConfig, filters: next });
+  }, [eventFilters, eventWaitConfig, updateWaitNodeConfig]);
+
+  const removeEventFilterClause = useCallback((index: number) => {
+    if (!eventWaitConfig) return;
+    const next = eventFilters.filter((_, currentIndex) => currentIndex !== index);
+    updateWaitNodeConfig({ ...eventWaitConfig, filters: next });
+  }, [eventFilters, eventWaitConfig, updateWaitNodeConfig]);
+
+  const addEventFilterClause = useCallback(() => {
+    if (!eventWaitConfig) return;
+    const defaultPath = eventFilterFields[0]?.path ?? '';
+    const defaultFieldMeta = eventFilterFields.find((field) => field.path === defaultPath);
+    const next = [
+      ...eventFilters,
+      {
+        path: defaultPath,
+        op: '=',
+        value: normalizeWaitFilterValueForOperator('=', undefined, defaultFieldMeta)
+      } as EventWaitFilterClause
+    ];
+    updateWaitNodeConfig({ ...eventWaitConfig, filters: next });
+  }, [eventFilterFields, eventFilters, eventWaitConfig, updateWaitNodeConfig]);
+
+  useEffect(() => {
+    if (step.type !== 'event.wait' && step.type !== 'time.wait') {
+      return;
+    }
+
+    const currentConfig = ((step as NodeStep).config as Record<string, unknown> | undefined) ?? {};
+    if (!Object.prototype.hasOwnProperty.call(currentConfig, 'saveAs')) {
+      return;
+    }
+
+    updateWaitNodeConfig(currentConfig);
+  }, [step, updateWaitNodeConfig]);
+
   const handleNodeConfigChange = (config: Record<string, unknown>) => {
     onChange({ ...step, config });
   };
@@ -5380,7 +6068,7 @@ const StepConfigPanel: React.FC<{
       )}
 
       {/* §19.4 - Enhanced Save Output section with toggle, preview, and copy */}
-      {!step.type.startsWith('control.') && (() => {
+      {!step.type.startsWith('control.') && step.type !== 'event.wait' && step.type !== 'time.wait' && (() => {
         const nodeStep = step as NodeStep;
         const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
         const actionId = (existingConfig?.actionId as string) ?? '';
@@ -5513,7 +6201,294 @@ const StepConfigPanel: React.FC<{
         <div className="text-sm text-gray-500">Return stops workflow execution.</div>
       )}
 
-      {nodeSchema && step.type !== 'control.return' && step.type !== 'control.callWorkflow' && (
+      {step.type === 'event.wait' && eventWaitConfig && (
+        <div className="space-y-3">
+          <SearchableSelect
+            id={`event-wait-event-${step.id}`}
+            label="Event"
+            value={selectedWaitEventName}
+            onChange={(value) => {
+              const eventName = value.trim();
+              updateWaitNodeConfig({
+                ...eventWaitConfig,
+                eventName,
+                filters: []
+              });
+            }}
+            placeholder="Select event"
+            dropdownMode="overlay"
+            options={eventCatalogOptions.map((option) => ({
+              value: option.event_type,
+              label: option.name || option.event_type
+            }))}
+            disabled={!editable}
+          />
+
+          <ExpressionField
+            idPrefix={`event-wait-correlation-${step.id}`}
+            label="Correlation Key Expression"
+            value={ensureExpr((eventWaitConfig.correlationKey as Expr | undefined) ?? { $expr: '' })}
+            onChange={(expr) => updateWaitNodeConfig({ ...eventWaitConfig, correlationKey: expr })}
+            fieldOptions={enhancedFieldOptions}
+            context={expressionContext}
+            disabled={!editable}
+          />
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Payload Filters</Label>
+              <Button
+                id={`event-wait-filter-add-${step.id}`}
+                variant="outline"
+                size="sm"
+                onClick={addEventFilterClause}
+                disabled={!editable}
+              >
+                Add filter
+              </Button>
+            </div>
+            {eventWaitPayloadSchemaStatus === 'loading' && (
+              <div className="text-xs text-gray-500">Loading event schema fields...</div>
+            )}
+            {eventFilters.length === 0 && (
+              <div className="text-xs text-gray-400">No filters configured.</div>
+            )}
+            {eventFilters.map((filter, index) => {
+              const fieldMeta = eventFilterFields.find((field) => field.path === filter.path);
+              const showValue = filter.op !== 'exists' && filter.op !== 'not_exists';
+              const expectsArray = filter.op === 'in' || filter.op === 'not_in';
+              const dependencyInputMapping = buildEventFilterDependencyMapping(eventFilters, index);
+              const enumOptions = (fieldMeta?.enumValues ?? []).map((item) => ({ value: String(item), label: String(item) }));
+              const valueAsString = Array.isArray(filter.value)
+                ? filter.value.map((item) => String(item)).join(', ')
+                : filter.value === undefined || filter.value === null
+                  ? ''
+                  : String(filter.value);
+
+              return (
+                <Card key={`event-filter-${index}`} className="p-3 space-y-2">
+                  <div className="grid grid-cols-12 gap-2">
+                    <div className="col-span-5">
+                      {eventFilterFieldOptions.length > 0 ? (
+                        <CustomSelect
+                          id={`event-wait-filter-path-${step.id}-${index}`}
+                          label={index === 0 ? 'Field' : undefined}
+                          options={eventFilterFieldOptions}
+                          value={filter.path}
+                          onValueChange={(nextPath) => updateEventFilterClause(index, { path: nextPath })}
+                          disabled={!editable}
+                        />
+                      ) : (
+                        <Input
+                          id={`event-wait-filter-path-${step.id}-${index}`}
+                          label={index === 0 ? 'Field path' : undefined}
+                          value={filter.path}
+                          disabled={!editable}
+                          onChange={(event) => updateEventFilterClause(index, { path: event.target.value })}
+                        />
+                      )}
+                    </div>
+                    <div className="col-span-4">
+                      <CustomSelect
+                        id={`event-wait-filter-op-${step.id}-${index}`}
+                        label={index === 0 ? 'Operator' : undefined}
+                        options={WAIT_FILTER_OPERATOR_OPTIONS}
+                        value={filter.op}
+                        onValueChange={(value) => {
+                          const nextOp = value as WaitFilterOperator;
+                          updateEventFilterClause(index, {
+                            op: nextOp,
+                            value: normalizeWaitFilterValueForOperator(nextOp, filter.value, fieldMeta)
+                          });
+                        }}
+                        disabled={!editable}
+                      />
+                    </div>
+                    <div className="col-span-3 flex items-end justify-end">
+                      <Button
+                        id={`event-wait-filter-remove-${step.id}-${index}`}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeEventFilterClause(index)}
+                        disabled={!editable}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+
+                  {showValue && (
+                    <div>
+                      {fieldMeta?.pickerKind && supportsWaitFilterPickerResource(fieldMeta.pickerKind) && !expectsArray ? (
+                        <WorkflowActionInputFixedPicker
+                          idPrefix={`event-wait-filter-value-${step.id}-${index}`}
+                          field={{
+                            name: filter.path || 'value',
+                            editor: {
+                              kind: 'picker',
+                              picker: { resource: fieldMeta.pickerKind },
+                              dependencies: fieldMeta.pickerDependencies,
+                              fixedValueHint: fieldMeta.pickerFixedValueHint,
+                              allowsDynamicReference: false
+                            }
+                          }}
+                          value={valueAsString || null}
+                          onChange={(nextValue) => updateEventFilterClause(index, { value: nextValue ?? '' })}
+                          rootInputMapping={dependencyInputMapping}
+                          disabled={!editable}
+                        />
+                      ) : enumOptions.length > 0 && !expectsArray ? (
+                        <CustomSelect
+                          id={`event-wait-filter-value-${step.id}-${index}`}
+                          label="Value"
+                          options={enumOptions}
+                          value={valueAsString}
+                          onValueChange={(value) => {
+                            const matching = fieldMeta?.enumValues?.find((item) => String(item) === value);
+                            updateEventFilterClause(index, { value: matching ?? value });
+                          }}
+                          disabled={!editable}
+                        />
+                      ) : fieldMeta?.type === 'boolean' && !expectsArray ? (
+                        <CustomSelect
+                          id={`event-wait-filter-value-${step.id}-${index}`}
+                          label="Value"
+                          options={[
+                            { value: 'true', label: 'true' },
+                            { value: 'false', label: 'false' }
+                          ]}
+                          value={valueAsString}
+                          onValueChange={(value) => updateEventFilterClause(index, { value: value === 'true' })}
+                          disabled={!editable}
+                        />
+                      ) : fieldMeta?.type === 'number' && !expectsArray ? (
+                        <Input
+                          id={`event-wait-filter-value-${step.id}-${index}`}
+                          label="Value"
+                          type="number"
+                          value={valueAsString}
+                          disabled={!editable}
+                          onChange={(event) => updateEventFilterClause(index, { value: Number(event.target.value) })}
+                        />
+                      ) : (
+                        <Input
+                          id={`event-wait-filter-value-${step.id}-${index}`}
+                          label={expectsArray ? 'Values (comma separated)' : 'Value'}
+                          value={valueAsString}
+                          disabled={!editable}
+                          onChange={(event) => {
+                            const raw = event.target.value;
+                            if (expectsArray) {
+                              const values = raw
+                                .split(',')
+                                .map((item) => item.trim())
+                                .filter((item) => item.length > 0);
+                              updateEventFilterClause(index, {
+                                value: values.map((item) => coerceWaitFilterValue(item, fieldMeta))
+                              });
+                            } else {
+                              updateEventFilterClause(index, { value: coerceWaitFilterValue(raw, fieldMeta) });
+                            }
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+
+          <Input
+            id={`event-wait-timeout-${step.id}`}
+            label="Timeout (ms)"
+            type="number"
+            value={typeof eventWaitConfig.timeoutMs === 'number' ? eventWaitConfig.timeoutMs : ''}
+            disabled={!editable}
+            onChange={(event) => {
+              const raw = event.target.value.trim();
+              updateWaitNodeConfig({
+                ...eventWaitConfig,
+                timeoutMs: raw ? Number(raw) : undefined
+              });
+            }}
+          />
+
+          <MappingExprEditor
+            idPrefix={`event-wait-assign-${step.id}`}
+            label="Assign on resume"
+            value={(eventWaitConfig.assign as Record<string, Expr>) ?? {}}
+            onChange={(assign) => updateWaitNodeConfig({ ...eventWaitConfig, assign })}
+            fieldOptions={enhancedFieldOptions}
+            context={expressionContext}
+            disabled={!editable}
+          />
+        </div>
+      )}
+
+      {step.type === 'time.wait' && timeWaitConfig && (
+        <div className="space-y-3">
+          <CustomSelect
+            id={`time-wait-mode-${step.id}`}
+            label="Mode"
+            options={[
+              { value: 'duration', label: 'Duration' },
+              { value: 'until', label: 'Until' }
+            ]}
+            value={typeof timeWaitConfig.mode === 'string' ? timeWaitConfig.mode : 'duration'}
+            onValueChange={(mode) => updateWaitNodeConfig({
+              ...timeWaitConfig,
+              mode,
+              durationMs: mode === 'duration' ? (timeWaitConfig.durationMs ?? 1000) : undefined,
+              until: mode === 'until' ? (timeWaitConfig.until ?? { $expr: '' }) : undefined
+            })}
+            disabled={!editable}
+          />
+          {(timeWaitConfig.mode ?? 'duration') === 'duration' ? (
+            <Input
+              id={`time-wait-duration-${step.id}`}
+              label="Duration (ms)"
+              type="number"
+              value={typeof timeWaitConfig.durationMs === 'number' ? timeWaitConfig.durationMs : ''}
+              disabled={!editable}
+              onChange={(event) => {
+                const raw = event.target.value.trim();
+                updateWaitNodeConfig({
+                  ...timeWaitConfig,
+                  durationMs: raw ? Number(raw) : undefined
+                });
+              }}
+            />
+          ) : (
+            <ExpressionField
+              idPrefix={`time-wait-until-${step.id}`}
+              label="Until expression"
+              value={ensureExpr((timeWaitConfig.until as Expr | undefined) ?? { $expr: '' })}
+              onChange={(untilExpr) => updateWaitNodeConfig({ ...timeWaitConfig, until: untilExpr })}
+              fieldOptions={enhancedFieldOptions}
+              context={expressionContext}
+              disabled={!editable}
+            />
+          )}
+
+          <MappingExprEditor
+            idPrefix={`time-wait-assign-${step.id}`}
+            label="Assign on resume"
+            value={(timeWaitConfig.assign as Record<string, Expr>) ?? {}}
+            onChange={(assign) => updateWaitNodeConfig({ ...timeWaitConfig, assign })}
+            fieldOptions={enhancedFieldOptions}
+            context={expressionContext}
+            disabled={!editable}
+          />
+        </div>
+      )}
+
+      {nodeSchema
+        && step.type !== 'control.return'
+        && step.type !== 'control.callWorkflow'
+        && step.type !== 'event.wait'
+        && step.type !== 'time.wait'
+        && (
         <SchemaForm
           schema={nodeSchema}
           rootSchema={nodeSchema}
@@ -5626,7 +6601,11 @@ const FIELD_METADATA: Record<string, { label: string; description?: string; adva
   onError: { label: 'Error Handling', description: 'How to handle errors', advanced: true },
   eventName: { label: 'Event Name', description: 'Name of the event to wait for' },
   correlationKey: { label: 'Correlation Key', description: 'Expression to match incoming events' },
+  filters: { label: 'Payload Filters', description: 'Optional event payload filters (AND semantics)' },
   timeoutMs: { label: 'Timeout (ms)', description: 'Maximum time to wait in milliseconds', advanced: true },
+  mode: { label: 'Wait Mode', description: 'Duration or until time' },
+  durationMs: { label: 'Duration (ms)', description: 'Relative duration in milliseconds' },
+  until: { label: 'Until', description: 'Expression resolving to an absolute date/time' },
   state: { label: 'State Name', description: 'The state to transition to' },
   assign: { label: 'Assignments', description: 'Variables to assign' },
   taskType: { label: 'Task Type', description: 'Type of human task' },

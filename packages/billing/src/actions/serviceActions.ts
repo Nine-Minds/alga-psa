@@ -61,6 +61,10 @@ export type CatalogPickerItem = Pick<
   currency_rate?: number | null;
   /** True when the service has at least one row in service_prices (i.e. uses multi-currency pricing). */
   has_currency_prices?: boolean;
+  /** Product cost in minor currency units (from service_catalog.cost). */
+  cost?: number | null;
+  /** ISO 4217 currency code for the cost field. */
+  cost_currency?: string | null;
 };
 
 export const searchServiceCatalogForPicker = withAuth(async (
@@ -115,7 +119,9 @@ export const searchServiceCatalogForPicker = withAuth(async (
         'sc.unit_of_measure',
         'sc.item_kind',
         'sc.sku',
-        trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate')
+        trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+        trx.raw('CAST(sc.cost AS FLOAT) as cost'),
+        'sc.cost_currency'
       );
 
     if (options.currency_code) {

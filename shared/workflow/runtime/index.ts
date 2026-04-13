@@ -37,3 +37,4 @@ export {
   safeSerialize,
   enforceSnapshotSize
 } from './utils/redactionUtils';
+export { evaluateEventWaitFilters } from './utils/eventWaitFilters';

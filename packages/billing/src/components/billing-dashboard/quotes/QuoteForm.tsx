@@ -21,6 +21,7 @@ import { addQuoteItem, approveQuote, convertQuoteToBoth, convertQuoteToContract,
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
+import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 
@@ -101,6 +102,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   const [isWorking, setIsWorking] = useState(false);
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const [sendRecipients, setSendRecipients] = useState<QuoteRecipient[]>([]);
   const [sendAdditionalEmails, setSendAdditionalEmails] = useState('');
   const [sendMessage, setSendMessage] = useState('');
   const [approvalDialogMode, setApprovalDialogMode] = useState<'approve' | 'changes' | null>(null);
@@ -313,6 +315,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
             is_taxable: item.is_taxable ?? true,
             tax_region: item.tax_region ?? null,
             tax_rate: item.tax_rate ?? null,
+            cost: item.cost ?? null,
+            cost_currency: item.cost_currency ?? null,
           };
 
           if (item.quote_item_id) {
@@ -424,16 +428,26 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
 
   const handleSendQuote = async () => {
     if (!quote) return;
-    const parsedEmails = sendAdditionalEmails.split(',').map((e) => e.trim()).filter(Boolean);
+    const typedEmails = sendAdditionalEmails.split(',').map((e) => e.trim()).filter(Boolean);
+    const pickedEmails = sendRecipients.map((r) => r.email);
+    const seen = new Set<string>();
+    const combined: string[] = [];
+    for (const email of [...pickedEmails, ...typedEmails]) {
+      const key = email.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      combined.push(email);
+    }
     const result = await runWorkflowAction('send quote', () =>
       sendQuote(quote.quote_id, {
         message: sendMessage.trim() || undefined,
-        email_addresses: parsedEmails.length > 0 ? parsedEmails : undefined,
+        email_addresses: combined.length > 0 ? combined : undefined,
       })
     );
     if (result) {
       setIsSendDialogOpen(false);
       setSendMessage('');
+      setSendRecipients([]);
       setSendAdditionalEmails('');
       setNotice('Quote sent to the client.');
     }
@@ -911,7 +925,16 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
           </DialogDescription>
           <div className="space-y-3 py-2">
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Additional recipients (comma-separated)
+              Recipients
+              <QuoteSendRecipientsField
+                id="quote-form-send-recipients"
+                clientId={form.client_id}
+                value={sendRecipients}
+                onChange={setSendRecipients}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Additional email addresses (comma-separated)
               <Input
                 id="quote-form-send-emails"
                 value={sendAdditionalEmails}

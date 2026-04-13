@@ -10,9 +10,10 @@ import dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
 
-import { initializeWorkflowRuntimeV2, registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime';
+import { initializeWorkflowRuntimeV2, registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime/worker';
 import { WorkflowRuntimeV2Worker } from '@alga-psa/workflows/workers';
 import { WorkflowRuntimeV2EventStreamWorker } from './v2/WorkflowRuntimeV2EventStreamWorker.js';
+import { WorkflowRuntimeV2TemporalWorker } from './v2/WorkflowRuntimeV2TemporalWorker.js';
 import logger from '@alga-psa/core/logger';
 import { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } from '@alga-psa/email';
 import { registerEnterpriseStorageProviders } from './registerEnterpriseStorageProviders.js';
@@ -47,15 +48,38 @@ async function startServices() {
 
     const runtimeV2WorkerId = `runtime-v2-${Date.now()}`;
     const runtimeV2EventWorkerId = `runtime-v2-events-${Date.now()}`;
+    const runtimeV2TemporalWorkerId = `runtime-v2-temporal-${Date.now()}`;
     const runtimeV2Worker = new WorkflowRuntimeV2Worker(runtimeV2WorkerId);
     const runtimeV2EventWorker = new WorkflowRuntimeV2EventStreamWorker(runtimeV2EventWorkerId);
+    const runtimeV2TemporalWorker = new WorkflowRuntimeV2TemporalWorker(runtimeV2TemporalWorkerId);
+    const enableDbPollingWorker =
+      process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING === 'true'
+      || process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING === '1';
+    const enableTemporalPolling = !['false', '0', 'no'].includes(
+      String(process.env.WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING ?? 'true').toLowerCase(),
+    );
     logger.info('[WorkflowWorker] Starting runtime v2 workers', {
       runtimeV2WorkerId,
       runtimeV2EventWorkerId,
+      runtimeV2TemporalWorkerId,
       consumerGroup: process.env.WORKFLOW_RUNTIME_V2_EVENT_CONSUMER_GROUP ?? 'workflow-runtime-v2',
+      temporalQueue: process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE ?? 'workflow-runtime-v2',
+      temporalAddress: process.env.TEMPORAL_ADDRESS ?? 'temporal-frontend.temporal.svc.cluster.local:7233',
+      temporalNamespace: process.env.TEMPORAL_NAMESPACE ?? 'default',
+      enableDbPollingWorker,
+      enableTemporalPolling,
     });
-
-    await Promise.all([runtimeV2Worker.start(), runtimeV2EventWorker.start()]);
+    if (enableTemporalPolling) {
+      await runtimeV2TemporalWorker.start();
+    } else {
+      logger.info('[WorkflowWorker] Authored Temporal polling disabled for this environment');
+    }
+    await runtimeV2EventWorker.start();
+    if (enableDbPollingWorker) {
+      await runtimeV2Worker.start();
+    } else {
+      logger.info('[WorkflowWorker] DB polling runtime worker disabled; Temporal-native runtime is authoritative for new runs');
+    }
     
     logger.info('[WorkflowWorker] All services started successfully');
     
@@ -65,7 +89,11 @@ async function startServices() {
     
     async function shutdown() {
       logger.info('[WorkflowWorker] Shutting down services...');
-      await Promise.all([runtimeV2Worker.stop(), runtimeV2EventWorker.stop()]);
+      await Promise.all([
+        enableTemporalPolling ? runtimeV2TemporalWorker.stop() : Promise.resolve(),
+        runtimeV2EventWorker.stop(),
+        enableDbPollingWorker ? runtimeV2Worker.stop() : Promise.resolve()
+      ]);
       process.exit(0);
     }
   } catch (error) {

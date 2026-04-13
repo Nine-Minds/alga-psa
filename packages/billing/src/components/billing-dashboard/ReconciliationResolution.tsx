@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle, CheckCircle, XCircle, ArrowLeft, AlertTriangle, Info } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Define the threshold for requiring four-eyes approval
 const FOUR_EYES_THRESHOLD = 1000; // $1000
@@ -130,8 +131,18 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation('msp/billing');
   const stepParam = searchParams?.get('step');
   const reportId = propReportId || (params?.reportId as string);
+  const steps = STEPS.map((step) => ({
+    ...step,
+    label:
+      step.id === 'review'
+        ? t('reconciliation.steps.review', { defaultValue: 'Review Discrepancy' })
+        : step.id === 'approve'
+          ? t('reconciliation.steps.approval', { defaultValue: 'Approval' })
+          : t('reconciliation.steps.confirmation', { defaultValue: 'Confirmation' }),
+  }));
 
   // Determine initial step based on URL parameter
   const getInitialStep = (): number => {
@@ -240,12 +251,12 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
       } catch (error) {
         console.error('Error fetching report data:', error);
         setLoading(false);
-        setError('Failed to load reconciliation report data');
+        setError(t('reconciliation.errors.loadData', { defaultValue: 'Failed to load reconciliation report data' }));
       }
     };
 
     fetchReportData();
-  }, [reportId]);
+  }, [reportId, t]);
 
   // Determine if four-eyes principle is required
   const requiresFourEyes = report && Math.abs(report.difference) >= FOUR_EYES_THRESHOLD;
@@ -253,7 +264,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
   // Handle next step
   const handleNextStep = () => {
     if (currentStep === 1 && requiresFourEyes && !approval.secondaryApprovalVerified) {
-      setError('Secondary approval is required for this correction');
+      setError(t('reconciliation.errors.secondaryApprovalRequired', { defaultValue: 'Secondary approval is required for this correction' }));
       return;
     }
 
@@ -309,7 +320,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
   // Handle sending secondary approval request
   const handleSendSecondaryApproval = () => {
     if (!approval.secondaryApproverName || !approval.secondaryApproverEmail) {
-      setError('Please enter the name and email of the secondary approver');
+      setError(t('reconciliation.errors.secondaryApproverRequired', { defaultValue: 'Please enter the name and email of the secondary approver' }));
       return;
     }
 
@@ -341,7 +352,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
       setApproval({ ...approval, secondaryApprovalVerified: true });
       setError(null);
     } else {
-      setError('Invalid verification code');
+      setError(t('reconciliation.errors.invalidVerificationCode', { defaultValue: 'Invalid verification code' }));
     }
   };
 
@@ -382,7 +393,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
       setIsConfirmationDialogOpen(true);
     } catch (error) {
       console.error('Error resolving report:', error);
-      setError(error instanceof Error ? error.message : 'An unknown error occurred');
+      setError(error instanceof Error ? error.message : t('reconciliation.errors.unknown', { defaultValue: 'An unknown error occurred' }));
       setIsProcessing(false);
     }
   };
@@ -435,6 +446,19 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
     return report.actual_balance + getCorrectionAmount();
   };
 
+  const getResolutionTypeLabel = (type: ResolutionType) => {
+    switch (type) {
+      case 'recommended':
+        return t('reconciliation.resolutionTypes.recommended', { defaultValue: 'Recommended Fix' });
+      case 'custom':
+        return t('reconciliation.resolutionTypes.custom', { defaultValue: 'Custom Correction' });
+      case 'no_action':
+        return t('reconciliation.resolutionTypes.noAction', { defaultValue: 'No Action Required' });
+      default:
+        return t('reconciliation.resolutionTypes.recommended', { defaultValue: 'Recommended Fix' });
+    }
+  };
+
   // Determine if this is a credit tracking issue
   const isCreditTrackingIssue = report?.metadata &&
     (report.metadata.issue_type === 'missing_credit_tracking_entry' ||
@@ -469,9 +493,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
         
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <div className="font-semibold">Error</div>
+          <div className="font-semibold">{t('common.error', { defaultValue: 'Error' })}</div>
           <AlertDescription>
-            {error || 'Reconciliation report not found. The report may have been deleted or you may not have permission to view it.'}
+            {error || t('reconciliation.errors.reportNotFound', { defaultValue: 'Reconciliation report not found. The report may have been deleted or you may not have permission to view it.' })}
           </AlertDescription>
         </Alert>
       </div>
@@ -483,13 +507,14 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <Button id="back-button" variant="outline" onClick={handleCancel} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {t('reconciliation.buttons.back', { defaultValue: 'Back' })}
         </Button>
         
         <h2 className="text-xl font-bold">Resolve Credit Discrepancy</h2>
       </div>
       
-      <Stepper currentStep={currentStep} steps={STEPS} className="mb-8" />
+      <Stepper currentStep={currentStep} steps={steps} className="mb-8" />
       
       {/* Step 1: Review Discrepancy */}
       {currentStep === 0 && (
@@ -497,35 +522,46 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Discrepancy Details</CardTitle>
+                <CardTitle>
+                  {t('reconciliation.sections.discrepancyDetails', { defaultValue: 'Discrepancy Details' })}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <div>
-                      <p className="text-sm text-[rgb(var(--color-text-500))]">Client</p>
+                      <p className="text-sm text-[rgb(var(--color-text-500))]">
+                        {t('reconciliation.fields.client', { defaultValue: 'Client' })}
+                      </p>
                       <p className="font-medium">{client?.name || report.client_id}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-[rgb(var(--color-text-500))]">Status</p>
+                      <p className="text-sm text-[rgb(var(--color-text-500))]">
+                        {t('reconciliation.fields.status', { defaultValue: 'Status' })}
+                      </p>
                       <Badge className="bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-900))] flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" /> Open
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {t('reconciliation.status.open', { defaultValue: 'Open' })}
                       </Badge>
                     </div>
                   </div>
                   
                   <div>
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Detected</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">
+                      {t('reconciliation.fields.detected', { defaultValue: 'Detected' })}
+                    </p>
                     <p className="font-medium">{formatDateTime(parseISO(report.detection_date), 'PPpp')}</p>
                   </div>
                   
                   {isCreditTrackingIssue && report.metadata && (
                     <div>
-                      <p className="text-sm text-[rgb(var(--color-text-500))]">Issue Type</p>
+                      <p className="text-sm text-[rgb(var(--color-text-500))]">
+                        {t('reconciliation.fields.issueType', { defaultValue: 'Issue Type' })}
+                      </p>
                       <p className="font-medium">
                         {report.metadata.issue_type === 'missing_credit_tracking_entry'
-                          ? 'Missing Credit Tracking Entry'
-                          : 'Inconsistent Credit Remaining Amount'}
+                          ? t('reconciliation.issueTypes.missingCreditTrackingEntry', { defaultValue: 'Missing Credit Tracking Entry' })
+                          : t('reconciliation.issueTypes.inconsistentCreditRemainingAmount', { defaultValue: 'Inconsistent Credit Remaining Amount' })}
                       </p>
                     </div>
                   )}
@@ -535,26 +571,34 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
             
             <Card>
               <CardHeader>
-                <CardTitle>Balance Comparison</CardTitle>
+                <CardTitle>
+                  {t('reconciliation.sections.balanceComparison', { defaultValue: 'Balance Comparison' })}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-[rgb(var(--color-primary-50))] p-4 rounded-lg">
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Expected Balance</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">
+                      {t('reconciliation.fields.expectedBalance', { defaultValue: 'Expected Balance' })}
+                    </p>
                     <p className="text-2xl font-bold text-[rgb(var(--color-primary-700))]">
                       {formatCurrency(report.expected_balance)}
                     </p>
                   </div>
                   
                   <div className="bg-[rgb(var(--color-accent-50))] p-4 rounded-lg">
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Actual Balance</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">
+                      {t('reconciliation.fields.actualBalance', { defaultValue: 'Actual Balance' })}
+                    </p>
                     <p className="text-2xl font-bold text-[rgb(var(--color-accent-700))]">
                       {formatCurrency(report.actual_balance)}
                     </p>
                   </div>
                   
                   <div className="col-span-2 bg-[rgb(var(--color-secondary-50))] p-4 rounded-lg">
-                    <p className="text-sm text-[rgb(var(--color-text-500))]">Difference</p>
+                    <p className="text-sm text-[rgb(var(--color-text-500))]">
+                      {t('reconciliation.fields.difference', { defaultValue: 'Difference' })}
+                    </p>
                     <p className={`text-2xl font-bold ${report.difference >= 0
                       ? 'text-[rgb(var(--color-primary-700))]'
                       : 'text-[rgb(var(--color-destructive-600))]'}`}>
@@ -570,7 +614,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
           {isCreditTrackingIssue && report.metadata && (
             <Card>
               <CardHeader>
-                <CardTitle>Issue Details</CardTitle>
+                <CardTitle>
+                  {t('reconciliation.sections.issueDetails', { defaultValue: 'Issue Details' })}
+                </CardTitle>
                 <CardDescription>
                   Detailed information about the credit tracking issue
                 </CardDescription>
@@ -580,7 +626,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                   <div className="space-y-4">
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
-                      <div className="font-semibold">Missing Credit Tracking Entry</div>
+                      <div className="font-semibold">
+                        {t('reconciliation.issueTypes.missingCreditTrackingEntry', { defaultValue: 'Missing Credit Tracking Entry' })}
+                      </div>
                       <AlertDescription>
                         A credit transaction was found without a corresponding credit tracking entry.
                       </AlertDescription>
@@ -621,7 +669,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                   <div className="space-y-4">
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
-                      <div className="font-semibold">Inconsistent Credit Remaining Amount</div>
+                      <div className="font-semibold">
+                        {t('reconciliation.issueTypes.inconsistentCreditRemainingAmount', { defaultValue: 'Inconsistent Credit Remaining Amount' })}
+                      </div>
                       <AlertDescription>
                         The remaining amount in a credit tracking entry doesn't match the expected value based on transaction history.
                       </AlertDescription>
@@ -711,7 +761,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
           {/* Resolution options */}
           <Card>
             <CardHeader>
-              <CardTitle>Resolution Options</CardTitle>
+              <CardTitle>
+                {t('reconciliation.sections.resolutionOptions', { defaultValue: 'Resolution Options' })}
+              </CardTitle>
               <CardDescription>
                 Select how you want to resolve this discrepancy
               </CardDescription>
@@ -728,7 +780,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                     className="h-4 w-4 text-[rgb(var(--color-primary-600))] focus:ring-[rgb(var(--color-primary-500))]"
                   />
                   <label htmlFor="recommended-fix" className="text-sm font-medium text-[rgb(var(--color-text-900))]">
-                    Apply Recommended Fix ({formatCurrency(report.difference)})
+                    {t('reconciliation.resolutionTypes.recommended', { defaultValue: 'Recommended Fix' })} ({formatCurrency(report.difference)})
                   </label>
                 </div>
                 
@@ -743,11 +795,13 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                   />
                   <div className="flex-1">
                     <label htmlFor="custom-fix" className="text-sm font-medium text-[rgb(var(--color-text-900))]">
-                      Custom Correction
+                      {t('reconciliation.resolutionTypes.custom', { defaultValue: 'Custom Correction' })}
                     </label>
                     {resolutionType === 'custom' && (
                       <div className="mt-2">
-                        <Label htmlFor="custom-amount">Correction Amount</Label>
+                        <Label htmlFor="custom-amount">
+                          {t('reconciliation.customCorrection.label', { defaultValue: 'Correction Amount' })}
+                        </Label>
                         <Input
                           id="custom-amount"
                           type="text"
@@ -756,7 +810,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                           className="mt-1"
                         />
                         <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-                          Enter a positive value to increase the balance, or a negative value to decrease it.
+                          {t('reconciliation.customCorrection.hint', { defaultValue: 'Enter a positive amount to increase the balance or a negative amount to decrease it.' })}
                         </p>
                       </div>
                     )}
@@ -773,17 +827,17 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                     className="h-4 w-4 text-[rgb(var(--color-primary-600))] focus:ring-[rgb(var(--color-primary-500))]"
                   />
                   <label htmlFor="no-action" className="text-sm font-medium text-[rgb(var(--color-text-900))]">
-                    No Action Required (Mark as Resolved Without Correction)
+                    {t('reconciliation.resolutionTypes.noAction', { defaultValue: 'No Action Required' })}
                   </label>
                 </div>
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button id="cancel-button" variant="outline" onClick={handleCancel}>
-                Cancel
+                {t('reconciliation.buttons.cancel', { defaultValue: 'Cancel' })}
               </Button>
               <Button id="next-button" onClick={handleNextStep}>
-                Next
+                {t('reconciliation.buttons.next', { defaultValue: 'Next' })}
               </Button>
             </CardFooter>
           </Card>
@@ -795,7 +849,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Approval Details</CardTitle>
+              <CardTitle>
+                {t('reconciliation.sections.approvalDetails', { defaultValue: 'Approval Details' })}
+              </CardTitle>
               <CardDescription>
                 Provide approval details for the correction
               </CardDescription>
@@ -804,18 +860,18 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
               <div className="space-y-6">
                 <div>
                   <Label htmlFor="resolution-notes" className="text-sm font-medium">
-                    Resolution Notes <span className="text-[rgb(var(--color-destructive-500))]">*</span>
+                    {t('reconciliation.notes.label', { defaultValue: 'Resolution Notes' })} <span className="text-[rgb(var(--color-destructive-500))]">*</span>
                   </Label>
                   <TextArea
                     id="resolution-notes"
                     value={approval.notes}
                     onChange={handleNotesChange}
-                    placeholder="Explain the reason for this correction..."
+                    placeholder={t('reconciliation.notes.placeholder', { defaultValue: 'Explain the reason for this correction...' })}
                     className="w-full mt-1"
                     rows={4}
                   />
                   <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-                    Please provide detailed notes explaining the reason for this correction.
+                    {t('reconciliation.notes.hint', { defaultValue: 'These notes will be recorded in the audit trail for this discrepancy.' })}
                   </p>
                 </div>
                 
@@ -824,9 +880,13 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                     <div className="flex items-start space-x-2 mb-4">
                       <AlertTriangle className="h-5 w-5 text-[rgb(var(--color-accent-700))] mt-0.5" />
                       <div>
-                        <h4 className="font-medium text-[rgb(var(--color-accent-900))]">Four-Eyes Approval Required</h4>
+                        <h4 className="font-medium text-[rgb(var(--color-accent-900))]">
+                          {t('reconciliation.fourEyes.requiredTitle', { defaultValue: 'Four-Eyes Approval Required' })}
+                        </h4>
                         <p className="text-sm text-[rgb(var(--color-accent-700))]">
-                          This correction exceeds {formatCurrency(FOUR_EYES_THRESHOLD)} and requires secondary approval.
+                          {t('reconciliation.fourEyes.requiredDescription', {
+                            defaultValue: 'This correction exceeds the approval threshold and requires a secondary approver to review and verify the change before it can be submitted.',
+                          })}
                         </p>
                       </div>
                     </div>
@@ -835,7 +895,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                       <div className="space-y-4">
                         <div>
                           <Label htmlFor="secondary-approver-name" className="text-sm font-medium">
-                            Secondary Approver Name <span className="text-[rgb(var(--color-destructive-500))]">*</span>
+                            {t('reconciliation.fourEyes.approverName', { defaultValue: 'Secondary Approver Name' })} <span className="text-[rgb(var(--color-destructive-500))]">*</span>
                           </Label>
                           <Input
                             id="secondary-approver-name"
@@ -847,7 +907,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                         
                         <div>
                           <Label htmlFor="secondary-approver-email" className="text-sm font-medium">
-                            Secondary Approver Email <span className="text-[rgb(var(--color-destructive-500))]">*</span>
+                            {t('reconciliation.fourEyes.approverEmail', { defaultValue: 'Secondary Approver Email' })} <span className="text-[rgb(var(--color-destructive-500))]">*</span>
                           </Label>
                           <Input
                             id="secondary-approver-email"
@@ -863,22 +923,26 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                           onClick={handleSendSecondaryApproval}
                           disabled={!approval.secondaryApproverName || !approval.secondaryApproverEmail}
                         >
-                          Send Approval Request
+                          {t('reconciliation.fourEyes.sendRequest', { defaultValue: 'Send Approval Request' })}
                         </Button>
                       </div>
                     ) : !approval.secondaryApprovalVerified ? (
                       <div className="space-y-4">
                         <Alert>
                           <Info className="h-4 w-4" />
-                          <div className="font-semibold">Approval Request Sent</div>
+                          <div className="font-semibold">
+                            {t('reconciliation.fourEyes.requestSentTitle', { defaultValue: 'Approval Request Sent' })}
+                          </div>
                           <AlertDescription>
-                            An approval request has been sent to {approval.secondaryApproverEmail}.
+                            {t('reconciliation.fourEyes.requestSentDescription', {
+                              defaultValue: 'Ask the secondary approver for the verification code they received, then enter it below to continue.',
+                            })}
                           </AlertDescription>
                         </Alert>
                         
                         <div>
                           <Label htmlFor="verification-code" className="text-sm font-medium">
-                            Verification Code <span className="text-[rgb(var(--color-destructive-500))]">*</span>
+                            {t('reconciliation.fourEyes.verificationCode', { defaultValue: 'Verification Code' })} <span className="text-[rgb(var(--color-destructive-500))]">*</span>
                           </Label>
                           <div className="flex space-x-2 mt-1">
                             <Input
@@ -893,20 +957,24 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                               onClick={handleVerifyCode}
                               disabled={approval.secondaryApprovalCode.length !== 6}
                             >
-                              Verify
+                              {t('reconciliation.fourEyes.verifyCode', { defaultValue: 'Verify Code' })}
                             </Button>
                           </div>
                           <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-                            Enter the 6-digit verification code sent to the secondary approver.
+                            {t('reconciliation.fourEyes.verificationHint', { defaultValue: 'Enter the verification code provided by the secondary approver.' })}
                           </p>
                         </div>
                       </div>
                     ) : (
                       <Alert className="bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-900))] border-[rgb(var(--color-primary-200))]">
                         <CheckCircle className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
-                        <div className="font-semibold">Secondary Approval Verified</div>
+                        <div className="font-semibold">
+                          {t('reconciliation.fourEyes.verifiedTitle', { defaultValue: 'Secondary Approval Verified' })}
+                        </div>
                         <AlertDescription className="text-[rgb(var(--color-primary-800))]">
-                          The secondary approval has been verified by {approval.secondaryApproverName}.
+                          {t('reconciliation.fourEyes.verifiedDescription', {
+                            defaultValue: 'Secondary approval has been verified and this correction can now be submitted.',
+                          })}
                         </AlertDescription>
                       </Alert>
                     )}
@@ -914,24 +982,32 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                 )}
                 
                 <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-md">
-                  <h4 className="font-medium mb-2">Correction Summary</h4>
+                  <h4 className="font-medium mb-2">
+                    {t('reconciliation.sections.correctionSummary', { defaultValue: 'Correction Summary' })}
+                  </h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="text-[rgb(var(--color-text-500))]">Resolution Type:</div>
+                    <div className="text-[rgb(var(--color-text-500))]">
+                      {t('reconciliation.fields.resolutionType', { defaultValue: 'Resolution Type' })}:
+                    </div>
                     <div className="font-medium">
-                      {resolutionType === 'recommended' ? 'Recommended Fix' :
-                       resolutionType === 'custom' ? 'Custom Correction' :
-                       'No Action Required'}
+                      {getResolutionTypeLabel(resolutionType)}
                     </div>
                     
                     {resolutionType !== 'no_action' && (
                       <>
-                        <div className="text-[rgb(var(--color-text-500))]">Correction Amount:</div>
+                        <div className="text-[rgb(var(--color-text-500))]">
+                          {t('reconciliation.fields.correctionAmount', { defaultValue: 'Correction Amount' })}:
+                        </div>
                         <div className="font-medium">{formatCurrency(getCorrectionAmount())}</div>
                         
-                        <div className="text-[rgb(var(--color-text-500))]">Current Balance:</div>
+                        <div className="text-[rgb(var(--color-text-500))]">
+                          {t('reconciliation.fields.currentBalance', { defaultValue: 'Current Balance' })}:
+                        </div>
                         <div className="font-medium">{formatCurrency(report.actual_balance)}</div>
                         
-                        <div className="text-[rgb(var(--color-text-500))]">New Balance:</div>
+                        <div className="text-[rgb(var(--color-text-500))]">
+                          {t('reconciliation.fields.newBalance', { defaultValue: 'New Balance' })}:
+                        </div>
                         <div className="font-medium">{formatCurrency(getNewBalance())}</div>
                       </>
                     )}
@@ -941,14 +1017,14 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button id="back-button" variant="outline" onClick={handlePreviousStep}>
-                Back
+                {t('reconciliation.buttons.back', { defaultValue: 'Back' })}
               </Button>
               <Button
                 id="next-button"
                 onClick={handleNextStep}
                 disabled={!approval.notes || (!!requiresFourEyes && !approval.secondaryApprovalVerified)}
               >
-                Next
+                {t('reconciliation.buttons.next', { defaultValue: 'Next' })}
               </Button>
             </CardFooter>
           </Card>
@@ -956,7 +1032,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <div className="font-semibold">Error</div>
+              <div className="font-semibold">{t('common.error', { defaultValue: 'Error' })}</div>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -968,7 +1044,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Confirm Resolution</CardTitle>
+              <CardTitle>
+                {t('reconciliation.sections.confirmResolution', { defaultValue: 'Confirm Resolution' })}
+              </CardTitle>
               <CardDescription>
                 Review and confirm the correction details
               </CardDescription>
@@ -977,39 +1055,51 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
               <div className="space-y-6">
                 <Alert className="bg-[rgb(var(--color-accent-50))] text-[rgb(var(--color-accent-900))] border-[rgb(var(--color-accent-200))]">
                   <AlertTriangle className="h-4 w-4 text-[rgb(var(--color-accent-600))]" />
-                  <div className="font-semibold">Important</div>
+                  <div className="font-semibold">
+                    {t('reconciliation.confirmation.importantTitle', { defaultValue: 'Important' })}
+                  </div>
                   <AlertDescription className="text-[rgb(var(--color-accent-800))]">
-                    Please review the correction details carefully before confirming. This action cannot be undone.
+                    {t('reconciliation.confirmation.importantDescription', {
+                      defaultValue: 'Please review the details below carefully. This action will update reconciliation records and cannot be easily undone.',
+                    })}
                   </AlertDescription>
                 </Alert>
                 
                 <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-md">
-                  <h4 className="font-medium mb-4">Resolution Details</h4>
+                  <h4 className="font-medium mb-4">
+                    {t('reconciliation.sections.resolutionDetails', { defaultValue: 'Resolution Details' })}
+                  </h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-[rgb(var(--color-text-500))]">Client</p>
+                      <p className="text-[rgb(var(--color-text-500))]">
+                        {t('reconciliation.fields.client', { defaultValue: 'Client' })}
+                      </p>
                       <p className="font-medium">{client?.name || report.client_id}</p>
                     </div>
                     <div>
-                      <p className="text-[rgb(var(--color-text-500))]">Report ID</p>
+                      <p className="text-[rgb(var(--color-text-500))]">
+                        {t('reconciliation.fields.reportId', { defaultValue: 'Report ID' })}
+                      </p>
                       <p className="font-medium font-mono">{report.report_id}</p>
                     </div>
                     <div>
-                      <p className="text-[rgb(var(--color-text-500))]">Resolution Type</p>
-                      <p className="font-medium">
-                        {resolutionType === 'recommended' ? 'Recommended Fix' :
-                         resolutionType === 'custom' ? 'Custom Correction' :
-                         'No Action Required'}
+                      <p className="text-[rgb(var(--color-text-500))]">
+                        {t('reconciliation.fields.resolutionType', { defaultValue: 'Resolution Type' })}
                       </p>
+                      <p className="font-medium">{getResolutionTypeLabel(resolutionType)}</p>
                     </div>
                     {resolutionType !== 'no_action' && (
                       <div>
-                        <p className="text-[rgb(var(--color-text-500))]">Correction Amount</p>
+                        <p className="text-[rgb(var(--color-text-500))]">
+                          {t('reconciliation.fields.correctionAmount', { defaultValue: 'Correction Amount' })}
+                        </p>
                         <p className="font-medium">{formatCurrency(getCorrectionAmount())}</p>
                       </div>
                     )}
                     <div className="col-span-2">
-                      <p className="text-[rgb(var(--color-text-500))]">Resolution Notes</p>
+                      <p className="text-[rgb(var(--color-text-500))]">
+                        {t('reconciliation.fields.resolutionNotes', { defaultValue: 'Resolution Notes' })}
+                      </p>
                       <p className="font-medium">{approval.notes}</p>
                     </div>
                   </div>
@@ -1017,17 +1107,23 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                 
                 {resolutionType !== 'no_action' && (
                   <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-md">
-                    <h4 className="font-medium mb-4">Impact Summary</h4>
+                    <h4 className="font-medium mb-4">
+                      {t('reconciliation.sections.impactSummary', { defaultValue: 'Impact Summary' })}
+                    </h4>
                     <div className="grid grid-cols-3 gap-4">
                       <div className="p-3 bg-[rgb(var(--color-accent-50))] rounded-md text-center">
-                        <p className="text-xs text-[rgb(var(--color-text-500))]">Current Balance</p>
+                        <p className="text-xs text-[rgb(var(--color-text-500))]">
+                          {t('reconciliation.fields.currentBalance', { defaultValue: 'Current Balance' })}
+                        </p>
                         <p className="text-lg font-bold">{formatCurrency(report.actual_balance)}</p>
                       </div>
                       <div className="p-3 bg-[rgb(var(--color-secondary-50))] rounded-md text-center flex items-center justify-center">
                         <span className="text-lg">→</span>
                       </div>
                       <div className="p-3 bg-[rgb(var(--color-primary-50))] rounded-md text-center">
-                        <p className="text-xs text-[rgb(var(--color-text-500))]">New Balance</p>
+                        <p className="text-xs text-[rgb(var(--color-text-500))]">
+                          {t('reconciliation.fields.newBalance', { defaultValue: 'New Balance' })}
+                        </p>
                         <p className="text-lg font-bold">{formatCurrency(getNewBalance())}</p>
                       </div>
                     </div>
@@ -1039,9 +1135,13 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                     <div className="flex items-start space-x-2">
                       <CheckCircle className="h-5 w-5 text-[rgb(var(--color-primary-600))] mt-0.5" />
                       <div>
-                        <h4 className="font-medium text-[rgb(var(--color-primary-900))]">Secondary Approval Verified</h4>
+                        <h4 className="font-medium text-[rgb(var(--color-primary-900))]">
+                          {t('reconciliation.confirmation.verifiedTitle', { defaultValue: 'Secondary Approval Verified' })}
+                        </h4>
                         <p className="text-sm text-[rgb(var(--color-primary-700))]">
-                          This correction has been approved by {approval.secondaryApproverName} ({approval.secondaryApproverEmail}).
+                          {t('reconciliation.confirmation.verifiedDescription', {
+                            defaultValue: 'A secondary approver has verified this correction and the approval requirement has been satisfied.',
+                          })}
                         </p>
                       </div>
                     </div>
@@ -1051,14 +1151,16 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button id="back-button" variant="outline" onClick={handlePreviousStep}>
-                Back
+                {t('reconciliation.buttons.back', { defaultValue: 'Back' })}
               </Button>
               <Button
                 id="confirm-button"
                 onClick={handleSubmitResolution}
                 disabled={isProcessing}
               >
-                {isProcessing ? 'Processing...' : 'Confirm Resolution'}
+                {isProcessing
+                  ? t('common.processing', { defaultValue: 'Processing...' })
+                  : t('reconciliation.confirmation.confirmButton', { defaultValue: 'Confirm Resolution' })}
               </Button>
             </CardFooter>
           </Card>
@@ -1066,7 +1168,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <div className="font-semibold">Error</div>
+              <div className="font-semibold">{t('common.error', { defaultValue: 'Error' })}</div>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -1077,11 +1179,13 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
       <Dialog
         isOpen={!!isConfirmationDialogOpen}
         onClose={() => setIsConfirmationDialogOpen(false)}
-        title="Resolution Complete"
+        title={t('reconciliation.sections.resolutionComplete', { defaultValue: 'Resolution Complete' })}
       >
         <DialogContent>
           <DialogDescription>
-            The credit discrepancy has been successfully resolved.
+            {t('reconciliation.confirmation.thankYouDescription', {
+              defaultValue: 'The discrepancy has been resolved and the billing records have been updated.',
+            })}
           </DialogDescription>
           
           <div className="py-4">
@@ -1092,23 +1196,35 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
             </div>
             
             <div className="text-center mb-4">
-              <p className="text-lg font-medium">Thank you!</p>
+              <p className="text-lg font-medium">
+                {t('reconciliation.confirmation.thankYouTitle', { defaultValue: 'Thank you!' })}
+              </p>
               <p className="text-sm text-[rgb(var(--color-text-500))]">
-                The credit discrepancy has been resolved and all records have been updated.
+                {t('reconciliation.confirmation.thankYouDescription', {
+                  defaultValue: 'The discrepancy has been resolved and the billing records have been updated.',
+                })}
               </p>
             </div>
             
             {resolutionType !== 'no_action' && (
               <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-md mb-4">
-                <h4 className="font-medium mb-2 text-center">Resolution Summary</h4>
+                <h4 className="font-medium mb-2 text-center">
+                  {t('reconciliation.sections.resolutionSummary', { defaultValue: 'Resolution Summary' })}
+                </h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-[rgb(var(--color-text-500))]">Previous Balance:</div>
+                  <div className="text-[rgb(var(--color-text-500))]">
+                    {t('reconciliation.fields.previousBalance', { defaultValue: 'Previous Balance' })}:
+                  </div>
                   <div className="font-medium text-right">{formatCurrency(report.actual_balance)}</div>
                   
-                  <div className="text-[rgb(var(--color-text-500))]">Correction Amount:</div>
+                  <div className="text-[rgb(var(--color-text-500))]">
+                    {t('reconciliation.fields.correctionAmount', { defaultValue: 'Correction Amount' })}:
+                  </div>
                   <div className="font-medium text-right">{formatCurrency(getCorrectionAmount())}</div>
                   
-                  <div className="text-[rgb(var(--color-text-500))]">New Balance:</div>
+                  <div className="text-[rgb(var(--color-text-500))]">
+                    {t('reconciliation.fields.newBalance', { defaultValue: 'New Balance' })}:
+                  </div>
                   <div className="font-medium text-right">{formatCurrency(getNewBalance())}</div>
                 </div>
               </div>
@@ -1117,7 +1233,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
           
           <DialogFooter>
             <Button id="close-confirmation-button" onClick={handleCloseConfirmation}>
-              Close
+              {t('reconciliation.confirmation.closeButton', { defaultValue: 'Close' })}
             </Button>
           </DialogFooter>
         </DialogContent>

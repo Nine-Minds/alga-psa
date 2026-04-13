@@ -69,10 +69,10 @@
       "notHelpful": "Non utile"
     },
     "actions": {
-      "edit": "Modificare",
+      "edit": "Modifica",
       "submitForReview": "Invia per la revisione",
-      "publish": "Pubblicare",
-      "archive": "Archivio"
+      "publish": "Pubblica",
+      "archive": "Archivia"
     },
     "pagination": {
       "itemsPerPage": {
@@ -102,10 +102,10 @@
     },
     "actions": {
       "submitForReview": "Invia per la revisione",
-      "publish": "Pubblicare",
-      "archive": "Archivio",
+      "publish": "Pubblica",
+      "archive": "Archivia",
       "saveMetadata": "Salva metadati",
-      "saving": "Risparmio..."
+      "saving": "Salvataggio..."
     },
     "feedback": {
       "permissionDenied": "Autorizzazione negata",
@@ -192,10 +192,10 @@
     "currentStatus": "Stato attuale",
     "actions": {
       "submitForReview": "Invia per la revisione",
-      "publish": "Pubblicare",
+      "publish": "Pubblica",
       "approveAndPublish": "Approva e pubblica",
-      "archive": "Archivio",
-      "republish": "Ripubblicare"
+      "archive": "Archivia",
+      "republish": "Ripubblica"
     },
     "flow": {
       "draft": "Bozza",

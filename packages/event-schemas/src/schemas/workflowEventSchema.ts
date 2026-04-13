@@ -9,6 +9,7 @@ import { z } from 'zod';
 export const WorkflowEventBaseSchema = z.object({
   event_id: z.string().uuid(),
   execution_id: z.string().uuid().optional(), // Made execution_id optional
+  workflow_correlation_key: z.string().min(1).optional(),
   event_name: z.string(),
   event_type: z.string(),
   tenant: z.string(),
@@ -73,6 +74,7 @@ export type WorkflowStreamEntry = z.infer<typeof WorkflowStreamEntrySchema>;
 export interface WorkflowEventInput {
   event_id: string;
   execution_id: string;
+  workflow_correlation_key?: string;
   event_name: string;
   event_type: string;
   tenant: string;
@@ -90,6 +92,7 @@ export function toStreamEvent(event: WorkflowEventInput): WorkflowEventBase {
   return {
     event_id: event.event_id,
     execution_id: event.execution_id,
+    workflow_correlation_key: event.workflow_correlation_key,
     event_name: event.event_name,
     event_type: event.event_type,
     tenant: event.tenant,
@@ -112,6 +115,7 @@ export function parseStreamEvent(message: RedisStreamMessage): WorkflowEventBase
     const eventForValidation = {
       event_id: rawEventData.event_id,
       execution_id: rawEventData.execution_id === '' ? undefined : rawEventData.execution_id,
+      workflow_correlation_key: rawEventData.workflow_correlation_key === '' ? undefined : rawEventData.workflow_correlation_key,
       event_name: rawEventData.event_name,
       event_type: rawEventData.event_type,
       tenant: rawEventData.tenant,

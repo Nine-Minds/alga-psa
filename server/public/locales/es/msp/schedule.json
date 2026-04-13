@@ -85,7 +85,7 @@
       "title": "Eliminar entrada de programación",
       "messageRecurring": "Seleccione qué eventos eliminar:",
       "messageSingle": "¿Está seguro de que desea eliminar esta entrada del programa? Esta acción no se puede deshacer.",
-      "confirm": "Borrar",
+      "confirm": "Eliminar",
       "entityFallback": "esta entrada de horario",
       "options": {
         "single": "Sólo este evento",
@@ -443,8 +443,8 @@
     },
     "actions": {
       "cancel": "Cancelar",
-      "close": "Cerca",
-      "save": "Ahorrar",
+      "close": "Cerrar",
+      "save": "Guardar",
       "delete": "Eliminar entrada"
     },
     "workItem": {

@@ -8,7 +8,7 @@
     },
     "tabs": {
       "articles": "Artikel",
-      "reviewDashboard": "Überprüfen Sie das Dashboard"
+      "reviewDashboard": "Überprüfungs-Dashboard"
     },
     "feedback": {
       "loadError": "Artikel konnten nicht geladen werden",
@@ -20,7 +20,7 @@
   "shared": {
     "statusLabels": {
       "draft": "Entwurf",
-      "review": "Im Rückblick",
+      "review": "In Überprüfung",
       "published": "Veröffentlicht",
       "archived": "Archiviert"
     },
@@ -56,7 +56,7 @@
     "table": {
       "title": "Titel",
       "type": "Typ",
-      "audience": "Publikum",
+      "audience": "Zielgruppe",
       "status": "Status",
       "tags": "Schlagworte",
       "stats": "Statistiken",
@@ -72,7 +72,7 @@
       "edit": "Bearbeiten",
       "submitForReview": "Zur Überprüfung einreichen",
       "publish": "Veröffentlichen",
-      "archive": "Archiv"
+      "archive": "Archivieren"
     },
     "pagination": {
       "itemsPerPage": {
@@ -82,12 +82,12 @@
       }
     },
     "stale": {
-      "reviewOverdue": "Rezension überfällig"
+      "reviewOverdue": "Überprüfung überfällig"
     },
     "dialogs": {
       "archive": {
-        "title": "Archivartikel",
-        "message": "Sind Sie sicher, dass Sie „{{title}}“ archivieren möchten? Dadurch wird es aus der Sichtbarkeit des Clients entfernt."
+        "title": "Artikel archivieren",
+        "message": "Sind Sie sicher, dass Sie „{{title}}“ archivieren möchten? Dadurch wird er aus der Kundensicht entfernt."
       }
     },
     "feedback": {
@@ -103,9 +103,9 @@
     "actions": {
       "submitForReview": "Zur Überprüfung einreichen",
       "publish": "Veröffentlichen",
-      "archive": "Archiv",
+      "archive": "Archivieren",
       "saveMetadata": "Metadaten speichern",
-      "saving": "Sparen..."
+      "saving": "Speichern..."
     },
     "feedback": {
       "permissionDenied": "Zugriff verweigert",
@@ -136,10 +136,10 @@
         "title": "Titel",
         "slug": "URL-Slug",
         "articleType": "Artikeltyp",
-        "audience": "Publikum",
+        "audience": "Zielgruppe",
         "category": "Kategorie",
         "reviewCycle": "Überprüfungszyklus",
-        "nextReview": "Nächste Rezension",
+        "nextReview": "Nächste Überprüfung",
         "noCategory": "Keine Kategorie"
       }
     },
@@ -150,12 +150,12 @@
   "filters": {
     "title": "Filter",
     "actions": {
-      "clear": "Klar"
+      "clear": "Zurücksetzen"
     },
     "labels": {
       "search": "Suchen",
       "status": "Status",
-      "audience": "Publikum",
+      "audience": "Zielgruppe",
       "articleType": "Artikeltyp",
       "category": "Kategorie",
       "tags": "Schlagworte"
@@ -194,12 +194,12 @@
       "submitForReview": "Zur Überprüfung einreichen",
       "publish": "Veröffentlichen",
       "approveAndPublish": "Genehmigen und veröffentlichen",
-      "archive": "Archiv",
+      "archive": "Archivieren",
       "republish": "Neu veröffentlichen"
     },
     "flow": {
       "draft": "Entwurf",
-      "review": "Rezension",
+      "review": "Überprüfung",
       "published": "Veröffentlicht"
     },
     "warnings": {
@@ -209,11 +209,11 @@
       "publish": {
         "title": "Artikel veröffentlichen",
         "message": "Sind Sie sicher, dass Sie diesen Artikel veröffentlichen möchten?",
-        "messageWithAudience": "Dadurch wird der Artikel veröffentlicht und für {{audience}}-Benutzer sichtbar gemacht. Bist du sicher?"
+        "messageWithAudience": "Dadurch wird der Artikel veröffentlicht und für {{audience}}-Benutzer sichtbar gemacht. Sind Sie sicher?"
       },
       "archive": {
-        "title": "Archivartikel",
-        "message": "Dadurch wird der Artikel archiviert und aus der Client-Sichtbarkeit entfernt. Bist du sicher?"
+        "title": "Artikel archivieren",
+        "message": "Dadurch wird der Artikel archiviert und aus der Kundensicht entfernt. Sind Sie sicher?"
       }
     },
     "feedback": {
@@ -225,24 +225,24 @@
   },
   "reviewDashboard": {
     "summary": {
-      "awaitingReview": "Warten auf Rezension",
-      "overdueReviews": "Überfällige Bewertungen"
+      "awaitingReview": "Wartet auf Überprüfung",
+      "overdueReviews": "Überfällige Überprüfungen"
     },
-    "empty": "Alles aufgeholt! Es sind keine Artikel erforderlich, die überprüft werden müssen.",
+    "empty": "Alles erledigt! Es müssen keine Artikel überprüft werden.",
     "sections": {
-      "awaitingReview": "Artikel warten auf Rezension",
+      "awaitingReview": "Artikel warten auf Überprüfung",
       "overdue": "Überprüfung überfällig"
     },
     "labels": {
       "submitted": "Eingereicht",
       "due": "Fällig",
       "lastReviewed": "Zuletzt überprüft",
-      "never": "Niemals"
+      "never": "Nie"
     },
     "actions": {
-      "view": "Sicht",
-      "review": "Rezension",
-      "reviewNow": "Jetzt bewerten"
+      "view": "Anzeigen",
+      "review": "Überprüfen",
+      "reviewNow": "Jetzt überprüfen"
     },
     "feedback": {
       "loadError": "Überprüfungsdaten konnten nicht geladen werden"
@@ -255,7 +255,7 @@
       "formats": "Unterstützt .md- und .html-Dateien"
     },
     "fields": {
-      "audience": "Publikum",
+      "audience": "Zielgruppe",
       "articleType": "Artikeltyp"
     },
     "actions": {
@@ -277,7 +277,7 @@
   "staleness": {
     "badges": {
       "reviewOverdue": "Überprüfung überfällig",
-      "reviewDueSoon": "Rezension in Kürze fällig",
+      "reviewDueSoon": "Überprüfung bald fällig",
       "overdueBy": "{{count}} Tage überfällig",
       "dueIn": "Fällig in {{count}} Tagen"
     },

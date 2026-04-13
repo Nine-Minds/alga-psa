@@ -1,0 +1,31 @@
+[
+  {"id": "F001", "description": "Create server/public/locales/en/msp/credits.json namespace with all keys needed by credit components (~80 keys across page, columns, status, actions, tabs, settings, charts, stats, management, reconciliation, application, expiration, expirationDialog, context groups)", "implemented": false},
+  {"id": "F002", "description": "Generate fr/msp/credits.json translations for all keys in F001", "implemented": false},
+  {"id": "F003", "description": "Generate es/msp/credits.json translations for all keys", "implemented": false},
+  {"id": "F004", "description": "Generate de/msp/credits.json translations for all keys", "implemented": false},
+  {"id": "F005", "description": "Generate nl/msp/credits.json translations for all keys", "implemented": false},
+  {"id": "F006", "description": "Generate it/msp/credits.json translations for all keys (with Italian accent audit)", "implemented": false},
+  {"id": "F007", "description": "Generate pl/msp/credits.json translations for all keys", "implemented": false},
+  {"id": "F008", "description": "Run `node scripts/generate-pseudo-locales.cjs` to generate xx/msp/credits.json and yy/msp/credits.json pseudo-locale files from English source", "implemented": false},
+  {"id": "F009", "description": "Run `node scripts/validate-translations.cjs` and confirm exit code 0 (key parity, variable preservation, pseudo-locale patterns, Italian accents)", "implemented": false},
+  {"id": "F010", "description": "Add '/msp/billing/credits' route to ROUTE_NAMESPACES in packages/core/src/lib/i18n/config.ts loading ['common', 'msp/core', 'features/billing', 'msp/credits']", "implemented": false},
+
+  {"id": "F011", "description": "Wire useTranslation('msp/credits') in CreditsPage.tsx — create a client wrapper component (CreditsPageClient.tsx) to handle translation for the server component; translate column titles (Credit ID, Created, Description, Original Amount, Remaining, Expires, Status, Actions), status labels (Active, Expired, Expiring Soon), tab labels (Active Credits, All Credits, Expired Credits), card titles (Credits Overview, Credit Expiration Summary, Credit Usage Trends), settings section labels, and page heading", "implemented": false},
+  {"id": "F012", "description": "Wire useTranslation('msp/credits') in CreditsPage.tsx — translate CreditExpirationSettings sub-component labels (Credit Expiration Settings, Credit Expiration, Enabled/Disabled, Expiration Period, Notification Days) and card descriptions", "implemented": false},
+
+  {"id": "F013", "description": "Wire useTranslation('msp/credits') in AddCreditButton.tsx — translate button label (Add Credit), dialog title, placeholder text, Cancel/Add Credit buttons", "implemented": false},
+  {"id": "F014", "description": "Wire useTranslation('msp/credits') in BackButton.tsx — translate 'Back to Credits' button text", "implemented": false},
+
+  {"id": "F015", "description": "Wire useTranslation('msp/credits') in CreditManagement.tsx — translate page title (Credit Management), chart card titles/descriptions (Credit Expiration Summary, Credit Usage Trends), stat labels (Total Active Credits, Expiring in 30 Days, Total Credits Applied, Total Credits Expired), chart legend labels (Credits Issued, Credits Applied, Credits Expired)", "implemented": false},
+  {"id": "F016", "description": "Wire useTranslation('msp/credits') in CreditManagement.tsx — translate credits table section: card title (Recent Credits), card description, column titles, tab labels (Active Credits, Expired Credits, All Credits), status labels, action buttons (View, Edit, Expire), View All Credits button, and Add Credit dialog strings", "implemented": false},
+  {"id": "F017", "description": "Wire useTranslation('msp/credits') in CreditManagement.tsx — translate renderCreditContext helper: lineage status labels (Lineage Missing, Transferred Recurring Credit, Recurring Source, Financial Only), context descriptions (Service Period, No recurring service period)", "implemented": false},
+
+  {"id": "F018", "description": "Wire useTranslation('msp/credits') in CreditReconciliation.tsx — translate dashboard header (Credit Reconciliation Dashboard), client selector (Select Client), run button (Run Reconciliation / Running...), filter labels (Status, All Statuses, Open, In Review, Resolved, From Date, To Date), Reset button, and toast messages (validation result with interpolation)", "implemented": false},
+  {"id": "F019", "description": "Wire useTranslation('msp/credits') in CreditReconciliation.tsx — translate stat cards (Total Discrepancies, Total Discrepancy Amount, Open Issues), chart titles (Status Distribution, Discrepancy Trends), chart descriptions and legend labels, reconciliation reports table (card title/description, column titles, tab labels with counts, status badge labels, View/Resolve buttons)", "implemented": false},
+
+  {"id": "F020", "description": "Wire useTranslation('msp/credits') in CreditApplicationUI.tsx — translate card title (Apply Credit), descriptions, column titles (Amount Available, Created, Expiration, Select), labels (Total Available Credit, Invoice Amount, Select Credit to Apply, Amount to Apply), button text (Select/Selected, Cancel, Apply Credit, Applying...), help text, error/empty states", "implemented": false},
+
+  {"id": "F021", "description": "Wire useTranslation('msp/credits') in CreditExpirationInfo.tsx — translate card title (Applied Credits), description with interpolation (Credits applied to this invoice: {{amount}}), field labels (Credit Amount, Created, Expiration), Never label, help text, error/empty states", "implemented": false},
+
+  {"id": "F022", "description": "Wire useTranslation('msp/credits') in CreditExpirationModificationDialog.tsx — translate dialog title (Modify Credit Expiration), description, field labels (Credit Amount, Remaining Amount, Created, Current Expiration, No expiration), switch label (Remove expiration date), input label (New Expiration Date), validation error (past date), button text (Cancel, Save Changes, Saving...), generic update error message", "implemented": false}
+]

@@ -1250,7 +1250,7 @@
     "betaNotice": "11111",
     "emptyCategory": "11111",
     "rmmEnterpriseNote": "11111",
-    "categoryHeading": "{{label}} 11111",
+    "categoryHeading": "11111 {{label}} 11111",
     "loading": {
       "payments": "11111"
     },

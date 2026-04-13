@@ -1,0 +1,748 @@
+{
+  "common": {
+    "back": "Terug",
+    "cancel": "Annuleren",
+    "close": "Sluiten",
+    "confirm": "Bevestigen",
+    "create": "Aanmaken",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "error": "Fout",
+    "loading": "Laden...",
+    "new": "Nieuw",
+    "next": "Volgende",
+    "notAvailable": "N.v.t.",
+    "openMenu": "Menu openen",
+    "processing": "Verwerken...",
+    "refresh": "Vernieuwen",
+    "remove": "Verwijderen",
+    "reset": "Opnieuw instellen",
+    "save": "Opslaan",
+    "saving": "Opslaan...",
+    "success": "Succes",
+    "update": "Update",
+    "yes": "Ja",
+    "no": "Nee"
+  },
+  "dashboard": {
+    "title": "Facturering",
+    "beta": {
+      "title": "Bèta-release",
+      "description": "Ons vernieuwde factureringssysteem bevindt zich momenteel in de bètafase. Het kan zijn dat u problemen of onvolledige functies tegenkomt. We stellen uw geduld op prijs terwijl we de ervaring blijven verbeteren."
+    },
+    "errorPrefix": "Fout:",
+    "backToPresets": "Terug naar de lijst met voorinstellingen voor contractregels",
+    "quoteTemplatesHeading": "Offertesjablonen",
+    "tabs": {
+      "quotes": "Offertes",
+      "quoteLayouts": "Offerte-indelingen",
+      "quoteTemplates": "Offertesjablonen",
+      "clientContracts": "Klantcontracten",
+      "accountingExports": "Boekhoudkundige exporten",
+      "contractTemplates": "Contractsjablonen",
+      "invoicing": "Facturering",
+      "invoiceLayouts": "Factuurlay-outs",
+      "taxRates": "Belastingtarieven",
+      "contractLinePresets": "Voorinstellingen voor contractregels",
+      "billingCycles": "Factureringscycli",
+      "servicePeriods": "Serviceperioden",
+      "usageTracking": "Gebruik volgen",
+      "reports": "Rapporten",
+      "serviceCatalog": "Servicecatalogus",
+      "products": "Producten"
+    }
+  },
+  "overview": {
+    "errors": {
+      "loadTitle": "Kan factuurgegevens niet laden",
+      "loadData": "Kan factureringsgegevens niet laden"
+    },
+    "metrics": {
+      "activeContractLines": {
+        "title": "Actieve contractregels",
+        "subtitle": "Actieve contractregels"
+      },
+      "billingClients": {
+        "title": "Facturatie van klanten",
+        "subtitle": "Totaal aantal klanten"
+      },
+      "monthlyRevenue": {
+        "title": "Maandelijkse omzet",
+        "subtitle": "Huidige maand"
+      },
+      "activeServices": {
+        "title": "Actieve diensten",
+        "subtitle": "In Catalogus"
+      },
+      "outstandingAmount": {
+        "title": "Uitstaand bedrag",
+        "subtitle": "Onbetaalde facturen"
+      },
+      "creditBalance": {
+        "title": "Creditsaldo",
+        "subtitle": "Totaal krediet"
+      },
+      "pendingApprovals": {
+        "title": "In afwachting van goedkeuringen",
+        "subtitle": "Tijdinvoer"
+      }
+    },
+    "states": {
+      "ellipsis": "...",
+      "error": "Fout",
+      "zero": "0",
+      "zeroHours": "0 uur"
+    },
+    "sections": {
+      "monthlyActivity": {
+        "title": "Maandelijkse activiteit",
+        "subtitle": "Factureerbare uren deze maand"
+      },
+      "serviceCatalog": {
+        "title": "Servicecatalogusbeheer",
+        "description": "Beheer uw serviceaanbod, prijzen en factureringsconfiguraties",
+        "activeServicesLabel": "Actieve diensten",
+        "button": "Beheer servicecatalogus"
+      }
+    },
+    "features": {
+      "paymentProcessing": {
+        "title": "Betalingsverwerking",
+        "description": "Volg en beheer klantbetalingen, verwerk terugbetalingen en handel betalingsgeschillen af"
+      },
+      "billingCycles": {
+        "title": "Factureringscycli",
+        "description": "Beheer factureringsschema's voor klanten, standaardfrequenties en factuurfrequentie-instellingen"
+      },
+      "servicePeriods": {
+        "title": "Serviceperioden",
+        "description": "Bekijk terugkerende serviceperioden en begrijp hoe factuurvensters deze groeperen"
+      },
+      "invoiceManagement": {
+        "title": "Factuurbeheer",
+        "description": "Genereer factuurvensters voor terugkerende serviceperioden en creëer handmatige of vooruitbetalingsdocumenten wanneer de financiële afhandeling afwijkt van terugkerende dekking"
+      },
+      "overduePayments": {
+        "title": "Achterstallige betalingen",
+        "description": "Bewaken en opvolgen van achterstallige betalingen en betalingsherinneringen"
+      },
+      "serviceCatalog": {
+        "title": "Servicecatalogus",
+        "description": "Beheer uw serviceaanbod, prijzen en contracten"
+      }
+    },
+    "debug": {
+      "reportExecuted": "Rapport uitgevoerd:",
+      "executionTime": "Uitvoeringstijd:",
+      "reportVersion": "Rapportversie:"
+    }
+  },
+  "reconciliation": {
+    "title": "Los kredietverschillen op",
+    "steps": {
+      "review": "Discrepantie beoordelen",
+      "approval": "Goedkeuring",
+      "confirmation": "Bevestiging"
+    },
+    "sections": {
+      "discrepancyDetails": "Discrepantiedetails",
+      "balanceComparison": "Saldovergelijking",
+      "issueDetails": "Probleemdetails",
+      "resolutionOptions": "Resolutie Opties",
+      "approvalDetails": "Goedkeuringsdetails",
+      "correctionSummary": "Correctie Samenvatting",
+      "confirmResolution": "Bevestig de oplossing",
+      "resolutionDetails": "Resolutiedetails",
+      "impactSummary": "Impactsamenvatting",
+      "resolutionComplete": "Resolutie voltooid",
+      "resolutionSummary": "Resolutie Samenvatting"
+    },
+    "fields": {
+      "client": "Cliënt",
+      "status": "Status",
+      "detected": "Gedetecteerd",
+      "issueType": "Probleemtype",
+      "expectedBalance": "Verwacht saldo",
+      "actualBalance": "Werkelijk saldo",
+      "difference": "Verschil",
+      "transactionId": "Transactie-ID",
+      "transactionType": "Transactietype",
+      "transactionAmount": "Transactiebedrag",
+      "transactionDate": "Transactiedatum",
+      "creditId": "Krediet-ID",
+      "originalAmount": "Oorspronkelijk bedrag",
+      "expectedRemaining": "Verwacht resterende",
+      "actualRemaining": "Werkelijke resterende",
+      "reportId": "Rapport-ID",
+      "resolutionType": "Resolutietype",
+      "correctionAmount": "Correctiebedrag",
+      "currentBalance": "Huidig ​​saldo",
+      "newBalance": "Nieuw saldo",
+      "resolutionNotes": "Resolutie Opmerkingen",
+      "previousBalance": "Vorig saldo"
+    },
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Ontbrekende invoer voor kredietregistratie",
+      "inconsistentCreditRemainingAmount": "Inconsistent resterend kredietbedrag"
+    },
+    "transactionHistory": {
+      "title": "Kredietaanvragen",
+      "columns": {
+        "transactionId": "Transactie-ID",
+        "date": "Datum",
+        "amount": "Hoeveelheid"
+      }
+    },
+    "recommendedFix": {
+      "title": "Aanbevolen oplossing",
+      "missingTrackingDescription": "Maak een kredietregistratie aan op basis van de oorspronkelijke transactiegegevens en stel het resterende bedrag in zodat dit overeenkomt met het oorspronkelijke transactiebedrag.",
+      "missingTrackingRemainingAmount": "Resterend bedrag: Bereken op basis van eventuele aanvragen",
+      "inconsistentRemainingDescription": "Werk het resterende bedrag van de kredietregistratie bij zodat het overeenkomt met het berekende verwachte saldo op basis van aanvragen."
+    },
+    "resolutionTypes": {
+      "recommended": "Aanbevolen oplossing",
+      "custom": "Aangepaste correctie",
+      "noAction": "Geen actie vereist"
+    },
+    "customCorrection": {
+      "label": "Correctiebedrag",
+      "hint": "Voer een positief bedrag in om het saldo te verhogen of een negatief bedrag om het te verlagen."
+    },
+    "notes": {
+      "label": "Resolutie Opmerkingen",
+      "placeholder": "Leg de reden voor deze correctie uit...",
+      "hint": "Deze aantekeningen worden vastgelegd in de audit trail voor deze discrepantie."
+    },
+    "fourEyes": {
+      "requiredTitle": "Goedkeuring door vier ogen vereist",
+      "requiredDescription": "Deze correctie overschrijdt de goedkeuringsdrempel en vereist dat een secundaire goedkeurder de wijziging controleert en verifieert voordat deze kan worden ingediend.",
+      "approverName": "Naam van secundaire goedkeurder",
+      "approverEmail": "E-mailadres van secundaire goedkeurder",
+      "sendRequest": "Goedkeuringsverzoek verzenden",
+      "requestSentTitle": "Goedkeuringsverzoek verzonden",
+      "requestSentDescription": "Vraag de secundaire goedkeurder om de verificatiecode die hij of zij heeft ontvangen en voer deze hieronder in om door te gaan.",
+      "verificationCode": "Verificatiecode",
+      "verifyCode": "Controleer code",
+      "verificationHint": "Voer de verificatiecode in die is verstrekt door de secundaire goedkeurder.",
+      "verifiedTitle": "Secundaire goedkeuring geverifieerd",
+      "verifiedDescription": "De secundaire goedkeuring is geverifieerd en deze correctie kan nu worden ingediend."
+    },
+    "confirmation": {
+      "importantTitle": "Belangrijk",
+      "importantDescription": "Controleer de onderstaande gegevens zorgvuldig. Met deze actie worden de afstemmingsrecords bijgewerkt en kan deze niet eenvoudig ongedaan worden gemaakt.",
+      "verifiedTitle": "Secundaire goedkeuring geverifieerd",
+      "verifiedDescription": "Een secundaire fiatteur heeft deze correctie geverifieerd en er is voldaan aan de goedkeuringseis.",
+      "thankYouTitle": "Bedankt!",
+      "thankYouDescription": "Het verschil is opgelost en de factureringsgegevens zijn bijgewerkt.",
+      "confirmButton": "Bevestig de oplossing",
+      "closeButton": "Sluiten"
+    },
+    "status": {
+      "open": "Open"
+    },
+    "buttons": {
+      "cancel": "Annuleren",
+      "back": "Terug",
+      "next": "Volgende",
+      "confirm": "Bevestig de oplossing"
+    },
+    "errors": {
+      "loadData": "Kan afstemmingsrapportgegevens niet laden",
+      "secondaryApprovalRequired": "Voor deze correctie is secundaire goedkeuring vereist",
+      "secondaryApproverRequired": "Voer de naam en het e-mailadres van de secundaire goedkeurder in",
+      "invalidVerificationCode": "Ongeldige verificatiecode",
+      "unknown": "Er is een onbekende fout opgetreden",
+      "reportNotFound": "Afstemmingsrapport niet gevonden. Het rapport is mogelijk verwijderd of u heeft mogelijk geen toestemming om het te bekijken."
+    }
+  },
+  "discrepancy": {
+    "backToReconciliation": "Terug naar afstemming",
+    "title": "Los kredietverschillen op",
+    "tabs": {
+      "transactionHistory": "Transactiegeschiedenis",
+      "creditTrackingEntries": "Credittrackinggegevens",
+      "issueDetails": "Probleemdetails"
+    },
+    "cards": {
+      "relatedTransactions": "Gerelateerde transacties",
+      "creditTrackingEntries": "Credittrackinggegevens",
+      "issueDetails": "Probleemdetails",
+      "discrepancyDetails": "Discrepantiedetails",
+      "balanceComparison": "Saldovergelijking"
+    },
+    "status": {
+      "open": "Open",
+      "inReview": "Ter beoordeling",
+      "resolved": "Opgelost",
+      "expired": "Verlopen",
+      "active": "Actief"
+    },
+    "fields": {
+      "client": "Cliënt",
+      "status": "Status",
+      "detected": "Gedetecteerd",
+      "resolved": "Opgelost",
+      "resolutionNotes": "Resolutie Opmerkingen",
+      "issueType": "Probleemtype",
+      "expectedBalance": "Verwacht saldo",
+      "actualBalance": "Werkelijk saldo",
+      "difference": "Verschil",
+      "transactionId": "Transactie-ID",
+      "createdAt": "Gemaakt op",
+      "clientId": "Klant-ID",
+      "userId": "Gebruikers-ID",
+      "invoiceId": "Factuur-ID",
+      "metadata": "Metagegevens",
+      "creditId": "Krediet-ID",
+      "created": "Gemaakt",
+      "amount": "Hoeveelheid",
+      "remaining": "Overig",
+      "expiration": "Vervaldatum",
+      "originalAmount": "Oorspronkelijk bedrag",
+      "remainingAmount": "Resterend bedrag",
+      "expirationDate": "Vervaldatum",
+      "description": "Beschrijving",
+      "type": "Type",
+      "balanceAfter": "Saldo daarna"
+    },
+    "empty": {
+      "transactions": "Geen gerelateerde transacties gevonden.",
+      "creditTrackingEntries": "Geen kredietregistratiegegevens gevonden.",
+      "issueDetails": "Geen probleemdetails beschikbaar.",
+      "batchNotFound": "Partij niet gevonden.",
+      "noNotesProvided": "Geen aantekeningen verstrekt",
+      "noExpiration": "Geen vervaldatum"
+    },
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Ontbrekende invoer voor kredietregistratie",
+      "inconsistentCreditRemainingAmount": "Inconsistent resterend kredietbedrag"
+    },
+    "recommendedFix": {
+      "title": "Aanbevolen oplossing",
+      "missingTrackingDescription": "Maak een kredietregistratie aan op basis van de oorspronkelijke transactiegegevens en stel het resterende bedrag in zodat dit overeenkomt met het oorspronkelijke transactiebedrag.",
+      "missingTrackingRemainingAmount": "Resterend bedrag: Bereken op basis van eventuele aanvragen",
+      "inconsistentRemainingDescription": "Werk het resterende bedrag van de kredietregistratie bij zodat het overeenkomt met het berekende verwachte saldo op basis van aanvragen."
+    },
+    "resolutionDialog": {
+      "title": "Los kredietverschillen op",
+      "notesPlaceholder": "Leg de reden voor deze correctie uit...",
+      "confirmButton": "Bevestig de oplossing"
+    },
+    "actions": {
+      "applyFix": "Fix toepassen",
+      "resolveReport": "Rapport oplossen"
+    },
+    "errors": {
+      "unknown": "Er is een onbekende fout opgetreden"
+    }
+  },
+  "recommendedFix": {
+    "title": "Aanbevolen oplossingen",
+    "panels": {
+      "recommendedFix": "Aanbevolen oplossing",
+      "alternativeFix": "Alternatieve oplossing",
+      "noActionRequired": "Geen actie vereist",
+      "customAdjustment": "Aangepaste aanpassing"
+    },
+    "buttons": {
+      "createTrackingEntry": "Krediettrackinginvoer maken",
+      "updateRemainingAmount": "Resterend bedrag bijwerken",
+      "applyAdjustment": "Kredietaanpassing toepassen",
+      "applyCustomAdjustment": "Aangepaste aanpassing toepassen",
+      "markResolvedNoAction": "Markeren als opgelost (geen actie)",
+      "cancel": "Annuleren",
+      "confirm": "Fix toepassen"
+    },
+    "descriptions": {
+      "createTrackingEntry": "Hierdoor wordt een nieuwe credittracking-invoer voor de transactie gemaakt.",
+      "updateRemainingAmount": "Hierdoor wordt het resterende bedrag in de kredietregistratie bijgewerkt.",
+      "applyAdjustment": "Hierdoor wordt een kredietaanpassingstransactie aangemaakt om het saldo te corrigeren.",
+      "customAdjustment": "Hierdoor wordt een aangepaste kredietaanpassingstransactie gemaakt.",
+      "noAction": "Hierdoor wordt de discrepantie als opgelost gemarkeerd zonder dat er wijzigingen worden aangebracht.",
+      "missingTrackingRecommended": "Maak de ontbrekende credittrackingpost aan, zodat de transactie wordt weerspiegeld in het trackinggrootboek.",
+      "missingTrackingAlternative": "Maak in plaats daarvan een handmatige aanpassing aan als de oorspronkelijke transactie geen trackinginvoer zou moeten opleveren.",
+      "missingTrackingNoAction": "Laat het verschil alleen onopgelost als de transactie opzettelijk is uitgesloten van het volgen van het krediet.",
+      "inconsistentRemainingRecommended": "Werk het bijgehouden resterende bedrag bij, zodat het overeenkomt met het verwachte saldo na aanmelding.",
+      "inconsistentRemainingAlternative": "Maak een balansaanpassing in plaats van de bestaande trackinginvoer te bewerken.",
+      "inconsistentRemainingNoAction": "Laat het verschil alleen onopgelost als de trackinginvoer opzettelijk ergens anders wordt gecompenseerd.",
+      "genericRecommended": "Pas de aanbevolen correctie toe om de balansen weer op één lijn te brengen.",
+      "genericCustom": "Voer een aangepaste aanpassing in als een handmatige correctie vereist is."
+    },
+    "dialog": {
+      "adjustmentAmount": "Aanpassingsbedrag",
+      "adjustmentHint": "Voer een positief bedrag in om het saldo te verhogen of een negatief bedrag om het te verlagen.",
+      "notes": "Opmerkingen",
+      "notesPlaceholder": "Leg de reden voor deze correctie uit..."
+    },
+    "impactSummary": {
+      "title": "Impactsamenvatting",
+      "currentBalance": "Huidig ​​saldo",
+      "newBalance": "Nieuw saldo"
+    },
+    "resolved": {
+      "title": "Deze discrepantie is opgelost",
+      "description": "Er is geen verdere actie vereist, tenzij u de afstemmingsgeschiedenis moet bekijken."
+    },
+    "errors": {
+      "notesRequired": "Geef opmerkingen op waarin de reden voor deze correctie wordt uitgelegd",
+      "invalidAmount": "Voer een geldig bedrag in",
+      "unknown": "Er is een onbekende fout opgetreden"
+    }
+  },
+  "usage": {
+    "bucketHoursOverview": "Overzicht van bucketuren",
+    "usageRecords": "Gebruiksrecords",
+    "actions": {
+      "addUsage": "Gebruik toevoegen",
+      "updateUsage": "Gebruik bijwerken",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "resetFilters": "Opnieuw instellen"
+    },
+    "filters": {
+      "client": "Cliënt",
+      "service": "Dienst",
+      "clientPlaceholder": "Filter op klant",
+      "servicePlaceholder": "Filter op dienst",
+      "allClients": "Alle klanten",
+      "allServices": "Alle diensten"
+    },
+    "table": {
+      "client": "Cliënt",
+      "service": "Dienst",
+      "quantity": "Hoeveelheid",
+      "usageDate": "Gebruiksdatum",
+      "contractLine": "Contractlijn",
+      "actions": "Acties",
+      "defaultContractLine": "Standaardcontractregel",
+      "contractLineLabel": "Contractregel: {{id}}..."
+    },
+    "states": {
+      "loadingRecords": "Gebruiksrecords laden",
+      "noActiveBucketPlans": "Geen actieve bucketplannen gevonden."
+    },
+    "dialog": {
+      "addTitle": "Gebruiksrecord toevoegen",
+      "editTitle": "Gebruiksrecord bewerken",
+      "fields": {
+        "client": "Cliënt",
+        "service": "Dienst",
+        "quantity": "Hoeveelheid",
+        "usageDate": "Gebruiksdatum",
+        "comments": "Opmerkingen (optioneel)",
+        "contractLine": "Contractlijn"
+      },
+      "servicePlaceholder": "Selecteer dienst"
+    },
+    "contractLineGuidance": {
+      "multipleLines": "Deze service komt voor in meerdere contractregels. Selecteer op welke contractregel u wilt factureren.",
+      "tooltipNoClient": "Klantgegevens niet beschikbaar. Het gebruik wordt doorgestuurd naar het door het systeem beheerde standaardcontract.",
+      "tooltipMultiple": "Deze service komt voor in meerdere contractregels. Selecteer welke contractregel u wilt gebruiken. Bucketcontractregels worden doorgaans als eerste gebruikt totdat ze op zijn.",
+      "tooltipSingle": "Dit verbruik wordt gefactureerd onder de contractregel '{{name}}'.",
+      "tooltipNone": "Er zijn geen geschikte contractregels gevonden voor deze service.",
+      "placeholderNoClient": "Door het systeem beheerd standaardcontract gebruiken",
+      "placeholderNone": "Geen in aanmerking komende contractregels",
+      "placeholderSingle": "{{name}} gebruiken",
+      "placeholderSelect": "Selecteer een contractregel",
+      "wrongContractLineWarning": "Als u de verkeerde contractregel selecteert, kan dit leiden tot onjuiste facturering",
+      "noClientNotice": "Klantgegevens niet beschikbaar. Het gebruik wordt doorgestuurd naar het door het systeem beheerde standaardcontract.",
+      "noEligibleNotice": "Er zijn geen geschikte contractregels gevonden voor deze service."
+    },
+    "deleteDialog": {
+      "title": "Gebruiksrecord verwijderen",
+      "message": "Weet u zeker dat u deze gebruiksrecord wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+    },
+    "toast": {
+      "loadClientsError": "Kan klanten niet laden",
+      "loadUsageError": "Kan gebruiksrecords niet laden",
+      "createSuccess": "Gebruiksrecord is succesvol aangemaakt",
+      "createError": "Kan geen gebruiksrecord maken",
+      "updateSuccess": "Gebruiksrecord is succesvol bijgewerkt",
+      "updateError": "Kan het gebruiksrecord niet bijwerken",
+      "deleteSuccess": "Gebruiksrecord is succesvol verwijderd",
+      "deleteError": "Kan gebruiksrecord niet verwijderen"
+    }
+  },
+  "lineItem": {
+    "collapsed": {
+      "itemDiscount": "Artikelkorting",
+      "invoiceDiscount": "Factuurkorting",
+      "appliedTo": "Toegepast op: {{description}}",
+      "selectService": "Selecteer Dienst",
+      "taxable": "(belastbaar)",
+      "nonTaxable": "(Niet-belastbaar)",
+      "calculatedOnSave": "(berekend bij opslaan)"
+    },
+    "expanded": {
+      "discount": "Korting",
+      "item": "Artikel {{number}}",
+      "markedForRemoval": "Gemarkeerd voor verwijdering"
+    },
+    "fields": {
+      "service": "Dienst",
+      "quantity": "Hoeveelheid",
+      "discountType": "Kortingstype",
+      "percentage": "Percentage",
+      "amount": "Bedrag ({{currencySymbol}})",
+      "discountDescription": "Kortingsbeschrijving",
+      "applyDiscountTo": "Korting toepassen op",
+      "entireInvoice": "Volledige factuur",
+      "rate": "Tarief ({{currencySymbol}})",
+      "description": "Beschrijving"
+    },
+    "placeholders": {
+      "discountDescription": "bijvoorbeeld korting op vroegtijdige betaling"
+    },
+    "actions": {
+      "add": "Toevoegen",
+      "remove": "Verwijderen",
+      "restore": "Herstellen"
+    },
+    "hints": {
+      "removed": "Dit item wordt verwijderd wanneer u de wijzigingen opslaat"
+    },
+    "summary": {
+      "percentageDiscount": "Procentuele korting",
+      "fixedDiscount": "Vaste korting",
+      "itemTotal": "{{percentage}}% van het itemtotaal",
+      "invoiceTotal": "{{percentage}}% van het factuurtotaal",
+      "amount": "Bedrag: -{{currencySymbol}}{{amount}}",
+      "appliedTo": "Toegepast op: {{description}}",
+      "subtotal": "Subtotaal: {{currencySymbol}}{{amount}}"
+    },
+    "options": {
+      "percentage": "Percentage",
+      "fixedAmount": "Vast bedrag"
+    }
+  },
+  "contractLineServices": {
+    "table": {
+      "serviceName": "Dienstnaam",
+      "category": "Categorie",
+      "billingMethod": "Factureringsmethode",
+      "quantity": "Hoeveelheid",
+      "defaultRate": "Standaardtarief",
+      "actions": "Acties"
+    },
+    "billingMethods": {
+      "fixed": "Vaste prijs",
+      "hourly": "Per uur",
+      "usageBased": "Gebruik gebaseerd",
+      "usage": "Gebruik"
+    },
+    "badges": {
+      "product": "Product",
+      "service": "Dienst"
+    },
+    "actions": {
+      "editQuantity": "Hoeveelheid bewerken",
+      "remove": "Verwijderen",
+      "addSelectedServices": "Voeg geselecteerde services toe",
+      "addSelectedServicesWithCount": "Geselecteerde services toevoegen ({{count}})"
+    },
+    "tooltip": {
+      "defaultRate": "Het standaardtarief van de service, gebruikt voor interne waardetoewijzing en rapportage binnen het vaste plantotaal. Hier niet direct bewerkbaar."
+    },
+    "states": {
+      "loading": "Diensten laden...",
+      "emptyAssociated": "Er zijn momenteel geen services gekoppeld aan deze contractregel.",
+      "emptyAvailable": "Alle beschikbare services zijn al aan deze contractregel gekoppeld.",
+      "missingPrice": "{{currency}}-prijs ontbreekt"
+    },
+    "addSection": {
+      "title": "Services toevoegen aan contractregel",
+      "serviceType": "Servicetype: {{value}}",
+      "method": "Methode: {{value}}",
+      "rate": "Tarief: {{value}}",
+      "catalogPrice": "{{currency}}-prijs: {{value}}",
+      "catalogPriceMissing": "{{currency}} prijs: ontbreekt",
+      "customRate": "Aangepast {{currency}}-tarief",
+      "productMissingPrice": "Product \"{{name}}\" heeft geen {{currency}}-prijs. Voer een aangepast tarief in voordat u het toevoegt."
+    },
+    "errors": {
+      "loadData": "Kan servicegegevens niet laden",
+      "addServices": "Kan services niet toevoegen",
+      "removeService": "Kan service niet verwijderen"
+    },
+    "unknownService": "Onbekende dienst"
+  },
+  "presetServices": {
+    "warnings": {
+      "unsavedChanges": "U heeft niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen."
+    },
+    "table": {
+      "serviceName": "Dienstnaam",
+      "category": "Categorie",
+      "billingMethod": "Factureringsmethode",
+      "quantity": "Hoeveelheid",
+      "defaultRate": "Standaardtarief",
+      "actions": "Acties"
+    },
+    "tooltip": {
+      "defaultRate": "Het standaardtarief van de service, gebruikt voor interne waardetoewijzing en rapportage binnen het vaste plantotaal."
+    },
+    "states": {
+      "loading": "Diensten laden...",
+      "emptyAssociated": "Er zijn momenteel geen services gekoppeld aan deze contractregel.",
+      "emptyAvailable": "Alle beschikbare services zijn al aan deze contractregel gekoppeld."
+    },
+    "addSection": {
+      "title": "Services toevoegen aan contractregel",
+      "serviceType": "Servicetype: {{value}}",
+      "method": "Methode: {{value}}",
+      "rate": "Tarief: ${{value}}"
+    },
+    "actions": {
+      "remove": "Verwijderen",
+      "addSelectedServices": "Voeg geselecteerde services toe",
+      "addSelectedServicesWithCount": "Geselecteerde services toevoegen ({{count}})",
+      "saveChanges": "Wijzigingen opslaan",
+      "saveChangesDirty": "Wijzigingen opslaan *",
+      "saving": "Opslaan...",
+      "reset": "Opnieuw instellen"
+    },
+    "navigationDialog": {
+      "title": "Niet-opgeslagen wijzigingen",
+      "message": "U heeft niet-opgeslagen wijzigingen. Weet je zeker dat je deze pagina wilt verlaten? Alle wijzigingen gaan verloren.",
+      "confirmLabel": "Verlaat pagina",
+      "cancelLabel": "Blijf op pagina"
+    },
+    "toast": {
+      "saveSuccess": "Vooraf ingestelde services voor contractregels zijn succesvol opgeslagen",
+      "saveError": "Kan services niet opslaan"
+    },
+    "unknownService": "Onbekende dienst"
+  },
+  "accountingExports": {
+    "title": "Boekhoudkundige exporten",
+    "description": "Maak exportbatches, valideer toewijzingen en lever bestanden aan voor handmatige import in uw boekhoudsysteem.",
+    "table": {
+      "batch": "Partij",
+      "adapter": "Adapter",
+      "status": "Status",
+      "created": "Gemaakt",
+      "updated": "Bijgewerkt",
+      "actions": "Acties"
+    },
+    "actions": {
+      "refresh": "Vernieuwen",
+      "newExport": "Nieuwe export",
+      "open": "Openen",
+      "execute": "Uitvoeren",
+      "createBatch": "Batch maken",
+      "creating": "Creëren..."
+    },
+    "states": {
+      "loadingBatches": "Batch laden...",
+      "empty": "Nog geen exportbatches.",
+      "loadingDetails": "Batchgegevens laden...",
+      "batchNotFound": "Partij niet gevonden."
+    },
+    "createDialog": {
+      "title": "Nieuwe boekhoudkundige export",
+      "fields": {
+        "adapter": "Adapter",
+        "startDate": "Startdatum",
+        "endDate": "Einddatum",
+        "clientSearch": "Klant zoeken",
+        "invoiceStatuses": "Factuurstatussen",
+        "notes": "Opmerkingen"
+      },
+      "placeholders": {
+        "clientSearch": "Optioneel klantnaamfilter",
+        "invoiceStatuses": "Door komma's gescheiden (optioneel), b.v. afgerond, geplaatst",
+        "notes": "Optionele opmerkingen"
+      }
+    },
+    "detailDialog": {
+      "title": "Boekhoudkundige exportbatch",
+      "subtitle": "Batchdetails",
+      "fields": {
+        "batchId": "Batch-ID",
+        "adapter": "Adapter",
+        "status": "Status",
+        "created": "Gemaakt",
+        "lines": "Regels",
+        "errors": "Fouten",
+        "delivered": "Afgeleverd"
+      }
+    },
+    "toast": {
+      "created": "Boekhoudexportbatch gemaakt",
+      "executing": "Batchuitvoering gestart",
+      "loadBatchesError": "Kan boekhoudexportbatches niet laden",
+      "loadDetailError": "Kan batchdetails niet laden",
+      "createError": "Kan exportbatch niet maken",
+      "executeError": "Kan batch niet uitvoeren"
+    },
+    "status": {
+      "pending": "In afwachting",
+      "validating": "Valideren",
+      "ready": "Gereed",
+      "delivered": "Afgeleverd",
+      "posted": "Gepost",
+      "failed": "Mislukt",
+      "cancelled": "Geannuleerd",
+      "needsAttention": "Vereist aandacht"
+    }
+  },
+  "templateRenderer": {
+    "loading": "Sjabloonvoorbeeld laden...",
+    "errorPrefix": "Fout:",
+    "empty": "Selecteer een factuur en een sjabloon om een ​​voorbeeld te bekijken."
+  },
+  "templateDesigner": {
+    "propertyEditor": {
+      "selectField": "Selecteer een veld",
+      "content": "Inhoud",
+      "dataField": "Gegevensveld",
+      "width": "Breedte",
+      "height": "Hoogte",
+      "fontSize": "Lettergrootte",
+      "color": "Kleur",
+      "columns": "{{count}} kolom(men)",
+      "rows": "{{count}} rij(en)"
+    },
+    "conditionalRules": {
+      "title": "Voorwaardelijke weergaveregels",
+      "selectAction": "Selecteer actie",
+      "show": "Tonen",
+      "hide": "Verbergen",
+      "format": "Formaat",
+      "conditionPlaceholder": "Voorwaarde",
+      "targetPlaceholder": "Doel",
+      "addRule": "Regel toevoegen"
+    }
+  },
+  "contractsHub": {
+    "title": "Contracten",
+    "tabs": {
+      "templates": "Sjablonen",
+      "clientContracts": "Klantcontracten"
+    }
+  },
+  "editQuantityDialog": {
+    "title": "Aantal voor {{serviceName}} bewerken",
+    "fields": {
+      "quantity": "Hoeveelheid"
+    },
+    "validation": {
+      "empty": "Aantal mag niet leeg zijn.",
+      "positiveWholeNumber": "De hoeveelheid moet een positief geheel getal zijn."
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "saveQuantity": "Hoeveelheid opslaan",
+      "saving": "Opslaan..."
+    },
+    "errors": {
+      "saveFailed": "Kan aantal niet updaten. Probeer het opnieuw."
+    }
+  },
+  "templateRendererCore": {
+    "notAvailable": "N.v.t",
+    "unknownValue": "Onbekende waarde",
+    "noDataForList": "Geen gegevens voor lijst: {{name}}",
+    "uncategorized": "Niet gecategoriseerd"
+  }
+}

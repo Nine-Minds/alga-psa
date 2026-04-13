@@ -22,7 +22,7 @@ export * from './lib/tenancy';
 export * from './lib/onboardingWizard';
 export * from './lib/knowledgeBase';
 export * from './deletion';
-export * from './constants';
+export * from './constants/index';
 
 // Outbound email types - exported with explicit naming to avoid conflicts with inbound email interfaces.
 export type {
@@ -51,7 +51,7 @@ export type {
 export type { InboundTicketDefaults, TicketFieldOptions } from './lib/email';
 
 // Interface definitions (migrated from server/src/interfaces and shared/interfaces).
-export * from './interfaces';
+export * from './interfaces/index';
 
 // Tax interfaces are exported from their source module (not from interfaces/index.ts) to avoid barrel collisions.
 export type {

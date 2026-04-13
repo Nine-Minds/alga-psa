@@ -4,10 +4,12 @@ import { Switch } from "@alga-psa/ui/components/Switch";
 import { Label } from "@alga-psa/ui/components/Label";
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getDefaultBillingSettings, updateDefaultBillingSettings } from "@alga-psa/billing/actions";
 import type { BillingSettings } from "@alga-psa/billing/actions";
 
 const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
+  const { t } = useTranslation('msp/billing-settings');
   const [settings, setSettings] = React.useState<BillingSettings>({
     zeroDollarInvoiceHandling: 'normal',
     suppressZeroDollarInvoices: false
@@ -19,7 +21,7 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
         const currentSettings = await getDefaultBillingSettings();
         setSettings(currentSettings);
       } catch (error) {
-        handleError(error, 'Failed to load settings');
+        handleError(error, t('general.zeroDollar.errors.load', { defaultValue: 'Failed to load settings' }));
       }
     };
 
@@ -39,10 +41,12 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
       }
       if (result.success) {
         setSettings(newSettings);
-        toast.success("Zero-dollar invoice settings have been updated.");
+        toast.success(t('general.zeroDollar.toast.updated', {
+          defaultValue: 'Zero-dollar invoice settings have been updated.'
+        }));
       }
     } catch (error) {
-      handleError(error, 'Failed to save settings');
+      handleError(error, t('general.zeroDollar.errors.save', { defaultValue: 'Failed to save settings' }));
     }
   };
 
@@ -59,16 +63,24 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
       }
       if (result.success) {
         setSettings(newSettings);
-        toast.success("Zero-dollar invoice settings have been updated.");
+        toast.success(t('general.zeroDollar.toast.updated', {
+          defaultValue: 'Zero-dollar invoice settings have been updated.'
+        }));
       }
     } catch (error) {
-      handleError(error, 'Failed to save settings');
+      handleError(error, t('general.zeroDollar.errors.save', { defaultValue: 'Failed to save settings' }));
     }
   };
 
   const handlingOptions = [
-    { value: 'normal', label: 'Create as Draft' },
-    { value: 'finalized', label: 'Create and Finalize' }
+    {
+      value: 'normal',
+      label: t('general.zeroDollar.options.draft', { defaultValue: 'Create as Draft' })
+    },
+    {
+      value: 'finalized',
+      label: t('general.zeroDollar.options.finalized', { defaultValue: 'Create and Finalize' })
+    }
   ];
 
   return (
@@ -79,12 +91,18 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
           options={handlingOptions}
           value={settings.zeroDollarInvoiceHandling}
           onValueChange={handleHandlingChange}
-          placeholder="Select handling option"
-          label="Invoice Handling"
+          placeholder={t('general.zeroDollar.fields.handling.placeholder', {
+            defaultValue: 'Select handling option'
+          })}
+          label={t('general.zeroDollar.fields.handling.label', {
+            defaultValue: 'Invoice Handling'
+          })}
           className="!w-fit"
         />
         <p className="text-sm text-muted-foreground">
-          Choose how zero-dollar invoices should be handled when generated
+          {t('general.zeroDollar.fields.handling.help', {
+            defaultValue: 'Choose how zero-dollar invoices should be handled when generated'
+          })}
         </p>
       </div>
 
@@ -95,9 +113,13 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
           onCheckedChange={handleSuppressionChange}
         />
         <div className="space-y-1">
-          <Label htmlFor="suppress">Suppress Empty Invoices</Label>
+          <Label htmlFor="suppress">
+            {t('general.zeroDollar.fields.suppress.label', { defaultValue: 'Suppress Empty Invoices' })}
+          </Label>
           <p className="text-sm text-muted-foreground">
-            Skip creation of invoices with no line items
+            {t('general.zeroDollar.fields.suppress.help', {
+              defaultValue: 'Skip creation of invoices with no line items'
+            })}
           </p>
         </div>
       </div>
