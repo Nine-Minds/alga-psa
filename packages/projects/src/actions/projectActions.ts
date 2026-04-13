@@ -18,7 +18,9 @@ import type {
   IUser,
   IUserWithRoles,
   ItemType,
+  ProjectPhaseStatus,
   ProjectStatus,
+  ProjectWithPhases,
 } from '@alga-psa/types';
 import { getAllUsers, findUserById } from '@alga-psa/user-composition/actions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- server action calling another server action; cannot use React context composition
@@ -138,24 +140,6 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
  * Used by filter pickers that need to display projects + phases as a tree,
  * but don't need the full project details (statuses, users, etc.)
  */
-export interface ProjectPhaseStatus {
-  mapping_id: string;
-  name: string;
-  is_closed: boolean;
-}
-
-export interface ProjectWithPhases {
-  project_id: string;
-  project_name: string;
-  is_inactive: boolean;
-  phases: Array<{
-    phase_id: string;
-    phase_name: string;
-    wbs_code: string;
-    statuses: ProjectPhaseStatus[];
-  }>;
-}
-
 export const getProjectsWithPhases = withAuth(async (
   user,
   { tenant }

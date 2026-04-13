@@ -7,9 +7,9 @@ import {
   ActivityType,
   IPriority,
   IStatus,
-  ITag
+  ITag,
+  ProjectWithPhases,
 } from "@alga-psa/types";
-import type { ProjectWithPhases } from '@alga-psa/projects/actions/projectActions';
 
 import { Button } from "@alga-psa/ui/components/Button";
 import { Label } from "@alga-psa/ui/components/Label";

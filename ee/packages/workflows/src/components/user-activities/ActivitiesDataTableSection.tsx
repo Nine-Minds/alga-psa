@@ -9,7 +9,8 @@ import {
   ActivityResponse,
   IPriority,
   IStatus,
-  ITag
+  ITag,
+  ProjectWithPhases,
 } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -26,10 +27,6 @@ import { useActivityCrossFeature } from '@alga-psa/ui/context';
 import { useActivitiesCache } from '../../hooks/useActivitiesCache';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { ScheduleActivity } from '@alga-psa/types';
-
-// Re-export the shape from projectActions for the filter component
-import type { ProjectWithPhases } from '@alga-psa/projects/actions/projectActions';
-export type { ProjectWithPhases };
 
 import { ActivitiesTableSkeleton } from './ActivitiesTableSkeleton';
 import { getAllPriorities, getStatuses } from '@alga-psa/reference-data/actions';
@@ -327,10 +324,10 @@ export function ActivitiesDataTableSection({
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle>{title}</CardTitle>
         <div className="flex items-center gap-2">
-          <ViewSwitcher
+          <ViewSwitcher<ListViewMode>
             options={LIST_VIEW_OPTIONS}
             currentView={listViewMode}
-            onChange={setListViewMode}
+            onChange={(v) => setListViewMode(v)}
           />
           <Button
             id={`${id}-refresh-button`}
