@@ -115,7 +115,9 @@ describe('TierContext', () => {
     const { result } = renderHook(() => useTier(), { wrapper });
 
     expect(result.current.isSoloProTrial).toBe(true);
-    expect(result.current.hasFeature(TIER_FEATURES.MOBILE_ACCESS)).toBe(true);
+    // WORKFLOW_DESIGNER remains gated at Pro+, so the trial should unlock it
+    // for Solo tenants while the trial is active.
+    expect(result.current.hasFeature(TIER_FEATURES.WORKFLOW_DESIGNER)).toBe(true);
   });
 
   it('reverts Solo -> Pro trial feature access after the trial end passes', () => {
@@ -134,6 +136,8 @@ describe('TierContext', () => {
     const { result } = renderHook(() => useTier(), { wrapper });
 
     expect(result.current.isSoloProTrial).toBe(false);
-    expect(result.current.hasFeature(TIER_FEATURES.MOBILE_ACCESS)).toBe(false);
+    // Once the trial expires, Solo loses access to the still-gated
+    // WORKFLOW_DESIGNER feature.
+    expect(result.current.hasFeature(TIER_FEATURES.WORKFLOW_DESIGNER)).toBe(false);
   });
 });

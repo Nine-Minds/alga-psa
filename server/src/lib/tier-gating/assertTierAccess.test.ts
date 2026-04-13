@@ -52,17 +52,12 @@ describe('assertTierAccess', () => {
       await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).resolves.toBeUndefined();
     });
 
-    it('throws TierAccessError for solo tenant accessing INTEGRATIONS', async () => {
+    it('does not throw for solo tenant accessing INTEGRATIONS (now unlocked at solo)', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: 'solo' },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.INTEGRATIONS)).rejects.toThrow(TierAccessError);
-      await expect(assertTierAccess(TIER_FEATURES.INTEGRATIONS)).rejects.toMatchObject({
-        feature: TIER_FEATURES.INTEGRATIONS,
-        requiredTier: 'pro',
-        currentTier: 'solo',
-      });
+      await expect(assertTierAccess(TIER_FEATURES.INTEGRATIONS)).resolves.toBeUndefined();
     });
 
     it('does not throw for pro tenant accessing INTEGRATIONS', async () => {
@@ -73,7 +68,28 @@ describe('assertTierAccess', () => {
       await expect(assertTierAccess(TIER_FEATURES.INTEGRATIONS)).resolves.toBeUndefined();
     });
 
-    it('does not throw for solo tenants during an active Solo -> Pro trial', async () => {
+    it('does not throw for solo tenant accessing EXTENSIONS (now unlocked at solo)', async () => {
+      vi.mocked(getSession).mockResolvedValue({
+        user: { plan: 'solo' },
+      } as any);
+
+      await expect(assertTierAccess(TIER_FEATURES.EXTENSIONS)).resolves.toBeUndefined();
+    });
+
+    it('throws TierAccessError for solo tenant accessing WORKFLOW_DESIGNER', async () => {
+      vi.mocked(getSession).mockResolvedValue({
+        user: { plan: 'solo' },
+      } as any);
+
+      await expect(assertTierAccess(TIER_FEATURES.WORKFLOW_DESIGNER)).rejects.toThrow(TierAccessError);
+      await expect(assertTierAccess(TIER_FEATURES.WORKFLOW_DESIGNER)).rejects.toMatchObject({
+        feature: TIER_FEATURES.WORKFLOW_DESIGNER,
+        requiredTier: 'pro',
+        currentTier: 'solo',
+      });
+    });
+
+    it('does not throw for solo tenants accessing WORKFLOW_DESIGNER during an active Solo -> Pro trial', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: {
           plan: 'solo',
@@ -81,20 +97,7 @@ describe('assertTierAccess', () => {
         },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.MOBILE_ACCESS)).resolves.toBeUndefined();
-    });
-
-    it('throws TierAccessError for solo tenant accessing EXTENSIONS', async () => {
-      vi.mocked(getSession).mockResolvedValue({
-        user: { plan: 'solo' },
-      } as any);
-
-      await expect(assertTierAccess(TIER_FEATURES.EXTENSIONS)).rejects.toThrow(TierAccessError);
-      await expect(assertTierAccess(TIER_FEATURES.EXTENSIONS)).rejects.toMatchObject({
-        feature: TIER_FEATURES.EXTENSIONS,
-        requiredTier: 'pro',
-        currentTier: 'solo',
-      });
+      await expect(assertTierAccess(TIER_FEATURES.WORKFLOW_DESIGNER)).resolves.toBeUndefined();
     });
 
     it('throws for NULL plan tenant (misconfigured → pro)', async () => {
@@ -116,9 +119,19 @@ describe('assertTierAccess', () => {
         },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.MOBILE_ACCESS)).rejects.toMatchObject({
+      // WORKFLOW_DESIGNER stays gated at Pro+, so once the trial expires a
+      // Solo tenant is blocked from it again.
+      await expect(assertTierAccess(TIER_FEATURES.WORKFLOW_DESIGNER)).rejects.toMatchObject({
         currentTier: 'solo',
       });
+    });
+
+    it('does not throw for pro tenants accessing TEAMS_INTEGRATION (moved from premium to pro)', async () => {
+      vi.mocked(getSession).mockResolvedValue({
+        user: { plan: 'pro' },
+      } as any);
+
+      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).resolves.toBeUndefined();
     });
   });
 });
