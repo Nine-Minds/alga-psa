@@ -572,6 +572,21 @@ export class StripeService {
     const currentQuantity = existingSubscription.quantity;
     const isIncrease = newQuantity > currentQuantity;
 
+    // `newQuantity` is the user-facing total. For multi-item subscriptions
+    // the per-user line item only carries the billable portion; preview must
+    // use that same number or Stripe will compute proration against the
+    // wrong quantity. Early-adopter subscriptions have no included-seat.
+    const tenantRecord = await knex('tenants')
+      .where('tenant', tenantId)
+      .select('plan')
+      .first();
+    const isMultiItem = this.isMultiItemSubscription(existingSubscription);
+    const previewIncludedUsers =
+      isMultiItem && !this.isEarlyAdoptersSubscription(existingSubscription)
+        ? this.getIncludedUsersForTier(tenantRecord?.plan)
+        : 0;
+    const previewPerUserQuantity = Math.max(newQuantity - previewIncludedUsers, 0);
+
     // Get upcoming invoice from Stripe
     const upcomingInvoice = await this.stripe.invoices.createPreview({
       customer: customer.stripe_customer_external_id,
@@ -580,7 +595,7 @@ export class StripeService {
         items: [
           {
             id: existingSubscription.stripe_subscription_item_id,
-            quantity: newQuantity,
+            quantity: previewPerUserQuantity,
           },
         ],
         proration_behavior: isIncrease ? 'always_invoice' : 'none',
@@ -652,13 +667,26 @@ export class StripeService {
         // IMPORTANT: payment_behavior: 'error_if_incomplete' ensures the API call fails
         // if payment cannot be collected immediately, preventing license count updates
         // when payment fails (e.g., insufficient funds, expired card)
+
+        // `quantity` is the user-facing total. For multi-item subscriptions
+        // (platform fee + per-user line), the per-user line only carries the
+        // billable portion — total minus seats already covered by the base.
+        // Early-adopter subscriptions use their own per-user price; they
+        // don't have an included-seat concept, so they stay at quantity=total.
+        const isMultiItem = this.isMultiItemSubscription(existingSubscription);
+        const includedUsers =
+          isMultiItem && !this.isEarlyAdoptersSubscription(existingSubscription)
+            ? this.getIncludedUsersForTier(tenantRecord?.plan)
+            : 0;
+        const perUserQuantity = Math.max(quantity - includedUsers, 0);
+
         const updatedSubscription = await this.stripe.subscriptions.update(
           existingSubscription.stripe_subscription_external_id,
           {
             items: [
               {
                 id: existingSubscription.stripe_subscription_item_id,
-                quantity,
+                quantity: perUserQuantity,
               },
             ],
             proration_behavior: 'always_invoice', // Charge prorated amount now
@@ -735,10 +763,17 @@ export class StripeService {
         // early adopters pricing. Falls back to standard tier pricing if not on early adopters.
         const tenantTierPrices = this.getSubscriptionPriceIds(existingSubscription)
           || (tenantRecord?.plan ? this.getTierPriceIds(tenantRecord.plan) : null);
+        const phaseIncludedUsers = this.isEarlyAdoptersSubscription(existingSubscription)
+          ? 0
+          : this.getIncludedUsersForTier(tenantRecord?.plan);
 
         const buildPhaseItems = (qty: number): Stripe.SubscriptionScheduleUpdateParams.Phase.Item[] => {
           if (existingSubscription.stripe_base_item_id && tenantTierPrices) {
-            return this.buildTierLineItems(tenantTierPrices, qty) as Stripe.SubscriptionScheduleUpdateParams.Phase.Item[];
+            return this.buildTierLineItems(
+              tenantTierPrices,
+              qty,
+              phaseIncludedUsers,
+            ) as Stripe.SubscriptionScheduleUpdateParams.Phase.Item[];
           }
 
           return [{ price: this.config.licensePriceId!, quantity: qty }];
@@ -836,7 +871,11 @@ export class StripeService {
     let line_items: Stripe.Checkout.SessionCreateParams.LineItem[];
 
     if (tierPrices) {
-      line_items = this.buildTierLineItems(tierPrices, quantity);
+      line_items = this.buildTierLineItems(
+        tierPrices,
+        quantity,
+        this.getIncludedUsersForTier(tenant.plan),
+      );
       logger.info(
         `[StripeService] Using ${tierPrices.userPriceId ? 'multi-item' : 'flat-rate'} checkout (tier: ${tenant.plan}, interval: ${interval})`
       );
@@ -1181,7 +1220,23 @@ export class StripeService {
 
     // Update subscription in database
     const subscriptionItem = this.findUserItemFromStripe(subscription.items.data);
-    const quantity = subscriptionItem?.quantity || 1;
+
+    // Resolve the tier from the item's product name up front so the licensed-
+    // user math (and the scheduled-change comparison below) can add back any
+    // seats included in the platform fee on multi-item subscriptions.
+    let plan: TenantTier | undefined;
+    try {
+      const priceId = subscriptionItem?.price?.id;
+      if (priceId) {
+        const price = await this.stripe.prices.retrieve(priceId, { expand: ['product'] });
+        const product = price.product as Stripe.Product | undefined;
+        plan = tierFromStripeProduct(product?.name);
+      }
+    } catch (error) {
+      logger.warn(`[StripeService] Failed to resolve tier for subscription ${subscription.id}`, error);
+    }
+
+    const quantity = this.getLicensedUserCountFromStripeItems(subscription.items.data, plan);
 
     // Get existing subscription to check for scheduled changes
     const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
@@ -1232,22 +1287,6 @@ export class StripeService {
 
     // Update tenant licensed_user_count and plan if subscription is active or trialing
     if (subscription.status === 'active' || subscription.status === 'trialing') {
-      // Resolve plan from product name
-      let plan: TenantTier | undefined;
-      try {
-        const priceId = subscriptionItem?.price?.id;
-        if (priceId) {
-          const price = await this.stripe.prices.retrieve(priceId, { expand: ['product'] });
-          const product = price.product as Stripe.Product | undefined;
-          const productName = product?.name;
-          plan = tierFromStripeProduct(productName);
-        }
-      } catch (error) {
-        logger.warn(`[StripeService] Failed to resolve tier for subscription ${subscription.id}`, error);
-      }
-
-      const quantity = this.getLicensedUserCountFromStripeItems(subscription.items.data, plan);
-
       const updateData: Record<string, any> = {
         licensed_user_count: quantity,
         updated_at: knex.fn.now(),
@@ -1561,11 +1600,44 @@ export class StripeService {
     return sub.stripe_base_item_id !== null;
   }
 
-  private buildTierLineItems(prices: TierPriceIds, quantity: number): Array<{ price: string; quantity: number }> {
+  /**
+   * Number of users included in the base "platform fee" for a given tier.
+   * Must mirror `getIncludedUserCount` in nm-store's orderPlans.ts so the
+   * checkout provisioning path and the in-app purchase path agree on how many
+   * seats the base line item covers.
+   */
+  private getIncludedUsersForTier(tier: TenantTier | null | undefined): number {
+    if (tier === 'solo') return 1;
+    if (tier === 'pro') return 1;
+    return 0;
+  }
+
+  /**
+   * Build Stripe line items for a tier-based subscription.
+   *
+   * `totalQuantity` is the user-facing total seat count (e.g. 6 for a Pro
+   * tenant that wants six licensed users). The per-user line item only
+   * carries the *billable* portion — i.e. the total minus any seats already
+   * covered by the platform fee. `includedUsers` defaults to 0 so legacy
+   * call sites (early adopters, non-tiered) keep their existing behavior.
+   *
+   * When the billable portion is zero (e.g. a brand-new Pro subscription
+   * with one user, fully covered by the platform fee) the per-user item is
+   * omitted — Stripe rejects `quantity: 0` on checkout sessions and some
+   * subscription-schedule endpoints.
+   */
+  private buildTierLineItems(
+    prices: TierPriceIds,
+    totalQuantity: number,
+    includedUsers: number = 0,
+  ): Array<{ price: string; quantity: number }> {
     const items = [{ price: prices.basePriceId, quantity: 1 }];
 
     if (prices.userPriceId) {
-      items.push({ price: prices.userPriceId, quantity });
+      const perUserQuantity = Math.max(totalQuantity - includedUsers, 0);
+      if (perUserQuantity > 0) {
+        items.push({ price: prices.userPriceId, quantity: perUserQuantity });
+      }
     }
 
     return items;
@@ -1603,7 +1675,17 @@ export class StripeService {
     }
 
     const userItem = this.findUserItemFromStripe(items);
-    return userItem?.quantity || 1;
+    const perUserQuantity = userItem?.quantity || 1;
+
+    // Legacy single-item subscriptions store the total on the one item.
+    // Multi-item (base + per-user) subscriptions only store the billable
+    // portion on the per-user item, so add back the seat covered by the
+    // platform fee to arrive at the user-facing total.
+    if (items.length <= 1) {
+      return perUserQuantity;
+    }
+
+    return perUserQuantity + this.getIncludedUsersForTier(plan);
   }
 
   private async getActiveInternalUserCount(tenantId: string): Promise<number> {
@@ -1680,10 +1762,19 @@ export class StripeService {
       });
     }
 
-    // Add new tier items
+    // Add new tier items. `currentQuantity` is the user-facing total licensed
+    // seats — the per-user line item only bills the portion not already
+    // covered by the platform fee. We always include the per-user item even
+    // when the billable portion is zero so `stripe_subscription_item_id`
+    // continues to reference a real per-user line (required for future
+    // increases). Stripe's `subscriptions.update` endpoint accepts
+    // `quantity: 0` on line items; `checkout.sessions.create` does not, but
+    // this path only hits `subscriptions.update`.
+    const targetIncludedUsers = this.getIncludedUsersForTier(targetTier);
+    const upgradePerUserQuantity = Math.max(currentQuantity - targetIncludedUsers, 0);
     itemUpdates.push(
       { price: tierPrices.basePriceId, quantity: 1 },
-      { price: tierPrices.userPriceId, quantity: currentQuantity },
+      { price: tierPrices.userPriceId, quantity: upgradePerUserQuantity },
     );
 
     try {
@@ -1900,6 +1991,11 @@ export class StripeService {
     try {
       const knex = await getConnection(tenantId);
       const customer = await this.getOrImportCustomer(tenantId);
+      const tenantRecord = await knex('tenants')
+        .where('tenant', tenantId)
+        .select('plan')
+        .first();
+      const currentTier: TenantTier | undefined = tenantRecord?.plan;
 
       const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
         .where({
@@ -1910,6 +2006,8 @@ export class StripeService {
         .first();
 
       const userCount = existingSubscription?.quantity || 1;
+      const targetIncludedUsers = this.getIncludedUsersForTier(targetTier);
+      const targetBillableUsers = Math.max(userCount - targetIncludedUsers, 0);
 
       // Fetch target tier prices from Stripe
       const [basePrice, userPrice] = await Promise.all([
@@ -1919,7 +2017,7 @@ export class StripeService {
 
       const basePriceAmount = (basePrice.unit_amount || 0) / 100;
       const userPriceAmount = ((userPrice?.unit_amount) || 0) / 100;
-      const newMonthly = basePriceAmount + (userPriceAmount * userCount);
+      const newMonthly = basePriceAmount + (userPriceAmount * targetBillableUsers);
 
       // Calculate current monthly from existing subscription
       let currentMonthly = 0;
@@ -1935,7 +2033,14 @@ export class StripeService {
             const currentUserPrice = await knex<StripePrice>('stripe_prices')
               .where({ stripe_price_id: existingSubscription.stripe_price_id })
               .first();
-            currentMonthly += ((currentUserPrice?.unit_amount || 0) / 100) * userCount;
+            // Billable portion of the current tier: total minus seats
+            // already covered by the platform fee. Early-adopter
+            // subscriptions have no included seat.
+            const currentIncludedUsers = this.isEarlyAdoptersSubscription(existingSubscription)
+              ? 0
+              : this.getIncludedUsersForTier(currentTier);
+            const currentBillableUsers = Math.max(userCount - currentIncludedUsers, 0);
+            currentMonthly += ((currentUserPrice?.unit_amount || 0) / 100) * currentBillableUsers;
           }
         } else {
           // Legacy single-price mode: price_id is the per-user price
@@ -1961,7 +2066,7 @@ export class StripeService {
                 ...(existingSubscription.stripe_base_item_id
                   ? [{ id: existingSubscription.stripe_base_item_id, deleted: true as const }]
                   : []),
-                ...this.buildTierLineItems(tierPrices, userCount),
+                ...this.buildTierLineItems(tierPrices, userCount, targetIncludedUsers),
               ],
               proration_behavior: 'always_invoice',
             },
@@ -1986,7 +2091,7 @@ export class StripeService {
           ]);
           annualBasePrice = (annualBase.unit_amount || 0) / 100;
           annualUserPrice = ((annualUser?.unit_amount) || 0) / 100;
-          annualTotal = annualBasePrice + (annualUserPrice * userCount);
+          annualTotal = annualBasePrice + (annualUserPrice * targetBillableUsers);
           annualAvailable = true;
         } catch (e) {
           logger.warn('[StripeService] Could not fetch annual prices', { error: e });
@@ -2062,6 +2167,9 @@ export class StripeService {
       // The schedule now has one phase (current). Add a second phase with the new prices.
       const currentPhase = schedule.phases[0];
       const currentQuantity = existingSubscription.quantity;
+      const intervalIncludedUsers = this.isEarlyAdoptersSubscription(existingSubscription)
+        ? 0
+        : this.getIncludedUsersForTier(currentTier);
 
       await this.stripe.subscriptionSchedules.update(schedule.id, {
         phases: [
@@ -2074,7 +2182,7 @@ export class StripeService {
             })),
           },
           {
-            items: this.buildTierLineItems(newPrices, currentQuantity),
+            items: this.buildTierLineItems(newPrices, currentQuantity, intervalIncludedUsers),
           },
         ],
         end_behavior: 'release',
@@ -2453,9 +2561,13 @@ export class StripeService {
               quantity: item.quantity,
             })),
           },
-          // Phase 2: switch to Premium prices
+          // Phase 2: switch to Premium prices (Premium has 0 included users).
           {
-            items: this.buildTierLineItems(premiumPrices, currentQuantity),
+            items: this.buildTierLineItems(
+              premiumPrices,
+              currentQuantity,
+              this.getIncludedUsersForTier('premium'),
+            ),
           },
         ],
         end_behavior: 'release',
