@@ -112,6 +112,8 @@ const MetaLines: React.FC<MetaLinesProps> = ({
 
 interface WorkItemListProps {
   items: WorkItemWithStatus[];
+  pinnedItem?: WorkItemWithStatus | null;
+  selectedWorkItemId?: string | null;
   isSearching: boolean;
   currentPage: number;
   totalPages: number;
@@ -123,6 +125,8 @@ interface WorkItemListProps {
 
 export function WorkItemList({
   items,
+  pinnedItem = null,
+  selectedWorkItemId = null,
   isSearching,
   currentPage,
   totalPages,
@@ -140,7 +144,7 @@ export function WorkItemList({
       return (
         <>
           <div className="font-medium text-[rgb(var(--color-text-900))] text-lg mb-1">
-            {item.ticket_number} - {item.title || t('common.fallbacks.untitled', { defaultValue: 'Untitled' })}
+            {item.ticket_number} - {item.title || item.name || t('common.fallbacks.untitled', { defaultValue: 'Untitled' })}
           </div>
           <MetaLines
             clientName={item.client_name}
@@ -174,7 +178,7 @@ export function WorkItemList({
       return (
         <>
           <div className="font-medium text-[rgb(var(--color-text-900))] text-lg mb-1">
-            {item.task_name}
+            {item.task_name || item.name || t('common.fallbacks.untitled', { defaultValue: 'Untitled' })}
           </div>
           <div className="text-sm text-[rgb(var(--color-text-600))]">
             {item.project_name} • {item.phase_name}
@@ -282,17 +286,39 @@ export function WorkItemList({
     <div className="flex-1 min-h-[200px] overflow-auto transition-all duration-300">
       <div className="h-full overflow-y-auto">
         <div className="bg-white rounded-md border border-[rgb(var(--color-border-200))]">
-          {items.length > 0 ? (
+          {pinnedItem || items.length > 0 ? (
             <div>
+              {pinnedItem && (
+                <div className="border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-primary-50))] px-4 py-3">
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-[rgb(var(--color-primary-700))]">
+                    {t('workItemList.currentSelection', { defaultValue: 'Current work item' })}
+                  </div>
+                  <button
+                    id="current-work-item-option"
+                    type="button"
+                    className={[
+                      'w-full rounded-md border px-4 py-3 text-left transition-colors duration-150',
+                      selectedWorkItemId === pinnedItem.work_item_id
+                        ? 'border-[rgb(var(--color-primary-400))] bg-[rgb(var(--color-primary-100))]'
+                        : 'border-[rgb(var(--color-border-200))] bg-white hover:bg-[rgb(var(--color-border-50))]',
+                    ].join(' ')}
+                    onClick={() => onSelect(pinnedItem)}
+                  >
+                    {renderItemContent(pinnedItem)}
+                  </button>
+                </div>
+              )}
               <ul className="divide-y divide-[rgb(var(--color-border-200))]">
                 {items.map((item) => {
                   const isDisabled = item.type === 'ticket' && !!item.master_ticket_id;
+                  const isSelected = selectedWorkItemId === item.work_item_id;
                   return (
                     <li
                       key={item.work_item_id}
                       aria-disabled={isDisabled}
                       className={[
                         'bg-[rgb(var(--color-border-50))] transition-colors duration-150',
+                        isSelected ? 'bg-[rgb(var(--color-primary-50))]' : '',
                         isDisabled
                           ? 'opacity-50 cursor-not-allowed'
                           : 'hover:bg-[rgb(var(--color-border-100))] cursor-pointer',
@@ -303,41 +329,46 @@ export function WorkItemList({
                         onSelect(item);
                       }}
                     >
-                      <div className="px-4 py-3">
+                      <div className={[
+                        'px-4 py-3',
+                        isSelected ? 'border-l-4 border-[rgb(var(--color-primary-500))]' : '',
+                      ].join(' ')}>
                         {renderItemContent(item)}
                       </div>
                     </li>
                   );
                 })}
               </ul>
-              <div className="px-6 py-4 border-t border-gray-100 bg-white">
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => onPageChange(currentPage - 1)}
-                    disabled={currentPage === 1 || isSearching}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    id="previous-page-btn"
-                  >
-                    {t('workItemList.pagination.previous', { defaultValue: 'Previous' })}
-                  </button>
-                  <span className="text-sm text-[rgb(var(--color-text-700))]">
-                    {t('workItemList.pagination.pageInfo', {
-                      defaultValue: 'Page {{current}} of {{total}} ({{records}} total records)',
-                      current: currentPage,
-                      total: Math.max(1, totalPages),
-                      records: total
-                    })}
-                  </span>
-                  <button
-                    onClick={() => onPageChange(currentPage + 1)}
-                    disabled={!hasMore || isSearching || currentPage >= totalPages}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    id="next-page-btn"
-                  >
-                    {t('workItemList.pagination.next', { defaultValue: 'Next' })}
-                  </button>
+              {items.length > 0 && (
+                <div className="px-6 py-4 border-t border-gray-100 bg-white">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => onPageChange(currentPage - 1)}
+                      disabled={currentPage === 1 || isSearching}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      id="previous-page-btn"
+                    >
+                      {t('workItemList.pagination.previous', { defaultValue: 'Previous' })}
+                    </button>
+                    <span className="text-sm text-[rgb(var(--color-text-700))]">
+                      {t('workItemList.pagination.pageInfo', {
+                        defaultValue: 'Page {{current}} of {{total}} ({{records}} total records)',
+                        current: currentPage,
+                        total: Math.max(1, totalPages),
+                        records: total
+                      })}
+                    </span>
+                    <button
+                      onClick={() => onPageChange(currentPage + 1)}
+                      disabled={!hasMore || isSearching || currentPage >= totalPages}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      id="next-page-btn"
+                    >
+                      {t('workItemList.pagination.next', { defaultValue: 'Next' })}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           ) : (
             <div className="p-4 text-center text-[rgb(var(--color-text-500))]">

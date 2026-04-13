@@ -252,6 +252,7 @@ export function TimeSheet({
     );
 
     const [interactionState, setInteractionState] = useState<TimeSheetInteractionState>({ type: 'idle' });
+    const [persistedListFocusFilter, setPersistedListFocusFilter] = useState<TimeSheetListFocusFilter | null>(null);
 
     useEffect(() => {
         setTimeSheet(initialTimeSheet);
@@ -260,9 +261,7 @@ export function TimeSheet({
     const selectedCell = interactionState.type === 'dialog'
         ? interactionState.selection
         : null;
-    const listFocusFilter = interactionState.type === 'list-focus'
-        ? interactionState.filter
-        : null;
+    const listFocusFilter = persistedListFocusFilter;
     const activeQuickAdd = interactionState.type === 'quick-add'
         ? interactionState.quickAdd
         : null;
@@ -279,16 +278,23 @@ export function TimeSheet({
 
             return currentInteraction;
         });
+
+        if (newMode === 'grid') {
+            setPersistedListFocusFilter(null);
+        }
+
         setViewMode(newMode);
     }, [setViewMode]);
 
     const handleClearListFocusFilter = useCallback(() => {
+        setPersistedListFocusFilter(null);
         setInteractionState((currentInteraction) =>
             currentInteraction.type === 'list-focus' ? { type: 'idle' } : currentInteraction
         );
     }, []);
 
     const handleBackToGrid = useCallback(() => {
+        setPersistedListFocusFilter(null);
         setInteractionState((currentInteraction) =>
             currentInteraction.type === 'list-focus' ? { type: 'idle' } : currentInteraction
         );
@@ -299,18 +305,21 @@ export function TimeSheet({
         const normalizedDate = toDateOnlyString(selection.date);
 
         if (selection.entries.length > 1) {
+            const nextFilter = {
+                workItemId: selection.workItem.work_item_id,
+                workItemLabel: getWorkItemDisplayName(selection.workItem),
+                date: normalizedDate,
+                dateLabel: format(parseLocalDate(normalizedDate), 'MMM d'),
+                entryIds: selection.entries
+                    .map((entry) => entry.entry_id)
+                    .filter((entryId): entryId is string => Boolean(entryId)),
+                entryCount: selection.entries.length,
+            } satisfies TimeSheetListFocusFilter;
+
+            setPersistedListFocusFilter(nextFilter);
             setInteractionState({
                 type: 'list-focus',
-                filter: {
-                    workItemId: selection.workItem.work_item_id,
-                    workItemLabel: getWorkItemDisplayName(selection.workItem),
-                    date: normalizedDate,
-                    dateLabel: format(parseLocalDate(normalizedDate), 'MMM d'),
-                    entryIds: selection.entries
-                        .map((entry) => entry.entry_id)
-                        .filter((entryId): entryId is string => Boolean(entryId)),
-                    entryCount: selection.entries.length,
-                },
+                filter: nextFilter,
             });
             setViewMode('list');
             return;
@@ -350,12 +359,11 @@ export function TimeSheet({
     }, [initialDate]);
 
     const syncListFocusFilter = useCallback((entries: ITimeEntryWithWorkItem[]) => {
-        setInteractionState((currentInteraction) => {
-            if (currentInteraction.type !== 'list-focus') {
-                return currentInteraction;
+        setPersistedListFocusFilter((currentFilter) => {
+            if (!currentFilter) {
+                return currentFilter;
             }
 
-            const currentFilter = currentInteraction.filter;
             const matchingEntries = entries.filter((entry) => {
                 const entryDate = entry.work_date?.slice(0, 10) ?? toDateOnlyString(entry.start_time);
                 return entry.work_item_id === currentFilter.workItemId &&
@@ -365,19 +373,30 @@ export function TimeSheet({
             });
 
             if (matchingEntries.length === 0) {
-                return { type: 'idle' };
+                setInteractionState((currentInteraction) =>
+                    currentInteraction.type === 'list-focus' ? { type: 'idle' } : currentInteraction
+                );
+                return null;
             }
 
-            return {
-                type: 'list-focus',
-                filter: {
-                    ...currentFilter,
-                    entryIds: matchingEntries
-                        .map((entry) => entry.entry_id)
-                        .filter((entryId): entryId is string => Boolean(entryId)),
-                    entryCount: matchingEntries.length,
-                },
+            const nextFilter = {
+                ...currentFilter,
+                entryIds: matchingEntries
+                    .map((entry) => entry.entry_id)
+                    .filter((entryId): entryId is string => Boolean(entryId)),
+                entryCount: matchingEntries.length,
             };
+
+            setInteractionState((currentInteraction) =>
+                currentInteraction.type === 'list-focus'
+                    ? {
+                        type: 'list-focus',
+                        filter: nextFilter,
+                    }
+                    : currentInteraction
+            );
+
+            return nextFilter;
         });
     }, []);
 
@@ -754,6 +773,9 @@ export function TimeSheet({
         try {
             await deleteWorkItem(workItemId);
             await refreshTimeSheetData();
+            setPersistedListFocusFilter((currentFilter) =>
+                currentFilter?.workItemId === workItemId ? null : currentFilter
+            );
             setInteractionState((currentInteraction) => {
                 if (currentInteraction.type === 'quick-add' && currentInteraction.quickAdd.workItem.work_item_id === workItemId) {
                     return { type: 'idle' };
@@ -955,6 +977,7 @@ export function TimeSheet({
                     }}
                     onAdd={handleAddWorkItem}
                     availableWorkItems={Object.values(workItemsByType).flat()}
+                    initialWorkItemId={listFocusFilter?.workItemId ?? null}
                     timePeriod={timeSheet.time_period}
                 />
             )}
