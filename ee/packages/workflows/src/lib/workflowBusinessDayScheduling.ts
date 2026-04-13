@@ -21,7 +21,7 @@ type BusinessHoursEntryRow = {
 type HolidayRow = {
   tenant: string;
   schedule_id: string | null;
-  holiday_date: string;
+  holiday_date: string | Date;
   is_recurring: boolean;
 };
 
@@ -103,16 +103,31 @@ const toLocalDateInfo = (occurrence: Date, timezone: string): LocalDateInfo => {
   };
 };
 
+const normalizeHolidayDate = (value: string | Date): string => {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  const text = String(value).trim();
+  return text.includes('T') ? text.slice(0, 10) : text;
+};
+
+const normalizeHolidayRows = (holidays: HolidayRow[]): HolidayRow[] => holidays.map((holiday) => ({
+  ...holiday,
+  holiday_date: normalizeHolidayDate(holiday.holiday_date)
+}));
+
 const isHolidayForLocalDate = (
   holidays: HolidayRow[],
   localDate: string
 ): boolean => {
   const monthDay = localDate.slice(5);
-  return holidays.some((holiday) => (
-    holiday.is_recurring
-      ? holiday.holiday_date.slice(5) === monthDay
-      : holiday.holiday_date === localDate
-  ));
+  return holidays.some((holiday) => {
+    const holidayDate = normalizeHolidayDate(holiday.holiday_date);
+    return holiday.is_recurring
+      ? holidayDate.slice(5) === monthDay
+      : holidayDate === localDate;
+  });
 };
 
 export const classifyWorkflowOccurrenceDay = (params: {
@@ -120,7 +135,8 @@ export const classifyWorkflowOccurrenceDay = (params: {
   occurrenceTimezone: string;
   resolution: WorkflowBusinessDayResolution;
 }): WorkflowDayClassification => {
-  const localDateInfo = toLocalDateInfo(params.occurrence, params.occurrenceTimezone);
+  const classificationTimezone = params.resolution.scheduleTimezone || params.occurrenceTimezone;
+  const localDateInfo = toLocalDateInfo(params.occurrence, classificationTimezone);
   if (isHolidayForLocalDate(params.resolution.holidays, localDateInfo.localDate)) {
     return 'non_business';
   }
@@ -194,7 +210,7 @@ export const resolveWorkflowBusinessDaySettings = async (
         scheduleTimezone: overrideSchedule.timezone,
         is24x7: Boolean(overrideSchedule.is_24x7),
         entries,
-        holidays
+        holidays: normalizeHolidayRows(holidays)
       }
     };
   }
@@ -248,7 +264,7 @@ export const resolveWorkflowBusinessDaySettings = async (
       scheduleTimezone: selectedSchedule.timezone,
       is24x7: Boolean(selectedSchedule.is_24x7),
       entries,
-      holidays
+      holidays: normalizeHolidayRows(holidays)
     }
   };
 };

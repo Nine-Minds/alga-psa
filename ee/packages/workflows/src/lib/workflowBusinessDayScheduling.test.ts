@@ -44,6 +44,22 @@ describe('workflowBusinessDayScheduling', () => {
     })).toBe(true);
   });
 
+  it('treats Date-valued holiday rows as holidays', () => {
+    const classification = classifyWorkflowOccurrenceDay({
+      occurrence: new Date('2026-12-25T10:00:00.000Z'),
+      occurrenceTimezone: 'UTC',
+      resolution: {
+        ...baseResolution,
+        is24x7: true,
+        holidays: [
+          { tenant: 'tenant-1', schedule_id: null, holiday_date: new Date('2026-12-25T00:00:00.000Z'), is_recurring: false }
+        ]
+      }
+    });
+
+    expect(classification).toBe('non_business');
+  });
+
   it('T007: classifies non-holiday dates as business days only when the weekday is enabled', () => {
     const weekdayResolution = {
       ...baseResolution,
@@ -67,6 +83,22 @@ describe('workflowBusinessDayScheduling', () => {
 
     expect(monday).toBe('business');
     expect(tuesday).toBe('non_business');
+  });
+
+  it('uses the resolved business-hours schedule timezone when classifying a workflow occurrence day', () => {
+    const classification = classifyWorkflowOccurrenceDay({
+      occurrence: new Date('2026-04-14T06:30:00.000Z'),
+      occurrenceTimezone: 'America/Los_Angeles',
+      resolution: {
+        ...baseResolution,
+        scheduleTimezone: 'America/New_York',
+        entries: [
+          { tenant: 'tenant-1', schedule_id: 'schedule-1', day_of_week: 2, is_enabled: true }
+        ]
+      }
+    });
+
+    expect(classification).toBe('business');
   });
 
   it('T015: finds next eligible recurring occurrence within bounds and returns null when none is found', () => {

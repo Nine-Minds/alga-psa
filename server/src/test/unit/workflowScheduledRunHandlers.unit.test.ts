@@ -10,6 +10,8 @@ const updateScheduleState = vi.fn();
 const resolveWorkflowBusinessDaySettings = vi.fn();
 const isWorkflowOccurrenceEligible = vi.fn();
 const normalizeWorkflowDayTypeFilter = vi.fn();
+const cancelJob = vi.fn();
+const getJobStatus = vi.fn();
 
 vi.mock('server/src/lib/db', () => ({
   createTenantKnex: vi.fn(async (tenantId: string) => ({ knex: knexMock, tenant: tenantId }))
@@ -44,6 +46,13 @@ vi.mock('@alga-psa/workflows/lib/workflowBusinessDayScheduling', () => ({
   normalizeWorkflowDayTypeFilter: (...args: unknown[]) => normalizeWorkflowDayTypeFilter(...args)
 }));
 
+vi.mock('server/src/lib/jobs/JobRunnerFactory', () => ({
+  getJobRunner: vi.fn(async () => ({
+    cancelJob: (...args: unknown[]) => cancelJob(...args),
+    getJobStatus: (...args: unknown[]) => getJobStatus(...args)
+  }))
+}));
+
 import {
   workflowOneTimeScheduledRunHandler,
   workflowRecurringScheduledRunHandler
@@ -63,6 +72,10 @@ describe('Workflow scheduled run handlers', () => {
     normalizeWorkflowDayTypeFilter.mockImplementation((value: unknown) => (
       value === 'business' || value === 'non_business' ? value : 'any'
     ));
+    cancelJob.mockReset();
+    cancelJob.mockResolvedValue(true);
+    getJobStatus.mockReset();
+    getJobStatus.mockResolvedValue(null);
   });
 
   it('T025/T027: one-time handler launches with the saved schedule payload and preserves schedule provenance metadata', async () => {
@@ -440,6 +453,8 @@ describe('Workflow scheduled run handlers', () => {
       run_at: null,
       cron: '0 8 * * *',
       timezone: 'UTC',
+      job_id: 'job-service-calendar-error',
+      runner_schedule_id: 'workflow-schedule:workflow-error-1:schedule-error-1',
       payload_json: { accountId: 'acct-903' },
       enabled: true,
       status: 'scheduled'
@@ -460,11 +475,15 @@ describe('Workflow scheduled run handlers', () => {
     });
 
     expect(launchPublishedWorkflowRun).not.toHaveBeenCalled();
+    expect(cancelJob).toHaveBeenCalledWith('job-service-calendar-error', 'tenant-1');
     expect(updateScheduleState).toHaveBeenCalledWith(
       'schedule-error-1',
       expect.objectContaining({
         enabled: false,
         status: 'failed',
+        job_id: null,
+        runner_schedule_id: null,
+        next_fire_at: null,
         last_run_status: 'error',
         last_error: 'Business/non-business day filters require a default business-hours schedule or a specific override.'
       })

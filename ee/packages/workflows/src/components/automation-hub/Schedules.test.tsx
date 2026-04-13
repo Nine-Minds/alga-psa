@@ -49,7 +49,7 @@ const workflowFixtures = [
   }
 ];
 
-let scheduleFixtures = [
+const initialScheduleFixtures: Array<Record<string, any>> = [
   {
     id: '10000000-0000-0000-0000-000000000001',
     tenant_id: 'tenant-1',
@@ -111,6 +111,8 @@ let scheduleFixtures = [
     updated_at: '2026-03-08T10:00:00.000Z'
   }
 ];
+
+let scheduleFixtures = initialScheduleFixtures.map((schedule) => ({ ...schedule }));
 
 const billingSchema = {
   type: 'object',
@@ -203,23 +205,26 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
     onValueChange,
     options,
     label,
-    id
+    id,
+    disabled
   }: {
     value?: string | null;
     onValueChange: (value: string) => void;
-    options: Array<{ value: string; label: React.ReactNode; textValue?: string }>;
+    options: Array<{ value: string; label: React.ReactNode; textValue?: string; disabled?: boolean }>;
     label?: string;
     id?: string;
+    disabled?: boolean;
   }) => (
     <label>
       {label ?? id}
       <select
         aria-label={label ?? id ?? 'select'}
         value={value ?? ''}
+        disabled={disabled}
         onChange={(event) => onValueChange(event.target.value)}
       >
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option key={option.value} value={option.value} disabled={option.disabled}>
             {typeof option.label === 'string' ? option.label : (option.textValue ?? option.value)}
           </option>
         ))}
@@ -411,7 +416,7 @@ describe('Schedules', () => {
     currentSearchParams = new URLSearchParams('tab=schedules');
     router.push.mockReset();
     router.replace.mockReset();
-    scheduleFixtures = [...scheduleFixtures];
+    scheduleFixtures = initialScheduleFixtures.map((schedule) => ({ ...schedule }));
     actionMocks.listWorkflowSchedulesAction.mockImplementation(async (input: {
       workflowId?: string;
       status?: string;
@@ -480,6 +485,22 @@ describe('Schedules', () => {
     expect(screen.getByText('Weekday billing')).toBeInTheDocument();
     expect(screen.getAllByText('Billing sync').length).toBeGreaterThan(0);
     expect(screen.getByText('Schema mismatch after publish')).toBeInTheDocument();
+  });
+
+  it('shows a filtered recurring schedule as misconfigured instead of falling back to the raw cron next fire time', async () => {
+    scheduleFixtures = [
+      {
+        ...scheduleFixtures[0],
+        day_type_filter: 'business',
+        next_fire_at: '2026-03-09T14:00:00.000Z',
+        next_eligible_fire_at: null,
+        calendar_resolution_error: 'Business/non-business day filters require a default business-hours schedule or a specific override.'
+      }
+    ];
+
+    await renderSchedules();
+
+    expect(screen.getByText('Calendar misconfigured')).toBeInTheDocument();
   });
 
   it('filters the schedules list by workflow', async () => {
@@ -644,6 +665,43 @@ describe('Schedules', () => {
     expect(scheduleSelect).toBeInTheDocument();
     expect(within(scheduleSelect).getByRole('option', { name: /default business hours/i })).toBeInTheDocument();
     expect(within(scheduleSelect).getByRole('option', { name: /night shift/i })).toBeInTheDocument();
+  });
+
+  it('annotates and disables tenant default calendar source when no tenant default business-hours schedule exists', async () => {
+    actionMocks.listWorkflowScheduleBusinessHoursAction.mockResolvedValueOnce({
+      items: [
+        { schedule_id: 'bh-night', schedule_name: 'Night shift', is_default: false, is_24x7: false }
+      ]
+    });
+
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(screen.getByLabelText('Run on'), { target: { value: 'business' } });
+
+    const calendarSource = screen.getByLabelText('Calendar source');
+    expect(calendarSource).toBeInTheDocument();
+    expect(within(calendarSource).getByRole('option', { name: /tenant default business hours \(not configured\)/i })).toBeDisabled();
+    expect(screen.getByText('No tenant default business-hours schedule is configured yet. Choose a specific business-hours schedule or set a tenant default first.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Workflow'), {
+      target: { value: workflowFixtures[0].workflow_id }
+    });
+    await screen.findByLabelText('customerId');
+    fireEvent.change(screen.getByLabelText('Schedule name'), { target: { value: 'Filtered schedule without default' } });
+    fireEvent.change(screen.getByLabelText('customerId'), { target: { value: 'C-510' } });
+
+    expect(screen.getByText('Create Schedule', { selector: 'button' })).toBeDisabled();
+
+    fireEvent.change(calendarSource, { target: { value: 'specific' } });
+    const scheduleSelect = screen.getByLabelText('Business-hours schedule');
+    fireEvent.change(scheduleSelect, { target: { value: 'bh-night' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Create Schedule', { selector: 'button' })).toBeEnabled();
+    });
   });
 
   it('keeps UTC in the common timezone dropdown for new recurring schedules', async () => {

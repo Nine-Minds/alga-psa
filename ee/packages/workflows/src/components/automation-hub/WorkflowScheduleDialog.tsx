@@ -301,6 +301,34 @@ export default function WorkflowScheduleDialog({
     () => buildWorkflowEligibilityMessage(selectedWorkflow, availableSchemaRefs),
     [availableSchemaRefs, selectedWorkflow]
   );
+  const hasTenantDefaultBusinessHours = useMemo(
+    () => businessHoursOptions.some((schedule) => Boolean(schedule.is_default)),
+    [businessHoursOptions]
+  );
+  const hasAnyBusinessHoursSchedules = businessHoursOptions.length > 0;
+  const calendarSourceOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: 'tenant_default',
+        label: hasTenantDefaultBusinessHours
+          ? 'Tenant default business hours'
+          : 'Tenant default business hours (not configured)',
+        disabled: !hasTenantDefaultBusinessHours,
+        dropdownHint: !hasTenantDefaultBusinessHours
+          ? 'Set a tenant default business-hours schedule first, or choose a specific schedule.'
+          : undefined
+      },
+      {
+        value: 'specific',
+        label: 'Specific business-hours schedule',
+        disabled: !hasAnyBusinessHoursSchedules,
+        dropdownHint: !hasAnyBusinessHoursSchedules
+          ? 'Create a business-hours schedule first.'
+          : undefined
+      }
+    ],
+    [hasAnyBusinessHoursSchedules, hasTenantDefaultBusinessHours]
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -538,8 +566,9 @@ export default function WorkflowScheduleDialog({
     && (
       triggerType !== 'recurring'
       || dayTypeFilter === 'any'
-      || calendarSource === 'tenant_default'
-      || Boolean(businessHoursScheduleId)
+      || (calendarSource === 'tenant_default'
+        ? hasTenantDefaultBusinessHours
+        : Boolean(businessHoursScheduleId))
     )
   );
 
@@ -1009,22 +1038,27 @@ export default function WorkflowScheduleDialog({
                     ]}
                   />
                   {dayTypeFilter !== 'any' ? (
-                    <CustomSelect
-                      id="schedule-dialog-calendar-source"
-                      label="Calendar source"
-                      value={calendarSource}
-                      onValueChange={(value) => {
-                        const nextSource = value as CalendarSource;
-                        setCalendarSource(nextSource);
-                        if (nextSource === 'tenant_default') {
-                          setBusinessHoursScheduleId('');
-                        }
-                      }}
-                      options={[
-                        { value: 'tenant_default', label: 'Tenant default business hours' },
-                        { value: 'specific', label: 'Specific business-hours schedule' }
-                      ]}
-                    />
+                    <div className="space-y-2">
+                      <CustomSelect
+                        id="schedule-dialog-calendar-source"
+                        label="Calendar source"
+                        value={calendarSource}
+                        disabled={!hasTenantDefaultBusinessHours && !hasAnyBusinessHoursSchedules}
+                        onValueChange={(value) => {
+                          const nextSource = value as CalendarSource;
+                          setCalendarSource(nextSource);
+                          if (nextSource === 'tenant_default') {
+                            setBusinessHoursScheduleId('');
+                          }
+                        }}
+                        options={calendarSourceOptions}
+                      />
+                      {!hasTenantDefaultBusinessHours && calendarSource === 'tenant_default' ? (
+                        <div className="text-xs text-[rgb(var(--color-text-600))]">
+                          No tenant default business-hours schedule is configured yet. Choose a specific business-hours schedule or set a tenant default first.
+                        </div>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
 
@@ -1035,20 +1069,28 @@ export default function WorkflowScheduleDialog({
                       <span>Holidays are always treated as non-business days.</span>
                     </div>
                     {calendarSource === 'specific' ? (
-                      <CustomSelect
-                        id="schedule-dialog-business-hours-schedule"
-                        label="Business-hours schedule"
-                        value={businessHoursScheduleId}
-                        onValueChange={setBusinessHoursScheduleId}
-                        options={businessHoursOptions.map((schedule) => ({
-                          value: schedule.schedule_id,
-                          label: `${schedule.schedule_name}${schedule.is_default ? ' (Default)' : ''}`
-                        }))}
-                        placeholder="Choose a business-hours schedule"
-                      />
+                      hasAnyBusinessHoursSchedules ? (
+                        <CustomSelect
+                          id="schedule-dialog-business-hours-schedule"
+                          label="Business-hours schedule"
+                          value={businessHoursScheduleId}
+                          onValueChange={setBusinessHoursScheduleId}
+                          options={businessHoursOptions.map((schedule) => ({
+                            value: schedule.schedule_id,
+                            label: `${schedule.schedule_name}${schedule.is_default ? ' (Default)' : ''}`
+                          }))}
+                          placeholder="Choose a business-hours schedule"
+                        />
+                      ) : (
+                        <div className="text-xs text-[rgb(var(--color-text-500))]">
+                          No business-hours schedules are configured yet.
+                        </div>
+                      )
                     ) : (
                       <div className="text-xs text-[rgb(var(--color-text-500))]">
-                        Uses the tenant default business-hours schedule.
+                        {hasTenantDefaultBusinessHours
+                          ? 'Uses the tenant default business-hours schedule.'
+                          : 'No tenant default business-hours schedule is configured yet.'}
                       </div>
                     )}
                   </div>
