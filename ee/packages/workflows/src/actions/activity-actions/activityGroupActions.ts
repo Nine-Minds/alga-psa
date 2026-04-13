@@ -211,6 +211,14 @@ export const moveActivityToGroup = withAuth(async (
         .del();
     }
 
+    // Make room at the insertion index. Without this, multiple rows would
+    // share the same sort_order and the final order on reload would be
+    // non-deterministic.
+    await trx('user_activity_group_items')
+      .where({ tenant, group_id: targetGroupId })
+      .andWhere('sort_order', '>=', sortOrder)
+      .increment('sort_order', 1);
+
     // Insert at new position
     await trx('user_activity_group_items').insert({
       tenant,

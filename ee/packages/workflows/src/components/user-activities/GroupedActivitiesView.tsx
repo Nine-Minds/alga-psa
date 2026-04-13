@@ -47,6 +47,7 @@ import {
   moveActivityToGroup,
   removeActivityFromGroups,
   reorderActivitiesInGroup,
+  reorderGroups,
   type ActivityGroup,
 } from '@alga-psa/workflows/actions';
 import { InlineStatusPicker } from './InlineStatusPicker';
@@ -489,6 +490,35 @@ export function GroupedActivitiesView({
     const activeKey = active.id as string;
     const overId = over.id as string;
 
+    // ---- Group-level reorder ------------------------------------------
+    if (activeKey.startsWith('group:')) {
+      if (!overId.startsWith('group:')) return;
+      const activeGroupId = activeKey.slice('group:'.length);
+      const overGroupId = overId.slice('group:'.length);
+      if (activeGroupId === overGroupId) return;
+
+      const oldIndex = localGroups.findIndex((g) => g.groupId === activeGroupId);
+      const newIndex = localGroups.findIndex((g) => g.groupId === overGroupId);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const reordered = arrayMove(localGroups, oldIndex, newIndex).map((g, i) => ({
+        ...g,
+        sortOrder: i,
+      }));
+
+      setLocalGroups(reordered);
+
+      try {
+        await reorderGroups(
+          reordered.map((g, i) => ({ groupId: g.groupId, sortOrder: i }))
+        );
+      } catch (err) {
+        console.error('Error reordering groups:', err);
+        await onGroupsChange();
+      }
+      return;
+    }
+
     const sourceContainer = findContainer(activeKey);
     if (!sourceContainer) return;
 
@@ -520,34 +550,33 @@ export function GroupedActivitiesView({
 
     // -------- Same-container reorder ------------------------------------
     if (sourceContainer === targetContainer) {
+      // Ungrouped has no persisted ordering — it's rebuilt from the
+      // server's default sort on every load. Skipping the reorder avoids
+      // a flash of "moved" state that immediately snaps back.
+      if (sourceContainer === UNGROUPED_ID) return;
+
       const currentIdx = targetActivities.findIndex((a) => `${a.type}:${a.id}` === activeKey);
       if (currentIdx === -1 || overIndex === -1 || currentIdx === overIndex) return;
 
       const reordered = arrayMove(targetActivities, currentIdx, overIndex);
 
-      // Optimistic update
-      if (sourceContainer === UNGROUPED_ID) {
-        setUngrouped(reordered);
-      } else {
-        setLocalGroups((prev) =>
-          prev.map((g) =>
-            g.groupId === sourceContainer ? { ...g, activities: reordered } : g
-          )
+      setLocalGroups((prev) =>
+        prev.map((g) =>
+          g.groupId === sourceContainer ? { ...g, activities: reordered } : g
+        )
+      );
+      try {
+        await reorderActivitiesInGroup(
+          sourceContainer,
+          reordered.map((a, idx) => ({
+            activityId: a.id,
+            activityType: a.type,
+            sortOrder: idx,
+          }))
         );
-        // Persist new sort orders
-        try {
-          await reorderActivitiesInGroup(
-            sourceContainer,
-            reordered.map((a, idx) => ({
-              activityId: a.id,
-              activityType: a.type,
-              sortOrder: idx,
-            }))
-          );
-        } catch (err) {
-          console.error('Error reordering in group:', err);
-          await onGroupsChange();
-        }
+      } catch (err) {
+        console.error('Error reordering in group:', err);
+        await onGroupsChange();
       }
       return;
     }
@@ -578,26 +607,46 @@ export function GroupedActivitiesView({
     }
   }, [findContainer, localGroups, ungrouped, onGroupsChange]);
 
-  // Custom collision detection: prefer pointer-within for groups, fall back to rect
+  // Custom collision detection: prefer pointer-within, fall back to rect.
+  // Filter droppables so group drags only match group droppables and
+  // activity drags only match activity droppables.
   const collisionDetection: CollisionDetection = useCallback(
     (args) => {
-      const pointerCollisions = pointerWithin(args);
+      const activeId = args.active.id as string;
+      const isGroupDrag = typeof activeId === 'string' && activeId.startsWith('group:');
+
+      const filteredDroppables = args.droppableContainers.filter((droppable) => {
+        const droppableId = String(droppable.id);
+        const isGroupDroppable = droppableId.startsWith('group:');
+        return isGroupDrag ? isGroupDroppable : !isGroupDroppable;
+      });
+
+      const filteredArgs = { ...args, droppableContainers: filteredDroppables };
+
+      const pointerCollisions = pointerWithin(filteredArgs);
       if (pointerCollisions.length > 0) return pointerCollisions;
-      return rectIntersection(args);
+      return rectIntersection(filteredArgs);
     },
     []
   );
 
-  // Find the activity for the drag overlay
+  // Find the activity for the drag overlay (match on both id and type to
+  // avoid collisions between polymorphic activity_ids).
   const activeActivity = useMemo(() => {
-    if (!activeDragId) return null;
-    const parseKey = (k: string) => {
-      const idx = k.indexOf(':');
-      return { type: k.slice(0, idx), id: k.slice(idx + 1) };
-    };
-    const { id } = parseKey(activeDragId);
-    return activities.find((a) => a.id === id) || null;
+    if (!activeDragId || activeDragId.startsWith('group:')) return null;
+    const idx = activeDragId.indexOf(':');
+    if (idx === -1) return null;
+    const type = activeDragId.slice(0, idx);
+    const id = activeDragId.slice(idx + 1);
+    return activities.find((a) => a.id === id && a.type === type) || null;
   }, [activeDragId, activities]);
+
+  // Find the group for the group-drag overlay
+  const activeGroup = useMemo(() => {
+    if (!activeDragId || !activeDragId.startsWith('group:')) return null;
+    const groupId = activeDragId.slice('group:'.length);
+    return localGroups.find((g) => g.groupId === groupId) || null;
+  }, [activeDragId, localGroups]);
 
 
   return (
@@ -662,28 +711,33 @@ export function GroupedActivitiesView({
           onSortChange={handleGroupSortChange}
         />
 
-        {/* Groups */}
-        {localGroups.map((group) => {
-          const sortedGroup = groupSortBy
-            ? { ...group, activities: sortGroupActivities(group.activities, groupSortBy, groupSortDirection) }
-            : group;
-          return (
-            <GroupSection
-              key={group.groupId}
-              group={sortedGroup}
-              editingGroupId={editingGroupId}
-              editedGroupName={editedGroupName}
-              onStartRename={handleStartRename}
-              onEditGroupName={setEditedGroupName}
-              onSaveRename={handleSaveRename}
-              onCancelRename={() => setEditingGroupId(null)}
-              onToggleCollapse={handleToggleCollapse}
-              onDeleteGroup={handleDeleteGroup}
-              onOpenDrawer={handleOpenDrawer}
-              onActionComplete={onActionComplete}
-            />
-          );
-        })}
+        {/* Groups (sortable at the group level) */}
+        <SortableContext
+          items={localGroups.map((g) => `group:${g.groupId}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          {localGroups.map((group) => {
+            const sortedGroup = groupSortBy
+              ? { ...group, activities: sortGroupActivities(group.activities, groupSortBy, groupSortDirection) }
+              : group;
+            return (
+              <GroupSection
+                key={group.groupId}
+                group={sortedGroup}
+                editingGroupId={editingGroupId}
+                editedGroupName={editedGroupName}
+                onStartRename={handleStartRename}
+                onEditGroupName={setEditedGroupName}
+                onSaveRename={handleSaveRename}
+                onCancelRename={() => setEditingGroupId(null)}
+                onToggleCollapse={handleToggleCollapse}
+                onDeleteGroup={handleDeleteGroup}
+                onOpenDrawer={handleOpenDrawer}
+                onActionComplete={onActionComplete}
+              />
+            );
+          })}
+        </SortableContext>
 
         {/* Ungrouped section */}
         <UngroupedSection
@@ -698,6 +752,15 @@ export function GroupedActivitiesView({
           <div className="bg-background shadow-lg border border-border rounded-md px-3 py-2 flex items-center gap-2 max-w-md">
             {getTypeIcon(activeActivity.type)}
             <span className="text-sm font-medium truncate">{activeActivity.title}</span>
+          </div>
+        )}
+        {activeGroup && (
+          <div className="bg-card shadow-lg border border-border rounded-md px-3 py-2 flex items-center gap-2 max-w-md">
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold truncate">{activeGroup.groupName}</span>
+            <Badge variant="default" className="text-xs">
+              {activeGroup.activities.length}
+            </Badge>
           </div>
         )}
       </DragOverlay>
@@ -741,12 +804,47 @@ function GroupSection({
     [group.activities]
   );
 
+  // Sortable at the group level so the whole section can be dragged to
+  // reorder. The sortable id is namespaced with "group:" to distinguish
+  // group drags from activity drags in the shared DndContext.
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: `group:${group.groupId}`,
+    data: { type: 'group', groupId: group.groupId },
+  });
+
+  const sectionStyle: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : undefined,
+  };
+
   const isEditing = editingGroupId === group.groupId;
 
   return (
-    <div className="border border-border rounded-md bg-card">
+    <div
+      ref={setNodeRef}
+      style={sectionStyle}
+      className="border border-border rounded-md bg-card"
+    >
       {/* Group header */}
       <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border">
+        {/* Group drag handle */}
+        <button
+          type="button"
+          className="cursor-grab active:cursor-grabbing flex-shrink-0 p-0.5 text-muted-foreground hover:text-foreground opacity-40 hover:opacity-100 transition-opacity"
+          {...attributes}
+          {...listeners}
+          aria-label="Drag to reorder group"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
         <button
           type="button"
           onClick={() => onToggleCollapse(group)}
