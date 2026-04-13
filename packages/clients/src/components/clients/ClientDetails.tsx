@@ -1771,9 +1771,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           }}
           title={t('clientDetails.manageLocations', { defaultValue: 'Manage Locations' })}
         >
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <ClientLocations 
-              clientId={editedClient.client_id} 
+          <DialogContent className="max-w-4xl">
+            <ClientLocations
+              clientId={editedClient.client_id}
               isEditing={true}
             />
           </DialogContent>

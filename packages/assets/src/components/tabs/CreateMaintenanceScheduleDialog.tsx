@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -188,17 +188,46 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
     }
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-maintenance-schedule-btn"
+        type="button"
+        variant="secondary"
+        onClick={handleClose}
+        disabled={isSubmitting}
+      >
+        {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+      </Button>
+      <Button
+        id="submit-maintenance-schedule-btn"
+        type="button"
+        onClick={() => (document.getElementById('maintenance-schedule-form') as HTMLFormElement | null)?.requestSubmit()}
+        disabled={isSubmitting}
+      >
+        {isSubmitting
+          ? (isEditing
+              ? t('createMaintenanceScheduleDialog.actions.updating', { defaultValue: 'Updating...' })
+              : t('createMaintenanceScheduleDialog.actions.creating', { defaultValue: 'Creating...' }))
+          : (isEditing
+              ? t('createMaintenanceScheduleDialog.actions.update', { defaultValue: 'Update Schedule' })
+              : t('createMaintenanceScheduleDialog.actions.create', { defaultValue: 'Create Schedule' }))}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog 
-      isOpen={isOpen} 
-      onClose={handleClose} 
+    <Dialog
+      isOpen={isOpen}
+      onClose={handleClose}
       title={isEditing
         ? t('createMaintenanceScheduleDialog.titles.edit', { defaultValue: 'Edit Maintenance Schedule' })
-        : t('createMaintenanceScheduleDialog.titles.create', { defaultValue: 'Schedule Maintenance' })} 
+        : t('createMaintenanceScheduleDialog.titles.create', { defaultValue: 'Schedule Maintenance' })}
       id={isEditing ? 'edit-maintenance-schedule-dialog' : 'create-maintenance-schedule-dialog'}
+      footer={footer}
     >
       <DialogContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="maintenance-schedule-form" onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -327,31 +356,6 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
               />
             </div>
           )}
-
-          <DialogFooter>
-            <Button
-              id="cancel-maintenance-schedule-btn"
-              type="button"
-              variant="secondary"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
-              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-            </Button>
-            <Button
-              id="submit-maintenance-schedule-btn"
-              type="submit"
-              disabled={isSubmitting}
-            >
-              {isSubmitting
-                ? (isEditing
-                    ? t('createMaintenanceScheduleDialog.actions.updating', { defaultValue: 'Updating...' })
-                    : t('createMaintenanceScheduleDialog.actions.creating', { defaultValue: 'Creating...' }))
-                : (isEditing
-                    ? t('createMaintenanceScheduleDialog.actions.update', { defaultValue: 'Update Schedule' })
-                    : t('createMaintenanceScheduleDialog.actions.create', { defaultValue: 'Create Schedule' }))}
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

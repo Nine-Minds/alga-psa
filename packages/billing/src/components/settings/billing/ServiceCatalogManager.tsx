@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
 import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices, getDefaultBillingSettings } from '@alga-psa/billing/actions';
@@ -705,10 +705,30 @@ const ServiceCatalogManager: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-        <Dialog 
-        isOpen={isEditDialogOpen} 
-        onClose={() => setIsEditDialogOpen(false)} 
+        <Dialog
+        isOpen={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
         title={t('serviceCatalog.dialog.editTitle', { defaultValue: 'Edit Service' })}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id='cancel-button' variant="outline" onClick={() => {
+              setIsEditDialogOpen(false);
+              setEditingService(null);
+              setRateInput('');
+              setEditingPrices([]);
+            }}>
+              {t('serviceCatalog.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button id='save-button' onClick={() => {
+              // Just call handleUpdateService - it will close the dialog
+              handleUpdateService();
+              // Don't call setIsEditDialogOpen(false) here as it's already done in handleUpdateService
+              // and might cause race conditions with the pagination state
+            }}>
+              {t('serviceCatalog.actions.saveChanges', { defaultValue: 'Save Changes' })}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -1065,24 +1085,6 @@ const ServiceCatalogManager: React.FC = () => {
               </>
             )}
           </div>
-          <DialogFooter>
-            <Button id='cancel-button' variant="outline" onClick={() => {
-              setIsEditDialogOpen(false);
-              setEditingService(null);
-              setRateInput('');
-              setEditingPrices([]);
-            }}>
-              {t('serviceCatalog.actions.cancel', { defaultValue: 'Cancel' })}
-            </Button>
-            <Button id='save-button' onClick={() => {
-              // Just call handleUpdateService - it will close the dialog
-              handleUpdateService();
-              // Don't call setIsEditDialogOpen(false) here as it's already done in handleUpdateService
-              // and might cause race conditions with the pagination state
-            }}>
-              {t('serviceCatalog.actions.saveChanges', { defaultValue: 'Save Changes' })}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
       <DeleteEntityDialog

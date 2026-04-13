@@ -130,36 +130,65 @@ When implementing dialogs in the application, follow these guidelines:
    - Never import Dialog directly from '@radix-ui/react-dialog'
    ```tsx
    // Good
-   import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
-   
+   import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+
    // Bad
    import * as Dialog from '@radix-ui/react-dialog';
    ```
 
-2. **Dialog Structure**
+2. **Dialog Structure — sticky footer pattern**
+
+   Action buttons (Save/Cancel/Delete/Next/Back/etc.) belong in the `footer` prop, NOT inside `DialogContent`. The Dialog renders `footer` in a sticky `border-t` strip below the scrollable body, so buttons stay pinned when the body is tall.
+
    ```tsx
-   <Dialog 
-     isOpen={isOpen} 
-     onClose={() => setIsOpen(false)}
-     title="Dialog Title"
-     className="max-w-lg"  // Use responsive width classes
-   >
-     <DialogContent>
-       {/* Dialog content */}
-     </DialogContent>
-     <DialogFooter>
-       {/* Action buttons */}
-     </DialogFooter>
-   </Dialog>
+   const footer = (
+     <div className="flex justify-end space-x-2">
+       <Button variant="ghost" onClick={onClose}>Cancel</Button>
+       <Button
+         type="button"
+         onClick={() => (document.getElementById('my-form') as HTMLFormElement | null)?.requestSubmit()}
+       >Save</Button>
+     </div>
+   );
+
+   return (
+     <Dialog
+       isOpen={isOpen}
+       onClose={() => setIsOpen(false)}
+       title="Dialog Title"
+       className="max-w-lg"
+       footer={footer}
+     >
+       <DialogContent>
+         <form id="my-form" onSubmit={handleSubmit}>
+           {/* fields */}
+         </form>
+       </DialogContent>
+     </Dialog>
+   );
    ```
 
-3. **Props and Features**
+   **Critical:** Because `footer` is rendered OUTSIDE the `<form>`, a `type="submit"` button in the footer will not trigger the form's `onSubmit`. Give the form a unique `id` and switch the Save button to `type="button"` + `onClick={() => form.requestSubmit()}`. `requestSubmit()` still runs native HTML validation and fires `onSubmit`. Enter-in-field still submits because the form's own submit event handles that.
+
+   For dialogs without a form (e.g. confirmation dialogs, pickers), put plain `onClick` handlers on the footer buttons.
+
+3. **`DialogFooter` is deprecated**
+   - Do not use `DialogFooter` in new code — it places buttons inside the scrollable body. Use the `footer` prop.
+   - Existing `DialogFooter` usages should be migrated when touched.
+
+4. **Wizards and multi-step dialogs**
+   - Put Next/Back/Finish/Skip buttons in the `footer` prop.
+   - Make `footer` a computed value (or `undefined`) so it changes per step: e.g. `footer={step === 'upload' ? undefined : stepFooter}`.
+
+5. **Props and Features**
    - `isOpen`: Boolean to control dialog visibility
    - `onClose`: Callback function when dialog should close
    - `title`: Dialog title shown in the draggable header
    - `className`: Use responsive Tailwind classes (max-w-sm, max-w-md, max-w-lg, max-w-xl, max-w-2xl)
+   - `footer`: ReactNode rendered in the sticky footer strip
    - `draggable`: Defaults to true, set to false to disable dragging
    - `hideCloseButton`: Set to true to hide the X close button
+   - `allowOverflow`: Set to true for dialogs that host dropdowns/popovers
 
 4. **Width Guidelines**
    - Use responsive max-width classes instead of fixed pixel widths
@@ -170,19 +199,11 @@ When implementing dialogs in the application, follow these guidelines:
      - `max-w-xl` (576px) - Large dialogs (complex forms)
      - `max-w-2xl` (672px) - Extra large dialogs (multi-section forms)
 
-5. **Spacing and Padding**
-   - DialogContent automatically provides padding
-   - For forms with focus rings, add `mt-2` to the first form element container to prevent cut-off
-   - Example:
-   ```tsx
-   <DialogContent>
-     <form className="space-y-4 mt-2">
-       <Input className="..." />
-     </form>
-   </DialogContent>
-   ```
+6. **Spacing and Padding**
+   - The Dialog body has built-in padding (`px-6 pt-3 pb-6`) and handles scrolling itself (`flex-1 min-h-0 overflow-y-auto`). Do NOT add `max-h-[80vh]` or `overflow-y-auto` hacks to `DialogContent` — they fight the flex layout and break footer stickiness.
+   - For forms with focus rings, add `mt-2` to the first form element container to prevent cut-off.
 
-6. **Handling Close Events**
+7. **Handling Close Events**
    - The Dialog's onClose is called with boolean false when the X button is clicked
    - Handle both MouseEvent and boolean types if needed:
    ```tsx
@@ -194,7 +215,7 @@ When implementing dialogs in the application, follow these guidelines:
    };
    ```
 
-7. **Confirmation Dialogs**
+8. **Confirmation Dialogs**
    - For simple confirmations, use the ConfirmationDialog component
    - For custom confirmations with unsaved changes:
    ```tsx

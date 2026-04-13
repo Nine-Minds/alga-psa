@@ -879,6 +879,27 @@ const FixedValueEditorShell: React.FC<{
         onClose={closeDialog}
         title={`Edit ${field.name}`}
         className="max-w-4xl"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id={`${idPrefix}-dialog-cancel`}
+              type="button"
+              variant="outline"
+              onClick={closeDialog}
+              disabled={disabled}
+            >
+              Cancel
+            </Button>
+            <Button
+              id={`${idPrefix}-dialog-save`}
+              type="button"
+              onClick={applyDialogValue}
+              disabled={disabled}
+            >
+              Apply
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogHeader>
@@ -895,25 +916,6 @@ const FixedValueEditorShell: React.FC<{
               rows={18}
               disabled={disabled}
             />
-            <div className="flex justify-end gap-2">
-              <Button
-                id={`${idPrefix}-dialog-cancel`}
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                disabled={disabled}
-              >
-                Cancel
-              </Button>
-              <Button
-                id={`${idPrefix}-dialog-save`}
-                type="button"
-                onClick={applyDialogValue}
-                disabled={disabled}
-              >
-                Apply
-              </Button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>

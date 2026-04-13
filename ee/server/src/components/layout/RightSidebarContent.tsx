@@ -6,7 +6,7 @@ import { Chat } from '../chat/Chat';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { History, MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@alga-psa/ui/components/DropdownMenu';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -682,20 +682,8 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
         title="Rename chat"
         className="max-w-md"
         draggable={false}
-      >
-        <DialogContent>
-          <Input
-            id="rename-chat-input"
-            label="Chat title"
-            value={renameValue}
-            onChange={(event) => setRenameValue(event.target.value)}
-            placeholder="Enter chat title"
-            autoFocus
-            disabled={isRenamingChat}
-          />
-        </DialogContent>
-        <DialogFooter>
-          <div className="mt-4 flex justify-end gap-2">
+        footer={(
+          <div className="flex justify-end space-x-2">
             <Button
               id="rename-chat-cancel"
               variant="outline"
@@ -715,7 +703,19 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
               Save
             </Button>
           </div>
-        </DialogFooter>
+        )}
+      >
+        <DialogContent>
+          <Input
+            id="rename-chat-input"
+            label="Chat title"
+            value={renameValue}
+            onChange={(event) => setRenameValue(event.target.value)}
+            placeholder="Enter chat title"
+            autoFocus
+            disabled={isRenamingChat}
+          />
+        </DialogContent>
       </Dialog>
     </Collapsible.Root>
   );

@@ -32,7 +32,7 @@ import {
   getAvailableRecurringDueWork,
   type BillingPeriodDateRange,
 } from '@alga-psa/billing/actions/billingAndTax';
-import { Dialog, DialogContent, DialogFooter, DialogDescription } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { formatCurrency } from '@alga-psa/core';
 // Added imports for DropdownMenu
 import {
@@ -1693,6 +1693,25 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         isOpen={showReverseDialog}
         onClose={() => setShowReverseDialog(false)}
         title="Reverse Recurring Invoice"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id='cancel-reverse-billing-cycle-button'
+              variant="outline"
+              onClick={() => setShowReverseDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              id='reverse-billing-cycle-button'
+              variant="destructive"
+              onClick={handleReverseBillingCycle}
+              disabled={isReversing}
+            >
+              {isReversing ? 'Reversing...' : 'Yes, Reverse Invoice'}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <div className="flex items-center gap-2 text-red-600 mb-4">
@@ -1723,24 +1742,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </AlertDescription>
           </Alert>
         </DialogContent>
-
-        <DialogFooter>
-          <Button
-            id='cancel-reverse-billing-cycle-button'
-            variant="outline"
-            onClick={() => setShowReverseDialog(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            id='reverse-billing-cycle-button'
-            variant="destructive"
-            onClick={handleReverseBillingCycle}
-            disabled={isReversing}
-          >
-            {isReversing ? 'Reversing...' : 'Yes, Reverse Invoice'}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       <Dialog
@@ -1758,6 +1759,44 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           setErrors({}); // Clear preview-specific errors on close
         }}
         title="Invoice Preview"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="close-preview-dialog-button"
+              variant="outline" // Use outline for secondary action
+              onClick={() => {
+                setShowPreviewDialog(false);
+                setPreviewState({
+                  previews: [],
+                  invoiceCount: 0,
+                  billingCycleId: null,
+                  executionIdentityKey: null,
+                  selectorInput: null,
+                }); // Reset state on close
+                setErrors({}); // Clear errors on close
+              }}
+              disabled={isGeneratingFromPreview} // Disable while generating
+            >
+              Close Preview
+            </Button>
+            {/* Add Generate Invoice button */}
+            <Button
+              id="generate-invoice-from-preview-button"
+              onClick={handleGenerateFromPreview}
+              // Disable if there's an error, no data, or generation is in progress
+              disabled={
+                !!errors.preview
+                || previewState.previews.length === 0
+                || !previewState.selectorInput
+                || isGeneratingFromPreview
+                || isPreviewLoading
+                || !previewSupportsDirectGeneration
+              }
+            >
+              {isGeneratingFromPreview ? 'Generating...' : 'Generate Invoice'}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogDescription>
@@ -1864,43 +1903,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </div>
           )}
         </DialogContent>
-
-        <DialogFooter>
-          <Button
-            id="close-preview-dialog-button"
-            variant="outline" // Use outline for secondary action
-            onClick={() => {
-              setShowPreviewDialog(false);
-              setPreviewState({
-                previews: [],
-                invoiceCount: 0,
-                billingCycleId: null,
-                executionIdentityKey: null,
-                selectorInput: null,
-              }); // Reset state on close
-              setErrors({}); // Clear errors on close
-            }}
-            disabled={isGeneratingFromPreview} // Disable while generating
-          >
-            Close Preview
-          </Button>
-          {/* Add Generate Invoice button */}
-          <Button
-            id="generate-invoice-from-preview-button"
-            onClick={handleGenerateFromPreview}
-            // Disable if there's an error, no data, or generation is in progress
-            disabled={
-              !!errors.preview
-              || previewState.previews.length === 0
-              || !previewState.selectorInput
-              || isGeneratingFromPreview
-              || isPreviewLoading
-              || !previewSupportsDirectGeneration
-            }
-          >
-            {isGeneratingFromPreview ? 'Generating...' : 'Generate Invoice'}
-          </Button>
-        </DialogFooter>
       </Dialog>
 
       <ConfirmationDialog

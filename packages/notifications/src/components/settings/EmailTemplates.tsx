@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@alga-psa/ui/components/Button";
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@alga-psa/ui/components/Dialog";
+import { Dialog, DialogContent, DialogTitle } from "@alga-psa/ui/components/Dialog";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
@@ -656,8 +656,27 @@ function ViewTemplateDialog({
 
   if (!template) return null;
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="send-test-email-view-btn"
+        type="button"
+        variant="outline"
+        onClick={handleSendTest}
+        disabled={sendingTest}
+        className="mr-auto flex items-center gap-2"
+      >
+        <Send className="h-4 w-4" />
+        {sendingTest ? "Sending..." : "Send Test Email"}
+      </Button>
+      <Button id="close-view-dialog-btn" type="button" onClick={onClose}>
+        Close
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog isOpen={!!template} onClose={onClose}>
+    <Dialog isOpen={!!template} onClose={onClose} footer={footer}>
       <DialogTitle>Standard Template: {formatTemplateName(template.name)}</DialogTitle>
 
       <DialogContent className="space-y-4 px-6">
@@ -712,23 +731,6 @@ function ViewTemplateDialog({
           </div>
         )}
       </DialogContent>
-
-      <DialogFooter>
-        <Button
-          id="send-test-email-view-btn"
-          type="button"
-          variant="outline"
-          onClick={handleSendTest}
-          disabled={sendingTest}
-          className="mr-auto flex items-center gap-2"
-        >
-          <Send className="h-4 w-4" />
-          {sendingTest ? "Sending..." : "Send Test Email"}
-        </Button>
-        <Button id="close-view-dialog-btn" type="button" onClick={onClose}>
-          Close
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 }
@@ -812,9 +814,36 @@ function EditTemplateDialog({
     }
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="send-test-email-edit-btn"
+        type="button"
+        variant="outline"
+        onClick={handleSendTest}
+        disabled={sendingTest}
+        className="mr-auto flex items-center gap-2"
+      >
+        <Send className="h-4 w-4" />
+        {sendingTest ? "Sending..." : "Send Test Email"}
+      </Button>
+      <Button id="cancel-edit-dialog-btn" type="button" onClick={onClose} variant="outline">
+        Cancel
+      </Button>
+      <Button
+        id="save-template-btn"
+        type="button"
+        disabled={isSaving}
+        onClick={() => (document.getElementById('edit-template-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {isSaving ? "Saving..." : "Save"}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog isOpen={isOpen} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
+    <Dialog isOpen={isOpen} onClose={onClose} footer={footer}>
+      <form id="edit-template-form" onSubmit={handleSubmit}>
         <DialogTitle>Edit Custom Template: {formatTemplateName(template?.name ?? '')}</DialogTitle>
 
         <DialogContent className="space-y-4 px-6">
@@ -883,26 +912,6 @@ function EditTemplateDialog({
             </div>
           )}
         </DialogContent>
-
-        <DialogFooter>
-          <Button
-            id="send-test-email-edit-btn"
-            type="button"
-            variant="outline"
-            onClick={handleSendTest}
-            disabled={sendingTest}
-            className="mr-auto flex items-center gap-2"
-          >
-            <Send className="h-4 w-4" />
-            {sendingTest ? "Sending..." : "Send Test Email"}
-          </Button>
-          <Button id="cancel-edit-dialog-btn" type="button" onClick={onClose} variant="outline">
-            Cancel
-          </Button>
-          <Button id="save-template-btn" type="submit" disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save"}
-          </Button>
-        </DialogFooter>
       </form>
     </Dialog>
   );

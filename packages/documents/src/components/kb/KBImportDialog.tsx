@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Dialog, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Upload, FileText, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import {
   importArticles,
@@ -164,6 +164,32 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
     }
   }, [files, audience, articleType, onImportComplete]);
 
+  const footer = result ? (
+    <div className="flex justify-end space-x-2">
+      <Button id="kb-import-done" variant="default" onClick={handleClose}>
+        {t('common.done', 'Done')}
+      </Button>
+    </div>
+  ) : (
+    <div className="flex justify-end space-x-2">
+      <Button id="kb-import-cancel" variant="outline" onClick={handleClose}>
+        {t('common.cancel', 'Cancel')}
+      </Button>
+      <Button
+        id="kb-import-submit"
+        onClick={handleImport}
+        disabled={files.length === 0 || importing}
+      >
+        {importing
+          ? t('importDialog.actions.importing', { defaultValue: 'Importing...' })
+          : t('importDialog.actions.import', {
+              defaultValue: 'Import {{count}} file(s)',
+              count: files.length,
+            })}
+      </Button>
+    </div>
+  );
+
   return (
     <Dialog
       isOpen={isOpen}
@@ -171,6 +197,7 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
       title={t('importDialog.title', { defaultValue: 'Import Articles' })}
       className="max-w-lg"
       id="kb-import-dialog"
+      footer={footer}
     >
       {result ? (
         // Results view
@@ -209,12 +236,6 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
               </div>
             </div>
           )}
-
-          <DialogFooter>
-            <Button id="kb-import-done" variant="default" onClick={handleClose}>
-              {t('common.done', 'Done')}
-            </Button>
-          </DialogFooter>
         </div>
       ) : (
         // Upload view
@@ -293,23 +314,6 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
             </div>
           </div>
 
-          <DialogFooter>
-            <Button id="kb-import-cancel" variant="outline" onClick={handleClose}>
-              {t('common.cancel', 'Cancel')}
-            </Button>
-            <Button
-              id="kb-import-submit"
-              onClick={handleImport}
-              disabled={files.length === 0 || importing}
-            >
-              {importing
-                ? t('importDialog.actions.importing', { defaultValue: 'Importing...' })
-                : t('importDialog.actions.import', {
-                    defaultValue: 'Import {{count}} file(s)',
-                    count: files.length,
-                  })}
-            </Button>
-          </DialogFooter>
         </div>
       )}
     </Dialog>

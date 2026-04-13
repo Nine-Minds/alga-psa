@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, memo, useEffect } from 'react';
 import { formatISO } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '../../../../actions/timeEntryActions';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -255,6 +255,27 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   const title = hasExistingEntry
     ? `${isEditable ? 'Edit' : 'View'} Time Entry for ${workItem.name}`
     : `Add New Time Entry for ${workItem.name}`;
+  const footerActions = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id={`${id}-cancel-dialog-btn`}
+        onClick={handleCancel}
+        variant="outline"
+      >
+        {isEditable ? 'Cancel' : 'Close'}
+      </Button>
+      {isEditable && (
+        <Button
+          id={`${id}-save-dialog-btn`}
+          onClick={handleSave}
+          variant="default"
+          disabled={isSaving}
+        >
+          {isSaving ? 'Saving...' : 'Save'}
+        </Button>
+      )}
+    </div>
+  );
   const content = (
     <div
       className="mx-auto w-full max-w-[35rem]"
@@ -284,25 +305,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         </div>
       ) : null}
 
-      <DialogFooter>
-        <Button
-          id={`${id}-cancel-dialog-btn`}
-          onClick={handleCancel}
-          variant="outline"
-        >
-          {isEditable ? 'Cancel' : 'Close'}
-        </Button>
-        {isEditable && (
-          <Button
-            id={`${id}-save-dialog-btn`}
-            onClick={handleSave}
-            variant="default"
-            disabled={isSaving}
-          >
-            {isSaving ? 'Saving...' : 'Save'}
-          </Button>
-        )}
-      </DialogFooter>
+      {inDrawer && <div className="mt-4">{footerActions}</div>}
     </div>
   );
 
@@ -311,14 +314,15 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       {inDrawer ? (
         content
       ) : (
-        <Dialog 
-          isOpen={isOpen} 
-          onClose={handleCancel} 
-          title={title} 
+        <Dialog
+          isOpen={isOpen}
+          onClose={handleCancel}
+          title={title}
           hideCloseButton={false}
           id={`__skip_registration_${id}`}
           data-automation-id={id}
           data-automation-type="time-entry-dialog"
+          footer={footerActions}
         >
           <DialogContent className="w-full max-w-2xl">
             {content}

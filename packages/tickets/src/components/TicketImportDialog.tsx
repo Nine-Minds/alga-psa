@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -755,6 +755,89 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
   // Render
   // -------------------------------------------------------------------------
 
+  const footer = (() => {
+    if (step === 'board_selection') {
+      return (
+        <div className="flex justify-end space-x-2">
+          <Button
+            id="board-back-btn"
+            variant="outline"
+            onClick={() => setStep('upload')}
+          >
+            Back
+          </Button>
+          <Button
+            id="board-next-btn"
+            onClick={handleBoardNext}
+            disabled={!defaultBoardId}
+          >
+            Next
+          </Button>
+        </div>
+      );
+    }
+    if (step === 'mapping' && previewData) {
+      return (
+        <div className="flex justify-end space-x-2">
+          <Button
+            id="mapping-back-btn"
+            variant="outline"
+            onClick={() => setStep('board_selection')}
+            disabled={isProcessing}
+          >
+            Back
+          </Button>
+          <Button id="mapping-preview-btn" onClick={handlePreview} disabled={isProcessing}>
+            {isProcessing ? 'Processing...' : 'Preview'}
+          </Button>
+        </div>
+      );
+    }
+    if (step === 'preview' && validationResults.length > 0) {
+      return (
+        <div className="flex justify-end space-x-2">
+          <Button
+            id="preview-back-btn"
+            variant="outline"
+            onClick={() => setStep('mapping')}
+          >
+            Back
+          </Button>
+          <Button
+            id="preview-next-btn"
+            onClick={handleProceedFromPreview}
+            disabled={
+              (invalidCount > 0 && !importOptions.skipInvalidRows) ||
+              (!hasAnyUnmatched && !canProceedWithImport)
+            }
+          >
+            {nextStepLabel}
+          </Button>
+        </div>
+      );
+    }
+    if (step === 'resolve_data') {
+      return (
+        <div className="flex justify-end space-x-2">
+          <Button id="resolve-back-btn" variant="outline" onClick={() => setStep('preview')}>Back</Button>
+          <Button id="resolve-import-btn" onClick={handleImport} disabled={hasIncompleteMappings || !canProceedWithImport}>
+            Import Tickets
+          </Button>
+        </div>
+      );
+    }
+    if (step === 'complete' && importResult) {
+      return (
+        <div className="flex justify-end space-x-2">
+          <Button id="import-done-btn" onClick={handleClose}>
+            Done
+          </Button>
+        </div>
+      );
+    }
+    return null;
+  })();
+
   return (
     <Dialog
       isOpen={isOpen}
@@ -762,6 +845,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       title="Import Tickets"
       className="max-w-5xl"
       disableFocusTrap
+      footer={footer}
     >
       <DialogContent>
         {errors.length > 0 && (
@@ -844,22 +928,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               />
             </div>
 
-            <DialogFooter>
-              <Button
-                id="board-back-btn"
-                variant="outline"
-                onClick={() => setStep('upload')}
-              >
-                Back
-              </Button>
-              <Button
-                id="board-next-btn"
-                onClick={handleBoardNext}
-                disabled={!defaultBoardId}
-              >
-                Next
-              </Button>
-            </DialogFooter>
           </div>
         )}
 
@@ -940,21 +1008,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               </Alert>
             )}
 
-            <div className="mt-4">
-              <DialogFooter>
-                <Button
-                  id="mapping-back-btn"
-                  variant="outline"
-                  onClick={() => setStep('board_selection')}
-                  disabled={isProcessing}
-                >
-                  Back
-                </Button>
-                <Button id="mapping-preview-btn" onClick={handlePreview} disabled={isProcessing}>
-                  {isProcessing ? 'Processing...' : 'Preview'}
-                </Button>
-              </DialogFooter>
-            </div>
           </div>
         )}
 
@@ -1127,27 +1180,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               </Alert>
             )}
 
-            <div className="mt-4">
-              <DialogFooter>
-                <Button
-                  id="preview-back-btn"
-                  variant="outline"
-                  onClick={() => setStep('mapping')}
-                >
-                  Back
-                </Button>
-                <Button
-                  id="preview-next-btn"
-                  onClick={handleProceedFromPreview}
-                  disabled={
-                    (invalidCount > 0 && !importOptions.skipInvalidRows) ||
-                    (!hasAnyUnmatched && !canProceedWithImport)
-                  }
-                >
-                  {nextStepLabel}
-                </Button>
-              </DialogFooter>
-            </div>
           </div>
         )}
 
@@ -1552,14 +1584,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               </Alert>
             )}
 
-            <div className="mt-4">
-              <DialogFooter>
-                <Button id="resolve-back-btn" variant="outline" onClick={() => setStep('preview')}>Back</Button>
-                <Button id="resolve-import-btn" onClick={handleImport} disabled={hasIncompleteMappings || !canProceedWithImport}>
-                  Import Tickets
-                </Button>
-              </DialogFooter>
-            </div>
           </div>
         )}
 
@@ -1655,11 +1679,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               </div>
             )}
 
-            <DialogFooter className="mt-6">
-              <Button id="import-done-btn" onClick={handleClose}>
-                Done
-              </Button>
-            </DialogFooter>
           </div>
         )}
       </DialogContent>

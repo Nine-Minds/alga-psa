@@ -367,7 +367,9 @@
       "namePlaceholder": "Enter folder name",
       "loading": "Loading folders...",
       "rootOption": "Root (No folder)",
-      "empty": "No folders available. Documents will be saved to root."
+      "empty": "No folders available. Documents will be saved to root.",
+      "showAllFolders": "Show all folders",
+      "showEntityFolders": "Show entity folders"
     },
     "filters": {
       "searchLabel": "Search Documents",

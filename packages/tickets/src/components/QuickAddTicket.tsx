@@ -3,7 +3,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -974,6 +974,45 @@ export function QuickAddTicket({
     [priorities]
   );
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id={`${id}-cancel-btn`}
+        type="button"
+        variant="outline"
+        onClick={handleClose}
+      >
+        {t('actions.cancel', 'Cancel')}
+      </Button>
+      <Button
+        id={`${id}-create-open-btn`}
+        type="button"
+        variant="secondary"
+        disabled={isSubmitting}
+        onClick={() => {
+          void handleCreateTicket({ openAfterCreate: true });
+        }}
+        className={hasRequiredFieldErrors ? 'opacity-50' : ''}
+      >
+        {isSubmitting
+          ? t('quickAdd.submitting', 'Adding...')
+          : t('quickAdd.createAndView', 'Create + View Ticket')}
+      </Button>
+      <Button
+        id={`${id}-submit-btn`}
+        type="button"
+        variant="default"
+        disabled={isSubmitting}
+        onClick={() => { void handleCreateTicket(); }}
+        className={hasRequiredFieldErrors ? 'opacity-50' : ''}
+      >
+        {isSubmitting
+          ? t('quickAdd.submitting', 'Adding...')
+          : t('actions.create', 'Create')}
+      </Button>
+    </div>
+  );
+
   return (
     <div>
       <Dialog
@@ -983,6 +1022,7 @@ export function QuickAddTicket({
         className="w-full max-w-2xl max-h-[90vh]"
         title={t('quickAdd.dialogTitle', 'Quick Add Ticket')}
         disableFocusTrap
+        footer={footer}
       >
         <DialogContent>
           {isLoading ? (
@@ -1509,42 +1549,6 @@ export function QuickAddTicket({
                   />
 
                   {renderBeforeFooter?.()}
-                  <DialogFooter>
-                    <Button
-                      id={`${id}-cancel-btn`}
-                      type="button"
-                      variant="outline"
-                      onClick={handleClose}
-                    >
-                      {t('actions.cancel', 'Cancel')}
-                    </Button>
-                    <Button
-                      id={`${id}-create-open-btn`}
-                      type="button"
-                      variant="secondary"
-                      disabled={isSubmitting}
-                      onClick={() => {
-                        void handleCreateTicket({ openAfterCreate: true });
-                      }}
-                      className={hasRequiredFieldErrors ? 'opacity-50' : ''}
-                    >
-                      {isSubmitting
-                        ? t('quickAdd.submitting', 'Adding...')
-                        : t('quickAdd.createAndView', 'Create + View Ticket')}
-                    </Button>
-                    <Button
-                      id={`${id}-submit-btn`}
-                      type="button"
-                      variant="default"
-                      disabled={isSubmitting}
-                      onClick={() => { void handleCreateTicket(); }}
-                      className={hasRequiredFieldErrors ? 'opacity-50' : ''}
-                    >
-                      {isSubmitting
-                        ? t('quickAdd.submitting', 'Adding...')
-                        : t('actions.create', 'Create')}
-                    </Button>
-                  </DialogFooter>
                 </FormOrDiv>
               </ReflectionContainer>
             </>

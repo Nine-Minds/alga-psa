@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -109,16 +109,44 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
     }
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button
+        id="cancel-status-button"
+        type="button"
+        variant="outline"
+        onClick={() => {
+          onOpenChange(false);
+          setStatusName('');
+          setStatusOrder(0);
+          setIsClosed(false);
+          setIsDefault(false);
+        }}
+      >
+        Cancel
+      </Button>
+      <Button
+        id="save-status-button"
+        type="button"
+        className="bg-primary-500 text-white hover:bg-primary-600"
+        onClick={() => (document.getElementById('status-dialog-form') as HTMLFormElement | null)?.requestSubmit()}
+      >
+        {editingStatus ? 'Update' : 'Add'} Status
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog 
-      isOpen={open} 
+    <Dialog
+      isOpen={open}
       onClose={() => onOpenChange(false)}
       title={editingStatus ? 'Edit Status' : 'Add New Status'}
       className="max-w-lg"
       id="status-dialog"
+      footer={footer}
     >
       <DialogContent>
-        <form onSubmit={handleSubmit}>
+        <form id="status-dialog-form" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -183,30 +211,6 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
               )}
             </div>
           </div>
-          
-          <DialogFooter>
-            <Button
-              id="cancel-status-button"
-              type="button"
-              variant="outline"
-              onClick={() => {
-                onOpenChange(false);
-                setStatusName('');
-                setStatusOrder(0);
-                setIsClosed(false);
-                setIsDefault(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              id="save-status-button"
-              type="submit"
-              className="bg-primary-500 text-white hover:bg-primary-600"
-            >
-              {editingStatus ? 'Update' : 'Add'} Status
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

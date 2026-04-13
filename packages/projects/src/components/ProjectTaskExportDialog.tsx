@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -143,12 +143,44 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
     }
   }, [projectId, selectedFields, selectedPhaseIds, exportT]);
 
+  const footer =
+    step === 'configure' ? (
+      <div className="flex justify-end gap-2">
+        <Button
+          id="export-tasks-cancel-btn"
+          variant="outline"
+          onClick={handleClose}
+        >
+          {t('common:actions.cancel', 'Cancel')}
+        </Button>
+        <Button
+          id="export-tasks-btn"
+          onClick={() => void handleExport()}
+          disabled={noPhasesSelected || noFieldsSelected}
+          className="flex items-center gap-2"
+        >
+          <Download className="h-4 w-4" />
+          {exportT('exportTasks', 'Export Tasks')}
+        </Button>
+      </div>
+    ) : step === 'complete' ? (
+      <div className="flex justify-end">
+        <Button
+          id="export-tasks-done-btn"
+          onClick={handleClose}
+        >
+          {exportT('done', 'Done')}
+        </Button>
+      </div>
+    ) : undefined;
+
   return (
     <Dialog
       isOpen={isOpen}
       onClose={handleClose}
       title={exportT('title', 'Export Project Tasks')}
       className="max-w-lg"
+      footer={footer}
     >
       <DialogContent>
         {error && (
@@ -252,24 +284,6 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
               </p>
             </div>
 
-            <DialogFooter>
-              <Button
-                id="export-tasks-cancel-btn"
-                variant="outline"
-                onClick={handleClose}
-              >
-                {t('common:actions.cancel', 'Cancel')}
-              </Button>
-              <Button
-                id="export-tasks-btn"
-                onClick={() => void handleExport()}
-                disabled={noPhasesSelected || noFieldsSelected}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                {exportT('exportTasks', 'Export Tasks')}
-              </Button>
-            </DialogFooter>
           </div>
         )}
 
@@ -294,14 +308,6 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
                 plural: exportedCount === 1 ? '' : 's',
               })}
             </p>
-            <DialogFooter>
-              <Button
-                id="export-tasks-done-btn"
-                onClick={handleClose}
-              >
-                {exportT('done', 'Done')}
-              </Button>
-            </DialogFooter>
           </div>
         )}
       </DialogContent>

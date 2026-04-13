@@ -8,7 +8,7 @@ import {
   IPriority
 } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@alga-psa/ui/components/Dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@alga-psa/ui/components/Dialog";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
@@ -122,9 +122,29 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
       return currentValues.includes(value);
     };
 
+    const footer = (
+      <div className="flex justify-between w-full">
+        <Button
+          id="reset-filters-button"
+          type="button"
+          variant="outline"
+          onClick={handleReset}
+        >
+          Reset
+        </Button>
+        <Button
+          id="apply-filters-button"
+          type="button"
+          onClick={handleApply}
+        >
+          Apply Filters
+        </Button>
+      </div>
+    );
+
     return (
       // Pass isOpen and onClose to Dialog for controlled state
-      <Dialog isOpen={open} onClose={() => setOpen(false)}>
+      <Dialog isOpen={open} onClose={() => setOpen(false)} footer={footer}>
         {/* Trigger button is now removed from here and placed in the parent */}
         {/* DialogContent is always rendered, Dialog controls visibility */}
         <DialogContent className="sm:max-w-[450px]">
@@ -239,25 +259,6 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
             />
           </div>
 
-          <DialogFooter>
-            <div className="flex justify-between w-full">
-              <Button
-                id="reset-filters-button"
-                type="button"
-                variant="outline"
-                onClick={handleReset}
-              >
-                Reset
-              </Button>
-              <Button
-                id="apply-filters-button"
-                type="button"
-                onClick={handleApply}
-              >
-                Apply Filters
-              </Button>
-            </div>
-          </DialogFooter>
           </DialogContent>
       </Dialog>
     );

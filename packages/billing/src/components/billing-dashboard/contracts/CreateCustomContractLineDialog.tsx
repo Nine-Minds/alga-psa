@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -788,9 +788,25 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
       onClose={onClose}
       title="Create Custom Contract Line"
       className="max-w-3xl"
+      footer={(
+        <div className="flex justify-end space-x-2">
+          <Button id="custom-contract-line-cancel" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            id="custom-contract-line-submit"
+            type="button"
+            onClick={() => (document.getElementById('custom-contract-line-form') as HTMLFormElement | null)?.requestSubmit()}
+            disabled={isSaving}
+            className={!planName.trim() || !planType || !billingFrequency ? 'opacity-50' : ''}
+          >
+            {isSaving ? 'Creating...' : 'Create Contract Line'}
+          </Button>
+        </div>
+      )}
     >
       <DialogContent>
-        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+        <form id="custom-contract-line-form" onSubmit={handleSubmit} className="space-y-6" noValidate>
           {hasAttemptedSubmit && validationErrors.length > 0 && (
             <Alert variant="destructive">
               <AlertDescription>
@@ -1002,19 +1018,6 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             </section>
           )}
 
-          <DialogFooter>
-            <Button id="custom-contract-line-cancel" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              id="custom-contract-line-submit"
-              type="submit"
-              disabled={isSaving}
-              className={!planName.trim() || !planType || !billingFrequency ? 'opacity-50' : ''}
-            >
-              {isSaving ? 'Creating...' : 'Create Contract Line'}
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

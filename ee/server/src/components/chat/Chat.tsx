@@ -11,7 +11,7 @@ import {
   addMessageToChatAction,
 } from '../../lib/chat-actions/chatActions';
 import { HfInference } from '@huggingface/inference';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useAIChatContext } from '@product/chat/context';
@@ -1803,18 +1803,20 @@ export const Chat: React.FC<ChatProps> = ({
         onClose={closeValidationDialog}
         title="Message Required"
         id="chat-empty-message-dialog"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="chat-empty-message-dialog-ok"
+              onClick={closeValidationDialog}
+            >
+              OK
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <p className="text-sm text-gray-700">{validationMessage}</p>
         </DialogContent>
-        <DialogFooter>
-          <Button
-            id="chat-empty-message-dialog-ok"
-            onClick={closeValidationDialog}
-          >
-            OK
-          </Button>
-        </DialogFooter>
       </Dialog>
     </div>
   );

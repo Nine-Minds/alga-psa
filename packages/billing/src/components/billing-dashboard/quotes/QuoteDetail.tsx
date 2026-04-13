@@ -6,7 +6,7 @@ import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -927,8 +927,20 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           )}
         </section>
       </Box>
-      <Dialog id="quote-conversion-preview" isOpen={isConversionDialogOpen} onClose={() => setIsConversionDialogOpen(false)}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-3xl">
+      <Dialog
+        id="quote-conversion-preview"
+        isOpen={isConversionDialogOpen}
+        onClose={() => setIsConversionDialogOpen(false)}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="quote-conversion-cancel" variant="outline" onClick={() => setIsConversionDialogOpen(false)} disabled={isWorking}>Cancel</Button>
+            <Button id="quote-conversion-confirm" onClick={() => void handleConfirmConversion()} disabled={isWorking || !conversionPreview || (conversionMode === 'contract' && !conversionPreview.contract_items.length) || (conversionMode === 'invoice' && !conversionPreview.invoice_items.length) || (conversionMode === 'both' && (!conversionPreview.contract_items.length || !conversionPreview.invoice_items.length))}>
+              {conversionMode === 'contract' ? 'Create Draft Contract' : conversionMode === 'invoice' ? 'Create Draft Invoice' : 'Create Both Records'}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Conversion Preview</DialogTitle>
             <DialogDescription>
@@ -1009,16 +1021,21 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             </div>
           )}
 
-          <DialogFooter>
-            <Button id="quote-conversion-cancel" variant="outline" onClick={() => setIsConversionDialogOpen(false)} disabled={isWorking}>Cancel</Button>
-            <Button id="quote-conversion-confirm" onClick={() => void handleConfirmConversion()} disabled={isWorking || !conversionPreview || (conversionMode === 'contract' && !conversionPreview.contract_items.length) || (conversionMode === 'invoice' && !conversionPreview.invoice_items.length) || (conversionMode === 'both' && (!conversionPreview.contract_items.length || !conversionPreview.invoice_items.length))}>
-              {conversionMode === 'contract' ? 'Create Draft Contract' : conversionMode === 'invoice' ? 'Create Draft Invoice' : 'Create Both Records'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog id="quote-preview-dialog" isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} title="Quote Preview" className="max-w-4xl">
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <Dialog
+        id="quote-preview-dialog"
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        title="Quote Preview"
+        className="max-w-4xl"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="quote-preview-close" variant="outline" onClick={() => setIsPreviewOpen(false)}>Close</Button>
+          </div>
+        )}
+      >
+        <DialogContent>
           {previewHtml ? (
             <div className="rounded border border-border p-4 bg-white text-black" style={{ colorScheme: 'light' }}>
               <style dangerouslySetInnerHTML={{ __html: previewHtml.css }} />
@@ -1027,12 +1044,22 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           ) : (
             <div className="p-8 text-center text-sm text-muted-foreground">Loading preview...</div>
           )}
-          <DialogFooter>
-            <Button id="quote-preview-close" variant="outline" onClick={() => setIsPreviewOpen(false)}>Close</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog id="quote-send-dialog" isOpen={isSendDialogOpen} onClose={() => setIsSendDialogOpen(false)} title="Send Quote to Client">
+      <Dialog
+        id="quote-send-dialog"
+        isOpen={isSendDialogOpen}
+        onClose={() => setIsSendDialogOpen(false)}
+        title="Send Quote to Client"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="quote-send-cancel" variant="outline" onClick={() => setIsSendDialogOpen(false)} disabled={isWorking}>Cancel</Button>
+            <Button id="quote-send-confirm" onClick={() => void handleSendQuote()} disabled={isWorking}>
+              {isWorking ? 'Sending...' : 'Send Quote'}
+            </Button>
+          </div>
+        )}
+      >
         <DialogContent>
           <DialogDescription>
             This will email the quote to the client&apos;s billing contacts and change its status to &ldquo;Sent&rdquo;.
@@ -1067,12 +1094,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               />
             </label>
           </div>
-          <DialogFooter>
-            <Button id="quote-send-cancel" variant="outline" onClick={() => setIsSendDialogOpen(false)} disabled={isWorking}>Cancel</Button>
-            <Button id="quote-send-confirm" onClick={() => void handleSendQuote()} disabled={isWorking}>
-              {isWorking ? 'Sending...' : 'Send Quote'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
       <Dialog
@@ -1080,6 +1101,25 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         isOpen={approvalDialogMode !== null}
         onClose={() => { setApprovalDialogMode(null); setApprovalComment(''); }}
         title={approvalDialogMode === 'approve' ? 'Approve Quote' : 'Request Changes'}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="quote-approval-cancel"
+              variant="outline"
+              onClick={() => { setApprovalDialogMode(null); setApprovalComment(''); }}
+              disabled={isWorking}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="quote-approval-confirm"
+              onClick={() => void (approvalDialogMode === 'approve' ? handleApproveQuote() : handleRequestChanges())}
+              disabled={isWorking || (approvalDialogMode === 'changes' && !approvalComment.trim())}
+            >
+              {isWorking ? 'Processing...' : approvalDialogMode === 'approve' ? 'Approve' : 'Request Changes'}
+            </Button>
+          </div>
+        )}
       >
         <DialogContent>
           <DialogDescription>
@@ -1098,23 +1138,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               />
             </label>
           </div>
-          <DialogFooter>
-            <Button
-              id="quote-approval-cancel"
-              variant="outline"
-              onClick={() => { setApprovalDialogMode(null); setApprovalComment(''); }}
-              disabled={isWorking}
-            >
-              Cancel
-            </Button>
-            <Button
-              id="quote-approval-confirm"
-              onClick={() => void (approvalDialogMode === 'approve' ? handleApproveQuote() : handleRequestChanges())}
-              disabled={isWorking || (approvalDialogMode === 'changes' && !approvalComment.trim())}
-            >
-              {isWorking ? 'Processing...' : approvalDialogMode === 'approve' ? 'Approve' : 'Request Changes'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>

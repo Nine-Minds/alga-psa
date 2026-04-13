@@ -323,12 +323,32 @@ export function TemplateCreationWizard({
     }
   };
 
+  const footer = (
+    <WizardNavigation
+      currentStep={currentStep}
+      totalSteps={steps.length}
+      onBack={handleBack}
+      onNext={handleNext}
+      onSkip={handleSkip}
+      onFinish={handleFinish}
+      isNextDisabled={isLoading}
+      isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
+      isLoading={isLoading}
+      finishLabel={t('templates.wizard.create', 'Create Template')}
+      backLabel={t('templates.wizard.back', 'Back')}
+      skipLabel={t('templates.wizard.skip', 'Skip')}
+      nextLabel={t('templates.wizard.next', 'Next')}
+      completingLabel={t('templates.wizard.creating', 'Creating...')}
+    />
+  );
+
   return (
     <Dialog
       isOpen={open}
       onClose={() => onOpenChange(false)}
       title={t('templates.wizard.title', 'Create New Project Template')}
       className="max-w-4xl max-h-[90vh]"
+      footer={footer}
     >
       <div className="flex flex-col h-full">
         <div className="flex-shrink-0 px-6 pt-6">
@@ -354,25 +374,6 @@ export function TemplateCreationWizard({
               <AlertDescription>{errors[currentStep]}</AlertDescription>
             </Alert>
           )}
-        </div>
-
-        <div className="flex-shrink-0 px-6 pb-6 bg-white">
-          <WizardNavigation
-            currentStep={currentStep}
-            totalSteps={steps.length}
-            onBack={handleBack}
-            onNext={handleNext}
-            onSkip={handleSkip}
-            onFinish={handleFinish}
-            isNextDisabled={isLoading}
-            isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
-            isLoading={isLoading}
-            finishLabel={t('templates.wizard.create', 'Create Template')}
-            backLabel={t('templates.wizard.back', 'Back')}
-            skipLabel={t('templates.wizard.skip', 'Skip')}
-            nextLabel={t('templates.wizard.next', 'Next')}
-            completingLabel={t('templates.wizard.creating', 'Creating...')}
-          />
         </div>
       </div>
     </Dialog>

@@ -386,14 +386,30 @@ const TaxRates: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Dialog isOpen={isDialogOpen} onClose={() => {
-        setIsDialogOpen(false);
-        setHasAttemptedSubmit(false);
-        setValidationErrors([]);
-      }} title={isEditing ? 'Edit Tax Rate' : 'Add New Tax Rate'}>
+      <Dialog
+        isOpen={isDialogOpen}
+        onClose={() => {
+          setIsDialogOpen(false);
+          setHasAttemptedSubmit(false);
+          setValidationErrors([]);
+        }}
+        title={isEditing ? 'Edit Tax Rate' : 'Add New Tax Rate'}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button
+              id="save-tax-rate-button"
+              type="button"
+              onClick={() => (document.getElementById('tax-rate-form') as HTMLFormElement | null)?.requestSubmit()}
+              className={!currentTaxRate.region_code || !currentTaxRate.tax_percentage || !currentTaxRate.start_date ? 'opacity-50' : ''}
+            >
+              {isEditing ? 'Update' : 'Add'} Tax Rate
+            </Button>
+          </div>
+        )}
+      >
         <DialogContent>
           <DialogDescription>Enter the details for the tax rate.</DialogDescription>
-          <form onSubmit={(e) => { e.preventDefault(); handleAddOrUpdateTaxRate(); }} noValidate>
+          <form id="tax-rate-form" onSubmit={(e) => { e.preventDefault(); handleAddOrUpdateTaxRate(); }} noValidate>
             <div className="space-y-4">
               {hasAttemptedSubmit && validationErrors.length > 0 && (
                 <Alert variant="destructive" className="mb-4">
@@ -478,15 +494,6 @@ const TaxRates: React.FC = () => {
                   setError(null);
                 }}
               />
-            </div>
-            <div className="flex justify-end">
-              <Button
-              id="save-tax-rate-button"
-              type="submit"
-              className={!currentTaxRate.region_code || !currentTaxRate.tax_percentage || !currentTaxRate.start_date ? 'opacity-50' : ''}
-            >
-              {isEditing ? 'Update' : 'Add'} Tax Rate
-            </Button>  
             </div>
             </div>
           </form>
