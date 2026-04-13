@@ -125,7 +125,8 @@ async function runScheduledWorkflow(
       businessHoursScheduleId: schedule.business_hours_schedule_id ?? null
     });
 
-    if (!resolvedBusinessDaySettings.ok) {
+    if (resolvedBusinessDaySettings.ok === false) {
+      const { issue } = resolvedBusinessDaySettings;
       try {
         await cancelRecurringWorkflowScheduleRegistration(schedule.job_id, tenant);
       } catch (cancelError) {
@@ -133,7 +134,7 @@ async function runScheduledWorkflow(
         await WorkflowScheduleStateModel.update(knex, schedule.id, {
           last_fire_at: triggerMetadata.firedAt,
           last_run_status: 'error',
-          last_error: `${resolvedBusinessDaySettings.issue.message} (${cancellationMessage})`,
+          last_error: `${issue.message} (${cancellationMessage})`,
           last_fire_key: fireKey
         }).catch(() => undefined);
         throw cancelError;
@@ -147,7 +148,7 @@ async function runScheduledWorkflow(
         next_fire_at: null,
         last_fire_at: triggerMetadata.firedAt,
         last_run_status: 'error',
-        last_error: resolvedBusinessDaySettings.issue.message,
+        last_error: issue.message,
         last_fire_key: fireKey
       });
       return;

@@ -364,6 +364,10 @@ const enrichScheduleRow = async (
       : null
   );
 
+  const calendarResolutionError = resolvedBusinessDaySettings.ok === false
+    ? resolvedBusinessDaySettings.issue.message
+    : null;
+
   return {
     ...schedule,
     workflow_name: workflow?.name ?? null,
@@ -371,7 +375,7 @@ const enrichScheduleRow = async (
     effective_business_hours_schedule_name: effectiveResolution?.scheduleName ?? null,
     business_hours_schedule_source: effectiveResolution?.source ?? null,
     next_eligible_fire_at: nextEligibleFireAt,
-    calendar_resolution_error: resolvedBusinessDaySettings.ok ? null : resolvedBusinessDaySettings.issue.message
+    calendar_resolution_error: calendarResolutionError
   };
 };
 
@@ -456,10 +460,11 @@ async function mutateWorkflowSchedule(
     dayTypeFilter: desired.dayTypeFilter,
     businessHoursScheduleId: desired.businessHoursScheduleId ?? null
   });
-  if (!resolvedBusinessDaySettings.ok) {
+  if (resolvedBusinessDaySettings.ok === false) {
+    const { issue } = resolvedBusinessDaySettings;
     return toWorkflowScheduleValidationFailure(
-      resolvedBusinessDaySettings.issue.code,
-      resolvedBusinessDaySettings.issue.message
+      issue.code,
+      issue.message
     );
   }
 
