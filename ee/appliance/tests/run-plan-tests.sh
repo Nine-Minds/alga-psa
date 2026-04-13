@@ -100,6 +100,8 @@ require_text "$bootstrap_dry_run_output" "reset-appliance-data.sh"
 require_text "$bootstrap_dry_run_output" "create source git alga-appliance"
 require_text "$bootstrap_dry_run_output" "install-storage.sh --kubeconfig"
 require_text "$bootstrap_dry_run_output" "collect-support-bundle.sh"
+require_text "$bootstrap_dry_run_output" "Appliance claim URL (one-time): https://psa.example.test/auth/appliance-claim?token=<token>"
+require_text "$bootstrap_dry_run_output" "appliance-claim-token"
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'appUrl: "https://psa.example.test"'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'host: "psa.example.test"'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'domainSuffix: ""'

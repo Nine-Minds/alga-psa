@@ -21,7 +21,7 @@ Usage:
   build-images.sh --release-version <version> --talos-version <version> --kubernetes-version <version> --app-version <version> --app-release-branch <branch> --alga-core-tag <tag> --workflow-worker-tag <tag> --email-service-tag <tag> --temporal-worker-tag <tag> [options]
 
 Options:
-  --release-version <version>   Appliance release version (x.y.z)
+  --release-version <version>   Appliance release version (x.y, x.y-suffix, x.y.z, or x.y.z-suffix)
   --talos-version <version>     Talos version (for example: v1.12.0)
   --kubernetes-version <ver>    Kubernetes version (for example: v1.31.4)
   --app-version <version>       Alga application version/tag carried by the release manifest
@@ -268,8 +268,8 @@ if [ -z "${RELEASE_VERSION:-}" ] || [ -z "${TALOS_VERSION:-}" ] || [ -z "${KUBER
   exit 1
 fi
 
-if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "release-version must follow x.y.z" >&2
+if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?(-[A-Za-z0-9.-]+)?$ ]]; then
+  echo "release-version must follow x.y, x.y-suffix, x.y.z, or x.y.z-suffix" >&2
   exit 1
 fi
 

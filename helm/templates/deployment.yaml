@@ -531,6 +531,8 @@ spec:
             value: "{{ .Values.auth.nextauth_session_expires }}"
           - name: AUTH_TRUST_HOST
             value: "true"
+          - name: APPLIANCE_MODE
+            value: {{ ternary "true" "false" .Values.setup.applianceBootstrap.enabled | quote }}
 
           # ----------- EXTENSIONS ----------------
           {{- with .Values.config.extensions.domainRoot }}

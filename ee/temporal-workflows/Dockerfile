@@ -39,25 +39,25 @@ FROM base AS development
 WORKDIR /app/shared
 RUN npm install
 RUN npm run build
-RUN npm run build
 
 # Now build temporal-workflows
 WORKDIR /app
-COPY ee/temporal-workflows/ /app/ee/temporal-workflows/
-# Provide source files referenced via TS path aliases
-COPY packages/ /app/packages/
 COPY package*.json /app/
 COPY .npmrc /app/
 
 WORKDIR /app/ee/temporal-workflows
-# Ensure tsc-alias is available for the build
 RUN npm install
+
 WORKDIR /app
 RUN npm install --ignore-scripts --workspaces=false --legacy-peer-deps
 
+COPY ee/temporal-workflows/src /app/ee/temporal-workflows/src
+COPY ee/temporal-workflows/tsconfig.json /app/ee/temporal-workflows/tsconfig.json
+COPY ee/temporal-workflows/tsconfig.build.json /app/ee/temporal-workflows/tsconfig.build.json
+
 # Build event-schemas (imported at runtime by shared/workflow/streams)
 WORKDIR /app/packages/event-schemas
-RUN npx tsup
+RUN npm install --ignore-scripts --workspaces=false && ./node_modules/.bin/tsup
 
 WORKDIR /app/ee/temporal-workflows
 RUN npm run build
@@ -79,10 +79,12 @@ RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds direc
 # Production image from prebuilt artifacts (skips in-container TypeScript compilation).
 FROM base AS production-prebuilt
 
-COPY --from=prebuilt /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
+RUN groupadd -r temporal && useradd -r -g temporal temporal
+
+COPY --chown=temporal:temporal --from=prebuilt /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 # Copy integrations node_modules to both locations for module resolution
-COPY --from=base /app/packages/integrations/node_modules /app/packages/integrations/node_modules
-COPY --from=base /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
+COPY --chown=temporal:temporal --from=base /app/packages/integrations/node_modules /app/packages/integrations/node_modules
+COPY --chown=temporal:temporal --from=base /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
 # Expose all local monorepo packages under @alga-psa/* for runtime resolution.
 RUN mkdir -p /app/node_modules/@alga-psa \
     && for pkg in /app/packages/*; do \
@@ -93,8 +95,6 @@ RUN mkdir -p /app/node_modules/@alga-psa \
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt production stage"
 
-RUN groupadd -r temporal && useradd -r -g temporal temporal
-RUN chown -R temporal:temporal /app
 USER temporal
 
 WORKDIR /app/ee/temporal-workflows
@@ -109,17 +109,20 @@ CMD ["node", "dist/ee/temporal-workflows/src/worker.js"]
 # Production stage
 FROM base AS production
 
+# Create non-root user before final artifact copies so we can preserve ownership without a recursive chown.
+RUN groupadd -r temporal && useradd -r -g temporal temporal
+
 # Copy built shared module
-COPY --from=development /app/shared /app/shared
+COPY --chown=temporal:temporal --from=development /app/shared /app/shared
 
 # Copy built temporal-workflows
-COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
-COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
+COPY --chown=temporal:temporal --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
+COPY --chown=temporal:temporal --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
 # Copy event-schemas dist (runtime dependency of shared/workflow/streams)
-COPY --from=development /app/packages/event-schemas/dist /app/packages/event-schemas/dist
+COPY --chown=temporal:temporal --from=development /app/packages/event-schemas/dist /app/packages/event-schemas/dist
 # Copy integrations node_modules to both locations for module resolution
-COPY --from=development /app/packages/integrations/node_modules /app/packages/integrations/node_modules
-COPY --from=development /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
+COPY --chown=temporal:temporal --from=development /app/packages/integrations/node_modules /app/packages/integrations/node_modules
+COPY --chown=temporal:temporal --from=development /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
 # Expose all local monorepo packages under @alga-psa/* for runtime resolution.
 RUN mkdir -p /app/node_modules/@alga-psa \
     && for pkg in /app/packages/*; do \
@@ -131,9 +134,6 @@ RUN mkdir -p /app/node_modules/@alga-psa \
 # Verify seeds are present in production stage
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in production stage"
 
-# Create non-root user
-RUN groupadd -r temporal && useradd -r -g temporal temporal
-RUN chown -R temporal:temporal /app
 USER temporal
 
 WORKDIR /app/ee/temporal-workflows

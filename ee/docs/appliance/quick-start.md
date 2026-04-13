@@ -103,13 +103,33 @@ After bootstrap completes:
 
 1. Open `Status` and confirm the appliance is healthy or converging normally.
 2. Open `Workloads` and verify the `msp` workloads are starting successfully.
-3. Open the app URL you configured, for example:
+3. Capture the first-admin claim link printed by bootstrap:
+
+```text
+Appliance claim URL (one-time): https://<your-app-host>/auth/appliance-claim?token=...
+```
+
+If that output is lost, retrieve the token directly from Kubernetes:
+
+```bash
+kubectl --kubeconfig ~/.alga-psa-appliance/<site-id>/kubeconfig \
+  -n msp get secret appliance-claim-token \
+  -o jsonpath='{.data.token}' | base64 --decode; echo
+```
+
+Then open:
+
+```text
+https://<your-app-host>/auth/appliance-claim?token=<retrieved-token>
+```
+
+4. Open the app URL you configured, for example:
 
 ```text
 http://<appliance-ip>:3000
 ```
 
-You should reach the Alga PSA login screen.
+You should reach the appliance claim flow first. After claim is complete, use normal MSP sign-in.
 
 For day-2 tasks and deeper troubleshooting, continue with:
 

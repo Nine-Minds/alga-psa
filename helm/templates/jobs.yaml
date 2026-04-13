@@ -213,6 +213,10 @@ spec:
               value: {{ .Values.setup.applianceBootstrap.waitTimeoutSeconds | default 300 | quote }}
             - name: BOOTSTRAP_WAIT_RETRY_SECONDS
               value: {{ .Values.setup.applianceBootstrap.retryIntervalSeconds | default 2 | quote }}
+            {{- if .Values.setup.applianceBootstrap.enabled }}
+            - name: SEEDS_DIR
+              value: "/app/ee/server/seeds/onboarding"
+            {{- end }}
 
             # Secret provider configuration for setup jobs
             - name: SECRET_READ_CHAIN

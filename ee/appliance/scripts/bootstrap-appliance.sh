@@ -151,6 +151,56 @@ PY
   fi
 }
 
+generate_claim_token() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32
+  else
+    python3 - <<'PY'
+import secrets
+print(secrets.token_hex(32))
+PY
+  fi
+}
+
+sha256_hex() {
+  local value="$1"
+  if command -v openssl >/dev/null 2>&1; then
+    printf '%s' "$value" | openssl dgst -sha256 -r | awk '{print $1}'
+    return 0
+  fi
+
+  if command -v shasum >/dev/null 2>&1; then
+    printf '%s' "$value" | shasum -a 256 | awk '{print $1}'
+    return 0
+  fi
+
+  python3 - "$value" <<'PY'
+import hashlib
+import sys
+
+print(hashlib.sha256(sys.argv[1].encode("utf-8")).hexdigest())
+PY
+}
+
+iso_timestamp_plus_hours() {
+  local hours="$1"
+  python3 - "$hours" <<'PY'
+from datetime import datetime, timedelta, timezone
+import sys
+
+hours = int(sys.argv[1])
+target = datetime.now(timezone.utc) + timedelta(hours=hours)
+print(target.isoformat().replace("+00:00", "Z"))
+PY
+}
+
+iso_timestamp_now() {
+  python3 - <<'PY'
+from datetime import datetime, timezone
+print(datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"))
+PY
+}
+
 yaml_string() {
   python3 - "$1" <<'PY'
 import json
@@ -720,6 +770,111 @@ ensure_alga_auth_secret() {
     --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
 }
 
+get_db_superuser_password() {
+  kubectl --kubeconfig "$KUBECONFIG_PATH" -n msp get secret db-credentials -o jsonpath='{.data.DB_PASSWORD_SUPERUSER}' | base64 --decode
+}
+
+run_server_sql() {
+  local sql="$1"
+
+  if $DRY_RUN; then
+    echo "+ run SQL against msp/server database"
+    return 0
+  fi
+
+  local pg_password
+  pg_password="$(get_db_superuser_password)"
+
+  kubectl --kubeconfig "$KUBECONFIG_PATH" -n msp exec -i db-0 -- sh -c "PGPASSWORD=\"\$1\" psql -h db -p 5432 -U postgres -d server -Atq" -- "$pg_password" <<EOF
+$sql
+EOF
+}
+
+issue_appliance_claim_token() {
+  local base_url claim_token claim_token_hash expires_at issued_at claim_url
+  local state_json internal_user_count active_token_count completed_claim_count table_exists
+
+  base_url="${APP_URL%/}"
+  claim_url="${base_url}/auth/appliance-claim?token=<token>"
+
+  if $DRY_RUN; then
+    echo "+ evaluate appliance claim bootstrap state in server database"
+    echo "+ create/apply secret msp/appliance-claim-token"
+    echo "Appliance claim URL (one-time): ${claim_url}"
+    echo "Claim token secret: msp/appliance-claim-token"
+    echo "Retrieve claim token:"
+    echo "  kubectl --kubeconfig \"$KUBECONFIG_PATH\" -n msp get secret appliance-claim-token -o jsonpath='{.data.token}' | base64 --decode; echo"
+    return 0
+  fi
+
+  state_json="$(run_server_sql "SELECT json_build_object(
+    'table_exists', to_regclass('public.appliance_claim_tokens') IS NOT NULL,
+    'internal_user_count', COALESCE((SELECT COUNT(*) FROM users WHERE user_type = 'internal' AND is_inactive = false), 0),
+    'active_token_count', COALESCE((SELECT COUNT(*) FROM appliance_claim_tokens WHERE claimed_at IS NULL AND expires_at > now()), 0),
+    'completed_claim_count', COALESCE((SELECT COUNT(*) FROM appliance_claim_tokens WHERE claimed_at IS NOT NULL AND coalesce((metadata->>'superseded')::boolean, false) = false), 0)
+  )::text;")"
+
+  table_exists="$(printf '%s' "$state_json" | jq -r '.table_exists')"
+  internal_user_count="$(printf '%s' "$state_json" | jq -r '.internal_user_count')"
+  active_token_count="$(printf '%s' "$state_json" | jq -r '.active_token_count')"
+  completed_claim_count="$(printf '%s' "$state_json" | jq -r '.completed_claim_count')"
+
+  if [ "$table_exists" != "true" ]; then
+    echo "WARNING: appliance_claim_tokens table is missing. Skipping appliance claim token issuance." >&2
+    return 0
+  fi
+
+  if [ "$completed_claim_count" -gt 0 ] || [ "$internal_user_count" -gt 0 ]; then
+    echo "Appliance already claimed (durable claim record exists or internal MSP users exist). No new claim token was issued."
+    return 0
+  fi
+
+  if [ "$BOOTSTRAP_MODE" = "recover" ] && [ "$active_token_count" -gt 0 ] && secret_exists "msp" "appliance-claim-token"; then
+    local existing_url
+    existing_url="$(kubectl --kubeconfig "$KUBECONFIG_PATH" -n msp get secret appliance-claim-token -o jsonpath='{.data.claim_url}' | base64 --decode || true)"
+    echo "Reusing existing appliance claim token from secret msp/appliance-claim-token"
+    if [ -n "$existing_url" ]; then
+      echo "Appliance claim URL (existing): ${existing_url}"
+    fi
+    echo "Retrieve claim token:"
+    echo "  kubectl --kubeconfig \"$KUBECONFIG_PATH\" -n msp get secret appliance-claim-token -o jsonpath='{.data.token}' | base64 --decode; echo"
+    return 0
+  fi
+
+  claim_token="$(generate_claim_token)"
+  claim_token_hash="$(sha256_hex "$claim_token")"
+  expires_at="$(iso_timestamp_plus_hours "${APPLIANCE_CLAIM_TOKEN_TTL_HOURS:-72}")"
+  issued_at="$(iso_timestamp_now)"
+  claim_url="${base_url}/auth/appliance-claim?token=${claim_token}"
+
+  run_server_sql "
+BEGIN;
+UPDATE appliance_claim_tokens
+SET
+  claimed_at = now(),
+  metadata = coalesce(metadata, '{}'::jsonb) || '{\"superseded\":true,\"superseded_by\":\"bootstrap-appliance.sh\"}'::jsonb
+WHERE claimed_at IS NULL;
+INSERT INTO appliance_claim_tokens (token_hash, expires_at, created_at, metadata)
+VALUES (
+  '${claim_token_hash}',
+  '${expires_at}',
+  now(),
+  '{\"issued_by\":\"bootstrap-appliance.sh\",\"bootstrap_mode\":\"${BOOTSTRAP_MODE}\"}'::jsonb
+);
+COMMIT;"
+
+  kubectl --kubeconfig "$KUBECONFIG_PATH" -n msp create secret generic appliance-claim-token \
+    --from-literal=token="$claim_token" \
+    --from-literal=claim_url="$claim_url" \
+    --from-literal=issued_at="$issued_at" \
+    --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
+
+  echo "Appliance claim URL (one-time): ${claim_url}"
+  echo "Claim token secret: msp/appliance-claim-token"
+  echo "Retrieve claim token:"
+  echo "  kubectl --kubeconfig \"$KUBECONFIG_PATH\" -n msp get secret appliance-claim-token -o jsonpath='{.data.token}' | base64 --decode; echo"
+}
+
 create_runtime_values_dir() {
   local source_profile_dir="$REPO_ROOT/ee/appliance/flux/profiles/$PROFILE"
   local values_dir
@@ -1107,6 +1262,7 @@ apply_release_selection
 prepull_images
 install_gitops_sync
 wait_for_bootstrap
+issue_appliance_claim_token
 
 persist_operator_metadata
 

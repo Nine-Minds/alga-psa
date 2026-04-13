@@ -87,6 +87,37 @@ describe('ApplianceClaimPage', () => {
     expect(screen.queryByText('Claim Appliance MSP Admin')).not.toBeInTheDocument();
   });
 
+  it('keeps the claim form visible for recoverable validation errors', async () => {
+    verifyTokenMock.mockResolvedValue({ success: true, status: 'valid' });
+    completeClaimMock.mockResolvedValue({
+      success: false,
+      status: 'valid',
+      error: 'Password confirmation does not match.',
+      recoverable: true,
+    });
+
+    render(<ApplianceClaimPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Claim Appliance MSP Admin')).toBeInTheDocument();
+    });
+
+    fireEvent.change(getNamedInput('fullName'), { target: { value: 'Alice Admin' } });
+    fireEvent.change(getNamedInput('email'), { target: { value: 'admin@example.com' } });
+    fireEvent.change(getNamedInput('organizationName'), { target: { value: 'Acme MSP' } });
+    fireEvent.change(getNamedInput('password'), { target: { value: 'StrongPassword1!' } });
+    fireEvent.change(getNamedInput('confirmPassword'), { target: { value: 'MismatchPassword1!' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Claim appliance' }));
+
+    await waitFor(() => {
+      expect(completeClaimMock).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.getByText('Claim Appliance MSP Admin')).toBeInTheDocument();
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(signInMock).not.toHaveBeenCalled();
+  });
+
   it('T008: signs in and redirects to /msp/onboarding after successful claim', async () => {
     verifyTokenMock.mockResolvedValue({ success: true, status: 'valid' });
     completeClaimMock.mockResolvedValue({

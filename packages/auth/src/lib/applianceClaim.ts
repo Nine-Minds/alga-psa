@@ -42,6 +42,7 @@ export interface CompleteApplianceClaimResult {
   status: ApplianceClaimVerifyStatus;
   username?: string;
   error?: string;
+  recoverable?: boolean;
 }
 
 interface ApplianceClaimTokenRow {
@@ -72,6 +73,23 @@ async function hasAnyInternalUser(trx: Knex.Transaction): Promise<boolean> {
     .where({ user_type: 'internal', is_inactive: false })
     .first('user_id');
   return Boolean(row);
+}
+
+async function hasCompletedApplianceClaimRecord(trx: Knex.Transaction): Promise<boolean> {
+  const row = await trx('appliance_claim_tokens')
+    .whereNotNull('claimed_at')
+    .whereRaw("coalesce((metadata->>'superseded')::boolean, false) = false")
+    .first('id');
+
+  return Boolean(row);
+}
+
+async function isApplianceAlreadyClaimed(trx: Knex.Transaction): Promise<boolean> {
+  if (await hasCompletedApplianceClaimRecord(trx)) {
+    return true;
+  }
+
+  return hasAnyInternalUser(trx);
 }
 
 async function ensureTenantRow(
@@ -133,21 +151,41 @@ async function ensureTenantSettingsRow(trx: Knex.Transaction, tenantId: string):
     .ignore();
 }
 
+export function resolveOnboardingSeedPath(
+  seedFileName: string,
+  options?: {
+    cwd?: string;
+    moduleDirectory?: string;
+  }
+): string {
+  const cwd = options?.cwd ?? process.cwd();
+  const moduleDirectory = options?.moduleDirectory ?? moduleDir;
+  const candidatePaths = Array.from(new Set([
+    path.resolve(cwd, 'ee/server/seeds/onboarding', seedFileName),
+    path.resolve(cwd, 'server/seeds/onboarding', seedFileName),
+    path.resolve(cwd, 'seeds/onboarding', seedFileName),
+    path.resolve(cwd, '..', 'ee/server/seeds/onboarding', seedFileName),
+    path.resolve(cwd, '..', 'server/seeds/onboarding', seedFileName),
+    path.resolve(moduleDirectory, '../../../../ee/server/seeds/onboarding', seedFileName),
+    path.resolve(moduleDirectory, '../../../../server/seeds/onboarding', seedFileName),
+    path.resolve(moduleDirectory, '../../../../../ee/server/seeds/onboarding', seedFileName),
+    path.resolve(moduleDirectory, '../../../../../server/seeds/onboarding', seedFileName),
+  ]));
+
+  const seedPath = candidatePaths.find((candidate) => existsSync(candidate));
+  if (!seedPath) {
+    throw new Error(`Unable to resolve onboarding seed "${seedFileName}"`);
+  }
+
+  return seedPath;
+}
+
 async function runOnboardingSeed(
   trx: Knex.Transaction,
   tenantId: string,
   seedFileName: string
 ): Promise<void> {
-  const candidatePaths = [
-    path.resolve(process.cwd(), 'ee/server/seeds/onboarding', seedFileName),
-    path.resolve(process.cwd(), '..', 'ee/server/seeds/onboarding', seedFileName),
-    path.resolve(moduleDir, '../../../../../ee/server/seeds/onboarding', seedFileName),
-    path.resolve(moduleDir, '../../../../../../ee/server/seeds/onboarding', seedFileName),
-  ];
-  const seedPath = candidatePaths.find((candidate) => existsSync(candidate));
-  if (!seedPath) {
-    throw new Error(`Unable to resolve onboarding seed "${seedFileName}"`);
-  }
+  const seedPath = resolveOnboardingSeedPath(seedFileName);
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const seedModule = require(seedPath);
@@ -203,7 +241,7 @@ async function verifyTokenForClaim(
     return { status: 'appliance_mode_disabled' };
   }
 
-  if (await hasAnyInternalUser(trx)) {
+  if (await isApplianceAlreadyClaimed(trx)) {
     return { status: 'already_claimed' };
   }
 
@@ -262,26 +300,30 @@ export async function completeApplianceClaim(
       success: false,
       status: 'bootstrap_state_inconsistent',
       error: 'All fields are required.',
+      recoverable: true,
     };
   }
 
   if (password !== confirmPassword) {
     return {
       success: false,
-      status: 'bootstrap_state_inconsistent',
+      status: 'valid',
       error: 'Password confirmation does not match.',
+      recoverable: true,
     };
   }
 
   if (password.length < 8) {
     return {
       success: false,
-      status: 'bootstrap_state_inconsistent',
+      status: 'valid',
       error: 'Password must be at least 8 characters.',
+      recoverable: true,
     };
   }
 
-  return withAdminTransaction(async (trx) => {
+  try {
+    return await withAdminTransaction(async (trx) => {
     return trx.transaction(async (innerTrx) => {
       const verification = await verifyTokenForClaim(innerTrx, normalizedToken);
       if (verification.status !== 'valid' || !verification.tokenRow) {
@@ -317,7 +359,7 @@ export async function completeApplianceClaim(
         };
       }
 
-      if (await hasAnyInternalUser(innerTrx)) {
+      if (await isApplianceAlreadyClaimed(innerTrx)) {
         return {
           success: false,
           status: 'already_claimed',
@@ -330,8 +372,9 @@ export async function completeApplianceClaim(
       if (existingEmail) {
         return {
           success: false,
-          status: 'bootstrap_state_inconsistent',
+          status: 'valid',
           error: 'Email is already in use.',
+          recoverable: true,
         };
       }
 
@@ -394,7 +437,14 @@ export async function completeApplianceClaim(
         username: normalizedEmail,
       };
     });
-  });
+    });
+  } catch (error) {
+    return {
+      success: false,
+      status: 'bootstrap_state_inconsistent',
+      error: error instanceof Error ? error.message : 'Failed to complete appliance claim.',
+    };
+  }
 }
 
 export function getApplianceClaimTokenTtlHours(): number {

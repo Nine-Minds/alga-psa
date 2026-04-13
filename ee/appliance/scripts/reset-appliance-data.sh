@@ -5,7 +5,7 @@ KUBECONFIG_PATH="${KUBECONFIG:-}"
 APP_NAMESPACE="msp"
 RELEASE_NAMESPACE="alga-system"
 RESET_NAMESPACE="appliance-reset"
-STORAGE_PATH="/opt/local-path-provisioner"
+STORAGE_PATH="/var/mnt/alga-data/local-path-provisioner"
 FLUX_NAMESPACE="flux-system"
 GITOPS_SOURCE_NAME="alga-appliance"
 GITOPS_KUSTOMIZATION_NAME="alga-appliance"
@@ -22,7 +22,7 @@ Options:
   --app-namespace <name>       Application namespace to delete (default: msp)
   --release-namespace <name>   Release namespace to delete (default: alga-system)
   --reset-namespace <name>     Temporary namespace for the wipe job (default: appliance-reset)
-  --storage-path <path>        Host path used by local-path storage (default: /opt/local-path-provisioner)
+  --storage-path <path>        Host path used by local-path storage (default: /var/mnt/alga-data/local-path-provisioner)
   --flux-namespace <name>      Flux namespace containing appliance source objects (default: flux-system)
   --gitops-source <name>       GitRepository name to delete before reset (default: alga-appliance)
   --gitops-kustomization <name>

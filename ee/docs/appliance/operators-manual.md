@@ -129,6 +129,32 @@ Use this flow for:
 - failed bootstrap jobs
 - unhealthy `alga-core`, `db`, `redis`, or `pgbouncer` startup
 
+## Initial Admin Claim Retrieval
+
+Fresh appliance installs require a one-time claim token for the first MSP admin.
+
+Bootstrap prints a claim URL once:
+
+```text
+Appliance claim URL (one-time): https://<app-host>/auth/appliance-claim?token=...
+```
+
+If that output is lost, retrieve the token from Kubernetes:
+
+```bash
+kubectl --kubeconfig ~/.alga-psa-appliance/<site-id>/kubeconfig \
+  -n msp get secret appliance-claim-token \
+  -o jsonpath='{.data.token}' | base64 --decode; echo
+```
+
+Then claim the appliance:
+
+```text
+https://<app-host>/auth/appliance-claim?token=<retrieved-token>
+```
+
+If the appliance is already claimed, the claim route will stop accepting new first-admin setup and normal MSP sign-in is the supported entry path.
+
 ## Reset
 
 Use `Reset` only when you intend to wipe appliance runtime state.

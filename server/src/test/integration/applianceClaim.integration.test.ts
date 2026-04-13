@@ -31,13 +31,18 @@ async function truncateClaimTables(db: Knex): Promise<void> {
 async function insertClaimToken(
   db: Knex,
   token: string,
-  options?: { expiresAt?: Date; claimedAt?: Date | null }
+  options?: {
+    expiresAt?: Date;
+    claimedAt?: Date | null;
+    metadata?: Record<string, unknown> | null;
+  }
 ): Promise<void> {
   await db('appliance_claim_tokens').insert({
     token_hash: hashToken(token),
     expires_at: options?.expiresAt ?? new Date(Date.now() + 60 * 60 * 1000),
     claimed_at: options?.claimedAt ?? null,
     created_at: db.fn.now(),
+    metadata: options?.metadata ? JSON.stringify(options.metadata) : null,
   });
 }
 
@@ -88,6 +93,7 @@ describe('appliance claim integration', () => {
     });
     await insertClaimToken(db, 'used-token', {
       claimedAt: new Date(),
+      metadata: { superseded: true },
     });
 
     const beforeRows = await db('appliance_claim_tokens')
@@ -106,6 +112,43 @@ describe('appliance claim integration', () => {
       .select('id', 'claimed_at')
       .orderBy('created_at', 'asc');
     expect(afterRows).toEqual(beforeRows);
+  });
+
+  it('treats a completed non-superseded claim record as already claimed even without active internal users', async () => {
+    await insertClaimToken(db, 'claimed-token', {
+      claimedAt: new Date(),
+      metadata: { claim_source: 'web' },
+    });
+
+    const verifyResult = await verifyApplianceClaimTokenAction('claimed-token');
+    expect(verifyResult.status).toBe('already_claimed');
+
+    const completionResult = await completeApplianceClaimAction({
+      token: 'claimed-token',
+      fullName: 'Blocked Admin',
+      email: 'blocked@example.com',
+      organizationName: 'Blocked MSP',
+      password: 'StrongPassword1!',
+      confirmPassword: 'StrongPassword1!',
+    });
+
+    expect(completionResult.success).toBe(false);
+    expect(completionResult.status).toBe('already_claimed');
+  });
+
+  it('ignores superseded claim records when validating a current unclaimed token', async () => {
+    await insertClaimToken(db, 'superseded-token', {
+      claimedAt: new Date(),
+      metadata: { superseded: true },
+    });
+    await insertClaimToken(db, 'current-token');
+
+    const result = await verifyApplianceClaimTokenAction('current-token');
+
+    expect(result).toEqual({
+      success: true,
+      status: 'valid',
+    });
   });
 
   it('T004: blocks completion when appliance mode is disabled or an MSP admin already exists', async () => {
@@ -164,6 +207,24 @@ describe('appliance claim integration', () => {
 
     expect(alreadyClaimedResult.success).toBe(false);
     expect(alreadyClaimedResult.status).toBe('already_claimed');
+  });
+
+  it('returns a recoverable validation error when the claim form input is user-correctable', async () => {
+    await insertClaimToken(db, 'validation-token');
+
+    const result = await completeApplianceClaimAction({
+      token: 'validation-token',
+      fullName: 'Validation Admin',
+      email: 'validation@example.com',
+      organizationName: 'Validation MSP',
+      password: 'StrongPassword1!',
+      confirmPassword: 'MismatchPassword1!',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('valid');
+    expect(result.recoverable).toBe(true);
+    expect(result.error).toBe('Password confirmation does not match.');
   });
 
   it('T005: redeeming a valid token creates tenant bootstrap context, first MSP admin, and role assignment', async () => {
