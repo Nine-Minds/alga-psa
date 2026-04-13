@@ -434,7 +434,11 @@
       "selectMasterTicket": "Selecciona un ticket maestro...",
       "syncUpdates": "Sincronizar actualizaciones del maestro a los hijos (respuestas públicas + cambios de flujo de trabajo)",
       "syncUpdatesHelp": "Los tickets hijos conservan su estado actual cuando se agrupan. Los campos de flujo de trabajo quedan bloqueados en los hijos por defecto. Las notas internas se mantienen en el maestro.",
-      "childrenDescription": "Los secundarios mantienen su estado actual; los campos de flujo de trabajo están bloqueados en los secundarios. Las respuestas entrantes de los secundarios se muestran abajo como solo lectura."
+      "childrenDescription": "Los secundarios mantienen su estado actual; los campos de flujo de trabajo están bloqueados en los secundarios. Las respuestas entrantes de los secundarios se muestran abajo como solo lectura.",
+      "checkingMasters": "Comprobando agrupaciones existentes...",
+      "existingMasterSuffix": "(maestro existente)",
+      "existingMasterLocked": "Un ticket seleccionado ya es un maestro de agrupación. Se usará como maestro; los demás se añadirán como hijos.",
+      "multipleExistingMasters": "Varios tickets seleccionados ya son maestros de agrupación ({{count}}). Desagrupa todos menos uno antes de agrupar."
     },
     "auth": {
       "moveRequired": "Debes iniciar sesión para mover tickets",

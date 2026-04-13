@@ -33,7 +33,7 @@ import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { useDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser, getCurrentUserPermissions } from "@alga-psa/user-composition/actions";
@@ -1631,7 +1631,11 @@ const handleClose = () => {
 
     const performAddChildToBundle = useCallback(async (childTicketId: string) => {
         if (!ticket.ticket_id) return;
-        await addChildrenToBundleAction({ masterTicketId: ticket.ticket_id, childTicketIds: [childTicketId] });
+        const result = await addChildrenToBundleAction({ masterTicketId: ticket.ticket_id, childTicketIds: [childTicketId] });
+        if (isActionMessageError(result)) {
+            toast.error(getErrorMessage(result));
+            return;
+        }
         toast.success('Added ticket to bundle');
         setAddChildTicketNumber('');
         resetChildTicketPickerState();
