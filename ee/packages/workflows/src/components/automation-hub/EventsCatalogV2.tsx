@@ -60,6 +60,7 @@ import {
   WorkflowActionInputFixedPicker,
   WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES,
   type WorkflowActionInputPickerField,
+  type WorkflowPickerActions,
 } from './WorkflowActionInputFixedPicker';
 import { resolveWorkflowSchemaFieldEditor } from './workflowSchemaFieldEditor';
 
@@ -600,7 +601,8 @@ const SchemaForm: React.FC<{
   value: Record<string, unknown>;
   onChange: (next: Record<string, unknown>) => void;
   errors: ValidationIssue[];
-}> = ({ schema, value, onChange, errors }) => {
+  pickerActions: WorkflowPickerActions;
+}> = ({ schema, value, onChange, errors, pickerActions }) => {
   const renderField = (
     fieldSchema: JsonSchema,
     rootSchema: JsonSchema,
@@ -695,6 +697,7 @@ const SchemaForm: React.FC<{
             onChange={(nextValue) => onChange(setDeepValue(value, path, nextValue) as Record<string, unknown>)}
             idPrefix={`simulate-form-${fieldPath || 'root'}`}
             rootInputMapping={value as InputMapping}
+            actions={pickerActions}
           />
           {resolved.description && <div className="text-[11px] text-gray-500">{resolved.description}</div>}
           {fieldErrors.map((err) => (
@@ -929,7 +932,7 @@ const SimpleSeriesChart: React.FC<{ series: Array<{ day: string; count: number }
   );
 };
 
-export default function EventsCatalogV2() {
+export default function EventsCatalogV2({ pickerActions }: { pickerActions: WorkflowPickerActions }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1525,6 +1528,7 @@ export default function EventsCatalogV2() {
         eventType={simulateState.eventType}
         payloadSchemaRef={simulateState.payloadSchemaRef}
         onClose={() => setSimulateState({ open: false, eventType: null, payloadSchemaRef: null })}
+        pickerActions={pickerActions}
       />
 
       {/* Define Custom Event */}
@@ -1730,7 +1734,8 @@ const SimulateDialog: React.FC<{
   eventType: string | null;
   payloadSchemaRef: string | null;
   onClose: () => void;
-}> = ({ open, eventType, payloadSchemaRef, onClose }) => {
+  pickerActions: WorkflowPickerActions;
+}> = ({ open, eventType, payloadSchemaRef, onClose, pickerActions }) => {
   const [mode, setMode] = useState<'form' | 'json'>('form');
   const [schema, setSchema] = useState<any | null>(null);
   const [schemaRefOverride, setSchemaRefOverride] = useState<string>('');
@@ -1918,7 +1923,7 @@ const SimulateDialog: React.FC<{
           {mode === 'form' && (
             <div>
               <div className="text-xs font-medium text-gray-700 mb-2">Payload</div>
-              <SchemaForm schema={schema} value={formValue ?? {}} onChange={setFormValue} errors={errors} />
+              <SchemaForm schema={schema} value={formValue ?? {}} onChange={setFormValue} errors={errors} pickerActions={pickerActions} />
             </div>
           )}
 

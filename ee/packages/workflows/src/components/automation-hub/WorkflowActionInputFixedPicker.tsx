@@ -88,36 +88,22 @@ const EMPTY_TICKET_FIELD_OPTIONS: TicketFieldOptions = {
   locations: [],
 };
 
-type WorkflowClientActionsModule = {
+export type WorkflowPickerActions = {
   getAllContacts: () => Promise<IContact[]>;
   getContactsByClient: (clientId: string) => Promise<IContact[]>;
-};
-
-type WorkflowIntegrationActionsModule = {
   getAvailableStatuses: (boardId: string) => Promise<{ statuses: TicketFieldOptions['statuses'] }>;
   getTicketFieldOptions: () => Promise<{ options: TicketFieldOptions }>;
+  getTicketById: (ticketId: string) => Promise<{
+    ticket_id?: string;
+    ticket_number?: string | null;
+    title?: string | null;
+    board_id?: string | null;
+  } | null>;
+  getTicketsForList: (input: {
+    boardFilterState: 'active' | 'inactive' | 'all';
+    searchQuery: string;
+  }) => Promise<{ tickets?: WorkflowTicketSearchResult[] } | null>;
 };
-
-type WorkflowTicketActionsModule = {
-  getTicketById: (ticketId: string) => Promise<{ ticket_id?: string; ticket_number?: string | null; title?: string | null; board_id?: string | null } | null>;
-  getTicketsForList: (input: { boardFilterState: 'active' | 'inactive' | 'all'; searchQuery: string }) => Promise<{ tickets?: WorkflowTicketSearchResult[] } | null>;
-};
-
-const loadFeatureActions = async <T,>(featureName: string): Promise<T> => {
-  const modulePath = ['@alga-psa', featureName, 'actions'].join('/');
-  return import(modulePath) as Promise<T>;
-};
-
-const loadClientActions = async () => loadFeatureActions<WorkflowClientActionsModule>('clients');
-const loadIntegrationActions = async () => loadFeatureActions<WorkflowIntegrationActionsModule>('integrations');
-const loadTicketActions = async () => loadFeatureActions<WorkflowTicketActionsModule>('tickets');
-
-const getAllContactsForPicker = async () => (await loadClientActions()).getAllContacts();
-const getContactsByClientForPicker = async (clientId: string) => (await loadClientActions()).getContactsByClient(clientId);
-const getAvailableStatusesForPicker = async (boardId: string) => (await loadIntegrationActions()).getAvailableStatuses(boardId);
-const getTicketFieldOptionsForPicker = async () => (await loadIntegrationActions()).getTicketFieldOptions();
-const getTicketByIdForPicker = async (ticketId: string) => (await loadTicketActions()).getTicketById(ticketId);
-const getTicketsForListForPicker = async (input: { boardFilterState: 'active' | 'inactive' | 'all'; searchQuery: string }) => (await loadTicketActions()).getTicketsForList(input);
 
 const TICKET_PICKER_DEPENDENCY_HINTS: Partial<Record<string, Record<string, string>>> = {
   contact: {
@@ -424,7 +410,8 @@ const appendCurrentValueOption = (
 
 const loadWorkflowPickerData = async (
   kind: string,
-  dependencies: DependencyResolution[]
+  dependencies: DependencyResolution[],
+  actions: WorkflowPickerActions
 ): Promise<WorkflowPickerData> => {
   switch (kind) {
     case 'ticket-status': {
@@ -435,7 +422,7 @@ const loadWorkflowPickerData = async (
       if (fixedBoard?.status === 'fixed' && fixedBoard.value) {
         boardId = fixedBoard.value;
       } else if (fixedTicket?.status === 'fixed' && fixedTicket.value) {
-        const ticket = await getTicketByIdForPicker(fixedTicket.value);
+        const ticket = await actions.getTicketById(fixedTicket.value);
         boardId = ticket?.board_id ?? null;
       }
 
@@ -446,7 +433,7 @@ const loadWorkflowPickerData = async (
         };
       }
 
-      const { statuses } = await getAvailableStatusesForPicker(boardId);
+      const { statuses } = await actions.getAvailableStatuses(boardId);
       return {
         ...EMPTY_PICKER_DATA,
         ticketOptions: {
@@ -458,8 +445,8 @@ const loadWorkflowPickerData = async (
     case 'contact': {
       const fixedClient = dependencies.find((dependency) => dependency.path === 'client_id');
       const contacts = fixedClient?.status === 'fixed' && fixedClient.value
-        ? await getContactsByClientForPicker(fixedClient.value)
-        : await getAllContactsForPicker();
+        ? await actions.getContactsByClient(fixedClient.value)
+        : await actions.getAllContacts();
       return {
         ...EMPTY_PICKER_DATA,
         contacts,
@@ -488,7 +475,7 @@ const loadWorkflowPickerData = async (
     default:
       return {
         ...EMPTY_PICKER_DATA,
-        ticketOptions: (await getTicketFieldOptionsForPicker()).options,
+        ticketOptions: (await actions.getTicketFieldOptions()).options,
       };
   }
 };
@@ -499,7 +486,8 @@ const WorkflowTicketPicker: React.FC<{
   onChange: (value: string | null) => void;
   idPrefix: string;
   disabled?: boolean;
-}> = ({ field, value, onChange, idPrefix, disabled }) => {
+  actions: WorkflowPickerActions;
+}> = ({ field, value, onChange, idPrefix, disabled, actions }) => {
   const [search, setSearch] = useState('');
   const [options, setOptions] = useState<WorkflowPickerOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -515,7 +503,7 @@ const WorkflowTicketPicker: React.FC<{
           try {
             setIsLoading(true);
             setLoadError(null);
-            const ticket = await getTicketByIdForPicker(value);
+            const ticket = await actions.getTicketById(value);
             if (!active) return;
             setOptions(ticket?.ticket_id ? ([{
               value: ticket.ticket_id,
@@ -543,7 +531,7 @@ const WorkflowTicketPicker: React.FC<{
       try {
         setIsLoading(true);
         setLoadError(null);
-        const result = await getTicketsForListForPicker({
+        const result = await actions.getTicketsForList({
           boardFilterState: 'active',
           searchQuery: normalizedSearch,
         });
@@ -575,7 +563,7 @@ const WorkflowTicketPicker: React.FC<{
       active = false;
       window.clearTimeout(timeoutId);
     };
-  }, [search, value]);
+  }, [search, value, actions]);
 
   const placeholder = field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Search tickets by number or title';
 
@@ -612,6 +600,7 @@ const renderDedicatedPicker = ({
   onChange,
   idPrefix,
   disabled,
+  actions,
 }: {
   field: WorkflowActionInputPickerField;
   pickerKind: string;
@@ -621,6 +610,7 @@ const renderDedicatedPicker = ({
   onChange: (value: string | null) => void;
   idPrefix: string;
   disabled?: boolean;
+  actions: WorkflowPickerActions;
 }): React.ReactNode => {
   switch (pickerKind) {
     case 'board': {
@@ -704,6 +694,7 @@ const renderDedicatedPicker = ({
           onChange={onChange}
           idPrefix={idPrefix}
           disabled={disabled}
+          actions={actions}
         />
       );
     default:
@@ -722,6 +713,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   onChange: (value: string | null) => void;
   idPrefix: string;
   rootInputMapping: InputMapping;
+  actions: WorkflowPickerActions;
   disabled?: boolean;
 }> = ({
   field,
@@ -729,6 +721,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   onChange,
   idPrefix,
   rootInputMapping,
+  actions,
   disabled,
 }) => {
   const [data, setData] = useState<WorkflowPickerData>(EMPTY_PICKER_DATA);
@@ -791,7 +784,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
     setLoadError(null);
     setLoadedDependencySignature(null);
 
-    loadWorkflowPickerData(pickerKind, dependencyResolutions)
+    loadWorkflowPickerData(pickerKind, dependencyResolutions, actions)
       .then((nextData) => {
         if (!active) return;
         setData(nextData);
@@ -812,7 +805,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
     return () => {
       active = false;
     };
-  }, [dependencyResolutions, dependencySignature, disabledExplanation, pickerKind]);
+  }, [actions, dependencyResolutions, dependencySignature, disabledExplanation, pickerKind]);
 
   useEffect(() => {
     if (!hasResolvedDependencies || !value || loadedDependencySignature !== dependencySignature) {
@@ -857,6 +850,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
           onChange,
           idPrefix,
           disabled,
+          actions,
         })
       )}
       {(disabledExplanation || loadError) && (

@@ -12,10 +12,18 @@
     }
   },
   "namedInputs": {
-    "default": ["{projectRoot}/**/*", "!{projectRoot}/dist/**", "sharedGlobals"],
+    "default": [
+      "{projectRoot}/**/*",
+      "!{projectRoot}/dist/**",
+      "sharedGlobals"
+    ],
     "sharedGlobals": [
-      { "env": "EDITION" },
-      { "env": "NEXT_PUBLIC_EDITION" }
+      {
+        "env": "EDITION"
+      },
+      {
+        "env": "NEXT_PUBLIC_EDITION"
+      }
     ],
     "production": [
       "default",
@@ -34,17 +42,27 @@
       ]
     },
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["production", "^production"],
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "production",
+        "^production"
+      ],
       "cache": true
     },
     "next:build": {
-      "inputs": ["production", "^production"],
+      "inputs": [
+        "production",
+        "^production"
+      ],
       "cache": true
     },
     "next:dev": {},
     "test": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "cache": true
     },
     "lint": {
@@ -52,7 +70,10 @@
     },
     "typecheck": {
       "cache": true,
-      "inputs": ["default", "^default"]
+      "inputs": [
+        "default",
+        "^default"
+      ]
     }
   },
   "plugins": [
@@ -66,14 +87,29 @@
         "buildDepsTargetName": "build-deps",
         "watchDepsTargetName": "watch-deps"
       },
-      "exclude": ["ee/runner/**", "ee/setup/**", "setup/**", "pgbouncer/**", "redis/**", "docker/**"]
+      "exclude": [
+        "ee/runner/**",
+        "ee/setup/**",
+        "setup/**",
+        "pgbouncer/**",
+        "redis/**",
+        "docker/**"
+      ]
     },
     {
       "plugin": "@nx/playwright/plugin",
       "options": {
         "targetName": "e2e"
       },
-      "exclude": ["ee/runner/**", "ee/setup/**", "ee/server/**", "setup/**", "pgbouncer/**", "redis/**", "docker/**"]
+      "exclude": [
+        "ee/runner/**",
+        "ee/setup/**",
+        "ee/server/**",
+        "setup/**",
+        "pgbouncer/**",
+        "redis/**",
+        "docker/**"
+      ]
     },
     {
       "plugin": "@nx/docker",
@@ -85,7 +121,15 @@
           "name": "docker:run"
         }
       },
-      "exclude": ["ee/runner/**", "ee/setup/**", "setup/**", "pgbouncer/**", "redis/**", "docker/**"]
+      "exclude": [
+        "ee/runner/**",
+        "ee/setup/**",
+        "setup/**",
+        "pgbouncer/**",
+        "redis/**",
+        "docker/**"
+      ]
     }
-  ]
+  ],
+  "analytics": false
 }
