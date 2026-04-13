@@ -289,6 +289,7 @@ const mocks = vi.hoisted(() => {
       analytics: { capture: vi.fn() },
       AnalyticsEvents: { INVOICE_GENERATED: 'invoice_generated' },
     })),
+    detectRecurringApprovalBlockers: vi.fn(async () => new Map()),
     getFullInvoiceById,
   };
 });
@@ -394,6 +395,16 @@ vi.mock('../../../../../packages/billing/src/services/taxService', () => ({
   },
 }));
 
+vi.mock('../../../../../packages/billing/src/actions/recurringApprovalBlockers', async () => {
+  const actual = await vi.importActual<typeof import('../../../../../packages/billing/src/actions/recurringApprovalBlockers')>(
+    '../../../../../packages/billing/src/actions/recurringApprovalBlockers',
+  );
+  return {
+    ...actual,
+    detectRecurringApprovalBlockers: mocks.detectRecurringApprovalBlockers,
+  };
+});
+
 vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({
   getAnalyticsAsync: mocks.getAnalyticsAsync,
 }));
@@ -419,6 +430,7 @@ describe('selector-input recurring generation', () => {
     mocks.validateClientBillingEmail.mockResolvedValue({ valid: true });
     mocks.calculateBilling.mockResolvedValue(mocks.clientBillingResult);
     mocks.calculateBillingForExecutionWindow.mockResolvedValue(mocks.contractBillingResult);
+    mocks.detectRecurringApprovalBlockers.mockResolvedValue(new Map());
     mocks.rowsByTable.time_entries = [];
   });
 
@@ -653,18 +665,9 @@ describe('selector-input recurring generation', () => {
       }),
     );
 
-    mocks.rowsByTable.time_entries = [
-      {
-        tenant: 'tenant-1',
-        entry_id: 'entry-unapproved-1',
-        start_time: '2025-01-10',
-        end_time: '2025-01-10',
-        invoiced: false,
-        contract_line_id: 'line-1',
-        service_id: 'service-1',
-        approval_status: 'SUBMITTED',
-      },
-    ];
+    mocks.detectRecurringApprovalBlockers.mockResolvedValue(
+      new Map([[selectorInput.executionWindow.identityKey, 1]]),
+    );
 
     await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
       message: 'Blocked until approval: 1 unapproved entry.',

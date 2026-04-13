@@ -53,7 +53,8 @@ Working notes for making recurring invoice approval blockers explicit in Automat
 - Added shared recurring approval-blocker detection helper:
   - `packages/billing/src/actions/recurringApprovalBlockers.ts`
   - Centralizes blocker count logic for contract-hourly windows and unresolved/non-contract time selections.
-  - Uses `approval_status !== 'APPROVED'`, excludes `invoiced=true`, and returns counts by recurring execution identity key.
+  - Mirrors contract-hourly billing semantics more closely by including client/work-item scoping, configured service matching, and uniquely assignable unassigned time.
+  - Treats `approval_status IS NULL` as non-approved, excludes `invoiced=true`, and returns counts by recurring execution identity key.
 - Applied blocker metadata during due-work shaping:
   - `packages/billing/src/actions/billingAndTax.ts`
   - `getAvailableRecurringDueWork(...)` now computes and applies approval-blocker counts before pagination.
@@ -82,10 +83,11 @@ Working notes for making recurring invoice approval blockers explicit in Automat
   - `server/src/test/integration/billingInvoiceTiming.integration.test.ts`
   - Added/updated:
     - `T001/T004` approval-blocked contract-hourly window with uninvoiced non-approved time.
+    - Added parity coverage for uniquely assignable unassigned time on the final included service-period day and for `approval_status = NULL` behaving as non-approved.
     - `T002` unrelated non-approved time outside window does not block.
     - `T003/T008/T017` mixed-charge window blocked in full; direct generation rejects.
     - `T009/T011` stale-ready server rejection and approval-cleared transition back to ready.
-  - Added helper options in `createApprovedTimeEntryForContractLine(...)` for `approvalStatus` and `invoiced`.
+  - Added helper options in `createApprovedTimeEntryForContractLine(...)` for nullable `approvalStatus`, nullable `contractLineId`, and `invoiced`.
 - UI unit:
   - `server/src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx`
   - Added Needs Approval rendering/assertions (section order, row content, review link, non-selectable/non-generatable behavior).
@@ -105,7 +107,7 @@ Working notes for making recurring invoice approval blockers explicit in Automat
 - `pnpm -s vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false`
 - `pnpm -s vitest run src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts --coverage.enabled=false`
 - `pnpm -s vitest run src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/docs/unapprovedTimeBlocksRecurringInvoices.copy.test.ts --coverage.enabled=false`
-- `pnpm -s vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T001/T004|T002: recurring due-work does not block|T003/T008/T017|T009/T011" --coverage.enabled=false`
+- `pnpm -s vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T001/T004|parity: recurring due-work blocks uniquely assignable unassigned hourly time|T002: recurring due-work does not block|T003/T008/T017|T009/T011" --coverage.enabled=false`
 
 ## Gotchas / Notes
 

@@ -1293,6 +1293,77 @@ it('T001/T004: recurring due-work marks a contract-hourly window as approval-blo
   expect(blockedCandidate?.members[0]?.approvalBlockedEntryCount).toBe(1);
 }, HOOK_TIMEOUT);
 
+it('parity: recurring due-work blocks uniquely assignable unassigned hourly time on the persisted service-period end date and treats null approval status as non-approved', async () => {
+  setupCommonMocks({ tenantId, userId: 'approval-unique-unassigned-user', permissionCheck: () => true });
+
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Approval Unique Unassigned Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+
+  const hourlyLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Approval Unique Unassigned Service',
+    planName: 'Approval Unique Unassigned Plan',
+    baseRateCents: 12000,
+    startDate: '2025-02-08',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+  const uniqueUnassignedMaterializationPlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-08T00:00:00Z',
+    materializedAt: '2026-04-12T00:02:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-08T00:00:00Z',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: hourlyLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'hourly',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${hourlyLine.contractLineId}:approval-unique-unassigned:v1`,
+    sourceRunKey: 'integration-approval-unique-unassigned',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(uniqueUnassignedMaterializationPlan.records[0]);
+
+  await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: null,
+    startTime: '2025-03-07T10:00:00.000Z',
+    endTime: '2025-03-07T11:00:00.000Z',
+    approvalStatus: null,
+  });
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Approval Unique Unassigned Client',
+  });
+  const blockedCandidate = dueWork.invoiceCandidates.find((candidate) =>
+    candidate.clientName === 'Approval Unique Unassigned Client',
+  );
+
+  expect(blockedCandidate).toBeTruthy();
+  expect(blockedCandidate).toMatchObject({
+    canGenerate: false,
+    approvalBlockedEntryCount: 1,
+  });
+  expect(blockedCandidate?.blockedReason).toContain('1 unapproved entry');
+  expect(blockedCandidate?.members[0]?.approvalBlockedEntryCount).toBe(1);
+
+  await expect(
+    generateInvoiceForSelectionInput(blockedCandidate!.members[0]!.selectorInput),
+  ).rejects.toThrow('1 unapproved entry');
+}, HOOK_TIMEOUT);
+
 it('T002: recurring due-work does not block a window for unrelated non-approved time outside that window service-period semantics', async () => {
   setupCommonMocks({ tenantId, userId: 'approval-window-specific-user', permissionCheck: () => true });
 
@@ -5027,10 +5098,10 @@ async function getInvoiceDetailRows(invoiceId: string) {
 async function createApprovedTimeEntryForContractLine(params: {
   clientId: string;
   serviceId: string;
-  contractLineId: string;
+  contractLineId?: string | null;
   startTime: string;
   endTime: string;
-  approvalStatus?: 'APPROVED' | 'DRAFT' | 'SUBMITTED' | 'CHANGES_REQUESTED';
+  approvalStatus?: 'APPROVED' | 'DRAFT' | 'SUBMITTED' | 'CHANGES_REQUESTED' | null;
   invoiced?: boolean;
 }) {
   const userId = await createUser(db, tenantId, {
@@ -5042,17 +5113,25 @@ async function createApprovedTimeEntryForContractLine(params: {
     assignedTo: userId,
   });
 
-  return createTestTimeEntry(db, tenantId, {
+  const entry = await createTestTimeEntry(db, tenantId, {
     work_item_id: ticketId,
     work_item_type: 'ticket',
     service_id: params.serviceId,
     user_id: userId,
     approval_status: params.approvalStatus ?? 'APPROVED',
-    contract_line_id: params.contractLineId,
+    contract_line_id: params.contractLineId ?? null,
     start_time: new Date(params.startTime),
     end_time: new Date(params.endTime),
     invoiced: params.invoiced ?? false,
   });
+
+  if (params.approvalStatus === null) {
+    await db('time_entries')
+      .where({ tenant: tenantId, entry_id: entry.entry_id })
+      .update({ approval_status: null });
+  }
+
+  return entry;
 }
 
 async function createUsageRecordForContractLine(params: {

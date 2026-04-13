@@ -1,7 +1,7 @@
 [
   {
     "id": "T001",
-    "description": "DB-backed integration: a recurring contract-hourly window with at least one matching uninvoiced time entry whose approval status is not APPROVED is classified as approval-blocked and excluded from Ready to Invoice.",
+    "description": "DB-backed integration: a recurring contract-hourly window with matching uninvoiced non-approved time is classified as approval-blocked and excluded from Ready to Invoice, including uniquely assignable unassigned time that lands on the final included service-period day.",
     "implemented": true,
     "featureIds": [
       "F001",
@@ -34,7 +34,7 @@
   },
   {
     "id": "T004",
-    "description": "Unit/integration: any non-approved status used by time approval workflows (for example DRAFT, SUBMITTED, or CHANGES_REQUESTED) contributes to the approval-blocker count, while already invoiced entries do not.",
+    "description": "Unit/integration: any non-approved status used by time approval workflows, including NULL/legacy non-approved states, contributes to the approval-blocker count, while already invoiced entries do not.",
     "implemented": true,
     "featureIds": [
       "F004",
