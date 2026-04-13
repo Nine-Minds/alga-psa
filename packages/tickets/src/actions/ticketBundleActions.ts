@@ -176,7 +176,7 @@ export const bundleTicketsAction = withAuth(async (
     return { ok: true, value: { masterTicketId: data.masterTicketId, childTicketIds: uniqueChildIds, mode: data.mode } };
   });
 
-  if (!txResult.ok) {
+  if ('error' in txResult) {
     return txResult.error;
   }
   const result = txResult.value;
@@ -266,7 +266,7 @@ export const addChildrenToBundleAction = withAuth(async (
     return { ok: true, value: { masterTicketId: data.masterTicketId, childTicketIds: childIds } };
   });
 
-  if (!txResult.ok) {
+  if ('error' in txResult) {
     return txResult.error;
   }
   const result = txResult.value;
