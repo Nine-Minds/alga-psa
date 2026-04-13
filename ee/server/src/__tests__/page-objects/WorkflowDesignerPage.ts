@@ -289,6 +289,10 @@ export class WorkflowDesignerPage {
     return this.page.locator(`#workflow-step-delete-${stepId}`);
   }
 
+  stepDuplicateButton(stepId: string): Locator {
+    return this.page.locator(`#workflow-step-duplicate-${stepId}`);
+  }
+
   dropStepsHereText(): Locator {
     // Kept for backward compatibility with older pipeline UI, but prefer `emptyPipeline`.
     return this.page.getByText('Drop steps here');

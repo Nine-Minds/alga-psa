@@ -1018,7 +1018,7 @@ test.describe('Workflow Designer UI - basic', () => {
     }
   });
 
-  test('T079: grouped action steps preserve the current absence of duplicate behavior', async ({ page }) => {
+  test('T079: grouped action steps can be duplicated inline and select the new copy', async ({ page }) => {
     test.setTimeout(120000);
 
     const { db, tenantData, workflowPage } = await setupDesigner(page);
@@ -1026,10 +1026,21 @@ test.describe('Workflow Designer UI - basic', () => {
       await workflowPage.clickNewWorkflow();
       await workflowPage.addButtonFor('ticket').click();
 
-      const stepId = await workflowPage.getFirstStepId();
-      await expect(workflowPage.stepDeleteButton(stepId)).toBeVisible();
-      await expect(page.locator(`#workflow-step-duplicate-${stepId}`)).toHaveCount(0);
-      await expect(page.getByRole('button', { name: /duplicate step/i })).toHaveCount(0);
+      const originalStepId = await workflowPage.getFirstStepId();
+      await expect(workflowPage.stepDeleteButton(originalStepId)).toBeVisible();
+      await expect(workflowPage.stepDuplicateButton(originalStepId)).toBeVisible();
+
+      await workflowPage.stepDuplicateButton(originalStepId).click();
+      await expect(page.locator('[id^="workflow-step-select-"]')).toHaveCount(2);
+
+      const duplicatedStepButton = page.locator('[id^="workflow-step-select-"]').nth(1);
+      const duplicatedStepButtonId = await duplicatedStepButton.getAttribute('id');
+      expect(duplicatedStepButtonId).toBeTruthy();
+      const duplicatedStepId = duplicatedStepButtonId!.replace('workflow-step-select-', '');
+      expect(duplicatedStepId).not.toBe(originalStepId);
+
+      await expect(page.locator(`#workflow-step-saveAs-${duplicatedStepId}`)).toHaveValue('ticketsCreateResult');
+      await expect(page.locator(`#workflow-step-duplicate-${duplicatedStepId}`)).toBeVisible();
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
